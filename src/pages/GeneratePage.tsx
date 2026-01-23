@@ -3,28 +3,31 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { GenerateForm } from '@/components/features/generate/GenerateForm';
 import { GenerateResults } from '@/components/features/generate/GenerateResults';
-import { mockGenerateCase } from '@/lib/ai/providers/mock-provider';
+import { generateCase } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
+import { useToast } from '@/hooks/use-toast';
+
+import { Button } from '@/components/ui/button';
+import { Save } from 'lucide-react';
 
 export default function GeneratePage() {
-  const { generateResult, generateLoading, setGenerateResult, setGenerateLoading } = useSessionStore();
+  const { generateResult, generateLoading, setGenerateResult, setGenerateLoading, saveCurrentCase } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
+  const { toast } = useToast();
 
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
     try {
-      // Use mock provider for demo
-      if (config.provider === 'mock') {
-        const result = await mockGenerateCase(data.motion, data.side);
-        setGenerateResult(result);
-      } else {
-        // TODO: Implement real AI provider calls
-        const result = await mockGenerateCase(data.motion, data.side);
-        setGenerateResult(result);
-      }
+      const result = await generateCase(data, config);
+      setGenerateResult(result);
     } catch (error) {
       console.error('Failed to generate case:', error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setGenerateLoading(false);
     }
@@ -34,6 +37,15 @@ export default function GeneratePage() {
     // For now, regenerate entire case
     // TODO: Implement section-specific regeneration
     console.log('Regenerate section:', section);
+  };
+  
+  const handleSave = () => {
+    if (!generateResult) return;
+    const title = window.prompt("Enter a title for this case:", generateResult.caseStructure.thesis.slice(0, 50));
+    if (title) {
+      saveCurrentCase(title);
+      toast({ title: "Case Saved", description: "Your case has been saved to history." });
+    }
   };
 
   return (
@@ -55,7 +67,15 @@ export default function GeneratePage() {
           {/* Results */}
           <div>
             {generateResult ? (
-              <GenerateResults result={generateResult} onRegenerateSection={handleRegenerateSection} />
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={handleSave}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Case
+                  </Button>
+                </div>
+                <GenerateResults result={generateResult} onRegenerateSection={handleRegenerateSection} />
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
                 <div className="text-6xl mb-4">🎯</div>

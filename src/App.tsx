@@ -11,6 +11,8 @@ import BrainstormPage from "./pages/BrainstormPage";
 import FactoidsPage from "./pages/FactoidsPage";
 import AskPage from "./pages/AskPage";
 import SettingsPage from "./pages/SettingsPage";
+import HistoryPage from "./pages/HistoryPage";
+import TimerPage from "./pages/TimerPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/brainstorm" element={<BrainstormPage />} />
             <Route path="/factoids" element={<FactoidsPage />} />
             <Route path="/ask" element={<AskPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/timer" element={<TimerPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
