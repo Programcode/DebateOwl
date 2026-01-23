@@ -1,8 +1,11 @@
 // src/pages/SettingsPage.tsx
-import { Settings, Cpu, Thermometer, Zap } from 'lucide-react';
+import { Settings, Cpu, Thermometer, Zap, Key, Eye, EyeOff, Lock, Unlock, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -13,7 +16,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
+import { useSessionStore } from '@/lib/stores/session-store';
 import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const featureLabels: Record<FeatureTab, { name: string; description: string; color: string }> = {
   generate: { name: 'Generate', description: 'Argument generation', color: 'bg-primary' },
@@ -26,7 +32,34 @@ const featureLabels: Record<FeatureTab, { name: string; description: string; col
 const features: FeatureTab[] = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'];
 
 export default function SettingsPage() {
-  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme } = useSettingsStore();
+  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme, apiKeys, setApiKey, isAdmin, setAdmin, customSystemPrompt, setSystemPrompt } = useSettingsStore();
+  const { clearSession } = useSessionStore();
+  const { toast } = useToast();
+  
+  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
+  const [adminCode, setAdminCode] = useState('');
+
+  const toggleKeyVisibility = (providerId: string) => {
+    setVisibleKeys(prev => ({ ...prev, [providerId]: !prev[providerId] }));
+  };
+
+  const handleAdminUnlock = () => {
+    if (adminCode === 'debate2026') {
+      setAdmin(true);
+      toast({ title: "Admin Mode Unlocked", description: "You now have access to advanced settings." });
+    } else {
+      toast({ title: "Access Denied", description: "Incorrect admin code.", variant: "destructive" });
+    }
+  };
+
+  const handleNuke = () => {
+    if (confirm("Are you sure? This will delete ALL saved history and chats locally.")) {
+      clearSession();
+      // Also clear persistence if possible, but session store handles the data
+      localStorage.removeItem('debate-trainer-storage'); // Hard reset
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="container py-8 px-4">
@@ -77,6 +110,51 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* API Credentials */}
+        <Card className="mb-8 border-primary/20 bg-primary/5">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-primary" />
+              <CardTitle>API Credentials</CardTitle>
+            </div>
+            <CardDescription>
+              Enter your API keys to enable real AI generation. Keys are stored locally in your browser.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {DEFAULT_PROVIDERS.filter(p => p.requiresKey).map((provider) => (
+              <div key={provider.id} className="space-y-2">
+                <Label htmlFor={`key-${provider.id}`}>{provider.name} API Key</Label>
+                <div className="relative">
+                  <Input
+                    id={`key-${provider.id}`}
+                    type={visibleKeys[provider.id] ? 'text' : 'password'}
+                    value={apiKeys[provider.id] || ''}
+                    onChange={(e) => setApiKey(provider.id, e.target.value)}
+                    placeholder={
+                      isAdmin && (
+                        (provider.id === 'openai' && import.meta.env.VITE_OPENAI_API_KEY) ||
+                        (provider.id === 'anthropic' && import.meta.env.VITE_ANTHROPIC_API_KEY) ||
+                        (provider.id === 'google' && import.meta.env.VITE_GOOGLE_API_KEY)
+                      )
+                        ? "System Key Active (Override with custom key)"
+                        : isAdmin ? "(No system key found)" : "sk-..."
+                    }
+                    className="pr-10 font-mono text-sm bg-background"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleKeyVisibility(provider.id)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {visibleKeys[provider.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -197,7 +275,7 @@ export default function SettingsPage() {
         <Separator className="my-8" />
 
         {/* API Key Info */}
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-amber-500/30 bg-amber-500/5 mb-8">
           <CardHeader>
             <CardTitle className="text-amber-600">About AI Providers</CardTitle>
           </CardHeader>
@@ -206,11 +284,59 @@ export default function SettingsPage() {
               <strong>Mock AI (Demo)</strong> — Works offline with pre-generated responses. Perfect for exploring the app without API keys.
             </p>
             <p>
-              <strong>Lovable AI</strong> — Powered by Google Gemini and OpenAI models. Requires Lovable Cloud to be enabled.
+              <strong>Cloud AI</strong> — Powered by Google Gemini and OpenAI models. Requires API keys.
             </p>
             <p>
-              <strong>OpenAI Compatible</strong> — Connect your own OpenAI API key for full functionality (coming soon).
+              <strong>OpenAI Compatible</strong> — Connect your own OpenAI API key for full functionality.
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Admin Access */}
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              {isAdmin ? <Unlock className="h-5 w-5 text-destructive" /> : <Lock className="h-5 w-5 text-destructive" />}
+              <CardTitle>Admin Access</CardTitle>
+            </div>
+            <CardDescription>Advanced controls for tournament organizers</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!isAdmin ? (
+              <div className="flex gap-2">
+                <Input 
+                  type="password" 
+                  placeholder="Enter admin code..." 
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                />
+                <Button variant="destructive" onClick={handleAdminUnlock}>Unlock</Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Global System Prompt Override</Label>
+                  <Textarea 
+                    placeholder="Enter a custom system prompt to override default behaviors..."
+                    value={customSystemPrompt || ''}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <p className="text-xs text-muted-foreground">This prompt will be prepended to all AI requests.</p>
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-destructive/20">
+                  <div>
+                    <h4 className="font-medium text-destructive">Danger Zone</h4>
+                    <p className="text-xs text-muted-foreground">Irreversible actions</p>
+                  </div>
+                  <Button variant="destructive" size="sm" onClick={handleNuke}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Nuke Database (Reset All)
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

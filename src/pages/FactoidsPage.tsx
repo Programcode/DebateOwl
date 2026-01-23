@@ -3,26 +3,28 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
-import { mockFactoids } from '@/lib/ai/providers/mock-provider';
+import { factoids } from '@/lib/ai/client';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FactoidsPage() {
   const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
+  const { toast } = useToast();
 
   const handleSubmit = async (data: FactoidsInput) => {
     setFactoidsLoading(true);
     try {
-      if (config.provider === 'mock') {
-        const result = await mockFactoids(data.claim);
-        setFactoidsResult(result);
-      } else {
-        const result = await mockFactoids(data.claim);
-        setFactoidsResult(result);
-      }
+      const result = await factoids(data.claim, config);
+      setFactoidsResult(result);
     } catch (error) {
       console.error('Failed to find factoids:', error);
+      toast({
+        title: "Research Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setFactoidsLoading(false);
     }

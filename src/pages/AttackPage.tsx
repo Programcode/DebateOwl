@@ -3,26 +3,28 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AttackForm } from '@/components/features/attack/AttackForm';
 import { AttackResults } from '@/components/features/attack/AttackResults';
-import { mockAttackCase } from '@/lib/ai/providers/mock-provider';
+import { attackCase } from '@/lib/ai/client';
 import type { AttackInput } from '@/lib/ai/schemas/attack';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AttackPage() {
   const { attackResult, attackLoading, setAttackResult, setAttackLoading } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('attack');
+  const { toast } = useToast();
 
   const handleSubmit = async (data: AttackInput) => {
     setAttackLoading(true);
     try {
-      if (config.provider === 'mock') {
-        const result = await mockAttackCase(data.caseText);
-        setAttackResult(result);
-      } else {
-        const result = await mockAttackCase(data.caseText);
-        setAttackResult(result);
-      }
+      const result = await attackCase(data.caseText, config);
+      setAttackResult(result);
     } catch (error) {
       console.error('Failed to attack case:', error);
+      toast({
+        title: "Attack Analysis Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setAttackLoading(false);
     }

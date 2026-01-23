@@ -28,8 +28,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
     defaultValues: {
       motion: '',
       side: 'auto',
-      format: 'bp',
-      role: 'general',
+      format: 'custom',
+      role: 'intro',
       length: 'standard',
       audience: 'intermediate',
       tone: 'formal',
@@ -96,14 +96,13 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               <Select
                 value={currentValues.format}
                 onValueChange={(value) => setValue('format', value as GenerateInput['format'])}
+                disabled
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bp">British Parliamentary</SelectItem>
-                  <SelectItem value="policy">Policy Debate</SelectItem>
-                  <SelectItem value="classroom">Classroom Discussion</SelectItem>
+                  <SelectItem value="custom">Standard Tournament (4-6-6-3)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -119,9 +118,10 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="r1">First Speaker</SelectItem>
-                  <SelectItem value="r2">Second Speaker</SelectItem>
+                  <SelectItem value="intro">Introductor (4 min)</SelectItem>
+                  <SelectItem value="r1">R1 - Rebuttal/Arg (6 min)</SelectItem>
+                  <SelectItem value="r2">R2 - Rebuttal/Build (6 min)</SelectItem>
+                  <SelectItem value="conc">Conclusor (3 min)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

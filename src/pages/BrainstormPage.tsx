@@ -3,26 +3,28 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { BrainstormForm } from '@/components/features/brainstorm/BrainstormForm';
 import { BrainstormResults } from '@/components/features/brainstorm/BrainstormResults';
-import { mockBrainstorm } from '@/lib/ai/providers/mock-provider';
+import { brainstorm } from '@/lib/ai/client';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
+import { useToast } from '@/hooks/use-toast';
 
 export default function BrainstormPage() {
   const { brainstormResult, brainstormLoading, setBrainstormResult, setBrainstormLoading } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('brainstorm');
+  const { toast } = useToast();
 
   const handleSubmit = async (data: BrainstormInput) => {
     setBrainstormLoading(true);
     try {
-      if (config.provider === 'mock') {
-        const result = await mockBrainstorm(data.motion, data.outputMode);
-        setBrainstormResult(result);
-      } else {
-        const result = await mockBrainstorm(data.motion, data.outputMode);
-        setBrainstormResult(result);
-      }
+      const result = await brainstorm(data.motion, data.outputMode, config);
+      setBrainstormResult(result);
     } catch (error) {
       console.error('Failed to brainstorm:', error);
+      toast({
+        title: "Brainstorming Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setBrainstormLoading(false);
     }

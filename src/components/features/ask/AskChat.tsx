@@ -1,6 +1,5 @@
-// src/components/features/ask/AskChat.tsx
-import { useState } from 'react';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,19 +10,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 import { cn } from '@/lib/utils';
+import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
+  timestamp: number;
   output?: AskOutput;
 }
 
 interface AskChatProps {
   messages: Message[];
   isLoading: boolean;
-  onSend: (message: string, mode: string, citationMode: boolean) => void;
+  onSend: (message: string, mode: string, citationMode: boolean, files?: File[]) => void;
   onClear: () => void;
 }
 
@@ -125,7 +125,7 @@ function MessageBubble({ message }: { message: Message }) {
         )}
 
         <span className="text-[10px] text-muted-foreground">
-          {message.timestamp.toLocaleTimeString()}
+          {new Date(message.timestamp).toLocaleTimeString()}
         </span>
       </div>
     </div>
@@ -136,12 +136,43 @@ export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) 
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
   const [citationMode, setCitationMode] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
+
+  useEffect(() => {
+    if (transcript) {
+      setInput(transcript);
+    }
+  }, [transcript]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    onSend(input.trim(), mode, citationMode);
+    if ((!input.trim() && files.length === 0) || isLoading) return;
+    onSend(input.trim(), mode, citationMode, files);
     setInput('');
+    setFiles([]);
+    resetTranscript();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      startListening();
+    }
   };
 
   return (
@@ -221,16 +252,61 @@ export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) 
           </div>
         </div>
 
+        {/* Attached Files Preview */}
+        {files.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {files.map((file, i) => (
+              <div key={i} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs">
+                <Paperclip className="h-3 w-3" />
+                <span className="max-w-[100px] truncate">{file.name}</span>
+                <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Input */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
+            type="file"
+            multiple
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            title="Attach files"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          
+          {hasSupport && (
+            <Button
+              type="button"
+              variant={isListening ? "destructive" : "outline"}
+              size="icon"
+              onClick={toggleListening}
+              title={isListening ? "Stop listening" : "Start voice input"}
+              className={isListening ? "animate-pulse" : ""}
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
+
+          <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask your debate coach..."
+            placeholder={isListening ? "Listening..." : "Ask your debate coach..."}
             disabled={isLoading}
             className="flex-1"
           />
-          <Button type="submit" disabled={!input.trim() || isLoading}>
+          <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading}>
             <Send className="h-4 w-4" />
           </Button>
         </form>
