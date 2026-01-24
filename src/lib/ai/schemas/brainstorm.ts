@@ -4,12 +4,7 @@ import { z } from 'zod';
 export const BrainstormInputSchema = z.object({
   motion: z.string().min(1, 'Motion is required'),
   side: z.enum(['pro', 'con', 'both']),
-  existingIdeas: z.string(),
-  constraints: z.object({
-    ethicalRedLines: z.array(z.string()),
-    allowedSources: z.array(z.string()),
-    timeLimit: z.number().optional(),
-  }),
+  context: z.string().optional(),
   outputMode: z.enum(['mindmap', 'buckets', 'topfive']),
 });
 

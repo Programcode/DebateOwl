@@ -1,5 +1,5 @@
 // src/components/features/factoids/FactoidsResults.tsx
-import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb } from 'lucide-react';
+import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -11,6 +11,7 @@ interface FactoidsResultsProps {
   result: FactoidsOutput;
   onVerify?: () => void;
   isVerifying?: boolean;
+  onDiscuss?: () => void;
 }
 
 const verificationConfig = {
@@ -93,12 +94,21 @@ function FactoidCard({ factoid }: { factoid: Factoid }) {
   );
 }
 
-export function FactoidsResults({ result, onVerify, isVerifying }: FactoidsResultsProps) {
+export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss }: FactoidsResultsProps) {
   const verifiedCount = result.factoids.filter(f => f.citation.verified === 'verified').length;
   const unverifiedCount = result.factoids.filter(f => f.citation.verified === 'unverified').length;
 
   return (
     <div className="space-y-6">
+      {onDiscuss && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={onDiscuss}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Discuss Evidence
+          </Button>
+        </div>
+      )}
+
       {/* Verification Status */}
       <SectionCard
         title="Verification Status"

@@ -41,7 +41,7 @@ export function AppLayout() {
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-foreground">AI Debate Trainer</h1>
+              <h1 className="text-lg font-semibold tracking-tight text-foreground">DebateLab</h1>
               <p className="text-xs text-muted-foreground hidden sm:block">Master the art of argumentation</p>
             </div>
           </div>
@@ -118,7 +118,7 @@ export function AppLayout() {
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-4">
         <div className="container px-4 text-center text-sm text-muted-foreground">
-          <p>AI Debate Trainer • Built for debaters who demand excellence</p>
+          <p>DebateLab • Built for debaters who demand excellence</p>
         </div>
       </footer>
     </div>

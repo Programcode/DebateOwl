@@ -1,79 +1,87 @@
-# Lovable Prototype - Debate Trainer
+# AI Debate Trainer - Project Overview
 
-## Project Overview
+## Project Description
+The AI Debate Trainer is a React-based web application designed to help debaters improve their skills through AI-powered case generation, argument analysis, and interactive coaching. It features a modern UI, real-time speech recognition, a dedicated debate timer, and persistent history.
 
-This project is a React-based web application designed as a prototype for an "Innovation Fair" or "Debate Trainer". It provides a suite of AI-powered tools to assist users in debating and critical thinking tasks. The application is built using Vite, TypeScript, and Tailwind CSS.
+**Live Demo:** [https://debate.pi-stack.org](https://debate.pi-stack.org) (Assuming successful Pi deployment)
 
-### Key Features
-*   **Generate:** Create structured debate cases with customizable parameters (side, format, role, etc.).
-*   **Attack:** Generate counter-arguments or rebuttal points (inferred).
-*   **Brainstorm:** Generate ideas and arguments.
-*   **Factoids:** Retrieve relevant facts and statistics.
-*   **Ask:** A chat interface for general AI interaction.
-*   **Settings:** Configure AI providers (Mock, Lovable, OpenAI) and application preferences.
+## Key Features
 
-### Architecture
-*   **Frontend Framework:** React 18 with TypeScript.
-*   **Build Tool:** Vite.
-*   **Styling:** Tailwind CSS with `shadcn-ui` components.
-*   **State Management:** `zustand` for global state (settings, sessions) and persistence.
-*   **Routing:** `react-router-dom`.
-*   **Form Handling:** `react-hook-form` with `zod` schema validation.
-*   **AI Integration:** A flexible abstraction layer (`src/lib/ai`) supporting multiple providers and per-feature configuration.
-*   **Testing:** Vitest and React Testing Library.
+### 1. Generate Case
+*   Creates structured debate cases (Thesis, Contentions, Rebuttals).
+*   Supports the "Standard Tournament" format (4-6-6-3 speeches).
+*   **Save to History:** Persist generated cases for later review.
 
-## Building and Running
+### 2. Attack Case
+*   Analyzes user-provided arguments to find logical fallacies and weak points.
+*   Provides "Cross-Ex" questions to ask opponents.
+
+### 3. Ask Coach (Chat)
+*   **Context-Aware:** Remembers conversation history for natural follow-ups.
+*   **File Analysis:** Supports attaching `.txt`, `.md`, and `.json` files to ask questions about specific documents.
+*   **Voice Input:** Integrated Speech-to-Text for dictating questions.
+*   **Save Chat:** Persist conversation threads.
+
+### 4. Tools
+*   **Debate Timer:** Dedicated stopwatch with presets for Introductor (4m), R1 (6m), R2 (6m), and Conclusor (3m).
+*   **Brainstorm:** Idea generation tool for motion analysis.
+*   **Factoids:** Evidence search (simulated/AI-based).
+
+### 5. Admin & Settings
+*   **System Keys:** Support for pre-configured API keys via `config.js` (Runtime Config).
+*   **Admin Panel:** Unlockable via code (`debate2026`).
+    *   **Prompt Override:** Inject custom global instructions into the AI.
+    *   **Database Reset:** Clear all local history.
+    *   **Auto-Authentication:** Admin users bypass manual key entry.
+
+## Architecture
+
+*   **Frontend:** React 18, Vite, TypeScript.
+*   **Styling:** Tailwind CSS, shadcn/ui.
+*   **State Management:** Zustand (with `persist` middleware for LocalStorage).
+*   **AI Integration:** Custom client (`src/lib/ai/client.ts`) utilizing standard `fetch` for OpenAI, Anthropic, and Google Gemini APIs.
+*   **Deployment:** Dockerized with Nginx. Supports Runtime Configuration for secrets.
+
+## Development
 
 ### Prerequisites
-*   Node.js (LTS version recommended)
-*   npm
+*   Node.js 20+
+*   Docker (optional, for containerization)
 
-### Commands
-
-*   **Install Dependencies:**
+### Local Setup
+1.  Install dependencies:
     ```bash
     npm install
     ```
-
-*   **Start Development Server:**
+2.  Start development server:
     ```bash
     npm run dev
     ```
-    This starts the local development server (usually at http://localhost:5173).
 
-*   **Build for Production:**
-    ```bash
-    npm run build
-    ```
-    Builds the application to the `dist` folder.
+### Configuration (`public/config.js`)
+To avoid baking secrets into the build, the app reads from `window.env` defined in `public/config.js`.
+```javascript
+window.env = {
+  VITE_OPENAI_API_KEY: "sk-...",
+  VITE_GOOGLE_API_KEY: "AIza...",
+  VITE_ANTHROPIC_API_KEY: "sk-ant..."
+};
+```
 
-*   **Run Tests:**
-    ```bash
-    npm test
-    ```
-    Runs unit tests using Vitest.
+## Deployment
 
-*   **Lint Code:**
-    ```bash
-    npm run lint
-    ```
-    Runs ESLint to check for code quality issues.
+### Docker Build
+```bash
+docker build -t debate-trainer .
+```
 
-## Development Conventions
+### Docker Run
+```bash
+docker run -d -p 3000:80 --name debate-app --restart unless-stopped debate-trainer
+```
 
-### File Structure
-*   `src/components/features/`: Contains feature-specific components (e.g., `generate/GenerateForm.tsx`). Each feature typically has its own directory.
-*   `src/components/ui/`: Reusable UI components (buttons, inputs, cards) built with `shadcn-ui`.
-*   `src/lib/ai/`: AI integration logic, including provider definitions (`providers/`), schemas (`schemas/`), and prompt templates (`prompts/`).
-*   `src/lib/stores/`: Global state management using Zustand (e.g., `settings-store.ts`).
-*   `src/pages/`: Top-level page components corresponding to routes.
-*   `src/hooks/`: Custom React hooks (e.g., `use-mobile.tsx`, `use-toast.ts`).
-
-### Coding Style
-*   **Components:** Functional components using React hooks.
-*   **Types:** Extensive use of TypeScript interfaces and types.
-*   **Forms:** Use `react-hook-form` wrapped with `zod` resolvers for validation.
-*   **Styling:** Utility-first CSS using Tailwind classes.
-
-### AI Integration
-The project uses a provider pattern for AI services. New providers can be added in `src/lib/ai/providers`. Each feature can be configured to use a specific provider and model via the Settings page, persisted in local storage.
+### Raspberry Pi (ARM64)
+The Dockerfile is compatible with ARM64 architecture.
+1.  Transfer source code to Pi.
+2.  Build and run locally on the Pi.
+3.  Expose via Cloudflare Tunnel.

@@ -27,11 +27,7 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
     defaultValues: {
       motion: '',
       side: 'both',
-      existingIdeas: '',
-      constraints: {
-        ethicalRedLines: [],
-        allowedSources: [],
-      },
+      context: '',
       outputMode: 'topfive',
     },
   });
@@ -108,14 +104,14 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
             </div>
           </div>
 
-          {/* Existing Ideas */}
+          {/* Context */}
           <div className="space-y-2">
-            <Label htmlFor="existingIdeas" className="text-sm font-medium">
+            <Label htmlFor="context" className="text-sm font-medium">
               What You Already Have (Optional)
             </Label>
             <Textarea
-              id="existingIdeas"
-              {...register('existingIdeas')}
+              id="context"
+              {...register('context')}
               placeholder="Share any ideas or angles you've already considered..."
               className="min-h-[100px] resize-y"
             />

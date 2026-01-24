@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 export const FactoidsInputSchema = z.object({
   claim: z.string().min(1, 'Claim is required'),
-  region: z.string().optional(),
+  region: z.string().min(1, 'Region is required'),
+  sourceType: z.enum(['academic', 'government', 'news', 'any']),
   timeframe: z.string().optional(),
-  evidenceStrength: z.enum(['academic', 'government', 'media', 'any']),
   language: z.enum(['en', 'es']),
 });
 
