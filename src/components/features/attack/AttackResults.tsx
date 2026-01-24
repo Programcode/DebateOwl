@@ -1,6 +1,7 @@
 // src/components/features/attack/AttackResults.tsx
 import { AlertCircle, AlertTriangle, Info, MessageSquare, Scale, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -9,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface AttackResultsProps {
   result: AttackOutput;
+  onDiscuss?: () => void;
 }
 
 const severityConfig = {
@@ -66,7 +68,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
   );
 }
 
-export function AttackResults({ result }: AttackResultsProps) {
+export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
   const criticalCount = result.weaknesses.filter(w => w.severity === 'critical').length;
   const majorCount = result.weaknesses.filter(w => w.severity === 'major').length;
   const minorCount = result.weaknesses.filter(w => w.severity === 'minor').length;
@@ -82,13 +84,21 @@ export function AttackResults({ result }: AttackResultsProps) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">Case Strength</span>
-              <span className={cn(
-                'text-lg font-bold',
-                result.overallAssessment.score >= 70 ? 'text-primary' :
-                result.overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
-              )}>
-                {result.overallAssessment.score}/100
-              </span>
+              <div className="flex items-center gap-3">
+                <span className={cn(
+                  'text-lg font-bold',
+                  result.overallAssessment.score >= 70 ? 'text-primary' :
+                  result.overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
+                )}>
+                  {result.overallAssessment.score}/100
+                </span>
+                {onDiscuss && (
+                  <Button variant="outline" size="sm" onClick={onDiscuss}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Discuss with Coach
+                  </Button>
+                )}
+              </div>
             </div>
             <Progress 
               value={result.overallAssessment.score} 

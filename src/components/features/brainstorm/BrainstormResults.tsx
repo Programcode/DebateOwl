@@ -1,12 +1,14 @@
 // src/components/features/brainstorm/BrainstormResults.tsx
-import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb } from 'lucide-react';
+import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
 import { cn } from '@/lib/utils';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
+  onDiscuss?: () => void;
 }
 
 const strengthColors = {
@@ -46,7 +48,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-export function BrainstormResults({ result }: BrainstormResultsProps) {
+export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps) {
   // Show clarifying questions if needed
   if (result.needsMoreInfo && result.clarifyingQuestions?.length) {
     return (
@@ -71,6 +73,15 @@ export function BrainstormResults({ result }: BrainstormResultsProps) {
 
   return (
     <div className="space-y-6">
+      {onDiscuss && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={onDiscuss}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Discuss Ideas
+          </Button>
+        </div>
+      )}
+
       {/* Top Five */}
       {result.topFive && (
         <SectionCard

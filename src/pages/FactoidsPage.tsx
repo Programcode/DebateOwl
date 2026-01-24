@@ -1,22 +1,24 @@
-// src/pages/FactoidsPage.tsx
+import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
-import { factoids } from '@/lib/ai/client';
+import { factoids, askChat } from '@/lib/ai/client';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 
 export default function FactoidsPage() {
-  const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading } = useSessionStore();
+  const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
+  const askConfig = getFeatureConfig('ask');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (data: FactoidsInput) => {
     setFactoidsLoading(true);
     try {
-      const result = await factoids(data.claim, config);
+      const result = await factoids(data, config);
       setFactoidsResult(result);
     } catch (error) {
       console.error('Failed to find factoids:', error);
@@ -33,6 +35,42 @@ export default function FactoidsPage() {
   const handleVerify = async () => {
     // TODO: Implement verification
     console.log('Verifying sources...');
+  };
+
+  const handleDiscuss = async () => {
+    if (!factoidsResult) return;
+    
+    const summary = `I'd like to discuss the evidence I found.
+    
+    **Factoids:**
+    ${factoidsResult.factoids.slice(0, 3).map(f => `- ${f.shortClaim} (${f.citation.publisher})`).join('\n')}
+    
+    How can I best use this evidence?`;
+
+    addAskMessage({ role: 'user', content: summary });
+    navigate('/ask');
+    
+    setAskLoading(true);
+    try {
+      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
+      }));
+      
+      const result = await askChat(summary, history, 'general', askConfig);
+      
+      addAskMessage({
+        role: 'assistant',
+        content: result.response,
+        // @ts-ignore
+        output: result
+      });
+    } catch (error) {
+      console.error('Failed to discuss result:', error);
+      toast({ title: "Chat Error", description: "Failed to generate response.", variant: "destructive" });
+    } finally {
+      setAskLoading(false);
+    }
   };
 
   return (
@@ -54,7 +92,7 @@ export default function FactoidsPage() {
           {/* Results */}
           <div>
             {factoidsResult ? (
-              <FactoidsResults result={factoidsResult} onVerify={handleVerify} />
+              <FactoidsResults result={factoidsResult} onVerify={handleVerify} onDiscuss={handleDiscuss} />
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
                 <div className="text-6xl mb-4">📚</div>

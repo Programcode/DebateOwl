@@ -1,125 +1,102 @@
-# Deployment Guide: Docker + Cloudflare Tunnel
+# Deployment Guide
 
-This guide explains how to take your Debate Trainer application, containerize it with Docker, and securely expose it to the internet using a Cloudflare Tunnel.
+This app is optimized for Docker deployment, specifically targeting Raspberry Pi (ARM64) via Cloudflare Tunnels.
 
----
-
-## Part 1: Build & Run the Container
-
-First, we need to package your app into a running server.
-
-1.  **Build the Image**
-    Open your terminal in the project root and run:
-    ```bash
-    docker build -t debate-trainer .
-    ```
-    *(This may take a few minutes the first time as it downloads Node and builds your app)*
-
-2.  **Run the Container**
-    We will run the container and map it to port **3000** on your machine.
-    ```bash
-    docker run -d -p 3000:80 --name debate-app --restart unless-stopped debate-trainer
-    ```
-
-3.  **Verify it's working**
-    Open [http://localhost:3000](http://localhost:3000) in your browser. You should see your app running smoothly!
+## Architecture
+*   **Container:** Nginx serving static React build.
+*   **Config:** Runtime injection via `config.js` (no build args needed).
+*   **Exposure:** Cloudflare Tunnel (no port forwarding required).
 
 ---
 
-## Part 2: Cloudflare Tunnel (The "Public Link")
+## 1. Prepare Configuration
+Create a `config.js` file with your production keys. Do NOT commit this to Git.
 
-Now we connect that running container to your actual domain name.
+```javascript
+// config.js
+window.env = {
+  VITE_OPENAI_API_KEY: "sk-...",
+  VITE_GOOGLE_API_KEY: "AIza...",
+  VITE_ANTHROPIC_API_KEY: "sk-ant..."
+};
+```
 
-### Prerequisites
-*   A Cloudflare account.
-*   A domain added to your Cloudflare account.
-*   `cloudflared` installed on your host machine (or run as another docker container).
+Ensure this file is located at `public/config.js` before building, or mount it into the container at `/usr/share/nginx/html/config.js`.
 
-### Option A: Using the CLI (Quickest)
+---
 
-1.  **Login to Cloudflare**
+## 2. Deploy to Raspberry Pi
+
+### Transfer Code
+Send the project to your Pi (excluding heavy folders).
+```bash
+# Run on your Mac
+tar --exclude=node_modules --exclude=dist --exclude=.git -czf debate-trainer.tar.gz .
+scp debate-trainer.tar.gz user@raspberrypi.local:~/
+```
+
+### Build & Run (On Pi)
+SSH into your Pi and run:
+```bash
+ssh user@raspberrypi.local
+
+# Unpack
+mkdir -p ~/debate-trainer
+tar -xzf debate-trainer.tar.gz -C ~/debate-trainer
+cd ~/debate-trainer
+
+# Build (Takes ~5 mins on Pi 4)
+docker build -t debate-trainer .
+
+# Run
+# We use port 3001 to avoid conflicts with old instances
+docker rm -f debate-app || true
+docker run -d -p 3001:80 --name debate-app --restart unless-stopped debate-trainer
+```
+
+---
+
+## 3. Expose via Cloudflare Tunnel
+
+Run these commands **on the Raspberry Pi**.
+
+1.  **Install Cloudflared:**
+    ```bash
+    curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+    sudo dpkg -i cloudflared.deb
+    ```
+
+2.  **Authenticate:**
     ```bash
     cloudflared tunnel login
     ```
-    *This opens a browser window. Select your domain to authorize.*
+    *Copy the URL, authorize on your Mac.*
 
-2.  **Create a Tunnel**
+3.  **Create Tunnel:**
     ```bash
-    cloudflared tunnel create debate-tunnel
+    cloudflared tunnel create debate-pi
     ```
-    *Copy the Tunnel ID it gives you (e.g., `89b3...`).*
 
-3.  **Route DNS**
-    Tell Cloudflare "when someone visits `debate.yourdomain.com`, use this tunnel".
+4.  **Route DNS:**
     ```bash
-    cloudflared tunnel route dns debate-tunnel debate.yourdomain.com
+    # Replace with your domain
+    cloudflared tunnel route dns debate-pi debate.yourdomain.com
     ```
 
-4.  **Run the Tunnel**
-    Connect the tunnel to your local Docker app running on port 3000.
+5.  **Run Tunnel:**
     ```bash
-    cloudflared tunnel run --url http://localhost:3000 debate-tunnel
+    cloudflared tunnel run --url http://localhost:3001 debate-pi
     ```
 
-**Success!** Your app is now live at `https://debate.yourdomain.com`.
-
----
-
-### Option B: Using Docker Compose (The "Pro" Way)
-
-This method runs *both* your app and the tunnel together in Docker. This is cleaner because you don't need to install `cloudflared` on your machine manually.
-
-1.  **Get your Token**
-    *   Go to Cloudflare Dashboard > Zero Trust > Tunnels.
-    *   Create a new tunnel, choose "Docker", and copy the **token** (a long string starting with `ey...`).
-
-2.  **Create `docker-compose.yml`**
-    Create a file named `docker-compose.yml` in your project folder:
-
-    ```yaml
-    version: '3'
-    services:
-      # Your App
-      app:
-        build: .
-        container_name: debate-app
-        restart: unless-stopped
-        # No ports needed! The tunnel talks to it internally.
-
-      # The Tunnel
-      tunnel:
-        image: cloudflare/cloudflared
-        restart: unless-stopped
-        command: tunnel run
-        environment:
-          - TUNNEL_TOKEN=YOUR_LONG_TOKEN_HERE
-    ```
-
-3.  **Deploy**
+    *To run as a service (start on boot):*
     ```bash
-    docker-compose up -d
+    sudo cloudflared service install
     ```
-
-4.  **Configure Service**
-    *   Go back to the Cloudflare Dashboard.
-    *   In your Tunnel settings > "Public Hostname".
-    *   **Public Hostname:** `debate.yourdomain.com`
-    *   **Service:** `http://app:80`  <-- Note: "app" matches the service name in yaml!
 
 ---
 
 ## Troubleshooting
 
-*   **App not loading locally?**
-    Check if port 3000 is taken. Try `docker run -p 3001:80 ...` and check `localhost:3001`.
-*   **"Bad Gateway" (502) on domain?**
-    Cloudflare can't reach your app.
-    *   If using **CLI**: Ensure you pointed to `http://localhost:3000`.
-    *   If using **Docker Compose**: Ensure you pointed to `http://app:80`.
-*   **Updates?**
-    If you change code, you must rebuild:
-    ```bash
-    docker build -t debate-trainer .
-    docker rm -f debate-app
-    docker run -d -p 3000:80 --name debate-app debate-trainer
-    ```
+*   **"System Key Not Found":** Ensure `public/config.js` has the correct keys and structure (`window.env = { ... }`).
+*   **Port Conflict:** If port 3001 is taken, change the `-p 3001:80` part of the docker run command.
+*   **Tunnel Error:** Ensure you aren't running multiple tunnels with the same name. use `cloudflared tunnel list` to check.

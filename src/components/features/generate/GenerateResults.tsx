@@ -1,6 +1,7 @@
 // src/components/features/generate/GenerateResults.tsx
-import { Target, Shield, Swords, AlertTriangle } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
@@ -8,6 +9,7 @@ import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
 interface GenerateResultsProps {
   result: GenerateOutput;
   onRegenerateSection?: (section: string) => void;
+  onDiscuss?: () => void;
 }
 
 function ContentionCard({ contention, index }: { contention: Contention; index: number }) {
@@ -50,18 +52,26 @@ function ContentionCard({ contention, index }: { contention: Contention; index: 
   );
 }
 
-export function GenerateResults({ result, onRegenerateSection }: GenerateResultsProps) {
+export function GenerateResults({ result, onRegenerateSection, onDiscuss }: GenerateResultsProps) {
   return (
     <div className="space-y-6">
       {/* Metadata */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant={result.metadata.side === 'pro' ? 'default' : 'secondary'}>
-          {result.metadata.side === 'pro' ? 'Proposition' : 'Opposition'}
-        </Badge>
-        <Badge variant="outline">{result.metadata.format.toUpperCase()}</Badge>
-        <span className="text-xs text-muted-foreground">
-          Generated {new Date(result.metadata.generatedAt).toLocaleString()}
-        </span>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant={result.metadata.side === 'pro' ? 'default' : 'secondary'}>
+            {result.metadata.side === 'pro' ? 'Proposition' : 'Opposition'}
+          </Badge>
+          <Badge variant="outline">{result.metadata.format.toUpperCase()}</Badge>
+          <span className="text-xs text-muted-foreground">
+            Generated {new Date(result.metadata.generatedAt).toLocaleString()}
+          </span>
+        </div>
+        {onDiscuss && (
+          <Button variant="outline" size="sm" onClick={onDiscuss}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Discuss Case
+          </Button>
+        )}
       </div>
 
       {/* Case Structure */}

@@ -136,9 +136,9 @@ export default function SettingsPage() {
                     onChange={(e) => setApiKey(provider.id, e.target.value)}
                     placeholder={
                       isAdmin && (
-                        (provider.id === 'openai' && import.meta.env.VITE_OPENAI_API_KEY) ||
-                        (provider.id === 'anthropic' && import.meta.env.VITE_ANTHROPIC_API_KEY) ||
-                        (provider.id === 'google' && import.meta.env.VITE_GOOGLE_API_KEY)
+                        (provider.id === 'openai' && window.env?.VITE_OPENAI_API_KEY) ||
+                        (provider.id === 'anthropic' && window.env?.VITE_ANTHROPIC_API_KEY) ||
+                        (provider.id === 'google' && window.env?.VITE_GOOGLE_API_KEY)
                       )
                         ? "System Key Active (Override with custom key)"
                         : isAdmin ? "(No system key found)" : "sk-..."
@@ -155,6 +155,32 @@ export default function SettingsPage() {
                 </div>
               </div>
             ))}
+
+            {/* Jina AI Key */}
+            <div className="space-y-2">
+              <Label htmlFor="key-jina">Jina AI Key (For Search & URL Reading)</Label>
+              <div className="relative">
+                <Input
+                  id="key-jina"
+                  type={visibleKeys['jina'] ? 'text' : 'password'}
+                  value={apiKeys['jina'] || ''}
+                  onChange={(e) => setApiKey('jina', e.target.value)}
+                  placeholder={
+                    isAdmin && window.env?.VITE_JINA_API_KEY
+                      ? "System Key Active (Override with custom key)"
+                      : isAdmin ? "(No system key found)" : "jina_..."
+                  }
+                  className="pr-10 font-mono text-sm bg-background"
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleKeyVisibility('jina')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {visibleKeys['jina'] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -28,7 +28,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
       claim: '',
       region: '',
       timeframe: '',
-      evidenceStrength: 'any',
+      sourceType: 'any',
       language: 'en',
     },
   });
@@ -70,12 +70,15 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Region */}
             <div className="space-y-2">
-              <Label htmlFor="region" className="text-sm font-medium">Region (Optional)</Label>
+              <Label htmlFor="region" className="text-sm font-medium">Region <span className="text-destructive">*</span></Label>
               <Input
                 id="region"
                 {...register('region')}
                 placeholder="e.g., United States, Europe, Global"
               />
+              {errors.region && (
+                <p className="text-sm text-destructive">{errors.region.message}</p>
+              )}
             </div>
 
             {/* Timeframe */}
@@ -92,8 +95,8 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Source Type</Label>
               <Select
-                value={currentValues.evidenceStrength}
-                onValueChange={(value) => setValue('evidenceStrength', value as FactoidsInput['evidenceStrength'])}
+                value={currentValues.sourceType}
+                onValueChange={(value) => setValue('sourceType', value as FactoidsInput['sourceType'])}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -102,7 +105,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
                   <SelectItem value="any">Any Reputable Source</SelectItem>
                   <SelectItem value="academic">Academic Only</SelectItem>
                   <SelectItem value="government">Government Sources</SelectItem>
-                  <SelectItem value="media">Major Media</SelectItem>
+                  <SelectItem value="news">Major News</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,9 +1,19 @@
-// src/lib/stores/settings-store.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ProviderConfig } from '../ai/providers/types';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask';
+
+declare global {
+  interface Window {
+    env: {
+      VITE_OPENAI_API_KEY?: string;
+      VITE_GOOGLE_API_KEY?: string;
+      VITE_ANTHROPIC_API_KEY?: string;
+      VITE_JINA_API_KEY?: string;
+    }
+  }
+}
 
 interface SettingsState {
   // Global settings
@@ -28,7 +38,14 @@ interface SettingsState {
   setSystemPrompt: (prompt: string) => void;
 }
 
-const defaultConfig: ProviderConfig = {
+// Determine default config based on available system keys
+const hasGoogleKey = typeof window !== 'undefined' && window.env?.VITE_GOOGLE_API_KEY;
+
+const defaultConfig: ProviderConfig = hasGoogleKey ? {
+  provider: 'google',
+  model: 'gemini-3-flash-preview',
+  temperature: 0.7,
+} : {
   provider: 'mock',
   model: 'mock-standard',
   temperature: 0.7,
@@ -51,7 +68,20 @@ export const useSettingsStore = create<SettingsState>()(
 
       setLanguage: (language) => set({ language }),
       setTheme: (theme) => set({ theme }),
-      setAdmin: (isAdmin) => set({ isAdmin }),
+      setAdmin: (isAdmin) => set((state) => {
+        let newConfigs = { ...state.featureConfigs };
+        if (isAdmin) {
+          // Auto-upgrade to Gemini 3 Flash when admin is unlocked
+          (Object.keys(newConfigs) as FeatureTab[]).forEach(key => {
+            newConfigs[key] = {
+              ...newConfigs[key],
+              provider: 'google',
+              model: 'gemini-3-flash-preview'
+            };
+          });
+        }
+        return { isAdmin, featureConfigs: newConfigs };
+      }),
       setSystemPrompt: (prompt) => set({ customSystemPrompt: prompt }),
       setApiKey: (providerId, key) => set((state) => ({
         apiKeys: { ...state.apiKeys, [providerId]: key }
@@ -72,10 +102,10 @@ export const useSettingsStore = create<SettingsState>()(
         let apiKey = state.apiKeys[config.provider];
 
         // 2. System/Admin key (fallback if Admin is logged in)
-        if (!apiKey && state.isAdmin) {
-          if (config.provider === 'openai') apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-          if (config.provider === 'anthropic') apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-          if (config.provider === 'google') apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+        if (!apiKey && state.isAdmin && typeof window !== 'undefined' && window.env) {
+          if (config.provider === 'openai') apiKey = window.env.VITE_OPENAI_API_KEY;
+          if (config.provider === 'anthropic') apiKey = window.env.VITE_ANTHROPIC_API_KEY;
+          if (config.provider === 'google') apiKey = window.env.VITE_GOOGLE_API_KEY;
         }
 
         if (apiKey) {

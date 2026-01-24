@@ -1,10 +1,11 @@
 import { mockGenerateCase, mockAttackCase, mockBrainstorm, mockFactoids, mockAsk } from './providers/mock-provider';
 import type { ProviderConfig } from './providers/types';
 import type { GenerateInput, GenerateOutput } from './schemas/generate';
-import type { AttackOutput } from './schemas/attack';
-import type { BrainstormOutput } from './schemas/brainstorm';
-import type { FactoidsOutput } from './schemas/factoids';
+import type { AttackOutput, AttackInput } from './schemas/attack';
+import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
+import type { FactoidsOutput, FactoidsInput } from './schemas/factoids';
 import type { AskOutput } from './schemas/ask';
+import { useSettingsStore } from '../stores/settings-store';
 
 // --- Shared Helpers ---
 
@@ -104,8 +105,6 @@ async function callAnthropic(messages: any[], config: ProviderConfig, systemProm
 async function callGoogle(messages: any[], config: ProviderConfig, systemPrompt?: string) {
   if (!config.apiKey) throw new Error('API Key is missing for Google Gemini');
 
-  // Use correct API version and simplified URL structure
-  // v1beta is correct for most models, but let's be safer with error logging
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
   
   const contents = messages.map((m: any) => ({
@@ -157,7 +156,58 @@ async function callGoogle(messages: any[], config: ProviderConfig, systemPrompt?
   }
 }
 
-import { useSettingsStore } from '../stores/settings-store';
+// --- Jina AI Helpers ---
+
+async function getJinaKey() {
+  const store = useSettingsStore.getState();
+  let key = store.apiKeys['jina'];
+  if (!key && store.isAdmin && typeof window !== 'undefined' && window.env?.VITE_JINA_API_KEY) {
+    key = window.env.VITE_JINA_API_KEY;
+  }
+  return key;
+}
+
+async function callJinaReader(url: string): Promise<string> {
+  const apiKey = await getJinaKey();
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+  try {
+    const response = await fetch(`https://r.jina.ai/${url}`, { headers });
+    if (!response.ok) throw new Error(`Jina Reader failed: ${response.statusText}`);
+    const data = await response.json();
+    return data.data?.content || data.content || "No content extracted";
+  } catch (e) {
+    console.error("Jina Reader Error:", e);
+    return `[Failed to read URL ${url}: ${e instanceof Error ? e.message : 'Unknown error'}]`;
+  }
+}
+
+async function callJinaSearch(query: string): Promise<string> {
+  const apiKey = await getJinaKey();
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+  try {
+    const response = await fetch(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers });
+    if (!response.ok) throw new Error(`Jina Search failed: ${response.statusText}`);
+    const data = await response.json();
+    
+    if (data.data && Array.isArray(data.data)) {
+      return data.data.map((result: any) => 
+        `Title: ${result.title}\nURL: ${result.url}\nContent: ${result.content || result.description}\n---\n`
+      ).join('\n');
+    }
+    return "No search results found.";
+  } catch (e) {
+    console.error("Jina Search Error:", e);
+    return `[Search failed: ${e instanceof Error ? e.message : 'Unknown error'}]`;
+  }
+}
 
 // --- Unified Dispatcher ---
 
@@ -168,9 +218,14 @@ async function dispatchAI(
   jsonMode: boolean = true
 ): Promise<any> {
   const store = useSettingsStore.getState();
-  const finalSystemPrompt = store.customSystemPrompt 
-    ? `${store.customSystemPrompt}\n\nIMPORTANT: The following technical instructions must be followed strictly for the app to work:\n${systemPrompt}`
-    : systemPrompt;
+  
+  let finalSystemPrompt = systemPrompt;
+  
+  if (store.customSystemPrompt) {
+    finalSystemPrompt = `${store.customSystemPrompt}\n\nIMPORTANT: The following technical instructions must be followed strictly for the app to work:\n${finalSystemPrompt}`;
+  }
+
+  finalSystemPrompt += `\n\nCRITICAL FORMATTING INSTRUCTION: Do NOT use any Markdown formatting (like **bold**, *italics*, # headers, etc.) in your JSON string values. Use plain text only. The frontend handles styling.`;
 
   console.log('[DispatchAI] Starting request...', { provider: config.provider, model: config.model });
   
@@ -264,8 +319,8 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   return dispatchAI(config, [{ role: 'user', content: userPrompt }], systemPrompt);
 }
 
-export async function attackCase(caseText: string, config: ProviderConfig): Promise<AttackOutput> {
-  if (config.provider === 'mock') return mockAttackCase(caseText);
+export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<AttackOutput> {
+  if (config.provider === 'mock') return mockAttackCase(input.caseText);
 
   const systemPrompt = `You are an expert debate judge and coach. Analyze the given debate case and provide a critical breakdown in JSON format.
   
@@ -285,11 +340,26 @@ export async function attackCase(caseText: string, config: ProviderConfig): Prom
     "weighingAnalysis": { "currentWeighing": "string", "missingComparisons": ["string"], "improvementSuggestions": ["string"] }
   }`;
 
-  return dispatchAI(config, [{ role: 'user', content: `Analyze this case:\n\n${caseText}` }], systemPrompt);
+  let userPrompt = `Analyze this case based on the following parameters:
+  
+  - Aggressiveness: ${input.aggressiveness.toUpperCase()}
+    ${input.aggressiveness === 'ruthless' ? '(Be extremely critical, find every minor flaw, show no mercy)' : input.aggressiveness === 'mild' ? '(Be constructive and encouraging, focus on major fixes)' : '(Provide balanced, objective criticism)'}
+  
+  - Judge Paradigm: ${input.judgeParadigm.toUpperCase()}
+    ${input.judgeParadigm === 'logic' ? '(Focus strictly on logical consistency and validity of premises)' : input.judgeParadigm === 'values' ? '(Focus on moral framework, impact on human dignity/rights)' : '(Focus on real-world policy impacts, solvency, and net benefits)'}
+  
+  - Fallacy Detection: ${input.detectFallacies ? 'ENABLED (List all logical fallacies found)' : 'DISABLED (Skip minor fallacies, focus on structural issues)'}
+  
+  - Weighing Analysis: ${input.analyzeWeighing ? 'ENABLED (Critique their impact calculus)' : 'DISABLED'}
+
+  CASE TEXT:
+  "${input.caseText}"`;
+
+  return dispatchAI(config, [{ role: 'user', content: userPrompt }], systemPrompt);
 }
 
-export async function brainstorm(motion: string, outputMode: string, config: ProviderConfig): Promise<BrainstormOutput> {
-  if (config.provider === 'mock') return mockBrainstorm(motion, outputMode);
+export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<BrainstormOutput> {
+  if (config.provider === 'mock') return mockBrainstorm(input.motion, input.outputMode);
 
   const systemPrompt = `You are a creative debate strategist. Brainstorm arguments and angles for the given motion.
   
@@ -309,11 +379,26 @@ export async function brainstorm(motion: string, outputMode: string, config: Pro
     "warningsAndTradeoffs": ["string"]
   }`;
 
-  return dispatchAI(config, [{ role: 'user', content: `Motion: ${motion}\nOutput Mode: ${outputMode}` }], systemPrompt);
+  const userPrompt = `Motion: ${input.motion}
+  
+  Parameters:
+  - Side to Explore: ${input.side.toUpperCase()}
+  - Output Mode: ${input.outputMode}
+  ${input.context ? `\nContext/Existing Ideas:\n"${input.context}"` : ''}`;
+
+  return dispatchAI(config, [{ role: 'user', content: userPrompt }], systemPrompt);
 }
 
-export async function factoids(claim: string, config: ProviderConfig): Promise<FactoidsOutput> {
-  if (config.provider === 'mock') return mockFactoids(claim);
+export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
+  if (config.provider === 'mock') return mockFactoids(input.claim);
+
+  // Perform Jina Search
+  let searchContext = "";
+  try {
+    searchContext = await callJinaSearch(input.claim);
+  } catch (e) {
+    console.error("Jina Search failed silently, proceeding without search results", e);
+  }
 
   const systemPrompt = `You are a research assistant. Find relevant facts, statistics, and sources for the given claim.
   
@@ -325,13 +410,13 @@ export async function factoids(claim: string, config: ProviderConfig): Promise<F
 
   Output JSON matching:
   {
-    "factoids": [{ 
+    "factoids": [{
         "id": "string", 
         "shortClaim": "string", 
         "keyFigure": "string", 
         "context": "string", 
         "limitations": "string", 
-        "citation": { "title": "string", "publisher": "string", "date": "string", "verified": "unverified" },
+        "citation": { "title": "string", "publisher": "string", "date": "string", "verified": "verified|unverified" },
         "howToUse": "string",
         "relevanceScore": number
     }],
@@ -340,11 +425,63 @@ export async function factoids(claim: string, config: ProviderConfig): Promise<F
     "verificationStatus": "pending"
   }`;
 
-  return dispatchAI(config, [{ role: 'user', content: `Find evidence for: ${claim}` }], systemPrompt);
+  const userPrompt = `Find evidence for claim: "${input.claim}"
+  
+  SEARCH RESULTS (Use these if relevant):
+  ${searchContext}
+  
+  Parameters:
+  - Region: ${input.region}
+  - Source Type: ${input.sourceType}
+  - Timeframe: ${input.timeframe || 'Recent (last 5 years)'}
+  - Language: ${input.language}`;
+
+  return dispatchAI(config, [{ role: 'user', content: userPrompt }], systemPrompt);
+}
+
+async function summarizeHistory(messages: { role: string, content: string }[], config: ProviderConfig): Promise<string> {
+  const prompt = `Summarize the following debate conversation history into a concise paragraph. Capture key arguments, agreed points, and the current topic. Preserve the context for a debate coach.
+  
+  HISTORY:
+  ${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}`;
+
+  // Use a fast model for summarization if possible, or just current config
+  // We force jsonMode=false because we just want text
+  try {
+    return await dispatchAI(config, [{ role: 'user', content: prompt }], "You are a helpful summarizer.", false);
+  } catch (e) {
+    console.error("Summarization failed:", e);
+    return "Previous conversation (summarization failed).";
+  }
 }
 
 export async function askChat(message: string, history: { role: 'user' | 'assistant', content: string }[], mode: string, config: ProviderConfig): Promise<AskOutput> {
   if (config.provider === 'mock') return mockAsk(message, mode);
+
+  // 1. Detect URLs (Current message + History)
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  let urls = message.match(urlRegex) || [];
+  
+  // If no URLs in current message, check recent history (last 3 messages)
+  if (urls.length === 0 && history.length > 0) {
+    const recentHistory = history.slice(-3);
+    recentHistory.forEach(msg => {
+      const found = msg.content.match(urlRegex);
+      if (found) urls = [...urls, ...found];
+    });
+  }
+
+  // Deduplicate URLs
+  const uniqueUrls = [...new Set(urls)];
+  let urlContext = "";
+
+  if (uniqueUrls.length > 0) {
+    const contents = await Promise.all(uniqueUrls.slice(0, 3).map(async url => {
+      const content = await callJinaReader(url);
+      return `--- Content from ${url} ---\n${content.slice(0, 10000)}...\n--- End of ${url} ---`;
+    }));
+    urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join('\n');
+  }
 
   const systemPrompt = `You are a debate coach chat bot. Answer the user's question.
   
@@ -363,14 +500,29 @@ export async function askChat(message: string, history: { role: 'user' | 'assist
     "argumentMap": { "mainClaim": "string", "supportingPoints": ["string"], "counterpoints": ["string"], "assumptions": ["string"] } (optional)
   }`;
 
-  // Convert history to provider format
-  // We filter out any complex output objects from history and just keep text content for context
-  const pastMessages = history.map(m => ({
-    role: m.role,
-    content: m.content
-  }));
+  // 2. Handle History (Summarization vs Window)
+  let contextMessages: { role: string, content: string }[] = [];
+  
+  // Clean history first
+  const cleanHistory = history.map(m => ({ role: m.role, content: m.content }));
 
-  const currentMessage = { role: 'user', content: `Message: ${message}\nMode: ${mode}` };
+  if (cleanHistory.length > 25) {
+    // Summarize older messages (keep last 20 verbatim)
+    const messagesToSummarize = cleanHistory.slice(0, cleanHistory.length - 20);
+    const recentMessages = cleanHistory.slice(-20);
+    
+    // We run summarization in parallel if we can, but here we need it before sending
+    const summary = await summarizeHistory(messagesToSummarize, config);
+    
+    contextMessages = [
+      { role: 'system', content: `Previous conversation summary: ${summary}` },
+      ...recentMessages
+    ];
+  } else {
+    contextMessages = cleanHistory;
+  }
 
-  return dispatchAI(config, [...pastMessages, currentMessage], systemPrompt);
+  const currentMessage = { role: 'user', content: `Message: ${message}${urlContext}\nMode: ${mode}` };
+
+  return dispatchAI(config, [...contextMessages, currentMessage], systemPrompt);
 }
