@@ -8,7 +8,7 @@ import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 
 export default function FactoidsPage() {
-  const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
+  const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
   const askConfig = getFeatureConfig('ask');
@@ -37,6 +37,11 @@ export default function FactoidsPage() {
     console.log('Verifying sources...');
   };
 
+  const handleSaveToLibrary = (title: string, content: string, url?: string) => {
+    addSource({ title, content, type: 'url', origin: url });
+    toast({ title: "Saved to Library", description: "This evidence is now available for grounding." });
+  };
+
   const handleDiscuss = async () => {
     if (!factoidsResult) return;
     
@@ -63,7 +68,7 @@ export default function FactoidsPage() {
         role: 'assistant',
         content: result.response,
         // @ts-ignore
-        output: result
+        output: result 
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
@@ -92,7 +97,12 @@ export default function FactoidsPage() {
           {/* Results */}
           <div>
             {factoidsResult ? (
-              <FactoidsResults result={factoidsResult} onVerify={handleVerify} onDiscuss={handleDiscuss} />
+              <FactoidsResults 
+                result={factoidsResult} 
+                onVerify={handleVerify} 
+                onDiscuss={handleDiscuss}
+                onSaveSource={handleSaveToLibrary}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
                 <div className="text-6xl mb-4">📚</div>

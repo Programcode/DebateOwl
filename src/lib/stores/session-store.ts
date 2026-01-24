@@ -14,6 +14,16 @@ interface Message {
   output?: AskOutput;
 }
 
+export interface Source {
+  id: string;
+  title: string;
+  content: string;
+  type: 'url' | 'file' | 'text';
+  origin?: string;
+  createdAt: number;
+  isActive: boolean;
+}
+
 interface SavedItem<T> {
   id: string;
   data: T;
@@ -44,6 +54,7 @@ interface SessionState {
   savedBrainstorms: SavedItem<BrainstormOutput>[];
   savedFactoids: SavedItem<FactoidsOutput>[];
   savedChats: SavedItem<Message[]>[];
+  sourceLibrary: Source[];
 
   // --- Actions ---
   setGenerateResult: (result: GenerateOutput | null) => void;
@@ -69,6 +80,11 @@ interface SessionState {
   clearAskMessages: () => void;
   saveCurrentChat: (title: string) => void;
   loadSavedChat: (id: string) => void;
+
+  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => void;
+  removeSource: (id: string) => void;
+  toggleSource: (id: string) => void;
+  clearLibrary: () => void;
   
   clearSession: () => void;
 }
@@ -96,6 +112,22 @@ export const useSessionStore = create<SessionState>()(
       savedBrainstorms: [],
       savedFactoids: [],
       savedChats: [],
+      sourceLibrary: [],
+
+      // Source Library Actions
+      addSource: (source) => set((state) => ({
+        sourceLibrary: [
+          { ...source, id: generateId(), createdAt: Date.now(), isActive: true },
+          ...state.sourceLibrary
+        ]
+      })),
+      removeSource: (id) => set((state) => ({
+        sourceLibrary: state.sourceLibrary.filter(s => s.id !== id)
+      })),
+      toggleSource: (id) => set((state) => ({
+        sourceLibrary: state.sourceLibrary.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s)
+      })),
+      clearLibrary: () => set({ sourceLibrary: [] }),
 
       // Generate Actions
       setGenerateResult: (result) => set({ generateResult: result }),

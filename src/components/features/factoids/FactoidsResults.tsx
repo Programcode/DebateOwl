@@ -1,5 +1,5 @@
 // src/components/features/factoids/FactoidsResults.tsx
-import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare } from 'lucide-react';
+import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare, Bookmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -12,6 +12,7 @@ interface FactoidsResultsProps {
   onVerify?: () => void;
   isVerifying?: boolean;
   onDiscuss?: () => void;
+  onSaveSource?: (title: string, content: string, url?: string) => void;
 }
 
 const verificationConfig = {
@@ -20,7 +21,7 @@ const verificationConfig = {
   pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' },
 };
 
-function FactoidCard({ factoid }: { factoid: Factoid }) {
+function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
   const config = verificationConfig[factoid.citation.verified];
   const VerifyIcon = config.icon;
 
@@ -29,7 +30,21 @@ function FactoidCard({ factoid }: { factoid: Factoid }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          <h4 className="font-semibold text-foreground">{factoid.shortClaim}</h4>
+          {factoid.citation.url ? (
+            <a 
+              href={factoid.citation.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2"
+            >
+              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
+                {factoid.shortClaim}
+              </h4>
+              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+          ) : (
+            <h4 className="font-semibold text-foreground">{factoid.shortClaim}</h4>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <Badge className={cn('text-xs', config.bg, config.color)}>
               <VerifyIcon className="mr-1 h-3 w-3" />
@@ -40,7 +55,20 @@ function FactoidCard({ factoid }: { factoid: Factoid }) {
             </span>
           </div>
         </div>
-        <Progress value={factoid.relevanceScore} className="w-16 h-2" />
+        <div className="flex flex-col items-end gap-2">
+          <Progress value={factoid.relevanceScore} className="w-16 h-2" />
+          {onSave && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              onClick={() => onSave(factoid.shortClaim, `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`, factoid.citation.url)}
+              title="Save to Library"
+            >
+              <Bookmark className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Key Figure */}
@@ -94,7 +122,7 @@ function FactoidCard({ factoid }: { factoid: Factoid }) {
   );
 }
 
-export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss }: FactoidsResultsProps) {
+export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource }: FactoidsResultsProps) {
   const verifiedCount = result.factoids.filter(f => f.citation.verified === 'verified').length;
   const unverifiedCount = result.factoids.filter(f => f.citation.verified === 'unverified').length;
 
@@ -160,7 +188,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss }: Fa
       >
         <div className="space-y-4">
           {result.factoids.map((factoid) => (
-            <FactoidCard key={factoid.id} factoid={factoid} />
+            <FactoidCard key={factoid.id} factoid={factoid} onSave={onSaveSource} />
           ))}
         </div>
       </SectionCard>

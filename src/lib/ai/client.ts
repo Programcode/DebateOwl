@@ -6,6 +6,7 @@ import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
 import type { FactoidsOutput, FactoidsInput } from './schemas/factoids';
 import type { AskOutput } from './schemas/ask';
 import { useSettingsStore } from '../stores/settings-store';
+import { useSessionStore } from '../stores/session-store';
 
 // --- Shared Helpers ---
 
@@ -215,17 +216,33 @@ async function dispatchAI(
   config: ProviderConfig, 
   messages: any[], 
   systemPrompt: string,
-  jsonMode: boolean = true
+  jsonMode: boolean = true,
+  options?: { allowMarkdown?: boolean }
 ): Promise<any> {
-  const store = useSettingsStore.getState();
+  const settings = useSettingsStore.getState();
+  const session = useSessionStore.getState();
+  const allowMarkdown = options?.allowMarkdown ?? false;
   
+  // 1. Fetch Local Knowledge (Active Sources)
+  const activeSources = session.sourceLibrary.filter(s => s.isActive);
+  const localKnowledge = activeSources.length > 0 
+    ? `\n\nLOCAL KNOWLEDGE BASE (Use this information as your primary factual source):\n${activeSources.map(s => `--- SOURCE: ${s.title} (${s.origin}) ---\n${s.content}\n`).join('\n')}\n`
+    : "";
+
+  // 2. Combine prompts
   let finalSystemPrompt = systemPrompt;
   
-  if (store.customSystemPrompt) {
-    finalSystemPrompt = `${store.customSystemPrompt}\n\nIMPORTANT: The following technical instructions must be followed strictly for the app to work:\n${finalSystemPrompt}`;
+  if (settings.customSystemPrompt) {
+    finalSystemPrompt = `${settings.customSystemPrompt}\n\nIMPORTANT: The following technical instructions must be followed strictly for the app to work:\n${finalSystemPrompt}`;
   }
 
-  finalSystemPrompt += `\n\nCRITICAL FORMATTING INSTRUCTION: Do NOT use any Markdown formatting (like **bold**, *italics*, # headers, etc.) in your JSON string values. Use plain text only. The frontend handles styling.`;
+  // Prepend local knowledge
+  finalSystemPrompt = localKnowledge + finalSystemPrompt;
+
+  // Add NO MARKDOWN instruction unless the endpoint allows markdown
+  if (!allowMarkdown) {
+    finalSystemPrompt += `\n\nCRITICAL FORMATTING INSTRUCTION: Do NOT use any Markdown formatting (like **bold**, *italics*, # headers, etc.) in your JSON string values. Use plain text only. The frontend handles styling.`;
+  }
 
   console.log('[DispatchAI] Starting request...', { provider: config.provider, model: config.model });
   
@@ -524,5 +541,5 @@ export async function askChat(message: string, history: { role: 'user' | 'assist
 
   const currentMessage = { role: 'user', content: `Message: ${message}${urlContext}\nMode: ${mode}` };
 
-  return dispatchAI(config, [...contextMessages, currentMessage], systemPrompt);
+  return dispatchAI(config, [...contextMessages, currentMessage], systemPrompt, true, { allowMarkdown: true });
 }

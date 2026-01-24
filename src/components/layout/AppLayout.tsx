@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   Clock,
-  Timer
+  Timer,
+  Database
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/brainstorm', label: 'Brainstorm', icon: Lightbulb, description: 'Explore ideas' },
   { path: '/factoids', label: 'Factoids', icon: BookOpen, description: 'Find evidence' },
   { path: '/ask', label: 'Ask', icon: MessageCircle, description: 'Get coaching' },
+  { path: '/library', label: 'Library', icon: Database, description: 'Manage sources' },
   { path: '/timer', label: 'Timer', icon: Timer, description: 'Practice timing' },
   { path: '/history', label: 'History', icon: Clock, description: 'Saved items' },
 ];
