@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Mic, MicOff } from 'lucide-react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,7 @@ interface AskChatProps {
   isLoading: boolean;
   onSend: (message: string, mode: string, citationMode: boolean, files?: File[]) => void;
   onClear: () => void;
+  onSaveSource?: (title: string, content: string) => void;
 }
 
 const modeOptions = [
@@ -34,7 +35,7 @@ const modeOptions = [
   { id: 'argumentmap', label: 'Arg Map', icon: Map },
 ];
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
   const isUser = message.role === 'user';
   const output = message.output;
 
@@ -42,12 +43,28 @@ function MessageBubble({ message }: { message: Message }) {
     <div className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[85%] rounded-2xl px-4 py-3 space-y-3',
+          'max-w-[85%] rounded-2xl px-4 py-3 space-y-3 relative group',
           isUser
             ? 'bg-primary text-primary-foreground rounded-br-sm'
             : 'bg-card border border-border rounded-bl-sm'
         )}
       >
+        {!isUser && onSave && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute -right-10 top-0 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+            onClick={() => {
+              const title = message.content.length > 30
+                ? `${message.content.slice(0, 30)}...`
+                : message.content;
+              onSave(title, message.content);
+            }}
+            title="Save to Library"
+          >
+            <Bookmark className="h-4 w-4" />
+          </Button>
+        )}
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
 
         {/* Follow-up questions */}
@@ -84,55 +101,22 @@ function MessageBubble({ message }: { message: Message }) {
           </div>
         )}
 
-        {/* Argument Map */}
-        {output?.argumentMap && (
-          <div className="space-y-2 pt-2 border-t border-border/50">
-            <div>
-              <span className="text-xs font-medium text-primary">Main Claim:</span>
-              <p className="text-xs">{output.argumentMap.mainClaim}</p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <span className="text-xs font-medium text-muted-foreground">Supporting:</span>
-                <ul className="space-y-0.5">
-                  {output.argumentMap.supportingPoints.map((p, i) => (
-                    <li key={i} className="text-xs">+ {p}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground">Counters:</span>
-                <ul className="space-y-0.5">
-                  {output.argumentMap.counterpoints.map((c, i) => (
-                    <li key={i} className="text-xs">- {c}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Uncertainties */}
-        {output?.uncertainties && output.uncertainties.length > 0 && (
-          <div className="pt-2 border-t border-border/50">
-            <span className="text-xs font-medium text-amber-500">Uncertainties:</span>
-            <ul className="mt-1 space-y-0.5">
-              {output.uncertainties.map((u, i) => (
-                <li key={i} className="text-xs text-muted-foreground">⚠ {u}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         <span className="text-[10px] text-muted-foreground">
-          {new Date(message.timestamp).toLocaleTimeString()}
+          {(() => {
+            try {
+              if (!message.timestamp) return '';
+              return new Date(message.timestamp).toLocaleTimeString();
+            } catch (e) {
+              return '';
+            }
+          })()}
         </span>
       </div>
     </div>
   );
 }
 
-export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) {
+export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: AskChatProps) {
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
   const [citationMode, setCitationMode] = useState(false);
@@ -209,7 +193,7 @@ export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) 
           ) : (
             <div className="space-y-4">
               {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
+                <MessageBubble key={message.id} message={message} onSave={onSaveSource} />
               ))}
               {isLoading && (
                 <div className="flex gap-3">
@@ -223,9 +207,7 @@ export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) 
         </ScrollArea>
       </CardContent>
 
-      {/* Input Area */}
       <div className="shrink-0 border-t border-border p-4 space-y-3">
-        {/* Mode Selection */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex gap-1">
             {modeOptions.map((option) => (
@@ -252,7 +234,6 @@ export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) 
           </div>
         </div>
 
-        {/* Attached Files Preview */}
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {files.map((file, i) => (
@@ -267,7 +248,6 @@ export function AskChat({ messages, isLoading, onSend, onClear }: AskChatProps) 
           </div>
         )}
 
-        {/* Input */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
             type="file"

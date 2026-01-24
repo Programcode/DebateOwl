@@ -12,6 +12,7 @@ import FactoidsPage from "./pages/FactoidsPage";
 import AskPage from "./pages/AskPage";
 import SettingsPage from "./pages/SettingsPage";
 import HistoryPage from "./pages/HistoryPage";
+import LibraryPage from "./pages/LibraryPage";
 import TimerPage from "./pages/TimerPage";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/factoids" element={<FactoidsPage />} />
             <Route path="/ask" element={<AskPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/library" element={<LibraryPage />} />
             <Route path="/timer" element={<TimerPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

@@ -1,10 +1,11 @@
 // src/components/features/generate/GenerateResults.tsx
-import { Target, Shield, Swords, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
+import { exportCaseToDocx } from '@/lib/export-utils';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -66,12 +67,18 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
             Generated {new Date(result.metadata.generatedAt).toLocaleString()}
           </span>
         </div>
-        {onDiscuss && (
-          <Button variant="outline" size="sm" onClick={onDiscuss}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Discuss Case
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
+            <FileDown className="h-4 w-4 mr-2" />
+            Export Word
           </Button>
-        )}
+          {onDiscuss && (
+            <Button variant="outline" size="sm" onClick={onDiscuss}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Discuss Case
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Case Structure */}
