@@ -1,9 +1,8 @@
 // src/pages/SettingsPage.tsx
-import { Settings, Cpu, Thermometer, Zap, Key, Eye, EyeOff, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Settings, Cpu, Thermometer, Zap, Lock, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
-import { useState } from 'react';
+import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 
 const featureLabels: Record<FeatureTab, { name: string; description: string; color: string }> = {
@@ -32,33 +31,20 @@ const featureLabels: Record<FeatureTab, { name: string; description: string; col
 const features: FeatureTab[] = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'];
 
 export default function SettingsPage() {
-  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme, apiKeys, setApiKey, isAdmin, setAdmin, customSystemPrompt, setSystemPrompt } = useSettingsStore();
-  const { clearSession } = useSessionStore();
+  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme, customSystemPrompt, setSystemPrompt } = useSettingsStore();
+  const { clearSession, clearAllData } = useSessionStore();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
-  
-  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
-  const [adminCode, setAdminCode] = useState('');
-
-  const toggleKeyVisibility = (providerId: string) => {
-    setVisibleKeys(prev => ({ ...prev, [providerId]: !prev[providerId] }));
-  };
-
-  const handleAdminUnlock = () => {
-    if (adminCode === 'debate2026') {
-      setAdmin(true);
-      toast({ title: "Admin Mode Unlocked", description: "You now have access to advanced settings." });
-    } else {
-      toast({ title: "Access Denied", description: "Incorrect admin code.", variant: "destructive" });
-    }
-  };
 
   const handleNuke = () => {
-    if (confirm("Are you sure? This will delete ALL saved history and chats locally.")) {
+    if (!confirm("Are you sure? This will delete ALL saved data from your account.")) return;
+    void clearAllData().then(() => {
       clearSession();
-      // Also clear persistence if possible, but session store handles the data
-      localStorage.removeItem('debate-trainer-storage'); // Hard reset
-      window.location.reload();
-    }
+      localStorage.removeItem('debate-trainer-storage');
+      toast({ title: "Account Data Cleared", description: "All saved items were removed." });
+    }).catch(() => {
+      toast({ title: "Error", description: "Failed to clear account data.", variant: "destructive" });
+    });
   };
 
   return (
@@ -72,7 +58,7 @@ export default function SettingsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
           </div>
           <p className="text-muted-foreground">
-            Configure AI providers and models for each feature
+            Configure your account and AI preferences
           </p>
         </div>
 
@@ -113,73 +99,26 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* API Credentials */}
+        {/* Account */}
         <Card className="mb-8 border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-primary" />
-              <CardTitle>API Credentials</CardTitle>
+              <Lock className="h-5 w-5 text-primary" />
+              <CardTitle>Account</CardTitle>
             </div>
             <CardDescription>
-              Enter your API keys to enable real AI generation. Keys are stored locally in your browser.
+              Signed in with Google. API keys are managed securely on the server.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {DEFAULT_PROVIDERS.filter(p => p.requiresKey).map((provider) => (
-              <div key={provider.id} className="space-y-2">
-                <Label htmlFor={`key-${provider.id}`}>{provider.name} API Key</Label>
-                <div className="relative">
-                  <Input
-                    id={`key-${provider.id}`}
-                    type={visibleKeys[provider.id] ? 'text' : 'password'}
-                    value={apiKeys[provider.id] || ''}
-                    onChange={(e) => setApiKey(provider.id, e.target.value)}
-                    placeholder={
-                      isAdmin && (
-                        (provider.id === 'openai' && window.env?.VITE_OPENAI_API_KEY) ||
-                        (provider.id === 'anthropic' && window.env?.VITE_ANTHROPIC_API_KEY) ||
-                        (provider.id === 'google' && window.env?.VITE_GOOGLE_API_KEY)
-                      )
-                        ? "System Key Active (Override with custom key)"
-                        : isAdmin ? "(No system key found)" : "sk-..."
-                    }
-                    className="pr-10 font-mono text-sm bg-background"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => toggleKeyVisibility(provider.id)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {visibleKeys[provider.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Signed in as</p>
+                <p className="font-medium">{user?.email || 'Unknown user'}</p>
               </div>
-            ))}
-
-            {/* Jina AI Key */}
-            <div className="space-y-2">
-              <Label htmlFor="key-jina">Jina AI Key (For Search & URL Reading)</Label>
-              <div className="relative">
-                <Input
-                  id="key-jina"
-                  type={visibleKeys['jina'] ? 'text' : 'password'}
-                  value={apiKeys['jina'] || ''}
-                  onChange={(e) => setApiKey('jina', e.target.value)}
-                  placeholder={
-                    isAdmin && window.env?.VITE_JINA_API_KEY
-                      ? "System Key Active (Override with custom key)"
-                      : isAdmin ? "(No system key found)" : "jina_..."
-                  }
-                  className="pr-10 font-mono text-sm bg-background"
-                />
-                <button
-                  type="button"
-                  onClick={() => toggleKeyVisibility('jina')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {visibleKeys['jina'] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <Button variant="outline" onClick={() => void signOut()}>
+                Sign out
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -188,7 +127,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-foreground">AI Provider Settings</h2>
           <p className="text-sm text-muted-foreground">
-            Configure different AI providers and models for each feature. Use Mock AI for demo mode without API keys.
+            Configure different AI providers and models for each feature. Keys are managed server-side.
           </p>
 
           <div className="grid gap-4">
@@ -300,69 +239,34 @@ export default function SettingsPage() {
 
         <Separator className="my-8" />
 
-        {/* API Key Info */}
-        <Card className="border-amber-500/30 bg-amber-500/5 mb-8">
+        {/* System Prompt */}
+        <Card className="border-primary/20 bg-primary/5 mb-8">
           <CardHeader>
-            <CardTitle className="text-amber-600">About AI Providers</CardTitle>
+            <CardTitle>Custom System Prompt</CardTitle>
+            <CardDescription>Add optional instructions to apply to all AI responses.</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>
-              <strong>Mock AI (Demo)</strong> — Works offline with pre-generated responses. Perfect for exploring the app without API keys.
-            </p>
-            <p>
-              <strong>Cloud AI</strong> — Powered by Google Gemini and OpenAI models. Requires API keys.
-            </p>
-            <p>
-              <strong>OpenAI Compatible</strong> — Connect your own OpenAI API key for full functionality.
-            </p>
+          <CardContent className="space-y-2">
+            <Label>System Prompt</Label>
+            <Textarea
+              value={customSystemPrompt || ''}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              placeholder="Add custom guidance for the AI..."
+              className="min-h-[120px]"
+            />
           </CardContent>
         </Card>
 
-        {/* Admin Access */}
+        {/* Danger Zone */}
         <Card className="border-destructive/20 bg-destructive/5">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              {isAdmin ? <Unlock className="h-5 w-5 text-destructive" /> : <Lock className="h-5 w-5 text-destructive" />}
-              <CardTitle>Admin Access</CardTitle>
-            </div>
-            <CardDescription>Advanced controls for tournament organizers</CardDescription>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>Irreversible actions</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {!isAdmin ? (
-              <div className="flex gap-2">
-                <Input 
-                  type="password" 
-                  placeholder="Enter admin code..." 
-                  value={adminCode}
-                  onChange={(e) => setAdminCode(e.target.value)}
-                />
-                <Button variant="destructive" onClick={handleAdminUnlock}>Unlock</Button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Global System Prompt Override</Label>
-                  <Textarea 
-                    placeholder="Enter a custom system prompt to override default behaviors..."
-                    value={customSystemPrompt || ''}
-                    onChange={(e) => setSystemPrompt(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                  <p className="text-xs text-muted-foreground">This prompt will be prepended to all AI requests.</p>
-                </div>
-
-                <div className="flex justify-between items-center pt-4 border-t border-destructive/20">
-                  <div>
-                    <h4 className="font-medium text-destructive">Danger Zone</h4>
-                    <p className="text-xs text-muted-foreground">Irreversible actions</p>
-                  </div>
-                  <Button variant="destructive" size="sm" onClick={handleNuke}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Nuke Database (Reset All)
-                  </Button>
-                </div>
-              </div>
-            )}
+          <CardContent>
+            <Button variant="destructive" size="sm" onClick={handleNuke}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete All Saved Data
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -1,121 +1,154 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ProviderConfig } from '../ai/providers/types';
+import { supabase } from '@/lib/supabase/client';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask';
 
-declare global {
-  interface Window {
-    env: {
-      VITE_OPENAI_API_KEY?: string;
-      VITE_GOOGLE_API_KEY?: string;
-      VITE_ANTHROPIC_API_KEY?: string;
-      VITE_JINA_API_KEY?: string;
-    }
-  }
-}
-
 interface SettingsState {
-  // Global settings
   language: 'en' | 'es';
   theme: 'light' | 'dark' | 'system';
-  isAdmin: boolean;
   customSystemPrompt?: string;
-  
-  // API Credentials
-  apiKeys: Record<string, string>;
-
-  // Per-feature AI settings
   featureConfigs: Record<FeatureTab, ProviderConfig>;
-  
-  // Actions
+
   setLanguage: (lang: 'en' | 'es') => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  setApiKey: (providerId: string, key: string) => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
   getFeatureConfig: (feature: FeatureTab) => ProviderConfig;
-  setAdmin: (isAdmin: boolean) => void;
   setSystemPrompt: (prompt: string) => void;
+  hydrateFromServer: () => Promise<void>;
+  resetLocalData: () => void;
 }
 
-// Determine default config based on available system keys
-const hasGoogleKey = typeof window !== 'undefined' && window.env?.VITE_GOOGLE_API_KEY;
-
-const defaultConfig: ProviderConfig = hasGoogleKey ? {
-  provider: 'google',
-  model: 'gemini-3-flash-preview',
-  temperature: 0.7,
-} : {
-  provider: 'mock',
-  model: 'mock-standard',
+const defaultConfig: ProviderConfig = {
+  provider: 'openai',
+  model: 'gpt-4o-mini',
   temperature: 0.7,
 };
+
+const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
+  generate: { ...defaultConfig },
+  attack: { ...defaultConfig },
+  brainstorm: { ...defaultConfig, temperature: 0.9 },
+  factoids: { ...defaultConfig, temperature: 0.3 },
+  ask: { ...defaultConfig },
+});
+
+async function getUserId() {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id || null;
+}
+
+async function upsertSettings(payload: {
+  language: string;
+  theme: string;
+  feature_configs: Record<string, ProviderConfig>;
+  custom_system_prompt: string | null;
+}) {
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('user_settings').upsert({
+    user_id: userId,
+    ...payload,
+    updated_at: new Date().toISOString(),
+  });
+}
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       language: 'en',
       theme: 'system',
-      isAdmin: false,
-      apiKeys: {},
-      featureConfigs: {
-        generate: { ...defaultConfig },
-        attack: { ...defaultConfig },
-        brainstorm: { ...defaultConfig, temperature: 0.9 },
-        factoids: { ...defaultConfig, temperature: 0.3 },
-        ask: { ...defaultConfig },
+      customSystemPrompt: undefined,
+      featureConfigs: getDefaultFeatureConfigs(),
+
+      setLanguage: (language) => {
+        set({ language });
+        void upsertSettings({
+          language,
+          theme: get().theme,
+          feature_configs: get().featureConfigs,
+          custom_system_prompt: get().customSystemPrompt ?? null,
+        });
+      },
+      setTheme: (theme) => {
+        set({ theme });
+        void upsertSettings({
+          language: get().language,
+          theme,
+          feature_configs: get().featureConfigs,
+          custom_system_prompt: get().customSystemPrompt ?? null,
+        });
+      },
+      setSystemPrompt: (prompt) => {
+        set({ customSystemPrompt: prompt });
+        void upsertSettings({
+          language: get().language,
+          theme: get().theme,
+          feature_configs: get().featureConfigs,
+          custom_system_prompt: prompt || null,
+        });
       },
 
-      setLanguage: (language) => set({ language }),
-      setTheme: (theme) => set({ theme }),
-      setAdmin: (isAdmin) => set((state) => {
-        let newConfigs = { ...state.featureConfigs };
-        if (isAdmin) {
-          // Auto-upgrade to Gemini 3 Flash when admin is unlocked
-          (Object.keys(newConfigs) as FeatureTab[]).forEach(key => {
-            newConfigs[key] = {
-              ...newConfigs[key],
-              provider: 'google',
-              model: 'gemini-3-flash-preview'
-            };
-          });
-        }
-        return { isAdmin, featureConfigs: newConfigs };
-      }),
-      setSystemPrompt: (prompt) => set({ customSystemPrompt: prompt }),
-      setApiKey: (providerId, key) => set((state) => ({
-        apiKeys: { ...state.apiKeys, [providerId]: key }
-      })),
-      
-      setFeatureConfig: (feature, config) => set((state) => ({
-        featureConfigs: {
-          ...state.featureConfigs,
-          [feature]: { ...state.featureConfigs[feature], ...config },
-        },
-      })),
-      
+      setFeatureConfig: (feature, config) => {
+        set((state) => ({
+          featureConfigs: {
+            ...state.featureConfigs,
+            [feature]: { ...state.featureConfigs[feature], ...config },
+          },
+        }));
+        void upsertSettings({
+          language: get().language,
+          theme: get().theme,
+          feature_configs: get().featureConfigs,
+          custom_system_prompt: get().customSystemPrompt ?? null,
+        });
+      },
+
       getFeatureConfig: (feature) => {
         const config = get().featureConfigs[feature];
-        const state = get();
-        
-        // 1. User-provided key (highest priority)
-        let apiKey = state.apiKeys[config.provider];
+        if (config) return config;
+        const defaults = getDefaultFeatureConfigs();
+        return defaults[feature];
+      },
 
-        // 2. System/Admin key (fallback if Admin is logged in)
-        if (!apiKey && state.isAdmin && typeof window !== 'undefined' && window.env) {
-          if (config.provider === 'openai') apiKey = window.env.VITE_OPENAI_API_KEY;
-          if (config.provider === 'anthropic') apiKey = window.env.VITE_ANTHROPIC_API_KEY;
-          if (config.provider === 'google') apiKey = window.env.VITE_GOOGLE_API_KEY;
-        }
+      hydrateFromServer: async () => {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('*')
+          .single();
+        if (error || !data) return;
 
-        if (apiKey) {
-          return { ...config, apiKey };
-        }
-        return config;
+        const defaults = getDefaultFeatureConfigs();
+        const serverConfigs = (data.feature_configs as Record<FeatureTab, ProviderConfig>) || {};
+        const mergedConfigs = { ...defaults, ...serverConfigs };
+
+        set({
+          language: (data.language as 'en' | 'es') || 'en',
+          theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
+          featureConfigs: mergedConfigs,
+          customSystemPrompt: data.custom_system_prompt || undefined,
+        });
+      },
+      resetLocalData: () => {
+        set({
+          language: 'en',
+          theme: 'system',
+          customSystemPrompt: undefined,
+          featureConfigs: getDefaultFeatureConfigs(),
+        });
       },
     }),
     {
       name: 'debate-trainer-settings',
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const defaults = getDefaultFeatureConfigs();
+        const merged = { ...defaults, ...(state.featureConfigs || {}) };
+        state.featureConfigs = merged;
+        if (!state.language) state.language = 'en';
+        if (!state.theme) state.theme = 'system';
+      },
     }
   )
 );

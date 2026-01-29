@@ -57,7 +57,7 @@ export const DEFAULT_PROVIDERS: AIProvider[] = [
       { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most capable', maxTokens: 32000 },
       { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', description: 'Balanced performance', maxTokens: 8000 },
     ],
-    isAvailable: () => true,
+    isAvailable: () => false,
   },
   {
     id: 'openai',
