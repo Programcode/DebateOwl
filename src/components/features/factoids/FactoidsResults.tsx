@@ -21,26 +21,34 @@ const verificationConfig = {
   pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' },
 };
 
+function formatUrl(url?: string) {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  if (url.includes('.')) return `https://${url}`;
+  return undefined;
+}
+
 function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
   const config = verificationConfig[factoid.citation.verified];
   const VerifyIcon = config.icon;
+  const safeUrl = formatUrl(factoid.citation.url);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          {factoid.citation.url ? (
+          {safeUrl ? (
             <a 
-              href={factoid.citation.url} 
+              href={safeUrl} 
               target="_blank" 
               rel="noopener noreferrer"
               className="group flex items-center gap-2"
             >
-              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
+              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline text-left">
                 {factoid.shortClaim}
               </h4>
-              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </a>
           ) : (
             <h4 className="font-semibold text-foreground">{factoid.shortClaim}</h4>
@@ -72,13 +80,13 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
       </div>
 
       {/* Key Figure */}
-      <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
+      <div className="rounded-md bg-primary/5 border border-primary/20 p-3 text-left">
         <span className="text-sm font-medium text-primary">Key Figure: </span>
         <span className="text-lg font-bold text-foreground">{factoid.keyFigure}</span>
       </div>
 
       {/* Context & Limitations */}
-      <div className="space-y-2 text-sm">
+      <div className="space-y-2 text-sm text-left">
         <div>
           <span className="font-medium text-muted-foreground">Context: </span>
           <span className="text-foreground">{factoid.context}</span>
@@ -90,15 +98,15 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
       </div>
 
       {/* Citation Block */}
-      <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+      <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm text-left">
         <div className="font-medium text-foreground">{factoid.citation.title}</div>
         <div className="text-muted-foreground">
           {factoid.citation.publisher}
           {factoid.citation.date && ` • ${factoid.citation.date}`}
         </div>
-        {factoid.citation.url ? (
+        {safeUrl ? (
           <a
-            href={factoid.citation.url}
+            href={safeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-primary hover:underline"

@@ -417,31 +417,34 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     console.error("Jina Search failed silently, proceeding without search results", e);
   }
 
-  const systemPrompt = `You are a research assistant. Find relevant facts, statistics, and sources for the given claim.
+    const systemPrompt = `You are a research assistant. Find relevant facts, statistics, and sources for the given claim.
+    
+    CRITICAL: The debate format is strictly:
+    - Introductor (4 min): Introduces the team and presents the arguments.
+    - R1 (6 min): 4 minutes of stating and reasoning arguments, followed by 2 minutes of refuting the opponent's arguments.
+    - R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
+    - Conclusor (3 min): Summarizes the debate and explains why this team wins.
   
-  CRITICAL: The debate format is strictly:
-  - Introductor (4 min): Introduces the team and presents the arguments.
-  - R1 (6 min): 4 minutes of stating and reasoning arguments, followed by 2 minutes of refuting the opponent's arguments.
-  - R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
-  - Conclusor (3 min): Summarizes the debate and explains why this team wins.
-
-  Output JSON matching:
-  {
-    "factoids": [{
-        "id": "string", 
-        "shortClaim": "string", 
-        "keyFigure": "string", 
-        "context": "string", 
-        "limitations": "string", 
-        "citation": { "title": "string", "publisher": "string", "date": "string", "verified": "verified|unverified" },
-        "howToUse": "string",
-        "relevanceScore": number
-    }],
-    "searchSuggestions": ["string"],
-    "warnings": ["string"],
-    "verificationStatus": "pending"
-  }`;
-
+    SOURCE INSTRUCTION: Use the provided SEARCH RESULTS to find real, verifiable information. 
+    For each factoid, you MUST include the exact "URL" from the search result in the "citation.url" field.
+    If no URL is found, leave it blank, but prioritize results with URLs.
+  
+    Output JSON matching:
+    {
+      "factoids": [{ 
+          "id": "string", 
+          "shortClaim": "string", 
+          "keyFigure": "string", 
+          "context": "string", 
+          "limitations": "string", 
+          "citation": { "title": "string", "publisher": "string", "date": "string", "url": "string (the exact URL from search results)", "verified": "verified|unverified" },
+          "howToUse": "string",
+          "relevanceScore": number
+      }],
+      "searchSuggestions": ["string"],
+      "warnings": ["string"],
+      "verificationStatus": "pending"
+    }`;
   const userPrompt = `Find evidence for claim: "${input.claim}"
   
   SEARCH RESULTS (Use these if relevant):

@@ -1,87 +1,48 @@
-# AI Debate Trainer - Project Overview
+# DebateLab - Project Overview
 
 ## Project Description
-The AI Debate Trainer is a React-based web application designed to help debaters improve their skills through AI-powered case generation, argument analysis, and interactive coaching. It features a modern UI, real-time speech recognition, a dedicated debate timer, and persistent history.
+DebateLab is a comprehensive AI-powered research and preparation suite for competitive debaters. It combines advanced large language models with real-time web search and document analysis to help users build, critique, and practice debate cases.
 
-**Live Demo:** [https://debate.pi-stack.org](https://debate.pi-stack.org) (Assuming successful Pi deployment)
+**Live URL:** [https://debate.pi-stack.org](https://debate.pi-stack.org)
 
 ## Key Features
 
-### 1. Generate Case
-*   Creates structured debate cases (Thesis, Contentions, Rebuttals).
-*   Supports the "Standard Tournament" format (4-6-6-3 speeches).
-*   **Save to History:** Persist generated cases for later review.
+### 1. Source Library & Deep Grounding (New)
+*   **Persistent Knowledge Base:** Save URLs, text snippets, and assistant responses to a local library.
+*   **Active Grounding:** Active sources are automatically injected into the AI's context for all features, ensuring the AI "remembers" your research.
+*   **URL Reading:** Powered by Jina Reader (`r.jina.ai`) to extract clean text from any web page or PDF link.
 
-### 2. Attack Case
-*   Analyzes user-provided arguments to find logical fallacies and weak points.
-*   Provides "Cross-Ex" questions to ask opponents.
+### 2. Case Generation & Export
+*   **Tournament Ready:** Generates cases for the 4-6-6-3 speech format.
+*   **Word Export:** Download your generated cases as professionally formatted `.docx` files.
+*   **Context Transfer:** Use the "Discuss" button to move any result into the Chat for follow-up coaching.
 
-### 3. Ask Coach (Chat)
-*   **Context-Aware:** Remembers conversation history for natural follow-ups.
-*   **File Analysis:** Supports attaching `.txt`, `.md`, and `.json` files to ask questions about specific documents.
-*   **Voice Input:** Integrated Speech-to-Text for dictating questions.
-*   **Save Chat:** Persist conversation threads.
+### 3. Argument Analysis (Attack)
+*   Ruthless critique of case logic, evidence, and structural weaknesses.
+*   **Judge Paradigms:** Choose between Logic-Heavy, Values-Focused, or Policy-based analysis.
+*   **Fallacy Detection:** Automatic identification of logical errors.
 
-### 4. Tools
-*   **Debate Timer:** Dedicated stopwatch with presets for Introductor (4m), R1 (6m), R2 (6m), and Conclusor (3m).
-*   **Brainstorm:** Idea generation tool for motion analysis.
-*   **Factoids:** Evidence search (simulated/AI-based).
+### 4. Interactive Coaching (Ask)
+*   **Summarized Context:** Intelligent memory management that summarizes older messages while keeping the last 20 verbatim to prevent confusion.
+*   **Voice & Files:** Supports real-time speech-to-text and file attachments for a multimodal experience.
 
-### 5. Admin & Settings
-*   **System Keys:** Support for pre-configured API keys via `config.js` (Runtime Config).
-*   **Admin Panel:** Unlockable via code (`debate2026`).
-    *   **Prompt Override:** Inject custom global instructions into the AI.
-    *   **Database Reset:** Clear all local history.
-    *   **Auto-Authentication:** Admin users bypass manual key entry.
+### 5. Research Tools
+*   **Factoids:** Active web search (via Jina Search) to find real, verifiable evidence with clickable citations.
+*   **Brainstorm:** Multi-mode ideation (Mindmap, Buckets, Top 5) for motion analysis.
+*   **Timer:** Dedicated debate stopwatch with role-specific presets.
 
-## Architecture
+## Architecture & Deployment
 
-*   **Frontend:** React 18, Vite, TypeScript.
-*   **Styling:** Tailwind CSS, shadcn/ui.
-*   **State Management:** Zustand (with `persist` middleware for LocalStorage).
-*   **AI Integration:** Custom client (`src/lib/ai/client.ts`) utilizing standard `fetch` for OpenAI, Anthropic, and Google Gemini APIs.
-*   **Deployment:** Dockerized with Nginx. Supports Runtime Configuration for secrets.
+*   **Runtime Config:** API keys are managed via `public/config.js` at runtime, allowing for a simplified Docker build process.
+*   **Admin Panel:** Code `debate2026` unlocks prompt overrides and database reset tools.
+*   **Persistent State:** Zustand + LocalStorage keeps all data (history, library, settings) safe across sessions.
+*   **CI/CD:** Automated builds via GitHub Actions pushing to Docker Hub, with Watchtower auto-updating the Raspberry Pi deployment.
 
-## Development
-
-### Prerequisites
-*   Node.js 20+
-*   Docker (optional, for containerization)
-
-### Local Setup
-1.  Install dependencies:
-    ```bash
-    npm install
-    ```
-2.  Start development server:
-    ```bash
-    npm run dev
-    ```
-
-### Configuration (`public/config.js`)
-To avoid baking secrets into the build, the app reads from `window.env` defined in `public/config.js`.
-```javascript
-window.env = {
-  VITE_OPENAI_API_KEY: "sk-...",
-  VITE_GOOGLE_API_KEY: "AIza...",
-  VITE_ANTHROPIC_API_KEY: "sk-ant..."
-};
-```
-
-## Deployment
-
-### Docker Build
+## Deployment Commands
 ```bash
+# Build
 docker build -t debate-trainer .
-```
 
-### Docker Run
-```bash
-docker run -d -p 3000:80 --name debate-app --restart unless-stopped debate-trainer
+# Run
+docker run -d -p 3001:80 --name debate-app --restart unless-stopped debate-trainer
 ```
-
-### Raspberry Pi (ARM64)
-The Dockerfile is compatible with ARM64 architecture.
-1.  Transfer source code to Pi.
-2.  Build and run locally on the Pi.
-3.  Expose via Cloudflare Tunnel.
