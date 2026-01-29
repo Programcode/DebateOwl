@@ -14,7 +14,7 @@ type Source = {
   type: string;
 };
 
-const DEFAULT_PROVIDER = (Deno.env.get("AI_DEFAULT_PROVIDER") || "openai") as Provider;
+const DEFAULT_PROVIDER = (Deno.env.get("AI_DEFAULT_PROVIDER") || "google") as Provider;
 
 function badRequest(message: string) {
   return new Response(JSON.stringify({ error: message }), {
@@ -377,7 +377,7 @@ Deno.serve(async (req) => {
   const feature = body.feature as Feature | undefined;
   const input = body.input as Record<string, unknown> | undefined;
   const provider = (body.provider as Provider | undefined) || DEFAULT_PROVIDER;
-  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gpt-4o-mini";
+  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-3-flash-preview";
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
   const sources = (body.sources as Source[] | undefined) || [];

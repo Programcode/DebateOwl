@@ -21,8 +21,8 @@ interface SettingsState {
 }
 
 const defaultConfig: ProviderConfig = {
-  provider: 'openai',
-  model: 'gpt-4o-mini',
+  provider: 'google',
+  model: 'gemini-3-flash-preview',
   temperature: 0.7,
 };
 
