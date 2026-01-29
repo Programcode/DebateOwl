@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain } from 'lucide-react';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,6 +23,21 @@ export default function HistoryPage() {
     navigate('/ask');
   };
 
+  const handleLoadAttack = (id: string) => {
+    store.loadSavedAttack(id);
+    navigate('/attack');
+  };
+
+  const handleLoadBrainstorm = (id: string) => {
+    store.loadSavedBrainstorm(id);
+    navigate('/brainstorm');
+  };
+
+  const handleLoadFactoids = (id: string) => {
+    store.loadSavedFactoids(id);
+    navigate('/factoids');
+  };
+
   return (
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -40,6 +54,7 @@ export default function HistoryPage() {
             <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4"/> Chat Sessions</TabsTrigger>
             <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4"/> Attack Analyses</TabsTrigger>
             <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4"/> Brainstorms</TabsTrigger>
+            <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4"/> Factoids</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cases">
@@ -108,18 +123,96 @@ export default function HistoryPage() {
             </Card>
           </TabsContent>
           
-          {/* Placeholders for other tabs */}
-           <TabsContent value="attacks">
+          <TabsContent value="attacks">
             <Card>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground">Attack history coming soon.</p>
+              <CardHeader>
+                <CardTitle>Attack Analyses</CardTitle>
+                <CardDescription>Saved critique and analysis results</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {store.savedAttacks.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No saved attacks yet.</p>
+                ) : (
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-4">
+                      {store.savedAttacks.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold">{item.title}</h4>
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                              <span>{formatDate(item.createdAt)}</span>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => handleLoadAttack(item.id)}>
+                            <Eye className="h-4 w-4 mr-2" /> Load
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
-           <TabsContent value="brainstorms">
+          <TabsContent value="brainstorms">
             <Card>
-               <CardContent className="pt-6">
-                <p className="text-muted-foreground">Brainstorm history coming soon.</p>
+              <CardHeader>
+                <CardTitle>Brainstorms</CardTitle>
+                <CardDescription>Saved idea explorations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {store.savedBrainstorms.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No saved brainstorms yet.</p>
+                ) : (
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-4">
+                      {store.savedBrainstorms.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold">{item.title}</h4>
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                              <span>{formatDate(item.createdAt)}</span>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => handleLoadBrainstorm(item.id)}>
+                            <Eye className="h-4 w-4 mr-2" /> Load
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="factoids">
+            <Card>
+              <CardHeader>
+                <CardTitle>Factoids</CardTitle>
+                <CardDescription>Saved evidence and citations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {store.savedFactoids.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No saved factoids yet.</p>
+                ) : (
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-4">
+                      {store.savedFactoids.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold">{item.title}</h4>
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                              <span>{formatDate(item.createdAt)}</span>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => handleLoadFactoids(item.id)}>
+                            <Eye className="h-4 w-4 mr-2" /> Load
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
