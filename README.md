@@ -1,68 +1,35 @@
-# AI Debate Trainer
+# DebateLab
 
-A comprehensive AI-powered assistant for competitive debaters.
+The ultimate AI-powered research and preparation suite for competitive debaters.
 
-## Features
+## 🚀 Key Features
 
-*   **Case Generator:** Instantly create structured 4-6-6-3 debate cases.
-*   **Case Attack:** Get ruthless critiques and cross-examination questions for your arguments.
-*   **Coach Chat:** Interactive chat with context memory, file attachment support, and voice input.
-*   **Debate Timer:** specialized stopwatch for Standard Tournament formats.
-*   **History:** Save your best cases and chats to your local database.
-*   **Admin Mode:** Unlock advanced settings and system prompt overrides.
+*   **Case Generator:** Build complete cases for the standard 4-6-6-3 tournament format.
+*   **Attack Mode:** Get ruthless critiques, fallacy detection, and cross-ex questions.
+*   **Source Library:** Build a local "Knowledge Base" of articles and research for the AI to use.
+*   **Factoids:** Active web search for real evidence with clickable source links.
+*   **Coach Chat:** Advanced interactive coaching with voice input and file analysis.
+*   **Word Export:** Download your preparation as professionally formatted `.docx` documents.
+*   **Debate Timer:** specialized stopwatch for tournament speech intervals.
 
-## Getting Started
-
-### Web Version
-Visit [https://debate.pi-stack.org](https://debate.pi-stack.org) (if deployed).
+## 🛠️ Setup
 
 ### Local Development
+1.  `npm install`
+2.  `npm run dev`
+3.  Go to **Settings** -> Enter Admin Code `debate2026` to unlock system keys (if configured) or add your own.
 
-1.  **Clone the repo:**
-    ```bash
-    git clone https://github.com/Programcode/debate-navigator.git
-    cd debate-navigator
-    ```
+### Docker Deployment
+The project is optimized for deployment on Raspberry Pi or any VPS.
+```bash
+docker build -t debate-trainer .
+docker run -d -p 3001:80 --name debate-app debate-trainer
+```
 
-2.  **Install:**
-    ```bash
-    npm install
-    ```
+## 🔒 Secrets & Admin
+*   **Runtime Config:** Add keys to `public/config.js` to avoid rebuilding images when keys change.
+*   **Admin Code:** `debate2026`
+*   **Grounding:** Enable sources in the **Library** tab to make the AI use specific data.
 
-3.  **Run:**
-    ```bash
-    npm run dev
-    ```
-
-4.  **Configure AI:**
-    Go to **Settings** in the app. Enter your OpenAI, Anthropic, or Google Gemini API key.
-    *Admin Code:* `debate2026` (Unlocks advanced features and pre-configured keys if set up).
-
-## Deployment (Docker)
-
-This app is designed to run anywhere using Docker.
-
-1.  **Build:**
-    ```bash
-    docker build -t debate-trainer .
-    ```
-
-2.  **Run:**
-    ```bash
-    docker run -d -p 3000:80 --name debate-app debate-trainer
-    ```
-
-3.  **Secrets:**
-    Secrets are handled via `public/config.js`. This file is mounted or copied into the container.
-    *   **Development:** Edit `public/config.js` directly.
-    *   **Production:** Mount a secure file:
-        ```bash
-        docker run -v $(pwd)/prod-config.js:/usr/share/nginx/html/config.js ...
-        ```
-
-## Tech Stack
-*   React + Vite
-*   TypeScript
-*   Tailwind CSS
-*   Zustand (State)
-*   Docker + Nginx
+## 🌐 Live Access
+Managed via Cloudflare Tunnel. Default local port is `3001`.

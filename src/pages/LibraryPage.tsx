@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -147,7 +147,21 @@ export default function LibraryPage() {
                           </div>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-semibold">{source.title}</h4>
+                              {source.origin?.startsWith('http') ? (
+                                <a 
+                                  href={source.origin} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="group flex items-center gap-2"
+                                >
+                                  <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
+                                    {source.title}
+                                  </h4>
+                                  <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </a>
+                              ) : (
+                                <h4 className="font-semibold">{source.title}</h4>
+                              )}
                               <Badge variant="outline" className="text-[10px] py-0">{source.type.toUpperCase()}</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground">Added {formatDate(source.createdAt)} • {source.origin || 'Manual entry'}</p>

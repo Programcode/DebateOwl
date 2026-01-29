@@ -15,7 +15,7 @@ export const CitationSchema = z.object({
   title: z.string(),
   publisher: z.string(),
   date: z.string().optional(),
-  url: z.string().url().optional(),
+  url: z.string().optional(), // Relaxed from .url()
   verified: z.enum(['verified', 'unverified', 'pending']),
   verifiedAt: z.string().optional(),
 });
