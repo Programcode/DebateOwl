@@ -50,4 +50,4 @@ jobs:
           context: .
           push: ${{ env.DOCKER_PUSH == 'true' }}
           tags: adamgaborjaniszabo/debate-trainer:latest
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
