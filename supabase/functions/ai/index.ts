@@ -55,6 +55,7 @@ const PROMPT_INJECTION_PATTERNS = [
 
 function sanitizePromptInput(input: string, fieldName: string): { sanitized: string } | { rejected: string } {
   if (typeof input !== "string") return { sanitized: "" };
+  // eslint-disable-next-line no-control-regex
   let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(sanitized)) {
