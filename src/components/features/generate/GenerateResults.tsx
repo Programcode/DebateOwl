@@ -28,7 +28,7 @@ function ContentionCard({ contention, index }: { contention: Contention; index: 
           </Badge>
         )}
       </div>
-      
+
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">Reasoning: </span>
@@ -59,12 +59,12 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
       {/* Metadata */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant={result.metadata.side === 'pro' ? 'default' : 'secondary'}>
-            {result.metadata.side === 'pro' ? 'Proposition' : 'Opposition'}
+          <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
+            {result.metadata?.side === 'pro' ? 'Proposition' : 'Opposition'}
           </Badge>
-          <Badge variant="outline">{result.metadata.format.toUpperCase()}</Badge>
+          <Badge variant="outline">{result.metadata?.format?.toUpperCase() || 'N/A'}</Badge>
           <span className="text-xs text-muted-foreground">
-            Generated {new Date(result.metadata.generatedAt).toLocaleString()}
+            Generated {result.metadata?.generatedAt ? new Date(result.metadata.generatedAt).toLocaleString() : 'N/A'}
           </span>
         </div>
         <div className="flex gap-2">
