@@ -23,6 +23,91 @@ function badRequest(message: string) {
   });
 }
 
+// Prompt-injection hardening constants
+const MAX_INPUT_LENGTH = 50000;
+const PROMPT_INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|text)/i,
+  /disregard\s+(all\s+)?(previous|prior|above)/i,
+  /forget\s+(all\s+)?(previous|prior|above)/i,
+  /you\s+are\s+now\s+(a|an)\s+/i,
+  /new\s+instruction[s]?\s*:/i,
+  /system\s*:\s*\[/i,
+  /\[\s*SYSTEM\s*\]/i,
+  /\{\s*"role"\s*:\s*"system"/i,
+  /<\|im_start\|>/i,
+  /<\|im_end\|>/i,
+  /###\s*instruction/i,
+  /\bDAN\s+mode\b/i,
+  /jailbreak/i,
+];
+
+/**
+ * Sanitizes user input to prevent prompt injection attacks.
+ * @returns sanitized string, or null if input is suspicious and should be rejected
+ */
+function sanitizePromptInput(input: string, fieldName: string): { sanitized: string } | { rejected: string } {
+  if (typeof input !== "string") {
+    return { sanitized: "" };
+  }
+
+  // Strip control characters except newline, carriage return, and tab
+  let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+
+  // Check for prompt injection patterns
+  for (const pattern of PROMPT_INJECTION_PATTERNS) {
+    if (pattern.test(sanitized)) {
+      console.warn(`[SECURITY] Prompt injection attempt detected in ${fieldName}: ${sanitized.slice(0, 200)}`);
+      return { rejected: `Suspicious content detected in ${fieldName}` };
+    }
+  }
+
+  // Truncate if too long
+  if (sanitized.length > MAX_INPUT_LENGTH) {
+    console.warn(`[SECURITY] Input truncated in ${fieldName}: ${sanitized.length} chars -> ${MAX_INPUT_LENGTH}`);
+    sanitized = sanitized.slice(0, MAX_INPUT_LENGTH);
+  }
+
+  return { sanitized };
+}
+
+/**
+ * Sanitizes all string fields in an input object.
+ * @returns sanitized object, or rejection message if any field is suspicious
+ */
+function sanitizeInput(input: Record<string, unknown>): { sanitized: Record<string, unknown> } | { rejected: string } {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(input)) {
+    if (typeof value === "string") {
+      const sanitizeResult = sanitizePromptInput(value, key);
+      if ("rejected" in sanitizeResult) {
+        return sanitizeResult;
+      }
+      result[key] = sanitizeResult.sanitized;
+    } else if (Array.isArray(value)) {
+      // Sanitize string arrays (like history)
+      const sanitizedArray: unknown[] = [];
+      for (let i = 0; i < value.length; i++) {
+        const item = value[i];
+        if (typeof item === "object" && item !== null && "content" in item) {
+          const contentResult = sanitizePromptInput(String((item as Record<string, unknown>).content || ""), `${key}[${i}].content`);
+          if ("rejected" in contentResult) {
+            return contentResult;
+          }
+          sanitizedArray.push({ ...item, content: contentResult.sanitized });
+        } else {
+          sanitizedArray.push(item);
+        }
+      }
+      result[key] = sanitizedArray;
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return { sanitized: result };
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -195,12 +280,12 @@ function buildSystemPrompt(feature: Feature, customSystemPrompt?: string | null,
     feature === "generate"
       ? GENERATE_PROMPT
       : feature === "attack"
-      ? ATTACK_PROMPT
-      : feature === "brainstorm"
-      ? BRAINSTORM_PROMPT
-      : feature === "factoids"
-      ? FACTOIDS_PROMPT
-      : ASK_PROMPT;
+        ? ATTACK_PROMPT
+        : feature === "brainstorm"
+          ? BRAINSTORM_PROMPT
+          : feature === "factoids"
+            ? FACTOIDS_PROMPT
+            : ASK_PROMPT;
 
   const custom = customSystemPrompt ? `\n\nCUSTOM SYSTEM PROMPT:\n${customSystemPrompt}` : "";
   const sourceText = sources && sources.length
@@ -386,17 +471,34 @@ Deno.serve(async (req) => {
   if (!feature) return badRequest("Missing feature");
   if (!input) return badRequest("Missing input");
 
+  // Sanitize all user inputs before processing
+  const sanitizeResult = sanitizeInput(input);
+  if ("rejected" in sanitizeResult) {
+    console.warn(`[SECURITY] Request rejected: ${sanitizeResult.rejected}`);
+    return badRequest(sanitizeResult.rejected);
+  }
+  const sanitizedInput = sanitizeResult.sanitized;
+
+  // Also sanitize custom system prompt if provided
+  if (customSystemPrompt) {
+    const promptResult = sanitizePromptInput(customSystemPrompt, "customSystemPrompt");
+    if ("rejected" in promptResult) {
+      console.warn(`[SECURITY] Custom prompt rejected: ${promptResult.rejected}`);
+      return badRequest(promptResult.rejected);
+    }
+  }
+
   try {
     const systemPrompt = buildSystemPrompt(feature, customSystemPrompt, sources);
 
     let searchContext = "";
     if (feature === "factoids") {
-      searchContext = await jinaSearch(String(input.claim || ""));
+      searchContext = await jinaSearch(String(sanitizedInput.claim || ""));
     }
 
     if (feature === "ask") {
-      const history = (input.history as Array<{ role: string; content: string }>) || [];
-      const message = String(input.message || "");
+      const history = (sanitizedInput.history as Array<{ role: string; content: string }>) || [];
+      const message = String(sanitizedInput.message || "");
       const urls = new Set<string>();
       extractUrls(message).forEach((u) => urls.add(u));
       history.slice(-3).forEach((m) => extractUrls(m.content).forEach((u) => urls.add(u)));
@@ -412,7 +514,7 @@ Deno.serve(async (req) => {
         urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join("\n");
       }
 
-      const prompt = `Message: ${message}${urlContext}\nMode: ${input.mode}`;
+      const prompt = `Message: ${message}${urlContext}\nMode: ${sanitizedInput.mode}`;
       const messages = [...history, { role: "user", content: prompt }];
 
       let output: unknown;
@@ -431,7 +533,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userPrompt = buildUserPrompt(feature, input, searchContext);
+    const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
     const messages = [{ role: "user", content: userPrompt }];
 
     let output: unknown;

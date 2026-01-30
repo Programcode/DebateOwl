@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,8 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
+import { useToast } from '@/hooks/use-toast';
+import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
 
 interface Message {
   id: string;
@@ -35,7 +37,15 @@ const modeOptions = [
   { id: 'argumentmap', label: 'Arg Map', icon: Map },
 ];
 
-function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
+const LOADING_MESSAGES = [
+  'Thinking...',
+  'Researching...',
+  'Analyzing...',
+  'Generating response...',
+  'Almost there...',
+];
+
+const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
   const isUser = message.role === 'user';
   const output = message.output;
 
@@ -61,6 +71,7 @@ function MessageBubble({ message, onSave }: { message: Message, onSave?: (title:
               onSave(title, message.content);
             }}
             title="Save to Library"
+            aria-label="Save message to library"
           >
             <Bookmark className="h-4 w-4" />
           </Button>
@@ -114,16 +125,30 @@ function MessageBubble({ message, onSave }: { message: Message, onSave?: (title:
       </div>
     </div>
   );
-}
+});
 
 export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: AskChatProps) {
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
   const [citationMode, setCitationMode] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const { toast } = useToast();
+
   const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
+
+  // Cycle through loading messages
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   useEffect(() => {
     if (transcript) {
@@ -142,7 +167,35 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      const newFiles = Array.from(e.target.files);
+      const allFiles = [...files, ...newFiles];
+
+      // Validate total file count
+      if (allFiles.length > MAX_FILE_COUNT) {
+        toast({
+          title: 'Too many files',
+          description: `You can only upload up to ${MAX_FILE_COUNT} files at once.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Validate each file
+      const result = validateFileUpload(allFiles);
+      if (!result.valid) {
+        toast({
+          title: 'File validation failed',
+          description: result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setFiles(allFiles);
+    }
+    // Reset input so same file can be selected again
+    if (e.target) {
+      e.target.value = '';
     }
   };
 
@@ -196,9 +249,14 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 <MessageBubble key={message.id} message={message} onSave={onSaveSource} />
               ))}
               {isLoading && (
-                <div className="flex gap-3">
+                <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true">
                   <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
-                    <LoadingSpinner size="sm" />
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span className="text-sm text-muted-foreground animate-pulse">
+                        {LOADING_MESSAGES[loadingMessageIndex]}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -236,11 +294,15 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
 
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {files.map((file, i) => (
-              <div key={i} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs">
+            {files.map((file) => (
+              <div key={file.name} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs">
                 <Paperclip className="h-3 w-3" />
                 <span className="max-w-[100px] truncate">{file.name}</span>
-                <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-foreground">
+                <button
+                  onClick={() => removeFile(files.indexOf(file))}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={`Remove ${file.name}`}
+                >
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -262,10 +324,11 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
             size="icon"
             onClick={() => fileInputRef.current?.click()}
             title="Attach files"
+            aria-label="Attach files"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
-          
+
           {hasSupport && (
             <Button
               type="button"
@@ -273,6 +336,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               size="icon"
               onClick={toggleListening}
               title={isListening ? "Stop listening" : "Start voice input"}
+              aria-label={isListening ? "Stop listening" : "Start voice input"}
               className={isListening ? "animate-pulse" : ""}
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -286,7 +350,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
             disabled={isLoading}
             className="flex-1"
           />
-          <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading}>
+          <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading} aria-label="Send message">
             <Send className="h-4 w-4" />
           </Button>
         </form>

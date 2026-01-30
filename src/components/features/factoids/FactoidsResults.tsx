@@ -6,6 +6,7 @@ import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
 import { cn } from '@/lib/utils';
+import { validateUrl } from '@/lib/validation/url';
 
 interface FactoidsResultsProps {
   result: FactoidsOutput;
@@ -21,17 +22,11 @@ const verificationConfig = {
   pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' },
 };
 
-function formatUrl(url?: string) {
-  if (!url) return undefined;
-  if (url.startsWith('http')) return url;
-  if (url.includes('.')) return `https://${url}`;
-  return undefined;
-}
-
 function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
   const config = verificationConfig[factoid.citation.verified];
   const VerifyIcon = config.icon;
-  const safeUrl = formatUrl(factoid.citation.url);
+  // Use secure URL validation instead of simple string checks
+  const safeUrl = validateUrl(factoid.citation.url);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
@@ -39,9 +34,9 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           {safeUrl ? (
-            <a 
-              href={safeUrl} 
-              target="_blank" 
+            <a
+              href={safeUrl}
+              target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-2"
             >
@@ -66,9 +61,9 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
         <div className="flex flex-col items-end gap-2">
           <Progress value={factoid.relevanceScore} className="w-16 h-2" />
           {onSave && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary"
               onClick={() => onSave(factoid.shortClaim, `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`, factoid.citation.url)}
               title="Save to Library"

@@ -36,14 +36,27 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
-  const handleNuke = () => {
-    if (!confirm("Are you sure? This will delete ALL saved data from your account.")) return;
+  const handleDeleteAllData = () => {
+    // First confirmation
+    if (!confirm(`Are you sure you want to delete ALL your saved data?\n\nThis will permanently delete all cases, attacks, brainstorms, factoids, chats, and sources for ${user?.email}.\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    // Second confirmation - require typing email
+    const typedEmail = prompt(`To confirm deletion, please type your email address:\n${user?.email}`);
+    if (typedEmail !== user?.email) {
+      toast({ title: "Cancelled", description: "Email didn't match. No data was deleted." });
+      return;
+    }
+
+    // Perform deletion
     void clearAllData().then(() => {
       clearSession();
       localStorage.removeItem('debate-trainer-storage');
-      toast({ title: "Account Data Cleared", description: "All saved items were removed." });
-    }).catch(() => {
-      toast({ title: "Error", description: "Failed to clear account data.", variant: "destructive" });
+      toast({ title: "Data Deleted", description: "All your saved data has been permanently removed." });
+    }).catch((error) => {
+      console.error('Failed to delete data:', error);
+      toast({ title: "Error", description: "Failed to delete data. Please try again.", variant: "destructive" });
     });
   };
 
@@ -260,15 +273,19 @@ export default function SettingsPage() {
         <Card className="border-destructive/20 bg-destructive/5">
           <CardHeader>
             <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            <CardDescription>Irreversible actions</CardDescription>
+            <CardDescription>
+              Permanently delete all your saved data. This only affects your account ({user?.email}).
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="destructive" size="sm" onClick={handleNuke}>
+            <Button variant="destructive" size="sm" onClick={handleDeleteAllData}>
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete All Saved Data
+              Delete All My Data
             </Button>
           </CardContent>
         </Card>
+
+
       </div>
     </div>
   );

@@ -183,14 +183,14 @@ export const useSessionStore = create<SessionState>()(
             sourceLibrary: state.sourceLibrary.map((s) =>
               s.id === localId
                 ? {
-                    id: data.id,
-                    title: data.title,
-                    content: data.content,
-                    type: data.type,
-                    origin: data.origin || undefined,
-                    isActive: data.is_active,
-                    createdAt: toTimestamp(data.created_at),
-                  }
+                  id: data.id,
+                  title: data.title,
+                  content: data.content,
+                  type: data.type,
+                  origin: data.origin || undefined,
+                  isActive: data.is_active,
+                  createdAt: toTimestamp(data.created_at),
+                }
                 : s
             ),
           }));
@@ -498,18 +498,27 @@ export const useSessionStore = create<SessionState>()(
       },
 
       clearAllData: async () => {
-        await supabase.from('messages').delete().neq('id', '');
-        await supabase.from('chats').delete().neq('id', '');
-        await supabase.from('cases').delete().neq('id', '');
-        await supabase.from('attacks').delete().neq('id', '');
-        await supabase.from('brainstorms').delete().neq('id', '');
-        await supabase.from('factoids').delete().neq('id', '');
-        await supabase.from('sources').delete().neq('id', '');
-        await supabase.from('source_files').delete().neq('id', '');
-        await supabase.from('ai_requests').delete().neq('id', '');
-        await supabase.from('api_keys').delete().neq('id', '');
-        await supabase.from('user_settings').delete().neq('user_id', '');
+        // SAFETY: Get current user ID - abort if not authenticated
+        const userId = await getUserId();
+        if (!userId) {
+          throw new Error('Cannot delete data: No authenticated user');
+        }
 
+        // SAFETY: All deletes explicitly filter by user_id
+        // This ensures only the current user's data is deleted, even if RLS fails
+        await supabase.from('messages').delete().eq('user_id', userId);
+        await supabase.from('chats').delete().eq('user_id', userId);
+        await supabase.from('cases').delete().eq('user_id', userId);
+        await supabase.from('attacks').delete().eq('user_id', userId);
+        await supabase.from('brainstorms').delete().eq('user_id', userId);
+        await supabase.from('factoids').delete().eq('user_id', userId);
+        await supabase.from('sources').delete().eq('user_id', userId);
+        await supabase.from('source_files').delete().eq('user_id', userId);
+        await supabase.from('ai_requests').delete().eq('user_id', userId);
+        await supabase.from('api_keys').delete().eq('user_id', userId);
+        await supabase.from('user_settings').delete().eq('user_id', userId);
+
+        // Clear local state
         set({
           savedCases: [],
           savedAttacks: [],

@@ -88,7 +88,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                 <span className={cn(
                   'text-lg font-bold',
                   result.overallAssessment.score >= 70 ? 'text-primary' :
-                  result.overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
+                    result.overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
                 )}>
                   {result.overallAssessment.score}/100
                 </span>
@@ -100,8 +100,8 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                 )}
               </div>
             </div>
-            <Progress 
-              value={result.overallAssessment.score} 
+            <Progress
+              value={result.overallAssessment.score}
               className="h-3"
             />
           </div>
