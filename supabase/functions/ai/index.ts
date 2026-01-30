@@ -51,6 +51,7 @@ function sanitizePromptInput(input: string, fieldName: string): { sanitized: str
   }
 
   // Strip control characters except newline, carriage return, and tab
+  // eslint-disable-next-line no-control-regex
   let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 
   // Check for prompt injection patterns
