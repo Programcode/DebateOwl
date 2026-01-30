@@ -1,12 +1,12 @@
 import { vi } from "vitest";
 
 type TableResponse = {
-  select?: any[];
-  single?: any;
-  insert?: any;
-  order?: any[];
-  in?: any[];
-  update?: any;
+  select?: unknown[];
+  single?: unknown;
+  insert?: unknown;
+  order?: unknown[];
+  in?: unknown[];
+  update?: unknown;
 };
 
 const tableResponses: Record<string, TableResponse> = {};
@@ -73,8 +73,8 @@ export const setMockSessionToken = (token: string | null) => {
   sessionToken = token || "";
 };
 
-export const setMockInvokeResponse = (data: any, error: any = null) => {
-  (supabaseMock.functions.invoke as any).mockResolvedValue({ data, error });
+export const setMockInvokeResponse = (data: unknown, error: unknown = null) => {
+  supabaseMock.functions.invoke.mockResolvedValue({ data, error });
 };
 
 export const resetMockState = () => {

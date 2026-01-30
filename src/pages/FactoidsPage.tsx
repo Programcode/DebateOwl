@@ -67,7 +67,7 @@ export default function FactoidsPage() {
       addAskMessage({
         role: 'assistant',
         content: result.response,
-        // @ts-ignore
+        // @ts-expect-error: form schema and UI fields diverge
         output: result 
       });
     } catch (error) {

@@ -29,8 +29,12 @@ interface SpeechRecognition extends EventTarget {
   stop(): void;
   abort(): void;
   onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: any) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
   onend: () => void;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
 }
 
 declare global {
@@ -71,7 +75,7 @@ export function useSpeechToText() {
         setIsListening(false);
       };
 
-      recognitionInstance.onerror = (event: any) => {
+      recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error', event.error);
         setIsListening(false);
       };

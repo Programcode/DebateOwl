@@ -337,8 +337,9 @@ async function jinaSearch(query: string) {
   if (!response.ok) return "";
   const data = await response.json();
   if (!data?.data || !Array.isArray(data.data)) return "";
+  type JinaResult = { title?: string; url?: string; content?: string; description?: string };
   return data.data
-    .map((r: any) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content || r.description}\n---`)
+    .map((r: JinaResult) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content || r.description}\n---`)
     .join("\n");
 }
 
@@ -367,7 +368,7 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
   }
 
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {

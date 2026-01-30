@@ -171,7 +171,7 @@ describe("session-store", () => {
     useSessionStore.setState({
       savedCases: [{ id: "1", title: "Case", createdAt: Date.now(), data: sampleGenerate }],
       savedAttacks: [{ id: "2", title: "Attack", createdAt: Date.now(), data: sampleAttack }],
-    } as any);
+    } as Partial<ReturnType<typeof useSessionStore.getState>>);
 
     await useSessionStore.getState().clearAllData();
     const state = useSessionStore.getState();

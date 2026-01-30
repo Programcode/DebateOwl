@@ -87,7 +87,7 @@ describe("settings-store", () => {
   });
 
   it("getFeatureConfig returns defaults when missing", () => {
-    useSettingsStore.setState({ featureConfigs: {} as any });
+    useSettingsStore.setState({ featureConfigs: {} } as Partial<ReturnType<typeof useSettingsStore.getState>>);
     const config = useSettingsStore.getState().getFeatureConfig("ask");
     expect(config.provider).toBe("google");
     expect(config.model).toBe("gemini-3-flash-preview");
