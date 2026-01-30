@@ -1,5 +1,6 @@
+// Runtime configuration for DebateLab
+// Note: API keys are stored securely in the Supabase Edge Function
+// This file only contains non-sensitive frontend configuration
 window.env = {
-  VITE_OPENAI_API_KEY: "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",
-  VITE_GOOGLE_API_KEY: "AIzaSyBeO-POlfAiaRECM6aFahxtsvVD5qRlUz4",
-  VITE_ANTHROPIC_API_KEY: "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"
+  // No API keys needed - all AI calls go through the authenticated Edge Function
 };
