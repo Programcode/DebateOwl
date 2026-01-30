@@ -24,7 +24,7 @@ export default function SharedPage() {
     const [item, setItem] = useState<SharedItem | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
-    const store = useSessionStore();
+
 
     useEffect(() => {
         const loadSharedItem = async () => {
