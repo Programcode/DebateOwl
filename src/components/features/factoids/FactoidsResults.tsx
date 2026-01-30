@@ -23,10 +23,12 @@ const verificationConfig = {
 };
 
 function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
-  const config = verificationConfig[factoid.citation.verified];
+  // Defensive check for old data format in localStorage
+  const verified = factoid.citation?.verified ?? 'pending';
+  const config = verificationConfig[verified] ?? verificationConfig.pending;
   const VerifyIcon = config.icon;
   // Use secure URL validation instead of simple string checks
-  const safeUrl = validateUrl(factoid.citation.url);
+  const safeUrl = validateUrl(factoid.citation?.url);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
@@ -65,7 +67,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary"
-              onClick={() => onSave(factoid.shortClaim, `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`, factoid.citation.url)}
+              onClick={() => onSave(factoid.shortClaim, `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`, factoid.citation?.url)}
               title="Save to Library"
             >
               <Bookmark className="h-4 w-4" />
@@ -94,10 +96,10 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 
       {/* Citation Block */}
       <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm text-left">
-        <div className="font-medium text-foreground">{factoid.citation.title}</div>
+        <div className="font-medium text-foreground">{factoid.citation?.title || 'Unknown Source'}</div>
         <div className="text-muted-foreground">
-          {factoid.citation.publisher}
-          {factoid.citation.date && ` • ${factoid.citation.date}`}
+          {factoid.citation?.publisher || 'Unknown'}
+          {factoid.citation?.date && ` • ${factoid.citation.date}`}
         </div>
         {safeUrl ? (
           <a
@@ -126,8 +128,8 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 }
 
 export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource }: FactoidsResultsProps) {
-  const verifiedCount = result.factoids.filter(f => f.citation.verified === 'verified').length;
-  const unverifiedCount = result.factoids.filter(f => f.citation.verified === 'unverified').length;
+  const verifiedCount = result.factoids.filter(f => f.citation?.verified === 'verified').length;
+  const unverifiedCount = result.factoids.filter(f => f.citation?.verified === 'unverified').length;
 
   return (
     <div className="space-y-6">
