@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function LibraryPage() {
   const { sourceLibrary, addSource, removeSource, toggleSource, clearLibrary } = useSessionStore();
   const { toast } = useToast();
-  
+
   const [isAdding, setIsAdding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [newSource, setNewSource] = useState({
@@ -84,28 +84,28 @@ export default function LibraryPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Title</Label>
-                  <Input 
-                    placeholder="e.g., UBI Study 2024" 
+                  <Input
+                    placeholder="e.g., UBI Study 2024"
                     value={newSource.title}
-                    onChange={(e) => setNewSource({...newSource, title: e.target.value})}
+                    onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Origin (URL/Author)</Label>
-                  <Input 
-                    placeholder="e.g., nature.com" 
+                  <Input
+                    placeholder="e.g., nature.com"
                     value={newSource.origin}
-                    onChange={(e) => setNewSource({...newSource, origin: e.target.value})}
+                    onChange={(e) => setNewSource({ ...newSource, origin: e.target.value })}
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Content</Label>
-                <Textarea 
-                  placeholder="Paste the full text here..." 
+                <Textarea
+                  placeholder="Paste the full text here..."
                   className="min-h-[200px]"
                   value={newSource.content}
-                  onChange={(e) => setNewSource({...newSource, content: e.target.value})}
+                  onChange={(e) => setNewSource({ ...newSource, content: e.target.value })}
                 />
               </div>
               <Button onClick={handleAdd} className="w-full">Save to Library</Button>
@@ -148,9 +148,9 @@ export default function LibraryPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               {source.origin?.startsWith('http') ? (
-                                <a 
-                                  href={source.origin} 
-                                  target="_blank" 
+                                <a
+                                  href={source.origin}
+                                  target="_blank"
                                   rel="noopener noreferrer"
                                   className="group flex items-center gap-2"
                                 >
@@ -173,12 +173,19 @@ export default function LibraryPage() {
                             <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                               {source.isActive ? 'Active' : 'Disabled'}
                             </span>
-                            <Switch 
-                              checked={source.isActive} 
+                            <Switch
+                              checked={source.isActive}
                               onCheckedChange={() => toggleSource(source.id)}
+                              aria-label={`Toggle ${source.title} in knowledge base`}
                             />
                           </div>
-                          <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeSource(source.id)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive h-8 w-8"
+                            onClick={() => removeSource(source.id)}
+                            aria-label={`Delete ${source.title}`}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

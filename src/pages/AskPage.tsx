@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
-import { askChat } from '@/lib/ai/client';
+import { askChat, isTimeoutError } from '@/lib/ai/client';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AskPage() {
@@ -56,17 +56,27 @@ export default function AskPage() {
 
       const history = askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
-      
+
       const result = await askChat(fullMessage, history, mode, config);
-      
+
       addAskMessage({
-        role: 'assistant', 
+        role: 'assistant',
         content: result.response,
-        output: result 
+        output: result
       });
     } catch (error) {
       console.error(error);
-      toast({ title: "Error", description: "Request failed", variant: "destructive" });
+
+      // Handle timeout errors with a specific message
+      if (isTimeoutError(error)) {
+        toast({
+          title: "Request Timed Out",
+          description: "The request took too long. Please try again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({ title: "Error", description: "Request failed. Please try again.", variant: "destructive" });
+      }
     } finally {
       setAskLoading(false);
     }
