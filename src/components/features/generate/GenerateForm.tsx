@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 
 interface GenerateFormProps {
   onSubmit: (data: GenerateInput) => void;
@@ -23,6 +24,7 @@ interface GenerateFormProps {
 }
 
 export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
+  const globalLanguage = useSettingsStore((s) => s.language);
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
     resolver: zodResolver(GenerateInputSchema),
     defaultValues: {
@@ -33,7 +35,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       length: 'standard',
       audience: 'intermediate',
       tone: 'formal',
-      language: 'en',
+      language: globalLanguage,
     },
   });
 
