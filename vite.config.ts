@@ -18,4 +18,29 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks for large dependencies
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-radix': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+          ],
+          'vendor-charts': ['recharts'],
+          'vendor-form': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+        },
+      },
+    },
+    // Increase warning limit since we're splitting into chunks
+    chunkSizeWarningLimit: 300,
+  },
 }));

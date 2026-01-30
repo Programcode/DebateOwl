@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export default function HistoryPage() {
   const navigate = useNavigate();
   const store = useSessionStore();
-  
+
   const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString() + ' ' + new Date(timestamp).toLocaleTimeString();
 
   const handleLoadCase = (id: string) => {
@@ -50,11 +50,11 @@ export default function HistoryPage() {
 
         <Tabs defaultValue="cases" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4"/> Saved Cases</TabsTrigger>
-            <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4"/> Chat Sessions</TabsTrigger>
-            <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4"/> Attack Analyses</TabsTrigger>
-            <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4"/> Brainstorms</TabsTrigger>
-            <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4"/> Factoids</TabsTrigger>
+            <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> Saved Cases</TabsTrigger>
+            <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4" /> Chat Sessions</TabsTrigger>
+            <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4" /> Attack Analyses</TabsTrigger>
+            <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4" /> Brainstorms</TabsTrigger>
+            <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4" /> Factoids</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cases">
@@ -82,7 +82,7 @@ export default function HistoryPage() {
                             <Button variant="outline" size="sm" onClick={() => handleLoadCase(item.id)}>
                               <Eye className="h-4 w-4 mr-2" /> Load
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => store.deleteSavedCase(item.id)}>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => store.deleteSavedCase(item.id)} aria-label={`Delete ${item.title}`}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -102,7 +102,7 @@ export default function HistoryPage() {
                 <CardDescription>Past conversations with the debate coach</CardDescription>
               </CardHeader>
               <CardContent>
-                 {store.savedChats.length === 0 ? (
+                {store.savedChats.length === 0 ? (
                   <p className="text-muted-foreground text-sm">No saved chats yet.</p>
                 ) : (
                   <div className="space-y-4">
@@ -122,7 +122,7 @@ export default function HistoryPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="attacks">
             <Card>
               <CardHeader>

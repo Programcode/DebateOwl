@@ -1,11 +1,11 @@
 // src/components/layout/AppLayout.tsx
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { 
-  Sparkles, 
-  Swords, 
-  Lightbulb, 
-  BookOpen, 
+import {
+  Sparkles,
+  Swords,
+  Lightbulb,
+  BookOpen,
   MessageCircle,
   Settings,
   Menu,
@@ -69,7 +69,7 @@ export function AppLayout() {
 
           <div className="flex items-center gap-2">
             <NavLink to="/settings">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings">
                 <Settings className="h-5 w-5" />
               </Button>
             </NavLink>
@@ -78,6 +78,8 @@ export function AppLayout() {
               size="icon"
               className="md:hidden text-muted-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
