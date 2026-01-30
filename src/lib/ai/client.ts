@@ -12,19 +12,111 @@ import { supabase } from '@/lib/supabase/client';
 // Request timeout in milliseconds (200 seconds)
 const REQUEST_TIMEOUT_MS = 200 * 1000;
 
+// Enable debug logging in development
+const DEBUG = import.meta.env.DEV;
+
+/**
+ * Base class for AI-related errors with structured information.
+ */
+export class AIError extends Error {
+  readonly statusCode?: number;
+  readonly requestId?: string;
+  readonly details?: Record<string, unknown>;
+
+  constructor(
+    message: string,
+    options?: { statusCode?: number; requestId?: string; details?: Record<string, unknown> }
+  ) {
+    super(message);
+    this.name = 'AIError';
+    this.statusCode = options?.statusCode;
+    this.requestId = options?.requestId;
+    this.details = options?.details;
+  }
+}
+
+/**
+ * Error for authentication failures (401/403).
+ * User should re-authenticate.
+ */
+export class AIAuthError extends AIError {
+  constructor(message: string = 'Authentication required. Please sign in again.', options?: { statusCode?: number; requestId?: string }) {
+    super(message, options);
+    this.name = 'AIAuthError';
+  }
+}
+
+/**
+ * Error for rate limit exceeded (429).
+ */
+export class AIRateLimitError extends AIError {
+  readonly limit?: number;
+  readonly current?: number;
+  readonly retryAfter?: number;
+
+  constructor(
+    message: string = 'Rate limit exceeded. Please try again later.',
+    options?: { statusCode?: number; requestId?: string; limit?: number; current?: number; retryAfter?: number }
+  ) {
+    super(message, { statusCode: options?.statusCode ?? 429, requestId: options?.requestId });
+    this.name = 'AIRateLimitError';
+    this.limit = options?.limit;
+    this.current = options?.current;
+    this.retryAfter = options?.retryAfter;
+  }
+}
+
+/**
+ * Error for AI provider failures (OpenAI, Google, Anthropic API errors).
+ */
+export class AIProviderError extends AIError {
+  readonly provider?: string;
+
+  constructor(
+    message: string,
+    options?: { statusCode?: number; requestId?: string; provider?: string; details?: Record<string, unknown> }
+  ) {
+    super(message, options);
+    this.name = 'AIProviderError';
+    this.provider = options?.provider;
+  }
+}
+
+/**
+ * Error for invalid/malformed AI responses.
+ */
+export class AIResponseError extends AIError {
+  constructor(message: string = 'Invalid response from AI service.', options?: { requestId?: string; details?: Record<string, unknown> }) {
+    super(message, options);
+    this.name = 'AIResponseError';
+  }
+}
+
 /**
  * Custom error for request timeouts.
  */
-export class TimeoutError extends Error {
+export class TimeoutError extends AIError {
   constructor(message: string = 'Request timed out. Please try again.') {
-    super(message);
+    super(message, { statusCode: 408 });
     this.name = 'TimeoutError';
   }
 }
 
 /**
- * Checks if an error is a TimeoutError.
+ * Type guards for error checking.
  */
+export function isAIAuthError(error: unknown): error is AIAuthError {
+  return error instanceof AIAuthError || (error instanceof Error && error.name === 'AIAuthError');
+}
+
+export function isAIRateLimitError(error: unknown): error is AIRateLimitError {
+  return error instanceof AIRateLimitError || (error instanceof Error && error.name === 'AIRateLimitError');
+}
+
+export function isAIProviderError(error: unknown): error is AIProviderError {
+  return error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError');
+}
+
 export function isTimeoutError(error: unknown): error is TimeoutError {
   return error instanceof TimeoutError || (error instanceof Error && error.name === 'TimeoutError');
 }
@@ -54,6 +146,9 @@ async function callSupabaseAI(
   input: Record<string, unknown>,
   config: ProviderConfig
 ) {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const startTime = performance.now();
+
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
@@ -65,30 +160,148 @@ async function callSupabaseAI(
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
 
-  // Require authentication for AI features
-  if (!accessToken) {
-    throw new Error('Please sign in to use AI features');
-  }
-
-  // Wrap the API call with timeout
-  const invokePromise = supabase.functions.invoke('ai', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: {
+  // Log request details in development
+  if (DEBUG) {
+    console.log(`[AI Request ${requestId}]`, {
       feature,
-      input,
       provider,
       model: config.model,
-      temperature: config.temperature,
-      customSystemPrompt: settings.customSystemPrompt || null,
-      sources: activeSources,
-    },
-  });
+      hasAccessToken: !!accessToken,
+      activeSources: activeSources.length,
+    });
+  }
 
-  const { data, error } = await withTimeout(invokePromise, REQUEST_TIMEOUT_MS);
+  // Require authentication for AI features
+  if (!accessToken) {
+    throw new AIAuthError('Please sign in to use AI features', { requestId });
+  }
 
-  if (error) throw new Error(error.message);
-  if (!data?.output) throw new Error('AI response missing output');
-  return data.output;
+  const requestBody = {
+    feature,
+    input,
+    provider,
+    model: config.model,
+    temperature: config.temperature,
+    customSystemPrompt: settings.customSystemPrompt || null,
+    sources: activeSources,
+  };
+
+  try {
+    // Wrap the API call with timeout
+    const invokePromise = supabase.functions.invoke('ai', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: requestBody,
+    });
+
+    const { data, error } = await withTimeout(invokePromise, REQUEST_TIMEOUT_MS);
+    const elapsed = Math.round(performance.now() - startTime);
+
+    // Log response in development
+    if (DEBUG) {
+      console.log(`[AI Response ${requestId}] ${elapsed}ms`, {
+        hasData: !!data,
+        hasOutput: !!data?.output,
+        hasError: !!error,
+        errorMessage: error?.message,
+      });
+    }
+
+    // Handle Supabase function invoke errors
+    if (error) {
+      const errorDetails = parseSupabaseError(error, requestId);
+      throw errorDetails;
+    }
+
+    // Handle response with error field (from edge function)
+    if (data?.error) {
+      const errorMessage = data.error as string;
+
+      // Rate limit error from edge function
+      if (data.limit !== undefined || errorMessage.includes('rate limit') || errorMessage.includes('limit exceeded')) {
+        throw new AIRateLimitError(errorMessage, {
+          requestId,
+          limit: data.limit as number | undefined,
+          current: data.current as number | undefined,
+        });
+      }
+
+      // Provider error (OpenAI, Google, etc.)
+      if (errorMessage.includes('OpenAI') || errorMessage.includes('Google') || errorMessage.includes('Anthropic')) {
+        throw new AIProviderError(errorMessage, { requestId, provider, details: { model: config.model } });
+      }
+
+      // Generic error from edge function
+      throw new AIError(errorMessage, { statusCode: 500, requestId });
+    }
+
+    // Validate response has expected output
+    if (!data?.output) {
+      throw new AIResponseError('AI response missing output field', { requestId, details: { data } });
+    }
+
+    return data.output;
+  } catch (err) {
+    // Re-throw our custom errors
+    if (err instanceof AIError) {
+      throw err;
+    }
+
+    // Handle timeout
+    if (err instanceof TimeoutError) {
+      throw err;
+    }
+
+    // Wrap unknown errors
+    const message = err instanceof Error ? err.message : 'Unknown error occurred';
+    throw new AIError(message, { requestId });
+  }
+}
+
+/**
+ * Parse Supabase FunctionsHttpError into appropriate AIError subclass.
+ */
+function parseSupabaseError(error: { message: string; context?: { status?: number } }, requestId: string): AIError {
+  const message = error.message || 'Unknown error';
+  // Try to extract status code from error context or message
+  let statusCode: number | undefined;
+
+  // Check for status in error context (Supabase v2)
+  if (error.context?.status) {
+    statusCode = error.context.status;
+  }
+
+  // Parse status from message patterns
+  if (message.includes('non-2xx') || message.includes('status code')) {
+    // Common message: "Edge Function returned a non-2xx status code"
+    // Check for hints in message
+    if (message.includes('401') || message.includes('Unauthorized')) {
+      statusCode = 401;
+    } else if (message.includes('403') || message.includes('Forbidden')) {
+      statusCode = 403;
+    } else if (message.includes('429') || message.includes('rate limit')) {
+      statusCode = 429;
+    } else if (message.includes('500') || message.includes('Internal')) {
+      statusCode = 500;
+    }
+  }
+
+  // Return appropriate error type based on status code
+  if (statusCode === 401 || statusCode === 403) {
+    return new AIAuthError(
+      'Authentication failed. Your session may have expired. Please sign in again.',
+      { statusCode, requestId }
+    );
+  }
+
+  if (statusCode === 429) {
+    return new AIRateLimitError('Too many requests. Please wait and try again.', { statusCode, requestId });
+  }
+
+  // Default: return generic error with helpful message
+  return new AIError(
+    `AI service error: ${message}. Please try again.`,
+    { statusCode: statusCode || 500, requestId }
+  );
 }
 
 /**

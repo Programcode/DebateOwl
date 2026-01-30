@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resetMockState, setMockInvokeResponse, supabaseMock } from "@/test/mocks/supabase";
+import { resetMockState, setMockInvokeResponse, setMockSessionToken, supabaseMock } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
-import { generateCase } from "@/lib/ai/client";
+import { generateCase, AIAuthError, AIRateLimitError, AIResponseError, AIError } from "@/lib/ai/client";
 
 describe("ai client", () => {
   beforeEach(() => {
@@ -71,7 +71,7 @@ describe("ai client", () => {
     }));
   });
 
-  it("throws when edge function returns no output", async () => {
+  it("throws AIResponseError when edge function returns no output", async () => {
     setMockInvokeResponse({ output: null });
 
     await expect(generateCase(
@@ -86,6 +86,61 @@ describe("ai client", () => {
         language: "en",
       },
       { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 }
-    )).rejects.toThrow("AI response missing output");
+    )).rejects.toThrow(AIResponseError);
+  });
+
+  it("throws AIAuthError when no access token available", async () => {
+    setMockSessionToken(null);
+
+    await expect(generateCase(
+      {
+        motion: "Test motion",
+        side: "pro",
+        format: "custom",
+        role: "intro",
+        length: "standard",
+        audience: "intermediate",
+        tone: "formal",
+        language: "en",
+      },
+      { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 }
+    )).rejects.toThrow(AIAuthError);
+  });
+
+  it("throws AIError when edge function returns error", async () => {
+    setMockInvokeResponse(null, { message: "Edge Function returned a non-2xx status code" });
+
+    await expect(generateCase(
+      {
+        motion: "Test motion",
+        side: "pro",
+        format: "custom",
+        role: "intro",
+        length: "standard",
+        audience: "intermediate",
+        tone: "formal",
+        language: "en",
+      },
+      { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 }
+    )).rejects.toThrow(AIError);
+  });
+
+  it("throws AIRateLimitError when edge function returns rate limit response", async () => {
+    setMockInvokeResponse({ error: "Daily request limit exceeded", limit: 100, current: 100 });
+
+    await expect(generateCase(
+      {
+        motion: "Test motion",
+        side: "pro",
+        format: "custom",
+        role: "intro",
+        length: "standard",
+        audience: "intermediate",
+        tone: "formal",
+        language: "en",
+      },
+      { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 }
+    )).rejects.toThrow(AIRateLimitError);
   });
 });
+

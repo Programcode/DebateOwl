@@ -4,7 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { GenerateForm } from '@/components/features/generate/GenerateForm';
 import { GenerateResults } from '@/components/features/generate/GenerateResults';
-import { generateCase, askChat } from '@/lib/ai/client';
+import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,11 +31,33 @@ export default function GeneratePage() {
       setGenerateResult(result);
     } catch (error) {
       console.error('Failed to generate case:', error);
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
+
+      // Handle specific error types with appropriate messages
+      if (isAIAuthError(error)) {
+        toast({
+          title: "Authentication Required",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (isAIRateLimitError(error)) {
+        toast({
+          title: "Rate Limit Exceeded",
+          description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} requests)` : ''}`,
+          variant: "destructive",
+        });
+      } else if (isTimeoutError(error)) {
+        toast({
+          title: "Request Timed Out",
+          description: "The AI took too long to respond. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          variant: "destructive",
+        });
+      }
     } finally {
       setGenerateLoading(false);
     }

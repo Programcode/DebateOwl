@@ -27,6 +27,23 @@ interface ResearchContext {
   verifiedUrls: Set<string>;
 }
 
+// Generate unique request ID for tracing
+function generateRequestId(): string {
+  return `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Structured logger for consistent log format
+function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: string, data?: Record<string, unknown>) {
+  const logObj = { requestId, level, message, ...data, timestamp: new Date().toISOString() };
+  if (level === "ERROR") {
+    console.error(JSON.stringify(logObj));
+  } else if (level === "WARN") {
+    console.warn(JSON.stringify(logObj));
+  } else {
+    console.log(JSON.stringify(logObj));
+  }
+}
+
 // ============== SUPABASE CLIENT ==============
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -595,6 +612,8 @@ function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searc
 // ============== MAIN HANDLER ==============
 
 Deno.serve(async (req) => {
+  const requestId = generateRequestId();
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -605,6 +624,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
+    log(requestId, "WARN", "Invalid JSON body received");
     return badRequest("Invalid JSON body");
   }
   const feature = body.feature as Feature | undefined;
@@ -614,18 +634,22 @@ Deno.serve(async (req) => {
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
   const sources = (body.sources as Source[] | undefined) || [];
+
+  // Log incoming request
+  log(requestId, "INFO", "Request received", { feature, provider, model, sourcesCount: sources.length });
+
   if (!feature) return badRequest("Missing feature");
   if (!input) return badRequest("Missing input");
   const sanitizeResult = sanitizeInput(input);
   if ("rejected" in sanitizeResult) {
-    console.warn(`[SECURITY] Request rejected: ${sanitizeResult.rejected}`);
+    log(requestId, "WARN", "Request rejected by sanitization", { reason: sanitizeResult.rejected });
     return badRequest(sanitizeResult.rejected);
   }
   const sanitizedInput = sanitizeResult.sanitized;
   if (customSystemPrompt) {
     const promptResult = sanitizePromptInput(customSystemPrompt, "customSystemPrompt");
     if ("rejected" in promptResult) {
-      console.warn(`[SECURITY] Custom prompt rejected: ${promptResult.rejected}`);
+      log(requestId, "WARN", "Custom prompt rejected", { reason: promptResult.rejected });
       return badRequest(promptResult.rejected);
     }
   }
@@ -638,9 +662,13 @@ Deno.serve(async (req) => {
       const token = authHeader.slice(7);
       const { data: { user } } = await supabase.auth.getUser(token);
       userId = user?.id || null;
-    } catch {
+      log(requestId, "INFO", "User authenticated", { userId });
+    } catch (authErr) {
+      log(requestId, "WARN", "Auth token validation failed", { error: authErr instanceof Error ? authErr.message : "Unknown" });
       // Anonymous request - continue without user
     }
+  } else {
+    log(requestId, "INFO", "No auth header provided, anonymous request");
   }
 
   // Check rate limits
