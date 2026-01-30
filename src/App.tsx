@@ -20,6 +20,8 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const LibraryPage = lazy(() => import("./pages/LibraryPage"));
 const TimerPage = lazy(() => import("./pages/TimerPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const SharedPage = lazy(() => import("./pages/SharedPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -42,6 +44,7 @@ const App = () => (
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/share/:code" element={<SharedPage />} />
               <Route
                 element={
                   <RequireAuth>
@@ -58,6 +61,7 @@ const App = () => (
                 <Route path="/library" element={<LibraryPage />} />
                 <Route path="/timer" element={<TimerPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/admin" element={<AdminPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
