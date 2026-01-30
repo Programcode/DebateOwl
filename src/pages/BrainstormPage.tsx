@@ -35,35 +35,35 @@ export default function BrainstormPage() {
 
   const handleDiscuss = async () => {
     if (!brainstormResult) return;
-    
+
     // Construct summary based on available output
     let summary = "I'd like to discuss these brainstormed ideas.\n\n";
-    
+
     if (brainstormResult.topFive) {
-      summary += "**Top Ideas:**\n" + brainstormResult.topFive.map(i => `- ${i.idea.title} (${i.idea.side.toUpperCase()})`).join('\n');
+      summary += "**Top Ideas:**\n" + brainstormResult.topFive.map(i => `- ${i.idea.title} (${i.idea.side?.toUpperCase() || 'N/A'})`).join('\n');
     } else if (brainstormResult.buckets) {
       summary += "**Key Buckets:**\n" + brainstormResult.buckets.map(b => `- ${b.name}: ${b.keyInsight}`).join('\n');
     }
-    
+
     summary += "\n\nCan you help me expand on one of these?";
 
     addAskMessage({ role: 'user', content: summary });
     navigate('/ask');
-    
+
     setAskLoading(true);
     try {
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({ 
-        role: m.role as 'user' | 'assistant', 
-        content: m.content 
+      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
       }));
-      
+
       const result = await askChat(summary, history, 'general', askConfig);
-      
-      addAskMessage({ 
-        role: 'assistant', 
+
+      addAskMessage({
+        role: 'assistant',
         content: result.response,
         // @ts-expect-error: form schema and UI fields diverge
-        output: result 
+        output: result
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
