@@ -23,6 +23,11 @@ export default function GeneratePage() {
     setGenerateLoading(true);
     try {
       const result = await generateCase(data, config);
+      console.log('[DEBUG] Generate result:', JSON.stringify(result, null, 2));
+      console.log('[DEBUG] Has caseStructure:', !!result?.caseStructure);
+      console.log('[DEBUG] Has contentions:', !!result?.contentions);
+      console.log('[DEBUG] Has predictedOpponentCase:', !!result?.predictedOpponentCase);
+      console.log('[DEBUG] Has counters:', !!result?.counters);
       setGenerateResult(result);
     } catch (error) {
       console.error('Failed to generate case:', error);
@@ -41,7 +46,7 @@ export default function GeneratePage() {
     // TODO: Implement section-specific regeneration
     console.log('Regenerate section:', section);
   };
-  
+
   const handleSave = () => {
     if (!generateResult) return;
     const title = window.prompt("Enter a title for this case:", generateResult.caseStructure.thesis.slice(0, 50));
@@ -53,33 +58,33 @@ export default function GeneratePage() {
 
   const handleDiscuss = async () => {
     if (!generateResult) return;
-    
+
     const summary = `I'd like to discuss the case we just generated.
     
     **Thesis:** ${generateResult.caseStructure.thesis}
     
     **Contentions:**
-    ${generateResult.contentions.map((c, i) => `${i+1}. ${c.claim}`).join('\n')}
+    ${generateResult.contentions.map((c, i) => `${i + 1}. ${c.claim}`).join('\n')}
     
     Can we refine this?`;
 
     addAskMessage({ role: 'user', content: summary });
     navigate('/ask');
-    
+
     setAskLoading(true);
     try {
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({ 
-        role: m.role as 'user' | 'assistant', 
-        content: m.content 
+      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
       }));
-      
+
       const result = await askChat(summary, history, 'general', askConfig);
-      
-      addAskMessage({ 
-        role: 'assistant', 
+
+      addAskMessage({
+        role: 'assistant',
         content: result.response,
         // @ts-expect-error: form schema and UI fields diverge
-        output: result 
+        output: result
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
@@ -115,8 +120,8 @@ export default function GeneratePage() {
                     Save Case
                   </Button>
                 </div>
-                <GenerateResults 
-                  result={generateResult} 
+                <GenerateResults
+                  result={generateResult}
                   onRegenerateSection={handleRegenerateSection}
                   onDiscuss={handleDiscuss}
                 />
