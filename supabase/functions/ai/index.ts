@@ -466,14 +466,48 @@ CRITICAL: The debate format is strictly:
 - R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
 - Conclusor (3 min): Summarizes the debate and explains why this team wins.
 
-Return a valid JSON object matching this structure:
+CRITICAL - STRICT JSON SCHEMA REQUIREMENT:
+You MUST return a valid JSON object with EXACTLY these fields. Do NOT use different field names.
+Do NOT add extra fields. Do NOT omit any fields. Follow this structure EXACTLY:
+
 {
-  "caseStructure": { "thesis": "string", "framework": "string", "keyDefinitions": ["string"], "burdenOfProof": "string" },
-  "contentions": [{ "id": "1", "claim": "string", "reasoning": "string", "evidence": "string", "needsSource": boolean, "sourceQuery": "string", "impact": "string" }],
-  "predictedOpponentCase": { "likelyArguments": ["string"], "strategicWeaknesses": ["string"], "keyClashes": ["string"] },
-  "counters": [{ "targetArgument": "string", "counterpoint": "string", "rebuttal": "string" }],
-  "metadata": { "side": "pro/con", "format": "string", "generatedAt": "ISO string" }
-}`;
+  "caseStructure": {
+    "thesis": "The main thesis statement for the debate",
+    "framework": "The framework or lens through which to view the debate",
+    "keyDefinitions": ["definition1", "definition2"],
+    "burdenOfProof": "What we must prove to win"
+  },
+  "contentions": [
+    {
+      "id": "1",
+      "claim": "The main claim of this contention",
+      "reasoning": "Why this claim is true",
+      "evidence": "Supporting evidence",
+      "needsSource": false,
+      "sourceQuery": "",
+      "impact": "Why this matters"
+    }
+  ],
+  "predictedOpponentCase": {
+    "likelyArguments": ["Argument opponent will make"],
+    "strategicWeaknesses": ["Weakness in our case"],
+    "keyClashes": ["Main clash points"]
+  },
+  "counters": [
+    {
+      "targetArgument": "What opponent argument this counters",
+      "counterpoint": "Our counter to that argument",
+      "rebuttal": "How to phrase the rebuttal"
+    }
+  ],
+  "metadata": {
+    "side": "pro",
+    "format": "custom",
+    "generatedAt": "CURRENT_ISO_TIMESTAMP"
+  }
+}
+
+IMPORTANT: The "side" in metadata must be exactly "pro" or "con". Always include the generatedAt timestamp.`;
 
 const ATTACK_PROMPT = `You are an expert debate judge and coach. Analyze the given debate case and provide a critical breakdown in JSON format.
 
