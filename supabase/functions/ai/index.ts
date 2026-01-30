@@ -27,6 +27,123 @@ interface ResearchContext {
   verifiedUrls: Set<string>;
 }
 
+// ============== SUPABASE CLIENT ==============
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// ============== RATE LIMITING ==============
+
+interface RateLimitResult {
+  allowed: boolean;
+  reason?: string;
+  limit?: number;
+  current?: number;
+}
+
+async function checkRateLimit(userId: string | null): Promise<RateLimitResult> {
+  if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
+
+  try {
+    // Get user's daily request count
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { count, error: countError } = await supabase
+      .from("ai_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", todayStart.toISOString());
+
+    if (countError) {
+      console.warn("[RATE LIMIT] Error counting requests:", countError);
+      return { allowed: true }; // Fail open
+    }
+
+    const currentCount = count || 0;
+
+    // Get user-specific limit, or fall back to global limit
+    const { data: userLimit } = await supabase
+      .from("rate_limits")
+      .select("limit_value")
+      .eq("user_id", userId)
+      .eq("limit_type", "daily_requests")
+      .single();
+
+    if (userLimit) {
+      if (currentCount >= userLimit.limit_value) {
+        return { allowed: false, reason: "Daily request limit exceeded", limit: userLimit.limit_value, current: currentCount };
+      }
+      return { allowed: true, limit: userLimit.limit_value, current: currentCount };
+    }
+
+    // Check global limit
+    const { data: globalLimit } = await supabase
+      .from("rate_limits")
+      .select("limit_value")
+      .is("user_id", null)
+      .eq("limit_type", "daily_requests")
+      .single();
+
+    if (globalLimit && currentCount >= globalLimit.limit_value) {
+      return { allowed: false, reason: "Daily request limit exceeded", limit: globalLimit.limit_value, current: currentCount };
+    }
+
+    return { allowed: true, limit: globalLimit?.limit_value, current: currentCount };
+  } catch (err) {
+    console.warn("[RATE LIMIT] Check failed:", err);
+    return { allowed: true }; // Fail open
+  }
+}
+
+async function logUsage(
+  userId: string | null,
+  feature: string,
+  provider: string,
+  model: string,
+  inputTokens?: number,
+  outputTokens?: number,
+  latencyMs?: number,
+  status: string = "success",
+  errorCode?: string
+) {
+  try {
+    // Estimate cost (rough estimates per 1M tokens)
+    const costPer1MInput: Record<string, number> = {
+      "gpt-4o": 2.5, "gpt-4o-mini": 0.15, "gpt-4-turbo": 10,
+      "gemini-2.0-flash": 0.075, "gemini-1.5-pro": 1.25,
+      "claude-3-5-sonnet": 3, "claude-3-haiku": 0.25
+    };
+    const costPer1MOutput: Record<string, number> = {
+      "gpt-4o": 10, "gpt-4o-mini": 0.6, "gpt-4-turbo": 30,
+      "gemini-2.0-flash": 0.3, "gemini-1.5-pro": 5,
+      "claude-3-5-sonnet": 15, "claude-3-haiku": 1.25
+    };
+
+    const inputCost = ((inputTokens || 0) / 1_000_000) * (costPer1MInput[model] || 1);
+    const outputCost = ((outputTokens || 0) / 1_000_000) * (costPer1MOutput[model] || 4);
+    const totalCost = inputCost + outputCost;
+
+    await supabase.from("ai_requests").insert({
+      user_id: userId,
+      feature,
+      provider,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      latency_ms: latencyMs,
+      status,
+      error_code: errorCode,
+      cost_usd: totalCost > 0 ? totalCost : null
+    });
+  } catch (err) {
+    console.warn("[USAGE LOG] Failed to log:", err);
+  }
+}
+
 const DEFAULT_PROVIDER = (Deno.env.get("AI_DEFAULT_PROVIDER") || "google") as Provider;
 
 function badRequest(message: string) {
@@ -478,6 +595,35 @@ Deno.serve(async (req) => {
       return badRequest(promptResult.rejected);
     }
   }
+
+  // Extract user ID from JWT authorization header
+  let userId: string | null = null;
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id || null;
+    } catch {
+      // Anonymous request - continue without user
+    }
+  }
+
+  // Check rate limits
+  const rateLimit = await checkRateLimit(userId);
+  if (!rateLimit.allowed) {
+    await logUsage(userId, feature, provider, model, undefined, undefined, undefined, "rate_limited");
+    return new Response(JSON.stringify({
+      error: rateLimit.reason,
+      limit: rateLimit.limit,
+      current: rateLimit.current
+    }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const startTime = Date.now();
   try {
     const systemPrompt = buildSystemPrompt(feature, customSystemPrompt, sources);
 
@@ -507,6 +653,9 @@ Deno.serve(async (req) => {
         await Promise.all(verifyPromises);
       }
 
+      // Log usage and return
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
       return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -528,6 +677,10 @@ Deno.serve(async (req) => {
       const prompt = `Message: ${message}${urlContext}\nMode: ${sanitizedInput.mode}`;
       const messages = [...history, { role: "user", content: prompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      // Log usage and return
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
       return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -535,10 +688,18 @@ Deno.serve(async (req) => {
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
     const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+    // Log usage and return
+    const latencyMs = Date.now() - startTime;
+    await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
     return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);
+
+    // Log error
+    const latencyMs = Date.now() - startTime;
+    await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs, "error", message.slice(0, 100));
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
