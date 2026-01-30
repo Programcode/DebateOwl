@@ -19,6 +19,14 @@ type Source = {
   type: string;
 };
 
+type JinaResult = { title?: string; url?: string; content?: string; description?: string };
+
+interface ResearchContext {
+  searches: Array<{ query: string; results: string }>;
+  readContent: Array<{ url: string; content: string }>;
+  verifiedUrls: Set<string>;
+}
+
 const DEFAULT_PROVIDER = (Deno.env.get("AI_DEFAULT_PROVIDER") || "google") as Provider;
 
 function badRequest(message: string) {
@@ -115,6 +123,223 @@ function parseJsonFromText(text: string, providerName: string) {
   throw new Error(`${providerName} returned invalid JSON`);
 }
 
+// ============== JINA FUNCTIONS ==============
+
+async function jinaSearch(query: string): Promise<JinaResult[]> {
+  const apiKey = Deno.env.get("JINA_API_KEY");
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  try {
+    const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers }, 15000);
+    if (!response.ok) return [];
+    const data = await response.json();
+    if (!data?.data || !Array.isArray(data.data)) return [];
+    return data.data as JinaResult[];
+  } catch {
+    console.warn(`[JINA] Search failed for: ${query}`);
+    return [];
+  }
+}
+
+async function jinaRead(url: string): Promise<string> {
+  const apiKey = Deno.env.get("JINA_API_KEY");
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  try {
+    const response = await fetchWithTimeout(`https://r.jina.ai/${url}`, { headers }, 15000);
+    if (!response.ok) return "";
+    const data = await response.json();
+    return (data.data?.content || data.content || "").slice(0, 8000);
+  } catch {
+    console.warn(`[JINA] Read failed for: ${url}`);
+    return "";
+  }
+}
+
+async function verifyUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetchWithTimeout(url, { method: "HEAD" }, 5000);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function formatSearchResults(results: JinaResult[]): string {
+  return results.map((r) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content || r.description}\n---`).join("\n");
+}
+
+// ============== DEEP RESEARCH ==============
+
+const QUERY_GENERATION_PROMPT = `You are a research assistant. Based on the initial claim and search results so far, generate 2-3 follow-up search queries to find more specific evidence.
+
+Return JSON: { "queries": ["query1", "query2", "query3"] }
+
+Keep queries specific, factual, and focused on statistics, studies, or official sources.`;
+
+async function generateFollowUpQueries(
+  claim: string,
+  currentResults: string,
+  provider: Provider,
+  model: string
+): Promise<string[]> {
+  const prompt = `Claim: "${claim}"\n\nCurrent search results:\n${currentResults.slice(0, 3000)}\n\nGenerate 2-3 specific follow-up queries to find more evidence.`;
+  try {
+    const result = await callAI(provider, model, QUERY_GENERATION_PROMPT, [{ role: "user", content: prompt }], 0.3);
+    const parsed = typeof result === "object" && result !== null ? result : {};
+    if (Array.isArray((parsed as { queries?: string[] }).queries)) {
+      return (parsed as { queries: string[] }).queries.slice(0, 3);
+    }
+    return [];
+  } catch (err) {
+    console.warn("[DEEP RESEARCH] Failed to generate follow-up queries:", err);
+    return [];
+  }
+}
+
+async function deepResearch(
+  claim: string,
+  region: string,
+  provider: Provider,
+  model: string
+): Promise<ResearchContext> {
+  const context: ResearchContext = {
+    searches: [],
+    readContent: [],
+    verifiedUrls: new Set(),
+  };
+
+  console.log("[DEEP RESEARCH] Starting for claim:", claim);
+
+  // Round 1: Initial search
+  const initialQuery = `${claim} ${region} statistics data`;
+  const round1Results = await jinaSearch(initialQuery);
+  const round1Text = formatSearchResults(round1Results);
+  context.searches.push({ query: initialQuery, results: round1Text });
+  console.log(`[DEEP RESEARCH] Round 1: ${round1Results.length} results`);
+
+  // Extract URLs for reading
+  const urlsToRead = round1Results.slice(0, 3).map((r) => r.url).filter(Boolean) as string[];
+
+  // Round 2: AI generates follow-up queries
+  const followUpQueries = await generateFollowUpQueries(claim, round1Text, provider, model);
+  console.log(`[DEEP RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
+
+  // Execute follow-up searches in parallel
+  const followUpPromises = followUpQueries.map(async (query) => {
+    const results = await jinaSearch(query);
+    const text = formatSearchResults(results);
+    context.searches.push({ query, results: text });
+    // Add more URLs to read
+    results.slice(0, 2).forEach((r) => {
+      if (r.url && !urlsToRead.includes(r.url)) urlsToRead.push(r.url);
+    });
+    return results.length;
+  });
+  await Promise.all(followUpPromises);
+  console.log(`[DEEP RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
+
+  // Round 3: Read top URLs for full content
+  const readPromises = urlsToRead.slice(0, 5).map(async (url) => {
+    const content = await jinaRead(url);
+    if (content) {
+      context.readContent.push({ url, content });
+      context.verifiedUrls.add(url);
+    }
+    return content.length > 0;
+  });
+  await Promise.all(readPromises);
+  console.log(`[DEEP RESEARCH] Read ${context.readContent.length} pages`);
+
+  return context;
+}
+
+function buildResearchContext(research: ResearchContext): string {
+  let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
+
+  // Add search results
+  for (const search of research.searches) {
+    ctx += `--- Search: "${search.query}" ---\n${search.results}\n\n`;
+  }
+
+  // Add full page content
+  if (research.readContent.length > 0) {
+    ctx += "\n=== FULL PAGE CONTENT (verified sources) ===\n\n";
+    for (const page of research.readContent) {
+      ctx += `--- From: ${page.url} ---\n${page.content.slice(0, 4000)}\n\n`;
+    }
+  }
+
+  return ctx;
+}
+
+// ============== AI PROVIDER CALLS ==============
+
+async function callAI(
+  provider: Provider,
+  model: string,
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  temperature: number
+): Promise<unknown> {
+  if (provider === "openai") {
+    return await callOpenAI([{ role: "system", content: systemPrompt }, ...messages], model, temperature);
+  } else if (provider === "anthropic") {
+    return await callAnthropic(messages, model, temperature, systemPrompt);
+  } else if (provider === "google") {
+    return await callGoogle(messages, model, temperature, systemPrompt);
+  }
+  throw new Error(`Unsupported provider: ${provider}`);
+}
+
+async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number) {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new Error("OPENAI_API_KEY missing");
+  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, messages, temperature, response_format: { type: "json_object" } }),
+  }, 60000);
+  if (!response.ok) { const text = await response.text(); throw new Error(`OpenAI error: ${text}`); }
+  const data = await response.json();
+  if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
+  return parseJsonFromText(data.choices[0]?.message?.content, "OpenAI");
+}
+
+async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string) {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
+  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model, system, messages, max_tokens: 4096, temperature }),
+  }, 60000);
+  if (!response.ok) { const text = await response.text(); throw new Error(`Anthropic error: ${text}`); }
+  const data = await response.json();
+  if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
+  return parseJsonFromText(data.content[0]?.text || "", "Anthropic");
+}
+
+async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string) {
+  const apiKey = Deno.env.get("GOOGLE_API_KEY");
+  if (!apiKey) throw new Error("GOOGLE_API_KEY missing");
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const contents = messages.map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] }));
+  const payload = { contents, systemInstruction: system ? { parts: [{ text: system }] } : undefined, generationConfig: { temperature, responseMimeType: "application/json" } };
+  const response = await fetchWithTimeout(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000);
+  if (!response.ok) { const text = await response.text(); throw new Error(`Google error: ${text}`); }
+  const data = await response.json();
+  if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
+  return parseJsonFromText(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google");
+}
+
+function extractUrls(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.match(urlRegex) || [];
+}
+
+// ============== PROMPTS ==============
+
 const GENERATE_PROMPT = `You are an expert debate coach. Generate a structured debate case in JSON format.
 
 CRITICAL: The debate format is strictly:
@@ -161,15 +386,38 @@ CRITICAL: The debate format is strictly:
 Output JSON matching:
 { "needsMoreInfo": boolean, "mindmap": [...], "buckets": [...], "topFive": [...], "nextSteps": ["string"], "warningsAndTradeoffs": ["string"] }`;
 
-const FACTOIDS_PROMPT = `You are a research assistant. Find relevant facts, statistics, and sources for the given claim.
+const FACTOIDS_PROMPT = `You are an expert research assistant specializing in finding verifiable evidence for debate.
 
-SOURCE INSTRUCTION: Use the provided SEARCH RESULTS to find real, verifiable information.
-For each factoid, you MUST include the exact "URL" from the search result in the "citation.url" field.
+IMPORTANT: You have been provided with DEEP RESEARCH including multiple web searches and full page content from verified sources.
+
+For each factoid:
+1. Use ONLY information from the provided research context
+2. Include the exact URL from the source in citation.url
+3. Set citation.verified to "verified" if the source was fully read, "unverified" otherwise
+4. Be specific with statistics, dates, and figures
 
 Output JSON matching:
 {
-  "factoids": [{ "id": "string", "shortClaim": "string", "keyFigure": "string", "context": "string", "limitations": "string", "citation": { "title": "string", "publisher": "string", "date": "string", "url": "string", "verified": "verified|unverified" }, "howToUse": "string", "relevanceScore": number }],
-  "searchSuggestions": ["string"], "warnings": ["string"], "verificationStatus": "pending"
+  "factoids": [{ 
+    "id": "string", 
+    "shortClaim": "string (one sentence)", 
+    "keyFigure": "string (the main statistic or data point)", 
+    "context": "string (background and methodology)", 
+    "limitations": "string", 
+    "citation": { 
+      "title": "string", 
+      "publisher": "string", 
+      "date": "string", 
+      "url": "string (MUST be from research context)", 
+      "verified": "verified|unverified" 
+    }, 
+    "howToUse": "string", 
+    "relevanceScore": number (0-100) 
+  }],
+  "searchSuggestions": ["string (additional queries for more evidence)"], 
+  "warnings": ["string"], 
+  "researchSummary": "string (brief summary of the research process)",
+  "verificationStatus": "complete"
 }`;
 
 const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
@@ -188,77 +436,11 @@ function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searc
   if (feature === "generate") return `Motion: ${input.motion}\nSide: ${input.side}\nFormat: ${input.format}\nRole: ${input.role}\nLength: ${input.length}\nAudience: ${input.audience}\nTone: ${input.tone}`;
   if (feature === "attack") return `Analyze this case based on the following parameters:\n\nCASE TEXT:\n"${input.caseText}"`;
   if (feature === "brainstorm") return `Motion: ${input.motion}\nSide: ${input.side}\nOutput Mode: ${input.outputMode}\n${input.context ? `Context: ${input.context}` : ''}`;
-  if (feature === "factoids") return `Find evidence for claim: "${input.claim}"\n\nSEARCH RESULTS (Use these if relevant):\n${searchContext}\n\nRegion: ${input.region}\nSource Type: ${input.sourceType}\nTimeframe: ${input.timeframe || "Recent (last 5 years)"}\nLanguage: ${input.language}`;
+  if (feature === "factoids") return `Find evidence for claim: "${input.claim}"\n\n${searchContext}\n\nRegion: ${input.region}\nSource Type: ${input.sourceType}\nTimeframe: ${input.timeframe || "Recent (last 5 years)"}\nLanguage: ${input.language}`;
   return `Message: ${input.message}\nMode: ${input.mode}`;
 }
 
-async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number) {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) throw new Error("OPENAI_API_KEY missing");
-  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages, temperature, response_format: { type: "json_object" } }),
-  }, 60000);
-  if (!response.ok) { const text = await response.text(); throw new Error(`OpenAI error: ${text}`); }
-  const data = await response.json();
-  if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
-  return parseJsonFromText(data.choices[0]?.message?.content, "OpenAI");
-}
-
-async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string) {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
-  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model, system, messages, max_tokens: 4096, temperature }),
-  }, 60000);
-  if (!response.ok) { const text = await response.text(); throw new Error(`Anthropic error: ${text}`); }
-  const data = await response.json();
-  if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
-  return parseJsonFromText(data.content[0]?.text || "", "Anthropic");
-}
-
-async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string) {
-  const apiKey = Deno.env.get("GOOGLE_API_KEY");
-  if (!apiKey) throw new Error("GOOGLE_API_KEY missing");
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const contents = messages.map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] }));
-  const payload = { contents, systemInstruction: system ? { parts: [{ text: system }] } : undefined, generationConfig: { temperature, responseMimeType: "application/json" } };
-  const response = await fetchWithTimeout(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000);
-  if (!response.ok) { const text = await response.text(); throw new Error(`Google error: ${text}`); }
-  const data = await response.json();
-  if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
-  return parseJsonFromText(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google");
-}
-
-async function jinaSearch(query: string) {
-  const apiKey = Deno.env.get("JINA_API_KEY");
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers }, 20000);
-  if (!response.ok) return "";
-  const data = await response.json();
-  if (!data?.data || !Array.isArray(data.data)) return "";
-  type JinaResult = { title?: string; url?: string; content?: string; description?: string };
-  return data.data.map((r: JinaResult) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content || r.description}\n---`).join("\n");
-}
-
-async function jinaRead(url: string) {
-  const apiKey = Deno.env.get("JINA_API_KEY");
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  const response = await fetchWithTimeout(`https://r.jina.ai/${url}`, { headers }, 20000);
-  if (!response.ok) return "";
-  const data = await response.json();
-  return data.data?.content || data.content || "";
-}
-
-function extractUrls(text: string) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.match(urlRegex) || [];
-}
+// ============== MAIN HANDLER ==============
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -276,7 +458,7 @@ Deno.serve(async (req) => {
   const feature = body.feature as Feature | undefined;
   const input = body.input as Record<string, unknown> | undefined;
   const provider = (body.provider as Provider | undefined) || DEFAULT_PROVIDER;
-  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-3-flash-preview";
+  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-2.0-flash";
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
   const sources = (body.sources as Source[] | undefined) || [];
@@ -297,10 +479,37 @@ Deno.serve(async (req) => {
   }
   try {
     const systemPrompt = buildSystemPrompt(feature, customSystemPrompt, sources);
-    let searchContext = "";
+
+    // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
-      searchContext = await jinaSearch(String(sanitizedInput.claim || ""));
+      const claim = String(sanitizedInput.claim || "");
+      const region = String(sanitizedInput.region || "");
+
+      // Perform deep research with multiple search rounds
+      const research = await deepResearch(claim, region, provider, model);
+      const searchContext = buildResearchContext(research);
+
+      const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
+      const messages = [{ role: "user", content: userPrompt }];
+
+      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      // Post-process: verify URLs in the response
+      if (output && typeof output === "object" && "factoids" in output) {
+        const factoids = (output as { factoids: Array<{ citation: { url: string; verified: string } }> }).factoids;
+        const verifyPromises = factoids.map(async (f) => {
+          if (f.citation?.url && !research.verifiedUrls.has(f.citation.url)) {
+            const isValid = await verifyUrl(f.citation.url);
+            f.citation.verified = isValid ? "verified" : "unverified";
+          }
+        });
+        await Promise.all(verifyPromises);
+      }
+
+      return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // ASK: Read URLs mentioned in messages
     if (feature === "ask") {
       const history = (sanitizedInput.history as Array<{ role: string; content: string }>) || [];
       const message = String(sanitizedInput.message || "");
@@ -317,33 +526,18 @@ Deno.serve(async (req) => {
       }
       const prompt = `Message: ${message}${urlContext}\nMode: ${sanitizedInput.mode}`;
       const messages = [...history, { role: "user", content: prompt }];
-      let output: unknown;
-      if (provider === "openai") {
-        output = await callOpenAI([{ role: "system", content: systemPrompt }, ...messages], model, temperature);
-      } else if (provider === "anthropic") {
-        output = await callAnthropic(messages, model, temperature, systemPrompt);
-      } else if (provider === "google") {
-        output = await callGoogle(messages, model, temperature, systemPrompt);
-      } else {
-        return badRequest(`Unsupported provider: ${provider}`);
-      }
+      const output = await callAI(provider, model, systemPrompt, messages, temperature);
       return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
+
+    // Other features: standard flow
+    const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    let output: unknown;
-    if (provider === "openai") {
-      output = await callOpenAI([{ role: "system", content: systemPrompt }, ...messages], model, temperature);
-    } else if (provider === "anthropic") {
-      output = await callAnthropic(messages, model, temperature, systemPrompt);
-    } else if (provider === "google") {
-      output = await callGoogle(messages, model, temperature, systemPrompt);
-    } else {
-      return badRequest(`Unsupported provider: ${provider}`);
-    }
+    const output = await callAI(provider, model, systemPrompt, messages, temperature);
     return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[ERROR]", message);
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
