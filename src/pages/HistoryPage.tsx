@@ -74,7 +74,7 @@ export default function HistoryPage() {
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <Badge variant="outline">{item.data.metadata.side.toUpperCase()}</Badge>
+                              <Badge variant="outline">{item.data.metadata?.side?.toUpperCase() || 'N/A'}</Badge>
                               <span>{formatDate(item.createdAt)}</span>
                             </div>
                           </div>
