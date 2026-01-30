@@ -5,40 +5,62 @@ DebateLab is a comprehensive AI-powered research and preparation suite for compe
 
 **Live URL:** [https://debate.pi-stack.org](https://debate.pi-stack.org)
 
+## Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌──────────────────┐
+│   React App     │───▶│ Supabase Edge   │───▶│  AI Providers    │
+│   (Vite/TS)     │    │   Functions     │    │  OpenAI/Google   │
+└─────────────────┘    └─────────────────┘    └──────────────────┘
+         │                      │
+         ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐
+│   Nginx/Docker  │    │ Supabase Auth   │
+│   (Production)  │    │  (Google OAuth) │
+└─────────────────┘    └─────────────────┘
+```
+
+**Stack:**
+- **Frontend:** React 18 + TypeScript + Vite + TailwindCSS + shadcn/ui
+- **Backend:** Supabase Edge Functions (Deno)
+- **Auth:** Supabase Auth with Google OAuth
+- **AI Providers:** OpenAI, Google Gemini (via Edge Function)
+- **Deployment:** Docker + Nginx + Cloudflare Tunnel + Watchtower
+
 ## Key Features
 
-### 1. Source Library & Deep Grounding (New)
-*   **Persistent Knowledge Base:** Save URLs, text snippets, and assistant responses to a local library.
-*   **Active Grounding:** Active sources are automatically injected into the AI's context for all features, ensuring the AI "remembers" your research.
-*   **URL Reading:** Powered by Jina Reader (`r.jina.ai`) to extract clean text from any web page or PDF link.
+### 1. Source Library & Deep Grounding
+- **Persistent Knowledge Base:** Save URLs, text snippets, and AI responses to a library
+- **Active Grounding:** Active sources are injected into AI context
+- **URL Reading:** Jina Reader extracts clean text from web pages
 
 ### 2. Case Generation & Export
-*   **Tournament Ready:** Generates cases for the 4-6-6-3 speech format.
-*   **Word Export:** Download your generated cases as professionally formatted `.docx` files.
-*   **Context Transfer:** Use the "Discuss" button to move any result into the Chat for follow-up coaching.
+- **Tournament Ready:** 4-6-6-3 speech format
+- **Word Export:** Download as formatted `.docx` files
+- **Context Transfer:** "Discuss" button sends results to Coach Chat
 
 ### 3. Argument Analysis (Attack)
-*   Ruthless critique of case logic, evidence, and structural weaknesses.
-*   **Judge Paradigms:** Choose between Logic-Heavy, Values-Focused, or Policy-based analysis.
-*   **Fallacy Detection:** Automatic identification of logical errors.
+- Ruthless critique with fallacy detection
+- Judge paradigms: Logic-Heavy, Values-Focused, Policy-based
 
 ### 4. Interactive Coaching (Ask)
-*   **Summarized Context:** Intelligent memory management that summarizes older messages while keeping the last 20 verbatim to prevent confusion.
-*   **Voice & Files:** Supports real-time speech-to-text and file attachments for a multimodal experience.
+- Summarized context for long conversations
+- Voice input and file attachments
 
-### 5. Research Tools
-*   **Factoids:** Active web search (via Jina Search) to find real, verifiable evidence with clickable citations.
-*   **Brainstorm:** Multi-mode ideation (Mindmap, Buckets, Top 5) for motion analysis.
-*   **Timer:** Dedicated debate stopwatch with role-specific presets.
+### 5. Research Tools (Factoids)
+- Deep web search with Jina AI
+- Multi-round research with AI query refinement
+- URL verification
 
-## Architecture & Deployment
+## Security Model
 
-*   **Runtime Config:** API keys are managed via `public/config.js` at runtime, allowing for a simplified Docker build process.
-*   **Admin Panel:** Code `debate2026` unlocks prompt overrides and database reset tools.
-*   **Persistent State:** Zustand + LocalStorage keeps all data (history, library, settings) safe across sessions.
-*   **CI/CD:** Automated builds via GitHub Actions pushing to Docker Hub, with Watchtower auto-updating the Raspberry Pi deployment.
+- **API Keys:** Stored as Supabase Edge Function secrets (never exposed to browser)
+- **Authentication:** JWT tokens via Supabase Auth
+- **Input Sanitization:** Prompt injection detection in Edge Function
+- **Nginx Hardening:** CSP headers, blocks sensitive files
 
 ## Deployment Commands
+
 ```bash
 # Build
 docker build -t debate-trainer .
@@ -46,3 +68,8 @@ docker build -t debate-trainer .
 # Run
 docker run -d -p 3001:80 --name debate-app --restart unless-stopped debate-trainer
 ```
+
+## Admin Access
+Code `debate2026` in Settings unlocks:
+- Global system prompt override
+- Database reset tools
