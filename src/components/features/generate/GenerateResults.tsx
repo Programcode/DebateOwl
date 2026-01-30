@@ -54,6 +54,18 @@ function ContentionCard({ contention, index }: { contention: Contention; index: 
 }
 
 export function GenerateResults({ result, onRegenerateSection, onDiscuss }: GenerateResultsProps) {
+  // Guard against incomplete result data
+  if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
+    return (
+      <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
+        <h3 className="text-lg font-semibold text-destructive mb-2">Generation Incomplete</h3>
+        <p className="text-sm text-muted-foreground">
+          The AI response was incomplete or malformed. Please try generating again.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Metadata */}
@@ -106,9 +118,9 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Definitions</h4>
             <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
-              {result.caseStructure.keyDefinitions.map((def, i) => (
+              {result.caseStructure.keyDefinitions?.map((def, i) => (
                 <li key={i}>{def}</li>
-              ))}
+              )) || <li className="text-muted-foreground">No definitions provided</li>}
             </ul>
           </div>
         </div>
@@ -117,12 +129,12 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
       {/* Contentions */}
       <SectionCard
         title="Contentions"
-        description={`${result.contentions.length} structured arguments`}
+        description={`${result.contentions?.length || 0} structured arguments`}
         icon={<Shield className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('contentions')}
       >
         <div className="space-y-4">
-          {result.contentions.map((contention, index) => (
+          {result.contentions?.map((contention, index) => (
             <ContentionCard key={contention.id} contention={contention} index={index} />
           ))}
         </div>
@@ -139,7 +151,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-2">Likely Arguments</h4>
             <ul className="space-y-2">
-              {result.predictedOpponentCase.likelyArguments.map((arg, i) => (
+              {result.predictedOpponentCase?.likelyArguments?.map((arg, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   <span className="text-destructive mt-1">•</span>
                   <span className="text-foreground">{arg}</span>
@@ -151,7 +163,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-2">Strategic Weaknesses</h4>
             <ul className="space-y-2">
-              {result.predictedOpponentCase.strategicWeaknesses.map((weakness, i) => (
+              {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   <span className="text-amber-500 mt-1">•</span>
                   <span className="text-foreground">{weakness}</span>
@@ -163,7 +175,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Clashes</h4>
             <div className="flex flex-wrap gap-2">
-              {result.predictedOpponentCase.keyClashes.map((clash, i) => (
+              {result.predictedOpponentCase?.keyClashes?.map((clash, i) => (
                 <Badge key={i} variant="outline">{clash}</Badge>
               ))}
             </div>
@@ -178,19 +190,19 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
         onRegenerate={() => onRegenerateSection?.('counters')}
       >
         <div className="space-y-4">
-          {result.counters.map((counter, i) => (
+          {result.counters?.map((counter, i) => (
             <div key={i} className="rounded-lg border border-border p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <Badge variant="destructive" className="text-xs">Target</Badge>
-                <span className="text-sm font-medium text-foreground">{counter.targetArgument}</span>
+                <span className="text-sm font-medium text-foreground">{counter?.targetArgument}</span>
               </div>
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Counter: </span>
-                <span className="text-sm text-foreground">{counter.counterpoint}</span>
+                <span className="text-sm text-foreground">{counter?.counterpoint}</span>
               </div>
               <div className="bg-muted/50 rounded-md p-2">
                 <span className="text-xs font-medium text-muted-foreground">Rebuttal: </span>
-                <span className="text-sm text-foreground">{counter.rebuttal}</span>
+                <span className="text-sm text-foreground">{counter?.rebuttal}</span>
               </div>
             </div>
           ))}
