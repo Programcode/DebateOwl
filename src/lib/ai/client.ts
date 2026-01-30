@@ -65,9 +65,14 @@ async function callSupabaseAI(
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
 
+  // Require authentication for AI features
+  if (!accessToken) {
+    throw new Error('Please sign in to use AI features');
+  }
+
   // Wrap the API call with timeout
   const invokePromise = supabase.functions.invoke('ai', {
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    headers: { Authorization: `Bearer ${accessToken}` },
     body: {
       feature,
       input,
