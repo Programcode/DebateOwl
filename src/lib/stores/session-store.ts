@@ -105,6 +105,38 @@ async function getUserId() {
   return data.user?.id || null;
 }
 
+interface SupabaseSavedRow<T> {
+  id: string;
+  title: string;
+  output: T;
+  created_at: string;
+}
+
+interface SupabaseChatRow {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
+interface SupabaseMessageRow {
+  id: string;
+  chat_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  output: AskOutput | null;
+  created_at: string;
+}
+
+interface SupabaseSourceRow {
+  id: string;
+  title: string;
+  content: string;
+  type: 'url' | 'file' | 'text';
+  origin: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
@@ -374,33 +406,38 @@ export const useSessionStore = create<SessionState>()(
           supabase.from('sources').select('*').order('created_at', { ascending: false }),
         ]);
 
-        const chatIds = (chatsRes.data || []).map((c: any) => c.id);
+        const chatRows = (chatsRes.data || []) as SupabaseChatRow[];
+        const chatIds = chatRows.map((c) => c.id);
         const messagesRes = chatIds.length
           ? await supabase.from('messages').select('*').in('chat_id', chatIds).order('created_at', { ascending: true })
           : { data: [] };
 
-        const serverCases = (casesRes.data || []).map((row: any) => ({
+        const caseRows = (casesRes.data || []) as SupabaseSavedRow<GenerateOutput>[];
+        const serverCases = caseRows.map((row) => ({
           id: row.id,
           data: row.output,
           createdAt: toTimestamp(row.created_at),
           title: row.title,
         }));
 
-        const serverAttacks = (attacksRes.data || []).map((row: any) => ({
+        const attackRows = (attacksRes.data || []) as SupabaseSavedRow<AttackOutput>[];
+        const serverAttacks = attackRows.map((row) => ({
           id: row.id,
           data: row.output,
           createdAt: toTimestamp(row.created_at),
           title: row.title,
         }));
 
-        const serverBrainstorms = (brainstormsRes.data || []).map((row: any) => ({
+        const brainstormRows = (brainstormsRes.data || []) as SupabaseSavedRow<BrainstormOutput>[];
+        const serverBrainstorms = brainstormRows.map((row) => ({
           id: row.id,
           data: row.output,
           createdAt: toTimestamp(row.created_at),
           title: row.title,
         }));
 
-        const serverFactoids = (factoidsRes.data || []).map((row: any) => ({
+        const factoidRows = (factoidsRes.data || []) as SupabaseSavedRow<FactoidsOutput>[];
+        const serverFactoids = factoidRows.map((row) => ({
           id: row.id,
           data: row.output,
           createdAt: toTimestamp(row.created_at),
@@ -408,7 +445,8 @@ export const useSessionStore = create<SessionState>()(
         }));
 
         const messageMap = new Map<string, Message[]>();
-        (messagesRes.data || []).forEach((row: any) => {
+        const messageRows = (messagesRes.data || []) as SupabaseMessageRow[];
+        messageRows.forEach((row) => {
           const list = messageMap.get(row.chat_id) || [];
           list.push({
             id: row.id,
@@ -420,14 +458,15 @@ export const useSessionStore = create<SessionState>()(
           messageMap.set(row.chat_id, list);
         });
 
-        const serverChats = (chatsRes.data || []).map((row: any) => ({
+        const serverChats = chatRows.map((row) => ({
           id: row.id,
           title: row.title,
           createdAt: toTimestamp(row.created_at),
           data: messageMap.get(row.id) || [],
         }));
 
-        const serverSources = (sourcesRes.data || []).map((row: any) => ({
+        const sourceRows = (sourcesRes.data || []) as SupabaseSourceRow[];
+        const serverSources = sourceRows.map((row) => ({
           id: row.id,
           title: row.title,
           content: row.content,
