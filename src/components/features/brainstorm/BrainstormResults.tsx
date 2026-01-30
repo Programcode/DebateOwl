@@ -29,7 +29,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-semibold text-foreground">{idea.title}</h4>
         <div className="flex gap-1 shrink-0">
-          <Badge className={cn('text-xs', sideColors[idea.side])}>
+          <Badge className={cn('text-xs', sideColors[idea.side] || sideColors.neutral)}>
             {idea.side === 'pro' ? 'PRO' : idea.side === 'con' ? 'CON' : 'NEUTRAL'}
           </Badge>
           <Badge variant="outline" className="text-xs">
