@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase/client';
+import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2 } from 'lucide-react';
 
@@ -51,7 +51,7 @@ export default function AdminPage() {
         if (!session) throw new Error('Not authenticated');
 
         const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin?action=${action}`,
+            `${SUPABASE_URL}/functions/v1/admin?action=${action}`,
             {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
@@ -60,12 +60,28 @@ export default function AdminPage() {
             }
         );
 
+        // Get response text first to handle HTML error pages
+        const text = await response.text();
+
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Request failed');
+            // Try to parse as JSON, fallback to text-based error
+            try {
+                const error = JSON.parse(text);
+                throw new Error(error.error || 'Request failed');
+            } catch {
+                // HTML error page or other non-JSON response
+                if (response.status === 401) throw new Error('Not authenticated');
+                if (response.status === 403) throw new Error('Admin access required');
+                throw new Error(`Request failed: ${response.status}`);
+            }
         }
 
-        return response.json();
+        // Parse successful response as JSON
+        try {
+            return JSON.parse(text);
+        } catch {
+            throw new Error('Invalid response from server');
+        }
     };
 
     const postAdminData = async (action: string, body: unknown) => {
@@ -73,7 +89,7 @@ export default function AdminPage() {
         if (!session) throw new Error('Not authenticated');
 
         const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin?action=${action}`,
+            `${SUPABASE_URL}/functions/v1/admin?action=${action}`,
             {
                 method: 'POST',
                 headers: {
@@ -84,12 +100,25 @@ export default function AdminPage() {
             }
         );
 
+        // Get response text first to handle HTML error pages
+        const text = await response.text();
+
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Request failed');
+            try {
+                const error = JSON.parse(text);
+                throw new Error(error.error || 'Request failed');
+            } catch {
+                if (response.status === 401) throw new Error('Not authenticated');
+                if (response.status === 403) throw new Error('Admin access required');
+                throw new Error(`Request failed: ${response.status}`);
+            }
         }
 
-        return response.json();
+        try {
+            return JSON.parse(text);
+        } catch {
+            return { success: true }; // Some POST actions may not return JSON
+        }
     };
 
     useEffect(() => {
@@ -107,10 +136,16 @@ export default function AdminPage() {
                 setIsAdmin(true);
             } catch (err) {
                 console.error('Admin load error:', err);
-                if (err instanceof Error && err.message.includes('Admin access required')) {
+                const message = err instanceof Error ? err.message : '';
+                // Check for any access denial error
+                if (message.includes('Admin access required') ||
+                    message.includes('403') ||
+                    message.includes('Not authenticated') ||
+                    message.includes('401')) {
                     setIsAdmin(false);
                 } else {
-                    toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load admin data', variant: 'destructive' });
+                    setIsAdmin(false); // Default to denying access on any error
+                    toast({ title: 'Error', description: message || 'Failed to load admin data', variant: 'destructive' });
                 }
             } finally {
                 setLoading(false);
