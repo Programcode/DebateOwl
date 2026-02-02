@@ -7,7 +7,6 @@ import { BrainstormResults } from '@/components/features/brainstorm/BrainstormRe
 import { brainstorm, askChat } from '@/lib/ai/client';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { useToast } from '@/hooks/use-toast';
-import { safeArray } from '@/lib/utils';
 
 export default function BrainstormPage() {
   const { brainstormResult, brainstormLoading, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
@@ -40,10 +39,10 @@ export default function BrainstormPage() {
     // Construct summary based on available output
     let summary = "I'd like to discuss these brainstormed ideas.\n\n";
 
-    if (safeArray(brainstormResult.topFive).length > 0) {
-      summary += "**Top Ideas:**\n" + safeArray(brainstormResult.topFive).map((i) => `- ${i.idea.title} (${i.idea.side?.toUpperCase() || 'N/A'})`).join('\n');
-    } else if (safeArray(brainstormResult.buckets).length > 0) {
-      summary += "**Key Buckets:**\n" + safeArray(brainstormResult.buckets).map((b) => `- ${b.name}: ${b.keyInsight}`).join('\n');
+    if (brainstormResult.topFive) {
+      summary += "**Top Ideas:**\n" + brainstormResult.topFive.map(i => `- ${i.idea.title} (${i.idea.side?.toUpperCase() || 'N/A'})`).join('\n');
+    } else if (brainstormResult.buckets) {
+      summary += "**Key Buckets:**\n" + brainstormResult.buckets.map(b => `- ${b.name}: ${b.keyInsight}`).join('\n');
     }
 
     summary += "\n\nCan you help me expand on one of these?";
@@ -63,9 +62,7 @@ export default function BrainstormPage() {
       addAskMessage({
         role: 'assistant',
         content: result.response,
-        role: 'assistant',
-        content: result.response,
-        // @ts-expect-error: form schema and UI fields diverge -> keeping this as it might be relevant for other reasons or specific line
+        // @ts-expect-error: form schema and UI fields diverge
         output: result
       });
     } catch (error) {

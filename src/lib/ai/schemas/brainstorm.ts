@@ -41,7 +41,6 @@ export const BrainstormOutputSchema = z.object({
   })).optional(),
   nextSteps: z.array(z.string()),
   warningsAndTradeoffs: z.array(z.string()),
-  searchSuggestions: z.array(z.string()).optional(),
 });
 
 export type BrainstormOutput = z.infer<typeof BrainstormOutputSchema>;
