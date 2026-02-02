@@ -262,54 +262,31 @@ function parseJsonFromText(text: string, providerName: string) {
 
 async function jinaSearch(query: string): Promise<JinaResult[]> {
   const apiKey = Deno.env.get("JINA_API_KEY");
-  const headers: Record<string, string> = {
-    "Accept": "application/json",
-    "Content-Type": "application/json"
-  };
+  const headers: Record<string, string> = { Accept: "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   try {
-    const response = await fetchWithTimeout("https://s.jina.ai/", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ q: query })
-    }, 15000);
-
-    if (!response.ok) {
-      console.warn(`[JINA] Search response not OK: ${response.status} ${response.statusText}`);
-      return [];
-    }
+    const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers }, 15000);
+    if (!response.ok) return [];
     const data = await response.json();
     if (!data?.data || !Array.isArray(data.data)) return [];
     return data.data as JinaResult[];
-  } catch (err) {
-    console.warn(`[JINA] Search failed for: ${query}`, err);
+  } catch {
+    console.warn(`[JINA] Search failed for: ${query}`);
     return [];
   }
 }
 
 async function jinaRead(url: string): Promise<string> {
   const apiKey = Deno.env.get("JINA_API_KEY");
-  const headers: Record<string, string> = {
-    "Accept": "application/json",
-    "Content-Type": "application/json"
-  };
+  const headers: Record<string, string> = { Accept: "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   try {
-    // Switch to POST for better URL handling and increased timeout
-    const response = await fetchWithTimeout("https://r.jina.ai/", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ url })
-    }, 30000);
-
-    if (!response.ok) {
-      console.warn(`[JINA] Read response not OK: ${response.status} ${response.statusText}`);
-      return "";
-    }
+    const response = await fetchWithTimeout(`https://r.jina.ai/${url}`, { headers }, 15000);
+    if (!response.ok) return "";
     const data = await response.json();
     return (data.data?.content || data.content || "").slice(0, 8000);
-  } catch (err) {
-    console.warn(`[JINA] Read failed for: ${url}`, err);
+  } catch {
+    console.warn(`[JINA] Read failed for: ${url}`);
     return "";
   }
 }

@@ -44,7 +44,7 @@ export default function FactoidsPage() {
 
   const handleDiscuss = async () => {
     if (!factoidsResult) return;
-    
+
     const summary = `I'd like to discuss the evidence I found.
     
     **Factoids:**
@@ -54,21 +54,21 @@ export default function FactoidsPage() {
 
     addAskMessage({ role: 'user', content: summary });
     navigate('/ask');
-    
+
     setAskLoading(true);
     try {
       const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
         role: m.role as 'user' | 'assistant',
         content: m.content
       }));
-      
+
       const result = await askChat(summary, history, 'general', askConfig);
-      
+
       addAskMessage({
         role: 'assistant',
         content: result.response,
         // @ts-expect-error: form schema and UI fields diverge
-        output: result 
+        output: result
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
@@ -97,9 +97,9 @@ export default function FactoidsPage() {
           {/* Results */}
           <div>
             {factoidsResult ? (
-              <FactoidsResults 
-                result={factoidsResult} 
-                onVerify={handleVerify} 
+              <FactoidsResults
+                result={factoidsResult}
+                onVerify={handleVerify}
                 onDiscuss={handleDiscuss}
                 onSaveSource={handleSaveToLibrary}
               />

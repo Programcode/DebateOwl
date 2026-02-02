@@ -1,10 +1,10 @@
 // src/components/features/brainstorm/BrainstormResults.tsx
-import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare, Search } from 'lucide-react';
+import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
-import { cn, safeArray } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -38,10 +38,10 @@ function IdeaCard({ idea }: { idea: Idea }) {
         </div>
       </div>
       <p className="text-sm text-foreground">{idea.description}</p>
-      {safeArray(idea.tradeoffs).length > 0 && (
+      {idea.tradeoffs.length > 0 && (
         <div>
           <span className="text-xs font-medium text-muted-foreground">Tradeoffs: </span>
-          <span className="text-xs text-foreground">{safeArray(idea.tradeoffs).join(', ')}</span>
+          <span className="text-xs text-foreground">{idea.tradeoffs.join(', ')}</span>
         </div>
       )}
     </div>
@@ -58,7 +58,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
         icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
       >
         <ul className="space-y-3">
-          {safeArray(result.clarifyingQuestions).map((question, i) => (
+          {result.clarifyingQuestions.map((question, i) => (
             <li key={i} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium shrink-0">
                 {i + 1}
@@ -83,14 +83,14 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Top Five */}
-      {safeArray(result.topFive).length > 0 && (
+      {result.topFive && (
         <SectionCard
           title="Top 5 Argument Angles"
           description="Best options ranked by potential"
           icon={<TrendingUp className="h-5 w-5 text-primary" />}
         >
           <div className="space-y-4">
-            {safeArray(result.topFive).map((item) => (
+            {result.topFive.map((item) => (
               <div key={item.rank} className="flex gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold shrink-0">
                   #{item.rank}
@@ -109,20 +109,20 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Mind Map */}
-      {safeArray(result.mindmap).length > 0 && (
+      {result.mindmap && (
         <SectionCard
           title="Argument Map"
           description="Ideas organized by category"
         >
           <div className="space-y-6">
-            {safeArray(result.mindmap).map((category, i) => (
+            {result.mindmap.map((category, i) => (
               <div key={i}>
                 <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-primary" />
                   {category.category}
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {safeArray(category.items).map((idea) => (
+                  {category.items.map((idea) => (
                     <IdeaCard key={idea.id} idea={idea} />
                   ))}
                 </div>
@@ -133,16 +133,16 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Buckets */}
-      {safeArray(result.buckets).length > 0 && (
+      {result.buckets && (
         <div className="grid gap-6 md:grid-cols-3">
-          {safeArray(result.buckets).map((bucket, i) => (
+          {result.buckets.map((bucket, i) => (
             <SectionCard
               key={i}
               title={bucket.name}
               description={bucket.keyInsight}
             >
               <div className="space-y-3">
-                {safeArray(bucket.ideas).map((idea) => (
+                {bucket.ideas.map((idea) => (
                   <IdeaCard key={idea.id} idea={idea} />
                 ))}
               </div>
@@ -151,33 +151,13 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
         </div>
       )}
 
-      {/* Find More Evidence */}
-      {safeArray(result.searchSuggestions).length > 0 && (
-        <SectionCard
-          title="Find More Evidence"
-          description="Suggested search queries"
-          icon={<Search className="h-5 w-5" />}
-        >
-          <div className="space-y-2">
-            {safeArray(result.searchSuggestions).map((query: string, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium shrink-0">
-                  {i + 1}
-                </span>
-                <span className="text-foreground">{query}</span>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
-
       {/* Next Steps */}
       <SectionCard
         title="Recommended Next Steps"
         icon={<ArrowRight className="h-5 w-5" />}
       >
         <ul className="space-y-2">
-          {safeArray(result.nextSteps).map((step, i) => (
+          {result.nextSteps.map((step, i) => (
             <li key={i} className="flex items-start gap-3 text-sm">
               <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium shrink-0">
                 {i + 1}
@@ -189,13 +169,13 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       </SectionCard>
 
       {/* Warnings */}
-      {safeArray(result.warningsAndTradeoffs).length > 0 && (
+      {result.warningsAndTradeoffs.length > 0 && (
         <SectionCard
           title="Warnings & Tradeoffs"
           icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
         >
           <ul className="space-y-2">
-            {safeArray(result.warningsAndTradeoffs).map((warning, i) => (
+            {result.warningsAndTradeoffs.map((warning, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <span className="text-amber-500 mt-1">⚠</span>
                 <span className="text-foreground">{warning}</span>
