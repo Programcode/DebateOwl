@@ -380,6 +380,59 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
   };
 }
 
+/**
+ * Transforms AI brainstorm response to ensure all required arrays and fields exist.
+ * Prevents "Cannot read properties of undefined (reading 'map')" errors.
+ */
+function transformBrainstormResponse(response: Record<string, unknown>): BrainstormOutput {
+  const ensureArray = <T>(arr: unknown): T[] => (Array.isArray(arr) ? (arr as T[]) : []);
+  
+  // Helper to safely map an idea object
+  const mapIdea = (item: Record<string, unknown>): Idea => ({
+    id: String(item?.id || Math.random().toString(36).substring(7)),
+    title: String(item?.title || 'Untitled Idea'),
+    description: String(item?.description || ''),
+    side: (['pro', 'con', 'neutral'].includes(item?.side as string) ? item.side as 'pro' | 'con' | 'neutral' : 'neutral'),
+    strength: (['strong', 'moderate', 'weak'].includes(item?.strength as string) ? item.strength as 'strong' | 'moderate' | 'weak' : 'moderate'),
+    tradeoffs: ensureArray(item?.tradeoffs).map(String),
+    relatedTo: ensureArray(item?.relatedTo).map(String),
+  });
+
+  return {
+    needsMoreInfo: Boolean(response.needsMoreInfo),
+    clarifyingQuestions: ensureArray(response.clarifyingQuestions).map(String),
+    
+    // Validate Mindmap structure
+    mindmap: Array.isArray(response.mindmap) 
+      ? response.mindmap.map((cat: Record<string, unknown>) => ({
+          category: String(cat?.category || 'General'),
+          items: ensureArray(cat?.items).map(item => mapIdea(item as Record<string, unknown>)),
+        }))
+      : undefined,
+
+    // Validate Buckets structure
+    buckets: Array.isArray(response.buckets)
+      ? response.buckets.map((bucket: Record<string, unknown>) => ({
+          name: String(bucket?.name || 'Category'),
+          keyInsight: String(bucket?.keyInsight || ''),
+          ideas: ensureArray(bucket?.ideas).map(idea => mapIdea(idea as Record<string, unknown>)),
+        }))
+      : undefined,
+
+    // Validate Top Five structure
+    topFive: Array.isArray(response.topFive)
+      ? response.topFive.map((tf: Record<string, unknown>) => ({
+          rank: Number(tf?.rank || 0),
+          whyTop: String(tf?.whyTop || ''),
+          idea: mapIdea(tf?.idea as Record<string, unknown>),
+        }))
+      : undefined,
+
+    nextSteps: ensureArray(response.nextSteps).map(String),
+    warningsAndTradeoffs: ensureArray(response.warningsAndTradeoffs).map(String),
+  };
+}
+
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<GenerateOutput> {
   if (config.provider === 'mock') return mockGenerateCase(input.motion, input.side);
   const rawResponse = await callSupabaseAI('generate', input as Record<string, unknown>, config);
@@ -393,7 +446,8 @@ export async function attackCase(input: AttackInput, config: ProviderConfig): Pr
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<BrainstormOutput> {
   if (config.provider === 'mock') return mockBrainstorm(input.motion, input.outputMode);
-  return callSupabaseAI('brainstorm', input as Record<string, unknown>, config);
+  const rawResponse = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config);
+  return transformBrainstormResponse(rawResponse as Record<string, unknown>);
 }
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
