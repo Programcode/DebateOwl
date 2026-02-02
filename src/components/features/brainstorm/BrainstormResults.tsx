@@ -122,7 +122,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
                   {category.category}
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {category.items.map((idea) => (
+                  {(category.items || []).map((idea) => (
                     <IdeaCard key={idea.id} idea={idea} />
                   ))}
                 </div>
@@ -142,7 +142,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
               description={bucket.keyInsight}
             >
               <div className="space-y-3">
-                {bucket.ideas.map((idea) => (
+                {(bucket.ideas || []).map((idea) => (
                   <IdeaCard key={idea.id} idea={idea} />
                 ))}
               </div>
@@ -157,7 +157,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
         icon={<ArrowRight className="h-5 w-5" />}
       >
         <ul className="space-y-2">
-          {result.nextSteps.map((step, i) => (
+          {(result.nextSteps || []).map((step, i) => (
             <li key={i} className="flex items-start gap-3 text-sm">
               <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium shrink-0">
                 {i + 1}
@@ -169,13 +169,13 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       </SectionCard>
 
       {/* Warnings */}
-      {result.warningsAndTradeoffs.length > 0 && (
+      {(result.warningsAndTradeoffs || []).length > 0 && (
         <SectionCard
           title="Warnings & Tradeoffs"
           icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
         >
           <ul className="space-y-2">
-            {result.warningsAndTradeoffs.map((warning, i) => (
+            {(result.warningsAndTradeoffs || []).map((warning, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <span className="text-amber-500 mt-1">⚠</span>
                 <span className="text-foreground">{warning}</span>

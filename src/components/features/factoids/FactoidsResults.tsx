@@ -128,8 +128,9 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 }
 
 export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource }: FactoidsResultsProps) {
-  const verifiedCount = result.factoids.filter(f => f.citation?.verified === 'verified').length;
-  const unverifiedCount = result.factoids.filter(f => f.citation?.verified === 'unverified').length;
+  const factoids = result.factoids || [];
+  const verifiedCount = factoids.filter(f => f.citation?.verified === 'verified').length;
+  const unverifiedCount = factoids.filter(f => f.citation?.verified === 'unverified').length;
 
   return (
     <div className="space-y-6">
@@ -150,10 +151,10 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <Progress value={(verifiedCount / result.factoids.length) * 100} className="h-3" />
+              <Progress value={factoids.length ? (verifiedCount / factoids.length) * 100 : 0} className="h-3" />
             </div>
             <span className="text-sm font-medium text-foreground">
-              {Math.round((verifiedCount / result.factoids.length) * 100)}%
+              {factoids.length ? Math.round((verifiedCount / factoids.length) * 100) : 0}%
             </span>
           </div>
           {unverifiedCount > 0 && onVerify && (
@@ -188,11 +189,11 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
 
       {/* Factoids */}
       <SectionCard
-        title={`Found ${result.factoids.length} Factoids`}
+        title={`Found ${factoids.length} Factoids`}
         description="Evidence points with citations"
       >
         <div className="space-y-4">
-          {result.factoids.map((factoid) => (
+          {factoids.map((factoid) => (
             <FactoidCard key={factoid.id} factoid={factoid} onSave={onSaveSource} />
           ))}
         </div>
