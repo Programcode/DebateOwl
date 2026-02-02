@@ -24,8 +24,6 @@ const sideColors = {
 };
 
 function IdeaCard({ idea }: { idea: Idea }) {
-  if (!idea) return null;
-  
   return (
     <div className={cn('rounded-lg border p-4 space-y-3', strengthColors[idea.strength])}>
       <div className="flex items-start justify-between gap-2">
@@ -40,7 +38,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
         </div>
       </div>
       <p className="text-sm text-foreground">{idea.description}</p>
-      {idea.tradeoffs && idea.tradeoffs.length > 0 && (
+      {idea.tradeoffs.length > 0 && (
         <div>
           <span className="text-xs font-medium text-muted-foreground">Tradeoffs: </span>
           <span className="text-xs text-foreground">{idea.tradeoffs.join(', ')}</span>
@@ -85,7 +83,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Top Five */}
-      {result.topFive && result.topFive.length > 0 && (
+      {result.topFive && (
         <SectionCard
           title="Top 5 Argument Angles"
           description="Best options ranked by potential"
@@ -111,7 +109,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Mind Map */}
-      {result.mindmap && result.mindmap.length > 0 && (
+      {result.mindmap && (
         <SectionCard
           title="Argument Map"
           description="Ideas organized by category"
@@ -124,13 +122,9 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
                   {category.category}
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {category.items && category.items.length > 0 ? (
-                    category.items.map((idea) => (
-                      <IdeaCard key={idea.id} idea={idea} />
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No ideas in this category.</p>
-                  )}
+                  {category.items.map((idea) => (
+                    <IdeaCard key={idea.id} idea={idea} />
+                  ))}
                 </div>
               </div>
             ))}
@@ -139,7 +133,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Buckets */}
-      {result.buckets && result.buckets.length > 0 && (
+      {result.buckets && (
         <div className="grid gap-6 md:grid-cols-3">
           {result.buckets.map((bucket, i) => (
             <SectionCard
@@ -148,13 +142,9 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
               description={bucket.keyInsight}
             >
               <div className="space-y-3">
-                {bucket.ideas && bucket.ideas.length > 0 ? (
-                  bucket.ideas.map((idea) => (
-                    <IdeaCard key={idea.id} idea={idea} />
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No ideas in this bucket.</p>
-                )}
+                {bucket.ideas.map((idea) => (
+                  <IdeaCard key={idea.id} idea={idea} />
+                ))}
               </div>
             </SectionCard>
           ))}
