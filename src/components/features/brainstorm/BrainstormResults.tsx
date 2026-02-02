@@ -1,5 +1,5 @@
 // src/components/features/brainstorm/BrainstormResults.tsx
-import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare } from 'lucide-react';
+import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -38,7 +38,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
         </div>
       </div>
       <p className="text-sm text-foreground">{idea.description}</p>
-      {idea.tradeoffs.length > 0 && (
+      {(idea.tradeoffs || []).length > 0 && (
         <div>
           <span className="text-xs font-medium text-muted-foreground">Tradeoffs: </span>
           <span className="text-xs text-foreground">{idea.tradeoffs.join(', ')}</span>
@@ -149,6 +149,26 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
             </SectionCard>
           ))}
         </div>
+      )}
+
+      {/* Find More Evidence */}
+      {(result.searchSuggestions || []).length > 0 && (
+        <SectionCard
+          title="Find More Evidence"
+          description="Suggested search queries"
+          icon={<Search className="h-5 w-5" />}
+        >
+          <div className="space-y-2">
+            {(result.searchSuggestions || []).map((query, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-foreground">{query}</span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
       )}
 
       {/* Next Steps */}
