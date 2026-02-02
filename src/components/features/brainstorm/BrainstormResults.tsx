@@ -152,24 +152,26 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Next Steps */}
-      <SectionCard
-        title="Recommended Next Steps"
-        icon={<ArrowRight className="h-5 w-5" />}
-      >
-        <ul className="space-y-2">
-          {result.nextSteps.map((step, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm">
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium shrink-0">
-                {i + 1}
-              </span>
-              <span className="text-foreground">{step}</span>
-            </li>
-          ))}
-        </ul>
-      </SectionCard>
+      {result.nextSteps && result.nextSteps.length > 0 && (
+        <SectionCard
+          title="Recommended Next Steps"
+          icon={<ArrowRight className="h-5 w-5" />}
+        >
+          <ul className="space-y-2">
+            {result.nextSteps.map((step, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-primary text-xs font-medium shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-foreground">{step}</span>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
 
       {/* Warnings */}
-      {result.warningsAndTradeoffs.length > 0 && (
+      {result.warningsAndTradeoffs && result.warningsAndTradeoffs.length > 0 && (
         <SectionCard
           title="Warnings & Tradeoffs"
           icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
