@@ -4,13 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
-import { cn } from '@/lib/utils';
-
-// Helper to ensure we always have an array, filtering out non-array truthy values (objects/strings)
-const safeArray = (data: any): any[] => {
-  if (Array.isArray(data)) return data;
-  return [];
-};
+import { cn, safeArray } from '@/lib/utils';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
