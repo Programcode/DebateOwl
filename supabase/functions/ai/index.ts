@@ -552,8 +552,82 @@ CRITICAL: The debate format is strictly:
 - R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
 - Conclusor (3 min): Summarizes the debate and explains why this team wins.
 
-Output JSON matching:
-{ "needsMoreInfo": boolean, "mindmap": [...], "buckets": [...], "topFive": [...], "nextSteps": ["string"], "warningsAndTradeoffs": ["string"] }`;
+CRITICAL - STRICT JSON SCHEMA REQUIREMENT:
+You MUST return a valid JSON object with EXACTLY these fields based on the requested outputMode.
+Do NOT use different field names. Do NOT omit required fields. Follow this structure EXACTLY:
+
+The Idea object structure (used in all output modes):
+{
+  "id": "unique-string-id",
+  "title": "Short title for the idea",
+  "description": "Detailed description of the argument angle",
+  "side": "pro" | "con" | "neutral",
+  "strength": "strong" | "moderate" | "weak",
+  "tradeoffs": ["potential downside 1", "potential downside 2"],
+  "relatedTo": ["id-of-related-idea"]
+}
+
+For outputMode "topfive", return:
+{
+  "needsMoreInfo": false,
+  "clarifyingQuestions": [],
+  "topFive": [
+    {
+      "rank": 1,
+      "idea": { /* Idea object */ },
+      "whyTop": "Explanation of why this is a top argument"
+    }
+  ],
+  "nextSteps": ["Suggested next step 1", "Suggested next step 2"],
+  "warningsAndTradeoffs": ["Warning or tradeoff to consider"]
+}
+
+For outputMode "mindmap", return:
+{
+  "needsMoreInfo": false,
+  "clarifyingQuestions": [],
+  "mindmap": [
+    {
+      "category": "Category name (e.g., Economic, Social, Political)",
+      "items": [
+        { /* Idea object */ }
+      ]
+    }
+  ],
+  "nextSteps": ["Suggested next step 1"],
+  "warningsAndTradeoffs": ["Warning or tradeoff to consider"]
+}
+
+For outputMode "buckets", return:
+{
+  "needsMoreInfo": false,
+  "clarifyingQuestions": [],
+  "buckets": [
+    {
+      "name": "Bucket name (e.g., Strong Arguments, Risky but High-Reward)",
+      "ideas": [
+        { /* Idea object */ }
+      ],
+      "keyInsight": "Main insight about this bucket of arguments"
+    }
+  ],
+  "nextSteps": ["Suggested next step 1"],
+  "warningsAndTradeoffs": ["Warning or tradeoff to consider"]
+}
+
+If the motion is unclear and you need more information, return:
+{
+  "needsMoreInfo": true,
+  "clarifyingQuestions": ["Question 1?", "Question 2?"],
+  "nextSteps": [],
+  "warningsAndTradeoffs": []
+}
+
+IMPORTANT:
+- Always include ALL required fields, even if empty arrays
+- Every Idea MUST have all fields: id, title, description, side, strength, tradeoffs, relatedTo
+- Generate at least 3-5 ideas for the requested output mode
+- Make ideas specific, actionable, and debate-ready`;
 
 const FACTOIDS_PROMPT = `You are an expert research assistant specializing in finding verifiable evidence for debate.
 
