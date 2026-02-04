@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
             const body = await req.json();
             const { userId, role } = body;
 
-            if (!userId || !["user", "admin"].includes(role)) {
+            if (!userId || !["user", "admin", "banned"].includes(role)) {
                 return new Response(JSON.stringify({ error: "Invalid role parameters" }), {
                     status: 400,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -204,14 +204,106 @@ Deno.serve(async (req) => {
             });
         }
 
-        // GET /admin?action=limits - Get all rate limits
+        // GET /admin?action=limits - Get deduplicated rate limits (most recent per type)
         if (action === "limits") {
-            const { data } = await supabase
-                .from("rate_limits")
-                .select("*")
-                .order("created_at", { ascending: false });
+            const { data, error } = await supabase.rpc("get_active_rate_limits");
+
+            if (error) {
+                // Fallback to direct query if RPC doesn't exist yet
+                const { data: fallbackData } = await supabase
+                    .from("rate_limits")
+                    .select("*")
+                    .order("updated_at", { ascending: false });
+
+                return new Response(JSON.stringify({ limits: fallbackData || [] }), {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
 
             return new Response(JSON.stringify({ limits: data || [] }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // GET /admin?action=global-prompts - Get all global prompts
+        if (action === "global-prompts") {
+            const { data } = await supabase
+                .from("global_prompts")
+                .select("*")
+                .order("feature");
+
+            return new Response(JSON.stringify({ prompts: data || [] }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=set-prompt - Set a global prompt
+        if (action === "set-prompt" && req.method === "POST") {
+            const body = await req.json();
+            const { feature, promptText, isActive } = body;
+
+            if (!feature || typeof promptText !== "string") {
+                return new Response(JSON.stringify({ error: "Invalid prompt parameters" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const validFeatures = ["generate", "attack", "brainstorm", "factoids", "ask", "all"];
+            if (!validFeatures.includes(feature)) {
+                return new Response(JSON.stringify({ error: "Invalid feature type" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { error } = await supabase
+                .from("global_prompts")
+                .upsert({
+                    feature,
+                    prompt_text: promptText,
+                    is_active: isActive !== false,
+                    created_by: user.id,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: "feature" });
+
+            if (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // DELETE /admin?action=delete-prompt - Delete a global prompt
+        if (action === "delete-prompt" && req.method === "POST") {
+            const body = await req.json();
+            const { feature } = body;
+
+            if (!feature) {
+                return new Response(JSON.stringify({ error: "Feature is required" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { error } = await supabase
+                .from("global_prompts")
+                .delete()
+                .eq("feature", feature);
+
+            if (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }

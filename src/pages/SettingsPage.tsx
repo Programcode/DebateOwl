@@ -3,7 +3,6 @@ import { Settings, Cpu, Thermometer, Zap, Lock, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
@@ -31,7 +29,7 @@ const featureLabels: Record<FeatureTab, { name: string; description: string; col
 const features: FeatureTab[] = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'];
 
 export default function SettingsPage() {
-  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme, customSystemPrompt, setSystemPrompt } = useSettingsStore();
+  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -250,24 +248,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <Separator className="my-8" />
-
-        {/* System Prompt */}
-        <Card className="border-primary/20 bg-primary/5 mb-8">
-          <CardHeader>
-            <CardTitle>Custom System Prompt</CardTitle>
-            <CardDescription>Add optional instructions to apply to all AI responses.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Label>System Prompt</Label>
-            <Textarea
-              value={customSystemPrompt || ''}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="Add custom guidance for the AI..."
-              className="min-h-[120px]"
-            />
-          </CardContent>
-        </Card>
 
         {/* Danger Zone */}
         <Card className="border-destructive/20 bg-destructive/5">
