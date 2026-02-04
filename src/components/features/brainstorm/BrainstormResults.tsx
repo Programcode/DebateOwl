@@ -24,24 +24,29 @@ const sideColors = {
 };
 
 function IdeaCard({ idea }: { idea: Idea }) {
+  // Defensive defaults for potentially undefined properties
+  const strength = idea.strength || 'moderate';
+  const side = idea.side || 'neutral';
+  const tradeoffs = Array.isArray(idea.tradeoffs) ? idea.tradeoffs : [];
+
   return (
-    <div className={cn('rounded-lg border p-4 space-y-3', strengthColors[idea.strength])}>
+    <div className={cn('rounded-lg border p-4 space-y-3', strengthColors[strength] || strengthColors.moderate)}>
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">{idea.title}</h4>
+        <h4 className="font-semibold text-foreground">{idea.title || 'Untitled Idea'}</h4>
         <div className="flex gap-1 shrink-0">
-          <Badge className={cn('text-xs', sideColors[idea.side] || sideColors.neutral)}>
-            {idea.side === 'pro' ? 'PRO' : idea.side === 'con' ? 'CON' : 'NEUTRAL'}
+          <Badge className={cn('text-xs', sideColors[side] || sideColors.neutral)}>
+            {side === 'pro' ? 'PRO' : side === 'con' ? 'CON' : 'NEUTRAL'}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {idea.strength}
+            {strength}
           </Badge>
         </div>
       </div>
-      <p className="text-sm text-foreground">{idea.description}</p>
-      {idea.tradeoffs.length > 0 && (
+      <p className="text-sm text-foreground">{idea.description || ''}</p>
+      {tradeoffs.length > 0 && (
         <div>
           <span className="text-xs font-medium text-muted-foreground">Tradeoffs: </span>
-          <span className="text-xs text-foreground">{idea.tradeoffs.join(', ')}</span>
+          <span className="text-xs text-foreground">{tradeoffs.join(', ')}</span>
         </div>
       )}
     </div>
@@ -83,7 +88,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Top Five */}
-      {result.topFive && (
+      {result.topFive && Array.isArray(result.topFive) && result.topFive.length > 0 && (
         <SectionCard
           title="Top 5 Argument Angles"
           description="Best options ranked by potential"
@@ -96,7 +101,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
                   #{item.rank}
                 </div>
                 <div className="flex-1">
-                  <IdeaCard idea={item.idea} />
+                  {item.idea && <IdeaCard idea={item.idea} />}
                   <div className="mt-2 flex items-center gap-2 text-sm">
                     <Lightbulb className="h-4 w-4 text-amber-500" />
                     <span className="text-muted-foreground">{item.whyTop}</span>
@@ -109,7 +114,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Mind Map */}
-      {result.mindmap && (
+      {result.mindmap && Array.isArray(result.mindmap) && result.mindmap.length > 0 && (
         <SectionCard
           title="Argument Map"
           description="Ideas organized by category"
@@ -122,7 +127,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
                   {category.category}
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {category.items.map((idea) => (
+                  {category.items && Array.isArray(category.items) && category.items.map((idea) => (
                     <IdeaCard key={idea.id} idea={idea} />
                   ))}
                 </div>
@@ -133,7 +138,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       )}
 
       {/* Buckets */}
-      {result.buckets && (
+      {result.buckets && Array.isArray(result.buckets) && result.buckets.length > 0 && (
         <div className="grid gap-6 md:grid-cols-3">
           {result.buckets.map((bucket, i) => (
             <SectionCard
@@ -142,7 +147,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
               description={bucket.keyInsight}
             >
               <div className="space-y-3">
-                {bucket.ideas.map((idea) => (
+                {bucket.ideas && Array.isArray(bucket.ideas) && bucket.ideas.map((idea) => (
                   <IdeaCard key={idea.id} idea={idea} />
                 ))}
               </div>
