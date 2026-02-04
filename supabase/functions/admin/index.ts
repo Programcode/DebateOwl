@@ -29,7 +29,9 @@ Deno.serve(async (req) => {
 
     // Authenticate request
     const authHeader = req.headers.get("authorization");
+    console.log("[ADMIN] Auth header present:", !!authHeader, "starts with Bearer:", authHeader?.startsWith("Bearer "));
     if (!authHeader?.startsWith("Bearer ")) {
+        console.log("[ADMIN] No auth header, returning 401");
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -37,8 +39,11 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.slice(7);
+    console.log("[ADMIN] Token length:", token.length);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    console.log("[ADMIN] getUser result - user:", user?.id, "error:", authError?.message);
     if (authError || !user) {
+        console.log("[ADMIN] Auth failed, returning 401");
         return new Response(JSON.stringify({ error: "Invalid token" }), {
             status: 401,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
