@@ -265,7 +265,7 @@ async function jinaSearch(query: string): Promise<JinaResult[]> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   try {
-    const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers }, 15000);
+    const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers }, 30000);
     if (!response.ok) return [];
     const data = await response.json();
     if (!data?.data || !Array.isArray(data.data)) return [];
@@ -281,7 +281,7 @@ async function jinaRead(url: string): Promise<string> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   try {
-    const response = await fetchWithTimeout(`https://r.jina.ai/${url}`, { headers }, 15000);
+    const response = await fetchWithTimeout(`https://r.jina.ai/${url}`, { headers }, 30000);
     if (!response.ok) return "";
     const data = await response.json();
     return (data.data?.content || data.content || "").slice(0, 8000);
