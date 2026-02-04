@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2 } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, MessageSquare, Ban, UserCheck } from 'lucide-react';
 
 interface UsageStats {
     totals: { requests: number; cost: number; successRate: number };
@@ -35,15 +36,28 @@ interface RateLimit {
     limit_value: number;
 }
 
+interface GlobalPrompt {
+    id: string;
+    feature: string;
+    prompt_text: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+const FEATURES = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'all'];
 
 export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<UsageStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [limits, setLimits] = useState<RateLimit[]>([]);
+    const [prompts, setPrompts] = useState<GlobalPrompt[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [newLimit, setNewLimit] = useState({ type: 'daily_requests', value: 100 });
+    const [newPrompt, setNewPrompt] = useState({ feature: 'all', text: '' });
+    const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
     const { toast } = useToast();
 
     const fetchAdminData = async (action: string) => {
@@ -60,23 +74,19 @@ export default function AdminPage() {
             }
         );
 
-        // Get response text first to handle HTML error pages
         const text = await response.text();
 
         if (!response.ok) {
-            // Try to parse as JSON, fallback to text-based error
             try {
                 const error = JSON.parse(text);
                 throw new Error(error.error || 'Request failed');
             } catch {
-                // HTML error page or other non-JSON response
                 if (response.status === 401) throw new Error('Not authenticated');
                 if (response.status === 403) throw new Error('Admin access required');
                 throw new Error(`Request failed: ${response.status}`);
             }
         }
 
-        // Parse successful response as JSON
         try {
             return JSON.parse(text);
         } catch {
@@ -100,7 +110,6 @@ export default function AdminPage() {
             }
         );
 
-        // Get response text first to handle HTML error pages
         const text = await response.text();
 
         if (!response.ok) {
@@ -117,7 +126,7 @@ export default function AdminPage() {
         try {
             return JSON.parse(text);
         } catch {
-            return { success: true }; // Some POST actions may not return JSON
+            return { success: true };
         }
     };
 
@@ -125,26 +134,27 @@ export default function AdminPage() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [statsData, usersData, limitsData] = await Promise.all([
+                const [statsData, usersData, limitsData, promptsData] = await Promise.all([
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
                     fetchAdminData('limits'),
+                    fetchAdminData('global-prompts').catch(() => ({ prompts: [] })),
                 ]);
                 setStats(statsData);
                 setUsers(usersData.users || []);
                 setLimits(limitsData.limits || []);
+                setPrompts(promptsData.prompts || []);
                 setIsAdmin(true);
             } catch (err) {
                 console.error('Admin load error:', err);
                 const message = err instanceof Error ? err.message : '';
-                // Check for any access denial error
                 if (message.includes('Admin access required') ||
                     message.includes('403') ||
                     message.includes('Not authenticated') ||
                     message.includes('401')) {
                     setIsAdmin(false);
                 } else {
-                    setIsAdmin(false); // Default to denying access on any error
+                    setIsAdmin(false);
                     toast({ title: 'Error', description: message || 'Failed to load admin data', variant: 'destructive' });
                 }
             } finally {
@@ -175,6 +185,33 @@ export default function AdminPage() {
             setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
         } catch (err) {
             toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update role', variant: 'destructive' });
+        }
+    };
+
+    const handleSavePrompt = async (feature: string, text: string) => {
+        try {
+            await postAdminData('set-prompt', {
+                feature,
+                promptText: text,
+                isActive: true,
+            });
+            toast({ title: 'Success', description: `Prompt for "${feature}" saved` });
+            const promptsData = await fetchAdminData('global-prompts');
+            setPrompts(promptsData.prompts || []);
+            setEditingPrompt(null);
+            setNewPrompt({ feature: 'all', text: '' });
+        } catch (err) {
+            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save prompt', variant: 'destructive' });
+        }
+    };
+
+    const handleDeletePrompt = async (feature: string) => {
+        try {
+            await postAdminData('delete-prompt', { feature });
+            toast({ title: 'Success', description: `Prompt for "${feature}" deleted` });
+            setPrompts(prompts.filter(p => p.feature !== feature));
+        } catch (err) {
+            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete prompt', variant: 'destructive' });
         }
     };
 
@@ -269,6 +306,7 @@ export default function AdminPage() {
                         <TabsTrigger value="usage">Usage Analytics</TabsTrigger>
                         <TabsTrigger value="users">User Management</TabsTrigger>
                         <TabsTrigger value="limits">Rate Limits</TabsTrigger>
+                        <TabsTrigger value="prompts">AI Prompts</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="usage" className="space-y-6">
@@ -356,7 +394,7 @@ export default function AdminPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>User Management</CardTitle>
-                                <CardDescription>View and manage user access</CardDescription>
+                                <CardDescription>View and manage user access and roles</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ScrollArea className="h-[500px]">
@@ -364,21 +402,36 @@ export default function AdminPage() {
                                         {users.map((user) => (
                                             <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                                                 <div className="space-y-1">
-                                                    <div className="font-medium">{user.email}</div>
+                                                    <div className="font-medium flex items-center gap-2">
+                                                        {user.email}
+                                                        {user.role === 'banned' && (
+                                                            <Badge variant="destructive" className="text-xs">Banned</Badge>
+                                                        )}
+                                                    </div>
                                                     <div className="text-sm text-muted-foreground">
                                                         {user.requestCount} requests • Joined {new Date(user.createdAt).toLocaleDateString()}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                                                    <Badge variant={user.role === 'admin' ? 'default' : user.role === 'banned' ? 'destructive' : 'secondary'}>
                                                         {user.role}
                                                     </Badge>
-                                                    {user.role !== 'admin' && (
-                                                        <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'admin')}>
-                                                            Make Admin
+                                                    {user.role === 'banned' ? (
+                                                        <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
+                                                            <UserCheck className="h-4 w-4 mr-1" />
+                                                            Unban
                                                         </Button>
-                                                    )}
-                                                    {user.role === 'admin' && (
+                                                    ) : user.role !== 'admin' ? (
+                                                        <>
+                                                            <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'admin')}>
+                                                                Make Admin
+                                                            </Button>
+                                                            <Button size="sm" variant="destructive" onClick={() => handleSetUserRole(user.id, 'banned')}>
+                                                                <Ban className="h-4 w-4 mr-1" />
+                                                                Ban
+                                                            </Button>
+                                                        </>
+                                                    ) : (
                                                         <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
                                                             Remove Admin
                                                         </Button>
@@ -431,7 +484,7 @@ export default function AdminPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Active Limits</CardTitle>
-                                    <CardDescription>Currently configured rate limits</CardDescription>
+                                    <CardDescription>Currently configured rate limits (most recent per type)</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-3">
@@ -451,6 +504,127 @@ export default function AdminPage() {
                                             ))
                                         )}
                                     </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="prompts" className="space-y-6">
+                        <div className="grid gap-6 md:grid-cols-2">
+                            {/* Add/Edit Prompt */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <MessageSquare className="h-5 w-5" />
+                                        {editingPrompt ? 'Edit Prompt' : 'Add Global Prompt'}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Set custom instructions for AI features. These apply to all users.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Feature</Label>
+                                        <select
+                                            className="w-full p-2 border rounded-md bg-background"
+                                            value={editingPrompt || newPrompt.feature}
+                                            onChange={(e) => {
+                                                if (editingPrompt) {
+                                                    setEditingPrompt(e.target.value);
+                                                } else {
+                                                    setNewPrompt({ ...newPrompt, feature: e.target.value });
+                                                }
+                                            }}
+                                            disabled={!!editingPrompt}
+                                        >
+                                            {FEATURES.map(f => (
+                                                <option key={f} value={f}>{f === 'all' ? 'All Features' : f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Prompt Instructions</Label>
+                                        <Textarea
+                                            placeholder="Enter custom instructions for the AI..."
+                                            className="min-h-[200px]"
+                                            value={editingPrompt ? prompts.find(p => p.feature === editingPrompt)?.prompt_text || '' : newPrompt.text}
+                                            onChange={(e) => {
+                                                if (editingPrompt) {
+                                                    setPrompts(prompts.map(p =>
+                                                        p.feature === editingPrompt ? { ...p, prompt_text: e.target.value } : p
+                                                    ));
+                                                } else {
+                                                    setNewPrompt({ ...newPrompt, text: e.target.value });
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={() => {
+                                                const feature = editingPrompt || newPrompt.feature;
+                                                const text = editingPrompt
+                                                    ? prompts.find(p => p.feature === editingPrompt)?.prompt_text || ''
+                                                    : newPrompt.text;
+                                                handleSavePrompt(feature, text);
+                                            }}
+                                            className="flex-1"
+                                        >
+                                            {editingPrompt ? 'Update Prompt' : 'Save Prompt'}
+                                        </Button>
+                                        {editingPrompt && (
+                                            <Button variant="outline" onClick={() => setEditingPrompt(null)}>
+                                                Cancel
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Existing Prompts */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Active Prompts</CardTitle>
+                                    <CardDescription>Global prompts applied to AI features</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ScrollArea className="h-[400px]">
+                                        <div className="space-y-3">
+                                            {prompts.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground">No global prompts configured</p>
+                                            ) : (
+                                                prompts.map((prompt) => (
+                                                    <div key={prompt.id} className="p-4 border rounded-lg space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Badge variant={prompt.is_active ? 'default' : 'secondary'}>
+                                                                {prompt.feature === 'all' ? 'All Features' : prompt.feature}
+                                                            </Badge>
+                                                            <div className="flex gap-1">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => setEditingPrompt(prompt.feature)}
+                                                                >
+                                                                    Edit
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="text-destructive"
+                                                                    onClick={() => handleDeletePrompt(prompt.feature)}
+                                                                >
+                                                                    Delete
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground line-clamp-3">
+                                                            {prompt.prompt_text}
+                                                        </p>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </ScrollArea>
                                 </CardContent>
                             </Card>
                         </div>

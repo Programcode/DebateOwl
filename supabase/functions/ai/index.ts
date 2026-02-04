@@ -61,10 +61,49 @@ interface RateLimitResult {
   current?: number;
 }
 
+async function checkUserBanned(userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .single();
+  return data?.role === "banned";
+}
+
+async function getGlobalPrompt(feature: string): Promise<string | null> {
+  // First try feature-specific prompt
+  const { data: featurePrompt } = await supabase
+    .from("global_prompts")
+    .select("prompt_text")
+    .eq("feature", feature)
+    .eq("is_active", true)
+    .single();
+
+  if (featurePrompt?.prompt_text) {
+    return featurePrompt.prompt_text;
+  }
+
+  // Fall back to 'all' prompt
+  const { data: allPrompt } = await supabase
+    .from("global_prompts")
+    .select("prompt_text")
+    .eq("feature", "all")
+    .eq("is_active", true)
+    .single();
+
+  return allPrompt?.prompt_text || null;
+}
+
 async function checkRateLimit(userId: string | null): Promise<RateLimitResult> {
   if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
 
   try {
+    // First check if user is banned
+    const isBanned = await checkUserBanned(userId);
+    if (isBanned) {
+      return { allowed: false, reason: "Your account has been suspended. Please contact support." };
+    }
+
     // Get user's daily request count
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -668,11 +707,18 @@ const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
 Output JSON matching:
 { "response": "string (markdown supported)", "followUpQuestions": ["string"], "uncertainties": ["string"], "prosConsAnalysis": { "pros": [...], "cons": [...] }, "argumentMap": { "mainClaim": "string", "supportingPoints": [...], "counterpoints": [...], "assumptions": [...] } }`;
 
-function buildSystemPrompt(feature: Feature, customSystemPrompt?: string | null, sources?: Source[]) {
+async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string | null, sources?: Source[]): Promise<string> {
   const base = feature === "generate" ? GENERATE_PROMPT : feature === "attack" ? ATTACK_PROMPT : feature === "brainstorm" ? BRAINSTORM_PROMPT : feature === "factoids" ? FACTOIDS_PROMPT : ASK_PROMPT;
+
+  // Fetch global prompt from database (admin-configured)
+  const globalPrompt = await getGlobalPrompt(feature);
+  const globalSection = globalPrompt ? `\n\nADMIN-CONFIGURED INSTRUCTIONS:\n${globalPrompt}` : "";
+
+  // User's custom prompt (from their settings)
   const custom = customSystemPrompt ? `\n\nCUSTOM SYSTEM PROMPT:\n${customSystemPrompt}` : "";
+
   const sourceText = sources && sources.length ? `\n\nLOCAL KNOWLEDGE BASE (use as primary factual source):\n${sources.map((s) => `--- ${s.title} (${s.origin || s.type}) ---\n${s.content}\n`).join("\n")}` : "";
-  return `${base}${custom}${sourceText}`;
+  return `${base}${globalSection}${custom}${sourceText}`;
 }
 
 function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searchContext: string) {
@@ -761,7 +807,7 @@ Deno.serve(async (req) => {
 
   const startTime = Date.now();
   try {
-    const systemPrompt = buildSystemPrompt(feature, customSystemPrompt, sources);
+    const systemPrompt = await buildSystemPrompt(feature, customSystemPrompt, sources);
 
     // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
