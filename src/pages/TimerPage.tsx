@@ -136,6 +136,16 @@ export default function TimerPage() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Reset when format changes
+  useEffect(() => {
+    setCurrentSpeechIdx(0);
+    setIsRunning(false);
+    setIsFinished(false);
+    // currentFormat is correct here due to render cycle
+    const firstSpeech = currentFormat.speeches[0];
+    setTimeLeft(firstSpeech.minutes * 60);
+  }, [formatId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Safety check if index is out of bounds for new format
   useEffect(() => {
     if (!currentFormat.speeches[currentSpeechIdx]) {
@@ -144,7 +154,7 @@ export default function TimerPage() {
       setIsFinished(false);
       setTimeLeft(currentFormat.speeches[0].minutes * 60);
     }
-  }, [formatId, currentFormat, currentSpeechIdx]);
+  }, [currentFormat, currentSpeechIdx]);
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
