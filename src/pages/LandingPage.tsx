@@ -3,7 +3,10 @@ import {
     Hero,
     SocialProof,
     Features,
+    DeepDive,
+    UseCases,
     HowItWorks,
+    FAQ,
     FinalCTA,
     Footer,
 } from "@/components/landing";
@@ -15,7 +18,10 @@ const LandingPage = () => {
             <Hero />
             <SocialProof />
             <Features />
+            <DeepDive />
             <HowItWorks />
+            <UseCases />
+            <FAQ />
             <FinalCTA />
             <Footer />
         </div>
