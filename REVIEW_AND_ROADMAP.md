@@ -1618,22 +1618,22 @@ npm install -D @vitest/coverage-v8
 ## Phase 1: Critical Fixes (Week 1-2)
 
 ### Day 1-2: Security Patches
-- [ ] Enable RLS on `global_prompts` (30 min)
-- [ ] Enable RLS on `rate_limits` (30 min)
-- [ ] Enable RLS on `user_roles` (30 min)
-- [ ] Enable leaked password protection (5 min)
-- [ ] Add HSTS header to nginx (5 min)
-- [ ] Update CORS in Edge Functions (1 hour)
+- [x] Enable RLS on `global_prompts` (30 min)
+- [x] Enable RLS on `rate_limits` (30 min)
+- [x] Enable RLS on `user_roles` (30 min)
+- [ ] Enable leaked password protection (skipped - free plan)
+- [x] Add HSTS header to nginx (5 min)
+- [x] Update CORS in Edge Functions (1 hour)
 
 ### Day 3-4: Dependency & Config Fixes
-- [ ] Update Vite/esbuild (`npm audit fix`) (30 min)
-- [ ] Install `@vitest/coverage-v8` (15 min)
-- [ ] Add missing FK indexes (15 min)
-- [ ] Suppress lint warnings (1 hour)
+- [x] Update Vite/esbuild (`npm audit fix`) (30 min)
+- [ ] Install `@vitest/coverage-v8` (skipped - peer dep conflict)
+- [x] Add missing FK indexes (15 min)
+- [x] Suppress lint warnings (1 hour)
 
 ### Day 5: RLS Performance
-- [ ] Update all RLS policies to use `(select auth.uid())` (2 hours)
-- [ ] Consolidate duplicate policies (1 hour)
+- [x] Update all RLS policies to use `(select auth.uid())` (2 hours)
+- [x] Consolidate duplicate policies (1 hour)
 
 **Phase 1 Total: ~8 hours**
 
