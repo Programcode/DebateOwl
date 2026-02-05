@@ -1,10 +1,11 @@
 // src/components/features/brainstorm/BrainstormResults.tsx
-import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare } from 'lucide-react';
+import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
 import { cn } from '@/lib/utils';
+import { exportBrainstormToPdf } from '@/lib/pdf-export-utils';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -79,7 +80,11 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
   return (
     <div className="space-y-6">
       {onDiscuss && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportBrainstormToPdf(result)}>
+            <FileText className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
           <Button variant="outline" size="sm" onClick={onDiscuss}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Discuss Ideas
