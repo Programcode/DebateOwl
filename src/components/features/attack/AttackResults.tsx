@@ -1,5 +1,5 @@
 // src/components/features/attack/AttackResults.tsx
-import { AlertCircle, AlertTriangle, Info, MessageSquare, Scale, Lightbulb } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, MessageSquare, Scale, Lightbulb, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
 import { cn } from '@/lib/utils';
+import { exportAttackToPdf } from '@/lib/pdf-export-utils';
 
 interface AttackResultsProps {
   result: AttackOutput;
@@ -92,10 +93,14 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                 )}>
                   {result.overallAssessment.score}/100
                 </span>
+                <Button variant="outline" size="sm" onClick={() => exportAttackToPdf(result)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
                 {onDiscuss && (
                   <Button variant="outline" size="sm" onClick={onDiscuss}>
                     <MessageSquare className="h-4 w-4 mr-2" />
-                    Discuss with Coach
+                    Discuss
                   </Button>
                 )}
               </div>

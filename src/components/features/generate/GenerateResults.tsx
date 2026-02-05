@@ -1,11 +1,12 @@
 // src/components/features/generate/GenerateResults.tsx
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
 import { exportCaseToDocx } from '@/lib/export-utils';
+import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -82,7 +83,11 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
         <div className="flex gap-2" data-tour="export-section">
           <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
             <FileDown className="h-4 w-4 mr-2" />
-            Export Word
+            Word
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportCaseToPdf(result)}>
+            <FileText className="h-4 w-4 mr-2" />
+            PDF
           </Button>
           {onDiscuss && (
             <Button variant="outline" size="sm" onClick={onDiscuss}>
