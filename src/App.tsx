@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting
@@ -53,6 +54,7 @@ const App = () => (
               <Route
                 element={
                   <RequireAuth>
+                    <OnboardingTour />
                     <AppLayout />
                   </RequireAuth>
                 }

@@ -19,7 +19,7 @@ This document details the features selected for the next phase of development, p
 ### 1.2 Onboarding Tutorial (Activation)
 **Goal:** Walk new users through their first generic case generation.
 **Why:** Complex UI can overwhelm first-time visitors.
-
+~~~~`
 **Technical Implementation:**
 - **Library:** Install `react-joyride` or building a custom `Joyride` component using `shadcn/ui` Popover.
 - **Flow:**
