@@ -4,9 +4,6 @@ import {
     SocialProof,
     Features,
     HowItWorks,
-    AppScreenshot,
-    Testimonials,
-    Pricing,
     FinalCTA,
     Footer,
 } from "@/components/landing";
@@ -19,9 +16,6 @@ const LandingPage = () => {
             <SocialProof />
             <Features />
             <HowItWorks />
-            <AppScreenshot />
-            <Testimonials />
-            <Pricing />
             <FinalCTA />
             <Footer />
         </div>
