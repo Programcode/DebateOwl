@@ -1,8 +1,8 @@
 // src/components/features/generate/GenerateForm.tsx
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Sparkles, Wand2 } from 'lucide-react';
+import { Sparkles, Wand2, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 interface GenerateFormProps {
   onSubmit: (data: GenerateInput) => void;
@@ -39,6 +40,25 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
     },
   });
 
+  // Voice input integration
+  const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();
+
+  // Sync transcript to motion field
+  useEffect(() => {
+    if (transcript) {
+      setValue('motion', transcript, { shouldValidate: true });
+    }
+  }, [transcript, setValue]);
+
+  const toggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      startListening();
+    }
+  };
+
   const currentValues = watch();
 
   return (
@@ -56,17 +76,41 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Motion Input */}
+          {/* Motion Input with Voice */}
           <div className="space-y-2">
             <Label htmlFor="motion" className="text-sm font-medium">
               Motion / Topic <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="motion"
-              {...register('motion')}
-              placeholder="e.g., This house believes that artificial intelligence will create more jobs than it destroys"
-              className="h-12"
-            />
+            <div className="relative flex gap-2">
+              <Input
+                id="motion"
+                {...register('motion')}
+                placeholder="e.g., This house believes that artificial intelligence will create more jobs than it destroys"
+                className="h-12 flex-1"
+              />
+              {hasVoiceSupport && (
+                <Button
+                  type="button"
+                  variant={isListening ? "destructive" : "outline"}
+                  size="icon"
+                  className={`h-12 w-12 shrink-0 ${isListening ? 'animate-pulse' : ''}`}
+                  onClick={toggleVoice}
+                  title={isListening ? "Stop listening" : "Dictate your motion"}
+                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                >
+                  {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+            {isListening && (
+              <div className="flex items-center gap-2 text-sm text-primary animate-pulse">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                Listening... Speak your motion clearly
+              </div>
+            )}
             {errors.motion && (
               <p className="text-sm text-destructive">{errors.motion.message}</p>
             )}
