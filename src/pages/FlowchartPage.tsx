@@ -86,10 +86,10 @@ function CustomNode({ data }: { data: FlowNodeData }) {
                 <Badge
                     variant="outline"
                     className={`mt-2 text-xs ${data.strength === 'strong'
-                            ? 'border-green-300 text-green-100'
-                            : data.strength === 'weak'
-                                ? 'border-red-300 text-red-100'
-                                : 'border-yellow-300 text-yellow-100'
+                        ? 'border-green-300 text-green-100'
+                        : data.strength === 'weak'
+                            ? 'border-red-300 text-red-100'
+                            : 'border-yellow-300 text-yellow-100'
                         }`}
                 >
                     {data.strength}
@@ -160,6 +160,7 @@ export default function FlowchartPage() {
     const [newNodeType, setNewNodeType] = useState<NodeType>('contention');
     const [newNodeStrength, setNewNodeStrength] = useState<'strong' | 'moderate' | 'weak'>('moderate');
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
+    const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
 
     const onConnect = useCallback(
         (connection: Connection) => {
@@ -177,26 +178,70 @@ export default function FlowchartPage() {
         [setEdges]
     );
 
-    const addNode = useCallback(() => {
+    const handleSaveNode = useCallback(() => {
         if (!newNodeLabel.trim()) return;
 
-        const newNode: Node<FlowNodeData> = {
-            id: `node-${Date.now()}`,
-            type: 'custom',
-            position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
-            data: {
-                label: newNodeLabel,
-                description: newNodeDescription,
-                type: newNodeType,
-                strength: newNodeType === 'contention' ? newNodeStrength : undefined,
-            },
-        };
+        if (editingNodeId) {
+            // Update existing node
+            setNodes((nds) =>
+                nds.map((node) => {
+                    if (node.id === editingNodeId) {
+                        return {
+                            ...node,
+                            data: {
+                                ...node.data,
+                                label: newNodeLabel,
+                                description: newNodeDescription,
+                                type: newNodeType,
+                                strength: newNodeType === 'contention' ? newNodeStrength : undefined,
+                            },
+                        };
+                    }
+                    return node;
+                })
+            );
+            setEditingNodeId(null);
+        } else {
+            // Add new node
+            const newNode: Node<FlowNodeData> = {
+                id: `node-${Date.now()}`,
+                type: 'custom',
+                position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
+                data: {
+                    label: newNodeLabel,
+                    description: newNodeDescription,
+                    type: newNodeType,
+                    strength: newNodeType === 'contention' ? newNodeStrength : undefined,
+                },
+            };
+            setNodes((nds) => [...nds, newNode]);
+        }
 
-        setNodes((nds) => [...nds, newNode]);
+        // Reset form
         setNewNodeLabel('');
         setNewNodeDescription('');
         setIsAddDialogOpen(false);
-    }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, setNodes]);
+    }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, editingNodeId, setNodes]);
+
+    const openAddDialog = () => {
+        setEditingNodeId(null);
+        setNewNodeLabel('');
+        setNewNodeDescription('');
+        setNewNodeType('contention');
+        setNewNodeStrength('moderate');
+        setIsAddDialogOpen(true);
+    };
+
+    const openEditDialog = useCallback((node: Node<FlowNodeData>) => {
+        setEditingNodeId(node.id);
+        setNewNodeLabel(node.data.label);
+        setNewNodeDescription(node.data.description || '');
+        setNewNodeType(node.data.type);
+        if (node.data.strength) {
+            setNewNodeStrength(node.data.strength);
+        }
+        setIsAddDialogOpen(true);
+    }, []);
 
     const deleteSelectedNode = useCallback(() => {
         if (!selectedNode || selectedNode === 'thesis') return;
@@ -249,15 +294,15 @@ export default function FlowchartPage() {
                         <div className="flex gap-2">
                             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm">
+                                    <Button variant="outline" size="sm" onClick={openAddDialog}>
                                         <Plus className="h-4 w-4 mr-2" />
                                         Add Node
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>Add Argument Node</DialogTitle>
-                                        <DialogDescription>Create a new node in your flowchart</DialogDescription>
+                                        <DialogTitle>{editingNodeId ? 'Edit Argument Node' : 'Add Argument Node'}</DialogTitle>
+                                        <DialogDescription>{editingNodeId ? 'Update the details of your node' : 'Create a new node in your flowchart'}</DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
@@ -307,16 +352,29 @@ export default function FlowchartPage() {
                                         )}
                                     </div>
                                     <DialogFooter>
-                                        <Button onClick={addNode}>Add Node</Button>
+                                        <Button onClick={handleSaveNode}>{editingNodeId ? 'Save Changes' : 'Add Node'}</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
 
                             {selectedNode && selectedNode !== 'thesis' && (
-                                <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const node = nodes.find(n => n.id === selectedNode);
+                                            if (node) openEditDialog(node);
+                                        }}
+                                    >
+                                        <GitBranch className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Button>
+                                    <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </>
                             )}
 
                             <Button variant="outline" size="sm" onClick={exportToPng}>
@@ -355,6 +413,7 @@ export default function FlowchartPage() {
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
                             onNodeClick={(_, node) => setSelectedNode(node.id)}
+                            onNodeDoubleClick={(_, node) => openEditDialog(node as Node<FlowNodeData>)}
                             onPaneClick={() => setSelectedNode(null)}
                             nodeTypes={nodeTypes}
                             fitView
