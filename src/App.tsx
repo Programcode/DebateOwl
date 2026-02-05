@@ -9,6 +9,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting
@@ -40,43 +41,45 @@ const PageLoader = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/share/:code" element={<SharedPage />} />
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/share/:code" element={<SharedPage />} />
 
-              {/* Protected App Routes */}
-              <Route
-                element={
-                  <RequireAuth>
-                    <OnboardingTour />
-                    <AppLayout />
-                  </RequireAuth>
-                }
-              >
-                <Route path="/app" element={<GeneratePage />} />
-                <Route path="/app/attack" element={<AttackPage />} />
-                <Route path="/app/brainstorm" element={<BrainstormPage />} />
-                <Route path="/app/factoids" element={<FactoidsPage />} />
-                <Route path="/app/ask" element={<AskPage />} />
-                <Route path="/app/history" element={<HistoryPage />} />
-                <Route path="/app/library" element={<LibraryPage />} />
-                <Route path="/app/timer" element={<TimerPage />} />
-                <Route path="/app/flowchart" element={<FlowchartPage />} />
-                <Route path="/app/settings" element={<SettingsPage />} />
-                <Route path="/app/admin" element={<AdminPage />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
+                {/* Protected App Routes */}
+                <Route
+                  element={
+                    <RequireAuth>
+                      <OnboardingTour />
+                      <AppLayout />
+                    </RequireAuth>
+                  }
+                >
+                  <Route path="/app" element={<GeneratePage />} />
+                  <Route path="/app/attack" element={<AttackPage />} />
+                  <Route path="/app/brainstorm" element={<BrainstormPage />} />
+                  <Route path="/app/factoids" element={<FactoidsPage />} />
+                  <Route path="/app/ask" element={<AskPage />} />
+                  <Route path="/app/history" element={<HistoryPage />} />
+                  <Route path="/app/library" element={<LibraryPage />} />
+                  <Route path="/app/timer" element={<TimerPage />} />
+                  <Route path="/app/flowchart" element={<FlowchartPage />} />
+                  <Route path="/app/settings" element={<SettingsPage />} />
+                  <Route path="/app/admin" element={<AdminPage />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
