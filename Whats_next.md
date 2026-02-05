@@ -4,42 +4,22 @@ This document details the features selected for the next phase of development, p
 
 ## 1. Short Term (Weeks 1-4)
 
-### 1.1 Usage Analytics Dashboard (Admin Insight)
-**Goal:** Visualize platform health, costs, and user engagement.
-**Why:** Admins need to track Token usage and error rates to manage costs.
+### 1.1 Dark/Light Mode Toggle
+**Goal:** User-controlled theme switching.
+**Why:** Personal preference, reduced eye strain.
 
 **Technical Implementation:**
-- **UI:** Add "Analytics" tab to `AdminPage`.
-- **Charts:** Use `recharts` for visual data (Bar/Line charts).
-- **Data:**
-  - `ai_requests` table query with `count()` grouped by day.
-  - New RPC function `get_daily_usage` for performance.
-- **Metrics:** Total Requests, Token Usage (est), Error Rate, Active Users.
+- **Status:** Already have `theme` in settings store.
+- **Next Steps:** Add toggle to settings page and persist preference.
 
-### 1.2 Onboarding Tutorial (Activation)
-**Goal:** Walk new users through their first generic case generation.
-**Why:** Complex UI can overwhelm first-time visitors.
-~~~~`
-**Technical Implementation:**
-- **Library:** Install `react-joyride` or building a custom `Joyride` component using `shadcn/ui` Popover.
-- **Flow:**
-  1. Welcome Modal on first login.
-  2. Highlight "Motion" input -> "Enter a topic".
-  3. Highlight "Generate" button.
-  4. Point to "Export" button after generation.
-- **State:** specific boolean flag in `user_settings` table: `has_completed_onboarding`.
-
-### 1.3 Voice Input (Accessibility & Speed)
-**Goal:** Allow users to dictate motions/arguments.
-**Why:** Speaking is faster than typing; simulates real debate practice.
+### 1.2 Debate Timer Improvements
+**Goal:** Audio cues, custom formats, keyboard control.
+**Why:** Better practice experience with timing.
 
 **Technical Implementation:**
-- **Status:** Partially implemented in `hooks/use-speech-to-text.ts`.
-- **Next Steps:**
-  - Add Microphone icon to `MotionInput` component.
-  - Integrate hook to stream text into the textarea.
-  - Add visual feedback (waveform or pulsing red dot) while listening.
-  - **Fallback:** Ensure graceful failure on browsers without Web Speech API support.
+- Enhance existing `TimerPage` with audio/visual cues.
+- Add custom format presets (Lincoln-Douglas, Policy, PF).
+- Keyboard shortcuts for start/stop/reset.
 
 ---
 
@@ -57,27 +37,23 @@ This document details the features selected for the next phase of development, p
   - Configurable speech times.
   - Real-time "Judge Feedback" sidebar (AI analyzing distinct arguments).
 
-### 2.2 Argument Flowcharts (Visual)
-**Goal:** Visualize the "flow" of a debate (Argument -> Attack -> Defense).
-**Why:** Text is linear; debate logic is branching.
+### 2.2 Team Workspaces
+**Goal:** Shared workspaces for debate teams.
+**Why:** Collaborate on case development.
 
 **Technical Implementation:**
-- **Library:** `reactflow` or `@xyflow/react`.
-- **Data Structure:** Convert linear AI output into a graph:
-  - Nodes: Arguments, Rebuttals.
-  - Edges: "Attacks", "Defends".
-- **Interaction:** Users can drag/drop nodes to reorganize the flow.
+- Multi-tenant architecture with team tables.
+- Team invitations via email.
+- Role-based permissions (coach, captain, member).
 
-### 2.3 PDF Export (Tournaments)
-**Goal:** Download a print-ready "Flow Sheet" or case file.
-**Why:** Word is good for editing; PDF is required for some submission formats/offline reading.
+### 2.3 Real-time Collaboration
+**Goal:** Multiple users editing cases simultaneously.
+**Why:** Team preparation sessions.
 
 **Technical Implementation:**
-- **Library:** `jspdf` or `react-pdf`.
-- **Features:**
-  - Multi-column layout "Flow Sheet" mode.
-  - Standard headers/footers (User Name, Team Code).
-- **Backend (Optional):** If client-side generation is too slow, move to a Node.js Edge Function using `puppeteer`.
+- Supabase Realtime subscriptions.
+- CRDT-based conflict resolution.
+- Presence indicators.
 
 ---
 
@@ -108,3 +84,14 @@ This document details the features selected for the next phase of development, p
 - **Phase 2 (Functionality):**
   - Native Auth integration.
   - Push Notifications for shared cases.
+
+---
+
+## Recently Completed ✅
+
+The following features have been implemented:
+- **Usage Analytics Dashboard** - Admin can view platform health, costs, user activity
+- **Onboarding Tutorial** - Interactive walkthrough for new users
+- **Voice Input** - Microphone input for motion field
+- **PDF Export** - Professional PDF export for all features
+- **Argument Flowcharts** - Visual debate flow with React Flow

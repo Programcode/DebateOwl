@@ -1474,15 +1474,15 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.3.4 ⭐ [NEXT UP] Argument Flowcharts
+### 7.3.4 Argument Flowcharts (COMPLETED)
 
 | Property | Value |
 |----------|-------|
 | **Description** | Visual flow diagrams of arguments |
 | **User Value** | Track argument development visually |
-| **Technical Approach** | React Flow or similar |
+| **Technical Approach** | React Flow with custom nodes |
 | **Time Estimate** | 20 hours |
-| **Priority** | Nice-to-have |
+| **Priority** | ⭐ [COMPLETED] |
 
 ---
 
@@ -1510,15 +1510,15 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.3.7 ⭐ [NEXT UP] PDF Export
+### 7.3.7 PDF Export (COMPLETED)
 
 | Property | Value |
 |----------|-------|
 | **Description** | Export cases as formatted PDFs |
 | **User Value** | Print-ready documents |
-| **Technical Approach** | jsPDF or server-side rendering |
+| **Technical Approach** | jsPDF + jspdf-autotable with branding |
 | **Time Estimate** | 8 hours |
-| **Priority** | Nice-to-have |
+| **Priority** | ⭐ [COMPLETED] |
 
 ---
 
