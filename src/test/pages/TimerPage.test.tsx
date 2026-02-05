@@ -20,7 +20,7 @@ const mockAudioContext = {
 
 // Mock UI components
 vi.mock('@/components/ui/select', () => ({
-    Select: ({ onValueChange, children, value }: any) => (
+    Select: ({ onValueChange, children, value }: { onValueChange: (val: string) => void; children: React.ReactNode; value: string }) => (
         <div data-testid="select-container">
             <button
                 data-testid="select-trigger"
@@ -31,10 +31,10 @@ vi.mock('@/components/ui/select', () => ({
             {children}
         </div>
     ),
-    SelectTrigger: ({ children }: any) => <div>{children}</div>,
+    SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     SelectValue: () => <span>Select Value</span>,
-    SelectContent: ({ children }: any) => <div>{children}</div>,
-    SelectItem: ({ value, children }: any) => <div data-value={value}>{children}</div>,
+    SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => <div data-value={value}>{children}</div>,
 }));
 
 describe('TimerPage', () => {
