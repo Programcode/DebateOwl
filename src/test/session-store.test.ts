@@ -10,7 +10,10 @@ vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from "@/lib/stores/session-store";
 
-const sampleGenerate = {
+import type { GenerateOutput } from "@/lib/ai/schemas/generate";
+import type { AttackOutput } from "@/lib/ai/schemas/attack";
+
+const sampleGenerate: GenerateOutput = {
   caseStructure: {
     thesis: "Test thesis",
     framework: "Test framework",
@@ -23,7 +26,7 @@ const sampleGenerate = {
   metadata: { side: "pro", format: "Test", generatedAt: new Date().toISOString() },
 };
 
-const sampleAttack = {
+const sampleAttack: AttackOutput = {
   overallAssessment: { score: 50, summary: "ok", strengthAreas: [] },
   weaknesses: [],
   fallaciesDetected: [],

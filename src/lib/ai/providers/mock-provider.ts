@@ -10,7 +10,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function mockGenerateCase(motion: string, side: string): Promise<GenerateOutput> {
   await delay(1500);
   const actualSide = side === 'auto' ? (Math.random() > 0.5 ? 'pro' : 'con') : side as 'pro' | 'con';
-  
+
   return {
     caseStructure: {
       thesis: `We ${actualSide === 'pro' ? 'support' : 'oppose'} the motion: "${motion}" because it fundamentally affects individual rights, economic stability, and social progress.`,
@@ -87,7 +87,7 @@ export async function mockGenerateCase(motion: string, side: string): Promise<Ge
 
 export async function mockAttackCase(caseText: string): Promise<AttackOutput> {
   await delay(1800);
-  
+
   return {
     overallAssessment: {
       score: 62,
@@ -175,7 +175,7 @@ export async function mockAttackCase(caseText: string): Promise<AttackOutput> {
 
 export async function mockBrainstorm(motion: string, outputMode: string): Promise<BrainstormOutput> {
   await delay(1200);
-  
+
   const ideas = [
     {
       id: '1',
@@ -220,7 +220,7 @@ export async function mockBrainstorm(motion: string, outputMode: string): Promis
       side: 'con' as const,
       strength: 'weak' as const,
       tradeoffs: ['Abstract concept', 'Hard to quantify'],
-      relatedTo: [],
+      relatedTo: [] as string[],
     },
   ];
 
@@ -259,7 +259,7 @@ export async function mockBrainstorm(motion: string, outputMode: string): Promis
 
 export async function mockFactoids(claim: string): Promise<FactoidsOutput> {
   await delay(2000);
-  
+
   return {
     factoids: [
       {
@@ -325,7 +325,7 @@ export async function mockFactoids(claim: string): Promise<FactoidsOutput> {
 
 export async function mockAsk(message: string, mode: string): Promise<AskOutput> {
   await delay(1000);
-  
+
   const baseResponse: AskOutput = {
     response: `Great question about "${message.slice(0, 50)}..."\n\nIn debate, this topic can be approached from multiple angles. The key is to identify the core value clash and build your case around a clear, defensible principle.`,
     followUpQuestions: [

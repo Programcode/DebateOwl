@@ -1,4 +1,5 @@
 // src/test/pages/pages.test.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
@@ -31,7 +32,7 @@ vi.mock('framer-motion', () => ({
 // Mock useAuth
 vi.mock('@/lib/auth', () => ({
     useAuth: () => ({
-        user: null,
+        user: null as any,
         loading: false,
         signInWithGoogle: vi.fn(),
         signOut: vi.fn(),

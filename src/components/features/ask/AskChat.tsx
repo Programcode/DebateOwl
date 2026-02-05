@@ -19,7 +19,8 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
-  output?: AskOutput;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  output?: any;
 }
 
 interface AskChatProps {
@@ -83,7 +84,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           <div className="space-y-1 pt-2 border-t border-border/50">
             <span className="text-xs font-medium text-muted-foreground">Follow-up questions:</span>
             <ul className="space-y-1">
-              {output.followUpQuestions.map((q, i) => (
+              {output.followUpQuestions.map((q: string, i: number) => (
                 <li key={i} className="text-xs text-muted-foreground">• {q}</li>
               ))}
             </ul>
@@ -96,7 +97,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             <div>
               <span className="text-xs font-medium text-primary">Pros</span>
               <ul className="mt-1 space-y-0.5">
-                {output.prosConsAnalysis.pros.map((pro, i) => (
+                {output.prosConsAnalysis.pros.map((pro: string, i: number) => (
                   <li key={i} className="text-xs">✓ {pro}</li>
                 ))}
               </ul>
@@ -104,7 +105,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             <div>
               <span className="text-xs font-medium text-destructive">Cons</span>
               <ul className="mt-1 space-y-0.5">
-                {output.prosConsAnalysis.cons.map((con, i) => (
+                {output.prosConsAnalysis.cons.map((con: string, i: number) => (
                   <li key={i} className="text-xs">✗ {con}</li>
                 ))}
               </ul>

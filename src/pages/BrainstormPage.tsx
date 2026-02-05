@@ -62,7 +62,6 @@ export default function BrainstormPage() {
       addAskMessage({
         role: 'assistant',
         content: result.response,
-        // @ts-expect-error: form schema and UI fields diverge
         output: result
       });
     } catch (error) {

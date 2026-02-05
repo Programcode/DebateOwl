@@ -138,7 +138,7 @@ export default function AdminPage() {
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
                     fetchAdminData('limits'),
-                    fetchAdminData('global-prompts').catch(() => ({ prompts: [] })),
+                    fetchAdminData('global-prompts').catch(() => ({ prompts: [] as GlobalPrompt[] })),
                 ]);
                 setStats(statsData);
                 setUsers(usersData.users || []);

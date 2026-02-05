@@ -1,4 +1,5 @@
 // src/test/schemas.test.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from 'vitest';
 import { GenerateInputSchema, GenerateOutputSchema, ContentionSchema } from '@/lib/ai/schemas/generate';
 import { AttackInputSchema, AttackOutputSchema, WeaknessSchema } from '@/lib/ai/schemas/attack';
@@ -240,9 +241,9 @@ describe('Attack Schema', () => {
                 summary: 'Solid case with some logical gaps',
                 strengthAreas: ['Evidence quality', 'Clear structure'],
             },
-            weaknesses: [],
-            fallaciesDetected: [],
-            crossExQuestions: [],
+            weaknesses: [] as any[],
+            fallaciesDetected: [] as any[],
+            crossExQuestions: [] as any[],
             weighingAnalysis: {
                 currentWeighing: 'Basic comparison provided',
                 missingComparisons: ['Timeframe comparison'],
@@ -365,7 +366,7 @@ describe('Brainstorm Schema', () => {
     describe('BucketSchema', () => {
         const validBucket = {
             name: 'Economic Arguments',
-            ideas: [],
+            ideas: [] as any[],
             keyInsight: 'Focus on long-term economic impact',
         };
 
@@ -525,7 +526,7 @@ describe('Factoids Schema', () => {
 
     describe('FactoidsOutputSchema', () => {
         const validOutput = {
-            factoids: [],
+            factoids: [] as any[],
             searchSuggestions: ['Try searching for specific years'],
             warnings: ['Limited data available'],
             verificationStatus: 'pending',

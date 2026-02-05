@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi } from "vitest";
 
 type TableResponse = {
@@ -74,7 +75,7 @@ export const setMockSessionToken = (token: string | null) => {
 };
 
 export const setMockInvokeResponse = (data: unknown, error: unknown = null) => {
-  supabaseMock.functions.invoke.mockResolvedValue({ data, error });
+  supabaseMock.functions.invoke.mockResolvedValue({ data: data as any, error });
 };
 
 export const resetMockState = () => {
