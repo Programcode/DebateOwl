@@ -35,7 +35,7 @@ export default function AttackPage() {
 
   const handleDiscuss = async () => {
     if (!attackResult) return;
-    
+
     const summary = `I'd like to discuss the critique of my case.
     
     **Overall Assessment:** ${attackResult.overallAssessment.summary}
@@ -48,26 +48,25 @@ export default function AttackPage() {
 
     // 1. Add User Message
     addAskMessage({ role: 'user', content: summary });
-    
+
     // 2. Navigate immediately so user sees the chat
     navigate('/ask');
-    
+
     // 3. Trigger AI (This runs in background even after nav)
     setAskLoading(true);
     try {
       // Construct history including the new message
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({ 
-        role: m.role as 'user' | 'assistant', 
-        content: m.content 
+      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
       }));
-      
+
       const result = await askChat(summary, history, 'general', askConfig);
-      
-      addAskMessage({ 
-        role: 'assistant', 
+
+      addAskMessage({
+        role: 'assistant',
         content: result.response,
-        // @ts-expect-error: form schema and UI fields diverge
-        output: result 
+        output: result
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);

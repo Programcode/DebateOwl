@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 // Use type assertion for window because SpeechRecognition is not standard yet
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
+  resultIndex: number;
 }
 
 interface SpeechRecognitionResultList {
@@ -63,7 +64,7 @@ export function useSpeechToText() {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
           } else {
-             // interim logic if needed, but we usually just want final
+            // interim logic if needed, but we usually just want final
           }
         }
         if (finalTranscript) {

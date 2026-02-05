@@ -12,7 +12,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
-  output?: AskOutput;
+  output?: AskOutput | GenerateOutput | AttackOutput | BrainstormOutput | FactoidsOutput;
 }
 
 export interface Source {
@@ -123,7 +123,7 @@ interface SupabaseMessageRow {
   chat_id: string;
   role: 'user' | 'assistant';
   content: string;
-  output: AskOutput | null;
+  output: AskOutput | GenerateOutput | AttackOutput | BrainstormOutput | FactoidsOutput | null;
   created_at: string;
 }
 
@@ -140,23 +140,23 @@ interface SupabaseSourceRow {
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
-      generateResult: null,
+      generateResult: null as GenerateOutput | null,
       generateLoading: false,
-      attackResult: null,
+      attackResult: null as AttackOutput | null,
       attackLoading: false,
-      brainstormResult: null,
+      brainstormResult: null as BrainstormOutput | null,
       brainstormLoading: false,
-      factoidsResult: null,
+      factoidsResult: null as FactoidsOutput | null,
       factoidsLoading: false,
-      askMessages: [],
+      askMessages: [] as Message[],
       askLoading: false,
 
-      savedCases: [],
-      savedAttacks: [],
-      savedBrainstorms: [],
-      savedFactoids: [],
-      savedChats: [],
-      sourceLibrary: [],
+      savedCases: [] as SavedItem<GenerateOutput>[],
+      savedAttacks: [] as SavedItem<AttackOutput>[],
+      savedBrainstorms: [] as SavedItem<BrainstormOutput>[],
+      savedFactoids: [] as SavedItem<FactoidsOutput>[],
+      savedChats: [] as SavedItem<Message[]>[],
+      sourceLibrary: [] as Source[],
 
       addSource: async (source) => {
         const localId = generateId();
@@ -410,7 +410,7 @@ export const useSessionStore = create<SessionState>()(
         const chatIds = chatRows.map((c) => c.id);
         const messagesRes = chatIds.length
           ? await supabase.from('messages').select('*').in('chat_id', chatIds).order('created_at', { ascending: true })
-          : { data: [] };
+          : { data: [] as SupabaseMessageRow[] };
 
         const caseRows = (casesRes.data || []) as SupabaseSavedRow<GenerateOutput>[];
         const serverCases = caseRows.map((row) => ({

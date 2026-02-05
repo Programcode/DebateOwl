@@ -59,7 +59,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       language: 'en',
       theme: 'system',
-      customSystemPrompt: undefined,
+      customSystemPrompt: undefined as string | undefined,
       featureConfigs: getDefaultFeatureConfigs(),
 
       setLanguage: (language) => {

@@ -105,7 +105,6 @@ export default function GeneratePage() {
       addAskMessage({
         role: 'assistant',
         content: result.response,
-        // @ts-expect-error: form schema and UI fields diverge
         output: result
       });
     } catch (error) {

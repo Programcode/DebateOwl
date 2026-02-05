@@ -42,15 +42,15 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
             spacing: { before: 200, after: 100 },
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Reasoning: ", italic: true }), new TextRun(reasoning)],
+            children: [new TextRun({ text: "Reasoning: ", italics: true }), new TextRun(reasoning)],
             spacing: { after: 100 },
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Evidence: ", italic: true }), new TextRun(evidence)],
+            children: [new TextRun({ text: "Evidence: ", italics: true }), new TextRun(evidence)],
             spacing: { after: 100 },
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Impact: ", italic: true }), new TextRun(impact)],
+            children: [new TextRun({ text: "Impact: ", italics: true }), new TextRun(impact)],
             spacing: { after: 300 },
           }),
         ];
@@ -75,10 +75,10 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
             children: [new TextRun({ text: "Target: ", bold: true }), new TextRun(target)],
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Counter: ", italic: true }), new TextRun(counterpoint)],
+            children: [new TextRun({ text: "Counter: ", italics: true }), new TextRun(counterpoint)],
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Rebuttal: ", italic: true }), new TextRun(rebuttal)],
+            children: [new TextRun({ text: "Rebuttal: ", italics: true }), new TextRun(rebuttal)],
             spacing: { after: 200 },
           }),
         ];
