@@ -79,7 +79,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
             Generated {result.metadata?.generatedAt ? new Date(result.metadata.generatedAt).toLocaleString() : 'N/A'}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2" data-tour="export-section">
           <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
             <FileDown className="h-4 w-4 mr-2" />
             Export Word

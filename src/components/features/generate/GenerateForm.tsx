@@ -201,7 +201,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           </div>
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12" disabled={isLoading} data-tour="generate-button">
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
