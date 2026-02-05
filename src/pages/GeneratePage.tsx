@@ -125,7 +125,7 @@ export default function GeneratePage() {
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
+        <div className="grid gap-8 grid-cols-1 lg:grid-cols-[400px_1fr]">
           {/* Form */}
           <div className="lg:sticky lg:top-24 lg:self-start">
             <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading} />

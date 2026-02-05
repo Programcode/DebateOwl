@@ -386,7 +386,7 @@ export default function FlowchartPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {/* Stats Bar */}
-                    <div className="flex gap-4 p-4 border-b bg-muted/30">
+                    <div className="flex flex-wrap gap-2 p-4 border-b bg-muted/30">
                         <Badge variant="outline" className="gap-1">
                             <Target className="h-3 w-3" /> Thesis: {stats.thesis || 0}
                         </Badge>
@@ -405,7 +405,7 @@ export default function FlowchartPage() {
                     </div>
 
                     {/* Flow Canvas */}
-                    <div className="h-[600px] w-full">
+                    <div className="h-[50vh] min-h-[400px] w-full">
                         <ReactFlow
                             nodes={nodes}
                             edges={edges}

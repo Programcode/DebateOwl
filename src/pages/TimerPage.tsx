@@ -301,19 +301,19 @@ export default function TimerPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Timer Display */}
-            <div className="relative flex items-center justify-center h-72 w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner">
+            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner transition-all">
               <div className={`absolute inset-0 rounded-full border-8 border-primary transition-all duration-1000`}
                 style={{ clipPath: `inset(${100 - progress}% 0 0 0)` }} />
 
               <div className="text-center z-10 flex flex-col items-center justify-center">
-                <div className={`text-7xl font-mono font-bold tracking-tighter tabular-nums ${timeLeft < 30 && timeLeft > 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                <div className={`text-6xl sm:text-7xl font-mono font-bold tracking-tighter tabular-nums ${timeLeft < 30 && timeLeft > 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
                   {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </div>
                 <div className="text-sm text-muted-foreground mt-4 font-medium uppercase tracking-widest flex items-center gap-2">
                   {isFinished ? "TIME UP" : isRunning ? "SPEAKING" : "PAUSED"}
                   {soundEnabled && <Bell className="h-3 w-3" />}
                 </div>
-                <Badge variant="outline" className="mt-2 text-xs">
+                <Badge variant="outline" className="mt-2 text-xs max-w-[180px] truncate">
                   {currentSpeech.name || currentSpeech.label}
                 </Badge>
               </div>
@@ -349,7 +349,7 @@ export default function TimerPage() {
               </Button>
             </div>
 
-            <div className="text-xs text-muted-foreground pt-4 flex items-center justify-center gap-4">
+            <div className="text-xs text-muted-foreground pt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
               <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> Space: Start/Stop</span>
               <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> R/Esc: Reset</span>
               <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> Arrows: Change Speech</span>
@@ -364,7 +364,7 @@ export default function TimerPage() {
                 <Bell className="h-4 w-4" /> Signals
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm flex justify-center gap-8 text-muted-foreground">
+            <CardContent className="text-sm flex flex-col sm:flex-row justify-center gap-2 sm:gap-8 text-muted-foreground items-center">
               <span className="flex items-center gap-2">1 min left: <b>1 Beep</b></span>
               <span className="flex items-center gap-2">Time up: <b>2 Beeps</b></span>
             </CardContent>
