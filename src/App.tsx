@@ -11,6 +11,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 const GeneratePage = lazy(() => import("./pages/GeneratePage"));
 const AttackPage = lazy(() => import("./pages/AttackPage"));
 const BrainstormPage = lazy(() => import("./pages/BrainstormPage"));
@@ -43,8 +44,12 @@ const App = () => (
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/share/:code" element={<SharedPage />} />
+
+              {/* Protected App Routes */}
               <Route
                 element={
                   <RequireAuth>
@@ -52,16 +57,16 @@ const App = () => (
                   </RequireAuth>
                 }
               >
-                <Route path="/" element={<GeneratePage />} />
-                <Route path="/attack" element={<AttackPage />} />
-                <Route path="/brainstorm" element={<BrainstormPage />} />
-                <Route path="/factoids" element={<FactoidsPage />} />
-                <Route path="/ask" element={<AskPage />} />
-                <Route path="/history" element={<HistoryPage />} />
-                <Route path="/library" element={<LibraryPage />} />
-                <Route path="/timer" element={<TimerPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/app" element={<GeneratePage />} />
+                <Route path="/app/attack" element={<AttackPage />} />
+                <Route path="/app/brainstorm" element={<BrainstormPage />} />
+                <Route path="/app/factoids" element={<FactoidsPage />} />
+                <Route path="/app/ask" element={<AskPage />} />
+                <Route path="/app/history" element={<HistoryPage />} />
+                <Route path="/app/library" element={<LibraryPage />} />
+                <Route path="/app/timer" element={<TimerPage />} />
+                <Route path="/app/settings" element={<SettingsPage />} />
+                <Route path="/app/admin" element={<AdminPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

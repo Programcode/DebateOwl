@@ -15,27 +15,27 @@ export default function HistoryPage() {
 
   const handleLoadCase = (id: string) => {
     store.loadSavedCase(id);
-    navigate('/');
+    navigate('/app');
   };
 
   const handleLoadChat = (id: string) => {
     store.loadSavedChat(id);
-    navigate('/ask');
+    navigate('/app/ask');
   };
 
   const handleLoadAttack = (id: string) => {
     store.loadSavedAttack(id);
-    navigate('/attack');
+    navigate('/app/attack');
   };
 
   const handleLoadBrainstorm = (id: string) => {
     store.loadSavedBrainstorm(id);
-    navigate('/brainstorm');
+    navigate('/app/brainstorm');
   };
 
   const handleLoadFactoids = (id: string) => {
     store.loadSavedFactoids(id);
-    navigate('/factoids');
+    navigate('/app/factoids');
   };
 
   return (

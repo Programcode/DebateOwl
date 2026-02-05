@@ -19,14 +19,14 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { path: '/', label: 'Generate', icon: Sparkles, description: 'Build arguments' },
-  { path: '/attack', label: 'Attack', icon: Swords, description: 'Find weaknesses' },
-  { path: '/brainstorm', label: 'Brainstorm', icon: Lightbulb, description: 'Explore ideas' },
-  { path: '/factoids', label: 'Factoids', icon: BookOpen, description: 'Find evidence' },
-  { path: '/ask', label: 'Ask', icon: MessageCircle, description: 'Get coaching' },
-  { path: '/library', label: 'Library', icon: Database, description: 'Manage sources' },
-  { path: '/timer', label: 'Timer', icon: Timer, description: 'Practice timing' },
-  { path: '/history', label: 'History', icon: Clock, description: 'Saved items' },
+  { path: '/app', label: 'Generate', icon: Sparkles, description: 'Build arguments' },
+  { path: '/app/attack', label: 'Attack', icon: Swords, description: 'Find weaknesses' },
+  { path: '/app/brainstorm', label: 'Brainstorm', icon: Lightbulb, description: 'Explore ideas' },
+  { path: '/app/factoids', label: 'Factoids', icon: BookOpen, description: 'Find evidence' },
+  { path: '/app/ask', label: 'Ask', icon: MessageCircle, description: 'Get coaching' },
+  { path: '/app/library', label: 'Library', icon: Database, description: 'Manage sources' },
+  { path: '/app/timer', label: 'Timer', icon: Timer, description: 'Practice timing' },
+  { path: '/app/history', label: 'History', icon: Clock, description: 'Saved items' },
 ];
 
 export function AppLayout() {
@@ -54,7 +54,7 @@ export function AppLayout() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                end={item.path === '/'}
+                end={item.path === '/app'}
                 className={cn(
                   "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -68,7 +68,7 @@ export function AppLayout() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <NavLink to="/settings">
+            <NavLink to="/app/settings">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings">
                 <Settings className="h-5 w-5" />
               </Button>
@@ -94,7 +94,7 @@ export function AppLayout() {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  end={item.path === '/'}
+                  end={item.path === '/app'}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
