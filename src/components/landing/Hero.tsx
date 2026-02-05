@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const Hero = () => {
     return (
@@ -58,7 +58,7 @@ const Hero = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.3 }}
-                        className="flex flex-col sm:flex-row gap-4"
+                        className="flex flex-col sm:flex-row gap-4 justify-center"
                     >
                         <a
                             href="/app"
@@ -67,10 +67,6 @@ const Hero = () => {
                             <span className="relative z-10">Start Debating Free</span>
                             <ArrowRight className="w-5 h-5 relative z-10" />
                         </a>
-                        <button className="btn-secondary-outline flex items-center justify-center gap-2 text-lg px-8 py-4">
-                            <Play className="w-5 h-5" />
-                            Watch Demo
-                        </button>
                     </motion.div>
 
                     {/* Hero Visual */}
