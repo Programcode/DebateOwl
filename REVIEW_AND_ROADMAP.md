@@ -1278,7 +1278,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.2.3 Usage Analytics Dashboard
+### 7.2.3 ⭐ [NEXT UP] Usage Analytics Dashboard
 
 | Property | Value |
 |----------|-------|
@@ -1340,7 +1340,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.2.8 Onboarding Tutorial
+### 7.2.8 ⭐ [NEXT UP] Onboarding Tutorial
 
 | Property | Value |
 |----------|-------|
@@ -1364,7 +1364,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.2.10 Voice Input
+### 7.2.10 ⭐ [NEXT UP] Voice Input
 
 | Property | Value |
 |----------|-------|
@@ -1462,7 +1462,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.3.3 Practice Mode with AI Opponent
+### 7.3.3 ⭐ [NEXT UP] Practice Mode with AI Opponent
 
 | Property | Value |
 |----------|-------|
@@ -1474,7 +1474,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.3.4 Argument Flowcharts
+### 7.3.4 ⭐ [NEXT UP] Argument Flowcharts
 
 | Property | Value |
 |----------|-------|
@@ -1510,7 +1510,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.3.7 PDF Export
+### 7.3.7 ⭐ [NEXT UP] PDF Export
 
 | Property | Value |
 |----------|-------|
@@ -1524,7 +1524,7 @@ npm install -D @vitest/coverage-v8
 
 ## 7.4 Long-Term Vision (6+ months)
 
-### 7.4.1 Native Mobile Apps
+### 7.4.1 ⭐ [NEXT UP] Native Mobile Apps
 
 | Property | Value |
 |----------|-------|
@@ -1557,7 +1557,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.4.4 Stripe Payments Integration
+### 7.4.4 ⭐ [NEXT UP] Stripe Payments Integration
 
 | Property | Value |
 |----------|-------|
