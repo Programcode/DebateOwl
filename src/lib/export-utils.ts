@@ -1,5 +1,3 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
-import { saveAs } from 'file-saver';
 import type { GenerateOutput } from './ai/schemas/generate';
 
 export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean> {
@@ -13,6 +11,10 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     ) {
       throw new Error('Missing required case data for export.');
     }
+
+    // Dynamically import heavy libraries only when needed
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
+    const { saveAs } = await import('file-saver');
 
     const thesis = result.caseStructure.thesis?.trim() || 'Untitled Thesis';
     const thesisTitle = thesis.split('.')[0] || thesis;

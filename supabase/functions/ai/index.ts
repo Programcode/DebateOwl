@@ -4,11 +4,22 @@
 // Inline CORS headers to avoid import issues
 // SECURITY: Using production domain. Localhost calls from dev browser work because 
 // browsers accept specific origin even when request is from different origin.
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://debate.pi-stack.org",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// SECURITY: Allow specific origins for CORS
+const ALLOWED_ORIGINS = [
+  "https://debate.pi-stack.org",
+  "http://localhost:5173",
+  "http://127.0.0.1:54321" // Local Supabase
+];
+
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+const corsHeaders = getCorsHeaders(null); // Default for non-request contexts
 
 type Provider = "openai" | "anthropic" | "google";
 
