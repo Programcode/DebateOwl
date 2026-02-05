@@ -12,7 +12,8 @@ import {
   X,
   Clock,
   Timer,
-  Database
+  Database,
+  GitBranch
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ const navItems = [
   { path: '/app/ask', label: 'Ask', icon: MessageCircle, description: 'Get coaching' },
   { path: '/app/library', label: 'Library', icon: Database, description: 'Manage sources' },
   { path: '/app/timer', label: 'Timer', icon: Timer, description: 'Practice timing' },
+  { path: '/app/flowchart', label: 'Flowchart', icon: GitBranch, description: 'Map arguments' },
   { path: '/app/history', label: 'History', icon: Clock, description: 'Saved items' },
 ];
 

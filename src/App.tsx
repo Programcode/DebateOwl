@@ -24,6 +24,7 @@ const LibraryPage = lazy(() => import("./pages/LibraryPage"));
 const TimerPage = lazy(() => import("./pages/TimerPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const SharedPage = lazy(() => import("./pages/SharedPage"));
+const FlowchartPage = lazy(() => import("./pages/FlowchartPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -67,6 +68,7 @@ const App = () => (
                 <Route path="/app/history" element={<HistoryPage />} />
                 <Route path="/app/library" element={<LibraryPage />} />
                 <Route path="/app/timer" element={<TimerPage />} />
+                <Route path="/app/flowchart" element={<FlowchartPage />} />
                 <Route path="/app/settings" element={<SettingsPage />} />
                 <Route path="/app/admin" element={<AdminPage />} />
               </Route>
