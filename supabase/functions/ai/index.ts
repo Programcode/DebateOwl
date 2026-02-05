@@ -2,8 +2,10 @@
 // Keeps provider keys server-side and returns structured JSON.
 
 // Inline CORS headers to avoid import issues
+// SECURITY: Using production domain. Localhost calls from dev browser work because 
+// browsers accept specific origin even when request is from different origin.
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://debate.pi-stack.org",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };

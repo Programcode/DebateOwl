@@ -157,4 +157,141 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Landing Page Utilities */
+@layer components {
+  .glass-card {
+    @apply bg-card backdrop-blur-xl border border-border rounded-2xl shadow-sm;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 58%) 100%);
+  }
+
+  .btn-primary-gradient {
+    @apply relative px-6 py-3 font-semibold text-primary-foreground rounded-xl overflow-hidden transition-all duration-300 shadow-lg;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 58%) 100%);
+  }
+
+  .btn-primary-gradient::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, hsl(199 89% 35%) 0%, hsl(262 83% 50%) 100%);
+  }
+
+  .btn-primary-gradient:hover::before {
+    @apply opacity-100;
+  }
+
+  .btn-primary-gradient:hover {
+    @apply shadow-xl;
+    box-shadow: 0 10px 40px hsl(var(--primary) / 0.3);
+  }
+
+  .btn-secondary-outline {
+    @apply px-6 py-3 font-semibold text-foreground rounded-xl border border-border bg-card transition-all duration-300 shadow-sm;
+  }
+
+  .btn-secondary-outline:hover {
+    @apply bg-secondary border-primary/30 shadow-md;
+  }
+
+  .shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.3), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 3s infinite;
+  }
+
+  .animated-grid {
+    background-image: 
+      linear-gradient(hsl(var(--border) / 0.8) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.8) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridMove 20s linear infinite;
+  }
+
+  .feature-card {
+    @apply glass-card p-6 transition-all duration-500 hover:shadow-lg;
+    transform-style: preserve-3d;
+  }
+
+  .feature-card:hover {
+    @apply border-primary/40;
+    box-shadow: 0 20px 40px hsl(var(--foreground) / 0.08);
+    transform: translateY(-4px) rotateX(2deg) rotateY(2deg);
+  }
+
+  .orb {
+    @apply absolute rounded-full blur-3xl pointer-events-none;
+  }
+
+  .orb-primary {
+    background: hsl(var(--primary) / 0.3);
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .orb-accent {
+    background: hsl(262 83% 75% / 0.25);
+    animation: float 10s ease-in-out infinite reverse;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .nav-blur {
+    @apply backdrop-blur-xl bg-background/90 border-b border-border shadow-sm;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes gridMove {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 60px 60px;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-10px);
+  }
+  75% {
+    transform: translateY(-25px) translateX(5px);
+  }
 }

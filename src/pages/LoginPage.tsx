@@ -9,7 +9,7 @@ export default function LoginPage() {
   const { user, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/app';
 
   useEffect(() => {
     if (user) navigate(from, { replace: true });

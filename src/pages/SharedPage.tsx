@@ -96,7 +96,7 @@ export default function SharedPage() {
             }
 
             toast({ title: 'Success', description: 'Content imported to your account!' });
-            navigate('/history');
+            navigate('/app/history');
         } catch (err) {
             toast({
                 title: 'Error',
@@ -126,7 +126,7 @@ export default function SharedPage() {
                         <CardDescription>{error || 'Content not found'}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={() => navigate('/')} className="w-full">
+                        <Button onClick={() => navigate('/app')} className="w-full">
                             Go to DebateLab
                         </Button>
                     </CardContent>
@@ -168,7 +168,7 @@ export default function SharedPage() {
                 </Card>
 
                 <div className="mt-4 text-center">
-                    <Button variant="outline" onClick={() => navigate('/')} className="gap-2">
+                    <Button variant="outline" onClick={() => navigate('/app')} className="gap-2">
                         <ExternalLink className="h-4 w-4" />
                         Open DebateLab
                     </Button>

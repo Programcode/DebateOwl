@@ -82,7 +82,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Language</Label>
+                <Label>AI Output Language</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es')}>
                   <SelectTrigger>
                     <SelectValue />
