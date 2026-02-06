@@ -39,7 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     init();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
+
       const prevUserId = session?.user?.id;
       const nextUserId = newSession?.user?.id;
       setSession(newSession);
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Persist Google provider_token for later use (e.g., Google Docs export)
       // This token is only available immediately after OAuth, not on session refresh
       if (newSession?.provider_token) {
+        console.log('[Auth] Storing new provider_token');
         localStorage.setItem('google_provider_token', newSession.provider_token);
       }
 
