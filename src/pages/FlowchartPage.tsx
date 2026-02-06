@@ -130,19 +130,19 @@ const initialNodes: Node<FlowNodeData>[] = [
         id: 'c1',
         type: 'custom',
         position: { x: 150, y: 200 },
-        data: { label: 'Contention 1', description: 'Your first argument', type: 'contention', strength: 'strong' },
+        data: { label: 'Argument 1', description: 'Your first argument', type: 'contention', strength: 'strong' },
     },
     {
         id: 'c2',
         type: 'custom',
         position: { x: 400, y: 200 },
-        data: { label: 'Contention 2', description: 'Your second argument', type: 'contention', strength: 'moderate' },
+        data: { label: 'Argument 2', description: 'Your second argument', type: 'contention', strength: 'moderate' },
     },
     {
         id: 'c3',
         type: 'custom',
         position: { x: 650, y: 200 },
-        data: { label: 'Contention 3', description: 'Your third argument', type: 'contention', strength: 'weak' },
+        data: { label: 'Argument 3', description: 'Your third argument', type: 'contention', strength: 'weak' },
     },
     {
         id: 'a1',
@@ -476,7 +476,7 @@ export default function FlowchartPage() {
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="contention">Contention (Your Argument)</SelectItem>
+                                                    <SelectItem value="contention">Argument (Your Argument)</SelectItem>
                                                     <SelectItem value="attack">Attack (Opponent's Response)</SelectItem>
                                                     <SelectItem value="rebuttal">Rebuttal (Your Counter)</SelectItem>
                                                     <SelectItem value="dropped">Dropped (Unaddressed)</SelectItem>
@@ -539,7 +539,7 @@ export default function FlowchartPage() {
                             <Target className="h-3 w-3" /> Thesis: {stats.thesis || 0}
                         </Badge>
                         <Badge variant="outline" className="gap-1 border-emerald-500 text-emerald-600">
-                            <Shield className="h-3 w-3" /> Contentions: {stats.contention || 0}
+                            <Shield className="h-3 w-3" /> Arguments: {stats.contention || 0}
                         </Badge>
                         <Badge variant="outline" className="gap-1 border-red-500 text-red-600">
                             <Swords className="h-3 w-3" /> Attacks: {stats.attack || 0}
@@ -600,7 +600,7 @@ export default function FlowchartPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-emerald-500" />
-                            <span>Contention - Supporting arguments</span>
+                            <span>Argument - Supporting arguments</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-red-500" />

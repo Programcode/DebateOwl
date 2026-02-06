@@ -183,9 +183,9 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             addParagraph(`Burden of Proof: ${result.caseStructure.burdenOfProof}`);
         }
 
-        // Contentions Table
+        // Arguments Table
         if (result.contentions?.length) {
-            addSectionTitle('Contentions', COLORS.success);
+            addSectionTitle('Arguments', COLORS.success);
             const rows = result.contentions.map((c, i) => [
                 `#${i + 1}`,
                 c.claim || '',

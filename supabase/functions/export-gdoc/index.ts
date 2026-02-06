@@ -2,6 +2,35 @@
 // Creates a Google Doc from debate data using the user's OAuth token.
 // Supports multiple modes: generate, attack, brainstorm, factoids
 
+// Import Supabase client for JWT verification
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// Initialize Supabase client with service role key for user verification
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Validate JWT from Authorization header
+async function validateJWT(req: Request): Promise<{ valid: boolean; userId?: string; error?: string }> {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+        return { valid: false, error: "Missing or invalid Authorization header" };
+    }
+
+    const token = authHeader.slice(7);
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) {
+            console.error("[GDOC] JWT validation failed:", error?.message || "No user found");
+            return { valid: false, error: error?.message || "Invalid token" };
+        }
+        return { valid: true, userId: user.id };
+    } catch (err) {
+        console.error("[GDOC] JWT validation error:", err);
+        return { valid: false, error: "Token validation failed" };
+    }
+}
+
 const ALLOWED_ORIGINS = [
     "https://debate.pi-stack.org",
     "http://localhost:5173",
@@ -42,6 +71,12 @@ interface GoogleDocsParagraphStyleRequest {
         paragraphStyle: {
             namedStyleType?: string;
             alignment?: string;
+            spaceAbove?: { magnitude: number; unit: string };
+            spaceBelow?: { magnitude: number; unit: string };
+            lineSpacing?: number;
+            indentStart?: { magnitude: number; unit: string };
+            borderTop?: { color: { color: { rgbColor: { red: number; green: number; blue: number } } }; width: { magnitude: number; unit: string }; padding: { magnitude: number; unit: string }; dashStyle: string };
+            borderBottom?: { color: { color: { rgbColor: { red: number; green: number; blue: number } } }; width: { magnitude: number; unit: string }; padding: { magnitude: number; unit: string }; dashStyle: string };
         };
         fields: string;
     };
@@ -55,6 +90,8 @@ interface GoogleDocsTextStyleRequest {
             italic?: boolean;
             fontSize?: { magnitude: number; unit: string };
             weightedFontFamily?: { fontFamily: string };
+            foregroundColor?: { color: { rgbColor: { red: number; green: number; blue: number } } };
+            backgroundColor?: { color: { rgbColor: { red: number; green: number; blue: number } } };
         };
         fields: string;
     };
@@ -62,7 +99,16 @@ interface GoogleDocsTextStyleRequest {
 
 type GoogleDocsUpdateRequest = GoogleDocsInsertRequest | GoogleDocsParagraphStyleRequest | GoogleDocsTextStyleRequest;
 
-// Helpers for building document content
+// Modern color palette
+const COLORS = {
+    primary: { red: 0.29, green: 0.47, blue: 0.82 },      // Professional blue #4A78D1
+    secondary: { red: 0.4, green: 0.4, blue: 0.45 },       // Slate gray #666673
+    accent: { red: 0.18, green: 0.55, blue: 0.34 },        // Forest green #2D8C57
+    muted: { red: 0.45, green: 0.45, blue: 0.5 },          // Muted gray #737380
+    dark: { red: 0.12, green: 0.12, blue: 0.15 },          // Near black #1F1F26
+};
+
+// Professional document builder with modern styling
 function createDocumentBuilder() {
     const requests: GoogleDocsUpdateRequest[] = [];
     let currentIndex = 1;
@@ -76,40 +122,220 @@ function createDocumentBuilder() {
         return { startIndex, endIndex: currentIndex };
     };
 
-    const applyHeading = (range: { startIndex: number; endIndex: number }, level: 1 | 2) => {
+    // Title style - Large, bold, centered
+    const applyTitle = (range: { startIndex: number; endIndex: number }) => {
+        requests.push({
+            updateTextStyle: {
+                range,
+                textStyle: {
+                    bold: true,
+                    fontSize: { magnitude: 28, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.dark } }
+                },
+                fields: "bold,fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
         requests.push({
             updateParagraphStyle: {
-                range: { startIndex: range.startIndex, endIndex: range.endIndex },
-                paragraphStyle: { namedStyleType: level === 1 ? "HEADING_1" : "HEADING_2" },
-                fields: "namedStyleType"
+                range,
+                paragraphStyle: {
+                    alignment: "CENTER",
+                    spaceBelow: { magnitude: 6, unit: "PT" }
+                },
+                fields: "alignment,spaceBelow"
             }
         });
     };
 
-    const applyBold = (range: { startIndex: number; endIndex: number }) => {
+    // Subtitle/metadata style
+    const applySubtitle = (range: { startIndex: number; endIndex: number }) => {
         requests.push({
             updateTextStyle: {
-                range: { startIndex: range.startIndex, endIndex: range.endIndex },
-                textStyle: { bold: true },
-                fields: "bold"
+                range,
+                textStyle: {
+                    fontSize: { magnitude: 11, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.muted } }
+                },
+                fields: "fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
+        requests.push({
+            updateParagraphStyle: {
+                range,
+                paragraphStyle: {
+                    alignment: "CENTER",
+                    spaceBelow: { magnitude: 24, unit: "PT" }
+                },
+                fields: "alignment,spaceBelow"
             }
         });
     };
 
-    const applyBodyStyle = (range: { startIndex: number; endIndex: number }) => {
+    // Section header - Bold, colored, with spacing
+    const applySectionHeader = (range: { startIndex: number; endIndex: number }) => {
         requests.push({
             updateTextStyle: {
-                range: { startIndex: range.startIndex, endIndex: range.endIndex },
+                range,
+                textStyle: {
+                    bold: true,
+                    fontSize: { magnitude: 16, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.primary } }
+                },
+                fields: "bold,fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
+        requests.push({
+            updateParagraphStyle: {
+                range,
+                paragraphStyle: {
+                    spaceAbove: { magnitude: 20, unit: "PT" },
+                    spaceBelow: { magnitude: 8, unit: "PT" },
+                    borderBottom: {
+                        color: { color: { rgbColor: { red: 0.85, green: 0.85, blue: 0.88 } } },
+                        width: { magnitude: 1, unit: "PT" },
+                        padding: { magnitude: 4, unit: "PT" },
+                        dashStyle: "SOLID"
+                    }
+                },
+                fields: "spaceAbove,spaceBelow,borderBottom"
+            }
+        });
+    };
+
+    // Sub-header for arguments, counters
+    const applySubHeader = (range: { startIndex: number; endIndex: number }) => {
+        requests.push({
+            updateTextStyle: {
+                range,
+                textStyle: {
+                    bold: true,
+                    fontSize: { magnitude: 13, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.accent } }
+                },
+                fields: "bold,fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
+        requests.push({
+            updateParagraphStyle: {
+                range,
+                paragraphStyle: {
+                    spaceAbove: { magnitude: 14, unit: "PT" },
+                    spaceBelow: { magnitude: 4, unit: "PT" }
+                },
+                fields: "spaceAbove,spaceBelow"
+            }
+        });
+    };
+
+    // Label text (Reasoning:, Evidence:, etc.)
+    const applyLabel = (range: { startIndex: number; endIndex: number }) => {
+        requests.push({
+            updateTextStyle: {
+                range,
+                textStyle: {
+                    bold: true,
+                    fontSize: { magnitude: 11, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.secondary } }
+                },
+                fields: "bold,fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
+    };
+
+    // Body text
+    const applyBody = (range: { startIndex: number; endIndex: number }) => {
+        requests.push({
+            updateTextStyle: {
+                range,
+                textStyle: {
+                    fontSize: { magnitude: 11, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.dark } }
+                },
+                fields: "fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
+        requests.push({
+            updateParagraphStyle: {
+                range,
+                paragraphStyle: {
+                    lineSpacing: 130,
+                    spaceBelow: { magnitude: 4, unit: "PT" }
+                },
+                fields: "lineSpacing,spaceBelow"
+            }
+        });
+    };
+
+    // Bullet point text
+    const applyBullet = (range: { startIndex: number; endIndex: number }) => {
+        requests.push({
+            updateTextStyle: {
+                range,
+                textStyle: {
+                    fontSize: { magnitude: 11, unit: "PT" },
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.dark } }
+                },
+                fields: "fontSize,weightedFontFamily,foregroundColor"
+            }
+        });
+        requests.push({
+            updateParagraphStyle: {
+                range,
+                paragraphStyle: {
+                    indentStart: { magnitude: 18, unit: "PT" },
+                    spaceBelow: { magnitude: 3, unit: "PT" }
+                },
+                fields: "indentStart,spaceBelow"
+            }
+        });
+    };
+
+    // Emphasized body text (thesis, key points)
+    const applyEmphasis = (range: { startIndex: number; endIndex: number }) => {
+        requests.push({
+            updateTextStyle: {
+                range,
                 textStyle: {
                     fontSize: { magnitude: 12, unit: "PT" },
-                    weightedFontFamily: { fontFamily: "Times New Roman" }
+                    weightedFontFamily: { fontFamily: "Lexend" },
+                    foregroundColor: { color: { rgbColor: COLORS.dark } },
+                    italic: true
                 },
-                fields: "fontSize,weightedFontFamily"
+                fields: "fontSize,weightedFontFamily,foregroundColor,italic"
+            }
+        });
+        requests.push({
+            updateParagraphStyle: {
+                range,
+                paragraphStyle: {
+                    lineSpacing: 140,
+                    spaceBelow: { magnitude: 12, unit: "PT" },
+                    indentStart: { magnitude: 12, unit: "PT" }
+                },
+                fields: "lineSpacing,spaceBelow,indentStart"
             }
         });
     };
 
-    return { requests, insertText, applyHeading, applyBold, applyBodyStyle };
+    return {
+        requests,
+        insertText,
+        applyTitle,
+        applySubtitle,
+        applySectionHeader,
+        applySubHeader,
+        applyLabel,
+        applyBody,
+        applyBullet,
+        applyEmphasis
+    };
 }
 
 // ============================================================
@@ -124,81 +350,108 @@ interface GenerateData {
 }
 
 function buildGenerateContent(data: GenerateData) {
-    const { requests, insertText, applyHeading, applyBold, applyBodyStyle } = createDocumentBuilder();
+    const {
+        requests, insertText, applyTitle, applySubtitle,
+        applySectionHeader, applySubHeader, applyLabel, applyBody, applyBullet, applyEmphasis
+    } = createDocumentBuilder();
 
     const thesis = data.caseStructure?.thesis?.trim() || 'Untitled Thesis';
-    const thesisTitle = thesis.split('.')[0] || thesis;
+    const thesisTitle = thesis.length > 60 ? thesis.substring(0, 57) + '...' : thesis;
 
-    // Title
-    const titleRange = insertText(`Debate Case: ${thesisTitle}\n\n`);
-    applyHeading(titleRange, 1);
+    // Title - Centered, large, bold
+    const titleRange = insertText(`${thesisTitle}\n`);
+    applyTitle(titleRange);
 
-    // Metadata
+    // Metadata - Centered subtitle
     const side = data.metadata?.side === 'pro' ? 'Proposition' : data.metadata?.side === 'con' ? 'Opposition' : 'Unknown';
-    const format = data.metadata?.format?.toUpperCase() || 'UNKNOWN';
-    const date = data.metadata?.generatedAt ? new Date(data.metadata.generatedAt).toLocaleDateString() : 'Unknown';
-    const metaRange = insertText(`Side: ${side} | Format: ${format} | Date: ${date}\n\n`);
-    applyBodyStyle(metaRange);
+    const format = data.metadata?.format?.toUpperCase() || 'Unknown Format';
+    const date = data.metadata?.generatedAt ? new Date(data.metadata.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
+    const metaRange = insertText(`${side} • ${format} • ${date}\n`);
+    applySubtitle(metaRange);
 
-    // Thesis
-    const thesisSectionRange = insertText('THESIS\n');
-    applyHeading(thesisSectionRange, 2);
-    const thesisBodyRange = insertText(`${thesis}\n\n`);
-    applyBodyStyle(thesisBodyRange);
+    // Thesis Section
+    const thesisSectionRange = insertText('Thesis\n');
+    applySectionHeader(thesisSectionRange);
+    const thesisBodyRange = insertText(`${thesis}\n`);
+    applyEmphasis(thesisBodyRange);
 
-    // Framework
+    // Framework Section
     const framework = data.caseStructure?.framework?.trim() || 'No framework provided.';
-    const frameworkSectionRange = insertText('FRAMEWORK\n');
-    applyHeading(frameworkSectionRange, 2);
-    applyBodyStyle(insertText(`${framework}\n\n`));
+    const frameworkSectionRange = insertText('Framework\n');
+    applySectionHeader(frameworkSectionRange);
+    applyBody(insertText(`${framework}\n`));
 
-    // Burden of Proof
+    // Burden of Proof Section
     const burden = data.caseStructure?.burdenOfProof?.trim() || 'No burden of proof provided.';
-    const burdenSectionRange = insertText('BURDEN OF PROOF\n');
-    applyHeading(burdenSectionRange, 2);
-    applyBodyStyle(insertText(`${burden}\n\n`));
+    const burdenSectionRange = insertText('Burden of Proof\n');
+    applySectionHeader(burdenSectionRange);
+    applyBody(insertText(`${burden}\n`));
 
-    // Contentions
-    const contentionsSectionRange = insertText('CONTENTIONS\n');
-    applyHeading(contentionsSectionRange, 2);
+    // Contentions Section
+    const contentionsSectionRange = insertText('Arguments\n');
+    applySectionHeader(contentionsSectionRange);
     const contentions = data.contentions || [];
     if (contentions.length === 0) {
-        applyBodyStyle(insertText('No contentions provided.\n\n'));
+        applyBody(insertText('No arguments provided.\n'));
     } else {
         contentions.forEach((c, i) => {
-            const claimRange = insertText(`Contention ${i + 1}: ${c?.claim || 'Untitled'}\n`);
-            applyBold(claimRange);
-            applyBodyStyle(claimRange);
-            applyBodyStyle(insertText(`Reasoning: ${c?.reasoning || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Evidence: ${c?.evidence || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Impact: ${c?.impact || 'N/A'}\n\n`));
+            // Contention header with number
+            const claimRange = insertText(`Argument ${i + 1}: ${c?.claim || 'Untitled'}\n`);
+            applySubHeader(claimRange);
+
+            // Labeled body content
+            if (c?.reasoning) {
+                const reasonLabel = insertText('Reasoning: ');
+                applyLabel(reasonLabel);
+                applyBody(insertText(`${c.reasoning}\n`));
+            }
+            if (c?.evidence) {
+                const evidenceLabel = insertText('Evidence: ');
+                applyLabel(evidenceLabel);
+                applyBody(insertText(`${c.evidence}\n`));
+            }
+            if (c?.impact) {
+                const impactLabel = insertText('Impact: ');
+                applyLabel(impactLabel);
+                applyBody(insertText(`${c.impact}\n`));
+            }
         });
     }
 
-    // Predicted Opponent Case
-    const predictedSectionRange = insertText('PREDICTED OPPONENT CASE\n');
-    applyHeading(predictedSectionRange, 2);
+    // Predicted Opponent Case Section
+    const predictedSectionRange = insertText('Predicted Opponent Case\n');
+    applySectionHeader(predictedSectionRange);
     const likelyArgs = data.predictedOpponentCase?.likelyArguments || [];
     if (likelyArgs.length === 0) {
-        applyBodyStyle(insertText('No predicted arguments.\n\n'));
+        applyBody(insertText('No predicted arguments.\n'));
     } else {
-        likelyArgs.forEach(arg => applyBodyStyle(insertText(`• ${arg}\n`)));
-        insertText('\n');
+        likelyArgs.forEach(arg => {
+            const bulletRange = insertText(`• ${arg}\n`);
+            applyBullet(bulletRange);
+        });
     }
 
-    // Counters
-    const countersSectionRange = insertText('PREPARED COUNTERS\n');
-    applyHeading(countersSectionRange, 2);
+    // Prepared Counters Section
+    const countersSectionRange = insertText('Prepared Counters\n');
+    applySectionHeader(countersSectionRange);
     const counters = data.counters || [];
     if (counters.length === 0) {
-        applyBodyStyle(insertText('No counters provided.\n\n'));
+        applyBody(insertText('No counters provided.\n'));
     } else {
-        counters.forEach(c => {
-            const targetRange = insertText(`Target: ${c?.targetArgument || 'Unknown'}\n`);
-            applyBold(targetRange);
-            applyBodyStyle(targetRange);
-            applyBodyStyle(insertText(`Counter: ${c?.counterpoint || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Rebuttal: ${c?.rebuttal || 'N/A'}\n\n`));
+        counters.forEach((c, i) => {
+            const targetRange = insertText(`Counter ${i + 1}: ${c?.targetArgument || 'Unknown Target'}\n`);
+            applySubHeader(targetRange);
+
+            if (c?.counterpoint) {
+                const counterLabel = insertText('Counterpoint: ');
+                applyLabel(counterLabel);
+                applyBody(insertText(`${c.counterpoint}\n`));
+            }
+            if (c?.rebuttal) {
+                const rebuttalLabel = insertText('Rebuttal: ');
+                applyLabel(rebuttalLabel);
+                applyBody(insertText(`${c.rebuttal}\n`));
+            }
         });
     }
 
@@ -216,67 +469,110 @@ interface AttackData {
 }
 
 function buildAttackContent(data: AttackData) {
-    const { requests, insertText, applyHeading, applyBold, applyBodyStyle } = createDocumentBuilder();
+    const {
+        requests, insertText, applyTitle, applySubtitle,
+        applySectionHeader, applySubHeader, applyLabel, applyBody, applyBullet
+    } = createDocumentBuilder();
 
     // Title
-    const titleRange = insertText('Case Attack Analysis\n\n');
-    applyHeading(titleRange, 1);
+    const titleRange = insertText('Case Attack Analysis\n');
+    applyTitle(titleRange);
 
-    // Score
+    // Score as subtitle
     const score = data.overallAssessment?.score ?? 0;
-    const scoreRange = insertText(`Overall Score: ${score}/100\n\n`);
-    applyBold(scoreRange);
-    applyBodyStyle(scoreRange);
+    const scoreColor = score >= 70 ? '💪 Strong' : score >= 40 ? '⚠️ Needs Work' : '🚨 Weak';
+    const scoreRange = insertText(`Score: ${score}/100 ${scoreColor}\n`);
+    applySubtitle(scoreRange);
 
     // Summary
-    applyBodyStyle(insertText(`${data.overallAssessment?.summary || 'No summary provided.'}\n\n`));
+    if (data.overallAssessment?.summary) {
+        const summaryLabel = insertText('Assessment: ');
+        applyLabel(summaryLabel);
+        applyBody(insertText(`${data.overallAssessment.summary}\n`));
+    }
+
+    // Strength Areas
+    const strengths = data.overallAssessment?.strengthAreas || [];
+    if (strengths.length > 0) {
+        const sectionRange = insertText('Strength Areas\n');
+        applySectionHeader(sectionRange);
+        strengths.forEach(s => {
+            const bulletRange = insertText(`✓ ${s}\n`);
+            applyBullet(bulletRange);
+        });
+    }
 
     // Weaknesses
-    const weaknessesSectionRange = insertText('WEAKNESSES IDENTIFIED\n');
-    applyHeading(weaknessesSectionRange, 2);
+    const weaknessesSectionRange = insertText('Weaknesses Identified\n');
+    applySectionHeader(weaknessesSectionRange);
     const weaknesses = data.weaknesses || [];
     if (weaknesses.length === 0) {
-        applyBodyStyle(insertText('No weaknesses identified.\n\n'));
+        applyBody(insertText('No weaknesses identified.\n'));
     } else {
         weaknesses.forEach((w, i) => {
-            const titleRange = insertText(`${i + 1}. [${w.severity?.toUpperCase() || 'UNKNOWN'}] ${w.description || 'No description'}\n`);
-            applyBold(titleRange);
-            applyBodyStyle(titleRange);
-            applyBodyStyle(insertText(`Why Weak: ${w.whyWeak || 'N/A'}\n`));
-            applyBodyStyle(insertText(`How Opponent Attacks: ${w.howOpponentAttacks || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Improved Version: ${w.improvedVersion || 'N/A'}\n\n`));
+            const severityIcon = w.severity === 'critical' ? '🔴' : w.severity === 'major' ? '🟠' : '🟡';
+            const titleRange = insertText(`${i + 1}. ${severityIcon} ${w.description || 'No description'}\n`);
+            applySubHeader(titleRange);
+
+            if (w.whyWeak) {
+                const label = insertText('Why Weak: ');
+                applyLabel(label);
+                applyBody(insertText(`${w.whyWeak}\n`));
+            }
+            if (w.howOpponentAttacks) {
+                const label = insertText('Attack Vector: ');
+                applyLabel(label);
+                applyBody(insertText(`${w.howOpponentAttacks}\n`));
+            }
+            if (w.improvedVersion) {
+                const label = insertText('Suggested Fix: ');
+                applyLabel(label);
+                applyBody(insertText(`${w.improvedVersion}\n`));
+            }
         });
     }
 
     // Fallacies
-    const fallaciesSectionRange = insertText('FALLACIES DETECTED\n');
-    applyHeading(fallaciesSectionRange, 2);
+    const fallaciesSectionRange = insertText('Fallacies Detected\n');
+    applySectionHeader(fallaciesSectionRange);
     const fallacies = data.fallaciesDetected || [];
     if (fallacies.length === 0) {
-        applyBodyStyle(insertText('No fallacies detected.\n\n'));
+        applyBody(insertText('No fallacies detected. ✓\n'));
     } else {
         fallacies.forEach(f => {
-            const nameRange = insertText(`${f.name || 'Unknown Fallacy'}\n`);
-            applyBold(nameRange);
-            applyBodyStyle(nameRange);
-            applyBodyStyle(insertText(`Location: ${f.location || 'N/A'}\n`));
-            applyBodyStyle(insertText(`${f.explanation || 'N/A'}\n\n`));
+            const nameRange = insertText(`⚠ ${f.name || 'Unknown Fallacy'}\n`);
+            applySubHeader(nameRange);
+            if (f.location) {
+                const label = insertText('Location: ');
+                applyLabel(label);
+                applyBody(insertText(`${f.location}\n`));
+            }
+            if (f.explanation) {
+                applyBody(insertText(`${f.explanation}\n`));
+            }
         });
     }
 
     // Cross-Ex Questions
-    const crossExSectionRange = insertText('CROSS-EXAMINATION QUESTIONS\n');
-    applyHeading(crossExSectionRange, 2);
+    const crossExSectionRange = insertText('Cross-Examination Questions\n');
+    applySectionHeader(crossExSectionRange);
     const crossEx = data.crossExQuestions || [];
     if (crossEx.length === 0) {
-        applyBodyStyle(insertText('No questions provided.\n\n'));
+        applyBody(insertText('No questions provided.\n'));
     } else {
         crossEx.forEach((q, i) => {
             const qRange = insertText(`Q${i + 1}: ${q.question || 'No question'}\n`);
-            applyBold(qRange);
-            applyBodyStyle(qRange);
-            applyBodyStyle(insertText(`Purpose: ${q.purpose || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Expected Trap: ${q.expectedTrap || 'N/A'}\n\n`));
+            applySubHeader(qRange);
+            if (q.purpose) {
+                const label = insertText('Purpose: ');
+                applyLabel(label);
+                applyBody(insertText(`${q.purpose}\n`));
+            }
+            if (q.expectedTrap) {
+                const label = insertText('Expected Trap: ');
+                applyLabel(label);
+                applyBody(insertText(`${q.expectedTrap}\n`));
+            }
         });
     }
 
@@ -294,68 +590,85 @@ interface BrainstormData {
 }
 
 function buildBrainstormContent(data: BrainstormData) {
-    const { requests, insertText, applyHeading, applyBold, applyBodyStyle } = createDocumentBuilder();
+    const {
+        requests, insertText, applyTitle, applySubtitle,
+        applySectionHeader, applySubHeader, applyLabel, applyBody, applyBullet
+    } = createDocumentBuilder();
 
     // Title
-    const titleRange = insertText('Brainstorm Results\n\n');
-    applyHeading(titleRange, 1);
+    const titleRange = insertText('Brainstorm Results\n');
+    applyTitle(titleRange);
+
+    // Subtitle with count
+    const totalIdeas = (data.topFive?.length || 0) +
+        (data.mindmap?.reduce((acc, cat) => acc + (cat.items?.length || 0), 0) || 0);
+    const subtitleRange = insertText(`${totalIdeas} Ideas Generated\n`);
+    applySubtitle(subtitleRange);
 
     // Top Five
     const topFive = data.topFive || [];
     if (topFive.length > 0) {
-        const sectionRange = insertText('TOP 5 ARGUMENT ANGLES\n');
-        applyHeading(sectionRange, 2);
+        const sectionRange = insertText('Top 5 Argument Angles\n');
+        applySectionHeader(sectionRange);
         topFive.forEach(item => {
-            const itemRange = insertText(`#${item.rank || '?'}: ${item.idea?.title || 'Untitled'}\n`);
-            applyBold(itemRange);
-            applyBodyStyle(itemRange);
-            applyBodyStyle(insertText(`${item.idea?.description || 'No description'}\n`));
-            applyBodyStyle(insertText(`Why Top: ${item.whyTop || 'N/A'}\n\n`));
+            const medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `#${item.rank}`;
+            const itemRange = insertText(`${medal} ${item.idea?.title || 'Untitled'}\n`);
+            applySubHeader(itemRange);
+            if (item.idea?.description) {
+                applyBody(insertText(`${item.idea.description}\n`));
+            }
+            if (item.whyTop) {
+                const label = insertText('Why Top: ');
+                applyLabel(label);
+                applyBody(insertText(`${item.whyTop}\n`));
+            }
         });
     }
 
     // Mind Map
     const mindmap = data.mindmap || [];
     if (mindmap.length > 0) {
-        const sectionRange = insertText('ARGUMENT MAP\n');
-        applyHeading(sectionRange, 2);
+        const sectionRange = insertText('Argument Map\n');
+        applySectionHeader(sectionRange);
         mindmap.forEach(category => {
-            const catRange = insertText(`${category.category || 'Category'}\n`);
-            applyBold(catRange);
-            applyBodyStyle(catRange);
+            const catRange = insertText(`📁 ${category.category || 'Category'}\n`);
+            applySubHeader(catRange);
             category.items?.forEach(idea => {
-                applyBodyStyle(insertText(`• ${idea.title || 'Untitled'}: ${idea.description || ''}\n`));
+                const bulletRange = insertText(`• ${idea.title || 'Untitled'}${idea.description ? ': ' + idea.description : ''}\n`);
+                applyBullet(bulletRange);
             });
-            insertText('\n');
         });
     }
 
     // Buckets
     const buckets = data.buckets || [];
     if (buckets.length > 0) {
-        const sectionRange = insertText('ARGUMENT BUCKETS\n');
-        applyHeading(sectionRange, 2);
+        const sectionRange = insertText('Argument Buckets\n');
+        applySectionHeader(sectionRange);
         buckets.forEach(bucket => {
-            const bucketRange = insertText(`${bucket.name || 'Bucket'}\n`);
-            applyBold(bucketRange);
-            applyBodyStyle(bucketRange);
-            applyBodyStyle(insertText(`${bucket.keyInsight || 'No insight'}\n`));
+            const bucketRange = insertText(`🗂 ${bucket.name || 'Bucket'}\n`);
+            applySubHeader(bucketRange);
+            if (bucket.keyInsight) {
+                const label = insertText('Key Insight: ');
+                applyLabel(label);
+                applyBody(insertText(`${bucket.keyInsight}\n`));
+            }
             bucket.ideas?.forEach(idea => {
-                applyBodyStyle(insertText(`• ${idea.title || 'Untitled'}\n`));
+                const bulletRange = insertText(`• ${idea.title || 'Untitled'}\n`);
+                applyBullet(bulletRange);
             });
-            insertText('\n');
         });
     }
 
     // Next Steps
     const nextSteps = data.nextSteps || [];
     if (nextSteps.length > 0) {
-        const sectionRange = insertText('NEXT STEPS\n');
-        applyHeading(sectionRange, 2);
+        const sectionRange = insertText('Next Steps\n');
+        applySectionHeader(sectionRange);
         nextSteps.forEach((step, i) => {
-            applyBodyStyle(insertText(`${i + 1}. ${step}\n`));
+            const stepRange = insertText(`${i + 1}. ${step}\n`);
+            applyBody(stepRange);
         });
-        insertText('\n');
     }
 
     return { requests, title: 'Brainstorm Results' };
@@ -376,39 +689,64 @@ interface FactoidsData {
 }
 
 function buildFactoidsContent(data: FactoidsData) {
-    const { requests, insertText, applyHeading, applyBold, applyBodyStyle } = createDocumentBuilder();
+    const {
+        requests, insertText, applyTitle, applySubtitle,
+        applySectionHeader, applySubHeader, applyLabel, applyBody, applyBullet
+    } = createDocumentBuilder();
 
     // Title
-    const titleRange = insertText('Research Factoids\n\n');
-    applyHeading(titleRange, 1);
+    const titleRange = insertText('Research Factoids\n');
+    applyTitle(titleRange);
+
+    // Subtitle with count
+    const count = data.factoids?.length || 0;
+    const subtitleRange = insertText(`${count} Facts & Evidence Found\n`);
+    applySubtitle(subtitleRange);
 
     // Factoids
-    const factoidsSectionRange = insertText('FACTS & EVIDENCE\n');
-    applyHeading(factoidsSectionRange, 2);
+    const factoidsSectionRange = insertText('Facts & Evidence\n');
+    applySectionHeader(factoidsSectionRange);
     const factoids = data.factoids || [];
     if (factoids.length === 0) {
-        applyBodyStyle(insertText('No factoids found.\n\n'));
+        applyBody(insertText('No factoids found.\n'));
     } else {
         factoids.forEach((f, i) => {
             const claimRange = insertText(`${i + 1}. ${f.shortClaim || 'No claim'}\n`);
-            applyBold(claimRange);
-            applyBodyStyle(claimRange);
-            applyBodyStyle(insertText(`Key Figure: ${f.keyFigure || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Context: ${f.context || 'N/A'}\n`));
-            applyBodyStyle(insertText(`How to Use: ${f.howToUse || 'N/A'}\n`));
-            applyBodyStyle(insertText(`Source: ${f.citation?.title || 'Unknown'} - ${f.citation?.publisher || 'Unknown'}\n\n`));
+            applySubHeader(claimRange);
+
+            if (f.keyFigure) {
+                const label = insertText('📊 Key Figure: ');
+                applyLabel(label);
+                applyBody(insertText(`${f.keyFigure}\n`));
+            }
+            if (f.context) {
+                const label = insertText('Context: ');
+                applyLabel(label);
+                applyBody(insertText(`${f.context}\n`));
+            }
+            if (f.howToUse) {
+                const label = insertText('💡 How to Use: ');
+                applyLabel(label);
+                applyBody(insertText(`${f.howToUse}\n`));
+            }
+            if (f.citation?.title || f.citation?.publisher) {
+                const label = insertText('📚 Source: ');
+                applyLabel(label);
+                const sourceText = [f.citation?.title, f.citation?.publisher].filter(Boolean).join(' — ');
+                applyBody(insertText(`${sourceText}\n`));
+            }
         });
     }
 
     // Warnings
     const warnings = data.warnings || [];
     if (warnings.length > 0) {
-        const warningsSectionRange = insertText('WARNINGS\n');
-        applyHeading(warningsSectionRange, 2);
+        const warningsSectionRange = insertText('Warnings\n');
+        applySectionHeader(warningsSectionRange);
         warnings.forEach(w => {
-            applyBodyStyle(insertText(`⚠ ${w}\n`));
+            const warnRange = insertText(`⚠️ ${w}\n`);
+            applyBullet(warnRange);
         });
-        insertText('\n');
     }
 
     return { requests, title: 'Research Factoids' };
@@ -418,6 +756,9 @@ function buildFactoidsContent(data: FactoidsData) {
 // MAIN HANDLER
 // ============================================================
 Deno.serve(async (req: Request) => {
+    // IMMEDIATE log to verify function is being called
+    console.log("[GDOC] Function invoked, method:", req.method);
+
     const origin = req.headers.get("origin");
     const corsHeaders = getCorsHeaders(origin);
 
@@ -429,7 +770,22 @@ Deno.serve(async (req: Request) => {
         return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
     }
 
+    // Validate Supabase JWT (manual validation since we disabled gateway verification)
+    const jwtResult = await validateJWT(req);
+    if (!jwtResult.valid) {
+        console.error("[GDOC] JWT validation failed:", jwtResult.error);
+        return new Response(JSON.stringify({
+            error: "Unauthorized",
+            details: jwtResult.error
+        }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+    }
+    console.log("[GDOC] JWT validated successfully, userId:", jwtResult.userId);
+
     try {
+        console.log("[GDOC] Parsing request body...");
         const body = await req.json();
         const mode = (body.mode || 'generate') as ExportMode;
         const data = body.data || body.caseData; // Support both new and legacy format
@@ -442,6 +798,9 @@ Deno.serve(async (req: Request) => {
                 headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
+
+        // Early debug logging
+        console.log(`[GDOC] Request received: mode=${mode}, hasToken=${!!accessToken}, hasRefresh=${!!refreshToken}`);
 
         if (!accessToken && !refreshToken) {
             return new Response(JSON.stringify({
@@ -556,9 +915,19 @@ Deno.serve(async (req: Request) => {
             console.error("[GDOC] Failed to create document:", errorText);
 
             if (createDocResponse.status === 401) {
+                // Parse Google's error for more details
+                let googleError = "Unknown error";
+                try {
+                    const parsed = JSON.parse(errorText);
+                    googleError = parsed.error?.message || parsed.error_description || errorText;
+                } catch {
+                    googleError = errorText;
+                }
+
                 return new Response(JSON.stringify({
-                    error: "Google authorization expired. Please sign out and sign back in.",
-                    code: "AUTH_EXPIRED"
+                    error: `Google API error: ${googleError}`,
+                    code: "AUTH_EXPIRED",
+                    details: errorText
                 }), {
                     status: 401,
                     headers: { ...corsHeaders, "Content-Type": "application/json" }

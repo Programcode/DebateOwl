@@ -17,7 +17,7 @@ interface GenerateResultsProps {
   onImportFlowchart?: () => void;
 }
 
-function ContentionCard({ contention, index }: { contention: Contention; index: number }) {
+function ArgumentCard({ contention, index }: { contention: Contention; index: number }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -189,14 +189,14 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
 
       {/* Contentions */}
       <SectionCard
-        title="Contentions"
+        title="Arguments"
         description={`${result.contentions?.length || 0} structured arguments`}
         icon={<Shield className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('contentions')}
       >
         <div className="space-y-4">
           {result.contentions?.map((contention, index) => (
-            <ContentionCard key={contention.id} contention={contention} index={index} />
+            <ArgumentCard key={contention.id} contention={contention} index={index} />
           ))}
         </div>
       </SectionCard>
