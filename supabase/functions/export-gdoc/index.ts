@@ -433,11 +433,17 @@ Deno.serve(async (req: Request) => {
         }
 
         if (!accessToken) {
-            return new Response(JSON.stringify({ error: "Missing Google access token. Please re-authenticate." }), {
+            return new Response(JSON.stringify({
+                error: "Missing Google access token. Please sign out and sign back in to grant Drive access.",
+                code: "NO_TOKEN"
+            }), {
                 status: 401,
                 headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
+
+        // Log token info for debugging (just first/last chars for security)
+        console.log(`[GDOC] Mode: ${mode}, Token: ${accessToken.substring(0, 8)}...${accessToken.substring(accessToken.length - 4)}`);
 
         // Build content based on mode
         let result: { requests: GoogleDocsUpdateRequest[]; title: string };
