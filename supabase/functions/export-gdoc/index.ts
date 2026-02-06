@@ -433,7 +433,8 @@ Deno.serve(async (req: Request) => {
         const body = await req.json();
         const mode = (body.mode || 'generate') as ExportMode;
         const data = body.data || body.caseData; // Support both new and legacy format
-        const accessToken = body.accessToken as string | undefined;
+        let accessToken = body.accessToken as string | undefined;
+        const refreshToken = body.refreshToken as string | undefined;
 
         if (!data) {
             return new Response(JSON.stringify({ error: "Missing data" }), {
@@ -442,7 +443,7 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        if (!accessToken) {
+        if (!accessToken && !refreshToken) {
             return new Response(JSON.stringify({
                 error: "Missing Google access token. Please sign out and sign back in to grant Drive access.",
                 code: "NO_TOKEN"
@@ -452,8 +453,60 @@ Deno.serve(async (req: Request) => {
             });
         }
 
+        // Helper function to refresh the access token using the refresh token
+        async function refreshAccessToken(): Promise<string | null> {
+            if (!refreshToken) return null;
+
+            const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+            const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+
+            if (!clientId || !clientSecret) {
+                console.error("[GDOC] Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in secrets");
+                return null;
+            }
+
+            console.log("[GDOC] Attempting to refresh access token...");
+
+            const response = await fetch("https://oauth2.googleapis.com/token", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    grant_type: "refresh_token",
+                    refresh_token: refreshToken,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                console.error("[GDOC] Token refresh failed:", error);
+                return null;
+            }
+
+            const tokenData = await response.json();
+            console.log("[GDOC] Token refresh successful");
+            return tokenData.access_token;
+        }
+
+        // If no access token but we have refresh token, try to refresh first
+        let newAccessToken: string | null = null;
+        if (!accessToken && refreshToken) {
+            newAccessToken = await refreshAccessToken();
+            if (!newAccessToken) {
+                return new Response(JSON.stringify({
+                    error: "Failed to refresh Google token. Please sign out and sign back in.",
+                    code: "REFRESH_FAILED"
+                }), {
+                    status: 401,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
+            }
+            accessToken = newAccessToken;
+        }
+
         // Log token info for debugging (just first/last chars for security)
-        console.log(`[GDOC] Mode: ${mode}, Token: ${accessToken.substring(0, 8)}...${accessToken.substring(accessToken.length - 4)}`);
+        console.log(`[GDOC] Mode: ${mode}, Token: ${accessToken!.substring(0, 8)}...${accessToken!.substring(accessToken!.length - 4)}`);
 
         // Build content based on mode
         let result: { requests: GoogleDocsUpdateRequest[]; title: string };
@@ -473,15 +526,30 @@ Deno.serve(async (req: Request) => {
                 break;
         }
 
-        // Create Google Doc
-        const createDocResponse = await fetch("https://docs.googleapis.com/v1/documents", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ title: result.title })
-        });
+        // Helper to make Google API call with potential token refresh retry
+        async function createGoogleDoc(token: string): Promise<Response> {
+            return fetch("https://docs.googleapis.com/v1/documents", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ title: result.title })
+            });
+        }
+
+        // Create Google Doc with retry on 401
+        let createDocResponse = await createGoogleDoc(accessToken!);
+
+        // If 401 and we have a refresh token, try refreshing and retry once
+        if (createDocResponse.status === 401 && refreshToken && !newAccessToken) {
+            console.log("[GDOC] Got 401, attempting token refresh...");
+            newAccessToken = await refreshAccessToken();
+            if (newAccessToken) {
+                accessToken = newAccessToken;
+                createDocResponse = await createGoogleDoc(accessToken);
+            }
+        }
 
         if (!createDocResponse.ok) {
             const errorText = await createDocResponse.text();
@@ -534,7 +602,9 @@ Deno.serve(async (req: Request) => {
         return new Response(JSON.stringify({
             success: true,
             documentUrl,
-            documentId
+            documentId,
+            // Return new access token if we refreshed it, so frontend can store it
+            ...(newAccessToken && { newAccessToken })
         }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
