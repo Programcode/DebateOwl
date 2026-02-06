@@ -83,6 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           redirectTo: window.location.origin,
           scopes: 'https://www.googleapis.com/auth/drive.file',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
     },

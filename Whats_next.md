@@ -31,14 +31,6 @@ This document details the features selected for the next phase of development, p
   - Real-time "Judge Feedback" sidebar (AI analyzing distinct arguments).
 
 
-### 2.3 Real-time Collaboration
-**Goal:** Multiple users editing cases simultaneously.
-**Why:** Team preparation sessions.
-
-**Technical Implementation:**
-- Supabase Realtime subscriptions.
-- CRDT-based conflict resolution.
-- Presence indicators.
 
 ### 2.4 Integration with Debate Wikis
 **Goal:** Pull evidence and cases from WikiDebate, NDCA Wiki, and curated sources.

@@ -1320,7 +1320,8 @@ npm install -D @vitest/coverage-v8
 | Property | Value |
 |----------|-------|
 | **Description** | Export cases directly to Google Docs |
-| **User Value** | Easier collaboration with teammates |
+| **User
+ Value** | Easier collaboration with teammates |
 | **Technical Approach** | Google Docs API integration |
 | **Dependencies** | Google OAuth scope expansion |
 | **Time Estimate** | 12 hours |
@@ -1352,7 +1353,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.2.9 Dark/Light Mode Toggle
+### 7.2.9 Dark/Light Mode Toggle (COMPLETED)
 
 | Property | Value |
 |----------|-------|
@@ -1376,7 +1377,7 @@ npm install -D @vitest/coverage-v8
 
 ---
 
-### 7.2.11 Debate Timer Improvements
+### 7.2.11 Debate Timer Improvements (COMPLETED)
 
 | Property | Value |
 |----------|-------|
