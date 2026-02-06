@@ -1,5 +1,6 @@
 // src/components/features/attack/AttackResults.tsx
-import { AlertCircle, AlertTriangle, Info, MessageSquare, Scale, Lightbulb, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, AlertTriangle, Info, MessageSquare, Scale, Lightbulb, FileText, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -8,6 +9,10 @@ import { Separator } from '@/components/ui/separator';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
 import { cn } from '@/lib/utils';
 import { exportAttackToPdf } from '@/lib/pdf-export-utils';
+import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils';
+import { toast } from 'sonner';
+import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
+
 
 interface AttackResultsProps {
   result: AttackOutput;
@@ -70,9 +75,46 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
 }
 
 export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
+  const [isExportingGDocs, setIsExportingGDocs] = useState(false);
+
   const criticalCount = result.weaknesses.filter(w => w.severity === 'critical').length;
   const majorCount = result.weaknesses.filter(w => w.severity === 'major').length;
   const minorCount = result.weaknesses.filter(w => w.severity === 'minor').length;
+
+  const handleDocxExport = async () => {
+    const success = await exportAttackToDocx(result);
+    if (success) {
+      toast.success('Attack analysis exported to DOCX!');
+    } else {
+      toast.error('Failed to export to DOCX');
+    }
+  };
+
+  const handleGoogleDocsExport = async () => {
+    setIsExportingGDocs(true);
+    try {
+      const exportResult = await exportAttackToGoogleDocs(result);
+      if (exportResult.success && exportResult.documentUrl) {
+        toast.success('Attack analysis exported to Google Docs!', {
+          action: {
+            label: 'Open',
+            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+          },
+        });
+        window.open(exportResult.documentUrl, '_blank');
+      } else if (exportResult.requiresReauth) {
+        toast.error(exportResult.error || 'Authentication required', {
+          description: 'Please sign out and sign back in to grant Google Drive access.',
+        });
+      } else {
+        toast.error(exportResult.error || 'Failed to export to Google Docs');
+      }
+    } catch {
+      toast.error('An unexpected error occurred during export');
+    } finally {
+      setIsExportingGDocs(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -85,7 +127,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">Case Strength</span>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <span className={cn(
                   'text-lg font-bold',
                   result.overallAssessment.score >= 70 ? 'text-primary' :
@@ -96,6 +138,23 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                 <Button variant="outline" size="sm" onClick={() => exportAttackToPdf(result)}>
                   <FileText className="h-4 w-4 mr-2" />
                   PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDocxExport}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  DOCX
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGoogleDocsExport}
+                  disabled={isExportingGDocs}
+                >
+                  {isExportingGDocs ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <GoogleDocsIcon className="h-4 w-4 mr-2" />
+                  )}
+                  Google Docs
                 </Button>
                 {onDiscuss && (
                   <Button variant="outline" size="sm" onClick={onDiscuss}>
@@ -138,40 +197,43 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
             </ul>
           </div>
         </div>
-      </SectionCard>
+      </SectionCard >
 
       {/* Weaknesses */}
-      <SectionCard
+      < SectionCard
         title="Identified Weaknesses"
-        description={`${result.weaknesses.length} issues found, sorted by severity`}
-        icon={<AlertCircle className="h-5 w-5" />}
+        description={`${result.weaknesses.length} issues found, sorted by severity`
+        }
+        icon={< AlertCircle className="h-5 w-5" />}
       >
         <div className="space-y-4">
           {result.weaknesses.map((weakness) => (
             <WeaknessCard key={weakness.id} weakness={weakness} />
           ))}
         </div>
-      </SectionCard>
+      </SectionCard >
 
       {/* Fallacies */}
-      {result.fallaciesDetected.length > 0 && (
-        <SectionCard
-          title="Fallacies Detected"
-          description="Logical errors in your argument"
-        >
-          <div className="space-y-3">
-            {result.fallaciesDetected.map((fallacy, i) => (
-              <div key={i} className="rounded-lg border border-border p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="destructive">{fallacy.name}</Badge>
-                  <span className="text-xs text-muted-foreground">in {fallacy.location}</span>
+      {
+        result.fallaciesDetected.length > 0 && (
+          <SectionCard
+            title="Fallacies Detected"
+            description="Logical errors in your argument"
+          >
+            <div className="space-y-3">
+              {result.fallaciesDetected.map((fallacy, i) => (
+                <div key={i} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="destructive">{fallacy.name}</Badge>
+                    <span className="text-xs text-muted-foreground">in {fallacy.location}</span>
+                  </div>
+                  <p className="text-sm text-foreground">{fallacy.explanation}</p>
                 </div>
-                <p className="text-sm text-foreground">{fallacy.explanation}</p>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      )}
+              ))}
+            </div>
+          </SectionCard>
+        )
+      }
 
       {/* Cross-Ex Questions */}
       <SectionCard
@@ -235,6 +297,6 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
           </div>
         </div>
       </SectionCard>
-    </div>
+    </div >
   );
 }

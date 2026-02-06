@@ -1,11 +1,13 @@
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch } from 'lucide-react';
+import { useState } from 'react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
-import { exportCaseToDocx } from '@/lib/export-utils';
+import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
+import { toast } from 'sonner';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -56,6 +58,34 @@ function ContentionCard({ contention, index }: { contention: Contention; index: 
 }
 
 export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onImportFlowchart }: GenerateResultsProps) {
+  const [isExportingGDocs, setIsExportingGDocs] = useState(false);
+
+  const handleGoogleDocsExport = async () => {
+    setIsExportingGDocs(true);
+    try {
+      const exportResult = await exportCaseToGoogleDocs(result);
+      if (exportResult.success && exportResult.documentUrl) {
+        toast.success('Case exported to Google Docs!', {
+          action: {
+            label: 'Open',
+            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+          },
+        });
+        window.open(exportResult.documentUrl, '_blank');
+      } else if (exportResult.requiresReauth) {
+        toast.error(exportResult.error || 'Authentication required', {
+          description: 'Please sign out and sign back in to grant Google Drive access.',
+        });
+      } else {
+        toast.error(exportResult.error || 'Failed to export to Google Docs');
+      }
+    } catch {
+      toast.error('An unexpected error occurred during export');
+    } finally {
+      setIsExportingGDocs(false);
+    }
+  };
+
   // Guard against incomplete result data
   if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
     return (
@@ -107,6 +137,19 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           <Button variant="outline" size="sm" onClick={() => exportCaseToPdf(result)}>
             <FileText className="h-4 w-4 mr-2" />
             PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGoogleDocsExport}
+            disabled={isExportingGDocs}
+          >
+            {isExportingGDocs ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileUp className="h-4 w-4 mr-2" />
+            )}
+            Google Docs
           </Button>
         </div>
       </div>

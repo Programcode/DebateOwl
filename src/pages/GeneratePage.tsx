@@ -92,7 +92,7 @@ export default function GeneratePage() {
     Can we refine this?`;
 
     addAskMessage({ role: 'user', content: summary });
-    navigate('/ask');
+    navigate('/app/ask');
 
     setAskLoading(true);
     try {
