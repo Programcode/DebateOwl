@@ -47,17 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession);
       setLoading(false);
 
-      // Persist Google provider_token for later use (e.g., Google Docs export)
-      // This token is only available immediately after OAuth, not on session refresh
+      // Persist Google provider tokens for later use (e.g., Google Docs export)
+      // These tokens are only available immediately after OAuth, not on session refresh
+      // Supabase does NOT auto-refresh provider tokens - we must do it manually
       if (newSession?.provider_token) {
         console.log('[Auth] Storing new provider_token');
         localStorage.setItem('google_provider_token', newSession.provider_token);
+      }
+      if (newSession?.provider_refresh_token) {
+        console.log('[Auth] Storing new provider_refresh_token');
+        localStorage.setItem('google_provider_refresh_token', newSession.provider_refresh_token);
       }
 
       if (!nextUserId) {
         resetSessionStore();
         resetSettingsStore();
         localStorage.removeItem('google_provider_token');
+        localStorage.removeItem('google_provider_refresh_token');
         return;
       }
 

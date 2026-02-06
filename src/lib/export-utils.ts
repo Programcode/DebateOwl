@@ -454,19 +454,37 @@ async function callGoogleDocsEdgeFunction(
       };
     }
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/export-gdoc`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ mode, data, accessToken: providerToken }),
-    });
+    // Also get the refresh token for server-side refresh if access token expires
+    const refreshToken = localStorage.getItem('google_provider_refresh_token');
 
+    // Helper to make the actual request
+    const makeRequest = async (token: string) => {
+      return fetch(`${SUPABASE_URL}/functions/v1/export-gdoc`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          mode,
+          data,
+          accessToken: token,
+          refreshToken: refreshToken  // Pass for server-side refresh
+        }),
+      });
+    };
+
+    const response = await makeRequest(providerToken);
     const respData = await response.json();
 
+    // If the Edge Function refreshed the token, store the new one for future requests
+    if (respData.newAccessToken) {
+      console.log('[GDocs Export] Storing refreshed access token from server');
+      localStorage.setItem('google_provider_token', respData.newAccessToken);
+    }
+
     if (!response.ok) {
-      if (respData.code === 'AUTH_EXPIRED' || response.status === 401) {
+      if (respData.code === 'AUTH_EXPIRED' || respData.code === 'REFRESH_FAILED' || response.status === 401) {
         return { success: false, error: respData.error || 'Authorization expired.', requiresReauth: true };
       }
       return { success: false, error: respData.error || 'Failed to export to Google Docs' };
