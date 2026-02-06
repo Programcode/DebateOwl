@@ -438,9 +438,13 @@ async function callGoogleDocsEdgeFunction(
     // Try session.provider_token first, fallback to localStorage
     // Supabase only provides provider_token immediately after OAuth, not on session refresh
     let providerToken = session.provider_token;
+    const tokenSource = providerToken ? 'session' : 'localStorage';
     if (!providerToken) {
       providerToken = localStorage.getItem('google_provider_token');
     }
+
+    console.log('[GDocs Export] Token source:', tokenSource, 'Token present:', !!providerToken,
+      'Token preview:', providerToken ? `${providerToken.substring(0, 10)}...` : 'none');
 
     if (!providerToken) {
       return {

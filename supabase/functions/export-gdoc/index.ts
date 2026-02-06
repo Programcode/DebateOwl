@@ -5,11 +5,21 @@
 const ALLOWED_ORIGINS = [
     "https://debate.pi-stack.org",
     "http://localhost:5173",
+    "http://localhost:8080",
     "http://127.0.0.1:54321"
 ];
 
 function getCorsHeaders(origin: string | null) {
-    const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    // Allow any localhost/127.0.0.1 origin for development
+    // Also allow local network IPs (192.168.x.x) for mobile/device testing
+    const isDevOrigin = origin && (
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('http://127.0.0.1') ||
+        origin.startsWith('http://192.168.')
+    );
+    const allowedOrigin = isDevOrigin || (origin && ALLOWED_ORIGINS.includes(origin))
+        ? origin
+        : ALLOWED_ORIGINS[0];
     return {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
