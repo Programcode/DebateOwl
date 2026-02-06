@@ -50,7 +50,7 @@ export default function AttackPage() {
     addAskMessage({ role: 'user', content: summary });
 
     // 2. Navigate immediately so user sees the chat
-    navigate('/ask');
+    navigate('/app/ask');
 
     // 3. Trigger AI (This runs in background even after nav)
     setAskLoading(true);

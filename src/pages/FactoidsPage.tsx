@@ -53,7 +53,7 @@ export default function FactoidsPage() {
     How can I best use this evidence?`;
 
     addAskMessage({ role: 'user', content: summary });
-    navigate('/ask');
+    navigate('/app/ask');
 
     setAskLoading(true);
     try {

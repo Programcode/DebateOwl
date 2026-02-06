@@ -1,5 +1,6 @@
 // src/components/features/factoids/FactoidsResults.tsx
-import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare, Bookmark, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare, Bookmark, FileText, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -8,6 +9,10 @@ import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
 import { exportFactoidsToPdf } from '@/lib/pdf-export-utils';
+import { exportFactoidsToDocx, exportFactoidsToGoogleDocs } from '@/lib/export-utils';
+import { toast } from 'sonner';
+import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
+
 
 interface FactoidsResultsProps {
   result: FactoidsOutput;
@@ -129,8 +134,44 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 }
 
 export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource }: FactoidsResultsProps) {
+  const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const verifiedCount = result.factoids.filter(f => f.citation?.verified === 'verified').length;
   const unverifiedCount = result.factoids.filter(f => f.citation?.verified === 'unverified').length;
+
+  const handleDocxExport = async () => {
+    const success = await exportFactoidsToDocx(result);
+    if (success) {
+      toast.success('Factoids exported to DOCX!');
+    } else {
+      toast.error('Failed to export to DOCX');
+    }
+  };
+
+  const handleGoogleDocsExport = async () => {
+    setIsExportingGDocs(true);
+    try {
+      const exportResult = await exportFactoidsToGoogleDocs(result);
+      if (exportResult.success && exportResult.documentUrl) {
+        toast.success('Factoids exported to Google Docs!', {
+          action: {
+            label: 'Open',
+            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+          },
+        });
+        window.open(exportResult.documentUrl, '_blank');
+      } else if (exportResult.requiresReauth) {
+        toast.error(exportResult.error || 'Authentication required', {
+          description: 'Please sign out and sign back in to grant Google Drive access.',
+        });
+      } else {
+        toast.error(exportResult.error || 'Failed to export to Google Docs');
+      }
+    } catch {
+      toast.error('An unexpected error occurred during export');
+    } finally {
+      setIsExportingGDocs(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -139,6 +180,23 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
           <Button variant="outline" size="sm" onClick={() => exportFactoidsToPdf(result)}>
             <FileText className="h-4 w-4 mr-2" />
             PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDocxExport}>
+            <FileDown className="h-4 w-4 mr-2" />
+            DOCX
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGoogleDocsExport}
+            disabled={isExportingGDocs}
+          >
+            {isExportingGDocs ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <GoogleDocsIcon className="h-4 w-4 mr-2" />
+            )}
+            Google Docs
           </Button>
           <Button variant="outline" size="sm" onClick={onDiscuss}>
             <MessageSquare className="h-4 w-4 mr-2" />

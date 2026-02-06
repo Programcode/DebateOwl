@@ -48,7 +48,7 @@ export default function BrainstormPage() {
     summary += "\n\nCan you help me expand on one of these?";
 
     addAskMessage({ role: 'user', content: summary });
-    navigate('/ask');
+    navigate('/app/ask');
 
     setAskLoading(true);
     try {
