@@ -1,5 +1,4 @@
-// src/components/features/generate/GenerateResults.tsx
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -12,6 +11,8 @@ interface GenerateResultsProps {
   result: GenerateOutput;
   onRegenerateSection?: (section: string) => void;
   onDiscuss?: () => void;
+  onSave?: () => void;
+  onImportFlowchart?: () => void;
 }
 
 function ContentionCard({ contention, index }: { contention: Contention; index: number }) {
@@ -54,7 +55,7 @@ function ContentionCard({ contention, index }: { contention: Contention; index: 
   );
 }
 
-export function GenerateResults({ result, onRegenerateSection, onDiscuss }: GenerateResultsProps) {
+export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onImportFlowchart }: GenerateResultsProps) {
   // Guard against incomplete result data
   if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
     return (
@@ -81,6 +82,24 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
           </span>
         </div>
         <div className="flex gap-2" data-tour="export-section">
+          {onSave && (
+            <Button variant="outline" size="sm" onClick={onSave}>
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          )}
+          {onDiscuss && (
+            <Button variant="outline" size="sm" onClick={onDiscuss}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Discuss
+            </Button>
+          )}
+          {onImportFlowchart && (
+            <Button variant="outline" size="sm" onClick={onImportFlowchart}>
+              <GitBranch className="h-4 w-4 mr-2" />
+              Flowcharts
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
             <FileDown className="h-4 w-4 mr-2" />
             Word
@@ -89,12 +108,6 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss }: Gene
             <FileText className="h-4 w-4 mr-2" />
             PDF
           </Button>
-          {onDiscuss && (
-            <Button variant="outline" size="sm" onClick={onDiscuss}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Discuss Case
-            </Button>
-          )}
         </div>
       </div>
 

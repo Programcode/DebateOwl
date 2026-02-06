@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Node, Edge } from 'reactflow';
 import type { GenerateOutput } from '../ai/schemas/generate';
 import type { AttackOutput } from '../ai/schemas/attack';
 import type { BrainstormOutput } from '../ai/schemas/brainstorm';
@@ -32,6 +33,11 @@ interface SavedItem<T> {
   title: string;
 }
 
+export interface FlowchartData {
+  nodes: Node[]; // Keeping any for now to avoid ReactFlow dependency here, but could be stricter
+  edges: Edge[];
+}
+
 interface SessionState {
   generateResult: GenerateOutput | null;
   generateLoading: boolean;
@@ -53,6 +59,7 @@ interface SessionState {
   savedBrainstorms: SavedItem<BrainstormOutput>[];
   savedFactoids: SavedItem<FactoidsOutput>[];
   savedChats: SavedItem<Message[]>[];
+  savedFlowcharts: SavedItem<FlowchartData>[];
   sourceLibrary: Source[];
 
   setGenerateResult: (result: GenerateOutput | null) => void;
@@ -82,6 +89,9 @@ interface SessionState {
   saveCurrentChat: (title: string) => Promise<void>;
   loadSavedChat: (id: string) => void;
 
+  saveFlowchart: (title: string, data: FlowchartData) => Promise<void>;
+  deleteSavedFlowchart: (id: string) => Promise<void>;
+
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   toggleSource: (id: string) => Promise<void>;
@@ -91,6 +101,9 @@ interface SessionState {
   clearAllData: () => Promise<void>;
   resetLocalData: () => void;
   clearSession: () => void;
+
+  pendingFlowchartData: FlowchartData | null;
+  setPendingFlowchartData: (data: FlowchartData | null) => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -109,6 +122,14 @@ interface SupabaseSavedRow<T> {
   id: string;
   title: string;
   output: T;
+  created_at: string;
+}
+
+interface SupabaseFlowchartRow {
+  id: string;
+  title: string;
+  nodes: Node[];
+  edges: Edge[];
   created_at: string;
 }
 
@@ -156,7 +177,11 @@ export const useSessionStore = create<SessionState>()(
       savedBrainstorms: [] as SavedItem<BrainstormOutput>[],
       savedFactoids: [] as SavedItem<FactoidsOutput>[],
       savedChats: [] as SavedItem<Message[]>[],
+      savedFlowcharts: [] as SavedItem<FlowchartData>[],
       sourceLibrary: [] as Source[],
+
+      pendingFlowchartData: null as FlowchartData | null,
+      setPendingFlowchartData: (data) => set({ pendingFlowchartData: data }),
 
       addSource: async (source) => {
         const localId = generateId();
@@ -389,6 +414,45 @@ export const useSessionStore = create<SessionState>()(
         if (item) set({ askMessages: item.data });
       },
 
+      saveFlowchart: async (title, data) => {
+        const localId = generateId();
+        const localItem = { id: localId, data: data, createdAt: Date.now(), title };
+        set((state) => ({ savedFlowcharts: [localItem, ...state.savedFlowcharts] }));
+
+        const userId = await getUserId();
+        if (!userId) return;
+        const { data: saved } = await supabase
+          .from('flowcharts')
+          .insert({
+            user_id: userId,
+            title,
+            nodes: data.nodes,
+            edges: data.edges,
+          })
+          .select('*')
+          .single();
+
+        if (saved) {
+          set((state) => ({
+            savedFlowcharts: state.savedFlowcharts.map((item) =>
+              item.id === localId
+                ? {
+                  id: saved.id,
+                  data: { nodes: saved.nodes, edges: saved.edges },
+                  createdAt: toTimestamp(saved.created_at),
+                  title: saved.title
+                }
+                : item
+            ),
+          }));
+        }
+      },
+
+      deleteSavedFlowchart: async (id) => {
+        set((state) => ({ savedFlowcharts: state.savedFlowcharts.filter((c) => c.id !== id) }));
+        await supabase.from('flowcharts').delete().eq('id', id);
+      },
+
       hydrateFromServer: async () => {
         const [
           casesRes,
@@ -396,6 +460,7 @@ export const useSessionStore = create<SessionState>()(
           brainstormsRes,
           factoidsRes,
           chatsRes,
+          flowchartsRes,
           sourcesRes,
         ] = await Promise.all([
           supabase.from('cases').select('*').order('created_at', { ascending: false }),
@@ -403,6 +468,7 @@ export const useSessionStore = create<SessionState>()(
           supabase.from('brainstorms').select('*').order('created_at', { ascending: false }),
           supabase.from('factoids').select('*').order('created_at', { ascending: false }),
           supabase.from('chats').select('*').order('created_at', { ascending: false }),
+          supabase.from('flowcharts').select('*').order('created_at', { ascending: false }),
           supabase.from('sources').select('*').order('created_at', { ascending: false }),
         ]);
 
@@ -440,6 +506,14 @@ export const useSessionStore = create<SessionState>()(
         const serverFactoids = factoidRows.map((row) => ({
           id: row.id,
           data: row.output,
+          createdAt: toTimestamp(row.created_at),
+          title: row.title,
+        }));
+
+        const flowchartRows = (flowchartsRes.data || []) as SupabaseFlowchartRow[];
+        const serverFlowcharts = flowchartRows.map((row) => ({
+          id: row.id,
+          data: { nodes: row.nodes, edges: row.edges },
           createdAt: toTimestamp(row.created_at),
           title: row.title,
         }));
@@ -482,6 +556,7 @@ export const useSessionStore = create<SessionState>()(
           serverBrainstorms.length,
           serverFactoids.length,
           serverChats.length,
+          serverFlowcharts.length,
           serverSources.length,
         ].some((count) => count > 0);
 
@@ -493,6 +568,7 @@ export const useSessionStore = create<SessionState>()(
           savedBrainstorms: serverBrainstorms,
           savedFactoids: serverFactoids,
           savedChats: serverChats,
+          savedFlowcharts: serverFlowcharts,
           sourceLibrary: serverSources,
         });
       },
@@ -512,6 +588,7 @@ export const useSessionStore = create<SessionState>()(
         await supabase.from('attacks').delete().eq('user_id', userId);
         await supabase.from('brainstorms').delete().eq('user_id', userId);
         await supabase.from('factoids').delete().eq('user_id', userId);
+        await supabase.from('flowcharts').delete().eq('user_id', userId);
         await supabase.from('sources').delete().eq('user_id', userId);
         await supabase.from('source_files').delete().eq('user_id', userId);
         await supabase.from('ai_requests').delete().eq('user_id', userId);
@@ -525,6 +602,7 @@ export const useSessionStore = create<SessionState>()(
           savedBrainstorms: [],
           savedFactoids: [],
           savedChats: [],
+          savedFlowcharts: [],
           sourceLibrary: [],
         });
       },
@@ -534,6 +612,7 @@ export const useSessionStore = create<SessionState>()(
         savedBrainstorms: [],
         savedFactoids: [],
         savedChats: [],
+        savedFlowcharts: [],
         sourceLibrary: [],
         generateResult: null,
         attackResult: null,
@@ -548,6 +627,7 @@ export const useSessionStore = create<SessionState>()(
         brainstormResult: null,
         factoidsResult: null,
         askMessages: [],
+        pendingFlowchartData: null,
       }),
     }),
     {

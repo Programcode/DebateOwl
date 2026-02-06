@@ -2,24 +2,17 @@
 
 This document details the features selected for the next phase of development, prioritized by strategic importance.
 
-## 1. Short Term (Weeks 1-4)
 
-### 1.1 Dark/Light Mode Toggle
-**Goal:** User-controlled theme switching.
-**Why:** Personal preference, reduced eye strain.
 
-**Technical Implementation:**
-- **Status:** Already have `theme` in settings store.
-- **Next Steps:** Add toggle to settings page and persist preference.
-
-### 1.2 Debate Timer Improvements
-**Goal:** Audio cues, custom formats, keyboard control.
-**Why:** Better practice experience with timing.
+### 1.3 Export to Google Docs
+**Goal:** Direct export of cases to Google Docs.
+**Why:** Easier collaboration and sharing with teammates.
 
 **Technical Implementation:**
-- Enhance existing `TimerPage` with audio/visual cues.
-- Add custom format presets (Lincoln-Douglas, Policy, PF).
-- Keyboard shortcuts for start/stop/reset.
+- **Auth:** Expand Google OAuth scopes to include `drive.file`.
+- **Backend:** New Edge Function `export-gdoc` using Google Drive API.
+- **Conversion:** Convert internal HTML/Markdown format to Google Docs structure.
+- **Style:** Professional, minimalist formatting (black/white, standard fonts) similar to legal briefs, avoiding UI colors.
 
 ---
 
@@ -37,14 +30,6 @@ This document details the features selected for the next phase of development, p
   - Configurable speech times.
   - Real-time "Judge Feedback" sidebar (AI analyzing distinct arguments).
 
-### 2.2 Team Workspaces
-**Goal:** Shared workspaces for debate teams.
-**Why:** Collaborate on case development.
-
-**Technical Implementation:**
-- Multi-tenant architecture with team tables.
-- Team invitations via email.
-- Role-based permissions (coach, captain, member).
 
 ### 2.3 Real-time Collaboration
 **Goal:** Multiple users editing cases simultaneously.
@@ -55,22 +40,46 @@ This document details the features selected for the next phase of development, p
 - CRDT-based conflict resolution.
 - Presence indicators.
 
+### 2.4 Integration with Debate Wikis
+**Goal:** Pull evidence and cases from WikiDebate, NDCA Wiki, and curated sources.
+**Why:** Access to community standard arguments and evidence.
+
+**Technical Implementation:**
+- **WikiDebate:** Use MediaWiki API to search and retrieve articles.
+- **NDCA Wiki:** Scraper/Indexer for open/recent case disclosures (caselist).
+- **Curated Sources:** New `curated_sources` table for admin-managed high-quality feeds.
+- **Search Integration:** Add specific "Wiki" tab to research tools.
+
 ---
 
 ## 3. Long Term (Months 3+)
 
 ### 3.1 Stripe Payments (Monetization)
-**Goal:** Sustainable revenue model.
+**Goal:** Sustainable revenue model with tiered access.
 **Why:** AI costs scale with usage; free tier is not sustainable long-term.
 
+**Usage Limits & Tiers:**
+1.  **Free Trial (Default):**
+    - Duration: 3 Days.
+    - Limit: 5 uses/day.
+2.  **Pro Subscription ($5/month):**
+    - Limit: 50 uses/day.
+    - Features: Access to Deep Research and Advanced Models.
+
+**Promo Code System:**
+- Admin can generate custom codes (e.g., "CIT").
+- Codes grant special access (e.g., "1 month free trial with 15 uses/day").
+- Codes used for demos and partners.
+
 **Technical Implementation:**
-- **Provider:** Stripe Checkout (Subscription Mode).
+- **Provider:** Stripe Checkout.
 - **Database:**
-  - Add `subscription_tier` (enum: free, pro) to `profiles`.
-  - Add `stripe_customer_id` and `stripe_subscription_id`.
+  - Update `rate_limits` to handle custom daily limits.
+  - New table `promo_codes` (code, duration_days, daily_limit, max_redemptions).
+  - Add `subscription_status`, `trial_ends_at`, `custom_limit` to `profiles`.
 - **Backend:**
-  - **Webhook Handler:** Edge function `stripe-webhook` to listen for `customer.subscription.updated`.
-  - **Gatekeeping:** Middleware in `ai/index.ts` to check `subscription_tier` before processing high-cost requests (like Deep Research).
+  - `stripe-webhook` for subscription updates.
+  - Middleware logic: Check `custom_limit` > `subscription_tier` > `default_trial`.
 
 ### 3.2 Native Mobile Apps (Accessibility)
 **Goal:** Fully native iOS and Android experience.

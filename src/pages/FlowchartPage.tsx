@@ -1,5 +1,5 @@
 // src/pages/FlowchartPage.tsx
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import ReactFlow, {
     Node,
     Edge,
@@ -14,6 +14,7 @@ import ReactFlow, {
     BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +37,22 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Download, Trash2, GitBranch, Target, Swords, Shield, AlertTriangle } from 'lucide-react';
+import {
+    Plus,
+    Download,
+    Trash2,
+    GitBranch,
+    Target,
+    Swords,
+    Shield,
+    AlertTriangle,
+    Save,
+    FolderOpen,
+    Clock
+} from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 // Custom node types
 type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
@@ -152,8 +167,30 @@ const initialEdges: Edge[] = [
 ];
 
 export default function FlowchartPage() {
+    const {
+        pendingFlowchartData,
+        setPendingFlowchartData,
+        saveFlowchart,
+        savedFlowcharts,
+        deleteSavedFlowchart
+    } = useSessionStore();
+
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+    // Save/Load dialog states
+    const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+    const [saveTitle, setSaveTitle] = useState('');
+    const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
+
+    useEffect(() => {
+        if (pendingFlowchartData) {
+            setNodes(pendingFlowchartData.nodes);
+            setEdges(pendingFlowchartData.edges);
+            setPendingFlowchartData(null);
+        }
+    }, [pendingFlowchartData, setNodes, setEdges, setPendingFlowchartData]);
+
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [newNodeLabel, setNewNodeLabel] = useState('');
     const [newNodeDescription, setNewNodeDescription] = useState('');
@@ -222,6 +259,37 @@ export default function FlowchartPage() {
         setNewNodeDescription('');
         setIsAddDialogOpen(false);
     }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, editingNodeId, setNodes]);
+
+    const handleSaveFlowchart = async () => {
+        if (!saveTitle.trim()) return;
+
+        try {
+            await saveFlowchart(saveTitle, { nodes, edges });
+            setIsSaveDialogOpen(false);
+            setSaveTitle('');
+            toast.success("Flowchart saved successfully");
+        } catch (error) {
+            toast.error("Failed to save flowchart");
+            console.error(error);
+        }
+    };
+
+    const handleLoadFlowchart = (data: FlowchartData) => {
+        setNodes(data.nodes);
+        setEdges(data.edges);
+        setIsLoadDialogOpen(false);
+        toast.success("Flowchart loaded");
+    };
+
+    const handleDeleteFlowchart = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await deleteSavedFlowchart(id);
+            toast.success("Flowchart deleted");
+        } catch (error) {
+            toast.error("Failed to delete flowchart");
+        }
+    };
 
     const openAddDialog = () => {
         setEditingNodeId(null);
@@ -292,6 +360,86 @@ export default function FlowchartPage() {
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            {/* Load Dialog */}
+                            <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <FolderOpen className="h-4 w-4 mr-2" />
+                                        Load
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>Saved Flowcharts</DialogTitle>
+                                        <DialogDescription>
+                                            Load a previously saved debate flow
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-2 py-4 max-h-[60vh] overflow-y-auto">
+                                        {savedFlowcharts.length === 0 ? (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                No saved flowcharts found
+                                            </div>
+                                        ) : (
+                                            savedFlowcharts.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
+                                                    onClick={() => handleLoadFlowchart(item.data)}
+                                                >
+                                                    <div className="space-y-1">
+                                                        <div className="font-medium">{item.title}</div>
+                                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <Clock className="h-3 w-3" />
+                                                            {formatDistanceToNow(item.createdAt, { addSuffix: true })}
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive opacity-70 hover:opacity-100"
+                                                        onClick={(e) => handleDeleteFlowchart(item.id, e)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Save Dialog */}
+                            <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Save
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Save Flowchart</DialogTitle>
+                                        <DialogDescription>Save your current flow to access it later</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label>Title</Label>
+                                            <Input
+                                                placeholder="e.g., Debate Round 1 Flow"
+                                                value={saveTitle}
+                                                onChange={(e) => setSaveTitle(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button onClick={handleSaveFlowchart}>Save Flowchart</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+
+                            <div className="w-px h-8 bg-border mx-1" />
+
                             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm" onClick={openAddDialog}>

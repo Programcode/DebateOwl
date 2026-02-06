@@ -7,12 +7,13 @@ import { GenerateResults } from '@/components/features/generate/GenerateResults'
 import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
+import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } from 'reactflow';
 
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 
 export default function GeneratePage() {
-  const { generateResult, generateLoading, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages } = useSessionStore();
+  const { generateResult, generateLoading, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
   const askConfig = getFeatureConfig('ask');
@@ -115,6 +116,85 @@ export default function GeneratePage() {
     }
   };
 
+  const handleImportFlowchart = () => {
+    if (!generateResult) return;
+
+    // We can use 'any' or more specific types if we import them from ReactFlow or our store
+    const nodes: ReactFlowNode[] = [];
+    const edges: ReactFlowEdge[] = [];
+    const centerX = 400;
+
+    // Thesis
+    nodes.push({
+      id: 'thesis',
+      type: 'custom',
+      position: { x: centerX, y: 50 },
+      data: {
+        label: 'Thesis',
+        description: generateResult.caseStructure.thesis,
+        type: 'thesis'
+      }
+    });
+
+    // Contentions
+    generateResult.contentions.forEach((c, i) => {
+      const id = `c-${i}`;
+      // Spread contentions horizontally
+      const xPos = centerX + ((i - (generateResult.contentions.length - 1) / 2) * 300);
+
+      nodes.push({
+        id,
+        type: 'custom',
+        position: { x: xPos, y: 250 },
+        data: {
+          label: `Contention ${i + 1}`,
+          description: c.claim,
+          type: 'contention',
+          strength: 'strong'
+        }
+      });
+
+      edges.push({
+        id: `e-thesis-${id}`,
+        source: 'thesis',
+        target: id,
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed }
+      });
+
+      // Add counters/attacks if available?
+      // For now, let's just add the main structure to keep it clean, 
+      // or maybe add predicted attacks below contentions if they map nicely.
+      // Since predictedOpponentCase is a flat list, we'll just add them as a group below.
+    });
+
+    // Attacks (Predicted Opponent Case)
+    // We'll just list them in a row below contentions for now
+    if (generateResult.predictedOpponentCase?.likelyArguments) {
+      generateResult.predictedOpponentCase.likelyArguments.forEach((arg, i) => {
+        const id = `a-${i}`;
+        const xPos = centerX + ((i - (generateResult.predictedOpponentCase.likelyArguments.length - 1) / 2) * 300);
+
+        nodes.push({
+          id,
+          type: 'custom',
+          position: { x: xPos, y: 450 },
+          data: {
+            label: `Attack ${i + 1}`,
+            description: arg,
+            type: 'attack'
+          }
+        });
+
+        // No edges for now as we don't know which contention they target
+      });
+    }
+
+    setPendingFlowchartData({ nodes, edges });
+    navigate('/app/flowchart');
+    toast({ title: "Case Imported", description: "Your case has been imported to Flowcharts." });
+  };
+
   return (
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -135,16 +215,12 @@ export default function GeneratePage() {
           <div>
             {generateResult ? (
               <div className="space-y-4">
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Case
-                  </Button>
-                </div>
                 <GenerateResults
                   result={generateResult}
                   onRegenerateSection={handleRegenerateSection}
                   onDiscuss={handleDiscuss}
+                  onSave={handleSave}
+                  onImportFlowchart={handleImportFlowchart}
                 />
               </div>
             ) : (
