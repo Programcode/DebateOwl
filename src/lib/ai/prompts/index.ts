@@ -99,7 +99,7 @@ AUDIENCE LEVEL: ${input.audience}
 TONE: ${input.tone}
 LANGUAGE: ${input.language}
 
-Provide a complete case structure with contentions, predicted opponent case, and prepared counters.
+Provide a complete case structure with arguments, predicted opponent case, and prepared counters.
 If any evidence is needed, mark it as needing a source and provide a search query.`;
 }
 

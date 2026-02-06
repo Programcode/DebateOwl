@@ -549,24 +549,24 @@ Do NOT add extra fields. Do NOT omit any fields. Follow this structure EXACTLY:
   "contentions": [
     {
       "id": "1",
-      "claim": "The main claim of this contention",
-      "reasoning": "Why this claim is true",
-      "evidence": "Supporting evidence",
+      "claim": "The main claim of this argument",
+      "reasoning": "Detailed explanation of why this claim is true. Be thorough - provide 2-3 supporting reasons with clear logical connections.",
+      "evidence": "Supporting evidence with specific examples, statistics, or expert opinions when possible",
       "needsSource": false,
       "sourceQuery": "",
-      "impact": "Why this matters"
+      "impact": "Why this matters - explain the significance and real-world consequences"
     }
   ],
   "predictedOpponentCase": {
-    "likelyArguments": ["Argument opponent will make"],
+    "likelyArguments": ["Argument opponent will make - include 5-8 likely opponent arguments"],
     "strategicWeaknesses": ["Weakness in our case"],
     "keyClashes": ["Main clash points"]
   },
   "counters": [
     {
       "targetArgument": "What opponent argument this counters",
-      "counterpoint": "Our counter to that argument",
-      "rebuttal": "How to phrase the rebuttal"
+      "counterpoint": "Our counter to that argument - be specific and detailed",
+      "rebuttal": "How to phrase the rebuttal in the debate round"
     }
   ],
   "metadata": {
@@ -576,7 +576,11 @@ Do NOT add extra fields. Do NOT omit any fields. Follow this structure EXACTLY:
   }
 }
 
-IMPORTANT: The "side" in metadata must be exactly "pro" or "con". Always include the generatedAt timestamp.`;
+IMPORTANT REQUIREMENTS:
+1. The "side" in metadata must be exactly "pro" or "con".
+2. Generate 3-4 strong arguments with detailed reasoning (2-3 paragraphs each).
+3. Include 5-8 predicted opponent arguments with corresponding counters.
+4. Each argument should have substantial reasoning, evidence, and impact sections.`;
 
 const ATTACK_PROMPT = `You are an expert debate judge and coach. Analyze the given debate case and provide a critical breakdown in JSON format.
 
@@ -879,7 +883,75 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Other features: standard flow
+    // GENERATE: Use deep research for evidence-backed arguments
+    if (feature === "generate") {
+      const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
+      const side = String(sanitizedInput.side || "pro");
+
+      // Perform research to find supporting evidence
+      console.log("[GENERATE] Starting deep research for motion:", motion);
+      const research = await deepResearch(motion, "", provider, model);
+      const searchContext = buildResearchContext(research);
+
+      // Build prompt with research context
+      const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
+      const messages = [{ role: "user", content: userPrompt }];
+      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      // Post-process: fix timestamp
+      if (output && typeof output === "object" && "metadata" in output) {
+        const metadata = (output as { metadata: { generatedAt?: string } }).metadata;
+        if (!metadata.generatedAt ||
+          metadata.generatedAt === "CURRENT_ISO_TIMESTAMP" ||
+          metadata.generatedAt.includes("CURRENT") ||
+          isNaN(new Date(metadata.generatedAt).getTime())) {
+          metadata.generatedAt = new Date().toISOString();
+        }
+      }
+
+      // Build discovered sources from research
+      const discoveredSources = research.readContent.map((item) => ({
+        title: item.url.replace(/^https?:\/\//, "").split("/")[0],
+        url: item.url,
+        content: item.content.slice(0, 1000),
+      }));
+      console.log(`[GENERATE] Found ${discoveredSources.length} sources`);
+
+      // Log usage and return with sources
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // BRAINSTORM: Use research to inform argument angles
+    if (feature === "brainstorm") {
+      const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
+
+      // Perform research to find relevant context
+      console.log("[BRAINSTORM] Starting deep research for motion:", motion);
+      const research = await deepResearch(motion, "", provider, model);
+      const searchContext = buildResearchContext(research);
+
+      // Build prompt with research context
+      const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
+      const messages = [{ role: "user", content: userPrompt }];
+      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      // Build discovered sources from research
+      const discoveredSources = research.readContent.map((item) => ({
+        title: item.url.replace(/^https?:\/\//, "").split("/")[0],
+        url: item.url,
+        content: item.content.slice(0, 1000),
+      }));
+      console.log(`[BRAINSTORM] Found ${discoveredSources.length} sources`);
+
+      // Log usage and return with sources
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Other features (attack): standard flow without research
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
     const output = await callAI(provider, model, systemPrompt, messages, temperature);

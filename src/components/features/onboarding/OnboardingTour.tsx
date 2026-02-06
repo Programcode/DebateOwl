@@ -35,7 +35,7 @@ const tourSteps: Step[] = [
             <div>
                 <h3 className="font-semibold mb-1">Step 2: Generate Your Case</h3>
                 <p className="text-sm text-muted-foreground">
-                    Click this button to generate a structured debate case with contentions, evidence, and rebuttals.
+                    Click this button to generate a structured debate case with arguments, evidence, and rebuttals.
                 </p>
             </div>
         ),

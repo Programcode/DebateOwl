@@ -1,0 +1,8 @@
+# This file configures Supabase Edge Function behavior per function.
+# See: https://supabase.com/docs/guides/functions/function-configuration
+
+# Disable gateway-level JWT verification for export-gdoc since we handle
+# authentication manually in the function code. This allows us to see
+# application logs and handle errors properly.
+[functions.export-gdoc]
+verify_jwt = false

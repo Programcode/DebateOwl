@@ -239,7 +239,7 @@ async function callSupabaseAI(
       throw new AIResponseError('AI response missing output field', { requestId, details: { data } });
     }
 
-    return data.output;
+    return data;
   } catch (err) {
     // Re-throw our custom errors
     if (err instanceof AIError) {
@@ -465,24 +465,56 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
 
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<GenerateOutput> {
   if (config.provider === 'mock') return mockGenerateCase(input.motion, input.side);
-  const rawResponse = await callSupabaseAI('generate', input as Record<string, unknown>, config);
-  return transformGenerateResponse(rawResponse as Record<string, unknown>);
+  const data = await callSupabaseAI('generate', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
+
+  // Auto-save discovered sources to library
+  if (data.discoveredSources && data.discoveredSources.length > 0) {
+    const session = useSessionStore.getState();
+    for (const source of data.discoveredSources) {
+      await session.addSource({
+        title: source.title,
+        content: source.content,
+        type: 'url',
+        origin: source.url,
+      });
+    }
+    console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
+  }
+
+  return transformGenerateResponse(data.output as Record<string, unknown>);
 }
 
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<AttackOutput> {
   if (config.provider === 'mock') return mockAttackCase(input.caseText);
-  return callSupabaseAI('attack', input as Record<string, unknown>, config);
+  const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown };
+  return data.output as AttackOutput;
 }
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<BrainstormOutput> {
   if (config.provider === 'mock') return mockBrainstorm(input.motion, input.outputMode);
-  const rawResponse = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config);
-  return transformBrainstormResponse(rawResponse as Record<string, unknown>);
+  const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
+
+  // Auto-save discovered sources to library
+  if (data.discoveredSources && data.discoveredSources.length > 0) {
+    const session = useSessionStore.getState();
+    for (const source of data.discoveredSources) {
+      await session.addSource({
+        title: source.title,
+        content: source.content,
+        type: 'url',
+        origin: source.url,
+      });
+    }
+    console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
+  }
+
+  return transformBrainstormResponse(data.output as Record<string, unknown>);
 }
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
   if (config.provider === 'mock') return mockFactoids(input.claim);
-  return callSupabaseAI('factoids', input as Record<string, unknown>, config);
+  const data = await callSupabaseAI('factoids', input as Record<string, unknown>, config) as { output: unknown };
+  return data.output as FactoidsOutput;
 }
 
 export async function askChat(
@@ -492,5 +524,6 @@ export async function askChat(
   config: ProviderConfig
 ): Promise<AskOutput> {
   if (config.provider === 'mock') return mockAsk(message, mode);
-  return callSupabaseAI('ask', { message, history, mode }, config);
+  const data = await callSupabaseAI('ask', { message, history, mode }, config) as { output: unknown };
+  return data.output as AskOutput;
 }

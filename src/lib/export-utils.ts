@@ -37,13 +37,13 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     const contentions = Array.isArray(result.contentions) ? result.contentions : [];
     const contentionsSection = contentions.length > 0
       ? contentions.flatMap((c, i) => {
-        const claim = c?.claim || 'Untitled contention';
+        const claim = c?.claim || 'Untitled argument';
         const reasoning = c?.reasoning || 'No reasoning provided.';
         const evidence = c?.evidence || 'No evidence provided.';
         const impact = c?.impact || 'No impact provided.';
         return [
           new Paragraph({
-            children: [new TextRun({ text: `Contention ${i + 1}: ${claim}`, bold: true, size: 28 })],
+            children: [new TextRun({ text: `Argument ${i + 1}: ${claim}`, bold: true, size: 28 })],
             spacing: { before: 200, after: 100 },
           }),
           new Paragraph({
@@ -60,7 +60,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
           }),
         ];
       })
-      : [new Paragraph({ text: "No contentions provided.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: "No arguments provided.", spacing: { after: 200 } })];
 
     const predictedArguments = Array.isArray(result.predictedOpponentCase.likelyArguments)
       ? result.predictedOpponentCase.likelyArguments
@@ -127,7 +127,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
             new Paragraph({ text: burdenOfProof, spacing: { after: 400 } }),
 
             // Contentions
-            new Paragraph({ text: "CONTENTIONS", heading: HeadingLevel.HEADING_2 }),
+            new Paragraph({ text: "ARGUMENTS", heading: HeadingLevel.HEADING_2 }),
             ...contentionsSection,
 
             // Predictions
@@ -484,6 +484,7 @@ async function callGoogleDocsEdgeFunction(
     }
 
     if (!response.ok) {
+      console.error('[GDocs Export] Error response:', response.status, respData);
       if (respData.code === 'AUTH_EXPIRED' || respData.code === 'REFRESH_FAILED' || response.status === 401) {
         return { success: false, error: respData.error || 'Authorization expired.', requiresReauth: true };
       }

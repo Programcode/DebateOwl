@@ -86,7 +86,7 @@ export default function GeneratePage() {
     
     **Thesis:** ${generateResult.caseStructure.thesis}
     
-    **Contentions:**
+    **Arguments:**
     ${generateResult.contentions.map((c, i) => `${i + 1}. ${c.claim}`).join('\n')}
     
     Can we refine this?`;
@@ -147,9 +147,9 @@ export default function GeneratePage() {
         type: 'custom',
         position: { x: xPos, y: 250 },
         data: {
-          label: `Contention ${i + 1}`,
+          label: `Argument ${i + 1}`,
           description: c.claim,
-          type: 'contention',
+          type: 'argument',
           strength: 'strong'
         }
       });
@@ -228,7 +228,7 @@ export default function GeneratePage() {
                 <div className="text-6xl mb-4">🎯</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">Ready to Generate</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Enter your motion and preferences to generate a complete debate case with contentions, counters, and strategic analysis.
+                  Enter your motion and preferences to generate a complete debate case with arguments, counters, and strategic analysis.
                 </p>
               </div>
             )}
