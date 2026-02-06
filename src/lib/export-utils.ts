@@ -435,7 +435,13 @@ async function callGoogleDocsEdgeFunction(
       return { success: false, error: 'Not authenticated. Please sign in.', requiresReauth: true };
     }
 
-    const providerToken = session.provider_token;
+    // Try session.provider_token first, fallback to localStorage
+    // Supabase only provides provider_token immediately after OAuth, not on session refresh
+    let providerToken = session.provider_token;
+    if (!providerToken) {
+      providerToken = localStorage.getItem('google_provider_token');
+    }
+
     if (!providerToken) {
       return {
         success: false,

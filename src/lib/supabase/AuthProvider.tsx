@@ -45,9 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession);
       setLoading(false);
 
+      // Persist Google provider_token for later use (e.g., Google Docs export)
+      // This token is only available immediately after OAuth, not on session refresh
+      if (newSession?.provider_token) {
+        localStorage.setItem('google_provider_token', newSession.provider_token);
+      }
+
       if (!nextUserId) {
         resetSessionStore();
         resetSettingsStore();
+        localStorage.removeItem('google_provider_token');
         return;
       }
 
