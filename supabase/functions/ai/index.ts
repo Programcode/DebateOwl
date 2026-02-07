@@ -40,6 +40,24 @@ interface ResearchContext {
   verifiedUrls: Set<string>;
 }
 
+interface ResearchOptions {
+  maxFollowUpQueries: number; // 0 = skip AI follow-up entirely
+  maxUrlsToRead: number;      // How many pages to read in full
+  overallTimeoutMs: number;   // Hard timeout for entire research
+}
+
+const LIGHT_RESEARCH: ResearchOptions = {
+  maxFollowUpQueries: 0,
+  maxUrlsToRead: 2,
+  overallTimeoutMs: 20000,
+};
+
+const DEEP_RESEARCH: ResearchOptions = {
+  maxFollowUpQueries: 3,
+  maxUrlsToRead: 5,
+  overallTimeoutMs: 45000,
+};
+
 // Generate unique request ID for tracing
 function generateRequestId(): string {
   return `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -384,11 +402,12 @@ async function generateFollowUpQueries(
   }
 }
 
-async function deepResearch(
+async function deepResearchInner(
   claim: string,
   region: string,
   provider: Provider,
-  model: string
+  model: string,
+  options: ResearchOptions
 ): Promise<ResearchContext> {
   const context: ResearchContext = {
     searches: [],
@@ -396,38 +415,38 @@ async function deepResearch(
     verifiedUrls: new Set(),
   };
 
-  console.log("[DEEP RESEARCH] Starting for claim:", claim);
+  console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
 
   // Round 1: Initial search
-  const initialQuery = `${claim} ${region} statistics data`;
+  const initialQuery = `${claim} ${region} statistics data`.trim();
   const round1Results = await jinaSearch(initialQuery);
   const round1Text = formatSearchResults(round1Results);
   context.searches.push({ query: initialQuery, results: round1Text });
-  console.log(`[DEEP RESEARCH] Round 1: ${round1Results.length} results`);
+  console.log(`[RESEARCH] Round 1: ${round1Results.length} results`);
 
   // Extract URLs for reading
   const urlsToRead = round1Results.slice(0, 3).map((r) => r.url).filter(Boolean) as string[];
 
-  // Round 2: AI generates follow-up queries
-  const followUpQueries = await generateFollowUpQueries(claim, round1Text, provider, model);
-  console.log(`[DEEP RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
+  // Round 2: AI generates follow-up queries (skipped in light mode)
+  if (options.maxFollowUpQueries > 0) {
+    const followUpQueries = await generateFollowUpQueries(claim, round1Text, provider, model);
+    console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
 
-  // Execute follow-up searches in parallel
-  const followUpPromises = followUpQueries.map(async (query) => {
-    const results = await jinaSearch(query);
-    const text = formatSearchResults(results);
-    context.searches.push({ query, results: text });
-    // Add more URLs to read
-    results.slice(0, 2).forEach((r) => {
-      if (r.url && !urlsToRead.includes(r.url)) urlsToRead.push(r.url);
+    const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
+      const results = await jinaSearch(query);
+      const text = formatSearchResults(results);
+      context.searches.push({ query, results: text });
+      results.slice(0, 2).forEach((r) => {
+        if (r.url && !urlsToRead.includes(r.url)) urlsToRead.push(r.url);
+      });
+      return results.length;
     });
-    return results.length;
-  });
-  await Promise.all(followUpPromises);
-  console.log(`[DEEP RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
+    await Promise.all(followUpPromises);
+    console.log(`[RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
+  }
 
   // Round 3: Read top URLs for full content
-  const readPromises = urlsToRead.slice(0, 5).map(async (url) => {
+  const readPromises = urlsToRead.slice(0, options.maxUrlsToRead).map(async (url) => {
     const content = await jinaRead(url);
     if (content) {
       context.readContent.push({ url, content });
@@ -436,9 +455,32 @@ async function deepResearch(
     return content.length > 0;
   });
   await Promise.all(readPromises);
-  console.log(`[DEEP RESEARCH] Read ${context.readContent.length} pages`);
+  console.log(`[RESEARCH] Read ${context.readContent.length} pages`);
 
   return context;
+}
+
+// Wrapper with overall timeout - returns partial results if research exceeds time limit
+async function deepResearch(
+  claim: string,
+  region: string,
+  provider: Provider,
+  model: string,
+  options: ResearchOptions = DEEP_RESEARCH
+): Promise<ResearchContext> {
+  try {
+    const result = await Promise.race([
+      deepResearchInner(claim, region, provider, model, options),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Research timeout")), options.overallTimeoutMs)
+      ),
+    ]);
+    return result;
+  } catch (err) {
+    console.warn(`[RESEARCH] Timed out or failed after ${options.overallTimeoutMs}ms:`, err);
+    // Return empty context so the AI call still proceeds without research
+    return { searches: [], readContent: [], verifiedUrls: new Set() };
+  }
 }
 
 function buildResearchContext(research: ResearchContext): string {
@@ -832,7 +874,7 @@ Deno.serve(async (req) => {
       const region = String(sanitizedInput.region || "");
 
       // Perform deep research with multiple search rounds
-      const research = await deepResearch(claim, region, provider, model);
+      const research = await deepResearch(claim, region, provider, model, DEEP_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
@@ -888,9 +930,9 @@ Deno.serve(async (req) => {
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
       const side = String(sanitizedInput.side || "pro");
 
-      // Perform research to find supporting evidence
-      console.log("[GENERATE] Starting deep research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model);
+      // Perform light research to find supporting evidence (avoids timeout)
+      console.log("[GENERATE] Starting light research for motion:", motion);
+      const research = await deepResearch(motion, "", provider, model, LIGHT_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
@@ -927,9 +969,9 @@ Deno.serve(async (req) => {
     if (feature === "brainstorm") {
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
 
-      // Perform research to find relevant context
-      console.log("[BRAINSTORM] Starting deep research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model);
+      // Perform light research to find relevant context (avoids timeout)
+      console.log("[BRAINSTORM] Starting light research for motion:", motion);
+      const research = await deepResearch(motion, "", provider, model, LIGHT_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
