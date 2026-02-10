@@ -4,8 +4,6 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AttackForm } from '@/components/features/attack/AttackForm';
 import { AttackResults } from '@/components/features/attack/AttackResults';
 import { attackCase, askChat } from '@/lib/ai/client';
-import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +15,6 @@ export default function AttackPage() {
   const askConfig = getFeatureConfig('ask');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
 
   const handleSubmit = async (data: AttackInput) => {
     setAttackLoading(true);
@@ -26,13 +23,11 @@ export default function AttackPage() {
       setAttackResult(result);
     } catch (error) {
       console.error('Failed to attack case:', error);
-      if (!subError.handleSubscriptionError(error)) {
-        toast({
-          title: "Attack Analysis Failed",
-          description: error instanceof Error ? error.message : "An unexpected error occurred",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Attack Analysis Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setAttackLoading(false);
     }
@@ -113,27 +108,6 @@ export default function AttackPage() {
           </div>
         </div>
       </div>
-
-      <LimitReachedModal
-        open={subError.limitModalOpen}
-        onOpenChange={subError.setLimitModalOpen}
-        variant={subError.limitModalVariant}
-        limit={subError.limitModalLimit}
-        current={subError.limitModalCurrent}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-      />
-      <ModelRestrictedModal
-        open={subError.modelModalOpen}
-        onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => {
-          subError.setModelModalOpen(false);
-          subError.setPricingModalOpen(true);
-        }}
-      />
-      <PricingModal
-        open={subError.pricingModalOpen}
-        onOpenChange={subError.setPricingModalOpen}
-      />
     </div>
   );
 }

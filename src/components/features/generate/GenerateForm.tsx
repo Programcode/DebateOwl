@@ -19,7 +19,6 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
-import { WikiSourcesToggle } from '@/components/features/shared/WikiSourcesToggle';
 
 interface GenerateFormProps {
   onSubmit: (data: GenerateInput) => void;
@@ -256,9 +255,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               </Select>
             </div>
           </div>
-
-          {/* Wiki Sources Toggle */}
-          <WikiSourcesToggle />
 
           {/* Submit Button */}
           <Button type="submit" className="w-full h-12" disabled={isLoading} data-tour="generate-button">

@@ -7,8 +7,6 @@ import { GenerateResults } from '@/components/features/generate/GenerateResults'
 import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
-import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } from 'reactflow';
 
 import { Button } from '@/components/ui/button';
@@ -21,27 +19,45 @@ export default function GeneratePage() {
   const askConfig = getFeatureConfig('ask');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
 
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
     try {
       const result = await generateCase(data, config);
+      console.log('[DEBUG] Generate result:', JSON.stringify(result, null, 2));
+      console.log('[DEBUG] Has caseStructure:', !!result?.caseStructure);
+      console.log('[DEBUG] Has contentions:', !!result?.contentions);
+      console.log('[DEBUG] Has predictedOpponentCase:', !!result?.predictedOpponentCase);
+      console.log('[DEBUG] Has counters:', !!result?.counters);
       setGenerateResult(result);
     } catch (error) {
       console.error('Failed to generate case:', error);
 
-      // Handle subscription errors with modals
-      if (subError.handleSubscriptionError(error)) return;
-
+      // Handle specific error types with appropriate messages
       if (isAIAuthError(error)) {
-        toast({ title: "Authentication Required", description: error.message, variant: "destructive" });
+        toast({
+          title: "Authentication Required",
+          description: error.message,
+          variant: "destructive",
+        });
       } else if (isAIRateLimitError(error)) {
-        toast({ title: "Rate Limit Exceeded", description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} requests)` : ''}`, variant: "destructive" });
+        toast({
+          title: "Rate Limit Exceeded",
+          description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} requests)` : ''}`,
+          variant: "destructive",
+        });
       } else if (isTimeoutError(error)) {
-        toast({ title: "Request Timed Out", description: "The AI took too long to respond. Please try again.", variant: "destructive" });
+        toast({
+          title: "Request Timed Out",
+          description: "The AI took too long to respond. Please try again.",
+          variant: "destructive",
+        });
       } else {
-        toast({ title: "Generation Failed", description: error instanceof Error ? error.message : "An unexpected error occurred", variant: "destructive" });
+        toast({
+          title: "Generation Failed",
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          variant: "destructive",
+        });
       }
     } finally {
       setGenerateLoading(false);
@@ -213,7 +229,6 @@ export default function GeneratePage() {
   };
 
   return (
-    <>
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
@@ -254,27 +269,5 @@ export default function GeneratePage() {
         </div>
       </div>
     </div>
-
-    <LimitReachedModal
-      open={subError.limitModalOpen}
-      onOpenChange={subError.setLimitModalOpen}
-      variant={subError.limitModalVariant}
-      limit={subError.limitModalLimit}
-      current={subError.limitModalCurrent}
-      onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-    />
-    <ModelRestrictedModal
-      open={subError.modelModalOpen}
-      onOpenChange={subError.setModelModalOpen}
-      onUpgrade={() => {
-        subError.setModelModalOpen(false);
-        subError.setPricingModalOpen(true);
-      }}
-    />
-    <PricingModal
-      open={subError.pricingModalOpen}
-      onOpenChange={subError.setPricingModalOpen}
-    />
-    </>
   );
 }

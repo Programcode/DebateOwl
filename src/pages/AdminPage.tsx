@@ -10,8 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, MessageSquare, Ban, UserCheck, Ticket, CreditCard } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, MessageSquare, Ban, UserCheck } from 'lucide-react';
 
 interface UsageStats {
     totals: { requests: number; cost: number; successRate: number };
@@ -46,27 +45,6 @@ interface GlobalPrompt {
     updated_at: string;
 }
 
-interface PromoCode {
-    id: string;
-    code: string;
-    type: string;
-    config: Record<string, number>;
-    max_redemptions: number | null;
-    redemptions_count: number;
-    expires_at: string | null;
-    is_active: boolean;
-    created_at: string;
-}
-
-interface Subscriber {
-    user_id: string;
-    email: string;
-    subscription_tier: string;
-    stripe_customer_id: string | null;
-    status: string | null;
-    current_period_end: string | null;
-}
-
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
 const FEATURES = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'all'];
 
@@ -80,9 +58,6 @@ export default function AdminPage() {
     const [newLimit, setNewLimit] = useState({ type: 'daily_requests', value: 100 });
     const [newPrompt, setNewPrompt] = useState({ feature: 'all', text: '' });
     const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
-    const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
-    const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
-    const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
     const { toast } = useToast();
 
     const fetchAdminData = async (action: string) => {
@@ -159,20 +134,16 @@ export default function AdminPage() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [statsData, usersData, limitsData, promptsData, promoData, subData] = await Promise.all([
+                const [statsData, usersData, limitsData, promptsData] = await Promise.all([
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
                     fetchAdminData('limits'),
                     fetchAdminData('global-prompts').catch(() => ({ prompts: [] as GlobalPrompt[] })),
-                    fetchAdminData('promo-codes').catch(() => ({ codes: [] as PromoCode[] })),
-                    fetchAdminData('subscribers').catch(() => ({ subscribers: [] as Subscriber[] })),
                 ]);
                 setStats(statsData);
                 setUsers(usersData.users || []);
                 setLimits(limitsData.limits || []);
                 setPrompts(promptsData.prompts || []);
-                setPromoCodes(promoData.codes || []);
-                setSubscribers(subData.subscribers || []);
                 setIsAdmin(true);
             } catch (err) {
                 console.error('Admin load error:', err);
@@ -331,19 +302,11 @@ export default function AdminPage() {
                 </div>
 
                 <Tabs defaultValue="usage" className="space-y-6">
-                    <TabsList className="flex-wrap">
+                    <TabsList>
                         <TabsTrigger value="usage">Usage Analytics</TabsTrigger>
                         <TabsTrigger value="users">User Management</TabsTrigger>
                         <TabsTrigger value="limits">Rate Limits</TabsTrigger>
                         <TabsTrigger value="prompts">AI Prompts</TabsTrigger>
-                        <TabsTrigger value="promo-codes">
-                            <Ticket className="h-4 w-4 mr-1" />
-                            Promo Codes
-                        </TabsTrigger>
-                        <TabsTrigger value="subscribers">
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            Subscribers
-                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="usage" className="space-y-6">
@@ -665,203 +628,6 @@ export default function AdminPage() {
                                 </CardContent>
                             </Card>
                         </div>
-                    </TabsContent>
-
-                    {/* Promo Codes Tab */}
-                    <TabsContent value="promo-codes" className="space-y-6">
-                        <div className="grid gap-6 md:grid-cols-2">
-                            {/* Create Promo Code */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Ticket className="h-5 w-5" />
-                                        Create Promo Code
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Code</Label>
-                                        <Input
-                                            placeholder="e.g. CIT2026"
-                                            value={newPromo.code}
-                                            onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value.toUpperCase() })}
-                                            className="uppercase"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Type</Label>
-                                        <Select value={newPromo.type} onValueChange={(v) => setNewPromo({ ...newPromo, type: v })}>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="extended_trial">Extended Trial</SelectItem>
-                                                <SelectItem value="extra_limit">Extra Daily Limit</SelectItem>
-                                                <SelectItem value="free_month">Free Month of Pro</SelectItem>
-                                                <SelectItem value="discount">Checkout Discount</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    {(newPromo.type === 'extended_trial' || newPromo.type === 'free_month') && (
-                                        <div className="space-y-2">
-                                            <Label>Days</Label>
-                                            <Input
-                                                type="number"
-                                                value={newPromo.configDays}
-                                                onChange={(e) => setNewPromo({ ...newPromo, configDays: parseInt(e.target.value) || 30 })}
-                                            />
-                                        </div>
-                                    )}
-                                    {newPromo.type === 'extra_limit' && (
-                                        <div className="space-y-2">
-                                            <Label>Daily Limit</Label>
-                                            <Input
-                                                type="number"
-                                                value={newPromo.configLimit}
-                                                onChange={(e) => setNewPromo({ ...newPromo, configLimit: parseInt(e.target.value) || 15 })}
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="space-y-2">
-                                        <Label>Max Redemptions (blank = unlimited)</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="Unlimited"
-                                            value={newPromo.maxRedemptions}
-                                            onChange={(e) => setNewPromo({ ...newPromo, maxRedemptions: e.target.value })}
-                                        />
-                                    </div>
-                                    <Button
-                                        onClick={async () => {
-                                            try {
-                                                const config: Record<string, number> = {};
-                                                if (newPromo.type === 'extended_trial' || newPromo.type === 'free_month') {
-                                                    config.days = newPromo.configDays;
-                                                } else if (newPromo.type === 'extra_limit') {
-                                                    config.limit = newPromo.configLimit;
-                                                }
-                                                await postAdminData('create-promo', {
-                                                    code: newPromo.code,
-                                                    type: newPromo.type,
-                                                    config,
-                                                    maxRedemptions: newPromo.maxRedemptions ? parseInt(newPromo.maxRedemptions) : null,
-                                                });
-                                                toast({ title: 'Success', description: `Promo code "${newPromo.code}" created` });
-                                                const data = await fetchAdminData('promo-codes');
-                                                setPromoCodes(data.codes || []);
-                                                setNewPromo({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
-                                            } catch (err) {
-                                                toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to create code', variant: 'destructive' });
-                                            }
-                                        }}
-                                        disabled={!newPromo.code.trim()}
-                                        className="w-full"
-                                    >
-                                        Create Code
-                                    </Button>
-                                </CardContent>
-                            </Card>
-
-                            {/* Active Promo Codes */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Active Codes</CardTitle>
-                                    <CardDescription>{promoCodes.length} promo codes</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ScrollArea className="h-[400px]">
-                                        <div className="space-y-3">
-                                            {promoCodes.map((promo) => (
-                                                <div key={promo.id} className="flex items-center justify-between p-3 rounded-lg border">
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <code className="font-mono font-bold">{promo.code}</code>
-                                                            <Badge variant={promo.is_active ? 'default' : 'secondary'}>
-                                                                {promo.type.replace('_', ' ')}
-                                                            </Badge>
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            Used {promo.redemptions_count}{promo.max_redemptions ? ` / ${promo.max_redemptions}` : ''} times
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={async () => {
-                                                            try {
-                                                                await postAdminData('toggle-promo', { id: promo.id, isActive: !promo.is_active });
-                                                                const data = await fetchAdminData('promo-codes');
-                                                                setPromoCodes(data.codes || []);
-                                                            } catch (err) {
-                                                                toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
-                                                            }
-                                                        }}
-                                                    >
-                                                        {promo.is_active ? 'Disable' : 'Enable'}
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                            {promoCodes.length === 0 && (
-                                                <p className="text-sm text-muted-foreground text-center py-8">
-                                                    No promo codes yet. Create one to get started.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </TabsContent>
-
-                    {/* Subscribers Tab */}
-                    <TabsContent value="subscribers" className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <CreditCard className="h-5 w-5" />
-                                    Subscribers
-                                </CardTitle>
-                                <CardDescription>{subscribers.length} users with subscription data</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-[500px]">
-                                    <div className="space-y-3">
-                                        {subscribers.map((sub) => (
-                                            <div key={sub.user_id} className="flex items-center justify-between p-3 rounded-lg border">
-                                                <div>
-                                                    <p className="font-medium text-sm">{sub.email}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Badge variant={sub.subscription_tier === 'pro' ? 'default' : 'secondary'}>
-                                                            {sub.subscription_tier}
-                                                        </Badge>
-                                                        {sub.status && (
-                                                            <Badge variant={sub.status === 'active' ? 'default' : 'destructive'}>
-                                                                {sub.status}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    {sub.current_period_end && (
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            Renews: {new Date(sub.current_period_end).toLocaleDateString()}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                {sub.stripe_customer_id && (
-                                                    <code className="text-xs text-muted-foreground">
-                                                        {sub.stripe_customer_id.slice(0, 16)}...
-                                                    </code>
-                                                )}
-                                            </div>
-                                        ))}
-                                        {subscribers.length === 0 && (
-                                            <p className="text-sm text-muted-foreground text-center py-8">
-                                                No subscribers yet.
-                                            </p>
-                                        )}
-                                    </div>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
                     </TabsContent>
                 </Tabs>
             </div>

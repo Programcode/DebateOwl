@@ -487,6 +487,7 @@ export function useSubscription() {
   return { tier, isPro: tier === 'pro', loading };
 }
 ```
+
 ## Merging Prompt
 
 Use this prompt when merging the Stripe monetization branch into main after route and Ask-search changes:

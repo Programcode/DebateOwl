@@ -67,39 +67,6 @@ export class AIRateLimitError extends AIError {
 }
 
 /**
- * Error for subscription limit reached (402) or trial expired.
- */
-export class AISubscriptionError extends AIError {
-  readonly code?: string;
-  readonly limit?: number;
-  readonly current?: number;
-
-  constructor(
-    message: string = 'Subscription required.',
-    options?: { statusCode?: number; requestId?: string; code?: string; limit?: number; current?: number }
-  ) {
-    super(message, { statusCode: options?.statusCode ?? 402, requestId: options?.requestId });
-    this.name = 'AISubscriptionError';
-    this.code = options?.code;
-    this.limit = options?.limit;
-    this.current = options?.current;
-  }
-}
-
-/**
- * Error for model access restriction (403 upgrade_required).
- */
-export class AIModelRestrictionError extends AIError {
-  constructor(
-    message: string = 'This model requires a Pro subscription.',
-    options?: { requestId?: string }
-  ) {
-    super(message, { statusCode: 403, requestId: options?.requestId });
-    this.name = 'AIModelRestrictionError';
-  }
-}
-
-/**
  * Error for AI provider failures (OpenAI, Google, Anthropic API errors).
  */
 export class AIProviderError extends AIError {
@@ -152,14 +119,6 @@ export function isAIProviderError(error: unknown): error is AIProviderError {
 
 export function isTimeoutError(error: unknown): error is TimeoutError {
   return error instanceof TimeoutError || (error instanceof Error && error.name === 'TimeoutError');
-}
-
-export function isAISubscriptionError(error: unknown): error is AISubscriptionError {
-  return error instanceof AISubscriptionError || (error instanceof Error && error.name === 'AISubscriptionError');
-}
-
-export function isAIModelRestrictionError(error: unknown): error is AIModelRestrictionError {
-  return error instanceof AIModelRestrictionError || (error instanceof Error && error.name === 'AIModelRestrictionError');
 }
 
 /**
@@ -249,31 +208,13 @@ async function callSupabaseAI(
 
     // Handle Supabase function invoke errors
     if (error) {
-      const errorPayload = await extractSupabaseErrorPayload(error);
-      const errorDetails = parseSupabaseError(error, requestId, errorPayload);
+      const errorDetails = parseSupabaseError(error, requestId);
       throw errorDetails;
     }
 
     // Handle response with error field (from edge function)
     if (data?.error) {
       const errorMessage = data.error as string;
-      const errorCode = data.code as string | undefined;
-
-      // Subscription errors (402 / trial expired / limit reached)
-      if (errorCode === 'trial_expired' || errorCode === 'limit_reached') {
-        throw new AISubscriptionError(errorMessage, {
-          statusCode: 402,
-          requestId,
-          code: errorCode,
-          limit: data.limit as number | undefined,
-          current: data.current as number | undefined,
-        });
-      }
-
-      // Model restriction (403 / upgrade_required)
-      if (errorCode === 'upgrade_required') {
-        throw new AIModelRestrictionError(errorMessage, { requestId });
-      }
 
       // Rate limit error from edge function
       if (data.limit !== undefined || errorMessage.includes('rate limit') || errorMessage.includes('limit exceeded')) {
@@ -319,56 +260,22 @@ async function callSupabaseAI(
 /**
  * Parse Supabase FunctionsHttpError into appropriate AIError subclass.
  */
-function getSupabaseErrorStatus(error: { context?: unknown }): number | undefined {
-  const context = error.context;
-  if (context && typeof context === 'object' && 'status' in context) {
-    const status = (context as { status?: unknown }).status;
-    if (typeof status === 'number') return status;
-  }
-  return undefined;
-}
-
-async function extractSupabaseErrorPayload(error: { context?: unknown }): Promise<Record<string, unknown> | null> {
-  const context = error.context;
-  if (!context || typeof context !== 'object') return null;
-
-  const responseLike = context as {
-    clone?: () => { json?: () => Promise<unknown> };
-    json?: () => Promise<unknown>;
-  };
-
-  const parser = typeof responseLike.clone === 'function'
-    ? responseLike.clone()
-    : responseLike;
-
-  if (typeof parser.json !== 'function') return null;
-
-  try {
-    const payload = await parser.json();
-    return payload && typeof payload === 'object' ? payload as Record<string, unknown> : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseSupabaseError(
-  error: { message: string; context?: unknown },
-  requestId: string,
-  payload?: Record<string, unknown> | null
-): AIError {
-  const payloadMessage = typeof payload?.error === 'string' ? payload.error : undefined;
-  const message = payloadMessage || error.message || 'Unknown error';
+function parseSupabaseError(error: { message: string; context?: { status?: number } }, requestId: string): AIError {
+  const message = error.message || 'Unknown error';
   // Try to extract status code from error context or message
-  let statusCode: number | undefined = getSupabaseErrorStatus(error);
+  let statusCode: number | undefined;
 
-  // Parse status from message patterns if status is missing
+  // Check for status in error context (Supabase v2)
+  if (error.context?.status) {
+    statusCode = error.context.status;
+  }
+
+  // Parse status from message patterns
   if (message.includes('non-2xx') || message.includes('status code')) {
     // Common message: "Edge Function returned a non-2xx status code"
     // Check for hints in message
     if (message.includes('401') || message.includes('Unauthorized')) {
       statusCode = 401;
-    } else if (message.includes('402')) {
-      statusCode = 402;
     } else if (message.includes('403') || message.includes('Forbidden')) {
       statusCode = 403;
     } else if (message.includes('429') || message.includes('rate limit')) {
@@ -379,43 +286,15 @@ function parseSupabaseError(
   }
 
   // Return appropriate error type based on status code
-  if (statusCode === 401) {
+  if (statusCode === 401 || statusCode === 403) {
     return new AIAuthError(
       'Authentication failed. Your session may have expired. Please sign in again.',
       { statusCode, requestId }
     );
   }
 
-  if (statusCode === 402) {
-    const code = typeof payload?.code === 'string' ? payload.code : undefined;
-    return new AISubscriptionError(message, {
-      statusCode,
-      requestId,
-      code,
-      limit: typeof payload?.limit === 'number' ? payload.limit : undefined,
-      current: typeof payload?.current === 'number' ? payload.current : undefined,
-    });
-  }
-
-  if (statusCode === 403) {
-    const code = typeof payload?.code === 'string' ? payload.code : undefined;
-    // Could be auth failure or model restriction
-    if (code === 'upgrade_required' || message.includes('model') || message.includes('upgrade')) {
-      return new AIModelRestrictionError(message, { requestId });
-    }
-    return new AIAuthError(
-      message || 'Access denied. Your session may have expired. Please sign in again.',
-      { statusCode, requestId }
-    );
-  }
-
   if (statusCode === 429) {
-    return new AIRateLimitError(message, {
-      statusCode,
-      requestId,
-      limit: typeof payload?.limit === 'number' ? payload.limit : undefined,
-      current: typeof payload?.current === 'number' ? payload.current : undefined,
-    });
+    return new AIRateLimitError('Too many requests. Please wait and try again.', { statusCode, requestId });
   }
 
   // Default: return generic error with helpful message
