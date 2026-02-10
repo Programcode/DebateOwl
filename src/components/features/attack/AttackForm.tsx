@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { WikiSourcesToggle } from '@/components/features/shared/WikiSourcesToggle';
 
 interface AttackFormProps {
   onSubmit: (data: AttackInput) => void;
@@ -130,6 +131,9 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
               />
             </div>
           </div>
+
+          {/* Wiki Sources Toggle */}
+          <WikiSourcesToggle />
 
           {/* Submit Button */}
           <Button type="submit" variant="destructive" className="w-full h-12" disabled={isLoading}>

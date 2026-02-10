@@ -67,6 +67,39 @@ export class AIRateLimitError extends AIError {
 }
 
 /**
+ * Error for subscription limit reached (402) or trial expired.
+ */
+export class AISubscriptionError extends AIError {
+  readonly code?: string;
+  readonly limit?: number;
+  readonly current?: number;
+
+  constructor(
+    message: string = 'Subscription required.',
+    options?: { statusCode?: number; requestId?: string; code?: string; limit?: number; current?: number }
+  ) {
+    super(message, { statusCode: options?.statusCode ?? 402, requestId: options?.requestId });
+    this.name = 'AISubscriptionError';
+    this.code = options?.code;
+    this.limit = options?.limit;
+    this.current = options?.current;
+  }
+}
+
+/**
+ * Error for model access restriction (403 upgrade_required).
+ */
+export class AIModelRestrictionError extends AIError {
+  constructor(
+    message: string = 'This model requires a Pro subscription.',
+    options?: { requestId?: string }
+  ) {
+    super(message, { statusCode: 403, requestId: options?.requestId });
+    this.name = 'AIModelRestrictionError';
+  }
+}
+
+/**
  * Error for AI provider failures (OpenAI, Google, Anthropic API errors).
  */
 export class AIProviderError extends AIError {
@@ -119,6 +152,14 @@ export function isAIProviderError(error: unknown): error is AIProviderError {
 
 export function isTimeoutError(error: unknown): error is TimeoutError {
   return error instanceof TimeoutError || (error instanceof Error && error.name === 'TimeoutError');
+}
+
+export function isAISubscriptionError(error: unknown): error is AISubscriptionError {
+  return error instanceof AISubscriptionError || (error instanceof Error && error.name === 'AISubscriptionError');
+}
+
+export function isAIModelRestrictionError(error: unknown): error is AIModelRestrictionError {
+  return error instanceof AIModelRestrictionError || (error instanceof Error && error.name === 'AIModelRestrictionError');
 }
 
 /**
@@ -215,6 +256,23 @@ async function callSupabaseAI(
     // Handle response with error field (from edge function)
     if (data?.error) {
       const errorMessage = data.error as string;
+      const errorCode = data.code as string | undefined;
+
+      // Subscription errors (402 / trial expired / limit reached)
+      if (errorCode === 'trial_expired' || errorCode === 'limit_reached') {
+        throw new AISubscriptionError(errorMessage, {
+          statusCode: 402,
+          requestId,
+          code: errorCode,
+          limit: data.limit as number | undefined,
+          current: data.current as number | undefined,
+        });
+      }
+
+      // Model restriction (403 / upgrade_required)
+      if (errorCode === 'upgrade_required') {
+        throw new AIModelRestrictionError(errorMessage, { requestId });
+      }
 
       // Rate limit error from edge function
       if (data.limit !== undefined || errorMessage.includes('rate limit') || errorMessage.includes('limit exceeded')) {
@@ -286,9 +344,24 @@ function parseSupabaseError(error: { message: string; context?: { status?: numbe
   }
 
   // Return appropriate error type based on status code
-  if (statusCode === 401 || statusCode === 403) {
+  if (statusCode === 401) {
     return new AIAuthError(
       'Authentication failed. Your session may have expired. Please sign in again.',
+      { statusCode, requestId }
+    );
+  }
+
+  if (statusCode === 402) {
+    return new AISubscriptionError('Subscription required to continue.', { statusCode, requestId });
+  }
+
+  if (statusCode === 403) {
+    // Could be auth failure or model restriction
+    if (message.includes('model') || message.includes('upgrade')) {
+      return new AIModelRestrictionError('This model requires a Pro subscription.', { requestId });
+    }
+    return new AIAuthError(
+      'Access denied. Your session may have expired. Please sign in again.',
       { statusCode, requestId }
     );
   }
