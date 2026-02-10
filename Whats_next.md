@@ -3,17 +3,6 @@
 This document details the features selected for the next phase of development, prioritized by strategic importance.
 
 
-
-### 1.3 Export to Google Docs
-**Goal:** Direct export of cases to Google Docs.
-**Why:** Easier collaboration and sharing with teammates.
-
-**Technical Implementation:**
-- **Auth:** Expand Google OAuth scopes to include `drive.file`.
-- **Backend:** New Edge Function `export-gdoc` using Google Drive API.
-- **Conversion:** Convert internal HTML/Markdown format to Google Docs structure.
-- **Style:** Professional, minimalist formatting (black/white, standard fonts) similar to legal briefs, avoiding UI colors.
-
 ---
 
 ## 2. Medium Term (Months 1-3)
@@ -46,32 +35,18 @@ This document details the features selected for the next phase of development, p
 
 ## 3. Long Term (Months 3+)
 
-### 3.1 Stripe Payments (Monetization)
 **Goal:** Sustainable revenue model with tiered access.
 **Why:** AI costs scale with usage; free tier is not sustainable long-term.
 
-**Usage Limits & Tiers:**
-1.  **Free Trial (Default):**
-    - Duration: 3 Days.
-    - Limit: 5 uses/day.
-2.  **Pro Subscription ($5/month):**
-    - Limit: 50 uses/day.
-    - Features: Access to Deep Research and Advanced Models.
+> [!IMPORTANT]
+> A comprehensive, 450+ line implementation plan has been created at [stripe_implementation.md](stripe_implementation.md). This file details every step of the integration including manual setup, database changes, and code.
 
-**Promo Code System:**
-- Admin can generate custom codes (e.g., "CIT").
-- Codes grant special access (e.g., "1 month free trial with 15 uses/day").
-- Codes used for demos and partners.
+**Key Features (Summary):**
+- **Free Tier:** 5 requests/day.
+- **Pro Tier ($5/mo):** 50 requests/day + Advanced Models (Claude 3.5 Sonnet, GPT-4o).
+- **Trial:** 3-Day Cardless Free Trial.
+- **Promo Codes:** Flexible system for overrides and discounts.
 
-**Technical Implementation:**
-- **Provider:** Stripe Checkout.
-- **Database:**
-  - Update `rate_limits` to handle custom daily limits.
-  - New table `promo_codes` (code, duration_days, daily_limit, max_redemptions).
-  - Add `subscription_status`, `trial_ends_at`, `custom_limit` to `profiles`.
-- **Backend:**
-  - `stripe-webhook` for subscription updates.
-  - Middleware logic: Check `custom_limit` > `subscription_tier` > `default_trial`.
 
 ### 3.2 Native Mobile Apps (Accessibility)
 **Goal:** Fully native iOS and Android experience.

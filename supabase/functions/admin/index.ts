@@ -324,6 +324,120 @@ Deno.serve(async (req) => {
             });
         }
 
+        // GET /admin?action=promo-codes - List all promo codes
+        if (action === "promo-codes") {
+            const { data } = await supabase
+                .from("promo_codes")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            return new Response(JSON.stringify({ codes: data || [] }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=create-promo - Create a promo code
+        if (action === "create-promo" && req.method === "POST") {
+            const body = await req.json();
+            const { code, type, config, maxRedemptions } = body;
+
+            if (!code || !type) {
+                return new Response(JSON.stringify({ error: "Code and type are required" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const validTypes = ["extended_trial", "extra_limit", "discount", "free_month"];
+            if (!validTypes.includes(type)) {
+                return new Response(JSON.stringify({ error: "Invalid promo type" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { error } = await supabase.from("promo_codes").insert({
+                code: code.toUpperCase(),
+                type,
+                config: config || {},
+                max_redemptions: maxRedemptions || null,
+                created_by: user.id,
+            });
+
+            if (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=toggle-promo - Enable/disable a promo code
+        if (action === "toggle-promo" && req.method === "POST") {
+            const body = await req.json();
+            const { id, isActive } = body;
+
+            if (!id) {
+                return new Response(JSON.stringify({ error: "Promo code ID is required" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { error } = await supabase.from("promo_codes").update({
+                is_active: isActive,
+            }).eq("id", id);
+
+            if (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // GET /admin?action=subscribers - List all subscribers with tier info
+        if (action === "subscribers") {
+            const { data: settings } = await supabase
+                .from("user_settings")
+                .select("user_id, subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at");
+
+            const { data: subs } = await supabase
+                .from("subscriptions")
+                .select("user_id, stripe_customer_id, status, current_period_end");
+
+            const { data: authUsers } = await supabase.auth.admin.listUsers();
+            const emailMap = new Map<string, string>();
+            authUsers?.users?.forEach(u => emailMap.set(u.id, u.email || "unknown"));
+
+            const subMap = new Map<string, { stripe_customer_id: string; status: string; current_period_end: string }>();
+            subs?.forEach(s => subMap.set(s.user_id, s));
+
+            const subscribers = (settings || []).map(s => {
+                const sub = subMap.get(s.user_id);
+                return {
+                    user_id: s.user_id,
+                    email: emailMap.get(s.user_id) || "unknown",
+                    subscription_tier: s.subscription_tier || "trial",
+                    stripe_customer_id: sub?.stripe_customer_id || null,
+                    status: sub?.status || null,
+                    current_period_end: sub?.current_period_end || null,
+                };
+            });
+
+            return new Response(JSON.stringify({ subscribers }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
         return new Response(JSON.stringify({ error: "Unknown action" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
