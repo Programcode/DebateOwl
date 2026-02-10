@@ -5,6 +5,7 @@ export const AskInputSchema = z.object({
   message: z.string().min(1, 'Message is required'),
   mode: z.enum(['general', 'clarify', 'summarize', 'proscons', 'argumentmap']),
   citationMode: z.boolean(),
+  webSearch: z.boolean().optional(),
   conversationHistory: z.array(z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string(),

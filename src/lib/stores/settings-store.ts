@@ -10,12 +10,14 @@ interface SettingsState {
   theme: 'light' | 'dark' | 'system';
   customSystemPrompt?: string;
   featureConfigs: Record<FeatureTab, ProviderConfig>;
+  wikiResearchEnabled: boolean;
 
   setLanguage: (lang: 'en' | 'es') => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
   getFeatureConfig: (feature: FeatureTab) => ProviderConfig;
   setSystemPrompt: (prompt: string) => void;
+  setWikiResearchEnabled: (enabled: boolean) => void;
   hydrateFromServer: () => Promise<void>;
   resetLocalData: () => void;
 }
@@ -61,6 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'system',
       customSystemPrompt: undefined as string | undefined,
       featureConfigs: getDefaultFeatureConfigs(),
+      wikiResearchEnabled: false,
 
       setLanguage: (language) => {
         set({ language });
@@ -88,6 +91,9 @@ export const useSettingsStore = create<SettingsState>()(
           feature_configs: get().featureConfigs,
           custom_system_prompt: prompt || null,
         });
+      },
+      setWikiResearchEnabled: (wikiResearchEnabled) => {
+        set({ wikiResearchEnabled });
       },
 
       setFeatureConfig: (feature, config) => {
@@ -128,6 +134,7 @@ export const useSettingsStore = create<SettingsState>()(
           theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
           featureConfigs: mergedConfigs,
           customSystemPrompt: data.custom_system_prompt || undefined,
+          wikiResearchEnabled: get().wikiResearchEnabled,
         });
       },
       resetLocalData: () => {
@@ -136,6 +143,7 @@ export const useSettingsStore = create<SettingsState>()(
           theme: 'system',
           customSystemPrompt: undefined,
           featureConfigs: getDefaultFeatureConfigs(),
+          wikiResearchEnabled: false,
         });
       },
     }),
@@ -148,6 +156,7 @@ export const useSettingsStore = create<SettingsState>()(
         state.featureConfigs = merged;
         if (!state.language) state.language = 'en';
         if (!state.theme) state.theme = 'system';
+        if (typeof state.wikiResearchEnabled !== 'boolean') state.wikiResearchEnabled = false;
       },
     }
   )

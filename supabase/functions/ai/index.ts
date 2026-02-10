@@ -58,6 +58,12 @@ const DEEP_RESEARCH: ResearchOptions = {
   overallTimeoutMs: 45000,
 };
 
+const ASK_RESEARCH: ResearchOptions = {
+  maxFollowUpQueries: 1,
+  maxUrlsToRead: 3,
+  overallTimeoutMs: 25000,
+};
+
 // Generate unique request ID for tracing
 function generateRequestId(): string {
   return `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -381,6 +387,54 @@ const QUERY_GENERATION_PROMPT = `You are a research assistant. Based on the init
 Return JSON: { "queries": ["query1", "query2", "query3"] }
 
 Keep queries specific, factual, and focused on statistics, studies, or official sources.`;
+
+const ASK_SEARCH_DECISION_PROMPT = `You decide whether a debate coaching answer needs live web research.
+
+Return strict JSON:
+{
+  "shouldSearch": boolean,
+  "query": "string"
+}
+
+Set shouldSearch=true when the user asks for current events, recent stats, real-world examples, laws/policies, or anything time-sensitive.
+Set shouldSearch=false for timeless coaching (strategy, structure, delivery, framing).
+When shouldSearch=true, provide one concise search query.
+Do not add any fields.`;
+
+function likelyNeedsFreshWebData(text: string): boolean {
+  return /\b(latest|today|current|recent|new|newest|update|updated|news|202[0-9]|law|policy|gdp|inflation|ceo|president|prime minister|market|stock|price|war|conflict)\b/i.test(text);
+}
+
+async function decideAskSearch(
+  message: string,
+  history: Array<{ role: string; content: string }>,
+  provider: Provider,
+  model: string
+): Promise<{ shouldSearch: boolean; query: string }> {
+  const context = history.slice(-4).map((m) => `${m.role}: ${m.content}`).join("\n");
+  const prompt = `${context ? `Recent conversation:\n${context}\n\n` : ""}User message:\n${message}`;
+
+  try {
+    const decision = await callAI(provider, model, ASK_SEARCH_DECISION_PROMPT, [{ role: "user", content: prompt }], 0);
+    if (decision && typeof decision === "object") {
+      const parsed = decision as { shouldSearch?: unknown; query?: unknown };
+      const shouldSearch = Boolean(parsed.shouldSearch);
+      const query = typeof parsed.query === "string" ? parsed.query.trim().slice(0, 240) : "";
+      if (shouldSearch) {
+        return { shouldSearch: true, query: query || message.slice(0, 240) };
+      }
+      return { shouldSearch: false, query: "" };
+    }
+  } catch (err) {
+    console.warn("[ASK] Search decision failed:", err);
+  }
+
+  const fallbackShouldSearch = likelyNeedsFreshWebData(message);
+  return {
+    shouldSearch: fallbackShouldSearch,
+    query: fallbackShouldSearch ? message.slice(0, 240) : "",
+  };
+}
 
 async function generateFollowUpQueries(
   claim: string,
@@ -900,13 +954,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ASK: Read URLs mentioned in messages
+    // ASK: Optionally run web search and include URL context from chat
     if (feature === "ask") {
       const history = (sanitizedInput.history as Array<{ role: string; content: string }>) || [];
       const message = String(sanitizedInput.message || "");
+      const mode = String(sanitizedInput.mode || "general");
+      const citationMode = Boolean(sanitizedInput.citationMode);
+      const webSearchEnabled = Boolean(sanitizedInput.webSearch);
+
+      // 1) Read URLs already shared in chat to ground the response in user-provided material
       const urls = new Set<string>();
       extractUrls(message).forEach((u) => urls.add(u));
       history.slice(-3).forEach((m) => extractUrls(m.content).forEach((u) => urls.add(u)));
+
       let urlContext = "";
       if (urls.size > 0) {
         const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
@@ -915,7 +975,23 @@ Deno.serve(async (req) => {
         }));
         urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join("\n");
       }
-      const prompt = `Message: ${message}${urlContext}\nMode: ${sanitizedInput.mode}`;
+
+      // 2) Optional web search in Ask mode (AI decides when this message needs fresh data)
+      let webSearchContext = "";
+      if (webSearchEnabled) {
+        const searchDecision = await decideAskSearch(message, history, provider, model);
+        if (searchDecision.shouldSearch) {
+          const research = await deepResearch(searchDecision.query, "", provider, model, ASK_RESEARCH);
+          if (research.searches.length > 0 || research.readContent.length > 0) {
+            webSearchContext = `\n\n${buildResearchContext(research)}`;
+          }
+        }
+      }
+
+      const prompt = `Message: ${message}
+Mode: ${mode}
+Citation Mode: ${citationMode ? "ON - be conservative and source claims when possible" : "OFF"}
+Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
 

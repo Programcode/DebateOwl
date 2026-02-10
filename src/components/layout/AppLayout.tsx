@@ -1,7 +1,8 @@
 // src/components/layout/AppLayout.tsx
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import {
+  Home,
   Sparkles,
   Swords,
   Lightbulb,
@@ -21,7 +22,8 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navItems = [
-  { path: '/app', label: 'Generate', icon: Sparkles, description: 'Build arguments' },
+  { path: '/app', label: 'Home', icon: Home, description: 'Choose a mode' },
+  { path: '/app/generate', label: 'Generate', icon: Sparkles, description: 'Build arguments' },
   { path: '/app/attack', label: 'Attack', icon: Swords, description: 'Find weaknesses' },
   { path: '/app/brainstorm', label: 'Brainstorm', icon: Lightbulb, description: 'Explore ideas' },
   { path: '/app/factoids', label: 'Factoids', icon: BookOpen, description: 'Find evidence' },
@@ -34,7 +36,6 @@ const navItems = [
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

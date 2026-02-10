@@ -148,6 +148,7 @@ export function buildAskPrompt(input: {
   message: string;
   mode: string;
   citationMode: boolean;
+  webSearch?: boolean;
   conversationHistory: { role: string; content: string }[];
 }): string {
   const historyText = input.conversationHistory
@@ -158,6 +159,7 @@ export function buildAskPrompt(input: {
 
 MODE: ${input.mode}
 CITATION MODE: ${input.citationMode ? 'ON - Only make claims you can source' : 'OFF'}
+WEB SEARCH: ${input.webSearch ? 'ON' : 'OFF'}
 
 Respond helpfully while following your coaching guidelines.`;
 }
