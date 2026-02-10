@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
 import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
+import { useSettingsStore } from '@/lib/stores/settings-store';
+import { BookMarked } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -282,14 +284,25 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               </Button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <Quote className="h-4 w-4 text-muted-foreground" />
-            <Label htmlFor="citation-mode" className="text-xs">Citations</Label>
-            <Switch
-              id="citation-mode"
-              checked={citationMode}
-              onCheckedChange={setCitationMode}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <BookMarked className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="wiki-mode" className="text-xs">Wiki</Label>
+              <Switch
+                id="wiki-mode"
+                checked={useSettingsStore.getState().wikiResearchEnabled}
+                onCheckedChange={(checked) => useSettingsStore.getState().setWikiResearchEnabled(checked)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Quote className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="citation-mode" className="text-xs">Citations</Label>
+              <Switch
+                id="citation-mode"
+                checked={citationMode}
+                onCheckedChange={setCitationMode}
+              />
+            </div>
           </div>
         </div>
 

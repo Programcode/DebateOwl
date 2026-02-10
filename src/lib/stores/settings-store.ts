@@ -10,12 +10,14 @@ interface SettingsState {
   theme: 'light' | 'dark' | 'system';
   customSystemPrompt?: string;
   featureConfigs: Record<FeatureTab, ProviderConfig>;
+  wikiResearchEnabled: boolean;
 
   setLanguage: (lang: 'en' | 'es') => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
   getFeatureConfig: (feature: FeatureTab) => ProviderConfig;
   setSystemPrompt: (prompt: string) => void;
+  setWikiResearchEnabled: (enabled: boolean) => void;
   hydrateFromServer: () => Promise<void>;
   resetLocalData: () => void;
 }
@@ -61,6 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'system',
       customSystemPrompt: undefined as string | undefined,
       featureConfigs: getDefaultFeatureConfigs(),
+      wikiResearchEnabled: false,
 
       setLanguage: (language) => {
         set({ language });
@@ -88,6 +91,9 @@ export const useSettingsStore = create<SettingsState>()(
           feature_configs: get().featureConfigs,
           custom_system_prompt: prompt || null,
         });
+      },
+      setWikiResearchEnabled: (enabled) => {
+        set({ wikiResearchEnabled: enabled });
       },
 
       setFeatureConfig: (feature, config) => {
@@ -136,6 +142,7 @@ export const useSettingsStore = create<SettingsState>()(
           theme: 'system',
           customSystemPrompt: undefined,
           featureConfigs: getDefaultFeatureConfigs(),
+          wikiResearchEnabled: false,
         });
       },
     }),
