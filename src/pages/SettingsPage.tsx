@@ -1,11 +1,9 @@
 // src/pages/SettingsPage.tsx
-import { useState } from 'react';
-import { Settings, Cpu, Thermometer, Zap, Lock, Trash2, Crown, CreditCard } from 'lucide-react';
+import { Settings, Cpu, Thermometer, Zap, Lock, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -19,10 +17,6 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
-import { useSubscription } from '@/hooks/use-subscription';
-import { redirectToPortal } from '@/lib/stripe';
-import { PricingModal } from '@/components/features/subscription/PricingModal';
-import { ModelRestrictedModal } from '@/components/features/subscription/ModelRestrictedModal';
 
 const featureLabels: Record<FeatureTab, { name: string; description: string; color: string }> = {
   generate: { name: 'Generate', description: 'Argument generation', color: 'bg-primary' },
@@ -34,35 +28,26 @@ const featureLabels: Record<FeatureTab, { name: string; description: string; col
 
 const features: FeatureTab[] = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'];
 
-const tierLabels: Record<string, { label: string; color: string }> = {
-  trial: { label: 'Free Trial', color: 'bg-blue-500' },
-  pro: { label: 'Pro', color: 'bg-amber-500' },
-  legacy_free: { label: 'Legacy Free', color: 'bg-green-500' },
-  expired: { label: 'Expired', color: 'bg-red-500' },
-};
-
 export default function SettingsPage() {
   const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const subscription = useSubscription();
-  const [pricingOpen, setPricingOpen] = useState(false);
-  const [modelRestrictionOpen, setModelRestrictionOpen] = useState(false);
-  const [restrictedModelName, setRestrictedModelName] = useState<string>();
-  const [portalLoading, setPortalLoading] = useState(false);
 
   const handleDeleteAllData = () => {
+    // First confirmation
     if (!confirm(`Are you sure you want to delete ALL your saved data?\n\nThis will permanently delete all cases, attacks, brainstorms, factoids, chats, and sources for ${user?.email}.\n\nThis action cannot be undone.`)) {
       return;
     }
 
+    // Second confirmation - require typing email
     const typedEmail = prompt(`To confirm deletion, please type your email address:\n${user?.email}`);
     if (typedEmail !== user?.email) {
       toast({ title: "Cancelled", description: "Email didn't match. No data was deleted." });
       return;
     }
 
+    // Perform deletion
     void clearAllData().then(() => {
       clearSession();
       localStorage.removeItem('debate-trainer-storage');
@@ -72,35 +57,6 @@ export default function SettingsPage() {
       toast({ title: "Error", description: "Failed to delete data. Please try again.", variant: "destructive" });
     });
   };
-
-  const handleManageSubscription = async () => {
-    setPortalLoading(true);
-    try {
-      await redirectToPortal();
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to open billing portal',
-        variant: 'destructive',
-      });
-      setPortalLoading(false);
-    }
-  };
-
-  const handleModelSelect = (feature: FeatureTab, modelId: string) => {
-    // Check if model is pro-only and user isn't pro
-    const provider = DEFAULT_PROVIDERS.find(p => p.id === featureConfigs[feature].provider);
-    const model = provider?.models.find(m => m.id === modelId);
-    if (model?.isProOnly && !subscription.isPro) {
-      setRestrictedModelName(model.name);
-      setModelRestrictionOpen(true);
-      return;
-    }
-    setFeatureConfig(feature, { model: modelId });
-  };
-
-  const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
-  const usagePercent = subscription.dailyLimit > 0 ? Math.min(100, (subscription.dailyUsed / subscription.dailyLimit) * 100) : 100;
 
   return (
     <div className="container py-8 px-4">
@@ -116,61 +72,6 @@ export default function SettingsPage() {
             Configure your account and AI preferences
           </p>
         </div>
-
-        {/* Subscription Status */}
-        <Card className="mb-8 border-primary/20">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
-              <CardTitle>Subscription</CardTitle>
-            </div>
-            <CardDescription>
-              Your current plan and usage
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className={`${tierInfo.color} text-white`}>{tierInfo.label}</Badge>
-                {subscription.tier === 'trial' && subscription.trialEndsAt && (
-                  <span className="text-sm text-muted-foreground">
-                    Ends {new Date(subscription.trialEndsAt).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-              {subscription.isPro ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void handleManageSubscription()}
-                  disabled={portalLoading}
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {portalLoading ? 'Loading...' : 'Manage Subscription'}
-                </Button>
-              ) : (
-                <Button size="sm" onClick={() => setPricingOpen(true)}>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Upgrade to Pro
-                </Button>
-              )}
-            </div>
-
-            {/* Usage Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Daily Usage</span>
-                <span className="font-medium">
-                  {subscription.dailyUsed} / {subscription.dailyLimit} requests
-                </span>
-              </div>
-              <Progress value={usagePercent} className="h-2" />
-              <p className="text-xs text-muted-foreground">
-                Resets at midnight UTC
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Global Settings */}
         <Card className="mb-8">
@@ -302,7 +203,7 @@ export default function SettingsPage() {
                         </Label>
                         <Select
                           value={config.model}
-                          onValueChange={(v) => handleModelSelect(feature, v)}
+                          onValueChange={(v) => setFeatureConfig(feature, { model: v })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -310,14 +211,9 @@ export default function SettingsPage() {
                           <SelectContent>
                             {selectedProvider?.models.map((model) => (
                               <SelectItem key={model.id} value={model.id}>
-                                <div className="flex items-center gap-2">
-                                  <div>
-                                    <div>{model.name}</div>
-                                    <div className="text-xs text-muted-foreground">{model.description}</div>
-                                  </div>
-                                  {model.isProOnly && !subscription.isPro && (
-                                    <Badge variant="outline" className="text-[10px] shrink-0">Pro</Badge>
-                                  )}
+                                <div>
+                                  <div>{model.name}</div>
+                                  <div className="text-xs text-muted-foreground">{model.description}</div>
                                 </div>
                               </SelectItem>
                             ))}
@@ -369,23 +265,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-      </div>
 
-      {/* Modals */}
-      <PricingModal
-        open={pricingOpen}
-        onOpenChange={setPricingOpen}
-        onPromoRedeemed={() => void subscription.refresh()}
-      />
-      <ModelRestrictedModal
-        open={modelRestrictionOpen}
-        onOpenChange={setModelRestrictionOpen}
-        modelName={restrictedModelName}
-        onUpgrade={() => {
-          setModelRestrictionOpen(false);
-          setPricingOpen(true);
-        }}
-      />
+      </div>
     </div>
   );
 }

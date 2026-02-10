@@ -3,8 +3,6 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
 import { askChat, isTimeoutError } from '@/lib/ai/client';
-import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AskPage() {
@@ -13,7 +11,6 @@ export default function AskPage() {
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
 
   const handleSend = async (
     message: string,
@@ -76,9 +73,8 @@ export default function AskPage() {
     } catch (error) {
       console.error(error);
 
-      if (subError.handleSubscriptionError(error)) {
-        // Subscription error handled by modal
-      } else if (isTimeoutError(error)) {
+      // Handle timeout errors with a specific message
+      if (isTimeoutError(error)) {
         toast({
           title: "Request Timed Out",
           description: "The request took too long. Please try again.",
@@ -117,27 +113,6 @@ export default function AskPage() {
           onSaveSource={handleSaveToLibrary}
         />
       </div>
-
-      <LimitReachedModal
-        open={subError.limitModalOpen}
-        onOpenChange={subError.setLimitModalOpen}
-        variant={subError.limitModalVariant}
-        limit={subError.limitModalLimit}
-        current={subError.limitModalCurrent}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-      />
-      <ModelRestrictedModal
-        open={subError.modelModalOpen}
-        onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => {
-          subError.setModelModalOpen(false);
-          subError.setPricingModalOpen(true);
-        }}
-      />
-      <PricingModal
-        open={subError.pricingModalOpen}
-        onOpenChange={subError.setPricingModalOpen}
-      />
     </div>
   );
 }
