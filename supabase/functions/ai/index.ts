@@ -46,12 +46,6 @@ interface ResearchOptions {
   overallTimeoutMs: number;   // Hard timeout for entire research
 }
 
-const LIGHT_RESEARCH: ResearchOptions = {
-  maxFollowUpQueries: 0,
-  maxUrlsToRead: 2,
-  overallTimeoutMs: 20000,
-};
-
 const DEEP_RESEARCH: ResearchOptions = {
   maxFollowUpQueries: 3,
   maxUrlsToRead: 5,
@@ -89,13 +83,33 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// ============== RATE LIMITING ==============
+// ============== RATE LIMITING & SUBSCRIPTION GATING ==============
+
+// Pro-only models: require active subscription
+const PRO_MODELS = new Set([
+  "gpt-4o",
+  "claude-3-5-sonnet-latest",
+  "claude-3-opus-20240229",
+  "gemini-1.5-pro",
+  "gemini-2.0-pro-exp",
+  "gemini-3-pro-preview",
+]);
 
 interface RateLimitResult {
   allowed: boolean;
   reason?: string;
   limit?: number;
   current?: number;
+  code?: "limit_reached" | "trial_expired" | "banned" | "upgrade_required";
+  statusCode?: number;
+}
+
+interface SubscriptionInfo {
+  tier: string; // 'trial' | 'pro' | 'legacy_free' | 'expired'
+  dailyLimit: number;
+  canAccessProModels: boolean;
+  trialEndsAt: string | null;
+  gracePeriodEndsAt: string | null;
 }
 
 async function checkUserBanned(userId: string): Promise<boolean> {
@@ -131,19 +145,91 @@ async function getGlobalPrompt(feature: string): Promise<string | null> {
   return allPrompt?.prompt_text || null;
 }
 
-async function checkRateLimit(userId: string | null): Promise<RateLimitResult> {
+async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
+  const { data: user } = await supabase
+    .from("user_settings")
+    .select("subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at")
+    .eq("user_id", userId)
+    .single();
+
+  if (!user) {
+    // No settings row — treat as new trial user
+    return { tier: "trial", dailyLimit: 5, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
+  }
+
+  const tier = user.subscription_tier || "trial";
+  const now = new Date();
+
+  // Legacy free users in grace period get pro-level access
+  if (tier === "legacy_free") {
+    const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
+    if (graceEnd && now < graceEnd) {
+      const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+      return { tier: "legacy_free", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    }
+    // Grace period expired — treat as expired
+    return { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+  }
+
+  // Pro subscribers
+  if (tier === "pro") {
+    const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+    return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+  }
+
+  // Trial users
+  if (tier === "trial") {
+    const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
+    if (trialEnd && now < trialEnd) {
+      const limit = user.daily_limit_override ? Math.max(5, user.daily_limit_override) : 5;
+      return { tier: "trial", dailyLimit: limit, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    }
+    // Trial expired
+    return { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+  }
+
+  // Expired
+  return { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+}
+
+async function checkRateLimit(userId: string | null, model?: string): Promise<RateLimitResult> {
   if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
 
   try {
     // First check if user is banned
     const isBanned = await checkUserBanned(userId);
     if (isBanned) {
-      return { allowed: false, reason: "Your account has been suspended. Please contact support." };
+      return { allowed: false, reason: "Your account has been suspended. Please contact support.", code: "banned", statusCode: 403 };
     }
 
-    // Get user's daily request count
+    // Get subscription info
+    const sub = await getSubscriptionInfo(userId);
+
+    // Check if trial/access expired (limit = 0)
+    if (sub.tier === "expired" && sub.dailyLimit === 0) {
+      return {
+        allowed: false,
+        reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.",
+        code: "trial_expired",
+        limit: 0,
+        current: 0,
+        statusCode: 402,
+      };
+    }
+
+    // Check model access
+    if (model && PRO_MODELS.has(model) && !sub.canAccessProModels) {
+      return {
+        allowed: false,
+        reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.",
+        code: "upgrade_required",
+        statusCode: 403,
+      };
+    }
+
+    // Count today's requests (UTC)
     const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    todayStart.setUTCHours(0, 0, 0, 0);
 
     const { count, error: countError } = await supabase
       .from("ai_requests")
@@ -158,34 +244,19 @@ async function checkRateLimit(userId: string | null): Promise<RateLimitResult> {
 
     const currentCount = count || 0;
 
-    // Get user-specific limit, or fall back to global limit
-    const { data: userLimit } = await supabase
-      .from("rate_limits")
-      .select("limit_value")
-      .eq("user_id", userId)
-      .eq("limit_type", "daily_requests")
-      .single();
-
-    if (userLimit) {
-      if (currentCount >= userLimit.limit_value) {
-        return { allowed: false, reason: "Daily request limit exceeded", limit: userLimit.limit_value, current: currentCount };
-      }
-      return { allowed: true, limit: userLimit.limit_value, current: currentCount };
+    // Check against subscription limit
+    if (sub.dailyLimit > 0 && currentCount >= sub.dailyLimit) {
+      return {
+        allowed: false,
+        reason: `You've used all ${sub.dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`,
+        code: "limit_reached",
+        limit: sub.dailyLimit,
+        current: currentCount,
+        statusCode: 402,
+      };
     }
 
-    // Check global limit
-    const { data: globalLimit } = await supabase
-      .from("rate_limits")
-      .select("limit_value")
-      .is("user_id", null)
-      .eq("limit_type", "daily_requests")
-      .single();
-
-    if (globalLimit && currentCount >= globalLimit.limit_value) {
-      return { allowed: false, reason: "Daily request limit exceeded", limit: globalLimit.limit_value, current: currentCount };
-    }
-
-    return { allowed: true, limit: globalLimit?.limit_value, current: currentCount };
+    return { allowed: true, limit: sub.dailyLimit, current: currentCount };
   } catch (err) {
     console.warn("[RATE LIMIT] Check failed:", err);
     return { allowed: true }; // Fail open
@@ -623,46 +694,60 @@ function extractUrls(text: string) {
 
 // ============== PROMPTS ==============
 
-const GENERATE_PROMPT = `You are an expert debate coach. Generate a structured debate case in JSON format.
+// Dynamic date context for prompts - ensures AI knows the current year
+function getCurrentDateContext(): string {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+  return `CURRENT DATE: ${now.toLocaleDateString('en-US', options)} (${now.getFullYear()})`;
+}
 
-CRITICAL: The debate format is strictly:
-- Introductor (4 min): Introduces the team and presents the arguments.
-- R1 (6 min): 4 minutes of stating and reasoning arguments, followed by 2 minutes of refuting the opponent's arguments.
-- R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
-- Conclusor (3 min): Summarizes the debate and explains why this team wins.
+const GENERATE_PROMPT = `You are an experienced competitive debater and coach with years of tournament experience. Generate a tournament-ready debate case in JSON format.
 
-CRITICAL - STRICT JSON SCHEMA REQUIREMENT:
-You MUST return a valid JSON object with EXACTLY these fields. Do NOT use different field names.
-Do NOT add extra fields. Do NOT omit any fields. Follow this structure EXACTLY:
+[DATE_CONTEXT]
 
+CRITICAL CONTEXT: You have been provided with WEB RESEARCH RESULTS containing current real-world data, statistics, and sources. This research reflects the CURRENT state of affairs. USE THIS DATA as your primary source of truth - do not rely on outdated training data. Prioritize evidence from 2025-2026.
+
+DEBATE FORMAT:
+- Introductor (4 min): Sets up the debate, defines key terms, presents the team line and argument roadmap.
+- R1 (6 min): 4 min constructive (building arguments with warrants and impacts), 2 min rebuttal.
+- R2 (6 min): Extends R1's arguments, primarily focuses on clash and weighing.
+- Conclusor (3 min): Crystallizes the debate, weighs key clashes, explains why this side wins.
+
+WRITING STYLE - Sound like a real debater:
+- Use debate terminology naturally: "weighing", "impacts", "links", "warrants", "brightlines", "uniqueness", "magnitude", "probability", "timeframe"
+- Write arguments as you would speak them in round - confident, persuasive, human
+- Avoid robotic AI-speak. No "it is important to note" or "this demonstrates that"
+- Be assertive: "This matters because..." not "One might argue that..."
+
+STRICT JSON SCHEMA:
 {
   "caseStructure": {
-    "thesis": "The main thesis statement for the debate",
-    "framework": "The framework or lens through which to view the debate",
+    "thesis": "A punchy, memorable thesis statement",
+    "framework": "The lens/value through which to evaluate this debate",
     "keyDefinitions": ["definition1", "definition2"],
-    "burdenOfProof": "What we must prove to win"
+    "burdenOfProof": "Our burden - what we must prove to win the ballot"
   },
   "contentions": [
     {
       "id": "1",
-      "claim": "The main claim of this argument",
-      "reasoning": "Detailed explanation of why this claim is true. Be thorough - provide 2-3 supporting reasons with clear logical connections.",
-      "evidence": "Supporting evidence with specific examples, statistics, or expert opinions when possible",
+      "claim": "Clear, tagline-style claim",
+      "reasoning": "The warrant - WHY this claim is true. Provide 2-3 logical links with clear causation chains.",
+      "evidence": "Specific stats, studies, expert quotes FROM THE PROVIDED RESEARCH. Cite sources with dates.",
       "needsSource": false,
       "sourceQuery": "",
-      "impact": "Why this matters - explain the significance and real-world consequences"
+      "impact": "The SO WHAT - magnitude, probability, and timeframe of the harm/benefit"
     }
   ],
   "predictedOpponentCase": {
-    "likelyArguments": ["Argument opponent will make - include 5-8 likely opponent arguments"],
-    "strategicWeaknesses": ["Weakness in our case"],
-    "keyClashes": ["Main clash points"]
+    "likelyArguments": ["5-8 arguments they will run"],
+    "strategicWeaknesses": ["Honest assessment of our vulnerabilities"],
+    "keyClashes": ["Where the debate will be won or lost"]
   },
   "counters": [
     {
-      "targetArgument": "What opponent argument this counters",
-      "counterpoint": "Our counter to that argument - be specific and detailed",
-      "rebuttal": "How to phrase the rebuttal in the debate round"
+      "targetArgument": "Their argument",
+      "counterpoint": "Our response - turn, mitigate, or take out",
+      "rebuttal": "How to phrase this in round"
     }
   ],
   "metadata": {
@@ -672,146 +757,155 @@ Do NOT add extra fields. Do NOT omit any fields. Follow this structure EXACTLY:
   }
 }
 
-IMPORTANT REQUIREMENTS:
-1. The "side" in metadata must be exactly "pro" or "con".
-2. Generate 3-4 strong arguments with detailed reasoning (2-3 paragraphs each).
-3. Include 5-8 predicted opponent arguments with corresponding counters.
-4. Each argument should have substantial reasoning, evidence, and impact sections.`;
+REQUIREMENTS:
+1. Side must be exactly "pro" or "con".
+2. Generate 3-4 strong contentions with thorough warrants.
+3. Include 5-8 predicted opponent arguments with pre-written counters.
+4. USE THE WEB RESEARCH - cite real 2025-2026 statistics and sources.
+5. ALWAYS set needsSource to false.`;
 
-const ATTACK_PROMPT = `You are an expert debate judge and coach. Analyze the given debate case and provide a critical breakdown in JSON format.
+const ATTACK_PROMPT = `You are a ruthless, experienced competitive debater tasked with tearing apart an opponent's case. Analyze this case like you're prepping to destroy it in finals.
 
-CRITICAL: The debate format is strictly:
-- Introductor (4 min): Introduces the team and presents the arguments.
-- R1 (6 min): 4 minutes of stating and reasoning arguments, followed by 2 minutes of refuting the opponent's arguments.
-- R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
-- Conclusor (3 min): Summarizes the debate and explains why this team wins.
+[DATE_CONTEXT]
 
-Analyze weaknesses, fallacies, and generate cross-ex questions.
-Return JSON matching:
+CRITICAL: You have WEB RESEARCH with current 2025-2026 data. Use this to:
+- Fact-check their claims against current reality
+- Find counter-evidence and turns
+- Identify where their evidence is outdated or misrepresented
+
+DEBATE FORMAT:
+- Introductor (4 min): Intro + argument roadmap
+- R1 (6 min): 4 min constructive, 2 min rebuttal
+- R2 (6 min): Extensions + clash
+- Conclusor (3 min): Weighing + crystallization
+
+ATTACK VOCABULARY - Think like a debater:
+- "Turn" = their argument actually helps our side
+- "Mitigate" = reduce the impact/probability of their claim
+- "No link" = their causation chain is broken
+- "Non-unique" = the harm exists regardless of the motion
+- "Timeframe/Probability/Magnitude" = weighing metrics
+- "Assertion without warrant" = they said it but didn't prove it
+
+Be BRUTAL but substantive. Don't just say "this is weak" - explain exactly how to exploit it.
+
+Return JSON:
 {
-  "overallAssessment": { "score": number (0-100), "summary": "string", "strengthAreas": ["string"] },
-  "weaknesses": [{ "id": "string", "severity": "critical|major|minor", "type": "evidential|logical|structural", "description": "string", "whyWeak": "string", "howOpponentAttacks": "string", "improvedVersion": "string", "affectedQuote": "string" }],
-  "fallaciesDetected": [{ "name": "string", "location": "string", "explanation": "string" }],
-  "crossExQuestions": [{ "question": "string", "purpose": "string", "expectedTrap": "string" }],
-  "weighingAnalysis": { "currentWeighing": "string", "missingComparisons": ["string"], "improvementSuggestions": ["string"] }
+  "overallAssessment": { "score": 0-100, "summary": "Honest assessment", "strengthAreas": ["What they did right"] },
+  "weaknesses": [{ "id": "string", "severity": "critical|major|minor", "type": "evidential|logical|structural", "description": "The flaw", "whyWeak": "Why this matters", "howOpponentAttacks": "Exact words to say in round", "improvedVersion": "How to fix it", "affectedQuote": "The problematic text" }],
+  "fallaciesDetected": [{ "name": "Fallacy name", "location": "Where in case", "explanation": "How to call it out" }],
+  "crossExQuestions": [{ "question": "The trap question", "purpose": "What you're setting up", "expectedTrap": "How their answer hurts them" }],
+  "weighingAnalysis": { "currentWeighing": "Their weighing", "missingComparisons": ["What they didn't compare"], "improvementSuggestions": ["How to out-weigh them"] }
 }`;
 
-const BRAINSTORM_PROMPT = `You are a creative debate strategist. Brainstorm arguments and angles for the given motion.
+const BRAINSTORM_PROMPT = `You're in the prep room with your team before a tournament round. Brainstorm arguments like experienced competitive debaters.
 
-CRITICAL: The debate format is strictly:
-- Introductor (4 min): Introduces the team and presents the arguments.
-- R1 (6 min): 4 minutes of stating and reasoning arguments, followed by 2 minutes of refuting the opponent's arguments.
-- R2 (6 min): Builds further on R1's arguments but primarily focuses on refuting the opponent.
-- Conclusor (3 min): Summarizes the debate and explains why this team wins.
+[DATE_CONTEXT]
 
-CRITICAL - STRICT JSON SCHEMA REQUIREMENT:
-You MUST return a valid JSON object with EXACTLY these fields based on the requested outputMode.
-Do NOT use different field names. Do NOT omit required fields. Follow this structure EXACTLY:
+CRITICAL: You have WEB RESEARCH with current 2025-2026 data. Use this to:
+- Ground your ideas in current events and recent developments
+- Find unexpected angles backed by real-world evidence
+- Identify what arguments are "hot" in current discourse
 
-The Idea object structure (used in all output modes):
+DEBATE FORMAT:
+- Introductor (4 min) → R1 (6 min) → R2 (6 min) → Conclusor (3 min)
+
+BRAINSTORM LIKE A DEBATER:
+- Think about "what's the narrative?" and "what's the mechanism?"
+- Consider stakeholder analysis: who wins, who loses, who decides?
+- Look for "intuition pumps" - examples that make the argument click
+- Identify potential "turns" - where an argument could backfire
+- Think about strategic positioning: what arguments force good clashes?
+
+Idea object structure:
 {
   "id": "unique-string-id",
-  "title": "Short title for the idea",
-  "description": "Detailed description of the argument angle",
+  "title": "Punchy argument tagline",
+  "description": "The argument angle with warrant and potential evidence",
   "side": "pro" | "con" | "neutral",
   "strength": "strong" | "moderate" | "weak",
-  "tradeoffs": ["potential downside 1", "potential downside 2"],
+  "tradeoffs": ["potential downside", "how opponent might flip this"],
   "relatedTo": ["id-of-related-idea"]
 }
 
-For outputMode "topfive", return:
+For outputMode "topfive":
 {
   "needsMoreInfo": false,
   "clarifyingQuestions": [],
   "topFive": [
-    {
-      "rank": 1,
-      "idea": { /* Idea object */ },
-      "whyTop": "Explanation of why this is a top argument"
-    }
+    { "rank": 1, "idea": { /* Idea */ }, "whyTop": "Why this wins rounds" }
   ],
-  "nextSteps": ["Suggested next step 1", "Suggested next step 2"],
-  "warningsAndTradeoffs": ["Warning or tradeoff to consider"]
+  "nextSteps": ["Research to do", "Arguments to prep"],
+  "warningsAndTradeoffs": ["Watch out for..."]
 }
 
-For outputMode "mindmap", return:
+For outputMode "mindmap":
 {
   "needsMoreInfo": false,
   "clarifyingQuestions": [],
   "mindmap": [
-    {
-      "category": "Category name (e.g., Economic, Social, Political)",
-      "items": [
-        { /* Idea object */ }
-      ]
-    }
+    { "category": "Economic/Social/Political/Practical/Principled", "items": [/* Idea objects */] }
   ],
-  "nextSteps": ["Suggested next step 1"],
-  "warningsAndTradeoffs": ["Warning or tradeoff to consider"]
+  "nextSteps": [...],
+  "warningsAndTradeoffs": [...]
 }
 
-For outputMode "buckets", return:
+For outputMode "buckets":
 {
   "needsMoreInfo": false,
   "clarifyingQuestions": [],
   "buckets": [
-    {
-      "name": "Bucket name (e.g., Strong Arguments, Risky but High-Reward)",
-      "ideas": [
-        { /* Idea object */ }
-      ],
-      "keyInsight": "Main insight about this bucket of arguments"
-    }
+    { "name": "Slam Dunks/High Risk High Reward/Defensive/Creative", "ideas": [...], "keyInsight": "Strategic note" }
   ],
-  "nextSteps": ["Suggested next step 1"],
-  "warningsAndTradeoffs": ["Warning or tradeoff to consider"]
+  "nextSteps": [...],
+  "warningsAndTradeoffs": [...]
 }
 
-If the motion is unclear and you need more information, return:
-{
-  "needsMoreInfo": true,
-  "clarifyingQuestions": ["Question 1?", "Question 2?"],
-  "nextSteps": [],
-  "warningsAndTradeoffs": []
-}
+If motion is unclear: { "needsMoreInfo": true, "clarifyingQuestions": [...], "nextSteps": [], "warningsAndTradeoffs": [] }
 
-IMPORTANT:
-- Always include ALL required fields, even if empty arrays
-- Every Idea MUST have all fields: id, title, description, side, strength, tradeoffs, relatedTo
-- Generate at least 3-5 ideas for the requested output mode
-- Make ideas specific, actionable, and debate-ready`;
+Generate 3-5 debate-ready ideas with real strategic value.`;
 
-const FACTOIDS_PROMPT = `You are an expert research assistant specializing in finding verifiable evidence for debate.
+const FACTOIDS_PROMPT = `You are a debate research specialist helping a team find cuttable evidence for tournament prep.
 
-IMPORTANT: You have been provided with DEEP RESEARCH including multiple web searches and full page content from verified sources.
+[DATE_CONTEXT]
 
-For each factoid:
-1. Use ONLY information from the provided research context
-2. Include the exact URL from the source in citation.url
-3. Set citation.verified to "verified" if the source was fully read, "unverified" otherwise
-4. Be specific with statistics, dates, and figures
+CRITICAL: You have DEEP RESEARCH with 2025-2026 web search results and verified source content. PRIORITIZE RECENT DATA:
+- 2026 data is gold - use it
+- 2025 data is great
+- Pre-2024 data should only be used for historical context or if it's the definitive study
 
-Output JSON matching:
+EVIDENCE QUALITY STANDARDS:
+- Quantify whenever possible: percentages, dollar amounts, dates, sample sizes
+- Note source credibility: peer-reviewed > government > news > think tank > blog
+- Flag potential bias in sources
+- Explain methodology limitations
+
+For each factoid, think about:
+- How would a debater card this? (short claim + key stat)
+- When in a round would you use this? (constructive vs rebuttal)
+- What's the strongest way to frame this stat?
+
+Output JSON:
 {
   "factoids": [{ 
     "id": "string", 
-    "shortClaim": "string (one sentence)", 
-    "keyFigure": "string (the main statistic or data point)", 
-    "context": "string (background and methodology)", 
-    "limitations": "string", 
+    "shortClaim": "One-sentence claim suitable for a card tagline", 
+    "keyFigure": "The stat/number that makes this evidence powerful", 
+    "context": "Methodology, sample size, conditions - what makes this credible", 
+    "limitations": "Honest limitations debaters should know", 
     "citation": { 
-      "title": "string", 
-      "publisher": "string", 
-      "date": "string", 
-      "url": "string (MUST be from research context)", 
+      "title": "Article/study title", 
+      "publisher": "Organization/journal", 
+      "date": "Publication date (PRIORITIZE 2025-2026)", 
+      "url": "EXACT URL from research context", 
       "verified": "verified|unverified" 
     }, 
-    "howToUse": "string", 
-    "relevanceScore": number (0-100) 
+    "howToUse": "When and how to deploy this in a round", 
+    "relevanceScore": 0-100 
   }],
-  "searchSuggestions": ["string (additional queries for more evidence)"], 
-  "warnings": ["string"], 
-  "researchSummary": "string (brief summary of the research process)",
+  "searchSuggestions": ["Follow-up research queries"], 
+  "warnings": ["Red flags or limitations to note"], 
+  "researchSummary": "What the research found overall",
   "verificationStatus": "complete"
 }`;
 
@@ -821,7 +915,13 @@ Output JSON matching:
 { "response": "string (markdown supported)", "followUpQuestions": ["string"], "uncertainties": ["string"], "prosConsAnalysis": { "pros": [...], "cons": [...] }, "argumentMap": { "mainClaim": "string", "supportingPoints": [...], "counterpoints": [...], "assumptions": [...] } }`;
 
 async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string | null, sources?: Source[]): Promise<string> {
-  const base = feature === "generate" ? GENERATE_PROMPT : feature === "attack" ? ATTACK_PROMPT : feature === "brainstorm" ? BRAINSTORM_PROMPT : feature === "factoids" ? FACTOIDS_PROMPT : ASK_PROMPT;
+  let base = feature === "generate" ? GENERATE_PROMPT : feature === "attack" ? ATTACK_PROMPT : feature === "brainstorm" ? BRAINSTORM_PROMPT : feature === "factoids" ? FACTOIDS_PROMPT : ASK_PROMPT;
+
+  // Inject current date context for features with web research
+  const webResearchFeatures: Feature[] = ["generate", "attack", "brainstorm", "factoids"];
+  if (webResearchFeatures.includes(feature)) {
+    base = base.replace("[DATE_CONTEXT]", getCurrentDateContext());
+  }
 
   // Fetch global prompt from database (admin-configured)
   const globalPrompt = await getGlobalPrompt(feature);
@@ -835,9 +935,9 @@ async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string |
 }
 
 function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searchContext: string) {
-  if (feature === "generate") return `Motion: ${input.motion}\nSide: ${input.side}\nFormat: ${input.format}\nRole: ${input.role}\nLength: ${input.length}\nAudience: ${input.audience}\nTone: ${input.tone}`;
-  if (feature === "attack") return `Analyze this case based on the following parameters:\n\nCASE TEXT:\n"${input.caseText}"`;
-  if (feature === "brainstorm") return `Motion: ${input.motion}\nSide: ${input.side}\nOutput Mode: ${input.outputMode}\n${input.context ? `Context: ${input.context}` : ''}`;
+  if (feature === "generate") return `Motion: ${input.motion}\nSide: ${input.side}\nFormat: ${input.format}\nRole: ${input.role}\nLength: ${input.length}\nAudience: ${input.audience}\nTone: ${input.tone}\n\n${searchContext}`;
+  if (feature === "attack") return `Analyze this case based on the following parameters:\n\nCASE TEXT:\n"${input.caseText}"\n\n${searchContext}`;
+  if (feature === "brainstorm") return `Motion: ${input.motion}\nSide: ${input.side}\nOutput Mode: ${input.outputMode}\n${input.context ? `Context: ${input.context}` : ''}\n\n${searchContext}`;
   if (feature === "factoids") return `Find evidence for claim: "${input.claim}"\n\n${searchContext}\n\nRegion: ${input.region}\nSource Type: ${input.sourceType}\nTimeframe: ${input.timeframe || "Recent (last 5 years)"}\nLanguage: ${input.language}`;
   return `Message: ${input.message}\nMode: ${input.mode}`;
 }
@@ -904,16 +1004,17 @@ Deno.serve(async (req) => {
     log(requestId, "INFO", "No auth header provided, anonymous request");
   }
 
-  // Check rate limits
-  const rateLimit = await checkRateLimit(userId);
+  // Check rate limits (includes subscription gating and model access)
+  const rateLimit = await checkRateLimit(userId, model);
   if (!rateLimit.allowed) {
-    await logUsage(userId, feature, provider, model, undefined, undefined, undefined, "rate_limited");
+    await logUsage(userId, feature, provider, model, undefined, undefined, undefined, "rate_limited", rateLimit.code);
     return new Response(JSON.stringify({
       error: rateLimit.reason,
+      code: rateLimit.code,
       limit: rateLimit.limit,
       current: rateLimit.current
     }), {
-      status: 429,
+      status: rateLimit.statusCode || 429,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
@@ -1006,15 +1107,23 @@ Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}${urlContext}${webSearch
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
       const side = String(sanitizedInput.side || "pro");
 
-      // Perform light research to find supporting evidence (avoids timeout)
-      console.log("[GENERATE] Starting light research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model, LIGHT_RESEARCH);
+      // Perform deep research to find supporting evidence
+      console.log("[GENERATE] Starting deep research for motion:", motion);
+      const research = await deepResearch(motion, "", provider, model, DEEP_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      // Post-process: force needsSource to false since we provided research
+      if (output && typeof output === "object" && "contentions" in output) {
+        const contentions = (output as { contentions: Array<{ needsSource?: boolean }> }).contentions;
+        for (const c of contentions) {
+          c.needsSource = false;
+        }
+      }
 
       // Post-process: fix timestamp
       if (output && typeof output === "object" && "metadata" in output) {
@@ -1045,9 +1154,9 @@ Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}${urlContext}${webSearch
     if (feature === "brainstorm") {
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
 
-      // Perform light research to find relevant context (avoids timeout)
-      console.log("[BRAINSTORM] Starting light research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model, LIGHT_RESEARCH);
+      // Perform deep research to find relevant context
+      console.log("[BRAINSTORM] Starting deep research for motion:", motion);
+      const research = await deepResearch(motion, "", provider, model, DEEP_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
@@ -1069,12 +1178,36 @@ Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}${urlContext}${webSearch
       return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Other features (attack): standard flow without research
+    // ATTACK: Use deep research for evidence-based critique
+    if (feature === "attack") {
+      const caseText = String(sanitizedInput.caseText || "");
+
+      // Research the topic to find counter-evidence
+      console.log("[ATTACK] Starting deep research for case analysis");
+      const research = await deepResearch(caseText.slice(0, 500), "", provider, model, DEEP_RESEARCH);
+      const searchContext = buildResearchContext(research);
+
+      const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
+      const messages = [{ role: "user", content: userPrompt }];
+      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      const discoveredSources = research.readContent.map((item) => ({
+        title: item.url.replace(/^https?:\/\//, "").split("/")[0],
+        url: item.url,
+        content: item.content.slice(0, 1000),
+      }));
+      console.log(`[ATTACK] Found ${discoveredSources.length} sources`);
+
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Fallback for any other feature
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
     const output = await callAI(provider, model, systemPrompt, messages, temperature);
 
-    // Log usage and return
     const latencyMs = Date.now() - startTime;
     await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
     return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
