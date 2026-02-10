@@ -16,12 +16,12 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-<<<<<<< HEAD
 import { WikiSourcesToggle } from '@/components/features/shared/WikiSourcesToggle';
-=======
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
->>>>>>> main
+import { useSubscription } from '@/hooks/use-subscription';
+import { ModelRestrictedModal } from '../subscription/ModelRestrictedModal';
+import { LimitReachedModal } from '../subscription/LimitReachedModal';
 
 interface AttackFormProps {
   onSubmit: (data: AttackInput) => void;
@@ -31,7 +31,7 @@ interface AttackFormProps {
 
 export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProps) {
   const { attackForm, setAttackForm } = useSessionStore();
-
+  const { checkFeatureAccess, modelRestrictedOpen, setModelRestrictedOpen, limitReachedOpen, setLimitReachedOpen, tier } = useSubscription();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<AttackInput>({
     resolver: zodResolver(AttackInputSchema),
     defaultValues: {
