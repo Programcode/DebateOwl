@@ -1011,7 +1011,6 @@ Deno.serve(async (req) => {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
-
   // Check rate limits (includes subscription gating and model access)
   const rateLimit = await checkRateLimit(userId, model);
   if (!rateLimit.allowed) {
