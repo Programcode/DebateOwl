@@ -987,22 +987,30 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Extract user ID from JWT authorization header
-  let userId: string | null = null;
+  // Require a valid user session for all AI requests.
+  // The frontend already enforces auth; this protects the endpoint even when
+  // gateway JWT verification is disabled.
   const authHeader = req.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    try {
-      const token = authHeader.slice(7);
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id || null;
-      log(requestId, "INFO", "User authenticated", { userId });
-    } catch (authErr) {
-      log(requestId, "WARN", "Auth token validation failed", { error: authErr instanceof Error ? authErr.message : "Unknown" });
-      // Anonymous request - continue without user
-    }
-  } else {
-    log(requestId, "INFO", "No auth header provided, anonymous request");
+  if (!authHeader?.startsWith("Bearer ")) {
+    log(requestId, "WARN", "Missing authorization header");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
+
+  const token = authHeader.slice(7);
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    log(requestId, "WARN", "Auth token validation failed", { error: authError?.message });
+    return new Response(JSON.stringify({ error: "Invalid token" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const userId: string = user.id;
+  log(requestId, "INFO", "User authenticated", { userId });
 
   // Check rate limits (includes subscription gating and model access)
   const rateLimit = await checkRateLimit(userId, model);
