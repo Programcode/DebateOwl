@@ -92,8 +92,8 @@ export const useSettingsStore = create<SettingsState>()(
           custom_system_prompt: prompt || null,
         });
       },
-      setWikiResearchEnabled: (wikiResearchEnabled) => {
-        set({ wikiResearchEnabled });
+      setWikiResearchEnabled: (enabled) => {
+        set({ wikiResearchEnabled: enabled });
       },
 
       setFeatureConfig: (feature, config) => {

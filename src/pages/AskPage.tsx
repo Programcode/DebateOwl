@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
@@ -9,6 +10,7 @@ export default function AskPage() {
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSend = async (
     message: string,

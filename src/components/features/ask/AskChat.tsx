@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Globe } from 'lucide-react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +11,9 @@ import type { AskOutput } from '@/lib/ai/schemas/ask';
 import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
-import { validateFileUpload, MAX_FILE_COUNT } from '@/lib/validation/file';
+import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { BookMarked } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -136,8 +137,6 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const wikiResearchEnabled = useSettingsStore((state) => state.wikiResearchEnabled);
-  const setWikiResearchEnabled = useSettingsStore((state) => state.setWikiResearchEnabled);
 
   const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
 
@@ -162,7 +161,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && files.length === 0) || isLoading) return;
-    onSend(input.trim(), mode, citationMode, wikiResearchEnabled, files);
+    onSend(input.trim(), mode, citationMode, useSettingsStore.getState().wikiResearchEnabled, files);
     setInput('');
     setFiles([]);
     resetTranscript();
@@ -286,12 +285,12 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="web-search-mode" className="text-xs">Web Search</Label>
+              <BookMarked className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="wiki-mode" className="text-xs">Wiki</Label>
               <Switch
-                id="web-search-mode"
-                checked={wikiResearchEnabled}
-                onCheckedChange={setWikiResearchEnabled}
+                id="wiki-mode"
+                checked={useSettingsStore.getState().wikiResearchEnabled}
+                onCheckedChange={(checked) => useSettingsStore.getState().setWikiResearchEnabled(checked)}
               />
             </div>
             <div className="flex items-center gap-2">
