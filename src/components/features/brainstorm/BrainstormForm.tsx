@@ -18,6 +18,9 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
+import { useSubscription } from '@/hooks/use-subscription';
+import { ModelRestrictedModal } from '../subscription/ModelRestrictedModal';
+import { LimitReachedModal } from '../subscription/LimitReachedModal';
 
 interface BrainstormFormProps {
   onSubmit: (data: BrainstormInput) => void;
@@ -26,6 +29,7 @@ interface BrainstormFormProps {
 
 export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
   const { brainstormForm, setBrainstormForm } = useSessionStore();
+  const { checkFeatureAccess, modelRestrictedOpen, setModelRestrictedOpen, limitReachedOpen, setLimitReachedOpen, tier } = useSubscription();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BrainstormInput>({
     resolver: zodResolver(BrainstormInputSchema),
