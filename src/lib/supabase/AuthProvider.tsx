@@ -27,15 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      // In some browser/extension states (blocked storage, stalled refresh),
-      // auth initialization can hang long enough to look like a blank screen.
-      // Fail open to the login route if it takes too long.
-      const initTimeoutId = window.setTimeout(() => {
-        if (!mounted) return;
-        console.warn('[Auth] init timeout: continuing without session');
-        setLoading(false);
-      }, 4000);
-
       try {
         const { data, error } = await supabase.auth.getSession();
         if (!mounted) return;
@@ -52,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
         setSession(null);
       } finally {
-        window.clearTimeout(initTimeoutId);
         if (mounted) setLoading(false);
       }
     };
@@ -92,8 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSettingsStore();
       }
 
-      hydrateSessionStore().catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
-      hydrateSettingsStore().catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+      void hydrateSessionStore();
+      void hydrateSettingsStore();
     });
 
     return () => {
@@ -107,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: session?.user ?? null,
     loading,
     signInWithGoogle: async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
+      await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/app`,
@@ -118,7 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         },
       });
-      if (error) throw error;
     },
     signOut: async () => {
       await supabase.auth.signOut();
