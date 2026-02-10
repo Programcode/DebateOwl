@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { useSessionStore } from '@/lib/stores/session-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 interface GenerateFormProps {
@@ -26,6 +27,8 @@ interface GenerateFormProps {
 
 export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const globalLanguage = useSettingsStore((s) => s.language);
+  const { generateForm, setGenerateForm } = useSessionStore();
+
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
     resolver: zodResolver(GenerateInputSchema),
     defaultValues: {
@@ -37,8 +40,17 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       audience: 'intermediate',
       tone: 'formal',
       language: globalLanguage,
+      ...generateForm, // Override defaults with persisted state
     },
   });
+
+  // Persist form changes
+  useEffect(() => {
+    const subscription = watch((value) => {
+      setGenerateForm(value as Partial<GenerateInput>);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setGenerateForm]);
 
   // Voice input integration
   const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();
