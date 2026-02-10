@@ -46,6 +46,7 @@ vi.mock('@/lib/stores/session-store', () => ({
         addAskMessage: mockAddAskMessage,
         setAskLoading: mockSetAskLoading,
         askMessages: [] as any[],
+        setPendingFlowchartData: vi.fn(),
     }),
 }));
 
