@@ -27,23 +27,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (!mounted) return;
-        if (error) console.warn('[Auth] getSession error:', error.message);
-        setSession(data.session ?? null);
-        if (data.session) {
-          void hydrateSessionStore();
-          void hydrateSettingsStore();
-        }
-      } catch (err) {
-        // If local storage is corrupted (common), getSession can throw and we
-        // end up stuck in a blank screen. Fail open to the login route.
-        console.error('[Auth] getSession failed:', err);
-        if (!mounted) return;
-        setSession(null);
-      } finally {
-        if (mounted) setLoading(false);
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setSession(data.session ?? null);
+      setLoading(false);
+      if (data.session) {
+        void hydrateSessionStore();
+        void hydrateSettingsStore();
       }
     };
 
