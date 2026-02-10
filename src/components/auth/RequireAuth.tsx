@@ -1,11 +1,19 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/supabase/AuthProvider';
+import { Loader2 } from 'lucide-react';
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return null;
+  if (loading) {
+    // Avoid a "blank screen" while Supabase loads/recovers the session.
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
