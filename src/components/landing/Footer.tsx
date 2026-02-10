@@ -19,7 +19,14 @@ const Footer = () => {
                     </div>
 
                     {/* Links - Removed per user request */}
-                    <div></div>
+                    <div className="flex items-center gap-4 text-sm">
+                        <a href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
+                            Terms
+                        </a>
+                        <a href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
+                            Privacy
+                        </a>
+                    </div>
 
                     {/* Copyright */}
                     <p className="text-sm text-muted-foreground">

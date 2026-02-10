@@ -1,6 +1,7 @@
 // src/components/features/onboarding/OnboardingTour.tsx
 import { useEffect, useCallback } from 'react';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
+import { useLocation } from 'react-router-dom';
 import { useOnboardingStore } from '@/hooks/use-onboarding';
 
 const tourSteps: Step[] = [
@@ -70,15 +71,23 @@ const tourSteps: Step[] = [
 
 export function OnboardingTour() {
     const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
+    const location = useLocation();
 
     // Start tour automatically for new users
     useEffect(() => {
-        if (!hasCompletedOnboarding) {
-            // Small delay to ensure DOM is ready
-            const timer = setTimeout(() => startTour(), 500);
-            return () => clearTimeout(timer);
+        if (hasCompletedOnboarding || location.pathname !== '/app/generate') return;
+
+        // Small delay to ensure DOM is ready on Generate page
+        const timer = setTimeout(() => startTour(), 500);
+        return () => clearTimeout(timer);
+    }, [hasCompletedOnboarding, location.pathname, startTour]);
+
+    // Prevent broken tooltips if user navigates away from Generate mid-tour
+    useEffect(() => {
+        if (isTourRunning && location.pathname !== '/app/generate') {
+            stopTour();
         }
-    }, [hasCompletedOnboarding, startTour]);
+    }, [isTourRunning, location.pathname, stopTour]);
 
     const handleJoyrideCallback = useCallback((data: CallBackProps) => {
         const { status } = data;

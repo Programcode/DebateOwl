@@ -1,5 +1,16 @@
 import { Link } from 'react-router-dom';
-import { Sparkles, Swords, Lightbulb, BookOpen, MessageCircle, ArrowRight } from 'lucide-react';
+import {
+  Sparkles,
+  Swords,
+  Lightbulb,
+  BookOpen,
+  MessageCircle,
+  Database,
+  Timer,
+  GitBranch,
+  Clock,
+  ArrowRight
+} from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +45,30 @@ const modes = [
     icon: MessageCircle,
     href: '/app/ask',
   },
+  {
+    title: 'Library',
+    description: 'Manage and toggle sources used for grounded responses.',
+    icon: Database,
+    href: '/app/library',
+  },
+  {
+    title: 'Timer',
+    description: 'Practice speaking rounds with tournament timing controls.',
+    icon: Timer,
+    href: '/app/timer',
+  },
+  {
+    title: 'Flowchart',
+    description: 'Map arguments and rebuttal links in a visual debate tree.',
+    icon: GitBranch,
+    href: '/app/flowchart',
+  },
+  {
+    title: 'History',
+    description: 'Reopen saved cases, chats, and previous prep sessions.',
+    icon: Clock,
+    href: '/app/history',
+  },
 ];
 
 export default function HomePage() {
@@ -45,7 +80,7 @@ export default function HomePage() {
           <p className="mt-2 text-sm text-muted-foreground">Choose a mode to start.</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {modes.map((mode) => (
             <Link key={mode.title} to={mode.href} className="group">
               <Card
