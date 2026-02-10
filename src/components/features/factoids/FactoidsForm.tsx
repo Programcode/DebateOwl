@@ -16,7 +16,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FactoidsInputSchema, type FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+<<<<<<< HEAD
 import { WikiSourcesToggle } from '@/components/features/shared/WikiSourcesToggle';
+=======
+import { useSessionStore } from '@/lib/stores/session-store';
+import { useEffect } from 'react';
+>>>>>>> main
 
 interface FactoidsFormProps {
   onSubmit: (data: FactoidsInput) => void;
@@ -25,6 +30,8 @@ interface FactoidsFormProps {
 
 export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
   const globalLanguage = useSettingsStore((s) => s.language);
+  const { factoidsForm, setFactoidsForm } = useSessionStore();
+
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FactoidsInput>({
     resolver: zodResolver(FactoidsInputSchema),
     defaultValues: {
@@ -33,8 +40,17 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
       timeframe: '',
       sourceType: 'any',
       language: globalLanguage,
+      ...factoidsForm, // Override with persisted state
     },
   });
+
+  // Persist form changes
+  useEffect(() => {
+    const subscription = watch((value) => {
+      setFactoidsForm(value as Partial<FactoidsInput>);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setFactoidsForm]);
 
   const currentValues = watch();
 

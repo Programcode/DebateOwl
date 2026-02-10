@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Node, Edge } from 'reactflow';
-import type { GenerateOutput } from '../ai/schemas/generate';
-import type { AttackOutput } from '../ai/schemas/attack';
-import type { BrainstormOutput } from '../ai/schemas/brainstorm';
-import type { FactoidsOutput } from '../ai/schemas/factoids';
+import type { GenerateOutput, GenerateInput } from '../ai/schemas/generate';
+import type { AttackOutput, AttackInput } from '../ai/schemas/attack';
+import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm';
+import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
 
@@ -61,6 +61,17 @@ interface SessionState {
   savedChats: SavedItem<Message[]>[];
   savedFlowcharts: SavedItem<FlowchartData>[];
   sourceLibrary: Source[];
+
+  // Persisted Form State
+  generateForm: Partial<GenerateInput>;
+  attackForm: Partial<AttackInput>;
+  brainstormForm: Partial<BrainstormInput>;
+  factoidsForm: Partial<FactoidsInput>;
+
+  setGenerateForm: (data: Partial<GenerateInput>) => void;
+  setAttackForm: (data: Partial<AttackInput>) => void;
+  setBrainstormForm: (data: Partial<BrainstormInput>) => void;
+  setFactoidsForm: (data: Partial<FactoidsInput>) => void;
 
   setGenerateResult: (result: GenerateOutput | null) => void;
   setGenerateLoading: (loading: boolean) => void;
@@ -179,6 +190,16 @@ export const useSessionStore = create<SessionState>()(
       savedChats: [] as SavedItem<Message[]>[],
       savedFlowcharts: [] as SavedItem<FlowchartData>[],
       sourceLibrary: [] as Source[],
+
+      generateForm: {},
+      attackForm: {},
+      brainstormForm: {},
+      factoidsForm: {},
+
+      setGenerateForm: (data) => set((state) => ({ generateForm: { ...state.generateForm, ...data } })),
+      setAttackForm: (data) => set((state) => ({ attackForm: { ...state.attackForm, ...data } })),
+      setBrainstormForm: (data) => set((state) => ({ brainstormForm: { ...state.brainstormForm, ...data } })),
+      setFactoidsForm: (data) => set((state) => ({ factoidsForm: { ...state.factoidsForm, ...data } })),
 
       pendingFlowchartData: null as FlowchartData | null,
       setPendingFlowchartData: (data) => set({ pendingFlowchartData: data }),
@@ -628,6 +649,10 @@ export const useSessionStore = create<SessionState>()(
         factoidsResult: null,
         askMessages: [],
         pendingFlowchartData: null,
+        generateForm: {},
+        attackForm: {},
+        brainstormForm: {},
+        factoidsForm: {},
       }),
     }),
     {

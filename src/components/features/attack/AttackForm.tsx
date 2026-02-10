@@ -16,7 +16,12 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+<<<<<<< HEAD
 import { WikiSourcesToggle } from '@/components/features/shared/WikiSourcesToggle';
+=======
+import { useSessionStore } from '@/lib/stores/session-store';
+import { useEffect } from 'react';
+>>>>>>> main
 
 interface AttackFormProps {
   onSubmit: (data: AttackInput) => void;
@@ -25,6 +30,8 @@ interface AttackFormProps {
 }
 
 export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProps) {
+  const { attackForm, setAttackForm } = useSessionStore();
+
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<AttackInput>({
     resolver: zodResolver(AttackInputSchema),
     defaultValues: {
@@ -33,8 +40,24 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
       judgeParadigm: 'logic',
       detectFallacies: true,
       analyzeWeighing: true,
+      ...attackForm, // Override defaults with persisted state
     },
   });
+
+  // Persist form changes
+  useEffect(() => {
+    const subscription = watch((value) => {
+      setAttackForm(value as Partial<AttackInput>);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setAttackForm]);
+
+  // If importedCase provided, update form
+  useEffect(() => {
+    if (importedCase) {
+      setValue('caseText', importedCase);
+    }
+  }, [importedCase, setValue]);
 
   const currentValues = watch();
 

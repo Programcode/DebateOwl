@@ -42,12 +42,11 @@ export function AppLayout() {
       <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
+              <img src="/favicon.ico" alt="DebateLab" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground">DebateLab</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Master the art of argumentation</p>
             </div>
           </div>
 
