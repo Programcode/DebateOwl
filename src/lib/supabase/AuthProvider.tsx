@@ -27,13 +27,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(data.session ?? null);
-      setLoading(false);
-      if (data.session) {
-        void hydrateSessionStore();
-        void hydrateSettingsStore();
+      try {
+        // In some browser states (stalled locks, blocked storage, extensions),
+        // getSession() can hang long enough to look like a frozen app. If it
+        // doesn't resolve quickly, fail open to the login route and rely on
+        // onAuthStateChange to populate the session when available.
+        const getSessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 4000)),
+        ]);
+
+        if (!mounted) return;
+        const { data, error } = getSessionResult;
+        if (error) console.warn('[Auth] getSession error:', error.message);
+        setSession(data.session ?? null);
+        if (data.session) {
+          hydrateSessionStore()?.catch?.((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
+          hydrateSettingsStore()?.catch?.((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+        }
+      } catch (err) {
+        console.warn('[Auth] init failed:', err);
+        if (!mounted) return;
+        setSession(null);
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
@@ -72,8 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSettingsStore();
       }
 
-      void hydrateSessionStore();
-      void hydrateSettingsStore();
+      hydrateSessionStore()?.catch?.((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
+      hydrateSettingsStore()?.catch?.((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
     });
 
     return () => {
