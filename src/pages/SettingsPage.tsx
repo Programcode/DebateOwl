@@ -78,11 +78,20 @@ export default function SettingsPage() {
     try {
       await redirectToPortal();
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to open billing portal';
+      if (message.toLowerCase().includes('no active subscription')) {
+        toast({
+          title: 'No Subscription Found',
+          description: 'This account is not connected to Stripe billing. Upgrade to Pro to start a subscription.',
+        });
+        setPricingOpen(true);
+      } else {
       toast({
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to open billing portal',
+          description: message,
         variant: 'destructive',
       });
+      }
       setPortalLoading(false);
     }
   };
@@ -138,7 +147,7 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              {subscription.isPro ? (
+              {subscription.tier === 'pro' ? (
                 <Button
                   variant="outline"
                   size="sm"
