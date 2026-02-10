@@ -16,7 +16,6 @@ export default function AskPage() {
     message: string,
     mode: string,
     citationMode: boolean,
-    webSearch: boolean,
     files?: File[]
   ) => {
     let displayContent = message;
@@ -63,7 +62,7 @@ export default function AskPage() {
       const history = askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
 
-      const result = await askChat(fullMessage, history, mode, config, { citationMode, webSearch });
+      const result = await askChat(fullMessage, history, mode, config, { citationMode });
 
       addAskMessage({
         role: 'assistant',
