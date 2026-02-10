@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/app`,
           scopes: 'https://www.googleapis.com/auth/drive.file',
           queryParams: {
             access_type: 'offline',

@@ -125,8 +125,12 @@ export function AppLayout() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-4">
-        <div className="container px-4 text-center text-sm text-muted-foreground">
+        <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p>DebateLab • Built for debaters who demand excellence</p>
+          <div className="flex items-center gap-4">
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+          </div>
         </div>
       </footer>
     </div>
