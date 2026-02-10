@@ -16,12 +16,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BrainstormInputSchema, type BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
+import { useSessionStore } from '@/lib/stores/session-store';
+import { useEffect } from 'react';
+
 interface BrainstormFormProps {
   onSubmit: (data: BrainstormInput) => void;
   isLoading: boolean;
 }
 
 export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
+  const { brainstormForm, setBrainstormForm } = useSessionStore();
+
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BrainstormInput>({
     resolver: zodResolver(BrainstormInputSchema),
     defaultValues: {
@@ -29,8 +34,17 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
       side: 'both',
       context: '',
       outputMode: 'topfive',
+      ...brainstormForm, // Override with persisted state
     },
   });
+
+  // Persist form changes
+  useEffect(() => {
+    const subscription = watch((value) => {
+      setBrainstormForm(value as Partial<BrainstormInput>);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setBrainstormForm]);
 
   const currentValues = watch();
 
@@ -118,9 +132,9 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
           </div>
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-primary-foreground" 
+          <Button
+            type="submit"
+            className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-primary-foreground"
             disabled={isLoading}
           >
             {isLoading ? (
