@@ -117,82 +117,115 @@ export default function GeneratePage() {
   };
 
   const handleImportFlowchart = () => {
-    if (!generateResult) return;
+    if (!generateResult?.caseStructure || !generateResult?.contentions) {
+      toast({ title: "Import Failed", description: "No valid case data to import.", variant: "destructive" });
+      return;
+    }
 
-    // We can use 'any' or more specific types if we import them from ReactFlow or our store
-    const nodes: ReactFlowNode[] = [];
-    const edges: ReactFlowEdge[] = [];
-    const centerX = 400;
+    try {
+      const nodes: ReactFlowNode[] = [];
+      const edges: ReactFlowEdge[] = [];
+      const centerX = 400;
 
-    // Thesis
-    nodes.push({
-      id: 'thesis',
-      type: 'custom',
-      position: { x: centerX, y: 50 },
-      data: {
-        label: 'Thesis',
-        description: generateResult.caseStructure.thesis,
-        type: 'thesis'
-      }
-    });
-
-    // Contentions
-    generateResult.contentions.forEach((c, i) => {
-      const id = `c-${i}`;
-      // Spread contentions horizontally
-      const xPos = centerX + ((i - (generateResult.contentions.length - 1) / 2) * 300);
-
+      // Thesis
       nodes.push({
-        id,
+        id: 'thesis',
         type: 'custom',
-        position: { x: xPos, y: 250 },
+        position: { x: centerX, y: 50 },
         data: {
-          label: `Argument ${i + 1}`,
-          description: c.claim,
-          type: 'argument',
-          strength: 'strong'
+          label: 'Thesis',
+          description: generateResult.caseStructure.thesis,
+          type: 'thesis'
         }
       });
 
-      edges.push({
-        id: `e-thesis-${id}`,
-        source: 'thesis',
-        target: id,
-        animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed }
-      });
-
-      // Add counters/attacks if available?
-      // For now, let's just add the main structure to keep it clean, 
-      // or maybe add predicted attacks below contentions if they map nicely.
-      // Since predictedOpponentCase is a flat list, we'll just add them as a group below.
-    });
-
-    // Attacks (Predicted Opponent Case)
-    // We'll just list them in a row below contentions for now
-    if (generateResult.predictedOpponentCase?.likelyArguments) {
-      generateResult.predictedOpponentCase.likelyArguments.forEach((arg, i) => {
-        const id = `a-${i}`;
-        const xPos = centerX + ((i - (generateResult.predictedOpponentCase.likelyArguments.length - 1) / 2) * 300);
+      // Contentions — use 'contention' type to match FlowchartPage nodeColors/nodeIcons
+      const contentions = generateResult.contentions;
+      contentions.forEach((c, i) => {
+        const id = `c-${i}`;
+        const xPos = centerX + ((i - (contentions.length - 1) / 2) * 300);
 
         nodes.push({
           id,
           type: 'custom',
-          position: { x: xPos, y: 450 },
+          position: { x: xPos, y: 250 },
           data: {
-            label: `Attack ${i + 1}`,
-            description: arg,
-            type: 'attack'
+            label: `Argument ${i + 1}`,
+            description: c.claim,
+            type: 'contention',
+            strength: 'strong'
           }
         });
 
-        // No edges for now as we don't know which contention they target
+        edges.push({
+          id: `e-thesis-${id}`,
+          source: 'thesis',
+          target: id,
+          animated: true,
+          markerEnd: { type: MarkerType.ArrowClosed }
+        });
       });
-    }
 
-    setPendingFlowchartData({ nodes, edges });
-    navigate('/app/flowchart');
-    toast({ title: "Case Imported", description: "Your case has been imported to Flowcharts." });
+      // Attacks (Predicted Opponent Case)
+      if (generateResult.predictedOpponentCase?.likelyArguments) {
+        const attacks = generateResult.predictedOpponentCase.likelyArguments;
+        attacks.forEach((arg, i) => {
+          const id = `a-${i}`;
+          const xPos = centerX + ((i - (attacks.length - 1) / 2) * 300);
+
+          nodes.push({
+            id,
+            type: 'custom',
+            position: { x: xPos, y: 450 },
+            data: {
+              label: `Attack ${i + 1}`,
+              description: arg,
+              type: 'attack'
+            }
+          });
+        });
+      }
+
+      // Counters / Rebuttals — link each to its target contention
+      if (generateResult.counters?.length) {
+        generateResult.counters.forEach((counter, i) => {
+          const id = `r-${i}`;
+          // Find the contention this counter targets
+          const targetIdx = contentions.findIndex(
+            (c) => c.claim.toLowerCase().includes(counter.targetArgument?.toLowerCase() ?? '')
+          );
+          const parentId = targetIdx >= 0 ? `c-${targetIdx}` : 'thesis';
+          const parentNode = nodes.find((n) => n.id === parentId);
+          const xPos = parentNode ? parentNode.position.x + 50 : centerX + (i * 250);
+
+          nodes.push({
+            id,
+            type: 'custom',
+            position: { x: xPos, y: 650 },
+            data: {
+              label: `Rebuttal ${i + 1}`,
+              description: counter.rebuttal || counter.counterpoint,
+              type: 'rebuttal'
+            }
+          });
+
+          edges.push({
+            id: `e-${parentId}-${id}`,
+            source: parentId,
+            target: id,
+            style: { stroke: '#3b82f6' },
+            markerEnd: { type: MarkerType.ArrowClosed }
+          });
+        });
+      }
+
+      setPendingFlowchartData({ nodes, edges });
+      navigate('/app/flowchart');
+      toast({ title: "Case Imported", description: "Your case has been imported to Flowcharts." });
+    } catch (error) {
+      console.error('Failed to import flowchart:', error);
+      toast({ title: "Import Failed", description: "Could not build flowchart from case data.", variant: "destructive" });
+    }
   };
 
   return (
