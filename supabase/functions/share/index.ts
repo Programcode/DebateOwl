@@ -6,6 +6,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
     "https://debate.pi-stack.org",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
     "http://localhost:5173",
     "http://127.0.0.1:54321"
 ];
@@ -18,7 +20,6 @@ function getCorsHeaders(origin: string | null) {
         "Access-Control-Allow-Methods": "POST, OPTIONS",
     };
 }
-const corsHeaders = getCorsHeaders(null); // Default
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -34,6 +35,8 @@ function generateShareCode(): string {
 }
 
 Deno.serve(async (req: Request) => {
+    const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }

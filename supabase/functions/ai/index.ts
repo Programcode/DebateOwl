@@ -7,6 +7,8 @@
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
   "https://debate.pi-stack.org",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
   "http://localhost:5173",
   "http://127.0.0.1:54321" // Local Supabase
 ];
@@ -19,7 +21,6 @@ function getCorsHeaders(origin: string | null) {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 }
-const corsHeaders = getCorsHeaders(null); // Default for non-request contexts
 
 type Provider = "openai" | "anthropic" | "google";
 
@@ -310,7 +311,7 @@ async function logUsage(
 
 const DEFAULT_PROVIDER = (Deno.env.get("AI_DEFAULT_PROVIDER") || "google") as Provider;
 
-function badRequest(message: string) {
+function badRequest(message: string, corsHeaders: Record<string, string>) {
   return new Response(JSON.stringify({ error: message }), {
     status: 400,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -946,6 +947,7 @@ function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searc
 
 Deno.serve(async (req) => {
   const requestId = generateRequestId();
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -958,7 +960,7 @@ Deno.serve(async (req) => {
     body = await req.json();
   } catch {
     log(requestId, "WARN", "Invalid JSON body received");
-    return badRequest("Invalid JSON body");
+    return badRequest("Invalid JSON body", corsHeaders);
   }
   const feature = body.feature as Feature | undefined;
   const input = body.input as Record<string, unknown> | undefined;
@@ -971,19 +973,19 @@ Deno.serve(async (req) => {
   // Log incoming request
   log(requestId, "INFO", "Request received", { feature, provider, model, sourcesCount: sources.length });
 
-  if (!feature) return badRequest("Missing feature");
-  if (!input) return badRequest("Missing input");
+  if (!feature) return badRequest("Missing feature", corsHeaders);
+  if (!input) return badRequest("Missing input", corsHeaders);
   const sanitizeResult = sanitizeInput(input);
   if ("rejected" in sanitizeResult) {
     log(requestId, "WARN", "Request rejected by sanitization", { reason: sanitizeResult.rejected });
-    return badRequest(sanitizeResult.rejected);
+    return badRequest(sanitizeResult.rejected, corsHeaders);
   }
   const sanitizedInput = sanitizeResult.sanitized;
   if (customSystemPrompt) {
     const promptResult = sanitizePromptInput(customSystemPrompt, "customSystemPrompt");
     if ("rejected" in promptResult) {
       log(requestId, "WARN", "Custom prompt rejected", { reason: promptResult.rejected });
-      return badRequest(promptResult.rejected);
+      return badRequest(promptResult.rejected, corsHeaders);
     }
   }
 
