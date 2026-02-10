@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase/client';
 
 const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID || '';
+if (!STRIPE_PRICE_ID) {
+  console.warn('[Stripe] VITE_STRIPE_PRICE_ID is not set — checkout will not work');
+}
 
 /**
  * Redirect user to Stripe Checkout for Pro subscription.
