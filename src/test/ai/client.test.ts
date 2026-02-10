@@ -205,4 +205,36 @@ describe('AI Client Integration', () => {
         });
     });
 
+    describe('askChat', () => {
+        it('passes citation and web search flags to the ask payload', async () => {
+            setMockInvokeResponse({
+                output: {
+                    response: 'Test response',
+                    followUpQuestions: [] as string[],
+                    uncertainties: [] as string[],
+                }
+            });
+
+            await askChat(
+                'What are recent examples?',
+                [],
+                'general',
+                mockConfig,
+                { citationMode: true, webSearch: true }
+            );
+
+            expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
+                body: expect.objectContaining({
+                    feature: 'ask',
+                    input: expect.objectContaining({
+                        message: 'What are recent examples?',
+                        mode: 'general',
+                        citationMode: true,
+                        webSearch: true,
+                    }),
+                }),
+            }));
+        });
+    });
+
 });

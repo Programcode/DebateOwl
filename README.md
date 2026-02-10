@@ -193,6 +193,7 @@ Interactive AI coaching with conversation memory.
 | **Voice Input** | Real-time speech-to-text for hands-free coaching |
 | **File Attachments** | Upload documents for AI analysis |
 | **Citation Mode** | Toggle to get responses with source citations |
+| **Web Search Toggle** | Optional AI-triggered Jina search for current events and fresh evidence |
 
 **Message Structure:**
 ```typescript
@@ -672,15 +673,16 @@ supabase functions deploy ai
 
 | Page | Path | Description |
 |------|------|-------------|
-| `GeneratePage` | `/` | Case generation form and results |
-| `AttackPage` | `/attack` | Case critique with fallacy detection |
-| `BrainstormPage` | `/brainstorm` | Multi-mode idea generation |
-| `FactoidsPage` | `/factoids` | Research with deep search |
-| `AskPage` | `/ask` | Interactive chat coaching |
-| `LibraryPage` | `/library` | Source library management |
-| `HistoryPage` | `/history` | Saved cases, attacks, etc. |
-| `SettingsPage` | `/settings` | Configuration and admin |
-| `TimerPage` | `/timer` | Debate stopwatch |
+| `HomePage` | `/app` | Unified mode selector homepage |
+| `GeneratePage` | `/app/generate` | Case generation form and results |
+| `AttackPage` | `/app/attack` | Case critique with fallacy detection |
+| `BrainstormPage` | `/app/brainstorm` | Multi-mode idea generation |
+| `FactoidsPage` | `/app/factoids` | Research with deep search |
+| `AskPage` | `/app/ask` | Interactive chat coaching |
+| `LibraryPage` | `/app/library` | Source library management |
+| `HistoryPage` | `/app/history` | Saved cases, attacks, etc. |
+| `SettingsPage` | `/app/settings` | Configuration and admin |
+| `TimerPage` | `/app/timer` | Debate stopwatch |
 | `LoginPage` | `/login` | Authentication |
 
 ### Component Patterns
@@ -745,18 +747,20 @@ function FeatureResults({ result }: { result: FeatureOutput }) {
 // src/App.tsx
 <BrowserRouter>
   <Routes>
-    <Route element={<AuthProvider><AppLayout /></AuthProvider>}>
-      <Route index element={<GeneratePage />} />
-      <Route path="/attack" element={<AttackPage />} />
-      <Route path="/brainstorm" element={<BrainstormPage />} />
-      <Route path="/factoids" element={<FactoidsPage />} />
-      <Route path="/ask" element={<AskPage />} />
-      <Route path="/library" element={<LibraryPage />} />
-      <Route path="/history" element={<HistoryPage />} />
-      <Route path="/timer" element={<TimerPage />} />
-      <Route path="/settings" element={<SettingsPage />} />
-    </Route>
+    <Route path="/" element={<LandingPage />} />
     <Route path="/login" element={<LoginPage />} />
+    <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
+      <Route path="/app" element={<HomePage />} />
+      <Route path="/app/generate" element={<GeneratePage />} />
+      <Route path="/app/attack" element={<AttackPage />} />
+      <Route path="/app/brainstorm" element={<BrainstormPage />} />
+      <Route path="/app/factoids" element={<FactoidsPage />} />
+      <Route path="/app/ask" element={<AskPage />} />
+      <Route path="/app/library" element={<LibraryPage />} />
+      <Route path="/app/history" element={<HistoryPage />} />
+      <Route path="/app/timer" element={<TimerPage />} />
+      <Route path="/app/settings" element={<SettingsPage />} />
+    </Route>
   </Routes>
 </BrowserRouter>
 ```

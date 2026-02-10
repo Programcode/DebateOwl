@@ -588,6 +588,11 @@ describe('Ask Schema', () => {
             expect(AskInputSchema.safeParse({ ...validInput, conversationHistory: [] }).success).toBe(true);
         });
 
+        it('accepts optional webSearch flag', () => {
+            expect(AskInputSchema.safeParse({ ...validInput, webSearch: true }).success).toBe(true);
+            expect(AskInputSchema.safeParse({ ...validInput, webSearch: false }).success).toBe(true);
+        });
+
         it('rejects invalid role in conversationHistory', () => {
             expect(AskInputSchema.safeParse({
                 ...validInput,

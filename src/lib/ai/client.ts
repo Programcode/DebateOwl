@@ -517,13 +517,25 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
   return data.output as FactoidsOutput;
 }
 
+export interface AskChatOptions {
+  citationMode?: boolean;
+  webSearch?: boolean;
+}
+
 export async function askChat(
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   mode: string,
-  config: ProviderConfig
+  config: ProviderConfig,
+  options: AskChatOptions = {}
 ): Promise<AskOutput> {
   if (config.provider === 'mock') return mockAsk(message, mode);
-  const data = await callSupabaseAI('ask', { message, history, mode }, config) as { output: unknown };
+  const data = await callSupabaseAI('ask', {
+    message,
+    history,
+    mode,
+    citationMode: Boolean(options.citationMode),
+    webSearch: Boolean(options.webSearch),
+  }, config) as { output: unknown };
   return data.output as AskOutput;
 }

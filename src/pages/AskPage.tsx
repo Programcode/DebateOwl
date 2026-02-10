@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
@@ -10,9 +9,14 @@ export default function AskPage() {
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleSend = async (message: string, mode: string, citationMode: boolean, files?: File[]) => {
+  const handleSend = async (
+    message: string,
+    mode: string,
+    citationMode: boolean,
+    webSearch: boolean,
+    files?: File[]
+  ) => {
     let displayContent = message;
     if (files && files.length > 0) {
       displayContent += `\n\n[Attachments: ${files.map(f => f.name).join(', ')}]`;
@@ -57,7 +61,7 @@ export default function AskPage() {
       const history = askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
 
-      const result = await askChat(fullMessage, history, mode, config);
+      const result = await askChat(fullMessage, history, mode, config, { citationMode, webSearch });
 
       addAskMessage({
         role: 'assistant',

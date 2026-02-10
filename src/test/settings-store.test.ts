@@ -18,6 +18,7 @@ describe("settings-store", () => {
       language: "en",
       theme: "system",
       customSystemPrompt: undefined,
+      wikiResearchEnabled: false,
       featureConfigs: {
         generate: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 },
         attack: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 },
@@ -78,12 +79,20 @@ describe("settings-store", () => {
     const store = useSettingsStore.getState();
     store.setTheme("dark");
     store.setSystemPrompt("Custom");
+    store.setWikiResearchEnabled(true);
     store.resetLocalData();
 
     const state = useSettingsStore.getState();
     expect(state.theme).toBe("system");
     expect(state.customSystemPrompt).toBeUndefined();
     expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
+    expect(state.wikiResearchEnabled).toBe(false);
+  });
+
+  it("setWikiResearchEnabled updates local state only", () => {
+    const store = useSettingsStore.getState();
+    store.setWikiResearchEnabled(true);
+    expect(useSettingsStore.getState().wikiResearchEnabled).toBe(true);
   });
 
   it("getFeatureConfig returns defaults when missing", () => {

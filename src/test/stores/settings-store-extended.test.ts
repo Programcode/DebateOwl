@@ -47,6 +47,7 @@ describe('Settings Store Extended', () => {
                 theme: 'system',
                 featureConfigs: createDefaultConfigs() as ReturnType<typeof createDefaultConfigs>,
                 customSystemPrompt: undefined,
+                wikiResearchEnabled: false,
             });
         });
     });
@@ -210,6 +211,7 @@ Focus on:
             expect(state.language).toBe('en');
             expect(state.theme).toBe('system');
             expect(state.customSystemPrompt).toBeUndefined();
+            expect(state.wikiResearchEnabled).toBe(false);
         });
     });
 });

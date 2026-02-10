@@ -15,7 +15,7 @@ export default function HistoryPage() {
 
   const handleLoadCase = (id: string) => {
     store.loadSavedCase(id);
-    navigate('/app');
+    navigate('/app/generate');
   };
 
   const handleLoadChat = (id: string) => {

@@ -1,9 +1,10 @@
 // src/test/pages/pages.test.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import LandingPage from '@/pages/LandingPage';
+import HomePage from '@/pages/HomePage';
 import NotFound from '@/pages/NotFound';
 
 // Mock framer-motion to avoid animation issues in tests
@@ -72,6 +73,22 @@ describe('Pages', () => {
         it('contains footer', () => {
             renderWithRouter(<LandingPage />);
             expect(screen.getAllByText(/DebateLab/i).length).toBeGreaterThan(0);
+        });
+    });
+
+    describe('HomePage', () => {
+        it('renders the mode selector heading', () => {
+            renderWithRouter(<HomePage />, '/app');
+            expect(screen.getByRole('heading', { name: 'DebateLab' })).toBeInTheDocument();
+        });
+
+        it('shows key mode cards', () => {
+            renderWithRouter(<HomePage />, '/app');
+            expect(screen.getByText('Generate')).toBeInTheDocument();
+            expect(screen.getByText('Attack')).toBeInTheDocument();
+            expect(screen.getByText('Brainstorm')).toBeInTheDocument();
+            expect(screen.getByText('Factoids')).toBeInTheDocument();
+            expect(screen.getByText('Ask')).toBeInTheDocument();
         });
     });
 

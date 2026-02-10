@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
 const GeneratePage = lazy(() => import("./pages/GeneratePage"));
 const AttackPage = lazy(() => import("./pages/AttackPage"));
 const BrainstormPage = lazy(() => import("./pages/BrainstormPage"));
@@ -62,7 +63,8 @@ const App = () => (
                     </RequireAuth>
                   }
                 >
-                  <Route path="/app" element={<GeneratePage />} />
+                  <Route path="/app" element={<HomePage />} />
+                  <Route path="/app/generate" element={<GeneratePage />} />
                   <Route path="/app/attack" element={<AttackPage />} />
                   <Route path="/app/brainstorm" element={<BrainstormPage />} />
                   <Route path="/app/factoids" element={<FactoidsPage />} />
