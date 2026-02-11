@@ -79,6 +79,7 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 // ============== SUPABASE CLIENT ==============
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -935,14 +936,6 @@ async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string |
   return `${base}${globalSection}${custom}${sourceText}`;
 }
 
-function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searchContext: string) {
-  if (feature === "generate") return `Motion: ${input.motion}\nSide: ${input.side}\nFormat: ${input.format}\nRole: ${input.role}\nLength: ${input.length}\nAudience: ${input.audience}\nTone: ${input.tone}\n\n${searchContext}`;
-  if (feature === "attack") return `Analyze this case based on the following parameters:\n\nCASE TEXT:\n"${input.caseText}"\n\n${searchContext}`;
-  if (feature === "brainstorm") return `Motion: ${input.motion}\nSide: ${input.side}\nOutput Mode: ${input.outputMode}\n${input.context ? `Context: ${input.context}` : ''}\n\n${searchContext}`;
-  if (feature === "factoids") return `Find evidence for claim: "${input.claim}"\n\n${searchContext}\n\nRegion: ${input.region}\nSource Type: ${input.sourceType}\nTimeframe: ${input.timeframe || "Recent (last 5 years)"}\nLanguage: ${input.language}`;
-  return `Message: ${input.message}\nMode: ${input.mode}`;
-}
-
 // ============== MAIN HANDLER ==============
 
 Deno.serve(async (req) => {
@@ -1098,8 +1091,10 @@ Deno.serve(async (req) => {
         }
       }
 
+      const modeGuidance = getAskModeGuidance(mode);
       const prompt = `Message: ${message}
 Mode: ${mode}
+Mode Guidance: ${modeGuidance}
 Citation Mode: ${citationMode ? "ON - be conservative and source claims when possible" : "OFF"}
 Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];

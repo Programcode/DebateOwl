@@ -6,6 +6,8 @@ import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+const STRIPE_PRICE_ID = Deno.env.get("STRIPE_PRICE_ID")?.trim() || "";
+const STRIPE_PRICE_LOOKUP_KEY = Deno.env.get("STRIPE_PRICE_LOOKUP_KEY")?.trim() || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -35,6 +37,206 @@ function getCorsHeaders(origin: string | null) {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isStripePriceId(value: string): boolean {
+  return /^price_[A-Za-z0-9]+$/.test(value);
+}
+
+class AppError extends Error {
+  status: number;
+  details: Record<string, unknown>;
+
+  constructor(status: number, message: string, details: Record<string, unknown> = {}) {
+    super(message);
+    this.status = status;
+    this.details = details;
+  }
+}
+
+function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
+  return "deleted" in customer && customer.deleted;
+}
+
+function isDeletedPrice(price: Stripe.Price | Stripe.DeletedPrice): price is Stripe.DeletedPrice {
+  return "deleted" in price && price.deleted;
+}
+
+function isActiveRecurringPrice(price: Stripe.Price | Stripe.DeletedPrice): price is Stripe.Price {
+  return !isDeletedPrice(price) && price.active && price.type === "recurring";
+}
+
+async function resolvePriceByLookupKey(lookupKey: string): Promise<string | null> {
+  const prices = await stripe.prices.list({
+    lookup_keys: [lookupKey],
+    active: true,
+    limit: 10,
+  });
+  const recurring = prices.data.find((price: Stripe.Price | Stripe.DeletedPrice) => isActiveRecurringPrice(price));
+  return recurring?.id || null;
+}
+
+async function resolveCheckoutPriceId(inputPriceId: string, inputLookupKey: string): Promise<{ id: string; source: string }> {
+  const candidatePriceIds = [STRIPE_PRICE_ID, inputPriceId]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  for (const candidate of candidatePriceIds) {
+    if (!isStripePriceId(candidate)) {
+      continue;
+    }
+    try {
+      const price = await stripe.prices.retrieve(candidate);
+      if (isActiveRecurringPrice(price)) {
+        return { id: price.id, source: `price_id:${candidate === STRIPE_PRICE_ID ? "env" : "request"}` };
+      }
+    } catch (err) {
+      const stripeErr = err as { code?: string; statusCode?: number };
+      if (stripeErr.code !== "resource_missing" && stripeErr.statusCode !== 404) {
+        throw err;
+      }
+    }
+  }
+
+  const candidateLookupKeys = [STRIPE_PRICE_LOOKUP_KEY, inputLookupKey]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  for (const lookupKey of candidateLookupKeys) {
+    const resolved = await resolvePriceByLookupKey(lookupKey);
+    if (resolved) {
+      return { id: resolved, source: `lookup_key:${lookupKey === STRIPE_PRICE_LOOKUP_KEY ? "env" : "request"}` };
+    }
+  }
+
+  const recurringPrices = await stripe.prices.list({
+    active: true,
+    type: "recurring",
+    limit: 10,
+  });
+
+  if (recurringPrices.data.length === 1) {
+    return { id: recurringPrices.data[0].id, source: "auto_single_recurring_price" };
+  }
+
+  if (recurringPrices.data.length === 0) {
+    throw new AppError(
+      400,
+      "No active recurring Stripe prices found. Configure STRIPE_PRICE_ID or STRIPE_PRICE_LOOKUP_KEY.",
+      { configuredPriceId: STRIPE_PRICE_ID || null, configuredLookupKey: STRIPE_PRICE_LOOKUP_KEY || null },
+    );
+  }
+
+  throw new AppError(
+    400,
+    "Unable to choose a Stripe price. Provide VITE_STRIPE_PRICE_ID, STRIPE_PRICE_ID, or STRIPE_PRICE_LOOKUP_KEY.",
+    {
+      recurringPriceCount: recurringPrices.data.length,
+      recurringPriceIds: recurringPrices.data.map((price: Stripe.Price) => price.id),
+      configuredPriceId: STRIPE_PRICE_ID || null,
+      configuredLookupKey: STRIPE_PRICE_LOOKUP_KEY || null,
+    },
+  );
+}
+
+async function findCustomerIdByUser(user: { id: string; email?: string | null }): Promise<string | null> {
+  const { data: existingSub, error: subLookupError } = await supabase
+    .from("subscriptions")
+    .select("stripe_customer_id")
+    .eq("user_id", user.id)
+    .not("stripe_customer_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (subLookupError) {
+    console.warn(`[CHECKOUT] Subscription lookup warning for ${user.id}: ${subLookupError.message}`);
+  }
+
+  if (existingSub?.stripe_customer_id) {
+    return existingSub.stripe_customer_id;
+  }
+
+  try {
+    const result = await stripe.customers.search({
+      query: `metadata['user_id']:'${user.id}'`,
+      limit: 1,
+    });
+    const fromMetadata = result.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
+      !isDeletedCustomer(customer)
+    );
+    if (fromMetadata && !isDeletedCustomer(fromMetadata)) {
+      return fromMetadata.id;
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "search failed";
+    console.warn(`[CHECKOUT] Customer search warning for ${user.id}: ${message}`);
+  }
+
+  if (!user.email) {
+    return null;
+  }
+
+  const candidates = await stripe.customers.list({ email: user.email, limit: 10 });
+  const matchingByMetadata = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
+    !isDeletedCustomer(customer) && customer.metadata?.user_id === user.id
+  );
+  if (matchingByMetadata && !isDeletedCustomer(matchingByMetadata)) {
+    return matchingByMetadata.id;
+  }
+
+  const firstActive = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
+    !isDeletedCustomer(customer)
+  );
+  if (firstActive && !isDeletedCustomer(firstActive)) {
+    return firstActive.id;
+  }
+
+  return null;
+}
+
+function classifyStripeError(err: unknown): { status: number; message: string; details: Record<string, unknown> } {
+  const stripeErr = err as {
+    type?: string;
+    code?: string;
+    param?: string;
+    message?: string;
+    statusCode?: number;
+  };
+
+  const details: Record<string, unknown> = {
+    type: stripeErr.type,
+    code: stripeErr.code,
+    param: stripeErr.param,
+    statusCode: stripeErr.statusCode,
+  };
+
+  const message = typeof stripeErr.message === "string" && stripeErr.message.trim()
+    ? stripeErr.message
+    : "Failed to create checkout session";
+
+  if (typeof stripeErr.statusCode === "number") {
+    if (stripeErr.statusCode >= 400 && stripeErr.statusCode < 500) {
+      return { status: 400, message, details };
+    }
+    if (stripeErr.statusCode >= 500) {
+      return { status: 502, message, details };
+    }
+  }
+
+  if (typeof stripeErr.type === "string" && stripeErr.type.toLowerCase().includes("invalidrequest")) {
+    return { status: 400, message, details };
+  }
+
+  return { status: 500, message, details };
 }
 
 Deno.serve(async (req) => {
@@ -68,55 +270,61 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { priceId, successUrl, cancelUrl, promoCode } = body as {
-      priceId: string;
-      successUrl: string;
-      cancelUrl: string;
-      promoCode?: string;
-    };
-
-    console.log(`[CHECKOUT] Request from user ${user.id}: priceId=${priceId}, hasPromo=${!!promoCode}`);
-    console.log(`[CHECKOUT] Stripe key prefix: ${STRIPE_SECRET_KEY!.substring(0, 7)}...`);
-
-    if (!priceId || !successUrl || !cancelUrl) {
-      return new Response(JSON.stringify({ error: "Missing required fields: priceId, successUrl, cancelUrl" }), {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get or create Stripe customer
-    let customerId: string | undefined;
+    const rawBody = (body && typeof body === "object") ? body as Record<string, unknown> : {};
+    const requestedPriceId = typeof rawBody.priceId === "string" ? rawBody.priceId.trim() : "";
+    const requestedLookupKey = typeof rawBody.lookupKey === "string" ? rawBody.lookupKey.trim() : "";
+    const successUrl = typeof rawBody.successUrl === "string" ? rawBody.successUrl.trim() : "";
+    const cancelUrl = typeof rawBody.cancelUrl === "string" ? rawBody.cancelUrl.trim() : "";
+    const promoCode = typeof rawBody.promoCode === "string" ? rawBody.promoCode.trim() : undefined;
 
-    // Check if user already has a Stripe customer ID
-    const { data: existingSub } = await supabase.from("subscriptions")
-      .select("stripe_customer_id")
-      .eq("user_id", user.id)
-      .not("stripe_customer_id", "is", null)
-      .limit(1)
-      .maybeSingle();
-
-    if (existingSub?.stripe_customer_id) {
-      customerId = existingSub.stripe_customer_id;
-      console.log(`[CHECKOUT] Found existing Stripe customer: ${customerId}`);
-    } else {
-      console.log(`[CHECKOUT] Creating new Stripe customer for ${user.email}`);
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { user_id: user.id },
+    if (!successUrl || !cancelUrl) {
+      return new Response(JSON.stringify({ error: "Missing required fields: successUrl, cancelUrl" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (!isValidHttpUrl(successUrl) || !isValidHttpUrl(cancelUrl)) {
+      return new Response(JSON.stringify({ error: "successUrl and cancelUrl must be valid HTTP(S) URLs" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const resolvedPrice = await resolveCheckoutPriceId(requestedPriceId, requestedLookupKey);
+
+    // Get or create Stripe customer
+    let customerId = await findCustomerIdByUser({ id: user.id, email: user.email });
+    if (!customerId) {
+      const customerParams: Stripe.CustomerCreateParams = {
+        metadata: { user_id: user.id },
+      };
+      if (user.email) {
+        customerParams.email = user.email;
+      }
+
+      const customer = await stripe.customers.create(customerParams);
       customerId = customer.id;
-      console.log(`[CHECKOUT] Created Stripe customer: ${customerId}`);
     }
 
     // Build checkout session params
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: resolvedPrice.id, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      client_reference_id: user.id,
       metadata: { user_id: user.id },
       subscription_data: {
         metadata: { user_id: user.id },
@@ -125,46 +333,41 @@ Deno.serve(async (req) => {
 
     // Apply promo code if provided
     if (promoCode) {
-      const { data: promo } = await supabase.from("promo_codes")
+      const { data: promo, error: promoLookupError } = await supabase.from("promo_codes")
         .select("*")
         .eq("code", promoCode.toUpperCase())
         .eq("is_active", true)
         .maybeSingle();
+
+      if (promoLookupError) {
+        console.warn(`[CHECKOUT] Promo lookup warning for ${promoCode}: ${promoLookupError.message}`);
+      }
 
       if (promo && promo.type === "discount") {
         sessionParams.allow_promotion_codes = true;
       }
     }
 
-    console.log(`[CHECKOUT] Creating checkout session with params:`, JSON.stringify({
-      customer: customerId,
-      mode: sessionParams.mode,
-      priceId,
-      successUrl,
-      cancelUrl,
-    }));
-
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    console.log(`[CHECKOUT] Success! Session ${session.id} for user ${user.id}`);
+    console.log(`[CHECKOUT] Session created for ${user.id}: ${session.id} (price=${resolvedPrice.id}, source=${resolvedPrice.source})`);
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    return new Response(JSON.stringify({ url: session.url, priceId: resolvedPrice.id }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    // Extract detailed Stripe error info if available
-    const stripeErr = err as { type?: string; code?: string; param?: string; message?: string; statusCode?: number };
-    const details = {
-      message: stripeErr.message || "Unknown error",
-      type: stripeErr.type,
-      code: stripeErr.code,
-      param: stripeErr.param,
-      statusCode: stripeErr.statusCode,
-    };
-    console.error("[CHECKOUT] Error details:", JSON.stringify(details));
-    return new Response(JSON.stringify({ error: details.message, details }), {
-      status: 500,
+    if (err instanceof AppError) {
+      return new Response(JSON.stringify({ error: err.message, details: err.details }), {
+        status: err.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { status, message, details } = classifyStripeError(err);
+    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }));
+    return new Response(JSON.stringify({ error: message, details }), {
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

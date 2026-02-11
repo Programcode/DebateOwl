@@ -9,6 +9,7 @@ interface SubscriptionState {
   isPro: boolean;
   isTrialActive: boolean;
   isExpired: boolean;
+  hasStripeBilling: boolean;
   dailyLimit: number;
   dailyUsed: number;
   trialEndsAt: string | null;
@@ -24,10 +25,12 @@ export function useSubscription(): SubscriptionState {
   const [dailyUsed, setDailyUsed] = useState(0);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [gracePeriodEndsAt, setGracePeriodEndsAt] = useState<string | null>(null);
+  const [hasStripeBilling, setHasStripeBilling] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!user) {
+      setHasStripeBilling(false);
       setLoading(false);
       return;
     }
@@ -86,6 +89,21 @@ export function useSubscription(): SubscriptionState {
         .gte('created_at', todayStart.toISOString());
 
       setDailyUsed(count || 0);
+
+      const { data: billingRow, error: billingError } = await supabase
+        .from('subscriptions')
+        .select('stripe_customer_id')
+        .eq('user_id', user.id)
+        .not('stripe_customer_id', 'is', null)
+        .limit(1)
+        .maybeSingle();
+
+      if (billingError) {
+        console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
+        setHasStripeBilling(false);
+      } else {
+        setHasStripeBilling(Boolean(billingRow?.stripe_customer_id));
+      }
     } catch (err) {
       console.warn('[useSubscription] Failed to load:', err);
     } finally {
@@ -106,6 +124,7 @@ export function useSubscription(): SubscriptionState {
     isPro,
     isTrialActive,
     isExpired,
+    hasStripeBilling,
     dailyLimit,
     dailyUsed,
     trialEndsAt,

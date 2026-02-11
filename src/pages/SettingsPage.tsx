@@ -86,11 +86,11 @@ export default function SettingsPage() {
         });
         setPricingOpen(true);
       } else {
-      toast({
-        title: 'Error',
+        toast({
+          title: 'Error',
           description: message,
-        variant: 'destructive',
-      });
+          variant: 'destructive',
+        });
       }
       setPortalLoading(false);
     }
@@ -110,6 +110,8 @@ export default function SettingsPage() {
 
   const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
   const usagePercent = subscription.dailyLimit > 0 ? Math.min(100, (subscription.dailyUsed / subscription.dailyLimit) * 100) : 100;
+  const canManageStripeBilling = subscription.tier === 'pro' && subscription.hasStripeBilling;
+  const upgradeLabel = subscription.tier === 'pro' ? 'Set Up Billing' : 'Upgrade to Pro';
 
   return (
     <div className="container py-8 px-4">
@@ -147,7 +149,7 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              {subscription.tier === 'pro' ? (
+              {canManageStripeBilling ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -160,7 +162,7 @@ export default function SettingsPage() {
               ) : (
                 <Button size="sm" onClick={() => setPricingOpen(true)}>
                   <Zap className="h-4 w-4 mr-2" />
-                  Upgrade to Pro
+                  {upgradeLabel}
                 </Button>
               )}
             </div>

@@ -2,32 +2,47 @@ import { supabase } from '@/lib/supabase/client';
 
 const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID || '';
 if (!STRIPE_PRICE_ID) {
-  console.warn('[Stripe] VITE_STRIPE_PRICE_ID is not set — checkout will not work');
+  console.warn('[Stripe] VITE_STRIPE_PRICE_ID is not set — create-checkout will resolve server-side price');
 }
 
-function getEdgeFunctionErrorMessage(error: unknown): string {
+async function getEdgeFunctionErrorMessage(error: unknown): Promise<string> {
   if (!error) return 'Request failed';
 
-  // Supabase functions errors often include a `context` with `status` and `body`.
-  // We prefer returning the function's JSON `{ error: "..." }` if present.
   const err = error as {
     message?: unknown;
-    context?: { status?: unknown; body?: unknown };
+    context?: unknown;
   };
 
   const context = err.context;
-  const body = context?.body;
-  const status = typeof context?.status === 'number' ? context.status : undefined;
+  let status: number | undefined;
+  let bodyObj: unknown;
 
-  let bodyObj: unknown = undefined;
-  if (typeof body === 'string' && body) {
-    try {
-      bodyObj = JSON.parse(body);
-    } catch {
-      bodyObj = undefined;
+  const maybeResponse = context as { status?: unknown; text?: () => Promise<string> };
+  if (maybeResponse && typeof maybeResponse.status === 'number') {
+    status = maybeResponse.status;
+    if (typeof maybeResponse.text === 'function') {
+      try {
+        const text = await maybeResponse.text();
+        if (text) {
+          bodyObj = JSON.parse(text);
+        }
+      } catch {
+        bodyObj = undefined;
+      }
     }
-  } else if (body && typeof body === 'object') {
-    bodyObj = body;
+  } else if (context && typeof context === 'object') {
+    const plainContext = context as { status?: unknown; body?: unknown };
+    status = typeof plainContext.status === 'number' ? plainContext.status : undefined;
+    const body = plainContext.body;
+    if (typeof body === 'string' && body) {
+      try {
+        bodyObj = JSON.parse(body);
+      } catch {
+        bodyObj = undefined;
+      }
+    } else if (body && typeof body === 'object') {
+      bodyObj = body;
+    }
   }
 
   const bodyError = bodyObj && typeof bodyObj === 'object' && 'error' in bodyObj
@@ -47,25 +62,30 @@ function getEdgeFunctionErrorMessage(error: unknown): string {
  * Redirect user to Stripe Checkout for Pro subscription.
  */
 export async function redirectToCheckout(promoCode?: string): Promise<void> {
-  if (!STRIPE_PRICE_ID) {
-    throw new Error('Stripe checkout is not configured. Set VITE_STRIPE_PRICE_ID and restart the dev server.');
-  }
-
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error('Please sign in to upgrade');
 
+  const checkoutBody: {
+    successUrl: string;
+    cancelUrl: string;
+    promoCode?: string;
+    priceId?: string;
+  } = {
+    successUrl: `${window.location.origin}/app/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${window.location.origin}/app/settings?checkout=canceled`,
+    promoCode,
+  };
+  if (STRIPE_PRICE_ID) {
+    checkoutBody.priceId = STRIPE_PRICE_ID;
+  }
+
   const { data, error } = await supabase.functions.invoke('create-checkout', {
     headers: { Authorization: `Bearer ${accessToken}` },
-    body: {
-      priceId: STRIPE_PRICE_ID,
-      successUrl: `${window.location.origin}/app/settings?checkout=success`,
-      cancelUrl: `${window.location.origin}/app/settings?checkout=canceled`,
-      promoCode,
-    },
+    body: checkoutBody,
   });
 
-  if (error) throw new Error(getEdgeFunctionErrorMessage(error) || 'Failed to create checkout session');
+  if (error) throw new Error(await getEdgeFunctionErrorMessage(error) || 'Failed to create checkout session');
   if (!data?.url) throw new Error('No checkout URL returned');
 
   window.location.href = data.url;
@@ -86,7 +106,7 @@ export async function redirectToPortal(): Promise<void> {
     },
   });
 
-  if (error) throw new Error(getEdgeFunctionErrorMessage(error) || 'Failed to create portal session');
+  if (error) throw new Error(await getEdgeFunctionErrorMessage(error) || 'Failed to create portal session');
   if (!data?.url) throw new Error('No portal URL returned');
 
   window.location.href = data.url;
@@ -105,6 +125,6 @@ export async function redeemPromoCode(code: string): Promise<{ success: boolean;
     body: { code },
   });
 
-  if (error) return { success: false, message: getEdgeFunctionErrorMessage(error) || 'Failed to redeem code' };
+  if (error) return { success: false, message: await getEdgeFunctionErrorMessage(error) || 'Failed to redeem code' };
   return data as { success: boolean; message: string };
 }
