@@ -176,19 +176,22 @@ describe('AI Client Integration', () => {
             const mockResponse = { output: { overallAssessment: { score: 80 } } };
             setMockInvokeResponse(mockResponse);
 
-            await attackCase({
+            const input = {
                 caseText: 'test',
                 aggressiveness: 'moderate',
                 judgeParadigm: 'logic',
                 detectFallacies: true,
                 analyzeWeighing: true
-            } as AttackInput, mockConfig);
+            } as AttackInput;
+
+            await attackCase(input, mockConfig);
 
             expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
                 body: expect.objectContaining({
                     feature: 'attack',
                     provider: 'openai',
-                    model: 'gpt-4o'
+                    model: 'gpt-4o',
+                    input: expect.objectContaining(input),
                 })
             }));
         });
@@ -231,6 +234,40 @@ describe('AI Client Integration', () => {
                         mode: 'general',
                         citationMode: true,
                         webSearch: true,
+                    }),
+                }),
+            }));
+        });
+    });
+
+    describe('factoids', () => {
+        it('passes source filters to the factoids payload', async () => {
+            setMockInvokeResponse({
+                output: {
+                    factoids: [] as any[],
+                    searchSuggestions: [] as string[],
+                    warnings: [] as string[],
+                    verificationStatus: 'complete',
+                }
+            });
+
+            await factoids({
+                claim: 'Solar is cheaper than coal',
+                region: 'United States',
+                sourceType: 'government',
+                timeframe: '2020-2025',
+                language: 'en',
+            }, mockConfig);
+
+            expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
+                body: expect.objectContaining({
+                    feature: 'factoids',
+                    input: expect.objectContaining({
+                        claim: 'Solar is cheaper than coal',
+                        region: 'United States',
+                        sourceType: 'government',
+                        timeframe: '2020-2025',
+                        language: 'en',
                     }),
                 }),
             }));

@@ -37,6 +37,89 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
+  return "deleted" in customer && customer.deleted;
+}
+
+async function findCustomerIdByUser(user: { id: string; email?: string | null }): Promise<string | null> {
+  const { data: sub, error: subError } = await supabase
+    .from("subscriptions")
+    .select("stripe_customer_id")
+    .eq("user_id", user.id)
+    .not("stripe_customer_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (subError) {
+    console.warn(`[PORTAL] Subscription lookup warning for ${user.id}: ${subError.message}`);
+  }
+
+  if (sub?.stripe_customer_id) {
+    return sub.stripe_customer_id;
+  }
+
+  if (!user.email) {
+    return null;
+  }
+
+  const candidates = await stripe.customers.list({ email: user.email, limit: 10 });
+  const matchingByMetadata = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
+    !isDeletedCustomer(customer) && customer.metadata?.user_id === user.id
+  );
+  if (matchingByMetadata && !isDeletedCustomer(matchingByMetadata)) {
+    return matchingByMetadata.id;
+  }
+
+  const firstActive = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
+    !isDeletedCustomer(customer)
+  );
+  if (firstActive && !isDeletedCustomer(firstActive)) {
+    return firstActive.id;
+  }
+
+  return null;
+}
+
+function classifyStripeError(err: unknown): { status: number; message: string } {
+  const stripeErr = err as {
+    type?: string;
+    code?: string;
+    message?: string;
+    statusCode?: number;
+  };
+
+  const message = typeof stripeErr.message === "string" && stripeErr.message.trim()
+    ? stripeErr.message
+    : "Failed to create billing portal session";
+
+  if (stripeErr.code === "resource_missing") {
+    return {
+      status: 400,
+      message: "No active subscription found. Upgrade to Pro to start a subscription.",
+    };
+  }
+
+  if (typeof stripeErr.statusCode === "number") {
+    if (stripeErr.statusCode >= 400 && stripeErr.statusCode < 500) {
+      return { status: 400, message };
+    }
+    if (stripeErr.statusCode >= 500) {
+      return { status: 502, message };
+    }
+  }
+
+  return { status: 500, message };
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -68,8 +151,18 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { returnUrl } = body as { returnUrl: string };
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const rawBody = (body && typeof body === "object") ? body as Record<string, unknown> : {};
+    const returnUrl = typeof rawBody.returnUrl === "string" ? rawBody.returnUrl.trim() : "";
 
     if (!returnUrl) {
       return new Response(JSON.stringify({ error: "Missing returnUrl" }), {
@@ -78,15 +171,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Look up the user's Stripe customer ID
-    const { data: sub, error: subError } = await supabase.from("subscriptions")
-      .select("stripe_customer_id")
-      .eq("user_id", user.id)
-      .not("stripe_customer_id", "is", null)
-      .limit(1)
-      .maybeSingle();
+    if (!isValidHttpUrl(returnUrl)) {
+      return new Response(JSON.stringify({ error: "returnUrl must be a valid HTTP(S) URL" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (subError || !sub?.stripe_customer_id) {
+    const customerId = await findCustomerIdByUser({ id: user.id, email: user.email });
+    if (!customerId) {
       return new Response(JSON.stringify({ error: "No active subscription found. Upgrade to Pro to start a subscription." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -94,7 +187,7 @@ Deno.serve(async (req) => {
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: sub.stripe_customer_id,
+      customer: customerId,
       return_url: returnUrl,
     });
 
@@ -105,10 +198,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const { status, message } = classifyStripeError(err);
     console.error("[PORTAL] Error:", message);
     return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
