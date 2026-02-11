@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FactoidsInputSchema, type FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSettingsStore } from '@/lib/stores/settings-store';
-import { WikiSourcesToggle } from '@/components/features/shared/WikiSourcesToggle';
+
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
 
@@ -144,8 +144,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
             </div>
           </div>
 
-          {/* Wiki Sources Toggle */}
-          <WikiSourcesToggle />
+
 
           {/* Submit Button */}
           <Button type="submit" variant="secondary" className="w-full h-12" disabled={isLoading}>
