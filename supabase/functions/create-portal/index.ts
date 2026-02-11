@@ -84,11 +84,11 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .not("stripe_customer_id", "is", null)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (subError || !sub?.stripe_customer_id) {
-      return new Response(JSON.stringify({ error: "No active subscription found" }), {
-        status: 404,
+      return new Response(JSON.stringify({ error: "No active subscription found. Upgrade to Pro to start a subscription." }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

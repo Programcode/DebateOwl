@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("user_id", user.id)
       .eq("promo_code_id", promo.id)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return new Response(JSON.stringify({ success: false, message: "You've already redeemed this code" }), {

@@ -76,6 +76,9 @@ Deno.serve(async (req) => {
       promoCode?: string;
     };
 
+    console.log(`[CHECKOUT] Request from user ${user.id}: priceId=${priceId}, hasPromo=${!!promoCode}`);
+    console.log(`[CHECKOUT] Stripe key prefix: ${STRIPE_SECRET_KEY!.substring(0, 7)}...`);
+
     if (!priceId || !successUrl || !cancelUrl) {
       return new Response(JSON.stringify({ error: "Missing required fields: priceId, successUrl, cancelUrl" }), {
         status: 400,
@@ -92,17 +95,19 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .not("stripe_customer_id", "is", null)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (existingSub?.stripe_customer_id) {
       customerId = existingSub.stripe_customer_id;
+      console.log(`[CHECKOUT] Found existing Stripe customer: ${customerId}`);
     } else {
-      // Create new Stripe customer
+      console.log(`[CHECKOUT] Creating new Stripe customer for ${user.email}`);
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: { user_id: user.id },
       });
       customerId = customer.id;
+      console.log(`[CHECKOUT] Created Stripe customer: ${customerId}`);
     }
 
     // Build checkout session params
@@ -116,36 +121,49 @@ Deno.serve(async (req) => {
       subscription_data: {
         metadata: { user_id: user.id },
       },
-      automatic_tax: { enabled: true },
     };
 
     // Apply promo code if provided
     if (promoCode) {
-      // Look up promo code in our database first
       const { data: promo } = await supabase.from("promo_codes")
         .select("*")
         .eq("code", promoCode.toUpperCase())
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
       if (promo && promo.type === "discount") {
-        // For discount type, allow Stripe promotion codes
         sessionParams.allow_promotion_codes = true;
       }
     }
 
+    console.log(`[CHECKOUT] Creating checkout session with params:`, JSON.stringify({
+      customer: customerId,
+      mode: sessionParams.mode,
+      priceId,
+      successUrl,
+      cancelUrl,
+    }));
+
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    console.log(`[CHECKOUT] Created session ${session.id} for user ${user.id}`);
+    console.log(`[CHECKOUT] Success! Session ${session.id} for user ${user.id}`);
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[CHECKOUT] Error:", message);
-    return new Response(JSON.stringify({ error: message }), {
+    // Extract detailed Stripe error info if available
+    const stripeErr = err as { type?: string; code?: string; param?: string; message?: string; statusCode?: number };
+    const details = {
+      message: stripeErr.message || "Unknown error",
+      type: stripeErr.type,
+      code: stripeErr.code,
+      param: stripeErr.param,
+      statusCode: stripeErr.statusCode,
+    };
+    console.error("[CHECKOUT] Error details:", JSON.stringify(details));
+    return new Response(JSON.stringify({ error: details.message, details }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

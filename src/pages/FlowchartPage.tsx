@@ -12,6 +12,8 @@ import ReactFlow, {
     Connection,
     MarkerType,
     BackgroundVariant,
+    Handle,
+    Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
@@ -85,8 +87,9 @@ function CustomNode({ data }: { data: FlowNodeData }) {
     const colors = nodeColors[data.type];
     return (
         <div
-            className={`px-4 py-3 shadow-lg rounded-lg border-2 ${colors.border} ${colors.bg} ${colors.text} min-w-[150px] max-w-[250px]`}
+            className={`px-4 py-3 shadow-lg rounded-lg border-2 ${colors.border} ${colors.bg} ${colors.text} min-w-[150px] max-w-[250px] relative`}
         >
+            <Handle type="target" position={Position.Top} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
             <div className="flex items-center gap-2 mb-1">
                 {nodeIcons[data.type]}
                 <Badge variant="secondary" className="text-xs bg-white/20">
@@ -110,6 +113,7 @@ function CustomNode({ data }: { data: FlowNodeData }) {
                     {data.strength}
                 </Badge>
             )}
+            <Handle type="source" position={Position.Bottom} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
         </div>
     );
 }

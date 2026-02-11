@@ -123,8 +123,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Fetch the full subscription from Stripe
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-  // Upsert subscription record
-  const { error: subError } = await supabase.from("subscriptions").upsert({
+  // Upsert subscription record — first check if a row already exists for this user
+  const { data: existingRow } = await supabase.from("subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  const subscriptionRow = {
     user_id: userId,
     stripe_customer_id: customerId,
     stripe_subscription_id: subscriptionId,
@@ -136,9 +142,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
     trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-  }, {
-    onConflict: "stripe_subscription_id",
-  });
+  };
+
+  const { error: subError } = existingRow
+    ? await supabase.from("subscriptions")
+        .update(subscriptionRow)
+        .eq("id", existingRow.id)
+    : await supabase.from("subscriptions")
+        .insert(subscriptionRow);
 
   if (subError) {
     console.error("[WEBHOOK] Failed to upsert subscription:", subError);
@@ -185,7 +196,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const { data: sub } = await supabase.from("subscriptions")
     .select("user_id")
     .eq("stripe_subscription_id", subscriptionId)
-    .single();
+    .maybeSingle();
 
   // Update subscription status
   const { error: subError } = await supabase.from("subscriptions").update({
@@ -218,7 +229,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const { data: sub } = await supabase.from("subscriptions")
     .select("user_id")
     .eq("stripe_subscription_id", subscriptionId)
-    .single();
+    .maybeSingle();
 
   // Update subscription record
   const { error: subError } = await supabase.from("subscriptions").update({
@@ -268,7 +279,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const { data: sub } = await supabase.from("subscriptions")
       .select("user_id")
       .eq("stripe_subscription_id", subscriptionId)
-      .single();
+      .maybeSingle();
 
     if (sub?.user_id) {
       await supabase.from("user_settings").update({
