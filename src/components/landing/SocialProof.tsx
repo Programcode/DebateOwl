@@ -1,8 +1,15 @@
 import { motion } from "framer-motion";
 
+const proofItems = [
+    { value: "9", label: "Prep Modes" },
+    { value: "2", label: "Plans (Trial + Pro)" },
+    { value: "3", label: "Major 2026 Upgrades" },
+    { value: "1", label: "Unified Workspace" },
+];
+
 const SocialProof = () => {
     return (
-        <section className="py-12 relative overflow-hidden">
+        <section className="relative overflow-hidden py-12">
             <div className="section-container">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -11,21 +18,22 @@ const SocialProof = () => {
                     viewport={{ once: true }}
                     className="text-center"
                 >
-                    <p className="text-muted-foreground text-sm md:text-base mb-8">
-                        Built for competitive debaters at tournaments worldwide
+                    <p className="mb-7 text-sm text-muted-foreground md:text-base">
+                        One platform for research, strategy, rebuttals, and speaking practice.
                     </p>
 
-                    <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12 opacity-50">
-                        {["Harvard", "Stanford", "Yale", "Princeton", "MIT", "Berkeley"].map((name, index) => (
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+                        {proofItems.map((item, index) => (
                             <motion.div
-                                key={name}
+                                key={item.label}
                                 initial={{ opacity: 0, y: 10 }}
                                 whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: index * 0.1 }}
+                                transition={{ duration: 0.35, delay: index * 0.06 }}
                                 viewport={{ once: true }}
-                                className="text-lg md:text-xl font-semibold text-muted-foreground"
+                                className="rounded-xl border border-border/70 bg-card/70 px-4 py-4"
                             >
-                                {name}
+                                <div className="text-2xl font-bold text-foreground">{item.value}</div>
+                                <div className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</div>
                             </motion.div>
                         ))}
                     </div>

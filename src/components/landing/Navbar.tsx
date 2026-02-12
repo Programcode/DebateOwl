@@ -1,68 +1,64 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ArrowRight, Brain } from "lucide-react";
+import { Menu, X, ArrowRight } from "lucide-react";
+
+const navLinks = [
+    { href: "#features", label: "Features" },
+    { href: "#whats-new", label: "What's New" },
+    { href: "#pricing", label: "Pricing" },
+    { href: "#how-it-works", label: "How It Works" },
+];
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
-
-    const navLinks = [
-        { href: "#features", label: "Features" },
-        { href: "#how-it-works", label: "How It Works" },
-    ];
 
     return (
         <motion.nav
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="fixed top-0 left-0 right-0 z-50 nav-blur"
+            className="fixed left-0 right-0 top-0 z-50 nav-blur"
         >
             <div className="section-container">
-                <div className="flex items-center justify-between h-16 md:h-20">
-                    {/* Logo */}
-                    <a href="/" className="flex items-center gap-2 group">
-                        <div className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/20 group-hover:border-primary/40 transition-colors">
-                            <Brain className="w-5 h-5 text-primary" />
-                        </div>
+                <div className="flex h-16 items-center justify-between md:h-20">
+                    <a href="/" className="group flex items-center gap-2">
+                        <img
+                            src="/favicon.ico"
+                            alt="DebateLab logo"
+                            className="h-9 w-9 rounded-lg border border-primary/20 object-cover transition-colors group-hover:border-primary/40"
+                        />
                         <span className="text-xl font-bold text-foreground">DebateLab</span>
                     </a>
 
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="hidden items-center gap-7 md:flex">
                         {navLinks.map((link) => (
                             <a
                                 key={link.href}
                                 href={link.href}
-                                className="text-muted-foreground hover:text-foreground transition-colors duration-200 text-sm font-medium"
+                                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
                             >
                                 {link.label}
                             </a>
                         ))}
                     </div>
 
-                    {/* CTA Button */}
-                    <div className="hidden md:flex items-center gap-4">
-                        <a
-                            href="/app"
-                            className="btn-primary-gradient shimmer flex items-center gap-2 text-sm"
-                        >
-                            <span className="relative z-10">Launch App</span>
-                            <ArrowRight className="w-4 h-4 relative z-10" />
+                    <div className="hidden items-center gap-3 md:flex">
+                        <a href="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
+                            <span className="relative z-10">Start Trial</span>
+                            <ArrowRight className="relative z-10 h-4 w-4" />
                         </a>
                     </div>
 
-                    {/* Mobile Menu Button */}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className="md:hidden p-2 text-foreground"
+                        className="p-2 text-foreground md:hidden"
                         aria-label="Toggle menu"
                     >
-                        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
                 </div>
             </div>
 
-            {/* Mobile Menu */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -70,25 +66,26 @@ const Navbar = () => {
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="md:hidden bg-background/95 backdrop-blur-xl border-b border-border"
+                        className="border-b border-border bg-background/95 backdrop-blur-xl md:hidden"
                     >
-                        <div className="section-container py-4 flex flex-col gap-4">
+                        <div className="section-container flex flex-col gap-4 py-4">
                             {navLinks.map((link) => (
                                 <a
                                     key={link.href}
                                     href={link.href}
                                     onClick={() => setIsOpen(false)}
-                                    className="text-muted-foreground hover:text-foreground transition-colors py-2 text-base font-medium"
+                                    className="py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
                                 >
                                     {link.label}
                                 </a>
                             ))}
                             <a
                                 href="/app"
-                                className="btn-primary-gradient shimmer flex items-center justify-center gap-2 mt-2"
+                                onClick={() => setIsOpen(false)}
+                                className="btn-primary-gradient shimmer mt-2 inline-flex items-center justify-center gap-2"
                             >
-                                <span className="relative z-10">Launch App</span>
-                                <ArrowRight className="w-4 h-4 relative z-10" />
+                                <span className="relative z-10">Start Trial</span>
+                                <ArrowRight className="relative z-10 h-4 w-4" />
                             </a>
                         </div>
                     </motion.div>

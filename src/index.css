@@ -167,23 +167,23 @@ All colors MUST be HSL.
 @layer components {
   .glass-card {
     @apply bg-card backdrop-blur-xl border border-border rounded-2xl shadow-sm;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
   }
 
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 58%) 100%);
+    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(169 72% 40%) 100%);
   }
 
   .btn-primary-gradient {
     @apply relative px-6 py-3 font-semibold text-primary-foreground rounded-xl overflow-hidden transition-all duration-300 shadow-lg;
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 58%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(169 72% 40%) 100%);
   }
 
   .btn-primary-gradient::before {
     content: '';
     @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(199 89% 35%) 0%, hsl(262 83% 50%) 100%);
+    background: linear-gradient(135deg, hsl(200 92% 32%) 0%, hsl(169 72% 34%) 100%);
   }
 
   .btn-primary-gradient:hover::before {
@@ -244,8 +244,16 @@ All colors MUST be HSL.
   }
 
   .orb-accent {
-    background: hsl(262 83% 75% / 0.25);
+    background: hsl(169 72% 45% / 0.22);
     animation: float 10s ease-in-out infinite reverse;
+  }
+
+  .aurora-bg {
+    background:
+      radial-gradient(circle at 12% 18%, hsl(var(--primary) / 0.28), transparent 45%),
+      radial-gradient(circle at 82% 14%, hsl(169 72% 40% / 0.22), transparent 48%),
+      radial-gradient(circle at 55% 85%, hsl(186 78% 45% / 0.18), transparent 44%);
+    animation: auroraShift 14s ease-in-out infinite;
   }
 
   .section-container {
@@ -278,6 +286,18 @@ All colors MUST be HSL.
   }
   100% {
     background-position: 60px 60px;
+  }
+}
+
+@keyframes auroraShift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(1.5%, -1.5%, 0) scale(1.04);
+  }
+  66% {
+    transform: translate3d(-1.5%, 1%, 0) scale(0.98);
   }
 }
 

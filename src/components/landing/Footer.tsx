@@ -1,5 +1,3 @@
-import { Brain } from "lucide-react";
-
 const Footer = () => {
     return (
         <footer className="py-12 border-t border-border/50">
@@ -8,9 +6,11 @@ const Footer = () => {
                     {/* Logo */}
                     <div className="flex items-center gap-6">
                         <a href="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
-                                <Brain className="w-5 h-5 text-primary" />
-                            </div>
+                            <img
+                                src="/favicon.ico"
+                                alt="DebateLab logo"
+                                className="h-8 w-8 rounded-lg border border-primary/20 object-cover"
+                            />
                             <span className="text-lg font-bold text-foreground">DebateLab</span>
                         </a>
                         <span className="hidden md:inline text-muted-foreground text-sm">
