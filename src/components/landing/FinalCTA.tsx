@@ -3,14 +3,12 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 const FinalCTA = () => {
     return (
-        <section className="py-24 relative overflow-hidden">
-            {/* Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5" />
-            <div className="absolute inset-0 animated-grid opacity-50" />
+        <section className="relative overflow-hidden py-24">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-emerald-200/20 dark:to-emerald-900/20" />
+            <div className="absolute inset-0 animated-grid opacity-45" />
 
-            {/* Orbs */}
-            <div className="orb orb-primary w-80 h-80 -top-40 left-0 opacity-50" />
-            <div className="orb orb-accent w-96 h-96 -bottom-40 right-0 opacity-50" />
+            <div className="orb orb-primary -top-40 left-0 h-80 w-80 opacity-55" />
+            <div className="orb orb-accent -bottom-40 right-0 h-96 w-96 opacity-55" />
 
             <div className="section-container relative z-10">
                 <motion.div
@@ -18,30 +16,29 @@ const FinalCTA = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                     viewport={{ once: true }}
-                    className="text-center max-w-3xl mx-auto"
+                    className="mx-auto max-w-3xl text-center"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-sm text-muted-foreground mb-6">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        Join thousands of debaters
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/85">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Free trial available
                     </div>
 
-                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-                        Ready to Outprepare{" "}
-                        <span className="gradient-text">Your Competition?</span>
+                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                        Ready to Build Your Next <span className="gradient-text">Winning Case?</span>
                     </h2>
 
-                    <p className="text-lg md:text-xl text-muted-foreground mb-10">
-                        Join thousands of debaters using AI to win.
+                    <p className="mt-6 text-lg text-muted-foreground md:text-xl">
+                        Launch DebateLab, start on the 3-day trial, then continue with Pro for advanced models and higher limits.
                     </p>
 
                     <motion.a
                         href="/app"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="inline-flex items-center gap-3 btn-primary-gradient shimmer text-lg px-10 py-5"
+                        className="btn-primary-gradient shimmer mt-10 inline-flex items-center gap-3 px-10 py-5 text-lg"
                     >
                         <span className="relative z-10">Launch DebateLab</span>
-                        <ArrowRight className="w-5 h-5 relative z-10" />
+                        <ArrowRight className="relative z-10 h-5 w-5" />
                     </motion.a>
                 </motion.div>
             </div>

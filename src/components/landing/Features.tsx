@@ -1,82 +1,103 @@
 import { motion } from "framer-motion";
-import { BookOpen, Zap, Target, Brain, Search, Scale } from "lucide-react";
+import {
+    BookOpen,
+    Zap,
+    Swords,
+    Brain,
+    Search,
+    Database,
+    MessageCircle,
+    Timer,
+    GitBranch,
+} from "lucide-react";
 
 const features = [
     {
-        icon: BookOpen,
-        title: "Source Library",
-        description: "Save URLs, snippets, and AI responses to build your personal knowledge base. Active sources get injected into every AI interaction.",
-    },
-    {
         icon: Zap,
-        title: "Case Generator",
-        description: "Generate tournament-ready cases in the 4-6-6-3 speech format. Export directly to Word with one click.",
+        title: "Generate",
+        description: "Build full cases with claims, warrants, impacts, and speech-ready structure.",
     },
     {
-        icon: Target,
-        title: "Argument Attack",
-        description: "Get ruthless critiques of any argument. Detect logical fallacies and weak points before your opponent does.",
+        icon: Swords,
+        title: "Attack",
+        description: "Stress-test arguments with weakness detection, fallacy checks, and rebuttal angles.",
     },
     {
         icon: Brain,
-        title: "AI Coach",
-        description: "Practice with an interactive coach that remembers your conversation and adapts to your style. Supports voice input.",
+        title: "Brainstorm",
+        description: "Explore motion ideas with structured ideation modes for faster prep.",
     },
     {
         icon: Search,
-        title: "Deep Research",
-        description: "Multi-round web search powered by Jina AI. The AI refines queries automatically to find the best evidence.",
+        title: "Factoids",
+        description: "Run deep research with source checks and evidence snippets for your case files.",
     },
     {
-        icon: Scale,
-        title: "Judge Paradigms",
-        description: "Test your arguments against different judge styles including Logic-Heavy, Values-Focused, or Policy-based.",
+        icon: MessageCircle,
+        title: "Ask Coach",
+        description: "Chat through strategy, cross-ex plans, and speaking choices with context memory.",
+    },
+    {
+        icon: Database,
+        title: "Source Library",
+        description: "Save and activate sources so AI outputs stay grounded in your own research.",
+    },
+    {
+        icon: Timer,
+        title: "Debate Timer",
+        description: "Practice speech pacing with multiple debate formats and keyboard controls.",
+    },
+    {
+        icon: GitBranch,
+        title: "Flowchart",
+        description: "Map argument trees visually and export your round strategy board.",
+    },
+    {
+        icon: BookOpen,
+        title: "History",
+        description: "Reopen saved cases, chats, attacks, and factoids whenever you need them.",
     },
 ];
 
 const Features = () => {
     return (
-        <section id="features" className="py-24 relative">
-            {/* Background glow */}
+        <section id="features" className="relative py-24">
             <div className="absolute inset-0 pointer-events-none">
-                <div className="orb orb-primary w-96 h-96 top-1/2 left-0 -translate-y-1/2 opacity-40" />
-                <div className="orb orb-accent w-80 h-80 bottom-0 right-0 opacity-40" />
+                <div className="orb orb-primary left-0 top-1/2 h-96 w-96 -translate-y-1/2 opacity-40" />
+                <div className="orb orb-accent bottom-0 right-0 h-80 w-80 opacity-40" />
             </div>
 
             <div className="section-container relative z-10">
-                {/* Section Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                     viewport={{ once: true }}
-                    className="text-center mb-16"
+                    className="mb-16 text-center"
                 >
-                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                        Everything You Need to{" "}
-                        <span className="gradient-text">Dominate</span>
+                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                        Every Core Tool In <span className="gradient-text">One Workspace</span>
                     </h2>
-                    <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                        Powerful tools designed specifically for competitive debaters
+                    <p className="mx-auto mt-4 max-w-3xl text-lg text-muted-foreground">
+                        Generate, attack, research, coach, and practice without jumping between disconnected apps.
                     </p>
                 </motion.div>
 
-                {/* Features Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {features.map((feature, index) => (
                         <motion.div
                             key={feature.title}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                            transition={{ duration: 0.5, delay: index * 0.06 }}
                             viewport={{ once: true }}
                             className="feature-card group"
                         >
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:border-primary/40 transition-colors">
-                                <feature.icon className="w-6 h-6 text-primary" />
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 transition-colors group-hover:border-primary/40">
+                                <feature.icon className="h-6 w-6 text-primary" />
                             </div>
-                            <h3 className="text-xl font-semibold mb-2 text-foreground">{feature.title}</h3>
-                            <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
+                            <h3 className="mb-2 text-xl font-semibold text-foreground">{feature.title}</h3>
+                            <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
                         </motion.div>
                     ))}
                 </div>

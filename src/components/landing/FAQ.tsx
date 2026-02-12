@@ -8,40 +8,40 @@ import { motion } from "framer-motion";
 
 const faqs = [
     {
+        question: "How much does DebateLab cost?",
+        answer: "DebateLab starts with a 3-day trial that includes 5 AI requests per day. After the trial, Pro is $5/month + tax and increases usage to 50 requests per day with advanced model access."
+    },
+    {
+        question: "What do I get with Pro?",
+        answer: "Pro unlocks advanced models (including GPT-4o, Claude, and Gemini Pro options), higher daily limits, deep research workflows, and priority processing while keeping all core debate tools in one place."
+    },
+    {
+        question: "Can I cancel or manage my subscription?",
+        answer: "Yes. After signing in, go to Settings and open the subscription section to manage billing through the Stripe customer portal."
+    },
+    {
         question: "Does the AI hallucinate arguments?",
-        answer: "We minimize hallucinations using 'Active Grounding'. By forcing the AI to use only the sources you provide (or that we find via live search), the output is strictly tied to real evidence. We also provide citations for every claim."
+        answer: "DebateLab reduces hallucinations by grounding output in your active source library and research context. You can keep your strongest evidence active so generated responses stay anchored to your prep."
     },
     {
-        question: "Is this cheating?",
-        answer: "No. DebateLab is a research assistant and practice tool. It helps you find information and structure your thoughts faster, but you still need to present the arguments, understand the logic, and make the strategic decisions in the round."
-    },
-    {
-        question: "Can I export my cases?",
-        answer: "Yes! You can export any generated case directly to a formatted Microsoft Word (.docx) document, ready for printing or further editing at a tournament."
-    },
-    {
-        question: "Do I need an API key?",
-        answer: "You can use your own OpenAI/Google keys for unlimited usage, or use our limited free tier which provides daily credits to get you started without any setup."
-    },
-    {
-        question: "What speech format does it use?",
-        answer: "We default to the standard 4-6-6-3 Public Forum format (Constructive, Rebuttal, Summary, Final Focus), but the AI is flexible enough to adapt to Lincoln-Douglas or Policy structures via custom prompts."
+        question: "Can I save and export my work?",
+        answer: "Yes. You can save cases, attacks, brainstorms, factoids, and chats in History, then export generated cases to Word when you need a print-ready draft."
     }
 ];
 
 const FAQ = () => {
     return (
-        <section className="py-24 bg-secondary/5">
+        <section className="bg-secondary/5 py-24">
             <div className="section-container max-w-3xl">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                     viewport={{ once: true }}
-                    className="text-center mb-12"
+                    className="mb-12 text-center"
                 >
-                    <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
-                    <p className="text-muted-foreground">Everything you need to know about the platform.</p>
+                    <h2 className="mb-4 text-3xl font-bold">Frequently Asked Questions</h2>
+                    <p className="text-muted-foreground">Pricing, workflow, and product details at a glance.</p>
                 </motion.div>
 
                 <motion.div
@@ -54,7 +54,7 @@ const FAQ = () => {
                         {faqs.map((faq, index) => (
                             <AccordionItem key={index} value={`item-${index}`}>
                                 <AccordionTrigger className="text-left text-lg">{faq.question}</AccordionTrigger>
-                                <AccordionContent className="text-muted-foreground text-base leading-relaxed">
+                                <AccordionContent className="text-base leading-relaxed text-muted-foreground">
                                     {faq.answer}
                                 </AccordionContent>
                             </AccordionItem>

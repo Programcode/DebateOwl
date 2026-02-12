@@ -9,15 +9,19 @@ import {
     FAQ,
     FinalCTA,
     Footer,
+    WhatsNew,
+    Pricing,
 } from "@/components/landing";
 
 const LandingPage = () => {
     return (
-        <div className="min-h-screen bg-background overflow-x-hidden">
+        <div className="min-h-screen overflow-x-hidden bg-background">
             <Navbar />
             <Hero />
             <SocialProof />
+            <WhatsNew />
             <Features />
+            <Pricing />
             <DeepDive />
             <HowItWorks />
             <UseCases />

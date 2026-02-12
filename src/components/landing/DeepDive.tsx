@@ -95,11 +95,11 @@ const DeepDive = () => {
                                     <span className="text-accent">User Query: "Impact on economy?"</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <span className="text-purple-500">➜</span>
+                                    <span className="text-cyan-500">➜</span>
                                     <span>Retrieved 3 relevant evidence chunks</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <span className="text-purple-500">➜</span>
+                                    <span className="text-cyan-500">➜</span>
                                     <span>Generating grounded response...</span>
                                 </div>
                                 <div className="p-3 bg-primary/10 rounded border border-primary/20 text-foreground">

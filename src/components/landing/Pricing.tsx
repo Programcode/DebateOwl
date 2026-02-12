@@ -1,0 +1,129 @@
+import { motion } from "framer-motion";
+import { Check, Crown, Sparkles, Zap } from "lucide-react";
+
+const TRIAL_FEATURES = [
+    "3-day access window",
+    "5 AI requests per day during trial",
+    "Standard AI models during trial",
+    "All core debate tools included",
+    "Save and reload your prep history",
+];
+
+const PRO_FEATURES = [
+    "50 AI requests per day",
+    "Advanced models (GPT-4o, Claude, Gemini Pro)",
+    "Priority processing",
+    "Deep research workflows",
+    "All core debate tools",
+];
+
+const Pricing = () => {
+    return (
+        <section id="pricing" className="relative overflow-hidden py-24">
+            <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/10 to-background" />
+            <div className="absolute inset-0 animated-grid opacity-40" />
+
+            <div className="section-container relative z-10">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    viewport={{ once: true }}
+                    className="mb-14 text-center"
+                >
+                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                        Trial + Pro for <span className="gradient-text">Debate Prep</span>
+                    </h2>
+                    <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+                        Start with a 3-day trial (5 AI requests/day). After trial ends, continue with Pro for ongoing access.
+                    </p>
+                </motion.div>
+
+                <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true }}
+                        className="rounded-2xl border border-border/70 bg-card/80 p-7 shadow-sm backdrop-blur"
+                    >
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-2xl font-semibold text-foreground">Trial</h3>
+                            <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                New Users
+                            </span>
+                        </div>
+                        <p className="text-4xl font-bold text-foreground">
+                            $0<span className="text-base font-medium text-muted-foreground"> for 3 days</span>
+                        </p>
+                        <p className="mt-2 text-sm text-muted-foreground">Use the full workflow before deciding on Pro.</p>
+
+                        <ul className="mt-6 space-y-3">
+                            {TRIAL_FEATURES.map((feature) => (
+                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
+                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <a href="/app" className="btn-secondary-outline mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
+                            <Zap className="h-4 w-4" />
+                            Start Trial
+                        </a>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
+                        viewport={{ once: true }}
+                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur"
+                    >
+                        <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Recommended
+                        </div>
+
+                        <div className="mb-4 mt-2 flex items-center justify-between">
+                            <h3 className="text-2xl font-semibold text-foreground">Pro</h3>
+                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
+                                Power Users
+                            </span>
+                        </div>
+                        <p className="text-4xl font-bold text-foreground">
+                            $5<span className="text-base font-medium text-muted-foreground">/month + tax</span>
+                        </p>
+                        <p className="mt-2 text-sm text-muted-foreground">For heavy prep weeks, tougher topics, and advanced model access.</p>
+
+                        <ul className="mt-6 space-y-3">
+                            {PRO_FEATURES.map((feature) => (
+                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
+                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <a href="/app" className="btn-primary-gradient shimmer mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
+                            <Crown className="relative z-10 h-4 w-4" />
+                            <span className="relative z-10">Launch App and Upgrade</span>
+                        </a>
+                    </motion.div>
+                </div>
+
+                <motion.p
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.2 }}
+                    viewport={{ once: true }}
+                    className="mt-7 text-center text-sm text-muted-foreground"
+                >
+                    There is no permanent free plan. Billing and upgrades are managed in <span className="font-medium text-foreground">Settings → Subscription</span> after sign in.
+                </motion.p>
+            </div>
+        </section>
+    );
+};
+
+export default Pricing;
