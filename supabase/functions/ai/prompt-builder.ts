@@ -39,7 +39,7 @@ Role: ${asString(input.role, "intro")}
 Length: ${asString(input.length, "standard")}
 Audience: ${asString(input.audience, "intermediate")}
 Tone: ${asString(input.tone, "formal")}
-Language: ${languageLabel(language)} (${language})
+Language: ${languageLabel(language)} (${language}) — Write ALL output in this language.
 
 ${searchContext}`;
   }

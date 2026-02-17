@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2 } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -153,6 +153,28 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           </Button>
         </div>
       </div>
+
+      {/* Exordio (Introductor only) */}
+      {result.exordio && (result.exordio.hook || result.exordio.transition) && (
+        <SectionCard
+          title="Exordio"
+          description="Your compelling opening"
+          icon={<Sparkles className="h-5 w-5" />}
+          onRegenerate={() => onRegenerateSection?.('exordio')}
+        >
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Hook</h4>
+              <p className="text-foreground italic">{result.exordio.hook}</p>
+            </div>
+            <Separator />
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Transition</h4>
+              <p className="text-foreground">{result.exordio.transition}</p>
+            </div>
+          </div>
+        </SectionCard>
+      )}
 
       {/* Case Structure */}
       <SectionCard

@@ -21,7 +21,6 @@ describe('Generate Schema', () => {
             length: 'standard',
             audience: 'intermediate',
             tone: 'formal',
-            language: 'en',
         };
 
         it('accepts valid input', () => {
@@ -61,11 +60,6 @@ describe('Generate Schema', () => {
 
         it('rejects invalid tone', () => {
             const result = GenerateInputSchema.safeParse({ ...validInput, tone: 'invalid' });
-            expect(result.success).toBe(false);
-        });
-
-        it('rejects invalid language', () => {
-            const result = GenerateInputSchema.safeParse({ ...validInput, language: 'fr' });
             expect(result.success).toBe(false);
         });
     });
@@ -425,7 +419,6 @@ describe('Factoids Schema', () => {
             region: 'United States',
             sourceType: 'academic',
             timeframe: '2020-2024',
-            language: 'en',
         };
 
         it('accepts valid input', () => {
