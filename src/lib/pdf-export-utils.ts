@@ -173,6 +173,17 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
 
         addHeader('Debate Case', `${side} • ${format} Format`);
 
+        // Exordio (if present)
+        if (result.exordio) {
+            addSectionTitle('Exordio', COLORS.primary);
+            if (result.exordio.hook) {
+                addParagraph(`Hook: ${result.exordio.hook}`);
+            }
+            if (result.exordio.transition) {
+                addParagraph(`Transition: ${result.exordio.transition}`);
+            }
+        }
+
         // Case Structure
         addSectionTitle('Thesis & Framework');
         addParagraph(result.caseStructure?.thesis || 'No thesis provided');
