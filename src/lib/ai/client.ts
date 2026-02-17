@@ -430,9 +430,18 @@ function parseSupabaseError(
  * This handles cases where the AI returns a different structure than requested.
  */
 function transformGenerateResponse(response: Record<string, unknown>): GenerateOutput {
-  // If already in correct format, return as-is
+  // If already in correct format, return as-is (with exordio preserved)
   if (response.caseStructure && response.contentions && response.predictedOpponentCase && response.counters && response.metadata) {
-    return response as unknown as GenerateOutput;
+    // Ensure exordio is properly structured if present
+    const result = response as unknown as GenerateOutput;
+    if (response.exordio && typeof response.exordio === 'object') {
+      const ex = response.exordio as Record<string, unknown>;
+      result.exordio = {
+        hook: String(ex.hook || ''),
+        transition: String(ex.transition || ''),
+      };
+    }
+    return result;
   }
 
   // Transform from wrong format to correct format
@@ -467,7 +476,7 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
   // Transform potentialWeaknesses to predictedOpponentCase
   const weaknesses = (response.potentialWeaknesses as string[]) || [];
 
-  return {
+  const result: GenerateOutput = {
     caseStructure: {
       thesis: (response.thesis as string) || (response.title as string) || '',
       framework: 'General framework',
@@ -499,6 +508,17 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
       generatedAt: new Date().toISOString(),
     },
   };
+
+  // Preserve exordio if present in the original response
+  if (response.exordio && typeof response.exordio === 'object') {
+    const ex = response.exordio as Record<string, unknown>;
+    result.exordio = {
+      hook: String(ex.hook || ''),
+      transition: String(ex.transition || ''),
+    };
+  }
+
+  return result;
 }
 
 /**
@@ -586,7 +606,10 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
 
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<GenerateOutput> {
   if (config.provider === 'mock') return mockGenerateCase(input.motion, input.side);
-  const data = await callSupabaseAI('generate', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
+  // Inject global language into input for the edge function
+  const language = useSettingsStore.getState().language;
+  const inputWithLanguage = { ...input, language } as Record<string, unknown>;
+  const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
 
   // Auto-save discovered sources to library
   if (data.discoveredSources && data.discoveredSources.length > 0) {
@@ -634,7 +657,10 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
   if (config.provider === 'mock') return mockFactoids(input.claim);
-  const data = await callSupabaseAI('factoids', input as Record<string, unknown>, config) as { output: unknown };
+  // Inject global language into input for the edge function
+  const language = useSettingsStore.getState().language;
+  const inputWithLanguage = { ...input, language } as Record<string, unknown>;
+  const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
   return data.output as FactoidsOutput;
 }
 

@@ -6,7 +6,6 @@ export const FactoidsInputSchema = z.object({
   region: z.string().min(1, 'Region is required'),
   sourceType: z.enum(['academic', 'government', 'news', 'any']),
   timeframe: z.string().optional(),
-  language: z.enum(['en', 'es']),
 });
 
 export type FactoidsInput = z.infer<typeof FactoidsInputSchema>;

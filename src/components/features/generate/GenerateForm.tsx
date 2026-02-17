@@ -16,7 +16,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
@@ -27,7 +26,6 @@ interface GenerateFormProps {
 }
 
 export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
-  const globalLanguage = useSettingsStore((s) => s.language);
   const { generateForm, setGenerateForm } = useSessionStore();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
@@ -40,7 +38,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       length: 'standard',
       audience: 'intermediate',
       tone: 'formal',
-      language: globalLanguage,
       ...generateForm, // Override defaults with persisted state
     },
   });
@@ -235,23 +232,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectItem value="formal">Formal</SelectItem>
                   <SelectItem value="conversational">Conversational</SelectItem>
                   <SelectItem value="aggressive">Aggressive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Language */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Language</Label>
-              <Select
-                value={currentValues.language}
-                onValueChange={(value) => setValue('language', value as GenerateInput['language'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
                 </SelectContent>
               </Select>
             </div>

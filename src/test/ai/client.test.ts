@@ -22,6 +22,7 @@ vi.mock('@/lib/stores/settings-store', () => ({
     useSettingsStore: {
         getState: vi.fn(() => ({
             customSystemPrompt: 'test-system-prompt',
+            language: 'en',
         })),
     },
 }));
@@ -76,7 +77,6 @@ describe('AI Client Integration', () => {
                 length: 'brief',
                 audience: 'advanced',
                 tone: 'formal',
-                language: 'en'
             };
 
             await generateCase(input, mockConfig);
@@ -89,7 +89,7 @@ describe('AI Client Integration', () => {
                     provider: 'openai',
                     model: 'gpt-4o',
                     temperature: 0.8,
-                    input: input,
+                    input: expect.objectContaining(input),
                     customSystemPrompt: 'test-system-prompt',
                     sources: expect.arrayContaining([
                         expect.objectContaining({ title: 'Source 1' }) // Only active source
@@ -256,7 +256,6 @@ describe('AI Client Integration', () => {
                 region: 'United States',
                 sourceType: 'government',
                 timeframe: '2020-2025',
-                language: 'en',
             }, mockConfig);
 
             expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({

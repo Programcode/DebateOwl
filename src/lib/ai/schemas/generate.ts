@@ -9,7 +9,6 @@ export const GenerateInputSchema = z.object({
   length: z.enum(['brief', 'standard', 'comprehensive']),
   audience: z.enum(['beginner', 'intermediate', 'advanced']),
   tone: z.enum(['formal', 'conversational', 'aggressive']),
-  language: z.enum(['en', 'es']),
 });
 
 export type GenerateInput = z.infer<typeof GenerateInputSchema>;
@@ -24,7 +23,13 @@ export const ContentionSchema = z.object({
   impact: z.string(),
 });
 
+export const ExordioSchema = z.object({
+  hook: z.string(),
+  transition: z.string(),
+});
+
 export const GenerateOutputSchema = z.object({
+  exordio: ExordioSchema.optional(),
   caseStructure: z.object({
     thesis: z.string(),
     framework: z.string(),

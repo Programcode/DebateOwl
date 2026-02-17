@@ -15,7 +15,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FactoidsInputSchema, type FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useSettingsStore } from '@/lib/stores/settings-store';
 
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
@@ -26,7 +25,6 @@ interface FactoidsFormProps {
 }
 
 export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
-  const globalLanguage = useSettingsStore((s) => s.language);
   const { factoidsForm, setFactoidsForm } = useSessionStore();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FactoidsInput>({
@@ -36,7 +34,6 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
       region: '',
       timeframe: '',
       sourceType: 'any',
-      language: globalLanguage,
       ...factoidsForm, // Override with persisted state
     },
   });
@@ -122,23 +119,6 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
                   <SelectItem value="academic">Academic Only</SelectItem>
                   <SelectItem value="government">Government Sources</SelectItem>
                   <SelectItem value="news">Major News</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Language */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Language</Label>
-              <Select
-                value={currentValues.language}
-                onValueChange={(value) => setValue('language', value as FactoidsInput['language'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
                 </SelectContent>
               </Select>
             </div>
