@@ -347,6 +347,7 @@ interface GenerateData {
     predictedOpponentCase?: { likelyArguments?: string[] };
     counters?: { targetArgument?: string; counterpoint?: string; rebuttal?: string }[];
     metadata?: { side?: string; format?: string; generatedAt?: string };
+    exordio?: { hook?: string; transition?: string };
 }
 
 function buildGenerateContent(data: GenerateData) {
@@ -368,6 +369,22 @@ function buildGenerateContent(data: GenerateData) {
     const date = data.metadata?.generatedAt ? new Date(data.metadata.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
     const metaRange = insertText(`${side} • ${format} • ${date}\n`);
     applySubtitle(metaRange);
+
+    // Exordio Section (if present)
+    if (data.exordio && (data.exordio.hook || data.exordio.transition)) {
+        const exordioSectionRange = insertText('Exordio\n');
+        applySectionHeader(exordioSectionRange);
+        if (data.exordio.hook) {
+            const hookLabel = insertText('Hook: ');
+            applyLabel(hookLabel);
+            applyBody(insertText(`${data.exordio.hook}\n`));
+        }
+        if (data.exordio.transition) {
+            const transitionLabel = insertText('Transition: ');
+            applyLabel(transitionLabel);
+            applyBody(insertText(`${data.exordio.transition}\n`));
+        }
+    }
 
     // Thesis Section
     const thesisSectionRange = insertText('Thesis\n');

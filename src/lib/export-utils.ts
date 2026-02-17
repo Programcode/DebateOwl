@@ -116,6 +116,19 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
               spacing: { after: 400 },
             }),
 
+            // Exordio (if present)
+            ...(result.exordio ? [
+              new Paragraph({ text: "EXORDIO", heading: HeadingLevel.HEADING_2 }),
+              new Paragraph({
+                children: [new TextRun({ text: "Hook: ", bold: true }), new TextRun(result.exordio.hook || '')],
+                spacing: { after: 100 },
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: "Transition: ", bold: true }), new TextRun(result.exordio.transition || '')],
+                spacing: { after: 400 },
+              }),
+            ] : []),
+
             // Thesis & Framework
             new Paragraph({ text: "THESIS", heading: HeadingLevel.HEADING_2 }),
             new Paragraph({ text: thesis, spacing: { after: 200 } }),
