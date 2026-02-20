@@ -5,7 +5,7 @@ const steps = [
     {
         icon: ScanSearch,
         title: "1. AI Scanning",
-        description: "We use Jina AI to read and index every URL you save, extracting clean text without clutter.",
+        description: "We use Exa to read and index every URL you save, extracting clean text without clutter.",
     },
     {
         icon: Database,
@@ -42,7 +42,7 @@ const DeepDive = () => {
                         </h2>
                         <p className="text-lg text-muted-foreground mb-8">
                             Most AI tools just guess. DebateLab actively reads your sources.
-                            Our deep integration with Jina AI ensures that every argument is backed by the evidence you provide.
+                            Our deep integration with Exa ensures that every argument is backed by the evidence you provide.
                         </p>
 
                         <div className="space-y-6">

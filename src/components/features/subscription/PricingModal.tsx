@@ -23,7 +23,7 @@ const FREE_FEATURES = [
 const PRO_FEATURES = [
   '50 AI requests per day',
   'Advanced models (GPT-4o, Claude 3.5 Sonnet, Gemini Pro)',
-  'Deep research with Jina AI',
+  'Deep research with Exa',
   'Priority processing',
   'All debate features',
 ];

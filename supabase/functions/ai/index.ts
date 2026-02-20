@@ -33,7 +33,7 @@ type Source = {
   type: string;
 };
 
-type JinaResult = { title?: string; url?: string; content?: string; description?: string };
+type ExaResult = { title?: string; url?: string; content?: string; description?: string };
 
 interface ResearchContext {
   searches: Array<{ query: string; results: string }>;
@@ -407,35 +407,65 @@ function parseJsonFromText(text: string, providerName: string) {
   throw new Error(`${providerName} returned invalid JSON`);
 }
 
-// ============== JINA FUNCTIONS ==============
+// ============== EXA FUNCTIONS ==============
 
-async function jinaSearch(query: string): Promise<JinaResult[]> {
-  const apiKey = Deno.env.get("JINA_API_KEY");
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+// exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
+async function exaSearch(query: string): Promise<ExaResult[]> {
+  const apiKey = Deno.env.get("EXA_API_KEY");
+  if (!apiKey) {
+    console.warn("[EXA] EXA_API_KEY not configured");
+    return [];
+  }
   try {
-    const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, { headers }, 30000);
-    if (!response.ok) return [];
+    const response = await fetchWithTimeout("https://api.exa.ai/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({
+        query,
+        type: "auto",
+        num_results: 10,
+        contents: { text: { max_characters: 10000 } },
+      }),
+    }, 30000);
+    if (!response.ok) {
+      console.warn(`[EXA] Search failed (${response.status}) for: ${query}`);
+      return [];
+    }
     const data = await response.json();
-    if (!data?.data || !Array.isArray(data.data)) return [];
-    return data.data as JinaResult[];
+    if (!data?.results || !Array.isArray(data.results)) return [];
+    return data.results.map((r: { title?: string; url?: string; text?: string }) => ({
+      title: r.title,
+      url: r.url,
+      content: r.text,
+    }));
   } catch {
-    console.warn(`[JINA] Search failed for: ${query}`);
+    console.warn(`[EXA] Search failed for: ${query}`);
     return [];
   }
 }
 
-async function jinaRead(url: string): Promise<string> {
-  const apiKey = Deno.env.get("JINA_API_KEY");
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+// exaGetContents: extract full text from a specific URL using Exa's /contents endpoint
+async function exaGetContents(url: string): Promise<string> {
+  const apiKey = Deno.env.get("EXA_API_KEY");
+  if (!apiKey) {
+    console.warn("[EXA] EXA_API_KEY not configured");
+    return "";
+  }
   try {
-    const response = await fetchWithTimeout(`https://r.jina.ai/${url}`, { headers }, 30000);
-    if (!response.ok) return "";
+    const response = await fetchWithTimeout("https://api.exa.ai/contents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({ urls: [url], text: { max_characters: 8000 } }),
+    }, 30000);
+    if (!response.ok) {
+      console.warn(`[EXA] Contents fetch failed (${response.status}) for: ${url}`);
+      return "";
+    }
     const data = await response.json();
-    return (data.data?.content || data.content || "").slice(0, 8000);
+    if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
+    return (data.results[0]?.text || "").slice(0, 8000);
   } catch {
-    console.warn(`[JINA] Read failed for: ${url}`);
+    console.warn(`[EXA] Contents fetch failed for: ${url}`);
     return "";
   }
 }
@@ -449,7 +479,7 @@ async function verifyUrl(url: string): Promise<boolean> {
   }
 }
 
-function formatSearchResults(results: JinaResult[]): string {
+function formatSearchResults(results: ExaResult[]): string {
   return results.map((r) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content || r.description}\n---`).join("\n");
 }
 
@@ -546,7 +576,7 @@ async function deepResearchInner(
 
   // Round 1: Initial search
   const initialQuery = `${claim} ${region} statistics data`.trim();
-  const round1Results = await jinaSearch(initialQuery);
+  const round1Results = await exaSearch(initialQuery);
   const round1Text = formatSearchResults(round1Results);
   context.searches.push({ query: initialQuery, results: round1Text });
   console.log(`[RESEARCH] Round 1: ${round1Results.length} results`);
@@ -560,7 +590,7 @@ async function deepResearchInner(
     console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
-      const results = await jinaSearch(query);
+      const results = await exaSearch(query);
       const text = formatSearchResults(results);
       context.searches.push({ query, results: text });
       results.slice(0, 2).forEach((r) => {
@@ -572,9 +602,9 @@ async function deepResearchInner(
     console.log(`[RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
   }
 
-  // Round 3: Read top URLs for full content
+  // Round 3: Fetch full content from top URLs using Exa /contents endpoint
   const readPromises = urlsToRead.slice(0, options.maxUrlsToRead).map(async (url) => {
-    const content = await jinaRead(url);
+    const content = await exaGetContents(url);
     if (content) {
       context.readContent.push({ url, content });
       context.verifiedUrls.add(url);
@@ -1130,7 +1160,7 @@ Deno.serve(async (req) => {
       let urlContext = "";
       if (urls.size > 0) {
         const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
-          const content = await jinaRead(u);
+          const content = await exaGetContents(u);
           return `--- Content from ${u} ---\n${content.slice(0, 8000)}\n--- End of ${u} ---`;
         }));
         urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join("\n");
