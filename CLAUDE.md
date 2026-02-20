@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DebateLab is an AI-powered debate preparation suite for competitive debaters. It combines multiple AI providers (OpenAI, Google Gemini, Anthropic) with real-time web research via Jina AI. Uses **Supabase Edge Functions** as the backend so API keys are never exposed to the browser. Authentication is via Supabase Auth with Google OAuth.
+DebateLab is an AI-powered debate preparation suite for competitive debaters. It combines multiple AI providers (OpenAI, Google Gemini, Anthropic) with real-time web research via Exa. Uses **Supabase Edge Functions** as the backend so API keys are never exposed to the browser. Authentication is via Supabase Auth with Google OAuth.
 
 **Live URL:** https://debate.pi-stack.org
 **Hosting:** Raspberry Pi + Docker + Cloudflare Tunnel
@@ -22,7 +22,7 @@ DebateLab is an AI-powered debate preparation suite for competitive debaters. It
 | Auth | Supabase Auth (Google OAuth) |
 | Database | Supabase PostgreSQL (15 tables, RLS enabled) |
 | AI Providers | OpenAI, Google Gemini, Anthropic Claude |
-| Web Search | Jina AI (Search + Reader) |
+| Web Search | Exa (Search + Contents) |
 | CI/CD | GitHub Actions + Docker Hub + Watchtower |
 
 ## Common Commands
@@ -56,9 +56,9 @@ npx supabase functions deploy share    # Deploy share function
 
 1. **`supabase/functions/ai/index.ts`** (~888 lines) - Main AI proxy
    - JWT authentication required
-   - API keys stored as Supabase secrets (OPENAI_API_KEY, GOOGLE_API_KEY, ANTHROPIC_API_KEY, JINA_API_KEY)
+   - API keys stored as Supabase secrets (OPENAI_API_KEY, GOOGLE_API_KEY, ANTHROPIC_API_KEY, EXA_API_KEY)
    - Input sanitization with prompt injection pattern detection
-   - Deep research with Jina AI (multi-round search, content reading, URL verification)
+   - Deep research with Exa (multi-round search, content reading, URL verification)
    - Rate limiting per authenticated user
    - Multi-provider routing (OpenAI, Google, Anthropic)
 
@@ -122,7 +122,7 @@ Main features under `src/components/features/`:
 - **generate/**: Case generation (4-6-6-3 tournament format, contentions with CWI structure)
 - **attack/**: Critical analysis with fallacy detection and severity ratings
 - **brainstorm/**: Multi-mode ideation (mindmap, buckets, top-5)
-- **factoids/**: Deep research with multi-round Jina search, URL verification, content reading
+- **factoids/**: Deep research with multi-round Exa search, URL verification, content reading
 - **ask/**: Coach chat with conversation memory, source grounding, voice input
 
 Each follows: `FeatureForm.tsx` -> `FeatureResults.tsx` pattern.
@@ -177,7 +177,7 @@ All RLS policies use optimized `(SELECT auth.uid())` pattern.
 | `OPENAI_API_KEY` | Supabase secrets | OpenAI API key |
 | `GOOGLE_API_KEY` | Supabase secrets | Google AI API key |
 | `ANTHROPIC_API_KEY` | Supabase secrets | Anthropic API key |
-| `JINA_API_KEY` | Supabase secrets | Jina AI API key |
+| `EXA_API_KEY` | Supabase secrets | Exa API key |
 | `AI_DEFAULT_PROVIDER` | Supabase secrets | Default provider (google) |
 | `AI_DEFAULT_MODEL` | Supabase secrets | Default model (gemini-2.0-flash) |
 
