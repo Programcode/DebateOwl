@@ -30,6 +30,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const SharedPage = lazy(() => import("./pages/SharedPage"));
 const FlowchartPage = lazy(() => import("./pages/FlowchartPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SourcesPage = lazy(() => import("./pages/SourcesPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/expocit/sources" element={<SourcesPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/share/:code" element={<SharedPage />} />
 
