@@ -175,6 +175,18 @@ describe('AI client branch coverage', () => {
     await expect(generateCase(validGenerateInput, config)).rejects.toBeInstanceOf(AIProviderError);
   });
 
+  it('throws AIProviderError when provider error code is returned without provider text', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        error: 'You exceeded your current quota',
+        code: 'insufficient_quota',
+      },
+      error: null,
+    });
+
+    await expect(generateCase(validGenerateInput, config)).rejects.toBeInstanceOf(AIProviderError);
+  });
+
   it('throws AIResponseError when output is missing', async () => {
     invokeMock.mockResolvedValueOnce({
       data: {

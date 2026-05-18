@@ -284,6 +284,8 @@
     "roleR1": "R1 - Rebuttal/Arg (6 min)",
     "roleR2": "R2 - Rebuttal/Build (6 min)",
     "roleConc": "Conclusor (3 min)",
+    "more": "More",
+    "moreOptions": "More options",
     "length": "Case Length",
     "lengthBrief": "Brief",
     "lengthStandard": "Standard",

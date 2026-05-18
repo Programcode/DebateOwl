@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
 import { askChat, isTimeoutError } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
@@ -87,7 +88,7 @@ export default function AskPage() {
           variant: "destructive"
         });
       } else {
-        toast({ title: t('ask.failed'), description: t('ask.failedDesc'), variant: "destructive" });
+        toast({ title: t('ask.failed'), description: getUserFacingAIError(error) || t('ask.failedDesc'), variant: "destructive" });
       }
     } finally {
       setAskLoading(false);

@@ -110,16 +110,28 @@ export function OnboardingTour() {
             callback={handleJoyrideCallback}
             styles={{
                 options: {
+                    arrowColor: 'hsl(var(--popover))',
+                    backgroundColor: 'hsl(var(--popover))',
+                    overlayColor: 'hsl(var(--background) / 0.72)',
                     primaryColor: 'hsl(var(--primary))',
+                    textColor: 'hsl(var(--popover-foreground))',
                     zIndex: 10000,
                 },
                 tooltip: {
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '0.5rem',
+                    boxShadow: '0 20px 45px hsl(var(--foreground) / 0.18)',
+                    color: 'hsl(var(--popover-foreground))',
                     padding: '1rem',
+                },
+                buttonClose: {
+                    color: 'hsl(var(--muted-foreground))',
                 },
                 buttonNext: {
                     backgroundColor: 'hsl(var(--primary))',
                     borderRadius: '0.375rem',
+                    color: 'hsl(var(--primary-foreground))',
                     padding: '0.5rem 1rem',
                 },
                 buttonBack: {

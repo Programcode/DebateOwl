@@ -9,6 +9,7 @@ import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutErro
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } from 'reactflow';
 
@@ -45,7 +46,7 @@ export default function GeneratePage() {
       } else if (isTimeoutError(error)) {
         toast({ title: t('generate.timeout'), description: t('generate.timeoutDesc'), variant: "destructive" });
       } else {
-        toast({ title: t('generate.failed'), description: error instanceof Error ? error.message : "An unexpected error occurred", variant: "destructive" });
+        toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: "destructive" });
       }
     } finally {
       setGenerateLoading(false);

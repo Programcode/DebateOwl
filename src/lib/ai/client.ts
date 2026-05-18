@@ -254,7 +254,7 @@ async function callSupabaseAI(
     // Handle Supabase function invoke errors
     if (error) {
       const errorPayload = await extractSupabaseErrorPayload(error);
-      const errorDetails = parseSupabaseError(error, requestId, errorPayload);
+      const errorDetails = parseSupabaseError(error, requestId, provider, config.model, errorPayload);
       throw errorDetails;
     }
 
@@ -289,8 +289,12 @@ async function callSupabaseAI(
       }
 
       // Provider error (OpenAI, Google, etc.)
-      if (errorMessage.includes('OpenAI') || errorMessage.includes('Google') || errorMessage.includes('Anthropic')) {
-        throw new AIProviderError(errorMessage, { requestId, provider, details: { model: config.model } });
+      if (isProviderErrorMessage(errorMessage) || isProviderErrorCode(errorCode)) {
+        throw new AIProviderError(errorMessage, {
+          requestId,
+          provider,
+          details: { model: config.model, code: errorCode },
+        });
       }
 
       // Generic error from edge function
@@ -369,10 +373,13 @@ async function extractSupabaseErrorPayload(error: { context?: unknown }): Promis
 function parseSupabaseError(
   error: { message: string; context?: unknown },
   requestId: string,
+  provider: string,
+  model: string,
   payload?: Record<string, unknown> | null
 ): AIError {
   const payloadMessage = typeof payload?.error === 'string' ? payload.error : undefined;
   const message = payloadMessage || error.message || 'Unknown error';
+  const errorCode = typeof payload?.code === 'string' ? payload.code : undefined;
 
   // Detect abort/signal errors and treat as timeout
   if (message.includes('abort') || message.includes('signal')) {
@@ -439,11 +446,28 @@ function parseSupabaseError(
     });
   }
 
+  if (isProviderErrorMessage(message) || isProviderErrorCode(errorCode)) {
+    return new AIProviderError(message, {
+      statusCode: statusCode || 500,
+      requestId,
+      provider,
+      details: { model, code: errorCode },
+    });
+  }
+
   // Default: return generic error with helpful message
   return new AIError(
     `AI service error: ${message}. Please try again.`,
     { statusCode: statusCode || 500, requestId }
   );
+}
+
+function isProviderErrorMessage(message: string): boolean {
+  return /OpenAI|Anthropic|Google|Gemini/i.test(message);
+}
+
+function isProviderErrorCode(code?: string): boolean {
+  return !!code && /quota|billing|api[_-]?key|provider|insufficient|overloaded|rate/i.test(code);
 }
 
 /**
