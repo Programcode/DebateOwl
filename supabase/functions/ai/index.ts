@@ -160,6 +160,7 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
 
   const tier = user.subscription_tier || "trial";
   const now = new Date();
+  const expired = { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
 
   // Legacy free users in grace period get pro-level access
   if (tier === "legacy_free") {
@@ -169,13 +170,37 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
       return { tier: "legacy_free", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
     // Grace period expired — treat as expired
-    return { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    return expired;
   }
 
-  // Pro subscribers
+  // Pro subscribers or promo Pro access. Stripe Pro must have an active
+  // subscription period; promo Pro uses grace_period_ends_at, with lifetime
+  // promo codes represented by a far-future date.
   if (tier === "pro") {
-    const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
-    return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    const promoEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
+    if (promoEnd && now < promoEnd) {
+      const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+      return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    }
+
+    const { data: subscriptions } = await supabase
+      .from("subscriptions")
+      .select("status, current_period_end")
+      .eq("user_id", userId)
+      .in("status", ["active", "trialing"])
+      .order("current_period_end", { ascending: false })
+      .limit(1);
+
+    const activeSubscription = subscriptions?.find((sub) =>
+      sub.current_period_end && new Date(sub.current_period_end) > now
+    );
+
+    if (activeSubscription) {
+      const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+      return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    }
+
+    return expired;
   }
 
   // Trial users
@@ -186,11 +211,41 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
       return { tier: "trial", dailyLimit: limit, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
     // Trial expired
-    return { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+    return expired;
   }
 
   // Expired
-  return { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+  return expired;
+}
+
+async function getConfiguredDailyLimit(userId: string, fallbackLimit: number): Promise<number> {
+  const { data: userLimit } = await supabase
+    .from("rate_limits")
+    .select("limit_value")
+    .eq("user_id", userId)
+    .eq("limit_type", "daily_requests")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (typeof userLimit?.limit_value === "number") {
+    return userLimit.limit_value;
+  }
+
+  const { data: globalLimit } = await supabase
+    .from("rate_limits")
+    .select("limit_value")
+    .is("user_id", null)
+    .eq("limit_type", "daily_requests")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (typeof globalLimit?.limit_value === "number") {
+    return globalLimit.limit_value;
+  }
+
+  return fallbackLimit;
 }
 
 async function checkRateLimit(userId: string | null, model?: string): Promise<RateLimitResult> {
@@ -205,9 +260,12 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
 
     // Get subscription info
     const sub = await getSubscriptionInfo(userId);
+    const dailyLimit = sub.tier === "expired" && sub.dailyLimit === 0
+      ? 0
+      : await getConfiguredDailyLimit(userId, sub.dailyLimit);
 
     // Check if trial/access expired (limit = 0)
-    if (sub.tier === "expired" && sub.dailyLimit === 0) {
+    if (sub.tier === "expired" && dailyLimit === 0) {
       return {
         allowed: false,
         reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.",
@@ -246,18 +304,18 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
     const currentCount = count || 0;
 
     // Check against subscription limit
-    if (sub.dailyLimit > 0 && currentCount >= sub.dailyLimit) {
+    if (dailyLimit > 0 && currentCount >= dailyLimit) {
       return {
         allowed: false,
-        reason: `You've used all ${sub.dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`,
+        reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`,
         code: "limit_reached",
-        limit: sub.dailyLimit,
+        limit: dailyLimit,
         current: currentCount,
         statusCode: 402,
       };
     }
 
-    return { allowed: true, limit: sub.dailyLimit, current: currentCount };
+    return { allowed: true, limit: dailyLimit, current: currentCount };
   } catch (err) {
     console.warn("[RATE LIMIT] Check failed:", err);
     return { allowed: true }; // Fail open

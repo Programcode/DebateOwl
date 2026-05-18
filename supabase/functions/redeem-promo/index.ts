@@ -136,10 +136,19 @@ Deno.serve(async (req) => {
       }
       case "free_month": {
         const graceEnd = new Date();
-        graceEnd.setDate(graceEnd.getDate() + 30);
+        graceEnd.setDate(graceEnd.getDate() + (config.days || 30));
         await supabase.from("user_settings").update({
           subscription_tier: "pro",
           grace_period_ends_at: graceEnd.toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("user_id", user.id);
+        break;
+      }
+      case "lifetime_pro": {
+        await supabase.from("user_settings").update({
+          subscription_tier: "pro",
+          daily_limit_override: config.limit || 50,
+          grace_period_ends_at: "9999-12-31T23:59:59.999Z",
           updated_at: new Date().toISOString(),
         }).eq("user_id", user.id);
         break;
@@ -172,7 +181,8 @@ Deno.serve(async (req) => {
     const messages: Record<string, string> = {
       extended_trial: `Trial extended by ${config.days || 30} days!`,
       extra_limit: `Daily limit upgraded to ${config.limit || 15} requests!`,
-      free_month: "Enjoy 1 month of free Pro access!",
+      free_month: `Enjoy ${config.days || 30} days of free Pro access!`,
+      lifetime_pro: "Lifetime Pro access unlocked!",
     };
 
     return new Response(JSON.stringify({

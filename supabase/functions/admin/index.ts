@@ -168,21 +168,39 @@ Deno.serve(async (req) => {
             const body = await req.json();
             const { userId, limitType, limitValue } = body;
 
-            if (!limitType || typeof limitValue !== "number") {
+            if (!limitType || !Number.isInteger(limitValue) || limitValue < 0) {
                 return new Response(JSON.stringify({ error: "Invalid limit parameters" }), {
                     status: 400,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
             }
 
-            // Upsert limit
-            const { error } = await supabase
-                .from("rate_limits")
-                .upsert({
-                    user_id: userId || null, // null = global limit
-                    limit_type: limitType,
-                    limit_value: limitValue,
-                }, { onConflict: "user_id,limit_type" });
+            let error;
+            const payload = {
+                user_id: userId || null,
+                limit_type: limitType,
+                limit_value: limitValue,
+                updated_at: new Date().toISOString(),
+            };
+
+            if (userId) {
+                ({ error } = await supabase
+                    .from("rate_limits")
+                    .upsert(payload, { onConflict: "user_id,limit_type" }));
+            } else {
+                const { data: existing } = await supabase
+                    .from("rate_limits")
+                    .select("id")
+                    .is("user_id", null)
+                    .eq("limit_type", limitType)
+                    .order("updated_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                ({ error } = existing
+                    ? await supabase.from("rate_limits").update(payload).eq("id", existing.id)
+                    : await supabase.from("rate_limits").insert(payload));
+            }
 
             if (error) {
                 return new Response(JSON.stringify({ error: error.message }), {
@@ -208,9 +226,20 @@ Deno.serve(async (req) => {
                 });
             }
 
+            if (userId === user.id && role !== "admin") {
+                return new Response(JSON.stringify({ error: "Admins cannot remove or ban their own admin account" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
             const { error } = await supabase
                 .from("user_roles")
-                .upsert({ user_id: userId, role }, { onConflict: "user_id" });
+                .upsert({
+                    user_id: userId,
+                    role,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: "user_id" });
 
             if (error) {
                 return new Response(JSON.stringify({ error: error.message }), {
@@ -352,7 +381,7 @@ Deno.serve(async (req) => {
                 });
             }
 
-            const validTypes = ["extended_trial", "extra_limit", "discount", "free_month"];
+            const validTypes = ["extended_trial", "extra_limit", "discount", "free_month", "lifetime_pro"];
             if (!validTypes.includes(type)) {
                 return new Response(JSON.stringify({ error: "Invalid promo type" }), {
                     status: 400,

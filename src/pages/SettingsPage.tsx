@@ -1,7 +1,8 @@
 // src/pages/SettingsPage.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Lock, Trash2, Crown, CreditCard, Zap } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
+import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
@@ -39,6 +41,38 @@ export default function SettingsPage() {
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        if (!cancelled) setIsAdmin(false);
+        return;
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin?action=stats`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!cancelled) setIsAdmin(response.ok);
+    }).catch(() => {
+      if (!cancelled) setIsAdmin(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleDeleteAllData = () => {
     if (!confirm(`Are you sure you want to delete ALL your saved data?\n\nThis will permanently delete all cases, attacks, brainstorms, factoids, chats, and sources for ${user?.email}.\n\nThis action cannot be undone.`)) {
@@ -243,6 +277,25 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
         </Card>
+
+        {isAdmin && (
+          <Card className="mt-8 mb-8 border-primary/20 bg-primary/5">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <CardTitle>Admin</CardTitle>
+              </div>
+              <CardDescription>
+                Open the admin dashboard for usage, users, limits, and promo codes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline">
+                <Link to="/app/admin">Open Admin Panel</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
 
         {/* Danger Zone */}

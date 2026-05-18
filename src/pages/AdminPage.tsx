@@ -6,11 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, MessageSquare, Ban, UserCheck, Ticket, CreditCard } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface UsageStats {
@@ -37,15 +36,6 @@ interface RateLimit {
     limit_value: number;
 }
 
-interface GlobalPrompt {
-    id: string;
-    feature: string;
-    prompt_text: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
 interface PromoCode {
     id: string;
     code: string;
@@ -68,18 +58,14 @@ interface Subscriber {
 }
 
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
-const FEATURES = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'all'];
 
 export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<UsageStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [limits, setLimits] = useState<RateLimit[]>([]);
-    const [prompts, setPrompts] = useState<GlobalPrompt[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [newLimit, setNewLimit] = useState({ type: 'daily_requests', value: 100 });
-    const [newPrompt, setNewPrompt] = useState({ feature: 'all', text: '' });
-    const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
     const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
@@ -159,18 +145,16 @@ export default function AdminPage() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [statsData, usersData, limitsData, promptsData, promoData, subData] = await Promise.all([
+                const [statsData, usersData, limitsData, promoData, subData] = await Promise.all([
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
                     fetchAdminData('limits'),
-                    fetchAdminData('global-prompts').catch(() => ({ prompts: [] as GlobalPrompt[] })),
                     fetchAdminData('promo-codes').catch(() => ({ codes: [] as PromoCode[] })),
                     fetchAdminData('subscribers').catch(() => ({ subscribers: [] as Subscriber[] })),
                 ]);
                 setStats(statsData);
                 setUsers(usersData.users || []);
                 setLimits(limitsData.limits || []);
-                setPrompts(promptsData.prompts || []);
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
                 setIsAdmin(true);
@@ -214,33 +198,6 @@ export default function AdminPage() {
             setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
         } catch (err) {
             toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update role', variant: 'destructive' });
-        }
-    };
-
-    const handleSavePrompt = async (feature: string, text: string) => {
-        try {
-            await postAdminData('set-prompt', {
-                feature,
-                promptText: text,
-                isActive: true,
-            });
-            toast({ title: 'Success', description: `Prompt for "${feature}" saved` });
-            const promptsData = await fetchAdminData('global-prompts');
-            setPrompts(promptsData.prompts || []);
-            setEditingPrompt(null);
-            setNewPrompt({ feature: 'all', text: '' });
-        } catch (err) {
-            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save prompt', variant: 'destructive' });
-        }
-    };
-
-    const handleDeletePrompt = async (feature: string) => {
-        try {
-            await postAdminData('delete-prompt', { feature });
-            toast({ title: 'Success', description: `Prompt for "${feature}" deleted` });
-            setPrompts(prompts.filter(p => p.feature !== feature));
-        } catch (err) {
-            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete prompt', variant: 'destructive' });
         }
     };
 
@@ -335,7 +292,6 @@ export default function AdminPage() {
                         <TabsTrigger value="usage">Usage Analytics</TabsTrigger>
                         <TabsTrigger value="users">User Management</TabsTrigger>
                         <TabsTrigger value="limits">Rate Limits</TabsTrigger>
-                        <TabsTrigger value="prompts">AI Prompts</TabsTrigger>
                         <TabsTrigger value="promo-codes">
                             <Ticket className="h-4 w-4 mr-1" />
                             Promo Codes
@@ -546,127 +502,6 @@ export default function AdminPage() {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="prompts" className="space-y-6">
-                        <div className="grid gap-6 md:grid-cols-2">
-                            {/* Add/Edit Prompt */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <MessageSquare className="h-5 w-5" />
-                                        {editingPrompt ? 'Edit Prompt' : 'Add Global Prompt'}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Set custom instructions for AI features. These apply to all users.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Feature</Label>
-                                        <select
-                                            className="w-full p-2 border rounded-md bg-background"
-                                            value={editingPrompt || newPrompt.feature}
-                                            onChange={(e) => {
-                                                if (editingPrompt) {
-                                                    setEditingPrompt(e.target.value);
-                                                } else {
-                                                    setNewPrompt({ ...newPrompt, feature: e.target.value });
-                                                }
-                                            }}
-                                            disabled={!!editingPrompt}
-                                        >
-                                            {FEATURES.map(f => (
-                                                <option key={f} value={f}>{f === 'all' ? 'All Features' : f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Prompt Instructions</Label>
-                                        <Textarea
-                                            placeholder="Enter custom instructions for the AI..."
-                                            className="min-h-[200px]"
-                                            value={editingPrompt ? prompts.find(p => p.feature === editingPrompt)?.prompt_text || '' : newPrompt.text}
-                                            onChange={(e) => {
-                                                if (editingPrompt) {
-                                                    setPrompts(prompts.map(p =>
-                                                        p.feature === editingPrompt ? { ...p, prompt_text: e.target.value } : p
-                                                    ));
-                                                } else {
-                                                    setNewPrompt({ ...newPrompt, text: e.target.value });
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            onClick={() => {
-                                                const feature = editingPrompt || newPrompt.feature;
-                                                const text = editingPrompt
-                                                    ? prompts.find(p => p.feature === editingPrompt)?.prompt_text || ''
-                                                    : newPrompt.text;
-                                                handleSavePrompt(feature, text);
-                                            }}
-                                            className="flex-1"
-                                        >
-                                            {editingPrompt ? 'Update Prompt' : 'Save Prompt'}
-                                        </Button>
-                                        {editingPrompt && (
-                                            <Button variant="outline" onClick={() => setEditingPrompt(null)}>
-                                                Cancel
-                                            </Button>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Existing Prompts */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Active Prompts</CardTitle>
-                                    <CardDescription>Global prompts applied to AI features</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ScrollArea className="h-[400px]">
-                                        <div className="space-y-3">
-                                            {prompts.length === 0 ? (
-                                                <p className="text-sm text-muted-foreground">No global prompts configured</p>
-                                            ) : (
-                                                prompts.map((prompt) => (
-                                                    <div key={prompt.id} className="p-4 border rounded-lg space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <Badge variant={prompt.is_active ? 'default' : 'secondary'}>
-                                                                {prompt.feature === 'all' ? 'All Features' : prompt.feature}
-                                                            </Badge>
-                                                            <div className="flex gap-1">
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    onClick={() => setEditingPrompt(prompt.feature)}
-                                                                >
-                                                                    Edit
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    className="text-destructive"
-                                                                    onClick={() => handleDeletePrompt(prompt.feature)}
-                                                                >
-                                                                    Delete
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-sm text-muted-foreground line-clamp-3">
-                                                            {prompt.prompt_text}
-                                                        </p>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </TabsContent>
-
                     {/* Promo Codes Tab */}
                     <TabsContent value="promo-codes" className="space-y-6">
                         <div className="grid gap-6 md:grid-cols-2">
@@ -698,6 +533,7 @@ export default function AdminPage() {
                                                 <SelectItem value="extended_trial">Extended Trial</SelectItem>
                                                 <SelectItem value="extra_limit">Extra Daily Limit</SelectItem>
                                                 <SelectItem value="free_month">Free Month of Pro</SelectItem>
+                                                <SelectItem value="lifetime_pro">Lifetime Pro</SelectItem>
                                                 <SelectItem value="discount">Checkout Discount</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -737,6 +573,8 @@ export default function AdminPage() {
                                                 const config: Record<string, number> = {};
                                                 if (newPromo.type === 'extended_trial' || newPromo.type === 'free_month') {
                                                     config.days = newPromo.configDays;
+                                                } else if (newPromo.type === 'lifetime_pro') {
+                                                    config.limit = 50;
                                                 } else if (newPromo.type === 'extra_limit') {
                                                     config.limit = newPromo.configLimit;
                                                 }
