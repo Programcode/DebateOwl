@@ -1,5 +1,6 @@
 // src/lib/pdf-export-utils.ts
 // Professional PDF export for all debate features using jsPDF
+import i18n from '@/i18n';
 import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
@@ -168,35 +169,35 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
         const pdf = await createPDFDocument();
         const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter } = pdf;
 
-        const side = result.metadata?.side === 'pro' ? 'Proposition' : 'Opposition';
+        const side = result.metadata?.side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
         const format = result.metadata?.format?.toUpperCase() || 'Standard';
 
-        addHeader('Debate Case', `${side} • ${format} Format`);
+        addHeader(i18n.t('export.debateCase'), `${side} • ${format} Format`);
 
         // Exordio (if present)
         if (result.exordio) {
-            addSectionTitle('Exordio', COLORS.primary);
+            addSectionTitle(i18n.t('export.exordio'), COLORS.primary);
             if (result.exordio.hook) {
-                addParagraph(`Hook: ${result.exordio.hook}`);
+                addParagraph(`${i18n.t('export.hook')}: ${result.exordio.hook}`);
             }
             if (result.exordio.transition) {
-                addParagraph(`Transition: ${result.exordio.transition}`);
+                addParagraph(`${i18n.t('export.transition')}: ${result.exordio.transition}`);
             }
         }
 
         // Case Structure
-        addSectionTitle('Thesis & Framework');
+        addSectionTitle(`${i18n.t('export.thesis')} & ${i18n.t('export.framework')}`);
         addParagraph(result.caseStructure?.thesis || 'No thesis provided');
         if (result.caseStructure?.framework) {
-            addParagraph(`Framework: ${result.caseStructure.framework}`);
+            addParagraph(`${i18n.t('export.framework')}: ${result.caseStructure.framework}`);
         }
         if (result.caseStructure?.burdenOfProof) {
-            addParagraph(`Burden of Proof: ${result.caseStructure.burdenOfProof}`);
+            addParagraph(`${i18n.t('export.burdenOfProof')}: ${result.caseStructure.burdenOfProof}`);
         }
 
         // Arguments Table
         if (result.contentions?.length) {
-            addSectionTitle('Arguments', COLORS.success);
+            addSectionTitle(i18n.t('export.arguments'), COLORS.success);
             const rows = result.contentions.map((c, i) => [
                 `#${i + 1}`,
                 c.claim || '',
@@ -204,24 +205,24 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
                 c.evidence || '',
                 c.impact || '',
             ]);
-            addTable(['#', 'Claim', 'Reasoning', 'Evidence', 'Impact'], rows, { headerColor: COLORS.success });
+            addTable(['#', 'Claim', i18n.t('export.reasoning'), i18n.t('export.evidence'), i18n.t('export.impact')], rows, { headerColor: COLORS.success });
         }
 
         // Predicted Opponent Case
         if (result.predictedOpponentCase?.likelyArguments?.length) {
-            addSectionTitle('Predicted Opponent Arguments', COLORS.warning);
+            addSectionTitle(i18n.t('export.predictedOpponent'), COLORS.warning);
             addBulletList(result.predictedOpponentCase.likelyArguments);
         }
 
         // Counters
         if (result.counters?.length) {
-            addSectionTitle('Prepared Counters', COLORS.danger);
+            addSectionTitle(i18n.t('export.counters'), COLORS.danger);
             const counterRows = result.counters.map((c) => [
                 c.targetArgument || '',
                 c.counterpoint || '',
                 c.rebuttal || '',
             ]);
-            addTable(['Target', 'Counter', 'Rebuttal'], counterRows, { headerColor: COLORS.danger });
+            addTable([i18n.t('export.target'), i18n.t('export.counter'), i18n.t('export.rebuttal')], counterRows, { headerColor: COLORS.danger });
         }
 
         addFooter();
@@ -242,7 +243,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
         const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter } = pdf;
 
         const score = result.overallAssessment?.score || 0;
-        addHeader('Attack Analysis', `Overall Score: ${score}/100`);
+        addHeader(i18n.t('export.caseAttack'), `${i18n.t('export.overallScore')}: ${score}/100`);
 
         // Summary
         addSectionTitle('Assessment Summary');
@@ -255,7 +256,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
 
         // Weaknesses Table
         if (result.weaknesses?.length) {
-            addSectionTitle('Identified Weaknesses', COLORS.danger);
+            addSectionTitle(i18n.t('export.weaknesses'), COLORS.danger);
             const rows = result.weaknesses.map((w) => [
                 w.severity?.toUpperCase() || '',
                 w.type || '',
@@ -267,7 +268,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
 
         // Fallacies
         if (result.fallaciesDetected?.length) {
-            addSectionTitle('Fallacies Detected', COLORS.warning);
+            addSectionTitle(i18n.t('export.fallacies'), COLORS.warning);
             const fallacyRows = result.fallaciesDetected.map((f) => [
                 f.name || '',
                 f.location || '',
@@ -278,7 +279,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
 
         // Cross-Ex Questions
         if (result.crossExQuestions?.length) {
-            addSectionTitle('Cross-Examination Questions', COLORS.primary);
+            addSectionTitle(i18n.t('export.crossExQuestions'), COLORS.primary);
             const qRows = result.crossExQuestions.map((q) => [
                 q.question || '',
                 q.purpose || '',
@@ -318,7 +319,7 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
         const pdf = await createPDFDocument();
         const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter } = pdf;
 
-        addHeader('Brainstorm Results', `${result.topFive?.length || 0} Top Ideas`);
+        addHeader(i18n.t('export.brainstormResults'), `${result.topFive?.length || 0} Top Ideas`);
 
         // Top 5
         if (result.topFive?.length) {
@@ -330,7 +331,7 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
                 item.idea?.side?.toUpperCase() || '',
                 item.whyTop || '',
             ]);
-            addTable(['Rank', 'Title', 'Description', 'Side', 'Why Top'], rows, { headerColor: COLORS.success });
+            addTable(['Rank', 'Title', 'Description', 'Side', i18n.t('export.whyTop')], rows, { headerColor: COLORS.success });
         }
 
         // Mind Map Categories
@@ -383,7 +384,7 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
         const { doc, addHeader, addSectionTitle, addBulletList, addTable, addFooter } = pdf;
 
         const verifiedCount = result.factoids?.filter((f) => f.citation?.verified === 'verified').length || 0;
-        addHeader('Research Factoids', `${result.factoids?.length || 0} Facts • ${verifiedCount} Verified`);
+        addHeader(i18n.t('export.researchFactoids'), `${result.factoids?.length || 0} Facts • ${verifiedCount} Verified`);
 
         // Factoids Table
         if (result.factoids?.length) {
@@ -395,7 +396,7 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
                 f.citation?.verified?.toUpperCase() || 'PENDING',
                 `${f.relevanceScore || 0}%`,
             ]);
-            addTable(['Claim', 'Key Figure', 'Source', 'Status', 'Relevance'], rows);
+            addTable(['Claim', i18n.t('export.keyFigure'), i18n.t('export.source'), 'Status', 'Relevance'], rows);
         }
 
         // Detailed factoids
@@ -404,11 +405,11 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
             result.factoids.forEach((f, i) => {
                 const pdf2 = pdf; // Access outer scope
                 pdf2.addParagraph(`${i + 1}. ${f.shortClaim}`);
-                pdf2.addParagraph(`   Context: ${f.context || 'N/A'}`, 5);
+                pdf2.addParagraph(`   ${i18n.t('export.context')}: ${f.context || 'N/A'}`, 5);
                 pdf2.addParagraph(`   Limitations: ${f.limitations || 'N/A'}`, 5);
-                pdf2.addParagraph(`   How to Use: ${f.howToUse || 'N/A'}`, 5);
+                pdf2.addParagraph(`   ${i18n.t('export.howToUse')}: ${f.howToUse || 'N/A'}`, 5);
                 if (f.citation?.url) {
-                    pdf2.addParagraph(`   Source: ${f.citation.url}`, 5);
+                    pdf2.addParagraph(`   ${i18n.t('export.source')}: ${f.citation.url}`, 5);
                 }
             });
         }
