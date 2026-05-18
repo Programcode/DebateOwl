@@ -110,7 +110,7 @@ export default function AskPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-foreground">{t('ask.title')}</h1>
           <ModelSelector feature="ask" />
         </div>

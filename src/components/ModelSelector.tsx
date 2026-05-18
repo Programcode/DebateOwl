@@ -19,7 +19,7 @@ export function ModelSelector({ feature }: ModelSelectorProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <Cpu className="h-4 w-4 text-muted-foreground shrink-0" />
+      <Cpu className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
       <Select
         value={currentModel}
         onValueChange={(model) => {
@@ -27,7 +27,7 @@ export function ModelSelector({ feature }: ModelSelectorProps) {
           if (found) setFeatureConfig(feature, { model, provider: found.provider });
         }}
       >
-        <SelectTrigger className="h-8 text-xs w-[200px]">
+        <SelectTrigger className="h-8 text-xs w-[160px] sm:w-[200px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

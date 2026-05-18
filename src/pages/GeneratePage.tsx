@@ -220,7 +220,7 @@ export default function GeneratePage() {
     <>
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 flex items-end justify-between gap-4">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Generate Arguments</h1>
             <p className="text-muted-foreground mt-1">
