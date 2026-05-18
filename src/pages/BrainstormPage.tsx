@@ -11,6 +11,7 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
+import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 
 export default function BrainstormPage() {
   const { brainstormResult, brainstormLoading, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
@@ -101,7 +102,11 @@ export default function BrainstormPage() {
 
           {/* Results */}
           <div>
-            {brainstormResult ? (
+            {brainstormLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
+                <StreamingIndicator messages={['Exploring angles...', 'Generating ideas...', 'Ranking options...', 'Finalizing...']} />
+              </div>
+            ) : brainstormResult ? (
               <BrainstormResults result={brainstormResult} onDiscuss={handleDiscuss} />
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">

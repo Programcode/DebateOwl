@@ -7,6 +7,7 @@ import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
+import { StaggeredContainer } from '@/components/ui/animated-section';
 import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { toast } from 'sonner';
@@ -103,7 +104,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
   }
 
   return (
-    <div className="space-y-6">
+    <StaggeredContainer className="space-y-6">
       {/* Metadata */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 flex-wrap">
@@ -295,6 +296,6 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           ))}
         </div>
       </SectionCard>
-    </div>
+    </StaggeredContainer>
   );
 }
