@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const GenerateInputSchema = z.object({
   motion: z.string().min(1, 'Motion is required'),
-  side: z.enum(['pro', 'con', 'auto']),
+  side: z.enum(['pro', 'con']),
   format: z.enum(['custom', 'bp', 'policy', 'classroom']), // Kept others for backward compatibility but UI will restrict
   role: z.enum(['intro', 'r1', 'r2', 'conc', 'general']),
   length: z.enum(['brief', 'standard', 'comprehensive']),

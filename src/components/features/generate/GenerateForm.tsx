@@ -34,9 +34,9 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
     resolver: zodResolver(GenerateInputSchema),
     defaultValues: {
       motion: '',
-      side: 'auto',
+      side: 'pro',
       format: 'custom',
-      role: 'intro',
+      role: 'r1',
       length: 'standard',
       audience: 'intermediate',
       tone: 'formal',
@@ -141,7 +141,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">{t('generateForm.sideAuto')}</SelectItem>
                   <SelectItem value="pro">{t('generateForm.sidePro')}</SelectItem>
                   <SelectItem value="con">{t('generateForm.sideCon')}</SelectItem>
                 </SelectContent>

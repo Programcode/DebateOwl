@@ -34,7 +34,7 @@ export function buildUserPrompt(feature: Feature, input: Record<string, unknown>
   if (feature === "generate") {
     const language = asString(input.language, "en");
     return `Motion: ${asString(input.motion)}
-Side: ${asString(input.side, "auto")}
+Side: ${asString(input.side, "pro")}
 Format: ${asString(input.format, "custom")}
 Role: ${asString(input.role, "intro")}
 Length: ${asString(input.length, "standard")}
