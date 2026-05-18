@@ -23,6 +23,7 @@ vi.mock('@/lib/stores/settings-store', () => ({
         getState: vi.fn(() => ({
             customSystemPrompt: 'test-system-prompt',
             language: 'en',
+            outputLanguage: 'en',
         })),
     },
 }));

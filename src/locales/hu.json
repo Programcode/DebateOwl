@@ -106,6 +106,8 @@
   "settings": {
     "title": "Beállítások",
     "aiOutputLanguage": "Nyelv (Felület + MI Kimenet)",
+    "uiLanguage": "Felület Nyelve",
+    "outputLanguage": "MI Kimeneti Nyelv",
     "theme": "Téma",
     "light": "Világos",
     "dark": "Sötét",

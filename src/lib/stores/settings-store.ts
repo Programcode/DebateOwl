@@ -8,12 +8,14 @@ export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'as
 
 interface SettingsState {
   language: 'en' | 'es' | 'hu';
+  outputLanguage: 'en' | 'es' | 'hu';
   theme: 'light' | 'dark' | 'system';
   customSystemPrompt?: string;
   featureConfigs: Record<FeatureTab, ProviderConfig>;
   wikiResearchEnabled: boolean;
 
   setLanguage: (lang: 'en' | 'es' | 'hu') => void;
+  setOutputLanguage: (lang: 'en' | 'es' | 'hu') => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
   getFeatureConfig: (feature: FeatureTab) => ProviderConfig;
@@ -61,6 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       language: 'en',
+      outputLanguage: 'en',
       theme: 'system',
       customSystemPrompt: undefined as string | undefined,
       featureConfigs: getDefaultFeatureConfigs(),
@@ -71,6 +74,15 @@ export const useSettingsStore = create<SettingsState>()(
         void i18n.changeLanguage(language);
         void upsertSettings({
           language,
+          theme: get().theme,
+          feature_configs: get().featureConfigs,
+          custom_system_prompt: get().customSystemPrompt ?? null,
+        });
+      },
+      setOutputLanguage: (outputLanguage) => {
+        set({ outputLanguage });
+        void upsertSettings({
+          language: get().language,
           theme: get().theme,
           feature_configs: get().featureConfigs,
           custom_system_prompt: get().customSystemPrompt ?? null,
@@ -157,6 +169,7 @@ export const useSettingsStore = create<SettingsState>()(
         const merged = { ...defaults, ...(state.featureConfigs || {}) };
         state.featureConfigs = merged;
         if (!state.language) state.language = 'en';
+        if (!state.outputLanguage) state.outputLanguage = 'en';
         if (!state.theme) state.theme = 'system';
         if (typeof state.wikiResearchEnabled !== 'boolean') state.wikiResearchEnabled = false;
         void i18n.changeLanguage(state.language);
