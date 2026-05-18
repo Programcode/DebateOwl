@@ -10,7 +10,7 @@ interface MockResponses {
     grace_period_ends_at?: string | null;
   } | null;
   usageCount: number | null;
-  billingData: { stripe_customer_id?: string | null } | null;
+  billingData: Array<{ stripe_customer_id?: string | null; status?: string | null; current_period_end?: string | null }> | null;
   billingError: { message: string } | null;
   throwOnUserSettings: boolean;
 }
@@ -59,12 +59,10 @@ const {
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            not: vi.fn(() => ({
-              limit: vi.fn(() => ({
-                maybeSingle: vi.fn(async () => ({
-                  data: mockResponses.billingData,
-                  error: mockResponses.billingError,
-                })),
+            order: vi.fn(() => ({
+              limit: vi.fn(async () => ({
+                data: mockResponses.billingData,
+                error: mockResponses.billingError,
               })),
             })),
           })),
@@ -122,7 +120,7 @@ describe('useSubscription', () => {
       grace_period_ends_at: null,
     };
     mockResponses.usageCount = 3;
-    mockResponses.billingData = { stripe_customer_id: 'cus_123' };
+    mockResponses.billingData = [{ stripe_customer_id: 'cus_123', status: 'active', current_period_end: '2099-12-31T00:00:00.000Z' }];
 
     const { result } = renderHook(() => useSubscription());
 
@@ -139,12 +137,13 @@ describe('useSubscription', () => {
     expect(result.current.trialEndsAt).toBe('2099-12-31T00:00:00.000Z');
   });
 
-  it('uses pro override when it is above the minimum threshold', async () => {
+  it('uses pro override when backed by active Stripe billing', async () => {
     mockAuthState.user = { id: 'user-pro' };
     mockResponses.userSettings = {
       subscription_tier: 'pro',
       daily_limit_override: 80,
     };
+    mockResponses.billingData = [{ stripe_customer_id: 'cus_pro', status: 'active', current_period_end: '2099-12-31T00:00:00.000Z' }];
 
     const { result } = renderHook(() => useSubscription());
 
@@ -155,6 +154,26 @@ describe('useSubscription', () => {
     expect(result.current.tier).toBe('pro');
     expect(result.current.dailyLimit).toBe(80);
     expect(result.current.isPro).toBe(true);
+  });
+
+  it('keeps promo-backed pro active until grace period ends', async () => {
+    mockAuthState.user = { id: 'promo-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 60,
+      grace_period_ends_at: '2099-12-31T00:00:00.000Z',
+    };
+
+    const { result } = renderHook(() => useSubscription());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.tier).toBe('pro');
+    expect(result.current.dailyLimit).toBe(60);
+    expect(result.current.isPro).toBe(true);
+    expect(result.current.hasStripeBilling).toBe(false);
   });
 
   it('handles legacy_free grace-period transitions on refresh', async () => {
@@ -283,7 +302,7 @@ describe('useSubscription', () => {
     expect(result.current.dailyLimit).toBe(13);
   });
 
-  it('falls back to no billing when billing lookup returns an error', async () => {
+  it('expires pro when billing lookup fails and no promo access is active', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     mockAuthState.user = { id: 'user-2' };
@@ -299,8 +318,8 @@ describe('useSubscription', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.tier).toBe('pro');
-    expect(result.current.dailyLimit).toBe(50);
+    expect(result.current.tier).toBe('expired');
+    expect(result.current.dailyLimit).toBe(10);
     expect(result.current.hasStripeBilling).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       '[useSubscription] Failed to load Stripe billing state:',

@@ -18,6 +18,12 @@ interface SubscriptionState {
   refresh: () => Promise<void>;
 }
 
+interface BillingRow {
+  stripe_customer_id?: string | null;
+  status?: string | null;
+  current_period_end?: string | null;
+}
+
 export function useSubscription(): SubscriptionState {
   const { user } = useAuth();
   const [tier, setTier] = useState<SubscriptionTier>('trial');
@@ -46,18 +52,41 @@ export function useSubscription(): SubscriptionState {
       if (data) {
         const rawTier = (data.subscription_tier || 'trial') as SubscriptionTier;
         const now = new Date();
+        let billingRows: BillingRow[] = [];
+
+        const { data: billingData, error: billingError } = await supabase
+          .from('subscriptions')
+          .select('stripe_customer_id, status, current_period_end')
+          .eq('user_id', user.id)
+          .order('current_period_end', { ascending: false })
+          .limit(5);
+
+        if (billingError) {
+          console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
+          setHasStripeBilling(false);
+        } else {
+          billingRows = billingData || [];
+          setHasStripeBilling(billingRows.some((row) => Boolean(row.stripe_customer_id)));
+        }
+
+        const activeStripeSubscription = billingRows.some((row) =>
+          (row.status === 'active' || row.status === 'trialing') &&
+          row.current_period_end &&
+          new Date(row.current_period_end) > now
+        );
+
+        const promoEnd = data.grace_period_ends_at ? new Date(data.grace_period_ends_at) : null;
 
         // Determine effective tier
         if (rawTier === 'legacy_free') {
-          const graceEnd = data.grace_period_ends_at ? new Date(data.grace_period_ends_at) : null;
-          if (graceEnd && now < graceEnd) {
+          if (promoEnd && now < promoEnd) {
             setTier('legacy_free');
             setDailyLimit(data.daily_limit_override ? Math.max(50, data.daily_limit_override) : 50);
           } else {
             setTier('expired');
             setDailyLimit(data.daily_limit_override || 0);
           }
-        } else if (rawTier === 'pro') {
+        } else if (rawTier === 'pro' && ((promoEnd && now < promoEnd) || activeStripeSubscription)) {
           setTier('pro');
           setDailyLimit(data.daily_limit_override ? Math.max(50, data.daily_limit_override) : 50);
         } else if (rawTier === 'trial') {
@@ -90,20 +119,7 @@ export function useSubscription(): SubscriptionState {
 
       setDailyUsed(count || 0);
 
-      const { data: billingRow, error: billingError } = await supabase
-        .from('subscriptions')
-        .select('stripe_customer_id')
-        .eq('user_id', user.id)
-        .not('stripe_customer_id', 'is', null)
-        .limit(1)
-        .maybeSingle();
-
-      if (billingError) {
-        console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
-        setHasStripeBilling(false);
-      } else {
-        setHasStripeBilling(Boolean(billingRow?.stripe_customer_id));
-      }
+      if (!data) setHasStripeBilling(false);
     } catch (err) {
       console.warn('[useSubscription] Failed to load:', err);
     } finally {
