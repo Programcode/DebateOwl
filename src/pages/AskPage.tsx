@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
@@ -14,6 +15,7 @@ export default function AskPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
+  const { t } = useTranslation();
 
   const handleSend = async (
     message: string,
@@ -79,12 +81,12 @@ export default function AskPage() {
         // Subscription error handled by modal
       } else if (isTimeoutError(error)) {
         toast({
-          title: "Request Timed Out",
-          description: "The request took too long. Please try again.",
+          title: t('ask.timeout'),
+          description: t('ask.timeoutDesc'),
           variant: "destructive"
         });
       } else {
-        toast({ title: "Error", description: "Request failed. Please try again.", variant: "destructive" });
+        toast({ title: t('ask.failed'), description: t('ask.failedDesc'), variant: "destructive" });
       }
     } finally {
       setAskLoading(false);
@@ -93,7 +95,7 @@ export default function AskPage() {
 
   const handleSaveToLibrary = (title: string, content: string) => {
     addSource({ title, content, type: 'text' });
-    toast({ title: "Saved", description: "Source added to library." });
+    toast({ title: t('ask.saved'), description: t('ask.savedDesc') });
   };
 
   const formattedMessages = askMessages.map(m => ({
@@ -107,7 +109,7 @@ export default function AskPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-foreground">Ask Your Coach</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground">{t('ask.title')}</h1>
         <AskChat
           messages={formattedMessages}
           isLoading={askLoading}

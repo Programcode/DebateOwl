@@ -1,5 +1,6 @@
 // src/pages/SettingsPage.tsx
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Settings, Cpu, Thermometer, Zap, Lock, Trash2, Crown, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const { clearSession, clearAllData } = useSessionStore();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
   const [modelRestrictionOpen, setModelRestrictionOpen] = useState(false);
@@ -192,7 +194,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>AI Output Language</Label>
+                <Label>{t('settings.aiOutputLanguage')}</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es' | 'hu')}>
                   <SelectTrigger>
                     <SelectValue />
@@ -205,15 +207,15 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Theme</Label>
+                <Label>{t('settings.theme')}</Label>
                 <Select value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="light">{t('settings.light')}</SelectItem>
+                    <SelectItem value="dark">{t('settings.dark')}</SelectItem>
+                    <SelectItem value="system">{t('settings.system')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

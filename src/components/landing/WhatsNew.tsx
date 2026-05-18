@@ -1,34 +1,17 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Crown, GitBranch, Timer, History, Sparkles } from "lucide-react";
 
-const updates = [
-    {
-        icon: Crown,
-        title: "Subscription Tiers",
-        description: "New trial and Pro plans with usage limits, Stripe checkout, and in-app billing management.",
-        badge: "Billing",
-    },
-    {
-        icon: GitBranch,
-        title: "Argument Flowcharts",
-        description: "Build visual argument maps with linked nodes, saved diagrams, and export support.",
-        badge: "New Tool",
-    },
-    {
-        icon: Timer,
-        title: "Upgraded Timer",
-        description: "Practice across Standard, LD, PF, and Policy formats with keyboard shortcuts and alerts.",
-        badge: "Improved",
-    },
-    {
-        icon: History,
-        title: "Saved Prep History",
-        description: "Quickly reload previous cases, chats, attacks, brainstorms, and fact-check sessions.",
-        badge: "Productivity",
-    },
-];
-
 const WhatsNew = () => {
+    const { t } = useTranslation();
+
+    const updates = [
+        { icon: Crown, title: t('whatsNew.sub1Title'), description: t('whatsNew.sub1Desc'), badge: "Billing" },
+        { icon: GitBranch, title: t('whatsNew.sub2Title'), description: t('whatsNew.sub2Desc'), badge: "New Tool" },
+        { icon: Timer, title: t('whatsNew.sub3Title'), description: t('whatsNew.sub3Desc'), badge: "Improved" },
+        { icon: History, title: t('whatsNew.sub4Title'), description: t('whatsNew.sub4Desc'), badge: "Productivity" },
+    ];
+
     return (
         <section id="whats-new" className="relative py-24 bg-secondary/10">
             <div className="section-container">
@@ -41,13 +24,13 @@ const WhatsNew = () => {
                 >
                     <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-medium text-foreground/85">
                         <Sparkles className="h-4 w-4 text-primary" />
-                        What&apos;s New
+                        {t('whatsNew.title')}
                     </div>
                     <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
-                        Shipped Recently for <span className="gradient-text">2026</span>
+                        {t('whatsNew.title')}
                     </h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-                        The latest release focuses on monetization, better prep workflows, and cleaner round practice.
+                        {t('whatsNew.subtitle')}
                     </p>
                 </motion.div>
 

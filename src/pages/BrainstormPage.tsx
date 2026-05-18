@@ -1,5 +1,6 @@
 // src/pages/BrainstormPage.tsx
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { BrainstormForm } from '@/components/features/brainstorm/BrainstormForm';
@@ -18,6 +19,7 @@ export default function BrainstormPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
+  const { t } = useTranslation();
 
   const handleSubmit = async (data: BrainstormInput) => {
     setBrainstormLoading(true);
@@ -28,7 +30,7 @@ export default function BrainstormPage() {
       console.error('Failed to brainstorm:', error);
       if (!subError.handleSubscriptionError(error)) {
         toast({
-          title: "Brainstorming Failed",
+          title: t('brainstorm.failed'),
           description: error instanceof Error ? error.message : "An unexpected error occurred",
           variant: "destructive",
         });
@@ -71,7 +73,7 @@ export default function BrainstormPage() {
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
-      toast({ title: "Chat Error", description: "Failed to generate response.", variant: "destructive" });
+      toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
     } finally {
       setAskLoading(false);
     }
@@ -81,9 +83,9 @@ export default function BrainstormPage() {
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Brainstorm Ideas</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('brainstorm.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Explore argument angles with collaborative AI ideation
+            {t('brainstorm.subtitle')}
           </p>
         </div>
 
@@ -100,9 +102,9 @@ export default function BrainstormPage() {
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">
                 <div className="text-6xl mb-4">💡</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Unlock Creative Angles</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('brainstorm.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Describe your motion to explore unconventional argument angles, identify tradeoffs, and find your strongest positions.
+                  {t('brainstorm.emptyDesc')}
                 </p>
               </div>
             )}

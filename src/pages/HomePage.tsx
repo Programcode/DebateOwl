@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Sparkles,
   Swords,
@@ -14,75 +15,32 @@ import {
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-const modes = [
-  {
-    title: 'Generate',
-    description: 'Build full debate cases with claims, warrants, and impacts.',
-    icon: Sparkles,
-    href: '/app/generate',
-  },
-  {
-    title: 'Attack',
-    description: 'Stress-test arguments and expose strategic weak points.',
-    icon: Swords,
-    href: '/app/attack',
-  },
-  {
-    title: 'Brainstorm',
-    description: 'Explore angles and discover fresh ways to frame motions.',
-    icon: Lightbulb,
-    href: '/app/brainstorm',
-  },
-  {
-    title: 'Factoids',
-    description: 'Find sourced evidence and debate-ready statistics.',
-    icon: BookOpen,
-    href: '/app/factoids',
-  },
-  {
-    title: 'Ask',
-    description: 'Chat with your coach for strategy, structure, and prep.',
-    icon: MessageCircle,
-    href: '/app/ask',
-  },
-  {
-    title: 'Library',
-    description: 'Manage and toggle sources used for grounded responses.',
-    icon: Database,
-    href: '/app/library',
-  },
-  {
-    title: 'Timer',
-    description: 'Practice speaking rounds with tournament timing controls.',
-    icon: Timer,
-    href: '/app/timer',
-  },
-  {
-    title: 'Flowchart',
-    description: 'Map arguments and rebuttal links in a visual debate tree.',
-    icon: GitBranch,
-    href: '/app/flowchart',
-  },
-  {
-    title: 'History',
-    description: 'Reopen saved cases, chats, and previous prep sessions.',
-    icon: Clock,
-    href: '/app/history',
-  },
+const modeKeys = [
+  { key: 'generate', icon: Sparkles, href: '/app/generate' },
+  { key: 'attack', icon: Swords, href: '/app/attack' },
+  { key: 'brainstorm', icon: Lightbulb, href: '/app/brainstorm' },
+  { key: 'factoids', icon: BookOpen, href: '/app/factoids' },
+  { key: 'ask', icon: MessageCircle, href: '/app/ask' },
+  { key: 'library', icon: Database, href: '/app/library' },
+  { key: 'timer', icon: Timer, href: '/app/timer' },
+  { key: 'flowchart', icon: GitBranch, href: '/app/flowchart' },
+  { key: 'history', icon: Clock, href: '/app/history' },
 ];
 
 export default function HomePage() {
+  const { t } = useTranslation();
+
   return (
     <div className="container px-4 py-8">
       <div className="mx-auto flex min-h-[72vh] max-w-5xl flex-col justify-center">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">DebateLab</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Choose a mode to start.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">{t('home.title')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('home.subtitle')}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          {modes.map((mode) => (
-            <Link key={mode.title} to={mode.href} className="group">
+          {modeKeys.map((mode) => (
+            <Link key={mode.key} to={mode.href} className="group">
               <Card
                 className={cn(
                   'h-full border-border/70 bg-card/60 transition-all',
@@ -96,8 +54,8 @@ export default function HomePage() {
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
-                  <CardTitle className="text-lg">{mode.title}</CardTitle>
-                  <CardDescription>{mode.description}</CardDescription>
+                  <CardTitle className="text-lg">{t(`home.${mode.key}`)}</CardTitle>
+                  <CardDescription>{t(`home.${mode.key}Desc`)}</CardDescription>
                 </CardHeader>
               </Card>
             </Link>

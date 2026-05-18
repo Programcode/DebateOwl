@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import i18n from '@/i18n';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
 
@@ -67,6 +68,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       setLanguage: (language) => {
         set({ language });
+        void i18n.changeLanguage(language);
         void upsertSettings({
           language,
           theme: get().theme,
@@ -157,6 +159,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (!state.language) state.language = 'en';
         if (!state.theme) state.theme = 'system';
         if (typeof state.wikiResearchEnabled !== 'boolean') state.wikiResearchEnabled = false;
+        void i18n.changeLanguage(state.language);
       },
     }
   )

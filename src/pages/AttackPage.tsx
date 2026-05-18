@@ -1,6 +1,7 @@
 // src/pages/AttackPage.tsx
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { useTranslation } from 'react-i18next';
 import { AttackForm } from '@/components/features/attack/AttackForm';
 import { AttackResults } from '@/components/features/attack/AttackResults';
 import { attackCase, askChat } from '@/lib/ai/client';
@@ -18,6 +19,7 @@ export default function AttackPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
+  const { t } = useTranslation();
 
   const handleSubmit = async (data: AttackInput) => {
     setAttackLoading(true);
@@ -28,7 +30,7 @@ export default function AttackPage() {
       console.error('Failed to attack case:', error);
       if (!subError.handleSubscriptionError(error)) {
         toast({
-          title: "Attack Analysis Failed",
+          title: t('attack.failed'),
           description: error instanceof Error ? error.message : "An unexpected error occurred",
           variant: "destructive",
         });
@@ -75,7 +77,7 @@ export default function AttackPage() {
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
-      toast({ title: "Chat Error", description: "Failed to generate response.", variant: "destructive" });
+      toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
     } finally {
       setAskLoading(false);
     }
@@ -85,9 +87,9 @@ export default function AttackPage() {
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Attack My Case</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('attack.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Find weaknesses in your arguments before your opponents do
+            {t('attack.subtitle')}
           </p>
         </div>
 
@@ -104,9 +106,9 @@ export default function AttackPage() {
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">
                 <div className="text-6xl mb-4">⚔️</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No Mercy Mode</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('attack.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.
+                  {t('attack.emptyDesc')}
                 </p>
               </div>
             )}

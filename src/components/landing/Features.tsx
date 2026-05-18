@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
     BookOpen,
@@ -11,55 +12,21 @@ import {
     GitBranch,
 } from "lucide-react";
 
-const features = [
-    {
-        icon: Zap,
-        title: "Generate",
-        description: "Build full cases with claims, warrants, impacts, and speech-ready structure.",
-    },
-    {
-        icon: Swords,
-        title: "Attack",
-        description: "Stress-test arguments with weakness detection, fallacy checks, and rebuttal angles.",
-    },
-    {
-        icon: Brain,
-        title: "Brainstorm",
-        description: "Explore motion ideas with structured ideation modes for faster prep.",
-    },
-    {
-        icon: Search,
-        title: "Factoids",
-        description: "Run deep research with source checks and evidence snippets for your case files.",
-    },
-    {
-        icon: MessageCircle,
-        title: "Ask Coach",
-        description: "Chat through strategy, cross-ex plans, and speaking choices with context memory.",
-    },
-    {
-        icon: Database,
-        title: "Source Library",
-        description: "Save and activate sources so AI outputs stay grounded in your own research.",
-    },
-    {
-        icon: Timer,
-        title: "Debate Timer",
-        description: "Practice speech pacing with multiple debate formats and keyboard controls.",
-    },
-    {
-        icon: GitBranch,
-        title: "Flowchart",
-        description: "Map argument trees visually and export your round strategy board.",
-    },
-    {
-        icon: BookOpen,
-        title: "History",
-        description: "Reopen saved cases, chats, attacks, and factoids whenever you need them.",
-    },
-];
-
 const Features = () => {
+    const { t } = useTranslation();
+
+    const features = [
+        { icon: Zap, title: t('features.generate'), description: t('features.generateDesc') },
+        { icon: Swords, title: t('features.attack'), description: t('features.attackDesc') },
+        { icon: Brain, title: t('features.brainstorm'), description: t('features.brainstormDesc') },
+        { icon: Search, title: t('features.factoids'), description: t('features.factoidsDesc') },
+        { icon: MessageCircle, title: t('features.ask'), description: t('features.askDesc') },
+        { icon: Database, title: t('features.library'), description: t('features.libraryDesc') },
+        { icon: Timer, title: t('features.timer'), description: t('features.timerDesc') },
+        { icon: GitBranch, title: t('features.flowchart'), description: t('features.flowchartDesc') },
+        { icon: BookOpen, title: t('features.history'), description: t('features.historyDesc') },
+    ];
+
     return (
         <section id="features" className="relative py-24">
             <div className="absolute inset-0 pointer-events-none">
@@ -76,10 +43,10 @@ const Features = () => {
                     className="mb-16 text-center"
                 >
                     <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
-                        Every Core Tool In <span className="gradient-text">One Workspace</span>
+                        {t('features.title')}
                     </h2>
                     <p className="mx-auto mt-4 max-w-3xl text-lg text-muted-foreground">
-                        Generate, attack, research, coach, and practice without jumping between disconnected apps.
+                        {t('features.subtitle')}
                     </p>
                 </motion.div>
 

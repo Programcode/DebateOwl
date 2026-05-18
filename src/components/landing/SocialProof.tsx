@@ -1,13 +1,16 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 
-const proofItems = [
-    { value: "9", label: "Prep Modes" },
-    { value: "2", label: "Plans (Trial + Pro)" },
-    { value: "3", label: "Major 2026 Upgrades" },
-    { value: "1", label: "Unified Workspace" },
-];
-
 const SocialProof = () => {
+    const { t } = useTranslation();
+
+    const proofItems = [
+        { value: "9", label: t('socialProof.modes') },
+        { value: "2", label: t('socialProof.plans') },
+        { value: "3", label: t('socialProof.upgrades') },
+        { value: "1", label: t('socialProof.workspace') },
+    ];
+
     return (
         <section className="relative overflow-hidden py-12">
             <div className="section-container">

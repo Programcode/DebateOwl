@@ -1,35 +1,21 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Database, ScanSearch, Sparkles, Network } from "lucide-react";
 
-const steps = [
-    {
-        icon: ScanSearch,
-        title: "1. AI Scanning",
-        description: "We use Exa to read and index every URL you save, extracting clean text without clutter.",
-    },
-    {
-        icon: Database,
-        title: "2. Knowledge Base",
-        description: "Your research is stored in a structured vector database, creating a personal library of facts.",
-    },
-    {
-        icon: Network,
-        title: "3. Context Injection",
-        description: "Relevant evidence is automatically retrieved and injected into the AI's context window.",
-    },
-    {
-        icon: Sparkles,
-        title: "4. Grounded Output",
-        description: "The AI generates arguments that strictly adhere to your evidence, reducing hallucinations.",
-    },
-];
-
 const DeepDive = () => {
+    const { t } = useTranslation();
+
+    const steps = [
+        { icon: ScanSearch, title: t('deepDive.step1'), description: t('deepDive.step1Desc') },
+        { icon: Database, title: t('deepDive.step2'), description: t('deepDive.step2Desc') },
+        { icon: Network, title: t('deepDive.step3'), description: t('deepDive.step3Desc') },
+        { icon: Sparkles, title: t('deepDive.step4'), description: t('deepDive.step4Desc') },
+    ];
+
     return (
         <section className="py-24 relative overflow-hidden bg-secondary/5">
             <div className="section-container relative z-10">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    {/* Text Content */}
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}
@@ -37,12 +23,10 @@ const DeepDive = () => {
                         viewport={{ once: true }}
                     >
                         <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                            Not Just Another Wrapper.<br />
-                            <span className="gradient-text">Active Grounding™ Technology.</span>
+                            {t('deepDive.title')}
                         </h2>
                         <p className="text-lg text-muted-foreground mb-8">
-                            Most AI tools just guess. DebateLab actively reads your sources.
-                            Our deep integration with Exa ensures that every argument is backed by the evidence you provide.
+                            {t('deepDive.subtitle')}
                         </p>
 
                         <div className="space-y-6">
@@ -67,7 +51,6 @@ const DeepDive = () => {
                         </div>
                     </motion.div>
 
-                    {/* Visual/Graphic */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         whileInView={{ opacity: 1, scale: 1 }}

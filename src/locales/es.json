@@ -1,0 +1,269 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "generate": "Generar",
+    "attack": "Atacar",
+    "brainstorm": "Ideas",
+    "factoids": "Datos",
+    "ask": "Preguntar",
+    "library": "Biblioteca",
+    "timer": "Cronómetro",
+    "flowchart": "Diagrama",
+    "history": "Historial",
+    "features": "Funciones",
+    "whatsNew": "Novedades",
+    "pricing": "Precios",
+    "howItWorks": "Cómo Funciona",
+    "startTrial": "Prueba Gratis",
+    "settings": "Ajustes",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "navDesc": {
+    "home": "Elegir un modo",
+    "generate": "Construir argumentos",
+    "attack": "Encontrar debilidades",
+    "brainstorm": "Explorar ideas",
+    "factoids": "Buscar evidencia",
+    "ask": "Recibir coaching",
+    "library": "Gestionar fuentes",
+    "timer": "Practicar tiempos",
+    "flowchart": "Mapear argumentos",
+    "history": "Elementos guardados"
+  },
+  "home": {
+    "title": "DebateLab",
+    "subtitle": "Elige un modo para comenzar.",
+    "generate": "Generar",
+    "generateDesc": "Construye casos completos con afirmaciones, razonamientos e impactos.",
+    "attack": "Atacar",
+    "attackDesc": "Pon a prueba argumentos y expón puntos débiles estratégicos.",
+    "brainstorm": "Ideas",
+    "brainstormDesc": "Explora ángulos y descubre formas frescas de enmarcar mociones.",
+    "factoids": "Datos",
+    "factoidsDesc": "Encuentra evidencia con fuentes y estadísticas listas para el debate.",
+    "ask": "Preguntar",
+    "askDesc": "Chatea con tu coach sobre estrategia, estructura y preparación.",
+    "library": "Biblioteca",
+    "libraryDesc": "Gestiona y activa fuentes usadas para respuestas fundamentadas.",
+    "timer": "Cronómetro",
+    "timerDesc": "Practica rondas de oratoria con controles de tiempo de torneo.",
+    "flowchart": "Diagrama",
+    "flowchartDesc": "Mapea argumentos y enlaces de refutación en un árbol visual.",
+    "history": "Historial",
+    "historyDesc": "Reabre casos guardados, chats y sesiones de preparación anteriores."
+  },
+  "generate": {
+    "title": "Generar Caso",
+    "subtitle": "Construye un caso de debate completo con asistencia de IA",
+    "emptyTitle": "Tu Caso Te Espera",
+    "emptyDesc": "Completa el formulario para generar un caso de debate estructurado con argumentos, evidencia y contra-estrategias.",
+    "save": "Guardar Caso",
+    "saved": "Caso Guardado",
+    "savedDesc": "Tu caso ha sido guardado en el historial.",
+    "savePrompt": "Ingresa un título para este caso:",
+    "failed": "Error al Generar",
+    "timeout": "Tiempo Agotado",
+    "timeoutDesc": "La IA tardó demasiado en responder. Inténtalo de nuevo.",
+    "authRequired": "Autenticación Requerida"
+  },
+  "attack": {
+    "title": "Atacar Mi Caso",
+    "subtitle": "Encuentra debilidades en tus argumentos antes que tus oponentes",
+    "emptyTitle": "Modo Sin Piedad",
+    "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
+    "failed": "Error en el Análisis de Ataque"
+  },
+  "brainstorm": {
+    "title": "Lluvia de Ideas",
+    "subtitle": "Explora ángulos de argumentación con ideación colaborativa de IA",
+    "emptyTitle": "Desbloquea Ángulos Creativos",
+    "emptyDesc": "Describe tu moción para explorar ángulos de argumentación no convencionales, identificar compromisos y encontrar tus posiciones más fuertes.",
+    "failed": "Error en la Lluvia de Ideas"
+  },
+  "factoids": {
+    "title": "Datos y Fuentes",
+    "subtitle": "Encuentra evidencia lista para el debate con citas verificables",
+    "emptyTitle": "Evidencia Que Gana",
+    "emptyDesc": "Ingresa una afirmación para encontrar datos de apoyo con citas reales, contexto y guía sobre cómo usarlos efectivamente.",
+    "failed": "Error en la Investigación",
+    "savedToLibrary": "Guardado en Biblioteca",
+    "savedToLibraryDesc": "Esta evidencia ahora está disponible para fundamentación."
+  },
+  "ask": {
+    "title": "Pregunta a Tu Coach",
+    "failed": "Error",
+    "failedDesc": "La solicitud falló. Inténtalo de nuevo.",
+    "timeout": "Tiempo Agotado",
+    "timeoutDesc": "La solicitud tardó demasiado. Inténtalo de nuevo.",
+    "saved": "Guardado",
+    "savedDesc": "Fuente añadida a la biblioteca."
+  },
+  "chat": {
+    "error": "Error de Chat",
+    "errorDesc": "No se pudo generar la respuesta."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "aiOutputLanguage": "Idioma de Salida de IA",
+    "theme": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "login": {
+    "title": "Iniciar Sesión en DebateLab",
+    "subtitle": "Se requiere inicio de sesión con Google para usar la app.",
+    "google": "Continuar con Google"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "¡Ups! Página no encontrada",
+    "link": "Volver al Inicio"
+  },
+  "footer": {
+    "tagline": "DebateLab • Hecho para debatientes que exigen excelencia",
+    "terms": "Términos",
+    "privacy": "Privacidad",
+    "copyright": "© 2026 DebateLab."
+  },
+  "hero": {
+    "headline": "Prepárate Más Rápido. Argumenta Mejor. Gana Más Rondas.",
+    "subheadline": "Preparación de debate impulsada por IA que te da ventaja en cada ronda.",
+    "trialBadge": "Prueba gratis de 3 días",
+    "requestsBadge": "5 solicitudes IA/día",
+    "proBadge": "$5/mes Pro",
+    "cta": "Prueba Gratis",
+    "ctaSecondary": "Ver Precios",
+    "trustBullet1": "Sin tarjeta de crédito",
+    "trustBullet2": "Cancela cuando quieras",
+    "trustBullet3": "Funciona con cualquier formato"
+  },
+  "features": {
+    "title": "Todo Lo Que Necesitas Para Ganar",
+    "subtitle": "Nueve modos potentes diseñados para debatientes competitivos.",
+    "generate": "Generador de Casos",
+    "generateDesc": "Construye casos completos con argumentos estructurados, evidencia y contra-estrategias.",
+    "attack": "Atacante de Casos",
+    "attackDesc": "Pon a prueba tus argumentos y encuentra debilidades antes que los oponentes.",
+    "brainstorm": "Lluvia de Ideas",
+    "brainstormDesc": "Explora ángulos no convencionales y descubre caminos de argumentación frescos.",
+    "factoids": "Datos",
+    "factoidsDesc": "Encuentra evidencia lista para el debate con citas verificables.",
+    "ask": "Coach",
+    "askDesc": "Recibe mentoría sobre estrategia, estructura y técnica.",
+    "library": "Biblioteca de Fuentes",
+    "libraryDesc": "Gestiona fuentes que fundamentan las respuestas de IA con evidencia real.",
+    "timer": "Cronómetro de Debate",
+    "timerDesc": "Practica con controles de tiempo precisos de torneo.",
+    "flowchart": "Diagrama de Flujo",
+    "flowchartDesc": "Mapea estructuras de argumentos y enlaces de refutación visualmente.",
+    "history": "Historial",
+    "historyDesc": "Accede a casos guardados, chats y sesiones de preparación anteriores."
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona",
+    "subtitle": "Tres pasos para una mejor preparación de debate.",
+    "step1Title": "Investigar",
+    "step1Desc": "La IA escanea fuentes verificadas y construye contexto para tu moción.",
+    "step2Title": "Generar",
+    "step2Desc": "Obtén argumentos estructurados, evidencia y contra-estrategias.",
+    "step3Title": "Practicar",
+    "step3Desc": "Refina con coaching, ejercicios de tiempo y mapeo de argumentos."
+  },
+  "useCases": {
+    "title": "Hecho Para Todos en el Debate",
+    "forDebaters": "Para Debatientes",
+    "forCoaches": "Para Coaches",
+    "forJudges": "Para Jueces",
+    "debater1": "Genera casos en segundos, no en horas",
+    "debater2": "Encuentra evidencia con citas reales",
+    "debater3": "Pon a prueba argumentos antes de las rondas",
+    "debater4": "Practica con tiempos de torneo",
+    "coach1": "Asigna mociones y revisa casos generados por IA",
+    "coach2": "Identifica debilidades comunes entre equipos",
+    "coach3": "Úsalo como herramienta de enseñanza para estructura argumentativa",
+    "coach4": "Ahorra tiempo en tareas de preparación repetitivas",
+    "judge1": "Explora ambos lados de mociones complejas",
+    "judge2": "Comprende estructuras argumentativas rápidamente",
+    "judge3": "Encuentra evidencia para verificar afirmaciones",
+    "judge4": "Mapea flujos de argumentos visualmente"
+  },
+  "pricing": {
+    "title": "Precios Simples y Transparentes",
+    "subtitle": "Comienza gratis, mejora cuando estés listo.",
+    "trial": "Prueba",
+    "trialPrice": "$0",
+    "trialPeriod": "por 3 días",
+    "pro": "Pro",
+    "proPrice": "$5",
+    "proPeriod": "/mes + impuestos",
+    "recommended": "Recomendado",
+    "trialFeature1": "5 solicitudes IA por día",
+    "trialFeature2": "Los 9 modos de preparación",
+    "trialFeature3": "Solo modelos básicos",
+    "trialFeature4": "Acceso por 3 días",
+    "proFeature1": "Solicitudes IA ilimitadas",
+    "proFeature2": "Los 9 modos de preparación",
+    "proFeature3": "Modelos premium (GPT-4o, Claude, Gemini Pro)",
+    "proFeature4": "Soporte prioritario",
+    "proFeature5": "Investigación Active Grounding™",
+    "startTrial": "Comenzar Prueba Gratis",
+    "subscribe": "Suscribirse Ahora",
+    "noFreePlan": "No hay plan gratuito permanente. Después de tu prueba, se requiere una suscripción para seguir usando DebateLab."
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "q1": "¿Cuánto cuesta DebateLab?",
+    "a1": "DebateLab ofrece una prueba gratis de 3 días con 5 solicitudes IA por día. Después, Pro cuesta $5/mes + impuestos para solicitudes ilimitadas y modelos premium.",
+    "q2": "¿Qué obtengo con Pro?",
+    "a2": "Solicitudes IA ilimitadas, acceso a modelos premium (GPT-4o, Claude 3.5 Sonnet, Gemini Pro), investigación Active Grounding™ y soporte prioritario.",
+    "q3": "¿Puedo cancelar mi suscripción?",
+    "a3": "Sí, puedes cancelar en cualquier momento desde tu página de Ajustes. Mantendrás el acceso hasta el final de tu período de facturación.",
+    "q4": "¿La IA inventa cosas?",
+    "a4": "Usamos tecnología Active Grounding™ para verificar afirmaciones contra fuentes reales. Cualquier información no verificada se marca claramente como tal.",
+    "q5": "¿Puedo guardar y exportar mi trabajo?",
+    "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs."
+  },
+  "finalCta": {
+    "title": "¿Listo Para Construir Tu Próximo Caso Ganador?",
+    "subtitle": "Únete a debatientes que se preparan mejor con IA.",
+    "cta": "Lanzar DebateLab"
+  },
+  "socialProof": {
+    "modes": "Modos de Preparación",
+    "plans": "Planes",
+    "upgrades": "Mejoras Importantes 2026",
+    "workspace": "Espacio de Trabajo Unificado"
+  },
+  "whatsNew": {
+    "title": "Novedades",
+    "subtitle": "Últimas actualizaciones y mejoras.",
+    "sub1Title": "Niveles de Suscripción",
+    "sub1Desc": "Prueba gratis y plan Pro con modelos premium.",
+    "sub2Title": "Diagramas de Argumentos",
+    "sub2Desc": "Mapeo visual de argumentos con nodos arrastrables.",
+    "sub3Title": "Cronómetro Mejorado",
+    "sub3Desc": "Tiempos precisos de torneo con formatos personalizados.",
+    "sub4Title": "Historial de Preparación",
+    "sub4Desc": "Accede a todos tus casos y sesiones anteriores."
+  },
+  "deepDive": {
+    "title": "Tecnología Active Grounding™",
+    "subtitle": "Cómo mantenemos honestas las respuestas de IA.",
+    "step1": "Escaneo IA vía Exa",
+    "step1Desc": "La búsqueda neuronal encuentra fuentes relevantes y de alta calidad.",
+    "step2": "Base de Conocimiento",
+    "step2Desc": "Tus fuentes se vectorizan para coincidencia semántica.",
+    "step3": "Inyección de Contexto",
+    "step3Desc": "Los hechos verificados se inyectan en el prompt de IA.",
+    "step4": "Salida Fundamentada",
+    "step4Desc": "Las respuestas citan fuentes reales, no alucinaciones."
+  },
+  "rateLimit": {
+    "title": "Límite de Solicitudes Excedido"
+  },
+  "subscription": {
+    "required": "Suscripción requerida."
+  }
+}
