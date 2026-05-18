@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
 import type { AttackOutput } from '@/lib/ai/schemas/attack';
