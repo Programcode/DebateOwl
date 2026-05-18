@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const Navbar = () => {
     const { t } = useTranslation();
@@ -45,6 +46,7 @@ const Navbar = () => {
                     </div>
 
                     <div className="hidden items-center gap-3 md:flex">
+                        <LanguageSwitcher />
                         <a href="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
                             <ArrowRight className="relative z-10 h-4 w-4" />
@@ -89,6 +91,7 @@ const Navbar = () => {
                                 <span className="relative z-10">{t('nav.startTrial')}</span>
                                 <ArrowRight className="relative z-10 h-4 w-4" />
                             </a>
+                            <LanguageSwitcher />
                         </div>
                     </motion.div>
                 )}

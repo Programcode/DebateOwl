@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LibraryPage() {
+  const { t } = useTranslation();
   const { sourceLibrary, addSource, removeSource, toggleSource, clearLibrary } = useSessionStore();
   const { toast } = useToast();
 
@@ -26,25 +28,25 @@ export default function LibraryPage() {
 
   const handleAdd = () => {
     if (!newSource.title || !newSource.content) {
-      toast({ title: "Error", description: "Title and content are required.", variant: "destructive" });
+      toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
     addSource(newSource);
     setNewSource({ title: '', content: '', type: 'text', origin: '' });
     setIsAdding(false);
-    toast({ title: "Source Added", description: "This source is now available for AI grounding." });
+    toast({ title: t('libraryPage.sourceAdded'), description: t('libraryPage.sourceAddedDesc') });
   };
 
   const handleClearLibrary = async () => {
     if (isClearing) return;
-    const confirmed = window.confirm('Clear all sources? This cannot be undone.');
+    const confirmed = window.confirm(t('libraryPage.clearConfirm'));
     if (!confirmed) return;
     setIsClearing(true);
     try {
       await Promise.resolve(clearLibrary());
     } catch (error) {
       console.error('Failed to clear library:', error);
-      toast({ title: "Error", description: "Failed to clear sources.", variant: "destructive" });
+      toast({ title: "Error", description: t('libraryPage.clearFailed'), variant: "destructive" });
     } finally {
       setIsClearing(false);
     }
@@ -59,17 +61,17 @@ export default function LibraryPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Source Library</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
             <p className="text-muted-foreground mt-1">
-              Manage research and evidence for "Deep Grounding" during case generation and chat.
+              {t('libraryPage.subtitle')}
             </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setIsAdding(!isAdding)}>
-              <Plus className="h-4 w-4 mr-2" /> {isAdding ? 'Cancel' : 'Add Source'}
+              <Plus className="h-4 w-4 mr-2" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
             </Button>
             <Button variant="ghost" className="text-destructive" onClick={handleClearLibrary} disabled={isClearing}>
-              <Trash2 className="h-4 w-4 mr-2" /> {isClearing ? 'Clearing...' : 'Clear All'}
+              <Trash2 className="h-4 w-4 mr-2" /> {isClearing ? t('libraryPage.clearing') : t('libraryPage.clearAll')}
             </Button>
           </div>
         </div>
@@ -77,38 +79,38 @@ export default function LibraryPage() {
         {isAdding && (
           <Card className="mb-8 border-primary/20 bg-primary/5">
             <CardHeader>
-              <CardTitle>Add New Knowledge</CardTitle>
-              <CardDescription>Manually add text or documentation to the library</CardDescription>
+              <CardTitle>{t('libraryPage.addNewTitle')}</CardTitle>
+              <CardDescription>{t('libraryPage.addNewDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Title</Label>
+                  <Label>{t('libraryPage.titleLabel')}</Label>
                   <Input
-                    placeholder="e.g., UBI Study 2024"
+                    placeholder={t('libraryPage.titlePlaceholder')}
                     value={newSource.title}
                     onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Origin (URL/Author)</Label>
+                  <Label>{t('libraryPage.originLabel')}</Label>
                   <Input
-                    placeholder="e.g., nature.com"
+                    placeholder={t('libraryPage.originPlaceholder')}
                     value={newSource.origin}
                     onChange={(e) => setNewSource({ ...newSource, origin: e.target.value })}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Content</Label>
+                <Label>{t('libraryPage.contentLabel')}</Label>
                 <Textarea
-                  placeholder="Paste the full text here..."
+                  placeholder={t('libraryPage.contentPlaceholder')}
                   className="min-h-[200px]"
                   value={newSource.content}
                   onChange={(e) => setNewSource({ ...newSource, content: e.target.value })}
                 />
               </div>
-              <Button onClick={handleAdd} className="w-full">Save to Library</Button>
+              <Button onClick={handleAdd} className="w-full">{t('libraryPage.saveToLibrary')}</Button>
             </CardContent>
           </Card>
         )}
@@ -117,13 +119,13 @@ export default function LibraryPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
-                <CardTitle className="text-xl">Your Knowledge Base</CardTitle>
-                <CardDescription>Active sources are used as context for all AI responses</CardDescription>
+                <CardTitle className="text-xl">{t('libraryPage.yourKBTitle')}</CardTitle>
+                <CardDescription>{t('libraryPage.yourKBDesc')}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                   <Database className="h-3 w-3 mr-1" />
-                  {sourceLibrary.length} Sources
+                  {sourceLibrary.length} {t('libraryPage.sourcesCount')}
                 </Badge>
               </div>
             </CardHeader>
@@ -131,9 +133,9 @@ export default function LibraryPage() {
               {sourceLibrary.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">Your library is empty</h3>
+                  <h3 className="text-lg font-medium">{t('libraryPage.emptyTitle')}</h3>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                    Add sources manually or save URLs from the Chat or Factoids tabs.
+                    {t('libraryPage.emptyDesc')}
                   </p>
                 </div>
               ) : (
@@ -164,14 +166,14 @@ export default function LibraryPage() {
                               )}
                               <Badge variant="outline" className="text-[10px] py-0">{source.type.toUpperCase()}</Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground">Added {formatDate(source.createdAt)} • {source.origin || 'Manual entry'}</p>
+                            <p className="text-xs text-muted-foreground">{t('libraryPage.added')} {formatDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
                             <p className="text-sm text-foreground line-clamp-2 mt-2">{source.content}</p>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-4 ml-4 shrink-0">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              {source.isActive ? 'Active' : 'Disabled'}
+                              {source.isActive ? t('libraryPage.active') : t('libraryPage.disabled')}
                             </span>
                             <Switch
                               checked={source.isActive}
@@ -207,12 +209,10 @@ export default function LibraryPage() {
               </div>
               <div>
                 <h4 className="font-semibold">
-                  {hasActiveSources ? 'Deep Grounding is Active' : 'Deep Grounding is Disabled'}
+                  {hasActiveSources ? t('libraryPage.groundingActive') : t('libraryPage.groundingDisabled')}
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  {hasActiveSources
-                    ? 'The AI will automatically prioritize information from your active sources when generating cases or answering questions.'
-                    : 'Enable at least one source to prioritize your library during case generation and chat.'}
+                  {hasActiveSources ? t('libraryPage.groundingActiveDesc') : t('libraryPage.groundingDisabledDesc')}
                 </p>
               </div>
             </CardContent>

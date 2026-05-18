@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ interface SharedItem {
 }
 
 export default function SharedPage() {
+    const { t } = useTranslation();
     const { code } = useParams<{ code: string }>();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function SharedPage() {
     useEffect(() => {
         const loadSharedItem = async () => {
             if (!code) {
-                setError('No share code provided');
+                setError(t('sharedPage.noCode'));
                 setLoading(false);
                 return;
             }
@@ -42,7 +44,7 @@ export default function SharedPage() {
                     .single();
 
                 if (fetchError || !data) {
-                    setError('Shared item not found or has expired');
+                    setError(t('sharedPage.contentNotFound'));
                     setLoading(false);
                     return;
                 }
@@ -55,14 +57,14 @@ export default function SharedPage() {
 
                 setItem(data);
             } catch (err) {
-                setError('Failed to load shared item');
+                setError(t('sharedPage.loadFailed'));
             } finally {
                 setLoading(false);
             }
         };
 
         loadSharedItem();
-    }, [code]);
+    }, [code, t]);
 
     const handleImport = async () => {
         if (!item) return;
@@ -72,16 +74,14 @@ export default function SharedPage() {
 
             if (!user) {
                 toast({
-                    title: 'Login Required',
-                    description: 'Please log in to import this content to your account',
+                    title: t('sharedPage.loginRequired'),
+                    description: t('sharedPage.loginRequiredDesc'),
                     variant: 'default',
                 });
                 navigate('/login');
                 return;
             }
 
-            // Import based on type - for now just show success message
-            // Direct store integration would require setting result state then calling save methods
             switch (item.item_type) {
                 case 'case':
                 case 'attack':
@@ -89,18 +89,18 @@ export default function SharedPage() {
                 case 'factoids':
                 case 'chat':
                 case 'sources':
-                    toast({ title: 'Imported', description: `${item.item_type} content is ready to view` });
+                    toast({ title: t('sharedPage.imported'), description: t('sharedPage.importedDesc') });
                     break;
                 default:
-                    toast({ title: 'Imported', description: 'Content added to your history' });
+                    toast({ title: t('sharedPage.imported'), description: t('sharedPage.importedDesc') });
             }
 
-            toast({ title: 'Success', description: 'Content imported to your account!' });
+            toast({ title: t('sharedPage.importSuccess'), description: t('sharedPage.importedDesc') });
             navigate('/app/history');
         } catch (err) {
             toast({
                 title: 'Error',
-                description: 'Failed to import content',
+                description: t('sharedPage.importFailed'),
                 variant: 'destructive',
             });
         }
@@ -121,13 +121,13 @@ export default function SharedPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Share2 className="h-5 w-5" />
-                            Shared Content
+                            {t('sharedPage.title')}
                         </CardTitle>
-                        <CardDescription>{error || 'Content not found'}</CardDescription>
+                        <CardDescription>{error || t('sharedPage.notFound')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button onClick={() => navigate('/app')} className="w-full">
-                            Go to DebateLab
+                            {t('sharedPage.goToApp')}
                         </Button>
                     </CardContent>
                 </Card>
@@ -144,17 +144,17 @@ export default function SharedPage() {
                             <div>
                                 <CardTitle className="flex items-center gap-2">
                                     <Share2 className="h-5 w-5 text-primary" />
-                                    {item.title || 'Shared Content'}
+                                    {item.title || t('sharedPage.title')}
                                 </CardTitle>
                                 <CardDescription className="mt-1">
                                     <Badge variant="secondary" className="mr-2">{item.item_type}</Badge>
-                                    Shared on {new Date(item.created_at).toLocaleDateString()}
-                                    <span className="text-muted-foreground ml-2">• {item.view_count} views</span>
+                                    {t('sharedPage.sharedOn')} {new Date(item.created_at).toLocaleDateString()}
+                                    <span className="text-muted-foreground ml-2">• {item.view_count} {t('sharedPage.views')}</span>
                                 </CardDescription>
                             </div>
                             <Button onClick={handleImport} className="gap-2">
                                 <Download className="h-4 w-4" />
-                                Import to My Account
+                                {t('sharedPage.importToAccount')}
                             </Button>
                         </div>
                     </CardHeader>
@@ -170,7 +170,7 @@ export default function SharedPage() {
                 <div className="mt-4 text-center">
                     <Button variant="outline" onClick={() => navigate('/app')} className="gap-2">
                         <ExternalLink className="h-4 w-4" />
-                        Open DebateLab
+                        {t('sharedPage.openApp')}
                     </Button>
                 </div>
             </div>

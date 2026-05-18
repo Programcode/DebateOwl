@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const modeKeys = [
   { key: 'generate', icon: Sparkles, href: '/app/generate' },
@@ -32,6 +33,9 @@ export default function HomePage() {
 
   return (
     <div className="container px-4 py-8">
+      <div className="flex justify-end">
+        <LanguageSwitcher />
+      </div>
       <div className="mx-auto flex min-h-[72vh] max-w-5xl flex-col justify-center">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground">{t('home.title')}</h1>
