@@ -9,7 +9,7 @@ const languages = [
   { value: 'hu', label: 'Magyar' },
 ] as const;
 
-export default function LanguageSwitcher() {
+export function LanguageSwitcher() {
   const { t } = useTranslation();
   const { language, setLanguage } = useSettingsStore();
 

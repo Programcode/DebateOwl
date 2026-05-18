@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const modeKeys = [
   { key: 'generate', icon: Sparkles, href: '/app/generate' },

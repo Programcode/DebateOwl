@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
+import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
 import { exportFactoidsToPdf } from '@/lib/pdf-export-utils';
@@ -177,7 +178,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
   };
 
   return (
-    <div className="space-y-6">
+    <StaggeredContainer className="space-y-6">
       {onDiscuss && (
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => exportFactoidsToPdf(result)}>
@@ -287,6 +288,6 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
           ))}
         </div>
       </SectionCard>
-    </div>
+    </StaggeredContainer>
   );
 }

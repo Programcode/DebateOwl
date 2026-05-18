@@ -11,6 +11,7 @@ import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { ModelSelector } from '@/components/ModelSelector';
+import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 
 export default function AttackPage() {
   const { attackResult, attackLoading, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
@@ -105,7 +106,11 @@ export default function AttackPage() {
 
           {/* Results */}
           <div>
-            {attackResult ? (
+            {attackLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
+                <StreamingIndicator messages={['Analyzing argument...', 'Finding weaknesses...', 'Preparing critique...', 'Finalizing...']} />
+              </div>
+            ) : attackResult ? (
               <AttackResults result={attackResult} onDiscuss={handleDiscuss} />
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">

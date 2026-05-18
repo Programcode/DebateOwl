@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
+import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { exportBrainstormToPdf } from '@/lib/pdf-export-utils';
 import { exportBrainstormToDocx, exportBrainstormToGoogleDocs } from '@/lib/export-utils';
@@ -122,7 +123,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
   }
 
   return (
-    <div className="space-y-6">
+    <StaggeredContainer className="space-y-6">
       {onDiscuss && (
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => exportBrainstormToPdf(result)}>
@@ -257,6 +258,6 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
           </ul>
         </SectionCard>
       )}
-    </div>
+    </StaggeredContainer>
   );
 }

@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
+import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { exportAttackToPdf } from '@/lib/pdf-export-utils';
 import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils';
@@ -121,7 +122,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <StaggeredContainer className="space-y-6">
       {/* Overall Assessment */}
       <SectionCard
         title={t('attackResults.overall')}
@@ -301,6 +302,6 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
           </div>
         </div>
       </SectionCard>
-    </div >
+    </StaggeredContainer >
   );
 }

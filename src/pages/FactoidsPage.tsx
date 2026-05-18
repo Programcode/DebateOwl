@@ -10,6 +10,7 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
+import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 
 export default function FactoidsPage() {
   const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource } = useSessionStore();
@@ -106,7 +107,11 @@ export default function FactoidsPage() {
 
           {/* Results */}
           <div>
-            {factoidsResult ? (
+            {factoidsLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
+                <StreamingIndicator messages={['Searching sources...', 'Verifying citations...', 'Building context...', 'Finalizing...']} />
+              </div>
+            ) : factoidsResult ? (
               <FactoidsResults
                 result={factoidsResult}
                 onVerify={handleVerify}

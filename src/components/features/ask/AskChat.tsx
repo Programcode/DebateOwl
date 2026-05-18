@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
@@ -258,8 +257,12 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true">
                   <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <LoadingSpinner size="sm" />
-                      <span className="text-sm text-muted-foreground animate-pulse">
+                      <span className="typing-indicator">
+                        <span className="typing-dot" />
+                        <span className="typing-dot" />
+                        <span className="typing-dot" />
+                      </span>
+                      <span className="text-sm text-muted-foreground">
                         {t(LOADING_MESSAGES_KEYS[loadingMessageIndex])}
                       </span>
                     </div>

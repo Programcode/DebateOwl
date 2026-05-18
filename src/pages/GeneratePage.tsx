@@ -15,6 +15,7 @@ import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } fr
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { ModelSelector } from '@/components/ModelSelector';
+import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 
 export default function GeneratePage() {
   const { generateResult, generateLoading, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData } = useSessionStore();
@@ -237,7 +238,11 @@ export default function GeneratePage() {
 
           {/* Results */}
           <div>
-            {generateResult ? (
+            {generateLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
+                <StreamingIndicator messages={['Researching sources...', 'Building arguments...', 'Structuring case...', 'Adding evidence...', 'Finalizing...']} />
+              </div>
+            ) : generateResult ? (
               <div className="space-y-4">
                 <GenerateResults
                   result={generateResult}
