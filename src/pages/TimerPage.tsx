@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +15,10 @@ import {
 
 interface DebateFormat {
   id: string;
-  name: string;
+  nameKey: string;
   speeches: {
     id: string;
-    label: string;
+    labelKey: string;
     minutes: number;
     color: string;
   }[];
@@ -26,51 +27,51 @@ interface DebateFormat {
 const FORMATS: DebateFormat[] = [
   {
     id: 'standard',
-    name: 'Standard (4-6-6-3)',
+    nameKey: 'timer.formatStandard',
     speeches: [
-      { id: 'intro', label: 'Introductor', minutes: 4, color: 'bg-blue-500' },
-      { id: 'r1', label: 'Refutation 1', minutes: 6, color: 'bg-orange-500' },
-      { id: 'r2', label: 'Refutation 2', minutes: 6, color: 'bg-red-500' },
-      { id: 'conc', label: 'Conclusor', minutes: 3, color: 'bg-green-500' },
+      { id: 'intro', labelKey: 'timer.speeches.standard.intro', minutes: 4, color: 'bg-blue-500' },
+      { id: 'r1', labelKey: 'timer.speeches.standard.r1', minutes: 6, color: 'bg-orange-500' },
+      { id: 'r2', labelKey: 'timer.speeches.standard.r2', minutes: 6, color: 'bg-red-500' },
+      { id: 'conc', labelKey: 'timer.speeches.standard.conc', minutes: 3, color: 'bg-green-500' },
     ]
   },
   {
     id: 'ld',
-    name: 'Lincoln-Douglas',
+    nameKey: 'timer.formatLD',
     speeches: [
-      { id: 'ac', label: 'Aff Constructive', minutes: 6, color: 'bg-blue-500' },
-      { id: 'nc', label: 'Neg Constructive', minutes: 7, color: 'bg-red-500' },
-      { id: 'ar1', label: '1st Aff Rebuttal', minutes: 4, color: 'bg-blue-400' },
-      { id: 'nr', label: 'Neg Rebuttal', minutes: 6, color: 'bg-red-400' },
-      { id: 'ar2', label: '2nd Aff Rebuttal', minutes: 3, color: 'bg-blue-600' },
+      { id: 'ac', labelKey: 'timer.speeches.ld.ac', minutes: 6, color: 'bg-blue-500' },
+      { id: 'nc', labelKey: 'timer.speeches.ld.nc', minutes: 7, color: 'bg-red-500' },
+      { id: 'ar1', labelKey: 'timer.speeches.ld.ar1', minutes: 4, color: 'bg-blue-400' },
+      { id: 'nr', labelKey: 'timer.speeches.ld.nr', minutes: 6, color: 'bg-red-400' },
+      { id: 'ar2', labelKey: 'timer.speeches.ld.ar2', minutes: 3, color: 'bg-blue-600' },
     ]
   },
   {
     id: 'pf',
-    name: 'Public Forum',
+    nameKey: 'timer.formatPF',
     speeches: [
-      { id: 'team1_c', label: 'Team 1 Constructive', minutes: 4, color: 'bg-blue-500' },
-      { id: 'team2_c', label: 'Team 2 Constructive', minutes: 4, color: 'bg-red-500' },
-      { id: 'team1_r', label: 'Team 1 Rebuttal', minutes: 4, color: 'bg-blue-400' },
-      { id: 'team2_r', label: 'Team 2 Rebuttal', minutes: 4, color: 'bg-red-400' },
-      { id: 'team1_s', label: 'Team 1 Summary', minutes: 3, color: 'bg-blue-600' },
-      { id: 'team2_s', label: 'Team 2 Summary', minutes: 3, color: 'bg-red-600' },
-      { id: 'team1_ff', label: 'Team 1 Final Focus', minutes: 2, color: 'bg-blue-700' },
-      { id: 'team2_ff', label: 'Team 2 Final Focus', minutes: 2, color: 'bg-red-700' },
+      { id: 'team1_c', labelKey: 'timer.speeches.pf.team1c', minutes: 4, color: 'bg-blue-500' },
+      { id: 'team2_c', labelKey: 'timer.speeches.pf.team2c', minutes: 4, color: 'bg-red-500' },
+      { id: 'team1_r', labelKey: 'timer.speeches.pf.team1r', minutes: 4, color: 'bg-blue-400' },
+      { id: 'team2_r', labelKey: 'timer.speeches.pf.team2r', minutes: 4, color: 'bg-red-400' },
+      { id: 'team1_s', labelKey: 'timer.speeches.pf.team1s', minutes: 3, color: 'bg-blue-600' },
+      { id: 'team2_s', labelKey: 'timer.speeches.pf.team2s', minutes: 3, color: 'bg-red-600' },
+      { id: 'team1_ff', labelKey: 'timer.speeches.pf.team1ff', minutes: 2, color: 'bg-blue-700' },
+      { id: 'team2_ff', labelKey: 'timer.speeches.pf.team2ff', minutes: 2, color: 'bg-red-700' },
     ]
   },
   {
     id: 'policy',
-    name: 'Policy (CX)',
+    nameKey: 'timer.formatPolicy',
     speeches: [
-      { id: '1ac', label: '1AC', minutes: 8, color: 'bg-blue-500' },
-      { id: '1nc', label: '1NC', minutes: 8, color: 'bg-red-500' },
-      { id: '2ac', label: '2AC', minutes: 8, color: 'bg-blue-400' },
-      { id: '2nc', label: '2NC', minutes: 8, color: 'bg-red-400' },
-      { id: '1nr', label: '1NR', minutes: 5, color: 'bg-red-600' },
-      { id: '1ar', label: '1AR', minutes: 5, color: 'bg-blue-600' },
-      { id: '2nr', label: '2NR', minutes: 5, color: 'bg-red-700' },
-      { id: '2ar', label: '2AR', minutes: 5, color: 'bg-blue-700' },
+      { id: '1ac', labelKey: 'timer.speeches.policy.1ac', minutes: 8, color: 'bg-blue-500' },
+      { id: '1nc', labelKey: 'timer.speeches.policy.1nc', minutes: 8, color: 'bg-red-500' },
+      { id: '2ac', labelKey: 'timer.speeches.policy.2ac', minutes: 8, color: 'bg-blue-400' },
+      { id: '2nc', labelKey: 'timer.speeches.policy.2nc', minutes: 8, color: 'bg-red-400' },
+      { id: '1nr', labelKey: 'timer.speeches.policy.1nr', minutes: 5, color: 'bg-red-600' },
+      { id: '1ar', labelKey: 'timer.speeches.policy.1ar', minutes: 5, color: 'bg-blue-600' },
+      { id: '2nr', labelKey: 'timer.speeches.policy.2nr', minutes: 5, color: 'bg-red-700' },
+      { id: '2ar', labelKey: 'timer.speeches.policy.2ar', minutes: 5, color: 'bg-blue-700' },
     ]
   }
 ];
@@ -123,6 +124,7 @@ const playSignal = (type: 'beep' | 'double-beep' | 'alarm') => {
 };
 
 export default function TimerPage() {
+  const { t } = useTranslation();
   const [formatId, setFormatId] = useState('standard');
   const [currentSpeechIdx, setCurrentSpeechIdx] = useState(0);
 
@@ -141,7 +143,6 @@ export default function TimerPage() {
     setCurrentSpeechIdx(0);
     setIsRunning(false);
     setIsFinished(false);
-    // currentFormat is correct here due to render cycle
     const firstSpeech = currentFormat.speeches[0];
     setTimeLeft(firstSpeech.minutes * 60);
   }, [formatId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -195,7 +196,6 @@ export default function TimerPage() {
   const nextSpeech = useCallback(() => {
     if (currentSpeechIdx < currentFormat.speeches.length - 1) {
       setCurrentSpeechIdx(prev => prev + 1);
-      // Automatically reset timer for next speech
       setIsRunning(false);
       setIsFinished(false);
       const nextSpeechObj = currentFormat.speeches[currentSpeechIdx + 1];
@@ -213,7 +213,6 @@ export default function TimerPage() {
     }
   }, [currentSpeechIdx, currentFormat]);
 
-  // Handle manual speech selection
   const handleSpeechSelect = (idx: number) => {
     setCurrentSpeechIdx(idx);
     setIsRunning(false);
@@ -247,7 +246,7 @@ export default function TimerPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleTimer, resetTimer, nextSpeech, prevSpeech]); // Include all dependencies
+  }, [toggleTimer, resetTimer, nextSpeech, prevSpeech]);
 
   const totalDuration = (currentSpeech.minutes || 0) * 60;
   const progress = Math.min(100, Math.max(0, ((totalDuration - timeLeft) / totalDuration) * 100));
@@ -256,23 +255,22 @@ export default function TimerPage() {
     <div className="container py-8 px-4">
       <div className="max-w-3xl mx-auto text-center">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Debate Timer</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('timer.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Professional timer with signals and multiple formats
+            {t('timer.subtitle')}
           </p>
         </div>
 
         <div className="flex justify-between items-center mb-6 max-w-xl mx-auto">
           <Select value={formatId} onValueChange={(val) => {
             setFormatId(val);
-            // Safety handling is done in useEffect, but we can also reset state here if desired
           }}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select Format" />
+              <SelectValue placeholder={t('timer.selectFormat')} />
             </SelectTrigger>
             <SelectContent>
               {FORMATS.map(f => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                <SelectItem key={f.id} value={f.id}>{t(f.nameKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -293,7 +291,7 @@ export default function TimerPage() {
                   className={`transition-all ${idx === currentSpeechIdx ? s.color : "opacity-70 hover:opacity-100"}`}
                   size="sm"
                 >
-                  {s.label} ({s.minutes}m)
+                  {t(s.labelKey)} ({s.minutes}m)
                 </Button>
               ))}
             </div>
@@ -310,11 +308,11 @@ export default function TimerPage() {
                   {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </div>
                 <div className="text-sm text-muted-foreground mt-4 font-medium uppercase tracking-widest flex items-center gap-2">
-                  {isFinished ? "TIME UP" : isRunning ? "SPEAKING" : "PAUSED"}
+                  {isFinished ? t('timer.timeUp') : isRunning ? t('timer.speaking') : t('timer.paused')}
                   {soundEnabled && <Bell className="h-3 w-3" />}
                 </div>
                 <Badge variant="outline" className="mt-2 text-xs max-w-[180px] truncate">
-                  {currentSpeech.name || currentSpeech.label}
+                  {t(currentSpeech.labelKey)}
                 </Badge>
               </div>
             </div>
@@ -331,11 +329,11 @@ export default function TimerPage() {
               >
                 {isRunning ? (
                   <>
-                    <Pause className="mr-2 h-6 w-6" /> Pause
+                    <Pause className="mr-2 h-6 w-6" /> {t('timer.pause')}
                   </>
                 ) : (
                   <>
-                    <Play className="mr-2 h-6 w-6" /> Start
+                    <Play className="mr-2 h-6 w-6" /> {t('timer.start')}
                   </>
                 )}
               </Button>
@@ -350,9 +348,9 @@ export default function TimerPage() {
             </div>
 
             <div className="text-xs text-muted-foreground pt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-              <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> Space: Start/Stop</span>
-              <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> R/Esc: Reset</span>
-              <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> Arrows: Change Speech</span>
+              <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('timer.spaceStartStop')}</span>
+              <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('timer.resetKey')}</span>
+              <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('timer.arrowsChange')}</span>
             </div>
           </CardContent>
         </Card>
@@ -361,12 +359,12 @@ export default function TimerPage() {
           <Card className="bg-muted/30">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Bell className="h-4 w-4" /> Signals
+                <Bell className="h-4 w-4" /> {t('timer.signals')}
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm flex flex-col sm:flex-row justify-center gap-2 sm:gap-8 text-muted-foreground items-center">
-              <span className="flex items-center gap-2">1 min left: <b>1 Beep</b></span>
-              <span className="flex items-center gap-2">Time up: <b>2 Beeps</b></span>
+              <span className="flex items-center gap-2">{t('timer.oneMinLeft')}: <b>{t('timer.oneBeep')}</b></span>
+              <span className="flex items-center gap-2">{t('timer.timeUpSignal')}: <b>{t('timer.twoBeeps')}</b></span>
             </CardContent>
           </Card>
         </div>

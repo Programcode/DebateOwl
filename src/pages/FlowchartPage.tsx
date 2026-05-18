@@ -1,5 +1,6 @@
 // src/pages/FlowchartPage.tsx
 import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactFlow, {
     Node,
     Edge,
@@ -171,6 +172,7 @@ const initialEdges: Edge[] = [
 ];
 
 export default function FlowchartPage() {
+    const { t } = useTranslation();
     const {
         pendingFlowchartData,
         setPendingFlowchartData,
@@ -223,7 +225,6 @@ export default function FlowchartPage() {
         if (!newNodeLabel.trim()) return;
 
         if (editingNodeId) {
-            // Update existing node
             setNodes((nds) =>
                 nds.map((node) => {
                     if (node.id === editingNodeId) {
@@ -243,7 +244,6 @@ export default function FlowchartPage() {
             );
             setEditingNodeId(null);
         } else {
-            // Add new node
             const newNode: Node<FlowNodeData> = {
                 id: `node-${Date.now()}`,
                 type: 'custom',
@@ -258,7 +258,6 @@ export default function FlowchartPage() {
             setNodes((nds) => [...nds, newNode]);
         }
 
-        // Reset form
         setNewNodeLabel('');
         setNewNodeDescription('');
         setIsAddDialogOpen(false);
@@ -271,9 +270,9 @@ export default function FlowchartPage() {
             await saveFlowchart(saveTitle, { nodes, edges });
             setIsSaveDialogOpen(false);
             setSaveTitle('');
-            toast.success("Flowchart saved successfully");
+            toast.success(t('flowchart.savedToast'));
         } catch (error) {
-            toast.error("Failed to save flowchart");
+            toast.error(t('flowchart.saveFailedToast'));
             console.error(error);
         }
     };
@@ -282,16 +281,16 @@ export default function FlowchartPage() {
         setNodes(data.nodes);
         setEdges(data.edges);
         setIsLoadDialogOpen(false);
-        toast.success("Flowchart loaded");
+        toast.success(t('flowchart.loadedToast'));
     };
 
     const handleDeleteFlowchart = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
             await deleteSavedFlowchart(id);
-            toast.success("Flowchart deleted");
+            toast.success(t('flowchart.deletedToast'));
         } catch (error) {
-            toast.error("Failed to delete flowchart");
+            toast.error(t('flowchart.deleteFailedToast'));
         }
     };
 
@@ -359,8 +358,8 @@ export default function FlowchartPage() {
                                 <GitBranch className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                                <CardTitle>Argument Flowchart</CardTitle>
-                                <CardDescription>Visualize and track debate arguments</CardDescription>
+                                <CardTitle>{t('flowchart.title')}</CardTitle>
+                                <CardDescription>{t('flowchart.subtitle')}</CardDescription>
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -369,20 +368,20 @@ export default function FlowchartPage() {
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm">
                                         <FolderOpen className="h-4 w-4 mr-2" />
-                                        Load
+                                        {t('flowchart.load')}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
                                     <DialogHeader>
-                                        <DialogTitle>Saved Flowcharts</DialogTitle>
+                                        <DialogTitle>{t('flowchart.savedFlowcharts')}</DialogTitle>
                                         <DialogDescription>
-                                            Load a previously saved debate flow
+                                            {t('flowchart.savedFlowchartsDesc')}
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-2 py-4 max-h-[60vh] overflow-y-auto">
                                         {savedFlowcharts.length === 0 ? (
                                             <div className="text-center py-8 text-muted-foreground">
-                                                No saved flowcharts found
+                                                {t('flowchart.noSavedFlowcharts')}
                                             </div>
                                         ) : (
                                             savedFlowcharts.map((item) => (
@@ -418,26 +417,26 @@ export default function FlowchartPage() {
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm">
                                         <Save className="h-4 w-4 mr-2" />
-                                        Save
+                                        {t('flowchart.save')}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>Save Flowchart</DialogTitle>
-                                        <DialogDescription>Save your current flow to access it later</DialogDescription>
+                                        <DialogTitle>{t('flowchart.saveFlowchartDialog')}</DialogTitle>
+                                        <DialogDescription>{t('flowchart.saveFlowchartDialogDesc')}</DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
-                                            <Label>Title</Label>
+                                            <Label>{t('flowchart.titleField')}</Label>
                                             <Input
-                                                placeholder="e.g., Debate Round 1 Flow"
+                                                placeholder={t('flowchart.titlePlaceholder')}
                                                 value={saveTitle}
                                                 onChange={(e) => setSaveTitle(e.target.value)}
                                             />
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <Button onClick={handleSaveFlowchart}>Save Flowchart</Button>
+                                        <Button onClick={handleSaveFlowchart}>{t('flowchart.saveFlowchart')}</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -448,63 +447,63 @@ export default function FlowchartPage() {
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm" onClick={openAddDialog}>
                                         <Plus className="h-4 w-4 mr-2" />
-                                        Add Node
+                                        {t('flowchart.addNode')}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>{editingNodeId ? 'Edit Argument Node' : 'Add Argument Node'}</DialogTitle>
-                                        <DialogDescription>{editingNodeId ? 'Update the details of your node' : 'Create a new node in your flowchart'}</DialogDescription>
+                                        <DialogTitle>{editingNodeId ? t('flowchart.editNode') : t('flowchart.addNodeDialog')}</DialogTitle>
+                                        <DialogDescription>{editingNodeId ? t('flowchart.editNodeDesc') : t('flowchart.addNodeDialogDesc')}</DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
-                                            <Label>Label</Label>
+                                            <Label>{t('flowchart.labelField')}</Label>
                                             <Input
-                                                placeholder="e.g., Economic Impact"
+                                                placeholder={t('flowchart.labelPlaceholder')}
                                                 value={newNodeLabel}
                                                 onChange={(e) => setNewNodeLabel(e.target.value)}
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Description (optional)</Label>
+                                            <Label>{t('flowchart.descriptionField')}</Label>
                                             <Textarea
-                                                placeholder="Brief description of this argument..."
+                                                placeholder={t('flowchart.descPlaceholder')}
                                                 value={newNodeDescription}
                                                 onChange={(e) => setNewNodeDescription(e.target.value)}
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Type</Label>
+                                            <Label>{t('flowchart.typeField')}</Label>
                                             <Select value={newNodeType} onValueChange={(v) => setNewNodeType(v as NodeType)}>
                                                 <SelectTrigger>
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="contention">Argument (Your Argument)</SelectItem>
-                                                    <SelectItem value="attack">Attack (Opponent's Response)</SelectItem>
-                                                    <SelectItem value="rebuttal">Rebuttal (Your Counter)</SelectItem>
-                                                    <SelectItem value="dropped">Dropped (Unaddressed)</SelectItem>
+                                                    <SelectItem value="contention">{t('flowchart.typeArgument')}</SelectItem>
+                                                    <SelectItem value="attack">{t('flowchart.typeAttack')}</SelectItem>
+                                                    <SelectItem value="rebuttal">{t('flowchart.typeRebuttal')}</SelectItem>
+                                                    <SelectItem value="dropped">{t('flowchart.typeDropped')}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         {newNodeType === 'contention' && (
                                             <div className="space-y-2">
-                                                <Label>Strength</Label>
+                                                <Label>{t('flowchart.strengthField')}</Label>
                                                 <Select value={newNodeStrength} onValueChange={(v) => setNewNodeStrength(v as 'strong' | 'moderate' | 'weak')}>
                                                     <SelectTrigger>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="strong">Strong</SelectItem>
-                                                        <SelectItem value="moderate">Moderate</SelectItem>
-                                                        <SelectItem value="weak">Weak</SelectItem>
+                                                        <SelectItem value="strong">{t('flowchart.strengthStrong')}</SelectItem>
+                                                        <SelectItem value="moderate">{t('flowchart.strengthModerate')}</SelectItem>
+                                                        <SelectItem value="weak">{t('flowchart.strengthWeak')}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                         )}
                                     </div>
                                     <DialogFooter>
-                                        <Button onClick={handleSaveNode}>{editingNodeId ? 'Save Changes' : 'Add Node'}</Button>
+                                        <Button onClick={handleSaveNode}>{editingNodeId ? t('flowchart.saveChanges') : t('flowchart.addNode')}</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -520,18 +519,18 @@ export default function FlowchartPage() {
                                         }}
                                     >
                                         <GitBranch className="h-4 w-4 mr-2" />
-                                        Edit
+                                        {t('flowchart.edit')}
                                     </Button>
                                     <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
+                                        {t('flowchart.delete')}
                                     </Button>
                                 </>
                             )}
 
                             <Button variant="outline" size="sm" onClick={exportToPng}>
                                 <Download className="h-4 w-4 mr-2" />
-                                Export PNG
+                                {t('flowchart.exportPng')}
                             </Button>
                         </div>
                     </div>
@@ -540,19 +539,19 @@ export default function FlowchartPage() {
                     {/* Stats Bar */}
                     <div className="flex flex-wrap gap-2 p-4 border-b bg-muted/30">
                         <Badge variant="outline" className="gap-1">
-                            <Target className="h-3 w-3" /> Thesis: {stats.thesis || 0}
+                            <Target className="h-3 w-3" /> {t('flowchart.legendThesis')}: {stats.thesis || 0}
                         </Badge>
                         <Badge variant="outline" className="gap-1 border-emerald-500 text-emerald-600">
-                            <Shield className="h-3 w-3" /> Arguments: {stats.contention || 0}
+                            <Shield className="h-3 w-3" /> {t('flowchart.legendArgument')}: {stats.contention || 0}
                         </Badge>
                         <Badge variant="outline" className="gap-1 border-red-500 text-red-600">
-                            <Swords className="h-3 w-3" /> Attacks: {stats.attack || 0}
+                            <Swords className="h-3 w-3" /> {t('flowchart.legendAttack')}: {stats.attack || 0}
                         </Badge>
                         <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600">
-                            <GitBranch className="h-3 w-3" /> Rebuttals: {stats.rebuttal || 0}
+                            <GitBranch className="h-3 w-3" /> {t('flowchart.legendRebuttal')}: {stats.rebuttal || 0}
                         </Badge>
                         <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600">
-                            <AlertTriangle className="h-3 w-3" /> Dropped: {stats.dropped || 0}
+                            <AlertTriangle className="h-3 w-3" /> {t('flowchart.legendDropped')}: {stats.dropped || 0}
                         </Badge>
                     </div>
 
@@ -594,29 +593,29 @@ export default function FlowchartPage() {
             {/* Legend */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-sm">Legend</CardTitle>
+                    <CardTitle className="text-sm">{t('flowchart.legend')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-wrap gap-4 text-sm">
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-primary" />
-                            <span>Thesis - Your main position</span>
+                            <span>{t('flowchart.legendThesis')}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-emerald-500" />
-                            <span>Argument - Supporting arguments</span>
+                            <span>{t('flowchart.legendArgument')}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-red-500" />
-                            <span>Attack - Opponent's responses</span>
+                            <span>{t('flowchart.legendAttack')}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-blue-500" />
-                            <span>Rebuttal - Your counters</span>
+                            <span>{t('flowchart.legendRebuttal')}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-4 w-4 rounded bg-amber-500" />
-                            <span>Dropped - Unaddressed arguments</span>
+                            <span>{t('flowchart.legendDropped')}</span>
                         </div>
                     </div>
                 </CardContent>
