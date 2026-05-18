@@ -1,10 +1,9 @@
 // src/pages/SettingsPage.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, Cpu, Thermometer, Zap, Lock, Trash2, Crown, CreditCard } from 'lucide-react';
+import { Settings, Cpu, Zap, Lock, Trash2, Crown, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -339,25 +338,6 @@ export default function SettingsPage() {
                         </Select>
                       </div>
 
-                      {/* Temperature */}
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Thermometer className="h-4 w-4" />
-                          Temperature: {config.temperature.toFixed(1)}
-                        </Label>
-                        <Slider
-                          value={[config.temperature]}
-                          onValueChange={([v]) => setFeatureConfig(feature, { temperature: v })}
-                          min={0}
-                          max={1}
-                          step={0.1}
-                          className="mt-2"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Precise</span>
-                          <span>Creative</span>
-                        </div>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -368,7 +348,7 @@ export default function SettingsPage() {
 
 
         {/* Danger Zone */}
-        <Card className="border-destructive/20 bg-destructive/5">
+        <Card className="border-destructive/20 bg-destructive/5 mt-8">
           <CardHeader>
             <CardTitle className="text-destructive">Danger Zone</CardTitle>
             <CardDescription>
