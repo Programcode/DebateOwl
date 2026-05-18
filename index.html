@@ -8,6 +8,18 @@
     <meta name="author" content="DebateLab" />
     <meta property="og:image" content="/og-image.png" />
     <script src="/config.js"></script>
+    <script>
+      // Prevent flash of wrong theme
+      (function() {
+        try {
+          var s = JSON.parse(localStorage.getItem('debate-trainer-settings') || '{}');
+          var t = s && s.state && s.state.theme;
+          if (t === 'dark') document.documentElement.classList.add('dark');
+          else if (t === 'light') document.documentElement.classList.add('light');
+          else if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+        } catch(e) {}
+      })();
+    </script>
   </head>
 
   <body>
