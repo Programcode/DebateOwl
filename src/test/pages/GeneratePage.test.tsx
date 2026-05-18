@@ -6,6 +6,9 @@ import GeneratePage from '@/pages/GeneratePage';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock dependencies
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/lib/ai/client', () => ({
     generateCase: vi.fn(),
     askChat: vi.fn(),
@@ -16,6 +19,9 @@ vi.mock('@/lib/ai/client', () => ({
 
 // Mock hooks
 const mockNavigate = vi.fn();
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual('react-router-dom');
     return {
@@ -25,6 +31,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockToast = vi.fn();
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: mockToast }),
 }));
@@ -36,6 +45,9 @@ const mockSaveCurrentCase = vi.fn();
 const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/lib/stores/session-store', () => ({
     useSessionStore: () => ({
         generateResult: null as any, // Default state
@@ -50,6 +62,9 @@ vi.mock('@/lib/stores/session-store', () => ({
     }),
 }));
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/lib/stores/settings-store', () => ({
     useSettingsStore: () => ({
         getFeatureConfig: vi.fn(() => ({ model: 'google' })),
@@ -57,6 +72,9 @@ vi.mock('@/lib/stores/settings-store', () => ({
 }));
 
 // Mock child components to simplify integration test (focus on page logic + wiring)
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/components/features/generate/GenerateForm', () => ({
     GenerateForm: ({ onSubmit, isLoading }: { onSubmit: (data: unknown) => void, isLoading: boolean }) => (
         <div data-testid="generate-form">
@@ -71,6 +89,9 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
     ),
 }));
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/components/features/generate/GenerateResults', () => ({
     GenerateResults: ({ result, onRegenerateSection, onDiscuss }: { result: { caseStructure: { thesis: string } }, onRegenerateSection: unknown, onDiscuss: () => void }) => (
         <div data-testid="generate-results">
@@ -146,6 +167,9 @@ describe('GeneratePage Integration', () => {
         };
 
         // We need to re-mock or use a spy implementation. 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
         // Since vi.mock is hoisted, we can't easily change it per test unless we use vi.doMock or modify the return value of a spy.
         // Ideally we'd use a real store with mocked initial state, but for now we'll rely on the fact that 
         // we mocked the module. To change implementation per test, we should have mocked the *hook implementaiton*.

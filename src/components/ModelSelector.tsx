@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
+import { useSubscription } from '@/hooks/use-subscription';
 
 interface ModelSelectorProps {
   feature: FeatureTab;
@@ -14,6 +15,7 @@ const allModels = DEFAULT_PROVIDERS
 
 export function ModelSelector({ feature }: ModelSelectorProps) {
   const { featureConfigs, setFeatureConfig } = useSettingsStore();
+  const { isPro } = useSubscription();
   const config = featureConfigs?.[feature];
   const currentModel = config?.model || 'gemini-3-flash-preview';
 
@@ -24,7 +26,10 @@ export function ModelSelector({ feature }: ModelSelectorProps) {
         value={currentModel}
         onValueChange={(model) => {
           const found = allModels.find(m => m.id === model);
-          if (found) setFeatureConfig(feature, { model, provider: found.provider });
+          if (found) {
+            if (found.isProOnly && !isPro) return;
+            setFeatureConfig(feature, { model, provider: found.provider });
+          }
         }}
       >
         <SelectTrigger className="h-8 text-xs w-[160px] sm:w-[200px]">
@@ -32,7 +37,12 @@ export function ModelSelector({ feature }: ModelSelectorProps) {
         </SelectTrigger>
         <SelectContent>
           {allModels.map((m) => (
-            <SelectItem key={m.id} value={m.id} className="text-xs">
+            <SelectItem
+              key={m.id}
+              value={m.id}
+              className="text-xs"
+              disabled={m.isProOnly && !isPro}
+            >
               <span className="flex items-center gap-2">
                 {m.name}
                 {m.isProOnly && <Badge variant="outline" className="text-[10px] px-1 py-0">Pro</Badge>}

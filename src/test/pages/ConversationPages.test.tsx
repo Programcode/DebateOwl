@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
+
 const mockNavigate = vi.fn();
 const mockToast = vi.fn();
 const mockAskChat = vi.fn();
