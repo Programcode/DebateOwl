@@ -10,6 +10,7 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { ModelSelector } from '@/components/ModelSelector';
 
 export default function AttackPage() {
   const { attackResult, attackLoading, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
@@ -86,11 +87,14 @@ export default function AttackPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('attack.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('attack.subtitle')}
-          </p>
+        <div className="mb-8 flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('attack.title')}</h1>
+            <p className="text-muted-foreground mt-1">
+              {t('attack.subtitle')}
+            </p>
+          </div>
+          <ModelSelector feature="attack" />
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
