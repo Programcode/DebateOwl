@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
+import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
 import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
@@ -38,11 +39,11 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.reasoning')} </span>
-          <span className="text-foreground">{contention.reasoning}</span>
+          <Markdown className="inline">{contention.reasoning}</Markdown>
         </div>
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.evidence')} </span>
-          <span className="text-foreground">{contention.evidence}</span>
+          <Markdown className="inline">{contention.evidence}</Markdown>
         </div>
         {contention.sourceQuery && (
           <div className="rounded-md bg-muted/50 p-2 text-xs">
@@ -52,7 +53,7 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
         )}
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.impact')} </span>
-          <span className="text-foreground">{contention.impact}</span>
+          <Markdown className="inline">{contention.impact}</Markdown>
         </div>
       </div>
     </div>
@@ -189,17 +190,17 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h4>
-            <p className="text-foreground">{result.caseStructure.thesis}</p>
+            <Markdown>{result.caseStructure.thesis}</Markdown>
           </div>
           <Separator />
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h4>
-            <p className="text-foreground">{result.caseStructure.framework}</p>
+            <Markdown>{result.caseStructure.framework}</Markdown>
           </div>
           <Separator />
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h4>
-            <p className="text-foreground">{result.caseStructure.burdenOfProof}</p>
+            <Markdown>{result.caseStructure.burdenOfProof}</Markdown>
           </div>
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h4>

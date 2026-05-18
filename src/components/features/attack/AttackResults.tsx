@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Markdown } from '@/components/ui/markdown';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
 import { cn } from '@/lib/utils';
 import { exportAttackToPdf } from '@/lib/pdf-export-utils';
@@ -57,7 +58,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">{t('attackResults.whyWeak')} </span>
-          <span className="text-foreground">{weakness.whyWeak}</span>
+          <Markdown className="inline">{weakness.whyWeak}</Markdown>
         </div>
         <div>
           <span className="font-medium text-muted-foreground">{t('attackResults.opponentAttack')} </span>
@@ -70,7 +71,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
           <Lightbulb className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-primary">{t('attackResults.improvedVersion')}</span>
         </div>
-        <p className="text-sm text-foreground">{weakness.improvedVersion}</p>
+        <p className="text-sm text-foreground"><Markdown>{weakness.improvedVersion}</Markdown></p>
       </div>
     </div>
   );
@@ -230,7 +231,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                     <Badge variant="destructive">{fallacy.name}</Badge>
                     <span className="text-xs text-muted-foreground">{t('attackResults.in')} {fallacy.location}</span>
                   </div>
-                  <p className="text-sm text-foreground">{fallacy.explanation}</p>
+                  <p className="text-sm text-foreground"><Markdown>{fallacy.explanation}</Markdown></p>
                 </div>
               ))}
             </div>
