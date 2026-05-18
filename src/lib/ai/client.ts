@@ -628,7 +628,7 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<GenerateOutput> {
   if (config.provider === 'mock') return mockGenerateCase(input.motion, input.side);
   // Inject global language into input for the edge function
-  const language = useSettingsStore.getState().language;
+  const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
   const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
 
@@ -679,7 +679,7 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
   if (config.provider === 'mock') return mockFactoids(input.claim);
   // Inject global language into input for the edge function
-  const language = useSettingsStore.getState().language;
+  const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
   const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
   return data.output as FactoidsOutput;

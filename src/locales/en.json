@@ -106,6 +106,8 @@
   "settings": {
     "title": "Settings",
     "aiOutputLanguage": "Language (UI + AI Output)",
+    "uiLanguage": "Interface Language",
+    "outputLanguage": "AI Output Language",
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",

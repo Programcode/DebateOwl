@@ -42,7 +42,7 @@ const tierLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function SettingsPage() {
-  const { featureConfigs, setFeatureConfig, language, setLanguage, theme, setTheme } = useSettingsStore();
+  const { featureConfigs, setFeatureConfig, language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -193,8 +193,21 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>{t('settings.aiOutputLanguage')}</Label>
+                <Label>{t('settings.uiLanguage')}</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es' | 'hu')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español</SelectItem>
+                    <SelectItem value="hu">Magyar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.outputLanguage')}</Label>
+                <Select value={outputLanguage} onValueChange={(v) => setOutputLanguage(v as 'en' | 'es' | 'hu')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
