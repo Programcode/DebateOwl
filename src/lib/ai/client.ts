@@ -228,13 +228,17 @@ async function callSupabaseAI(
   };
 
   try {
-    // Wrap the API call with timeout
-    const invokePromise = supabase.functions.invoke('ai', {
+    // Use a custom AbortController with our timeout to prevent premature abort
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    const { data, error } = await supabase.functions.invoke('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: requestBody,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
-    const { data, error } = await withTimeout(invokePromise, REQUEST_TIMEOUT_MS);
     const elapsed = Math.round(performance.now() - startTime);
 
     // Log response in development
@@ -310,8 +314,19 @@ async function callSupabaseAI(
       throw err;
     }
 
+    // Handle abort (our timeout triggered)
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new TimeoutError();
+    }
+
     // Wrap unknown errors
     const message = err instanceof Error ? err.message : 'Unknown error occurred';
+
+    // Check if the error message indicates an abort/timeout
+    if (message.includes('abort') || message.includes('signal')) {
+      throw new TimeoutError();
+    }
+
     throw new AIError(message, { requestId });
   }
 }
@@ -358,6 +373,12 @@ function parseSupabaseError(
 ): AIError {
   const payloadMessage = typeof payload?.error === 'string' ? payload.error : undefined;
   const message = payloadMessage || error.message || 'Unknown error';
+
+  // Detect abort/signal errors and treat as timeout
+  if (message.includes('abort') || message.includes('signal')) {
+    return new TimeoutError();
+  }
+
   // Try to extract status code from error context or message
   let statusCode: number | undefined = getSupabaseErrorStatus(error);
 

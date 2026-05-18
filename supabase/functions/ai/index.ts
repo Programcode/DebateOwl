@@ -48,9 +48,9 @@ interface ResearchOptions {
 }
 
 const DEEP_RESEARCH: ResearchOptions = {
-  maxFollowUpQueries: 3,
-  maxUrlsToRead: 5,
-  overallTimeoutMs: 45000,
+  maxFollowUpQueries: 2,
+  maxUrlsToRead: 3,
+  overallTimeoutMs: 30000,
 };
 
 const ASK_RESEARCH: ResearchOptions = {

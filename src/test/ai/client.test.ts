@@ -82,7 +82,7 @@ describe('AI Client Integration', () => {
             await generateCase(input, mockConfig);
 
             expect(supabaseMock.functions.invoke).toHaveBeenCalledTimes(1);
-            expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', {
+            expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
                 headers: { Authorization: expect.stringContaining('Bearer') },
                 body: expect.objectContaining({
                     feature: 'generate',
@@ -95,7 +95,7 @@ describe('AI Client Integration', () => {
                         expect.objectContaining({ title: 'Source 1' }) // Only active source
                     ])
                 }),
-            });
+            }));
 
             // Verify sources count
             const callArgs = (supabaseMock.functions.invoke.mock.calls[0] as any[])[1];
