@@ -7,6 +7,7 @@ import { askChat, isTimeoutError } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
+import { ModelSelector } from '@/components/ModelSelector';
 
 export default function AskPage() {
   const { askMessages, askLoading, addAskMessage, setAskLoading, clearAskMessages, addSource } = useSessionStore();
@@ -109,7 +110,10 @@ export default function AskPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-foreground">{t('ask.title')}</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-foreground">{t('ask.title')}</h1>
+          <ModelSelector feature="ask" />
+        </div>
         <AskChat
           messages={formattedMessages}
           isLoading={askLoading}

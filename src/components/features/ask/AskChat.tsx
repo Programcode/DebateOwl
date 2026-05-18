@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Markdown } from '@/components/ui/markdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -78,7 +79,9 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             <Bookmark className="h-4 w-4" />
           </Button>
         )}
-        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        <div className="text-sm">
+          <Markdown>{message.content}</Markdown>
+        </div>
 
         {/* Follow-up questions */}
         {output?.followUpQuestions && output.followUpQuestions.length > 0 && (
