@@ -6,6 +6,9 @@ import AttackPage from '@/pages/AttackPage';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock dependencies
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/lib/ai/client', () => ({
     attackCase: vi.fn(),
     askChat: vi.fn(),
@@ -13,6 +16,9 @@ vi.mock('@/lib/ai/client', () => ({
 
 // Mock hooks
 const mockNavigate = vi.fn();
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual('react-router-dom');
     return {
@@ -22,6 +28,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockToast = vi.fn();
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: mockToast }),
 }));
@@ -32,6 +41,9 @@ const mockSetAttackResult = vi.fn();
 const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/lib/stores/session-store', () => ({
     useSessionStore: () => ({
         attackResult: null as any, // Default state
@@ -44,6 +56,9 @@ vi.mock('@/lib/stores/session-store', () => ({
     }),
 }));
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/lib/stores/settings-store', () => ({
     useSettingsStore: () => ({
         getFeatureConfig: vi.fn(() => ({ model: 'google' })),
@@ -51,6 +66,9 @@ vi.mock('@/lib/stores/settings-store', () => ({
 }));
 
 // Mock child components
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/components/features/attack/AttackForm', () => ({
     AttackForm: ({ onSubmit, isLoading }: { onSubmit: (data: unknown) => void, isLoading: boolean }) => (
         <div data-testid="attack-form">
@@ -65,6 +83,9 @@ vi.mock('@/components/features/attack/AttackForm', () => ({
     ),
 }));
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
 vi.mock('@/components/features/attack/AttackResults', () => ({
     AttackResults: ({ result, onDiscuss }: { result: { overallAssessment: { score: number } }, onDiscuss: () => void }) => (
         <div data-testid="attack-results">

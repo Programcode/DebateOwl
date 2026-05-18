@@ -2,6 +2,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
+
 vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: vi.fn(() => ({
     featureConfigs: {
