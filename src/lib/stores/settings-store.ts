@@ -6,13 +6,13 @@ import { supabase } from '@/lib/supabase/client';
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask';
 
 interface SettingsState {
-  language: 'en' | 'es';
+  language: 'en' | 'es' | 'hu';
   theme: 'light' | 'dark' | 'system';
   customSystemPrompt?: string;
   featureConfigs: Record<FeatureTab, ProviderConfig>;
   wikiResearchEnabled: boolean;
 
-  setLanguage: (lang: 'en' | 'es') => void;
+  setLanguage: (lang: 'en' | 'es' | 'hu') => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
   getFeatureConfig: (feature: FeatureTab) => ProviderConfig;
@@ -130,7 +130,7 @@ export const useSettingsStore = create<SettingsState>()(
         const mergedConfigs = { ...defaults, ...serverConfigs };
 
         set({
-          language: (data.language as 'en' | 'es') || 'en',
+          language: (data.language as 'en' | 'es' | 'hu') || 'en',
           theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
           featureConfigs: mergedConfigs,
           customSystemPrompt: data.custom_system_prompt || undefined,

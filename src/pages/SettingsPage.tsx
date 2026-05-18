@@ -193,13 +193,14 @@ export default function SettingsPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>AI Output Language</Label>
-                <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es')}>
+                <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es' | 'hu')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="es">Español</SelectItem>
+                    <SelectItem value="hu">Magyar</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

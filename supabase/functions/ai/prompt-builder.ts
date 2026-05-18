@@ -11,6 +11,7 @@ const ASK_MODE_GUIDANCE: Record<string, string> = {
 const LANGUAGE_LABELS: Record<string, string> = {
   en: "English",
   es: "Spanish",
+  hu: "Hungarian",
 };
 
 function asString(value: unknown, fallback = ""): string {
