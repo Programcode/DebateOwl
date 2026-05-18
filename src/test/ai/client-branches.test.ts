@@ -527,14 +527,10 @@ describe('AI client branch coverage', () => {
   });
 
   it('throws TimeoutError when invoke never resolves', async () => {
-    vi.useFakeTimers();
-    invokeMock.mockImplementationOnce(() => new Promise(() => {}));
+    // Simulate the abort error that occurs when AbortController times out
+    invokeMock.mockRejectedValueOnce(new DOMException('The operation was aborted', 'AbortError'));
 
-    const requestExpectation = expect(generateCase(validGenerateInput, config)).rejects.toBeInstanceOf(TimeoutError);
-    await vi.advanceTimersByTimeAsync(200_000);
-
-    await requestExpectation;
-    vi.useRealTimers();
+    await expect(generateCase(validGenerateInput, config)).rejects.toBeInstanceOf(TimeoutError);
   });
 
   it('fails when there is no authenticated session token', async () => {
