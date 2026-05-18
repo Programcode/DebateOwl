@@ -6,6 +6,7 @@ import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
 import { factoids, askChat } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +33,7 @@ export default function FactoidsPage() {
       if (!subError.handleSubscriptionError(error)) {
         toast({
           title: t('factoids.failed'),
-          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          description: getUserFacingAIError(error),
           variant: "destructive",
         });
       }

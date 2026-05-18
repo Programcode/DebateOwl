@@ -7,6 +7,7 @@ import { BrainstormForm } from '@/components/features/brainstorm/BrainstormForm'
 import { BrainstormResults } from '@/components/features/brainstorm/BrainstormResults';
 import { brainstorm, askChat } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +34,7 @@ export default function BrainstormPage() {
       if (!subError.handleSubscriptionError(error)) {
         toast({
           title: t('brainstorm.failed'),
-          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          description: getUserFacingAIError(error),
           variant: "destructive",
         });
       }

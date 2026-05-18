@@ -1,9 +1,9 @@
 // src/components/features/generate/GenerateForm.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Sparkles, Wand2, Mic, MicOff } from 'lucide-react';
+import { ChevronDown, Mic, MicOff, SlidersHorizontal, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,7 @@ interface GenerateFormProps {
 export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const { t } = useTranslation();
   const { generateForm, setGenerateForm } = useSessionStore();
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
     resolver: zodResolver(GenerateInputSchema),
@@ -128,7 +129,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             )}
           </div>
 
-          {/* Two Column Grid */}
+          {/* Main Options */}
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Side */}
             <div className="space-y-2">
@@ -183,58 +184,86 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               </Select>
             </div>
 
-            {/* Length */}
+            {/* More */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.length')}</Label>
-              <Select
-                value={currentValues.length}
-                onValueChange={(value) => setValue('length', value as GenerateInput['length'])}
+              <Label className="text-sm font-medium">{t('generateForm.more')}</Label>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-full justify-between"
+                aria-expanded={advancedOpen}
+                aria-controls="generate-more-options"
+                onClick={() => setAdvancedOpen((open) => !open)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="brief">{t('generateForm.lengthBrief')}</SelectItem>
-                  <SelectItem value="standard">{t('generateForm.lengthStandard')}</SelectItem>
-                  <SelectItem value="comprehensive">{t('generateForm.lengthComprehensive')}</SelectItem>
-                </SelectContent>
-              </Select>
+                <span className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t('generateForm.moreOptions')}
+                </span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${advancedOpen ? 'rotate-180' : ''}`} />
+              </Button>
             </div>
+          </div>
 
-            {/* Audience */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.audience')}</Label>
-              <Select
-                value={currentValues.audience}
-                onValueChange={(value) => setValue('audience', value as GenerateInput['audience'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">{t('generateForm.audienceBeginner')}</SelectItem>
-                  <SelectItem value="intermediate">{t('generateForm.audienceIntermediate')}</SelectItem>
-                  <SelectItem value="advanced">{t('generateForm.audienceAdvanced')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div
+            id="generate-more-options"
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              advancedOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="grid gap-4 pt-1 sm:grid-cols-3">
+              {/* Length */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('generateForm.length')}</Label>
+                <Select
+                  value={currentValues.length}
+                  onValueChange={(value) => setValue('length', value as GenerateInput['length'])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="brief">{t('generateForm.lengthBrief')}</SelectItem>
+                    <SelectItem value="standard">{t('generateForm.lengthStandard')}</SelectItem>
+                    <SelectItem value="comprehensive">{t('generateForm.lengthComprehensive')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Tone */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.tone')}</Label>
-              <Select
-                value={currentValues.tone}
-                onValueChange={(value) => setValue('tone', value as GenerateInput['tone'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="formal">{t('generateForm.toneFormal')}</SelectItem>
-                  <SelectItem value="conversational">{t('generateForm.toneConversational')}</SelectItem>
-                  <SelectItem value="aggressive">{t('generateForm.toneAggressive')}</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Audience */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('generateForm.audience')}</Label>
+                <Select
+                  value={currentValues.audience}
+                  onValueChange={(value) => setValue('audience', value as GenerateInput['audience'])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">{t('generateForm.audienceBeginner')}</SelectItem>
+                    <SelectItem value="intermediate">{t('generateForm.audienceIntermediate')}</SelectItem>
+                    <SelectItem value="advanced">{t('generateForm.audienceAdvanced')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tone */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('generateForm.tone')}</Label>
+                <Select
+                  value={currentValues.tone}
+                  onValueChange={(value) => setValue('tone', value as GenerateInput['tone'])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="formal">{t('generateForm.toneFormal')}</SelectItem>
+                    <SelectItem value="conversational">{t('generateForm.toneConversational')}</SelectItem>
+                    <SelectItem value="aggressive">{t('generateForm.toneAggressive')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

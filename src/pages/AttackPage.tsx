@@ -6,6 +6,7 @@ import { AttackForm } from '@/components/features/attack/AttackForm';
 import { AttackResults } from '@/components/features/attack/AttackResults';
 import { attackCase, askChat } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +34,7 @@ export default function AttackPage() {
       if (!subError.handleSubscriptionError(error)) {
         toast({
           title: t('attack.failed'),
-          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          description: getUserFacingAIError(error),
           variant: "destructive",
         });
       }

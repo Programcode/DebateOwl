@@ -26,3 +26,9 @@ public/config.js
 .env
 supabase/.temp/
 coverage/
+
+# Local agent/task files
+.claude/
+.codex/
+tasks.txt
+humanizer.md
