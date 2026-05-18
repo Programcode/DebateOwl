@@ -1,7 +1,7 @@
 // src/pages/SettingsPage.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, Cpu, Zap, Lock, Trash2, Crown, CreditCard } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, CreditCard, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -14,25 +14,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
-import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
-import { ModelRestrictedModal } from '@/components/features/subscription/ModelRestrictedModal';
 
-const featureLabels: Record<FeatureTab, { name: string; description: string; color: string }> = {
-  generate: { name: 'Generate', description: 'Argument generation', color: 'bg-primary' },
-  attack: { name: 'Attack', description: 'Case analysis', color: 'bg-destructive' },
-  brainstorm: { name: 'Brainstorm', description: 'Idea exploration', color: 'bg-amber-500' },
-  factoids: { name: 'Factoids', description: 'Evidence finding', color: 'bg-secondary' },
-  ask: { name: 'Ask', description: 'Q&A coaching', color: 'bg-primary' },
-};
-
-const features: FeatureTab[] = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'];
 
 const tierLabels: Record<string, { label: string; color: string }> = {
   trial: { label: 'Free Trial', color: 'bg-blue-500' },
@@ -42,15 +31,13 @@ const tierLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function SettingsPage() {
-  const { featureConfigs, setFeatureConfig, language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
+  const { language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
-  const [modelRestrictionOpen, setModelRestrictionOpen] = useState(false);
-  const [restrictedModelName, setRestrictedModelName] = useState<string>();
   const [portalLoading, setPortalLoading] = useState(false);
 
   const handleDeleteAllData = () => {
@@ -95,18 +82,6 @@ export default function SettingsPage() {
       }
       setPortalLoading(false);
     }
-  };
-
-  const handleModelSelect = (feature: FeatureTab, modelId: string) => {
-    // Check if model is pro-only and user isn't pro
-    const provider = DEFAULT_PROVIDERS.find(p => p.id === featureConfigs[feature].provider);
-    const model = provider?.models.find(m => m.id === modelId);
-    if (model?.isProOnly && !subscription.isPro) {
-      setRestrictedModelName(model.name);
-      setModelRestrictionOpen(true);
-      return;
-    }
-    setFeatureConfig(feature, { model: modelId });
   };
 
   const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
@@ -191,7 +166,7 @@ export default function SettingsPage() {
             <CardDescription>App-wide preferences</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>{t('settings.uiLanguage')}</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es' | 'hu')}>
@@ -207,7 +182,7 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.outputLanguage')}</Label>
-                <Select value={outputLanguage} onValueChange={(v) => setOutputLanguage(v as 'en' | 'es' | 'hu')}>
+                <Select value={outputLanguage || 'en'} onValueChange={(v) => setOutputLanguage(v as 'en' | 'es' | 'hu')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -259,105 +234,15 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Per-Feature AI Settings */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-foreground">AI Provider Settings</h2>
-          <p className="text-sm text-muted-foreground">
-            Configure different AI providers and models for each feature. Keys are managed server-side.
-          </p>
-
-          <div className="grid gap-4">
-            {features.map((feature) => {
-              const featureInfo = featureLabels[feature];
-              const config = featureConfigs[feature];
-              const selectedProvider = DEFAULT_PROVIDERS.find(p => p.id === config.provider);
-
-              return (
-                <Card key={feature}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-3 w-3 rounded-full ${featureInfo.color}`} />
-                      <div>
-                        <CardTitle className="text-base">{featureInfo.name}</CardTitle>
-                        <CardDescription>{featureInfo.description}</CardDescription>
-                      </div>
-                      {config.provider === 'mock' && (
-                        <Badge variant="outline" className="ml-auto">Demo Mode</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      {/* Provider */}
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Cpu className="h-4 w-4" />
-                          Provider
-                        </Label>
-                        <Select
-                          value={config.provider}
-                          onValueChange={(v) => setFeatureConfig(feature, { provider: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DEFAULT_PROVIDERS.map((provider) => (
-                              <SelectItem
-                                key={provider.id}
-                                value={provider.id}
-                                disabled={!provider.isAvailable()}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {provider.name}
-                                  {!provider.isAvailable() && (
-                                    <Badge variant="secondary" className="text-[10px]">Coming Soon</Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Model */}
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Zap className="h-4 w-4" />
-                          Model
-                        </Label>
-                        <Select
-                          value={config.model}
-                          onValueChange={(v) => handleModelSelect(feature, v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedProvider?.models.map((model) => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div className="flex items-center gap-2">
-                                  <div>
-                                    <div>{model.name}</div>
-                                    <div className="text-xs text-muted-foreground">{model.description}</div>
-                                  </div>
-                                  {model.isProOnly && !subscription.isPro && (
-                                    <Badge variant="outline" className="text-[10px] shrink-0">Pro</Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
+        {/* AI Model Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Models</CardTitle>
+            <CardDescription>
+              Select your preferred model directly from each feature page using the model dropdown in the header.
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
 
         {/* Danger Zone */}
@@ -383,15 +268,6 @@ export default function SettingsPage() {
         open={pricingOpen}
         onOpenChange={setPricingOpen}
         onPromoRedeemed={() => void subscription.refresh()}
-      />
-      <ModelRestrictedModal
-        open={modelRestrictionOpen}
-        onOpenChange={setModelRestrictionOpen}
-        modelName={restrictedModelName}
-        onUpgrade={() => {
-          setModelRestrictionOpen(false);
-          setPricingOpen(true);
-        }}
       />
     </div>
   );
