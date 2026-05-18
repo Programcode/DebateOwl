@@ -105,7 +105,7 @@
   },
   "settings": {
     "title": "Ajustes",
-    "aiOutputLanguage": "Idioma de Salida de IA",
+    "aiOutputLanguage": "Idioma (Interfaz + Salida IA)",
     "theme": "Tema",
     "light": "Claro",
     "dark": "Oscuro",

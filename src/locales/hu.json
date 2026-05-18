@@ -105,7 +105,7 @@
   },
   "settings": {
     "title": "Beállítások",
-    "aiOutputLanguage": "MI Kimeneti Nyelv",
+    "aiOutputLanguage": "Nyelv (Felület + MI Kimenet)",
     "theme": "Téma",
     "light": "Világos",
     "dark": "Sötét",
