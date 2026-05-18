@@ -1,0 +1,269 @@
+{
+  "nav": {
+    "home": "Kezdőlap",
+    "generate": "Generálás",
+    "attack": "Támadás",
+    "brainstorm": "Ötletelés",
+    "factoids": "Tények",
+    "ask": "Kérdezés",
+    "library": "Könyvtár",
+    "timer": "Időmérő",
+    "flowchart": "Folyamatábra",
+    "history": "Előzmények",
+    "features": "Funkciók",
+    "whatsNew": "Újdonságok",
+    "pricing": "Árak",
+    "howItWorks": "Hogyan Működik",
+    "startTrial": "Próba Indítása",
+    "settings": "Beállítások",
+    "openMenu": "Menü megnyitása",
+    "closeMenu": "Menü bezárása"
+  },
+  "navDesc": {
+    "home": "Mód választása",
+    "generate": "Érvek építése",
+    "attack": "Gyengeségek keresése",
+    "brainstorm": "Ötletek felfedezése",
+    "factoids": "Bizonyítékok keresése",
+    "ask": "Coaching kérése",
+    "library": "Források kezelése",
+    "timer": "Időzítés gyakorlása",
+    "flowchart": "Érvek térképezése",
+    "history": "Mentett elemek"
+  },
+  "home": {
+    "title": "DebateLab",
+    "subtitle": "Válassz egy módot a kezdéshez.",
+    "generate": "Generálás",
+    "generateDesc": "Építs teljes vitaeseteket állításokkal, indoklásokkal és hatásokkal.",
+    "attack": "Támadás",
+    "attackDesc": "Teszteld az érveket és tárd fel a stratégiai gyengeségeket.",
+    "brainstorm": "Ötletelés",
+    "brainstormDesc": "Fedezz fel szögeket és találj friss módokat az indítványok keretezésére.",
+    "factoids": "Tények",
+    "factoidsDesc": "Találj forrásokkal alátámasztott bizonyítékokat és vitakész statisztikákat.",
+    "ask": "Kérdezés",
+    "askDesc": "Beszélgess az edződdel stratégiáról, struktúráról és felkészülésről.",
+    "library": "Könyvtár",
+    "libraryDesc": "Kezeld és kapcsold a megalapozott válaszokhoz használt forrásokat.",
+    "timer": "Időmérő",
+    "timerDesc": "Gyakorolj beszédrundákat versenyszintű időzítéssel.",
+    "flowchart": "Folyamatábra",
+    "flowchartDesc": "Térképezd az érveket és cáfolati kapcsolatokat vizuális vitafában.",
+    "history": "Előzmények",
+    "historyDesc": "Nyisd meg újra a mentett eseteket, chateket és korábbi felkészüléseket."
+  },
+  "generate": {
+    "title": "Eset Generálása",
+    "subtitle": "Építs teljes vitaesetet MI segítségével",
+    "emptyTitle": "Az Eseted Vár",
+    "emptyDesc": "Töltsd ki az űrlapot egy strukturált vitaeset generálásához érvekkel, bizonyítékokkal és ellen-stratégiákkal.",
+    "save": "Eset Mentése",
+    "saved": "Eset Mentve",
+    "savedDesc": "Az eseted mentésre került az előzményekbe.",
+    "savePrompt": "Adj meg egy címet ehhez az esethez:",
+    "failed": "Generálás Sikertelen",
+    "timeout": "Időtúllépés",
+    "timeoutDesc": "Az MI túl sokáig válaszolt. Próbáld újra.",
+    "authRequired": "Hitelesítés Szükséges"
+  },
+  "attack": {
+    "title": "Támadás az Esetem Ellen",
+    "subtitle": "Találd meg az érveid gyengeségeit, mielőtt az ellenfeleid megteszik",
+    "emptyTitle": "Kegyetlen Mód",
+    "emptyDesc": "Illeszd be az érvedet kíméletlen kritikáért, logikai hibák azonosításáért és megvalósítható javításokért.",
+    "failed": "Támadás Elemzés Sikertelen"
+  },
+  "brainstorm": {
+    "title": "Ötletelés",
+    "subtitle": "Fedezz fel érvelési szögeket együttműködő MI ötleteléssel",
+    "emptyTitle": "Kreatív Szögek Feloldása",
+    "emptyDesc": "Írd le az indítványodat szokatlan érvelési szögek felfedezéséhez, kompromisszumok azonosításához és legerősebb pozícióid megtalálásához.",
+    "failed": "Ötletelés Sikertelen"
+  },
+  "factoids": {
+    "title": "Tények és Források",
+    "subtitle": "Találj vitakész bizonyítékokat ellenőrizhető hivatkozásokkal",
+    "emptyTitle": "Győztes Bizonyítékok",
+    "emptyDesc": "Adj meg egy állítást támogató tények kereséséhez valós hivatkozásokkal, kontextussal és útmutatóval a hatékony felhasználáshoz.",
+    "failed": "Kutatás Sikertelen",
+    "savedToLibrary": "Mentve a Könyvtárba",
+    "savedToLibraryDesc": "Ez a bizonyíték mostantól elérhető megalapozáshoz."
+  },
+  "ask": {
+    "title": "Kérdezd az Edződ",
+    "failed": "Hiba",
+    "failedDesc": "A kérés sikertelen. Próbáld újra.",
+    "timeout": "Időtúllépés",
+    "timeoutDesc": "A kérés túl sokáig tartott. Próbáld újra.",
+    "saved": "Mentve",
+    "savedDesc": "Forrás hozzáadva a könyvtárhoz."
+  },
+  "chat": {
+    "error": "Chat Hiba",
+    "errorDesc": "Nem sikerült választ generálni."
+  },
+  "settings": {
+    "title": "Beállítások",
+    "aiOutputLanguage": "MI Kimeneti Nyelv",
+    "theme": "Téma",
+    "light": "Világos",
+    "dark": "Sötét",
+    "system": "Rendszer"
+  },
+  "login": {
+    "title": "Bejelentkezés a DebateLab-ba",
+    "subtitle": "Google bejelentkezés szükséges az alkalmazás használatához.",
+    "google": "Folytatás Google-lal"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Hoppá! Az oldal nem található",
+    "link": "Vissza a Kezdőlapra"
+  },
+  "footer": {
+    "tagline": "DebateLab • Kiválóságot követelő vitázóknak készült",
+    "terms": "Feltételek",
+    "privacy": "Adatvédelem",
+    "copyright": "© 2026 DebateLab."
+  },
+  "hero": {
+    "headline": "Készülj Gyorsabban. Érvelj Okosabban. Nyerj Több Fordulót.",
+    "subheadline": "MI-alapú vitafelkészülés, ami előnyt ad minden fordulóban.",
+    "trialBadge": "3 napos ingyenes próba",
+    "requestsBadge": "5 MI kérés/nap",
+    "proBadge": "$5/hó Pro",
+    "cta": "Próba Indítása",
+    "ctaSecondary": "Árak Megtekintése",
+    "trustBullet1": "Bankkártya nem szükséges",
+    "trustBullet2": "Bármikor lemondható",
+    "trustBullet3": "Bármely formátummal működik"
+  },
+  "features": {
+    "title": "Minden, Ami a Győzelemhez Kell",
+    "subtitle": "Kilenc erőteljes mód versenyző vitázóknak tervezve.",
+    "generate": "Eset Generátor",
+    "generateDesc": "Építs teljes eseteket strukturált érvekkel, bizonyítékokkal és ellen-stratégiákkal.",
+    "attack": "Eset Támadó",
+    "attackDesc": "Teszteld az érveidet és találd meg a gyengeségeket az ellenfelek előtt.",
+    "brainstorm": "Ötletelés",
+    "brainstormDesc": "Fedezz fel szokatlan szögeket és találj friss érvelési utakat.",
+    "factoids": "Tények",
+    "factoidsDesc": "Találj vitakész bizonyítékokat ellenőrizhető hivatkozásokkal.",
+    "ask": "Edző",
+    "askDesc": "Kapj mentorálást stratégiáról, struktúráról és technikáról.",
+    "library": "Forráskönyvtár",
+    "libraryDesc": "Kezeld a forrásokat, amelyek valós bizonyítékokkal alapozzák meg az MI válaszait.",
+    "timer": "Vita Időmérő",
+    "timerDesc": "Gyakorolj versenypontos időzítéssel.",
+    "flowchart": "Folyamatábra",
+    "flowchartDesc": "Térképezd az érvstruktúrákat és cáfolati kapcsolatokat vizuálisan.",
+    "history": "Előzmények",
+    "historyDesc": "Érd el a mentett eseteket, chateket és korábbi felkészüléseket."
+  },
+  "howItWorks": {
+    "title": "Hogyan Működik",
+    "subtitle": "Három lépés a jobb vitafelkészüléshez.",
+    "step1Title": "Kutatás",
+    "step1Desc": "Az MI ellenőrzött forrásokat vizsgál és kontextust épít az indítványodhoz.",
+    "step2Title": "Generálás",
+    "step2Desc": "Kapj strukturált érveket, bizonyítékokat és ellen-stratégiákat.",
+    "step3Title": "Gyakorlás",
+    "step3Desc": "Finomíts coachinggal, időzítési gyakorlatokkal és érvtérképezéssel."
+  },
+  "useCases": {
+    "title": "Mindenkinek Készült a Vitában",
+    "forDebaters": "Vitázóknak",
+    "forCoaches": "Edzőknek",
+    "forJudges": "Bíróknak",
+    "debater1": "Generálj eseteket másodpercek alatt, ne órák alatt",
+    "debater2": "Találj bizonyítékokat valós hivatkozásokkal",
+    "debater3": "Teszteld az érveket a fordulók előtt",
+    "debater4": "Gyakorolj versenyszintű időzítéssel",
+    "coach1": "Adj ki indítványokat és nézd át az MI által generált eseteket",
+    "coach2": "Azonosítsd a gyakori gyengeségeket a csapatok között",
+    "coach3": "Használd taneszközként az érvstruktúra oktatásához",
+    "coach4": "Spórolj időt az ismétlődő felkészülési feladatokon",
+    "judge1": "Fedezd fel komplex indítványok mindkét oldalát",
+    "judge2": "Értsd meg gyorsan az érvstruktúrákat",
+    "judge3": "Találj bizonyítékokat állítások ellenőrzéséhez",
+    "judge4": "Térképezd vizuálisan az érvfolyamatokat"
+  },
+  "pricing": {
+    "title": "Egyszerű, Átlátható Árazás",
+    "subtitle": "Kezdj ingyen, frissíts amikor készen állsz.",
+    "trial": "Próba",
+    "trialPrice": "$0",
+    "trialPeriod": "3 napig",
+    "pro": "Pro",
+    "proPrice": "$5",
+    "proPeriod": "/hó + adó",
+    "recommended": "Ajánlott",
+    "trialFeature1": "5 MI kérés naponta",
+    "trialFeature2": "Mind a 9 felkészülési mód",
+    "trialFeature3": "Csak alap modellek",
+    "trialFeature4": "3 napos hozzáférés",
+    "proFeature1": "Korlátlan MI kérések",
+    "proFeature2": "Mind a 9 felkészülési mód",
+    "proFeature3": "Prémium modellek (GPT-4o, Claude, Gemini Pro)",
+    "proFeature4": "Elsőbbségi támogatás",
+    "proFeature5": "Active Grounding™ kutatás",
+    "startTrial": "Ingyenes Próba Indítása",
+    "subscribe": "Feliratkozás Most",
+    "noFreePlan": "Nincs állandó ingyenes csomag. A próbaidőszak lejárta után előfizetés szükséges a DebateLab további használatához."
+  },
+  "faq": {
+    "title": "Gyakran Ismételt Kérdések",
+    "q1": "Mennyibe kerül a DebateLab?",
+    "a1": "A DebateLab 3 napos ingyenes próbát kínál napi 5 MI kéréssel. Ezután a Pro $5/hó + adó korlátlan kérésekért és prémium modellekért.",
+    "q2": "Mit kapok a Pro-val?",
+    "a2": "Korlátlan MI kérések, hozzáférés prémium modellekhez (GPT-4o, Claude 3.5 Sonnet, Gemini Pro), Active Grounding™ kutatás és elsőbbségi támogatás.",
+    "q3": "Lemondhatom az előfizetésem?",
+    "a3": "Igen, bármikor lemondhatod a Beállítások oldalon. A számlázási időszak végéig megtartod a hozzáférést.",
+    "q4": "Az MI kitalál dolgokat?",
+    "a4": "Active Grounding™ technológiát használunk az állítások valós forrásokkal való ellenőrzésére. Minden nem ellenőrzött információ egyértelműen meg van jelölve.",
+    "q5": "Menthetem és exportálhatom a munkámat?",
+    "a5": "Igen! Ments eseteket, ötleteket és chateket az Előzményekbe. Exportálj Word, PDF vagy Google Docs formátumba."
+  },
+  "finalCta": {
+    "title": "Készen Állsz a Következő Győztes Eseted Felépítésére?",
+    "subtitle": "Csatlakozz a vitázókhoz, akik MI-vel készülnek okosabban.",
+    "cta": "DebateLab Indítása"
+  },
+  "socialProof": {
+    "modes": "Felkészülési Mód",
+    "plans": "Csomag",
+    "upgrades": "Jelentős 2026-os Frissítés",
+    "workspace": "Egységes Munkaterület"
+  },
+  "whatsNew": {
+    "title": "Újdonságok",
+    "subtitle": "Legújabb frissítések és fejlesztések.",
+    "sub1Title": "Előfizetési Szintek",
+    "sub1Desc": "Ingyenes próba és Pro csomag prémium modellekkel.",
+    "sub2Title": "Érv Folyamatábrák",
+    "sub2Desc": "Vizuális érvtérképezés húzd-és-ejtsd csomópontokkal.",
+    "sub3Title": "Fejlesztett Időmérő",
+    "sub3Desc": "Versenypontos időzítés egyéni formátumokkal.",
+    "sub4Title": "Mentett Felkészülési Előzmények",
+    "sub4Desc": "Érd el az összes korábbi esetedet és munkamenetedet."
+  },
+  "deepDive": {
+    "title": "Active Grounding™ Technológia",
+    "subtitle": "Hogyan tartjuk őszintén az MI válaszokat.",
+    "step1": "MI Szkennelés Exa-val",
+    "step1Desc": "A neurális keresés releváns, magas minőségű forrásokat talál.",
+    "step2": "Tudásbázis",
+    "step2Desc": "A forrásaid vektorizálva vannak szemantikus egyeztetéshez.",
+    "step3": "Kontextus Injektálás",
+    "step3Desc": "Az ellenőrzött tények bekerülnek az MI promptba.",
+    "step4": "Megalapozott Kimenet",
+    "step4Desc": "A válaszok valós forrásokat idéznek, nem hallucinációkat."
+  },
+  "rateLimit": {
+    "title": "Kéréslimit Túllépve"
+  },
+  "subscription": {
+    "required": "Előfizetés szükséges."
+  }
+}

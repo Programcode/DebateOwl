@@ -1,43 +1,31 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { GraduationCap, Users, Gavel } from "lucide-react";
 
-const personas = [
-    {
-        icon: GraduationCap,
-        title: "For Debaters",
-        subtitle: "Cut Prep Time in Half",
-        points: [
-            "Generate cases in minutes, not hours",
-            "Practice speeches while commuting",
-            "Never get caught without a definition",
-            "Build a personal evidence library"
-        ]
-    },
-    {
-        icon: Users,
-        title: "For Coaches",
-        subtitle: "Scale Your Feedback",
-        points: [
-            "Review student cases instantly",
-            "Generate practice topics on the fly",
-            "Focus on strategy instead of formatting",
-            "Track research progress effortlessly"
-        ]
-    },
-    {
-        icon: Gavel,
-        title: "For Judges",
-        subtitle: "Deepen Your Analysis",
-        points: [
-            "Understand complex topic literature",
-            "Spot logical fallacies in real-time",
-            "Check sourcing accuracy quickly",
-            "Write better ballots with clear reasoning"
-        ]
-    }
-];
-
 const UseCases = () => {
+    const { t } = useTranslation();
+
+    const personas = [
+        {
+            icon: GraduationCap,
+            title: t('useCases.forDebaters'),
+            subtitle: "Cut Prep Time in Half",
+            points: [t('useCases.debater1'), t('useCases.debater2'), t('useCases.debater3'), t('useCases.debater4')]
+        },
+        {
+            icon: Users,
+            title: t('useCases.forCoaches'),
+            subtitle: "Scale Your Feedback",
+            points: [t('useCases.coach1'), t('useCases.coach2'), t('useCases.coach3'), t('useCases.coach4')]
+        },
+        {
+            icon: Gavel,
+            title: t('useCases.forJudges'),
+            subtitle: "Deepen Your Analysis",
+            points: [t('useCases.judge1'), t('useCases.judge2'), t('useCases.judge3'), t('useCases.judge4')]
+        }
+    ];
+
     return (
         <section className="py-24 relative">
             <div className="section-container">
@@ -49,7 +37,7 @@ const UseCases = () => {
                     className="text-center mb-16"
                 >
                     <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                        Built for <span className="gradient-text">Every Role</span>
+                        {t('useCases.title')}
                     </h2>
                     <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                         Whether you are competing, coaching, or judging, DebateLab gives you the edge.

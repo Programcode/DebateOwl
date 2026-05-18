@@ -1,7 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 const FinalCTA = () => {
+    const { t } = useTranslation();
+
     return (
         <section className="relative overflow-hidden py-24">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-emerald-200/20 dark:to-emerald-900/20" />
@@ -24,11 +27,11 @@ const FinalCTA = () => {
                     </div>
 
                     <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
-                        Ready to Build Your Next <span className="gradient-text">Winning Case?</span>
+                        {t('finalCta.title')}
                     </h2>
 
                     <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-                        Launch DebateLab, start on the 3-day trial, then continue with Pro for advanced models and higher limits.
+                        {t('finalCta.subtitle')}
                     </p>
 
                     <motion.a
@@ -37,7 +40,7 @@ const FinalCTA = () => {
                         whileTap={{ scale: 0.98 }}
                         className="btn-primary-gradient shimmer mt-10 inline-flex items-center gap-3 px-10 py-5 text-lg"
                     >
-                        <span className="relative z-10">Launch DebateLab</span>
+                        <span className="relative z-10">{t('finalCta.cta')}</span>
                         <ArrowRight className="relative z-10 h-5 w-5" />
                     </motion.a>
                 </motion.div>

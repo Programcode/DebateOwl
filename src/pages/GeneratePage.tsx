@@ -1,5 +1,6 @@
 // src/pages/GeneratePage.tsx
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { GenerateForm } from '@/components/features/generate/GenerateForm';
@@ -22,6 +23,7 @@ export default function GeneratePage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
+  const { t } = useTranslation();
 
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
@@ -35,13 +37,13 @@ export default function GeneratePage() {
       if (subError.handleSubscriptionError(error)) return;
 
       if (isAIAuthError(error)) {
-        toast({ title: "Authentication Required", description: error.message, variant: "destructive" });
+        toast({ title: t('generate.authRequired'), description: error.message, variant: "destructive" });
       } else if (isAIRateLimitError(error)) {
-        toast({ title: "Rate Limit Exceeded", description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} requests)` : ''}`, variant: "destructive" });
+        toast({ title: t('rateLimit.title'), description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} requests)` : ''}`, variant: "destructive" });
       } else if (isTimeoutError(error)) {
-        toast({ title: "Request Timed Out", description: "The AI took too long to respond. Please try again.", variant: "destructive" });
+        toast({ title: t('generate.timeout'), description: t('generate.timeoutDesc'), variant: "destructive" });
       } else {
-        toast({ title: "Generation Failed", description: error instanceof Error ? error.message : "An unexpected error occurred", variant: "destructive" });
+        toast({ title: t('generate.failed'), description: error instanceof Error ? error.message : "An unexpected error occurred", variant: "destructive" });
       }
     } finally {
       setGenerateLoading(false);
@@ -56,10 +58,10 @@ export default function GeneratePage() {
 
   const handleSave = () => {
     if (!generateResult) return;
-    const title = window.prompt("Enter a title for this case:", generateResult.caseStructure.thesis.slice(0, 50));
+    const title = window.prompt(t('generate.savePrompt'), generateResult.caseStructure.thesis.slice(0, 50));
     if (title) {
       saveCurrentCase(title);
-      toast({ title: "Case Saved", description: "Your case has been saved to history." });
+      toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
     }
   };
 
@@ -94,7 +96,7 @@ export default function GeneratePage() {
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
-      toast({ title: "Chat Error", description: "Failed to generate response.", variant: "destructive" });
+      toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
     } finally {
       setAskLoading(false);
     }

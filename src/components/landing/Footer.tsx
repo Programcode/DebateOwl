@@ -1,9 +1,12 @@
+import { useTranslation } from "react-i18next";
+
 const Footer = () => {
+    const { t } = useTranslation();
+
     return (
         <footer className="py-12 border-t border-border/50">
             <div className="section-container">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    {/* Logo */}
                     <div className="flex items-center gap-6">
                         <a href="/" className="flex items-center gap-2">
                             <img
@@ -14,23 +17,21 @@ const Footer = () => {
                             <span className="text-lg font-bold text-foreground">DebateLab</span>
                         </a>
                         <span className="hidden md:inline text-muted-foreground text-sm">
-                            AI-Powered Debate Prep
+                            {t('footer.tagline')}
                         </span>
                     </div>
 
-                    {/* Links - Removed per user request */}
                     <div className="flex items-center gap-4 text-sm">
                         <a href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
-                            Terms
+                            {t('footer.terms')}
                         </a>
                         <a href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
-                            Privacy
+                            {t('footer.privacy')}
                         </a>
                     </div>
 
-                    {/* Copyright */}
                     <p className="text-sm text-muted-foreground">
-                        © 2026 DebateLab. All rights reserved.
+                        {t('footer.copyright')} All rights reserved.
                     </p>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 // src/components/layout/AppLayout.tsx
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Home,
   Sparkles,
@@ -22,20 +23,21 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navItems = [
-  { path: '/app', label: 'Home', icon: Home, description: 'Choose a mode' },
-  { path: '/app/generate', label: 'Generate', icon: Sparkles, description: 'Build arguments' },
-  { path: '/app/attack', label: 'Attack', icon: Swords, description: 'Find weaknesses' },
-  { path: '/app/brainstorm', label: 'Brainstorm', icon: Lightbulb, description: 'Explore ideas' },
-  { path: '/app/factoids', label: 'Factoids', icon: BookOpen, description: 'Find evidence' },
-  { path: '/app/ask', label: 'Ask', icon: MessageCircle, description: 'Get coaching' },
-  { path: '/app/library', label: 'Library', icon: Database, description: 'Manage sources' },
-  { path: '/app/timer', label: 'Timer', icon: Timer, description: 'Practice timing' },
-  { path: '/app/flowchart', label: 'Flowchart', icon: GitBranch, description: 'Map arguments' },
-  { path: '/app/history', label: 'History', icon: Clock, description: 'Saved items' },
+  { path: '/app', key: 'home', icon: Home },
+  { path: '/app/generate', key: 'generate', icon: Sparkles },
+  { path: '/app/attack', key: 'attack', icon: Swords },
+  { path: '/app/brainstorm', key: 'brainstorm', icon: Lightbulb },
+  { path: '/app/factoids', key: 'factoids', icon: BookOpen },
+  { path: '/app/ask', key: 'ask', icon: MessageCircle },
+  { path: '/app/library', key: 'library', icon: Database },
+  { path: '/app/timer', key: 'timer', icon: Timer },
+  { path: '/app/flowchart', key: 'flowchart', icon: GitBranch },
+  { path: '/app/history', key: 'history', icon: Clock },
 ];
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -65,7 +67,7 @@ export function AppLayout() {
                 activeClassName="bg-primary/10 text-primary"
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {t(`nav.${item.key}`)}
               </NavLink>
             ))}
           </nav>
@@ -82,7 +84,7 @@ export function AppLayout() {
               size="icon"
               className="md:hidden text-muted-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -108,8 +110,8 @@ export function AppLayout() {
                 >
                   <item.icon className="h-5 w-5" />
                   <div>
-                    <div className="font-medium">{item.label}</div>
-                    <div className="text-xs opacity-70">{item.description}</div>
+                    <div className="font-medium">{t(`nav.${item.key}`)}</div>
+                    <div className="text-xs opacity-70">{t(`navDesc.${item.key}`)}</div>
                   </div>
                 </NavLink>
               ))}
@@ -126,10 +128,10 @@ export function AppLayout() {
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
-          <p>DebateLab • Built for debaters who demand excellence</p>
+          <p>{t('footer.tagline')}</p>
           <div className="flex items-center gap-4">
-            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
-            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">{t('footer.terms')}</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">{t('footer.privacy')}</a>
           </div>
         </div>
       </footer>

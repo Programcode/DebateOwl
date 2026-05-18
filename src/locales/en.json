@@ -1,0 +1,269 @@
+{
+  "nav": {
+    "home": "Home",
+    "generate": "Generate",
+    "attack": "Attack",
+    "brainstorm": "Brainstorm",
+    "factoids": "Factoids",
+    "ask": "Ask",
+    "library": "Library",
+    "timer": "Timer",
+    "flowchart": "Flowchart",
+    "history": "History",
+    "features": "Features",
+    "whatsNew": "What's New",
+    "pricing": "Pricing",
+    "howItWorks": "How It Works",
+    "startTrial": "Start Trial",
+    "settings": "Settings",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "navDesc": {
+    "home": "Choose a mode",
+    "generate": "Build arguments",
+    "attack": "Find weaknesses",
+    "brainstorm": "Explore ideas",
+    "factoids": "Find evidence",
+    "ask": "Get coaching",
+    "library": "Manage sources",
+    "timer": "Practice timing",
+    "flowchart": "Map arguments",
+    "history": "Saved items"
+  },
+  "home": {
+    "title": "DebateLab",
+    "subtitle": "Choose a mode to start.",
+    "generate": "Generate",
+    "generateDesc": "Build full debate cases with claims, warrants, and impacts.",
+    "attack": "Attack",
+    "attackDesc": "Stress-test arguments and expose strategic weak points.",
+    "brainstorm": "Brainstorm",
+    "brainstormDesc": "Explore angles and discover fresh ways to frame motions.",
+    "factoids": "Factoids",
+    "factoidsDesc": "Find sourced evidence and debate-ready statistics.",
+    "ask": "Ask",
+    "askDesc": "Chat with your coach for strategy, structure, and prep.",
+    "library": "Library",
+    "libraryDesc": "Manage and toggle sources used for grounded responses.",
+    "timer": "Timer",
+    "timerDesc": "Practice speaking rounds with tournament timing controls.",
+    "flowchart": "Flowchart",
+    "flowchartDesc": "Map arguments and rebuttal links in a visual debate tree.",
+    "history": "History",
+    "historyDesc": "Reopen saved cases, chats, and previous prep sessions."
+  },
+  "generate": {
+    "title": "Generate Case",
+    "subtitle": "Build a complete debate case with AI assistance",
+    "emptyTitle": "Your Case Awaits",
+    "emptyDesc": "Fill in the form to generate a structured debate case with arguments, evidence, and counter-strategies.",
+    "save": "Save Case",
+    "saved": "Case Saved",
+    "savedDesc": "Your case has been saved to history.",
+    "savePrompt": "Enter a title for this case:",
+    "failed": "Generation Failed",
+    "timeout": "Request Timed Out",
+    "timeoutDesc": "The AI took too long to respond. Please try again.",
+    "authRequired": "Authentication Required"
+  },
+  "attack": {
+    "title": "Attack My Case",
+    "subtitle": "Find weaknesses in your arguments before your opponents do",
+    "emptyTitle": "No Mercy Mode",
+    "emptyDesc": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.",
+    "failed": "Attack Analysis Failed"
+  },
+  "brainstorm": {
+    "title": "Brainstorm Ideas",
+    "subtitle": "Explore argument angles with collaborative AI ideation",
+    "emptyTitle": "Unlock Creative Angles",
+    "emptyDesc": "Describe your motion to explore unconventional argument angles, identify tradeoffs, and find your strongest positions.",
+    "failed": "Brainstorming Failed"
+  },
+  "factoids": {
+    "title": "Factoids & Sources",
+    "subtitle": "Find debate-ready evidence with verifiable citations",
+    "emptyTitle": "Evidence That Wins",
+    "emptyDesc": "Enter a claim to find supporting factoids with real citations, context, and guidance on how to use them effectively.",
+    "failed": "Research Failed",
+    "savedToLibrary": "Saved to Library",
+    "savedToLibraryDesc": "This evidence is now available for grounding."
+  },
+  "ask": {
+    "title": "Ask Your Coach",
+    "failed": "Error",
+    "failedDesc": "Request failed. Please try again.",
+    "timeout": "Request Timed Out",
+    "timeoutDesc": "The request took too long. Please try again.",
+    "saved": "Saved",
+    "savedDesc": "Source added to library."
+  },
+  "chat": {
+    "error": "Chat Error",
+    "errorDesc": "Failed to generate response."
+  },
+  "settings": {
+    "title": "Settings",
+    "aiOutputLanguage": "AI Output Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "login": {
+    "title": "Sign in to DebateLab",
+    "subtitle": "Google sign-in is required to use the app.",
+    "google": "Continue with Google"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Oops! Page not found",
+    "link": "Return to Home"
+  },
+  "footer": {
+    "tagline": "DebateLab • Built for debaters who demand excellence",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "copyright": "© 2026 DebateLab."
+  },
+  "hero": {
+    "headline": "Prep Faster. Argue Smarter. Win More Rounds.",
+    "subheadline": "AI-powered debate preparation that gives you the edge in every round.",
+    "trialBadge": "3-day free trial",
+    "requestsBadge": "5 AI requests/day",
+    "proBadge": "$5/month Pro",
+    "cta": "Start Trial",
+    "ctaSecondary": "View Pricing",
+    "trustBullet1": "No credit card required",
+    "trustBullet2": "Cancel anytime",
+    "trustBullet3": "Works with any format"
+  },
+  "features": {
+    "title": "Everything You Need to Win",
+    "subtitle": "Nine powerful modes designed for competitive debaters.",
+    "generate": "Case Generator",
+    "generateDesc": "Build complete cases with structured arguments, evidence, and counter-strategies.",
+    "attack": "Case Attacker",
+    "attackDesc": "Stress-test your arguments and find weaknesses before opponents do.",
+    "brainstorm": "Brainstorm",
+    "brainstormDesc": "Explore unconventional angles and discover fresh argument paths.",
+    "factoids": "Factoids",
+    "factoidsDesc": "Find debate-ready evidence with verifiable citations.",
+    "ask": "Ask Coach",
+    "askDesc": "Get mentoring on strategy, structure, and technique.",
+    "library": "Source Library",
+    "libraryDesc": "Manage sources that ground AI responses in real evidence.",
+    "timer": "Debate Timer",
+    "timerDesc": "Practice with tournament-accurate timing controls.",
+    "flowchart": "Flowchart",
+    "flowchartDesc": "Map argument structures and rebuttal links visually.",
+    "history": "History",
+    "historyDesc": "Access saved cases, chats, and previous prep sessions."
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Three steps to better debate prep.",
+    "step1Title": "Research",
+    "step1Desc": "AI scans verified sources and builds context for your motion.",
+    "step2Title": "Generate",
+    "step2Desc": "Get structured arguments, evidence, and counter-strategies.",
+    "step3Title": "Practice",
+    "step3Desc": "Refine with coaching, timing drills, and argument mapping."
+  },
+  "useCases": {
+    "title": "Built For Everyone in Debate",
+    "forDebaters": "For Debaters",
+    "forCoaches": "For Coaches",
+    "forJudges": "For Judges",
+    "debater1": "Generate cases in seconds, not hours",
+    "debater2": "Find evidence with real citations",
+    "debater3": "Stress-test arguments before rounds",
+    "debater4": "Practice with tournament timing",
+    "coach1": "Assign motions and review AI-generated cases",
+    "coach2": "Identify common weaknesses across teams",
+    "coach3": "Use as a teaching tool for argument structure",
+    "coach4": "Save time on repetitive prep tasks",
+    "judge1": "Explore both sides of complex motions",
+    "judge2": "Understand argument structures quickly",
+    "judge3": "Find evidence to verify claims",
+    "judge4": "Map argument flows visually"
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Start free, upgrade when you're ready.",
+    "trial": "Trial",
+    "trialPrice": "$0",
+    "trialPeriod": "for 3 days",
+    "pro": "Pro",
+    "proPrice": "$5",
+    "proPeriod": "/month + tax",
+    "recommended": "Recommended",
+    "trialFeature1": "5 AI requests per day",
+    "trialFeature2": "All 9 prep modes",
+    "trialFeature3": "Basic models only",
+    "trialFeature4": "3-day access",
+    "proFeature1": "Unlimited AI requests",
+    "proFeature2": "All 9 prep modes",
+    "proFeature3": "Premium models (GPT-4o, Claude, Gemini Pro)",
+    "proFeature4": "Priority support",
+    "proFeature5": "Active Grounding™ research",
+    "startTrial": "Start Free Trial",
+    "subscribe": "Subscribe Now",
+    "noFreePlan": "There is no permanent free plan. After your trial ends, a subscription is required to continue using DebateLab."
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "q1": "How much does DebateLab cost?",
+    "a1": "DebateLab offers a 3-day free trial with 5 AI requests per day. After that, Pro is $5/month + tax for unlimited requests and premium models.",
+    "q2": "What do I get with Pro?",
+    "a2": "Unlimited AI requests, access to premium models (GPT-4o, Claude 3.5 Sonnet, Gemini Pro), Active Grounding™ research, and priority support.",
+    "q3": "Can I cancel my subscription?",
+    "a3": "Yes, you can cancel anytime from your Settings page. You'll retain access until the end of your billing period.",
+    "q4": "Does the AI make things up?",
+    "a4": "We use Active Grounding™ technology to verify claims against real sources. Any unverified information is clearly marked as such.",
+    "q5": "Can I save and export my work?",
+    "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs."
+  },
+  "finalCta": {
+    "title": "Ready to Build Your Next Winning Case?",
+    "subtitle": "Join debaters who prep smarter with AI.",
+    "cta": "Launch DebateLab"
+  },
+  "socialProof": {
+    "modes": "Prep Modes",
+    "plans": "Plans",
+    "upgrades": "Major 2026 Upgrades",
+    "workspace": "Unified Workspace"
+  },
+  "whatsNew": {
+    "title": "What's New",
+    "subtitle": "Latest updates and improvements.",
+    "sub1Title": "Subscription Tiers",
+    "sub1Desc": "Free trial and Pro plan with premium models.",
+    "sub2Title": "Argument Flowcharts",
+    "sub2Desc": "Visual argument mapping with drag-and-drop nodes.",
+    "sub3Title": "Upgraded Timer",
+    "sub3Desc": "Tournament-accurate timing with custom formats.",
+    "sub4Title": "Saved Prep History",
+    "sub4Desc": "Access all your previous cases and sessions."
+  },
+  "deepDive": {
+    "title": "Active Grounding™ Technology",
+    "subtitle": "How we keep AI responses honest.",
+    "step1": "AI Scanning via Exa",
+    "step1Desc": "Neural search finds relevant, high-quality sources.",
+    "step2": "Knowledge Base",
+    "step2Desc": "Your sources are vectorized for semantic matching.",
+    "step3": "Context Injection",
+    "step3Desc": "Verified facts are injected into the AI prompt.",
+    "step4": "Grounded Output",
+    "step4Desc": "Responses cite real sources, not hallucinations."
+  },
+  "rateLimit": {
+    "title": "Rate Limit Exceeded"
+  },
+  "subscription": {
+    "required": "Subscription required."
+  }
+}

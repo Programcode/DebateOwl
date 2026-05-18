@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
@@ -17,6 +18,7 @@ export default function FactoidsPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
+  const { t } = useTranslation();
 
   const handleSubmit = async (data: FactoidsInput) => {
     setFactoidsLoading(true);
@@ -27,7 +29,7 @@ export default function FactoidsPage() {
       console.error('Failed to find factoids:', error);
       if (!subError.handleSubscriptionError(error)) {
         toast({
-          title: "Research Failed",
+          title: t('factoids.failed'),
           description: error instanceof Error ? error.message : "An unexpected error occurred",
           variant: "destructive",
         });
@@ -44,7 +46,7 @@ export default function FactoidsPage() {
 
   const handleSaveToLibrary = (title: string, content: string, url?: string) => {
     addSource({ title, content, type: 'url', origin: url });
-    toast({ title: "Saved to Library", description: "This evidence is now available for grounding." });
+    toast({ title: t('factoids.savedToLibrary'), description: t('factoids.savedToLibraryDesc') });
   };
 
   const handleDiscuss = async () => {
@@ -76,7 +78,7 @@ export default function FactoidsPage() {
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
-      toast({ title: "Chat Error", description: "Failed to generate response.", variant: "destructive" });
+      toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
     } finally {
       setAskLoading(false);
     }
@@ -86,9 +88,9 @@ export default function FactoidsPage() {
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Factoids & Sources</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('factoids.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Find debate-ready evidence with verifiable citations
+            {t('factoids.subtitle')}
           </p>
         </div>
 
@@ -110,9 +112,9 @@ export default function FactoidsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
                 <div className="text-6xl mb-4">📚</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Evidence That Wins</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('factoids.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Enter a claim to find supporting factoids with real citations, context, and guidance on how to use them effectively.
+                  {t('factoids.emptyDesc')}
                 </p>
               </div>
             )}

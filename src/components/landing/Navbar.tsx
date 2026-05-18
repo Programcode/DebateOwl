@@ -1,16 +1,18 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
 
-const navLinks = [
-    { href: "#features", label: "Features" },
-    { href: "#whats-new", label: "What's New" },
-    { href: "#pricing", label: "Pricing" },
-    { href: "#how-it-works", label: "How It Works" },
-];
-
 const Navbar = () => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
+
+    const navLinks = [
+        { href: "#features", label: t('nav.features') },
+        { href: "#whats-new", label: t('nav.whatsNew') },
+        { href: "#pricing", label: t('nav.pricing') },
+        { href: "#how-it-works", label: t('nav.howItWorks') },
+    ];
 
     return (
         <motion.nav
@@ -44,7 +46,7 @@ const Navbar = () => {
 
                     <div className="hidden items-center gap-3 md:flex">
                         <a href="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
-                            <span className="relative z-10">Start Trial</span>
+                            <span className="relative z-10">{t('nav.startTrial')}</span>
                             <ArrowRight className="relative z-10 h-4 w-4" />
                         </a>
                     </div>
@@ -84,7 +86,7 @@ const Navbar = () => {
                                 onClick={() => setIsOpen(false)}
                                 className="btn-primary-gradient shimmer mt-2 inline-flex items-center justify-center gap-2"
                             >
-                                <span className="relative z-10">Start Trial</span>
+                                <span className="relative z-10">{t('nav.startTrial')}</span>
                                 <ArrowRight className="relative z-10 h-4 w-4" />
                             </a>
                         </div>

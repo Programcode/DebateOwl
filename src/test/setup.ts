@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "@testing-library/jest-dom";
+import "../i18n";
 
 const createStorage = () => {
   let store: Record<string, string> = {};
