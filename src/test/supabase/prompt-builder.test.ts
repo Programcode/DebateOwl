@@ -78,7 +78,7 @@ describe('supabase prompt-builder', () => {
     }, '');
 
     expect(prompt).toContain('Motion: ');
-    expect(prompt).toContain('Side: auto');
+    expect(prompt).toContain('Side: pro');
     expect(prompt).toContain('Format: custom');
     expect(prompt).toContain('Role: intro');
     expect(prompt).toContain('Length: standard');
