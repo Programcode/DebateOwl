@@ -1,4 +1,5 @@
 // src/components/features/attack/AttackForm.tsx
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Swords, Search } from 'lucide-react';
@@ -27,6 +28,7 @@ interface AttackFormProps {
 }
 
 export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProps) {
+  const { t } = useTranslation();
   const { attackForm, setAttackForm } = useSessionStore();
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<AttackInput>({
     resolver: zodResolver(AttackInputSchema),
@@ -65,8 +67,8 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
             <Swords className="h-5 w-5 text-destructive" />
           </div>
           <div>
-            <CardTitle>Attack My Case</CardTitle>
-            <CardDescription>Find weaknesses and get improvement suggestions</CardDescription>
+            <CardTitle>{t('attackForm.title')}</CardTitle>
+            <CardDescription>{t('attackForm.subtitle')}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -75,12 +77,12 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
           {/* Case Text Input */}
           <div className="space-y-2">
             <Label htmlFor="caseText" className="text-sm font-medium">
-              Your Argument <span className="text-destructive">*</span>
+              {t('attackForm.argument')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="caseText"
               {...register('caseText')}
-              placeholder="Paste your debate case or argument here..."
+              placeholder={t('attackForm.argumentPlaceholder')}
               className="min-h-[200px] resize-y"
             />
             {errors.caseText && (
@@ -92,7 +94,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Aggressiveness */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Attack Intensity</Label>
+              <Label className="text-sm font-medium">{t('attackForm.intensity')}</Label>
               <Select
                 value={currentValues.aggressiveness}
                 onValueChange={(value) => setValue('aggressiveness', value as AttackInput['aggressiveness'])}
@@ -101,16 +103,16 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="mild">Mild (Constructive)</SelectItem>
-                  <SelectItem value="moderate">Moderate (Balanced)</SelectItem>
-                  <SelectItem value="ruthless">Ruthless (No Mercy)</SelectItem>
+                  <SelectItem value="mild">{t('attackForm.intensityMild')}</SelectItem>
+                  <SelectItem value="moderate">{t('attackForm.intensityModerate')}</SelectItem>
+                  <SelectItem value="ruthless">{t('attackForm.intensityRuthless')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Judge Paradigm */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Judge Paradigm</Label>
+              <Label className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
               <Select
                 value={currentValues.judgeParadigm}
                 onValueChange={(value) => setValue('judgeParadigm', value as AttackInput['judgeParadigm'])}
@@ -119,9 +121,9 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="logic">Logic-Heavy</SelectItem>
-                  <SelectItem value="values">Values-Focused</SelectItem>
-                  <SelectItem value="policy">Policy/Impact</SelectItem>
+                  <SelectItem value="logic">{t('attackForm.paradigmLogic')}</SelectItem>
+                  <SelectItem value="values">{t('attackForm.paradigmValues')}</SelectItem>
+                  <SelectItem value="policy">{t('attackForm.paradigmPolicy')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -131,8 +133,8 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
           <div className="space-y-4 rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Detect Fallacies</Label>
-                <p className="text-xs text-muted-foreground">Identify logical fallacies in the argument</p>
+                <Label className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
+                <p className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
               </div>
               <Switch
                 checked={currentValues.detectFallacies}
@@ -141,8 +143,8 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
             </div>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Analyze Weighing</Label>
-                <p className="text-xs text-muted-foreground">Evaluate impact comparison and prioritization</p>
+                <Label className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
+                <p className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
               </div>
               <Switch
                 checked={currentValues.analyzeWeighing}
@@ -158,12 +160,12 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
-                Analyzing Case...
+                {t('attackForm.analyzing')}
               </>
             ) : (
               <>
                 <Search className="mr-2 h-4 w-4" />
-                Find Weaknesses
+                {t('attackForm.submit')}
               </>
             )}
           </Button>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ interface GenerateResultsProps {
 }
 
 function ArgumentCard({ contention, index }: { contention: Contention; index: number }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -28,28 +30,28 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
         {contention.needsSource && (
           <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600">
             <AlertTriangle className="mr-1 h-3 w-3" />
-            Needs Source
+            {t('generateResults.needsSource')}
           </Badge>
         )}
       </div>
 
       <div className="space-y-2 text-sm">
         <div>
-          <span className="font-medium text-muted-foreground">Reasoning: </span>
+          <span className="font-medium text-muted-foreground">{t('generateResults.reasoning')} </span>
           <span className="text-foreground">{contention.reasoning}</span>
         </div>
         <div>
-          <span className="font-medium text-muted-foreground">Evidence: </span>
+          <span className="font-medium text-muted-foreground">{t('generateResults.evidence')} </span>
           <span className="text-foreground">{contention.evidence}</span>
         </div>
         {contention.sourceQuery && (
           <div className="rounded-md bg-muted/50 p-2 text-xs">
-            <span className="font-medium">Search suggestion: </span>
+            <span className="font-medium">{t('generateResults.searchSuggestion')} </span>
             <code className="text-primary">{contention.sourceQuery}</code>
           </div>
         )}
         <div>
-          <span className="font-medium text-muted-foreground">Impact: </span>
+          <span className="font-medium text-muted-foreground">{t('generateResults.impact')} </span>
           <span className="text-foreground">{contention.impact}</span>
         </div>
       </div>
@@ -58,6 +60,7 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
 }
 
 export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onImportFlowchart }: GenerateResultsProps) {
+  const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
 
   const handleGoogleDocsExport = async () => {
@@ -65,22 +68,22 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
     try {
       const exportResult = await exportCaseToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
-        toast.success('Case exported to Google Docs!', {
+        toast.success(t('generateResults.exportedGdocs'), {
           action: {
-            label: 'Open',
+            label: t('generateResults.open'),
             onClick: () => window.open(exportResult.documentUrl, '_blank'),
           },
         });
         window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || 'Authentication required', {
-          description: 'Please sign out and sign back in to grant Google Drive access.',
+        toast.error(exportResult.error || t('generateResults.authRequired'), {
+          description: t('generateResults.authRequiredDesc'),
         });
       } else {
-        toast.error(exportResult.error || 'Failed to export to Google Docs');
+        toast.error(exportResult.error || t('generateResults.exportFailed'));
       }
     } catch {
-      toast.error('An unexpected error occurred during export');
+      toast.error(t('generateResults.exportError'));
     } finally {
       setIsExportingGDocs(false);
     }
@@ -90,9 +93,9 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
   if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
-        <h3 className="text-lg font-semibold text-destructive mb-2">Generation Incomplete</h3>
+        <h3 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h3>
         <p className="text-sm text-muted-foreground">
-          The AI response was incomplete or malformed. Please try generating again.
+          {t('generateResults.incompleteDesc')}
         </p>
       </div>
     );
@@ -104,39 +107,39 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
-            {result.metadata?.side === 'pro' ? 'Proposition' : 'Opposition'}
+            {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
           </Badge>
           <Badge variant="outline">{result.metadata?.format?.toUpperCase() || 'N/A'}</Badge>
           <span className="text-xs text-muted-foreground">
-            Generated {result.metadata?.generatedAt ? new Date(result.metadata.generatedAt).toLocaleString() : 'N/A'}
+            {t('generateResults.generated')} {result.metadata?.generatedAt ? new Date(result.metadata.generatedAt).toLocaleString() : 'N/A'}
           </span>
         </div>
         <div className="flex gap-2" data-tour="export-section">
           {onSave && (
             <Button variant="outline" size="sm" onClick={onSave}>
               <Save className="h-4 w-4 mr-2" />
-              Save
+              {t('generateResults.save')}
             </Button>
           )}
           {onDiscuss && (
             <Button variant="outline" size="sm" onClick={onDiscuss}>
               <MessageSquare className="h-4 w-4 mr-2" />
-              Discuss
+              {t('generateResults.discuss')}
             </Button>
           )}
           {onImportFlowchart && (
             <Button variant="outline" size="sm" onClick={onImportFlowchart}>
               <GitBranch className="h-4 w-4 mr-2" />
-              Flowcharts
+              {t('generateResults.flowcharts')}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
             <FileDown className="h-4 w-4 mr-2" />
-            Word
+            {t('generateResults.word')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => exportCaseToPdf(result)}>
             <FileText className="h-4 w-4 mr-2" />
-            PDF
+            {t('generateResults.pdf')}
           </Button>
           <Button
             variant="outline"
@@ -149,7 +152,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
             ) : (
               <FileUp className="h-4 w-4 mr-2" />
             )}
-            Google Docs
+            {t('generateResults.googleDocs')}
           </Button>
         </div>
       </div>
@@ -157,19 +160,19 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
       {/* Exordio (Introductor only) */}
       {result.exordio && (result.exordio.hook || result.exordio.transition) && (
         <SectionCard
-          title="Exordio"
-          description="Your compelling opening"
+          title={t('generateResults.exordio')}
+          description={t('generateResults.exordioDesc')}
           icon={<Sparkles className="h-5 w-5" />}
           onRegenerate={() => onRegenerateSection?.('exordio')}
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">Hook</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h4>
               <p className="text-foreground italic">{result.exordio.hook}</p>
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">Transition</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h4>
               <p className="text-foreground">{result.exordio.transition}</p>
             </div>
           </div>
@@ -178,32 +181,32 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
 
       {/* Case Structure */}
       <SectionCard
-        title="Case Structure"
-        description="Your argument framework"
+        title={t('generateResults.caseStructure')}
+        description={t('generateResults.caseStructureDesc')}
         icon={<Target className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('structure')}
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">Thesis</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h4>
             <p className="text-foreground">{result.caseStructure.thesis}</p>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">Framework</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h4>
             <p className="text-foreground">{result.caseStructure.framework}</p>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">Burden of Proof</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h4>
             <p className="text-foreground">{result.caseStructure.burdenOfProof}</p>
           </div>
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Definitions</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h4>
             <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
               {result.caseStructure.keyDefinitions?.map((def, i) => (
                 <li key={i}>{def}</li>
-              )) || <li className="text-muted-foreground">No definitions provided</li>}
+              )) || <li className="text-muted-foreground">{t('generateResults.noDefinitions')}</li>}
             </ul>
           </div>
         </div>
@@ -211,8 +214,8 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
 
       {/* Contentions */}
       <SectionCard
-        title="Arguments"
-        description={`${result.contentions?.length || 0} structured arguments`}
+        title={t('generateResults.arguments')}
+        description={`${result.contentions?.length || 0} ${t('generateResults.structuredArguments')}`}
         icon={<Shield className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('contentions')}
       >
@@ -225,14 +228,14 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
 
       {/* Predicted Opponent Case */}
       <SectionCard
-        title="Predicted Opponent Case"
-        description="What they'll likely argue"
+        title={t('generateResults.predictedOpponent')}
+        description={t('generateResults.predictedOpponentDesc')}
         icon={<Swords className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('opponent')}
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Likely Arguments</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h4>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.likelyArguments?.map((arg, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -244,7 +247,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Strategic Weaknesses</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h4>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -256,7 +259,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Clashes</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h4>
             <div className="flex flex-wrap gap-2">
               {result.predictedOpponentCase?.keyClashes?.map((clash, i) => (
                 <Badge key={i} variant="outline">{clash}</Badge>
@@ -268,23 +271,23 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
 
       {/* Prepared Counters */}
       <SectionCard
-        title="Prepared Counters"
-        description="Ready-to-use rebuttals"
+        title={t('generateResults.preparedCounters')}
+        description={t('generateResults.preparedCountersDesc')}
         onRegenerate={() => onRegenerateSection?.('counters')}
       >
         <div className="space-y-4">
           {result.counters?.map((counter, i) => (
             <div key={i} className="rounded-lg border border-border p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant="destructive" className="text-xs">Target</Badge>
+                <Badge variant="destructive" className="text-xs">{t('generateResults.target')}</Badge>
                 <span className="text-sm font-medium text-foreground">{counter?.targetArgument}</span>
               </div>
               <div>
-                <span className="text-sm font-medium text-muted-foreground">Counter: </span>
+                <span className="text-sm font-medium text-muted-foreground">{t('generateResults.counter')} </span>
                 <span className="text-sm text-foreground">{counter?.counterpoint}</span>
               </div>
               <div className="bg-muted/50 rounded-md p-2">
-                <span className="text-xs font-medium text-muted-foreground">Rebuttal: </span>
+                <span className="text-xs font-medium text-muted-foreground">{t('generateResults.rebuttal')} </span>
                 <span className="text-sm text-foreground">{counter?.rebuttal}</span>
               </div>
             </div>

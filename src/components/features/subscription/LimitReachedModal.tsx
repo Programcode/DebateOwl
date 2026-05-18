@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Zap, Clock } from 'lucide-react';
@@ -12,6 +13,7 @@ interface LimitReachedModalProps {
 }
 
 export function LimitReachedModal({ open, onOpenChange, variant, limit, current, onUpgrade }: LimitReachedModalProps) {
+  const { t } = useTranslation();
   const isTrialExpired = variant === 'trial_expired';
 
   return (
@@ -26,22 +28,22 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
             )}
           </div>
           <DialogTitle className="text-center">
-            {isTrialExpired ? 'Free Trial Ended' : 'Daily Limit Reached'}
+            {isTrialExpired ? t('limitModal.trialEnded') : t('limitModal.limitReached')}
           </DialogTitle>
           <DialogDescription className="text-center">
             {isTrialExpired
-              ? 'Your 3-day free trial has ended. Upgrade to Pro to keep using DebateLab.'
-              : `You've used ${current || 0} of your ${limit || 0} daily requests. Your limit resets at midnight UTC.`}
+              ? t('limitModal.trialEndedDesc')
+              : t('limitModal.limitReachedDesc', { current: current || 0, limit: limit || 0 })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-2 mt-4">
           <Button onClick={onUpgrade} size="lg" className="w-full">
             <Zap className="h-4 w-4 mr-2" />
-            Upgrade to Pro — $5/mo
+            {t('limitModal.upgrade')}
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-1">
-            50 requests/day + advanced AI models
+            {t('limitModal.upgradeNote')}
           </p>
         </div>
       </DialogContent>

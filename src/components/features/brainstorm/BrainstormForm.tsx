@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lightbulb, Brain } from 'lucide-react';
@@ -25,6 +26,7 @@ interface BrainstormFormProps {
 }
 
 export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
+  const { t } = useTranslation();
   const { brainstormForm, setBrainstormForm } = useSessionStore();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BrainstormInput>({
@@ -56,8 +58,8 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
             <Lightbulb className="h-5 w-5 text-amber-500" />
           </div>
           <div>
-            <CardTitle>Brainstorm Ideas</CardTitle>
-            <CardDescription>Explore argument angles collaboratively</CardDescription>
+            <CardTitle>{t('brainstormForm.title')}</CardTitle>
+            <CardDescription>{t('brainstormForm.subtitle')}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -66,12 +68,12 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
           {/* Motion Input */}
           <div className="space-y-2">
             <Label htmlFor="motion" className="text-sm font-medium">
-              Motion / Topic <span className="text-destructive">*</span>
+              {t('brainstormForm.motion')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="motion"
               {...register('motion')}
-              placeholder="e.g., Universal Basic Income should be implemented globally"
+              placeholder={t('brainstormForm.motionPlaceholder')}
               className="h-12"
             />
             {errors.motion && (
@@ -83,7 +85,7 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Side */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Side to Explore</Label>
+              <Label className="text-sm font-medium">{t('brainstormForm.side')}</Label>
               <Select
                 value={currentValues.side}
                 onValueChange={(value) => setValue('side', value as BrainstormInput['side'])}
@@ -92,16 +94,16 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="both">Explore Both Sides</SelectItem>
-                  <SelectItem value="pro">Proposition Only</SelectItem>
-                  <SelectItem value="con">Opposition Only</SelectItem>
+                  <SelectItem value="both">{t('brainstormForm.sideBoth')}</SelectItem>
+                  <SelectItem value="pro">{t('brainstormForm.sidePro')}</SelectItem>
+                  <SelectItem value="con">{t('brainstormForm.sideCon')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Output Mode */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Output Format</Label>
+              <Label className="text-sm font-medium">{t('brainstormForm.outputFormat')}</Label>
               <Select
                 value={currentValues.outputMode}
                 onValueChange={(value) => setValue('outputMode', value as BrainstormInput['outputMode'])}
@@ -110,9 +112,9 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="topfive">Top 5 Best Angles</SelectItem>
-                  <SelectItem value="mindmap">Mind Map Style</SelectItem>
-                  <SelectItem value="buckets">Categorized Buckets</SelectItem>
+                  <SelectItem value="topfive">{t('brainstormForm.outputTop5')}</SelectItem>
+                  <SelectItem value="mindmap">{t('brainstormForm.outputMindmap')}</SelectItem>
+                  <SelectItem value="buckets">{t('brainstormForm.outputBuckets')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -121,12 +123,12 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
           {/* Context */}
           <div className="space-y-2">
             <Label htmlFor="context" className="text-sm font-medium">
-              What You Already Have (Optional)
+              {t('brainstormForm.existing')}
             </Label>
             <Textarea
               id="context"
               {...register('context')}
-              placeholder="Share any ideas or angles you've already considered..."
+              placeholder={t('brainstormForm.existingPlaceholder')}
               className="min-h-[100px] resize-y"
             />
           </div>
@@ -140,12 +142,12 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
-                Generating Ideas...
+                {t('brainstormForm.generating')}
               </>
             ) : (
               <>
                 <Brain className="mr-2 h-4 w-4" />
-                Start Brainstorming
+                {t('brainstormForm.submit')}
               </>
             )}
           </Button>

@@ -1,5 +1,6 @@
 // src/components/features/factoids/FactoidsResults.tsx
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare, Bookmark, FileText, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ const verificationConfig = {
 };
 
 function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
+  const { t } = useTranslation();
   // Defensive check for old data format in localStorage
   const verified = factoid.citation?.verified ?? 'pending';
   const config = verificationConfig[verified] ?? verificationConfig.pending;
@@ -62,7 +64,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
               {config.label}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              Relevance: {factoid.relevanceScore}%
+              {t('factoidsResults.relevance')} {factoid.relevanceScore}%
             </span>
           </div>
         </div>
@@ -74,7 +76,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary"
               onClick={() => onSave(factoid.shortClaim, `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`, factoid.citation?.url)}
-              title="Save to Library"
+              title={t('factoidsResults.saveToLibrary')}
             >
               <Bookmark className="h-4 w-4" />
             </Button>
@@ -84,27 +86,27 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 
       {/* Key Figure */}
       <div className="rounded-md bg-primary/5 border border-primary/20 p-3 text-left">
-        <span className="text-sm font-medium text-primary">Key Figure: </span>
+        <span className="text-sm font-medium text-primary">{t('factoidsResults.keyFigure')} </span>
         <span className="text-lg font-bold text-foreground">{factoid.keyFigure}</span>
       </div>
 
       {/* Context & Limitations */}
       <div className="space-y-2 text-sm text-left">
         <div>
-          <span className="font-medium text-muted-foreground">Context: </span>
+          <span className="font-medium text-muted-foreground">{t('factoidsResults.context')} </span>
           <span className="text-foreground">{factoid.context}</span>
         </div>
         <div>
-          <span className="font-medium text-muted-foreground">Limitations: </span>
+          <span className="font-medium text-muted-foreground">{t('factoidsResults.limitations')} </span>
           <span className="text-foreground">{factoid.limitations}</span>
         </div>
       </div>
 
       {/* Citation Block */}
       <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm text-left">
-        <div className="font-medium text-foreground">{factoid.citation?.title || 'Unknown Source'}</div>
+        <div className="font-medium text-foreground">{factoid.citation?.title || t('factoidsResults.unknownSource')}</div>
         <div className="text-muted-foreground">
-          {factoid.citation?.publisher || 'Unknown'}
+          {factoid.citation?.publisher || t('factoidsResults.unknown')}
           {factoid.citation?.date && ` • ${factoid.citation.date}`}
         </div>
         {safeUrl ? (
@@ -114,10 +116,10 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-primary hover:underline"
           >
-            View Source <ExternalLink className="h-3 w-3" />
+            {t('factoidsResults.viewSource')} <ExternalLink className="h-3 w-3" />
           </a>
         ) : (
-          <span className="text-amber-500 text-xs">URL requires verification</span>
+          <span className="text-amber-500 text-xs">{t('factoidsResults.urlNeedsVerification')}</span>
         )}
       </div>
 
@@ -125,7 +127,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
       <div className="flex items-start gap-2 text-sm">
         <Lightbulb className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
         <div>
-          <span className="font-medium text-muted-foreground">How to use: </span>
+          <span className="font-medium text-muted-foreground">{t('factoidsResults.howToUse')} </span>
           <span className="text-foreground">{factoid.howToUse}</span>
         </div>
       </div>
@@ -134,6 +136,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 }
 
 export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource }: FactoidsResultsProps) {
+  const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const verifiedCount = result.factoids.filter(f => f.citation?.verified === 'verified').length;
   const unverifiedCount = result.factoids.filter(f => f.citation?.verified === 'unverified').length;
@@ -141,9 +144,9 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
   const handleDocxExport = async () => {
     const success = await exportFactoidsToDocx(result);
     if (success) {
-      toast.success('Factoids exported to DOCX!');
+      toast.success(t('factoidsResults.exportedDocx'));
     } else {
-      toast.error('Failed to export to DOCX');
+      toast.error(t('factoidsResults.exportFailedDocx'));
     }
   };
 
@@ -152,22 +155,22 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
     try {
       const exportResult = await exportFactoidsToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
-        toast.success('Factoids exported to Google Docs!', {
+        toast.success(t('factoidsResults.exportedGdocs'), {
           action: {
-            label: 'Open',
+            label: t('factoidsResults.open'),
             onClick: () => window.open(exportResult.documentUrl, '_blank'),
           },
         });
         window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || 'Authentication required', {
-          description: 'Please sign out and sign back in to grant Google Drive access.',
+        toast.error(exportResult.error || t('factoidsResults.authRequired'), {
+          description: t('factoidsResults.authRequiredDesc'),
         });
       } else {
-        toast.error(exportResult.error || 'Failed to export to Google Docs');
+        toast.error(exportResult.error || t('factoidsResults.exportFailedGdocs'));
       }
     } catch {
-      toast.error('An unexpected error occurred during export');
+      toast.error(t('factoidsResults.exportError'));
     } finally {
       setIsExportingGDocs(false);
     }
@@ -200,15 +203,15 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
           </Button>
           <Button variant="outline" size="sm" onClick={onDiscuss}>
             <MessageSquare className="h-4 w-4 mr-2" />
-            Discuss Evidence
+            {t('factoidsResults.discuss')}
           </Button>
         </div>
       )}
 
       {/* Verification Status */}
       <SectionCard
-        title="Verification Status"
-        description={`${verifiedCount} verified, ${unverifiedCount} need verification`}
+        title={t('factoidsResults.verificationStatus')}
+        description={`${verifiedCount} ${t('factoidsResults.verified')}, ${unverifiedCount} ${t('factoidsResults.needVerification')}`}
       >
         <div className="space-y-4">
           <div className="flex items-center gap-4">
@@ -225,7 +228,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
               disabled={isVerifying}
               className="w-full"
             >
-              {isVerifying ? 'Verifying Sources...' : 'Verify All Sources'}
+              {isVerifying ? t('factoidsResults.verifying') : t('factoidsResults.verifyAll')}
             </Button>
           )}
         </div>
@@ -236,7 +239,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <span className="font-medium text-amber-600">Important Notes</span>
+            <span className="font-medium text-amber-600">{t('factoidsResults.importantNotes')}</span>
           </div>
           <ul className="space-y-1 text-sm">
             {result.warnings.map((warning, i) => (
@@ -251,8 +254,8 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
 
       {/* Factoids */}
       <SectionCard
-        title={`Found ${result.factoids.length} Factoids`}
-        description="Evidence points with citations"
+        title={`${t('factoidsResults.found')} ${result.factoids.length} ${t('factoidsResults.factoids')}`}
+        description={t('factoidsResults.factoidsDesc')}
       >
         <div className="space-y-4">
           {result.factoids.map((factoid) => (
@@ -263,8 +266,8 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
 
       {/* Search Suggestions */}
       <SectionCard
-        title="Find More Evidence"
-        description="Suggested search queries"
+        title={t('factoidsResults.findMore')}
+        description={t('factoidsResults.findMoreDesc')}
         icon={<Search className="h-5 w-5" />}
       >
         <div className="space-y-2">

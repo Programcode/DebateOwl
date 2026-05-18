@@ -1,5 +1,6 @@
 // src/components/features/generate/GenerateForm.tsx
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Sparkles, Wand2, Mic, MicOff } from 'lucide-react';
@@ -26,6 +27,7 @@ interface GenerateFormProps {
 }
 
 export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
+  const { t } = useTranslation();
   const { generateForm, setGenerateForm } = useSessionStore();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
@@ -79,8 +81,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Generate Debate Case</CardTitle>
-            <CardDescription>Create structured arguments for any motion</CardDescription>
+            <CardTitle>{t('generateForm.title')}</CardTitle>
+            <CardDescription>{t('generateForm.subtitle')}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -89,13 +91,13 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           {/* Motion Input with Voice */}
           <div className="space-y-2">
             <Label htmlFor="motion" className="text-sm font-medium">
-              Motion / Topic <span className="text-destructive">*</span>
+              {t('generateForm.motion')} <span className="text-destructive">*</span>
             </Label>
             <div className="relative flex gap-2">
               <Input
                 id="motion"
                 {...register('motion')}
-                placeholder="e.g., This house believes that artificial intelligence will create more jobs than it destroys"
+                placeholder={t('generateForm.motionPlaceholder')}
                 className="h-12 flex-1"
               />
               {hasVoiceSupport && (
@@ -105,8 +107,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   size="icon"
                   className={`h-12 w-12 shrink-0 ${isListening ? 'animate-pulse' : ''}`}
                   onClick={toggleVoice}
-                  title={isListening ? "Stop listening" : "Dictate your motion"}
-                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                  title={isListening ? t('generateForm.stopListening') : t('generateForm.dictate')}
+                  aria-label={isListening ? t('generateForm.stopVoice') : t('generateForm.startVoice')}
                 >
                   {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </Button>
@@ -118,7 +120,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                Listening... Speak your motion clearly
+                {t('generateForm.listening')}
               </div>
             )}
             {errors.motion && (
@@ -130,7 +132,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Side */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Side</Label>
+              <Label className="text-sm font-medium">{t('generateForm.side')}</Label>
               <Select
                 value={currentValues.side}
                 onValueChange={(value) => setValue('side', value as GenerateInput['side'])}
@@ -139,16 +141,16 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Auto (Pick Best)</SelectItem>
-                  <SelectItem value="pro">Proposition (Pro)</SelectItem>
-                  <SelectItem value="con">Opposition (Con)</SelectItem>
+                  <SelectItem value="auto">{t('generateForm.sideAuto')}</SelectItem>
+                  <SelectItem value="pro">{t('generateForm.sidePro')}</SelectItem>
+                  <SelectItem value="con">{t('generateForm.sideCon')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Format */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Debate Format</Label>
+              <Label className="text-sm font-medium">{t('generateForm.format')}</Label>
               <Select
                 value={currentValues.format}
                 onValueChange={(value) => setValue('format', value as GenerateInput['format'])}
@@ -158,14 +160,14 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="custom">Standard Tournament (4-6-6-3)</SelectItem>
+                  <SelectItem value="custom">{t('generateForm.formatStandard')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Role */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Speaker Role</Label>
+              <Label className="text-sm font-medium">{t('generateForm.role')}</Label>
               <Select
                 value={currentValues.role}
                 onValueChange={(value) => setValue('role', value as GenerateInput['role'])}
@@ -174,17 +176,17 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="intro">Introductor (4 min)</SelectItem>
-                  <SelectItem value="r1">R1 - Rebuttal/Arg (6 min)</SelectItem>
-                  <SelectItem value="r2">R2 - Rebuttal/Build (6 min)</SelectItem>
-                  <SelectItem value="conc">Conclusor (3 min)</SelectItem>
+                  <SelectItem value="intro">{t('generateForm.roleIntro')}</SelectItem>
+                  <SelectItem value="r1">{t('generateForm.roleR1')}</SelectItem>
+                  <SelectItem value="r2">{t('generateForm.roleR2')}</SelectItem>
+                  <SelectItem value="conc">{t('generateForm.roleConc')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Length */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Case Length</Label>
+              <Label className="text-sm font-medium">{t('generateForm.length')}</Label>
               <Select
                 value={currentValues.length}
                 onValueChange={(value) => setValue('length', value as GenerateInput['length'])}
@@ -193,16 +195,16 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="brief">Brief</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                  <SelectItem value="brief">{t('generateForm.lengthBrief')}</SelectItem>
+                  <SelectItem value="standard">{t('generateForm.lengthStandard')}</SelectItem>
+                  <SelectItem value="comprehensive">{t('generateForm.lengthComprehensive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Audience */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Audience Level</Label>
+              <Label className="text-sm font-medium">{t('generateForm.audience')}</Label>
               <Select
                 value={currentValues.audience}
                 onValueChange={(value) => setValue('audience', value as GenerateInput['audience'])}
@@ -211,16 +213,16 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
+                  <SelectItem value="beginner">{t('generateForm.audienceBeginner')}</SelectItem>
+                  <SelectItem value="intermediate">{t('generateForm.audienceIntermediate')}</SelectItem>
+                  <SelectItem value="advanced">{t('generateForm.audienceAdvanced')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Tone */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Tone</Label>
+              <Label className="text-sm font-medium">{t('generateForm.tone')}</Label>
               <Select
                 value={currentValues.tone}
                 onValueChange={(value) => setValue('tone', value as GenerateInput['tone'])}
@@ -229,9 +231,9 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="formal">Formal</SelectItem>
-                  <SelectItem value="conversational">Conversational</SelectItem>
-                  <SelectItem value="aggressive">Aggressive</SelectItem>
+                  <SelectItem value="formal">{t('generateForm.toneFormal')}</SelectItem>
+                  <SelectItem value="conversational">{t('generateForm.toneConversational')}</SelectItem>
+                  <SelectItem value="aggressive">{t('generateForm.toneAggressive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -244,12 +246,12 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
-                Generating Case...
+                {t('generateForm.generating')}
               </>
             ) : (
               <>
                 <Wand2 className="mr-2 h-4 w-4" />
-                Generate Debate Case
+                {t('generateForm.submit')}
               </>
             )}
           </Button>

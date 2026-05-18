@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,21 +32,22 @@ interface AskChatProps {
 }
 
 const modeOptions = [
-  { id: 'general', label: 'General', icon: MessageCircle },
-  { id: 'clarify', label: 'Clarify', icon: HelpCircle },
-  { id: 'proscons', label: 'Pros/Cons', icon: List },
-  { id: 'argumentmap', label: 'Arg Map', icon: Map },
+  { id: 'general', labelKey: 'askChat.modeGeneral', icon: MessageCircle },
+  { id: 'clarify', labelKey: 'askChat.modeClarify', icon: HelpCircle },
+  { id: 'proscons', labelKey: 'askChat.modeProsCons', icon: List },
+  { id: 'argumentmap', labelKey: 'askChat.modeArgMap', icon: Map },
 ];
 
-const LOADING_MESSAGES = [
-  'Thinking...',
-  'Researching...',
-  'Analyzing...',
-  'Generating response...',
-  'Almost there...',
+const LOADING_MESSAGES_KEYS = [
+  'askChat.thinking',
+  'askChat.researching',
+  'askChat.analyzing',
+  'askChat.generatingResponse',
+  'askChat.almostThere',
 ];
 
 const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
+  const { t } = useTranslation();
   const isUser = message.role === 'user';
   const output = message.output;
 
@@ -70,8 +72,8 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                 : message.content;
               onSave(title, message.content);
             }}
-            title="Save to Library"
-            aria-label="Save message to library"
+            title={t('askChat.saveToLibrary')}
+            aria-label={t('askChat.saveMessage')}
           >
             <Bookmark className="h-4 w-4" />
           </Button>
@@ -81,7 +83,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
         {/* Follow-up questions */}
         {output?.followUpQuestions && output.followUpQuestions.length > 0 && (
           <div className="space-y-1 pt-2 border-t border-border/50">
-            <span className="text-xs font-medium text-muted-foreground">Follow-up questions:</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('askChat.followUp')}</span>
             <ul className="space-y-1">
               {output.followUpQuestions.map((q: string, i: number) => (
                 <li key={i} className="text-xs text-muted-foreground">• {q}</li>
@@ -94,7 +96,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
         {output?.prosConsAnalysis && (
           <div className="grid gap-2 sm:grid-cols-2 pt-2 border-t border-border/50">
             <div>
-              <span className="text-xs font-medium text-primary">Pros</span>
+              <span className="text-xs font-medium text-primary">{t('askChat.pros')}</span>
               <ul className="mt-1 space-y-0.5">
                 {output.prosConsAnalysis.pros.map((pro: string, i: number) => (
                   <li key={i} className="text-xs">✓ {pro}</li>
@@ -102,7 +104,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
               </ul>
             </div>
             <div>
-              <span className="text-xs font-medium text-destructive">Cons</span>
+              <span className="text-xs font-medium text-destructive">{t('askChat.cons')}</span>
               <ul className="mt-1 space-y-0.5">
                 {output.prosConsAnalysis.cons.map((con: string, i: number) => (
                   <li key={i} className="text-xs">✗ {con}</li>
@@ -128,6 +130,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
 });
 
 export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: AskChatProps) {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
   const [citationMode, setCitationMode] = useState(false);
@@ -145,7 +148,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       return;
     }
     const interval = setInterval(() => {
-      setLoadingMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+      setLoadingMessageIndex(prev => (prev + 1) % LOADING_MESSAGES_KEYS.length);
     }, 3000);
     return () => clearInterval(interval);
   }, [isLoading]);
@@ -173,8 +176,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       // Validate total file count
       if (allFiles.length > MAX_FILE_COUNT) {
         toast({
-          title: 'Too many files',
-          description: `You can only upload up to ${MAX_FILE_COUNT} files at once.`,
+          title: t('askChat.tooManyFiles'),
+          description: t('askChat.tooManyFilesDesc', { max: MAX_FILE_COUNT }),
           variant: 'destructive',
         });
         return;
@@ -184,7 +187,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       const result = validateFileUpload(allFiles);
       if (!result.valid) {
         toast({
-          title: 'File validation failed',
+          title: t('askChat.fileValidationFailed'),
           description: result.error,
           variant: 'destructive',
         });
@@ -221,13 +224,13 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               <MessageCircle className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle>Ask Your Coach</CardTitle>
-              <CardDescription>Get answers to debate questions</CardDescription>
+              <CardTitle>{t('askChat.title')}</CardTitle>
+              <CardDescription>{t('askChat.subtitle')}</CardDescription>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={onClear}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Clear
+            {t('askChat.clear')}
           </Button>
         </div>
       </CardHeader>
@@ -238,9 +241,9 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6">
               <MessageCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="font-medium text-foreground mb-1">Start a conversation</h3>
+              <h3 className="font-medium text-foreground mb-1">{t('askChat.startConversation')}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Ask anything about debate strategy, arguments, or get help with your case.
+                {t('askChat.startDesc')}
               </p>
             </div>
           ) : (
@@ -254,7 +257,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                     <div className="flex items-center gap-2">
                       <LoadingSpinner size="sm" />
                       <span className="text-sm text-muted-foreground animate-pulse">
-                        {LOADING_MESSAGES[loadingMessageIndex]}
+                        {t(LOADING_MESSAGES_KEYS[loadingMessageIndex])}
                       </span>
                     </div>
                   </div>
@@ -277,14 +280,14 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 className="text-xs"
               >
                 <option.icon className="mr-1 h-3 w-3" />
-                {option.label}
+                {t(option.labelKey)}
               </Button>
             ))}
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Quote className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="citation-mode" className="text-xs">Citations</Label>
+              <Label htmlFor="citation-mode" className="text-xs">{t('askChat.citations')}</Label>
               <Switch
                 id="citation-mode"
                 checked={citationMode}
@@ -325,8 +328,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
             variant="outline"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            title="Attach files"
-            aria-label="Attach files"
+            title={t('askChat.attachFiles')}
+            aria-label={t('askChat.attachFiles')}
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -337,8 +340,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               variant={isListening ? "destructive" : "outline"}
               size="icon"
               onClick={toggleListening}
-              title={isListening ? "Stop listening" : "Start voice input"}
-              aria-label={isListening ? "Stop listening" : "Start voice input"}
+              title={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}
+              aria-label={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}
               className={isListening ? "animate-pulse" : ""}
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -348,11 +351,11 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isListening ? "Listening..." : "Ask your debate coach..."}
+            placeholder={isListening ? t('askChat.placeholderListening') : t('askChat.placeholder')}
             disabled={isLoading}
             className="flex-1"
           />
-          <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading} aria-label="Send message">
+          <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading} aria-label={t('askChat.send')}>
             <Send className="h-4 w-4" />
           </Button>
         </form>

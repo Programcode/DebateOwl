@@ -1,4 +1,5 @@
 // src/components/features/factoids/FactoidsForm.tsx
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { BookOpen, Search } from 'lucide-react';
@@ -25,6 +26,7 @@ interface FactoidsFormProps {
 }
 
 export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
+  const { t } = useTranslation();
   const { factoidsForm, setFactoidsForm } = useSessionStore();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FactoidsInput>({
@@ -56,8 +58,8 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
             <BookOpen className="h-5 w-5 text-secondary-foreground" />
           </div>
           <div>
-            <CardTitle>Find Evidence</CardTitle>
-            <CardDescription>Get debate-ready factoids with verified citations</CardDescription>
+            <CardTitle>{t('factoidsForm.title')}</CardTitle>
+            <CardDescription>{t('factoidsForm.subtitle')}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -66,12 +68,12 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
           {/* Claim Input */}
           <div className="space-y-2">
             <Label htmlFor="claim" className="text-sm font-medium">
-              Claim to Support <span className="text-destructive">*</span>
+              {t('factoidsForm.claim')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="claim"
               {...register('claim')}
-              placeholder="e.g., Renewable energy is more cost-effective than fossil fuels"
+              placeholder={t('factoidsForm.claimPlaceholder')}
               className="h-12"
             />
             {errors.claim && (
@@ -83,11 +85,11 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Region */}
             <div className="space-y-2">
-              <Label htmlFor="region" className="text-sm font-medium">Region <span className="text-destructive">*</span></Label>
+              <Label htmlFor="region" className="text-sm font-medium">{t('factoidsForm.region')} <span className="text-destructive">*</span></Label>
               <Input
                 id="region"
                 {...register('region')}
-                placeholder="e.g., United States, Europe, Global"
+                placeholder={t('factoidsForm.regionPlaceholder')}
               />
               {errors.region && (
                 <p className="text-sm text-destructive">{errors.region.message}</p>
@@ -96,17 +98,17 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
 
             {/* Timeframe */}
             <div className="space-y-2">
-              <Label htmlFor="timeframe" className="text-sm font-medium">Timeframe (Optional)</Label>
+              <Label htmlFor="timeframe" className="text-sm font-medium">{t('factoidsForm.timeframe')}</Label>
               <Input
                 id="timeframe"
                 {...register('timeframe')}
-                placeholder="e.g., 2020-2024, Last decade"
+                placeholder={t('factoidsForm.timeframePlaceholder')}
               />
             </div>
 
             {/* Evidence Strength */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Source Type</Label>
+              <Label className="text-sm font-medium">{t('factoidsForm.sourceType')}</Label>
               <Select
                 value={currentValues.sourceType}
                 onValueChange={(value) => setValue('sourceType', value as FactoidsInput['sourceType'])}
@@ -115,10 +117,10 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Any Reputable Source</SelectItem>
-                  <SelectItem value="academic">Academic Only</SelectItem>
-                  <SelectItem value="government">Government Sources</SelectItem>
-                  <SelectItem value="news">Major News</SelectItem>
+                  <SelectItem value="any">{t('factoidsForm.sourceAny')}</SelectItem>
+                  <SelectItem value="academic">{t('factoidsForm.sourceAcademic')}</SelectItem>
+                  <SelectItem value="government">{t('factoidsForm.sourceGovernment')}</SelectItem>
+                  <SelectItem value="news">{t('factoidsForm.sourceNews')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -131,12 +133,12 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
-                Finding Evidence...
+                {t('factoidsForm.finding')}
               </>
             ) : (
               <>
                 <Search className="mr-2 h-4 w-4" />
-                Find Factoids
+                {t('factoidsForm.submit')}
               </>
             )}
           </Button>
