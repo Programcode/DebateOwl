@@ -55,26 +55,28 @@ export function AppLayout() {
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-0.5 lg:gap-1">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 end={item.path === '/app'}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  "flex items-center gap-1.5 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
                 activeClassName="bg-primary/10 text-primary"
               >
-                <item.icon className="h-4 w-4" />
-                {t(`nav.${item.key}`)}
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">{t(`nav.${item.key}`)}</span>
               </NavLink>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+          <div className="flex items-center gap-1.5">
+            <div className="hidden lg:block">
+              <LanguageSwitcher />
+            </div>
             <ThemeToggle />
             <NavLink to="/app/settings">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings">
