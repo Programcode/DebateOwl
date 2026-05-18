@@ -389,6 +389,18 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
   }
 }
 
+class InvalidJsonResponseError extends Error {
+  readonly providerName: string;
+  readonly rawText: string;
+
+  constructor(providerName: string, rawText: string) {
+    super(`${providerName} returned invalid JSON`);
+    this.name = "InvalidJsonResponseError";
+    this.providerName = providerName;
+    this.rawText = rawText;
+  }
+}
+
 function parseJsonFromText(text: string, providerName: string) {
   if (!text) throw new Error(`${providerName} returned empty response content`);
   try {
@@ -403,7 +415,7 @@ function parseJsonFromText(text: string, providerName: string) {
       try { return JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
     }
   }
-  throw new Error(`${providerName} returned invalid JSON`);
+  throw new InvalidJsonResponseError(providerName, text);
 }
 
 // ============== EXA FUNCTIONS ==============
@@ -661,6 +673,44 @@ function buildResearchContext(research: ResearchContext): string {
 // ============== AI PROVIDER CALLS ==============
 
 async function callAI(
+  provider: Provider,
+  model: string,
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  temperature: number
+): Promise<unknown> {
+  try {
+    return await callAIOnce(provider, model, systemPrompt, messages, temperature);
+  } catch (err) {
+    if (!(err instanceof InvalidJsonResponseError)) throw err;
+
+    console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
+    return await callAIOnce(
+      provider,
+      model,
+      `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
+      withJsonRepairPrompt(messages),
+      0
+    );
+  }
+}
+
+function withJsonRepairPrompt(messages: Array<{ role: string; content: string }>) {
+  const repair = "Your previous response was not valid JSON. Return only valid JSON matching this schema, no prose. Re-answer the original request as a single JSON object. Do not include markdown fences or explanations.";
+  if (messages.length === 0) return [{ role: "user", content: repair }];
+
+  const repaired = [...messages];
+  const last = repaired[repaired.length - 1];
+  if (last.role === "user") {
+    repaired[repaired.length - 1] = { ...last, content: `${last.content}\n\n${repair}` };
+    return repaired;
+  }
+
+  repaired.push({ role: "user", content: repair });
+  return repaired;
+}
+
+async function callAIOnce(
   provider: Provider,
   model: string,
   systemPrompt: string,
