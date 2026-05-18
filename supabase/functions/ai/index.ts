@@ -89,12 +89,11 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Pro-only models: require active subscription
 const PRO_MODELS = new Set([
-  "gpt-4o",
-  "claude-3-5-sonnet-latest",
-  "claude-3-opus-20240229",
-  "gemini-1.5-pro",
-  "gemini-2.0-pro-exp",
-  "gemini-3-pro-preview",
+  "gpt-5.5",
+  "gpt-5.4",
+  "claude-opus-4-7",
+  "claude-sonnet-4-6",
+  "gemini-3.1-pro-preview",
 ]);
 
 interface RateLimitResult {
@@ -279,14 +278,14 @@ async function logUsage(
   try {
     // Estimate cost (rough estimates per 1M tokens)
     const costPer1MInput: Record<string, number> = {
-      "gpt-4o": 2.5, "gpt-4o-mini": 0.15, "gpt-4-turbo": 10,
-      "gemini-2.0-flash": 0.075, "gemini-1.5-pro": 1.25,
-      "claude-3-5-sonnet": 3, "claude-3-haiku": 0.25
+      "gpt-5.5": 5, "gpt-5.4": 2.5, "gpt-5.4-mini": 0.3,
+      "gemini-3.1-pro-preview": 1.25, "gemini-3-flash-preview": 0.075, "gemini-3.1-flash-lite-preview": 0.04,
+      "claude-opus-4-7": 15, "claude-sonnet-4-6": 3, "claude-haiku-4-5-20251001": 0.25
     };
     const costPer1MOutput: Record<string, number> = {
-      "gpt-4o": 10, "gpt-4o-mini": 0.6, "gpt-4-turbo": 30,
-      "gemini-2.0-flash": 0.3, "gemini-1.5-pro": 5,
-      "claude-3-5-sonnet": 15, "claude-3-haiku": 1.25
+      "gpt-5.5": 15, "gpt-5.4": 10, "gpt-5.4-mini": 1.2,
+      "gemini-3.1-pro-preview": 5, "gemini-3-flash-preview": 0.3, "gemini-3.1-flash-lite-preview": 0.15,
+      "claude-opus-4-7": 75, "claude-sonnet-4-6": 15, "claude-haiku-4-5-20251001": 1.25
     };
 
     const inputCost = ((inputTokens || 0) / 1_000_000) * (costPer1MInput[model] || 1);
@@ -1045,7 +1044,7 @@ Deno.serve(async (req) => {
   const feature = body.feature as Feature | undefined;
   const input = body.input as Record<string, unknown> | undefined;
   const provider = (body.provider as Provider | undefined) || DEFAULT_PROVIDER;
-  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-2.0-flash";
+  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-3-flash-preview";
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
   const sources = (body.sources as Source[] | undefined) || [];
