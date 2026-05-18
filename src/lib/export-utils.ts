@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
@@ -24,9 +25,9 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     const framework = result.caseStructure.framework?.trim() || 'No framework provided.';
     const burdenOfProof = result.caseStructure.burdenOfProof?.trim() || 'No burden of proof provided.';
     const sideLabel = result.metadata.side === 'pro'
-      ? 'Proposition'
+      ? i18n.t('export.proposition')
       : result.metadata.side === 'con'
-        ? 'Opposition'
+        ? i18n.t('export.opposition')
         : 'Unknown';
     const formatLabel = result.metadata.format ? result.metadata.format.toUpperCase() : 'UNKNOWN';
     const generatedAtDate = result.metadata.generatedAt ? new Date(result.metadata.generatedAt) : null;
@@ -47,27 +48,27 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
             spacing: { before: 200, after: 100 },
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Reasoning: ", italics: true }), new TextRun(reasoning)],
+            children: [new TextRun({ text: `${i18n.t('export.reasoning')}: `, italics: true }), new TextRun(reasoning)],
             spacing: { after: 100 },
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Evidence: ", italics: true }), new TextRun(evidence)],
+            children: [new TextRun({ text: `${i18n.t('export.evidence')}: `, italics: true }), new TextRun(evidence)],
             spacing: { after: 100 },
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Impact: ", italics: true }), new TextRun(impact)],
+            children: [new TextRun({ text: `${i18n.t('export.impact')}: `, italics: true }), new TextRun(impact)],
             spacing: { after: 300 },
           }),
         ];
       })
-      : [new Paragraph({ text: "No arguments provided.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: i18n.t('export.noArguments'), spacing: { after: 200 } })];
 
     const predictedArguments = Array.isArray(result.predictedOpponentCase.likelyArguments)
       ? result.predictedOpponentCase.likelyArguments
       : [];
     const predictedSection = predictedArguments.length > 0
       ? predictedArguments.map(arg => new Paragraph({ text: "• " + arg, spacing: { after: 100 } }))
-      : [new Paragraph({ text: "No predicted opponent arguments provided.", spacing: { after: 100 } })];
+      : [new Paragraph({ text: i18n.t('export.noOpponentArgs'), spacing: { after: 100 } })];
 
     const counters = Array.isArray(result.counters) ? result.counters : [];
     const countersSection = counters.length > 0
@@ -77,18 +78,18 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
         const rebuttal = c?.rebuttal || 'No rebuttal provided.';
         return [
           new Paragraph({
-            children: [new TextRun({ text: "Target: ", bold: true }), new TextRun(target)],
+            children: [new TextRun({ text: `${i18n.t('export.target')}: `, bold: true }), new TextRun(target)],
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Counter: ", italics: true }), new TextRun(counterpoint)],
+            children: [new TextRun({ text: `${i18n.t('export.counter')}: `, italics: true }), new TextRun(counterpoint)],
           }),
           new Paragraph({
-            children: [new TextRun({ text: "Rebuttal: ", italics: true }), new TextRun(rebuttal)],
+            children: [new TextRun({ text: `${i18n.t('export.rebuttal')}: `, italics: true }), new TextRun(rebuttal)],
             spacing: { after: 200 },
           }),
         ];
       })
-      : [new Paragraph({ text: "No counters provided.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: i18n.t('export.noCounters'), spacing: { after: 200 } })];
 
     const doc = new Document({
       sections: [
@@ -97,7 +98,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
           children: [
             // Title
             new Paragraph({
-              text: "Debate Case: " + thesisTitle,
+              text: i18n.t('export.debateCase') + ": " + thesisTitle,
               heading: HeadingLevel.HEADING_1,
               alignment: AlignmentType.CENTER,
               spacing: { after: 400 },
@@ -106,7 +107,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
             // Metadata
             new Paragraph({
               children: [
-                new TextRun({ text: "Side: ", bold: true }),
+                new TextRun({ text: `${i18n.t('export.side')}: `, bold: true }),
                 new TextRun(sideLabel),
                 new TextRun({ text: " | Format: ", bold: true }),
                 new TextRun(formatLabel),
@@ -118,37 +119,37 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
 
             // Exordio (if present)
             ...(result.exordio ? [
-              new Paragraph({ text: "EXORDIO", heading: HeadingLevel.HEADING_2 }),
+              new Paragraph({ text: i18n.t('export.exordio').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
               new Paragraph({
-                children: [new TextRun({ text: "Hook: ", bold: true }), new TextRun(result.exordio.hook || '')],
+                children: [new TextRun({ text: `${i18n.t('export.hook')}: `, bold: true }), new TextRun(result.exordio.hook || '')],
                 spacing: { after: 100 },
               }),
               new Paragraph({
-                children: [new TextRun({ text: "Transition: ", bold: true }), new TextRun(result.exordio.transition || '')],
+                children: [new TextRun({ text: `${i18n.t('export.transition')}: `, bold: true }), new TextRun(result.exordio.transition || '')],
                 spacing: { after: 400 },
               }),
             ] : []),
 
             // Thesis & Framework
-            new Paragraph({ text: "THESIS", heading: HeadingLevel.HEADING_2 }),
+            new Paragraph({ text: i18n.t('export.thesis').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
             new Paragraph({ text: thesis, spacing: { after: 200 } }),
 
-            new Paragraph({ text: "FRAMEWORK", heading: HeadingLevel.HEADING_2 }),
+            new Paragraph({ text: i18n.t('export.framework').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
             new Paragraph({ text: framework, spacing: { after: 200 } }),
 
-            new Paragraph({ text: "BURDEN OF PROOF", heading: HeadingLevel.HEADING_2 }),
+            new Paragraph({ text: i18n.t('export.burdenOfProof').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
             new Paragraph({ text: burdenOfProof, spacing: { after: 400 } }),
 
             // Contentions
-            new Paragraph({ text: "ARGUMENTS", heading: HeadingLevel.HEADING_2 }),
+            new Paragraph({ text: i18n.t('export.arguments').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
             ...contentionsSection,
 
             // Predictions
-            new Paragraph({ text: "PREDICTED OPPONENT CASE", heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
+            new Paragraph({ text: i18n.t('export.predictedOpponent').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
             ...predictedSection,
 
             // Counters
-            new Paragraph({ text: "PREPARED COUNTERS", heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
+            new Paragraph({ text: i18n.t('export.counters').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
             ...countersSection,
           ],
         },
@@ -185,19 +186,19 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
           spacing: { before: 200, after: 100 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: "Why Weak: ", italics: true }), new TextRun(w.whyWeak || '')],
+          children: [new TextRun({ text: `${i18n.t('export.whyWeak')}: `, italics: true }), new TextRun(w.whyWeak || '')],
           spacing: { after: 100 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: "How Opponent Attacks: ", italics: true }), new TextRun(w.howOpponentAttacks || '')],
+          children: [new TextRun({ text: `${i18n.t('export.howOpponentAttacks')}: `, italics: true }), new TextRun(w.howOpponentAttacks || '')],
           spacing: { after: 100 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: "Improved Version: ", italics: true }), new TextRun(w.improvedVersion || '')],
+          children: [new TextRun({ text: `${i18n.t('export.improvedVersion')}: `, italics: true }), new TextRun(w.improvedVersion || '')],
           spacing: { after: 200 },
         }),
       ])
-      : [new Paragraph({ text: "No weaknesses identified.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: i18n.t('export.noWeaknesses'), spacing: { after: 200 } })];
 
     const fallacies = result.fallaciesDetected || [];
     const fallaciesSection = fallacies.length > 0
@@ -209,7 +210,7 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
         new Paragraph({ text: `Location: ${f.location}`, spacing: { after: 50 } }),
         new Paragraph({ text: f.explanation, spacing: { after: 150 } }),
       ])
-      : [new Paragraph({ text: "No fallacies detected.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: i18n.t('export.noFallacies'), spacing: { after: 200 } })];
 
     const crossEx = result.crossExQuestions || [];
     const crossExSection = crossEx.length > 0
@@ -221,34 +222,34 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
         new Paragraph({ text: `Purpose: ${q.purpose}`, spacing: { after: 50 } }),
         new Paragraph({ text: `Expected Trap: ${q.expectedTrap}`, spacing: { after: 150 } }),
       ])
-      : [new Paragraph({ text: "No cross-examination questions provided.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: i18n.t('export.noCrossEx'), spacing: { after: 200 } })];
 
     const doc = new Document({
       sections: [{
         properties: {},
         children: [
           new Paragraph({
-            text: "Case Attack Analysis",
+            text: i18n.t('export.caseAttack'),
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
             spacing: { after: 400 },
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: "Overall Score: ", bold: true }),
+              new TextRun({ text: `${i18n.t('export.overallScore')}: `, bold: true }),
               new TextRun(`${result.overallAssessment.score}/100`),
             ],
             spacing: { after: 200 },
           }),
           new Paragraph({ text: result.overallAssessment.summary, spacing: { after: 400 } }),
 
-          new Paragraph({ text: "WEAKNESSES IDENTIFIED", heading: HeadingLevel.HEADING_2 }),
+          new Paragraph({ text: i18n.t('export.weaknesses').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
           ...weaknessesSection,
 
-          new Paragraph({ text: "FALLACIES DETECTED", heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
+          new Paragraph({ text: i18n.t('export.fallacies').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
           ...fallaciesSection,
 
-          new Paragraph({ text: "CROSS-EXAMINATION QUESTIONS", heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
+          new Paragraph({ text: i18n.t('export.crossExQuestions').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
           ...crossExSection,
         ],
       }],
@@ -273,7 +274,7 @@ export async function exportBrainstormToDocx(result: BrainstormOutput): Promise<
 
     const children: InstanceType<typeof Paragraph>[] = [
       new Paragraph({
-        text: "Brainstorm Results",
+        text: i18n.t('export.brainstormResults'),
         heading: HeadingLevel.HEADING_1,
         alignment: AlignmentType.CENTER,
         spacing: { after: 400 },
@@ -291,7 +292,7 @@ export async function exportBrainstormToDocx(result: BrainstormOutput): Promise<
         }));
         children.push(new Paragraph({ text: item.idea?.description || '', spacing: { after: 50 } }));
         children.push(new Paragraph({
-          children: [new TextRun({ text: "Why Top: ", italics: true }), new TextRun(item.whyTop || '')],
+          children: [new TextRun({ text: `${i18n.t('export.whyTop')}: `, italics: true }), new TextRun(item.whyTop || '')],
           spacing: { after: 150 },
         }));
       });
@@ -370,26 +371,26 @@ export async function exportFactoidsToDocx(result: FactoidsOutput): Promise<bool
           spacing: { before: 200, after: 100 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: "Key Figure: ", italics: true }), new TextRun(f.keyFigure || '')],
+          children: [new TextRun({ text: `${i18n.t('export.keyFigure')}: `, italics: true }), new TextRun(f.keyFigure || '')],
           spacing: { after: 50 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: "Context: ", italics: true }), new TextRun(f.context || '')],
+          children: [new TextRun({ text: `${i18n.t('export.context')}: `, italics: true }), new TextRun(f.context || '')],
           spacing: { after: 50 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: "How to Use: ", italics: true }), new TextRun(f.howToUse || '')],
+          children: [new TextRun({ text: `${i18n.t('export.howToUse')}: `, italics: true }), new TextRun(f.howToUse || '')],
           spacing: { after: 50 },
         }),
         new Paragraph({
           children: [
-            new TextRun({ text: "Source: ", italics: true }),
+            new TextRun({ text: `${i18n.t('export.source')}: `, italics: true }),
             new TextRun(`${f.citation?.title || 'Unknown'} - ${f.citation?.publisher || 'Unknown'}`),
           ],
           spacing: { after: 200 },
         }),
       ])
-      : [new Paragraph({ text: "No factoids found.", spacing: { after: 200 } })];
+      : [new Paragraph({ text: i18n.t('export.noFactoids'), spacing: { after: 200 } })];
 
     const warnings = result.warnings || [];
     const warningsSection = warnings.length > 0
@@ -401,7 +402,7 @@ export async function exportFactoidsToDocx(result: FactoidsOutput): Promise<bool
         properties: {},
         children: [
           new Paragraph({
-            text: "Research Factoids",
+            text: i18n.t('export.researchFactoids'),
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
             spacing: { after: 400 },
