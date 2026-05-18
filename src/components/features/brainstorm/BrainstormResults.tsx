@@ -1,5 +1,6 @@
 // src/components/features/brainstorm/BrainstormResults.tsx
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare, FileText, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ const sideColors = {
 };
 
 function IdeaCard({ idea }: { idea: Idea }) {
+  const { t } = useTranslation();
   // Defensive defaults for potentially undefined properties
   const strength = idea.strength || 'moderate';
   const side = idea.side || 'neutral';
@@ -37,10 +39,10 @@ function IdeaCard({ idea }: { idea: Idea }) {
   return (
     <div className={cn('rounded-lg border p-4 space-y-3', strengthColors[strength] || strengthColors.moderate)}>
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">{idea.title || 'Untitled Idea'}</h4>
+        <h4 className="font-semibold text-foreground">{idea.title || t('brainstormResults.untitled')}</h4>
         <div className="flex gap-1 shrink-0">
           <Badge className={cn('text-xs', sideColors[side] || sideColors.neutral)}>
-            {side === 'pro' ? 'PRO' : side === 'con' ? 'CON' : 'NEUTRAL'}
+            {side === 'pro' ? t('brainstormResults.pro') : side === 'con' ? t('brainstormResults.con') : t('brainstormResults.neutral')}
           </Badge>
           <Badge variant="outline" className="text-xs">
             {strength}
@@ -50,7 +52,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
       <p className="text-sm text-foreground">{idea.description || ''}</p>
       {tradeoffs.length > 0 && (
         <div>
-          <span className="text-xs font-medium text-muted-foreground">Tradeoffs: </span>
+          <span className="text-xs font-medium text-muted-foreground">{t('brainstormResults.tradeoffs')} </span>
           <span className="text-xs text-foreground">{tradeoffs.join(', ')}</span>
         </div>
       )}
@@ -59,14 +61,15 @@ function IdeaCard({ idea }: { idea: Idea }) {
 }
 
 export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps) {
+  const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
 
   const handleDocxExport = async () => {
     const success = await exportBrainstormToDocx(result);
     if (success) {
-      toast.success('Brainstorm exported to DOCX!');
+      toast.success(t('brainstormResults.exportedDocx'));
     } else {
-      toast.error('Failed to export to DOCX');
+      toast.error(t('brainstormResults.exportFailedDocx'));
     }
   };
 
@@ -75,22 +78,22 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
     try {
       const exportResult = await exportBrainstormToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
-        toast.success('Brainstorm exported to Google Docs!', {
+        toast.success(t('brainstormResults.exportedGdocs'), {
           action: {
-            label: 'Open',
+            label: t('brainstormResults.open'),
             onClick: () => window.open(exportResult.documentUrl, '_blank'),
           },
         });
         window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || 'Authentication required', {
-          description: 'Please sign out and sign back in to grant Google Drive access.',
+        toast.error(exportResult.error || t('brainstormResults.authRequired'), {
+          description: t('brainstormResults.authRequiredDesc'),
         });
       } else {
-        toast.error(exportResult.error || 'Failed to export to Google Docs');
+        toast.error(exportResult.error || t('brainstormResults.exportFailedGdocs'));
       }
     } catch {
-      toast.error('An unexpected error occurred during export');
+      toast.error(t('brainstormResults.exportError'));
     } finally {
       setIsExportingGDocs(false);
     }
@@ -100,8 +103,8 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
   if (result.needsMoreInfo && result.clarifyingQuestions?.length) {
     return (
       <SectionCard
-        title="Clarification Needed"
-        description="Please answer these questions for better results"
+        title={t('brainstormResults.clarification')}
+        description={t('brainstormResults.clarificationDesc')}
         icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
       >
         <ul className="space-y-3">
@@ -145,7 +148,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
           </Button>
           <Button variant="outline" size="sm" onClick={onDiscuss}>
             <MessageSquare className="h-4 w-4 mr-2" />
-            Discuss Ideas
+            {t('brainstormResults.discuss')}
           </Button>
         </div>
       )}
@@ -153,8 +156,8 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       {/* Top Five */}
       {result.topFive && Array.isArray(result.topFive) && result.topFive.length > 0 && (
         <SectionCard
-          title="Top 5 Argument Angles"
-          description="Best options ranked by potential"
+          title={t('brainstormResults.top5')}
+          description={t('brainstormResults.top5Desc')}
           icon={<TrendingUp className="h-5 w-5 text-primary" />}
         >
           <div className="space-y-4">
@@ -179,8 +182,8 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       {/* Mind Map */}
       {result.mindmap && Array.isArray(result.mindmap) && result.mindmap.length > 0 && (
         <SectionCard
-          title="Argument Map"
-          description="Ideas organized by category"
+          title={t('brainstormResults.argMap')}
+          description={t('brainstormResults.argMapDesc')}
         >
           <div className="space-y-6">
             {result.mindmap.map((category, i) => (
@@ -222,7 +225,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       {/* Next Steps */}
       {result.nextSteps && result.nextSteps.length > 0 && (
         <SectionCard
-          title="Recommended Next Steps"
+          title={t('brainstormResults.nextSteps')}
           icon={<ArrowRight className="h-5 w-5" />}
         >
           <ul className="space-y-2">
@@ -241,7 +244,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
       {/* Warnings */}
       {result.warningsAndTradeoffs && result.warningsAndTradeoffs.length > 0 && (
         <SectionCard
-          title="Warnings & Tradeoffs"
+          title={t('brainstormResults.warnings')}
           icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
         >
           <ul className="space-y-2">

@@ -1,77 +1,79 @@
 // src/components/features/onboarding/OnboardingTour.tsx
 import { useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
 import { useOnboardingStore } from '@/hooks/use-onboarding';
 
-const tourSteps: Step[] = [
-    {
-        target: 'body',
-        content: (
-            <div className="text-center">
-                <h2 className="text-xl font-bold mb-2">Welcome to DebateLab! 🎉</h2>
-                <p className="text-muted-foreground">
-                    Let's take a quick tour to help you create your first debate case.
-                </p>
-            </div>
-        ),
-        placement: 'center',
-        disableBeacon: true,
-    },
-    {
-        target: '#motion',
-        content: (
-            <div>
-                <h3 className="font-semibold mb-1">Step 1: Enter Your Motion</h3>
-                <p className="text-sm text-muted-foreground">
-                    Type any debate topic here. For example: "This house believes that AI will create more jobs than it destroys."
-                </p>
-            </div>
-        ),
-        placement: 'bottom',
-    },
-    {
-        target: '[data-tour="generate-button"]',
-        content: (
-            <div>
-                <h3 className="font-semibold mb-1">Step 2: Generate Your Case</h3>
-                <p className="text-sm text-muted-foreground">
-                    Click this button to generate a structured debate case with arguments, evidence, and rebuttals.
-                </p>
-            </div>
-        ),
-        placement: 'top',
-    },
-    {
-        target: '[data-tour="export-section"]',
-        content: (
-            <div>
-                <h3 className="font-semibold mb-1">Step 3: Save & Export</h3>
-                <p className="text-sm text-muted-foreground">
-                    After generating, you can save your case to history or export it as a Word document.
-                </p>
-            </div>
-        ),
-        placement: 'left',
-        spotlightClicks: false,
-    },
-    {
-        target: 'body',
-        content: (
-            <div className="text-center">
-                <h2 className="text-xl font-bold mb-2">You're Ready! 🚀</h2>
-                <p className="text-muted-foreground">
-                    Explore the other features: Attack arguments, Coach chat, and Research factoids.
-                </p>
-            </div>
-        ),
-        placement: 'center',
-    },
-];
-
 export function OnboardingTour() {
+    const { t } = useTranslation();
     const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
     const location = useLocation();
+
+    const tourSteps: Step[] = [
+        {
+            target: 'body',
+            content: (
+                <div className="text-center">
+                    <h2 className="text-xl font-bold mb-2">{t('onboarding.welcome')}</h2>
+                    <p className="text-muted-foreground">
+                        {t('onboarding.welcomeDesc')}
+                    </p>
+                </div>
+            ),
+            placement: 'center',
+            disableBeacon: true,
+        },
+        {
+            target: '#motion',
+            content: (
+                <div>
+                    <h3 className="font-semibold mb-1">{t('onboarding.step1')}</h3>
+                    <p className="text-sm text-muted-foreground">
+                        {t('onboarding.step1Desc')}
+                    </p>
+                </div>
+            ),
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="generate-button"]',
+            content: (
+                <div>
+                    <h3 className="font-semibold mb-1">{t('onboarding.step2')}</h3>
+                    <p className="text-sm text-muted-foreground">
+                        {t('onboarding.step2Desc')}
+                    </p>
+                </div>
+            ),
+            placement: 'top',
+        },
+        {
+            target: '[data-tour="export-section"]',
+            content: (
+                <div>
+                    <h3 className="font-semibold mb-1">{t('onboarding.step3')}</h3>
+                    <p className="text-sm text-muted-foreground">
+                        {t('onboarding.step3Desc')}
+                    </p>
+                </div>
+            ),
+            placement: 'left',
+            spotlightClicks: false,
+        },
+        {
+            target: 'body',
+            content: (
+                <div className="text-center">
+                    <h2 className="text-xl font-bold mb-2">{t('onboarding.ready')}</h2>
+                    <p className="text-muted-foreground">
+                        {t('onboarding.readyDesc')}
+                    </p>
+                </div>
+            ),
+            placement: 'center',
+        },
+    ];
 
     // Start tour automatically for new users
     useEffect(() => {
@@ -128,11 +130,11 @@ export function OnboardingTour() {
                 },
             }}
             locale={{
-                back: 'Back',
-                close: 'Close',
-                last: 'Get Started!',
-                next: 'Next',
-                skip: 'Skip Tour',
+                back: t('onboarding.back'),
+                close: t('onboarding.close'),
+                last: t('onboarding.getStarted'),
+                next: t('onboarding.next'),
+                skip: t('onboarding.skip'),
             }}
         />
     );
