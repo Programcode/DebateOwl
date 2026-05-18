@@ -21,6 +21,7 @@ import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const navItems = [
   { path: '/app', key: 'home', icon: Home },
@@ -73,6 +74,7 @@ export function AppLayout() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <ThemeToggle />
             <NavLink to="/app/settings">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings">
