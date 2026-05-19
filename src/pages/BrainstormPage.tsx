@@ -13,6 +13,7 @@ import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
+import { AnimatedSection } from '@/components/ui/animated-section';
 
 export default function BrainstormPage() {
   const { brainstormResult, brainstormLoading, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
@@ -85,7 +86,7 @@ export default function BrainstormPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('brainstorm.title')}</h1>
             <p className="text-muted-foreground mt-1">
@@ -93,16 +94,16 @@ export default function BrainstormPage() {
             </p>
           </div>
           <ModelSelector feature="brainstorm" />
-        </div>
+        </AnimatedSection>
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
           {/* Form */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
+          <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
             <BrainstormForm onSubmit={handleSubmit} isLoading={brainstormLoading} />
-          </div>
+          </AnimatedSection>
 
           {/* Results */}
-          <div>
+          <AnimatedSection delay={150}>
             {brainstormLoading ? (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
                 <StreamingIndicator messages={['Exploring angles...', 'Generating ideas...', 'Ranking options...', 'Finalizing...']} />
@@ -118,7 +119,7 @@ export default function BrainstormPage() {
                 </p>
               </div>
             )}
-          </div>
+          </AnimatedSection>
         </div>
       </div>
 

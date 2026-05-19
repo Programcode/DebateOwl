@@ -93,12 +93,10 @@ describe('AdminPage Integration', () => {
             totals: { requests: 1234, cost: 5.67, successRate: 98.5 },
             daily: [{ date: 'Feb 01', requests: 100, cost: 0.5, errors: 2 }],
             byFeature: { generate: 50, ask: 50 },
-            byUser: [{ user_id: 'user-1', requests: 10, cost: 0.1 }],
+            byUser: [{ user_id: 'user-1', email: 'top@example.com', requests: 10, cost: 0.1 }],
         };
 
         const mockUsers = { users: [] };
-        const mockLimits = { limits: [] };
-        const mockPrompts = { prompts: [] };
 
         globalFetch.mockImplementation(async (url: string) => {
             console.log('FETCH URL:', url); // Debug log
@@ -107,12 +105,6 @@ describe('AdminPage Integration', () => {
             }
             if (url.includes('action=users')) {
                 return { ok: true, status: 200, text: async () => JSON.stringify(mockUsers) };
-            }
-            if (url.includes('action=limits')) {
-                return { ok: true, status: 200, text: async () => JSON.stringify(mockLimits) };
-            }
-            if (url.includes('action=global-prompts')) {
-                return { ok: true, status: 200, text: async () => JSON.stringify(mockPrompts) };
             }
             return { ok: false, status: 404, text: async () => '{}' };
         });
@@ -133,6 +125,9 @@ describe('AdminPage Integration', () => {
         expect(screen.getByText('1,234')).toBeInTheDocument();
         expect(screen.getByText('$5.6700')).toBeInTheDocument();
         expect(screen.getByRole('tab', { name: 'Usage Analytics' })).toBeInTheDocument();
+        expect(screen.queryByRole('tab', { name: 'Rate Limits' })).not.toBeInTheDocument();
+        expect(screen.getByText('top@example.com')).toBeInTheDocument();
         expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+        expect(globalFetch.mock.calls.some(([url]) => String(url).includes('action=limits'))).toBe(false);
     });
 });

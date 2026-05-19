@@ -730,6 +730,17 @@ function buildResearchContext(research: ResearchContext): string {
 
 // ============== AI PROVIDER CALLS ==============
 
+const HUMANIZER_INSTRUCTIONS = `HUMANIZER STYLE INSTRUCTIONS:
+- Follow the local humanizer.md rules: remove obvious AI-writing patterns and make the prose sound human, specific, and natural.
+- Write like a strong human debate coach, not a generic AI assistant. Be direct and concrete.
+- Avoid inflated significance claims, promotional language, vague expert attributions, superficial "-ing" analysis, forced rule-of-three phrasing, synonym cycling, chatbot filler, and generic upbeat conclusions.
+- Vary sentence rhythm where prose is requested, but keep structured JSON fields concise.
+- Do not use em dashes at all. Use commas, colons, parentheses, or separate sentences instead.`;
+
+function withHumanizerInstructions(systemPrompt: string): string {
+  return `${systemPrompt}\n\n${HUMANIZER_INSTRUCTIONS}`;
+}
+
 async function callAI(
   provider: Provider,
   model: string,
@@ -775,12 +786,13 @@ async function callAIOnce(
   messages: Array<{ role: string; content: string }>,
   temperature: number
 ): Promise<unknown> {
+  const effectiveSystemPrompt = withHumanizerInstructions(systemPrompt);
   if (provider === "openai") {
-    return await callOpenAI([{ role: "system", content: systemPrompt }, ...messages], model, temperature);
+    return await callOpenAI([{ role: "system", content: effectiveSystemPrompt }, ...messages], model, temperature);
   } else if (provider === "anthropic") {
-    return await callAnthropic(messages, model, temperature, systemPrompt);
+    return await callAnthropic(messages, model, temperature, effectiveSystemPrompt);
   } else if (provider === "google") {
-    return await callGoogle(messages, model, temperature, systemPrompt);
+    return await callGoogle(messages, model, temperature, effectiveSystemPrompt);
   }
   throw new Error(`Unsupported provider: ${provider}`);
 }
