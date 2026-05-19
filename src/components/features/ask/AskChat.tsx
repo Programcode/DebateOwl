@@ -53,6 +53,16 @@ const LOADING_MESSAGES_KEYS = [
   'askChat.almostThere',
 ];
 
+function getFirstUrl(text?: string) {
+  return text?.match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[),.;!?]+$/g, '');
+}
+
+function sourceQualityClass(label?: string) {
+  if (label === 'strong') return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+  if (label === 'moderate') return 'bg-sky-500/10 text-sky-600 dark:text-sky-400';
+  return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+}
+
 const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
   const { t } = useTranslation();
   const isUser = message.role === 'user';
@@ -117,9 +127,18 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                       {citation.verified ? t('askChat.verified') : t('askChat.unverified')}
                     </span>
                   </div>
-                  {citation.source && (
+                  {citation.source && getFirstUrl(citation.source) ? (
+                    <a
+                      className="mt-1 block break-all text-primary hover:underline"
+                      href={getFirstUrl(citation.source)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {citation.source}
+                    </a>
+                  ) : citation.source ? (
                     <div className="mt-1 break-all text-muted-foreground">{citation.source}</div>
-                  )}
+                  ) : null}
                   {citation.note && (
                     <div className="mt-1 text-muted-foreground">{citation.note}</div>
                   )}
@@ -140,14 +159,26 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             )}
             {output.searchInfo.sources?.length > 0 && (
               <ul className="space-y-1">
-                {output.searchInfo.sources.map((source: { title: string; url: string; verified: boolean }, i: number) => (
-                  <li key={`${source.url}-${i}`} className="text-xs">
-                    <a className="text-primary hover:underline break-all" href={source.url} target="_blank" rel="noreferrer">
+                {output.searchInfo.sources.map((source: { title: string; url: string; verified: boolean; sourceType?: string; qualityScore?: number; qualityLabel?: string }, i: number) => (
+                  <li key={`${source.url}-${i}`} className="rounded-md border border-border/60 bg-muted/20 p-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {source.qualityLabel && (
+                        <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', sourceQualityClass(source.qualityLabel))}>
+                          {source.qualityLabel}
+                        </span>
+                      )}
+                      {source.sourceType && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          {source.sourceType}
+                        </span>
+                      )}
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {source.verified ? t('askChat.verified') : t('askChat.unverified')}
+                      </span>
+                    </div>
+                    <a className="mt-1 block text-primary hover:underline break-all" href={source.url} target="_blank" rel="noreferrer">
                       {source.title || source.url}
                     </a>
-                    <span className="ml-2 text-muted-foreground">
-                      {source.verified ? t('askChat.verified') : t('askChat.unverified')}
-                    </span>
                   </li>
                 ))}
               </ul>
@@ -378,7 +409,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       </CardContent>
 
       <div className="shrink-0 border-t border-border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex gap-1">
             {modeOptions.map((option) => (
               <Button
@@ -393,8 +424,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               </Button>
             ))}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-4">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
               <Quote className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="citation-mode" className="text-xs">{t('askChat.citations')}</Label>
               <Switch
@@ -403,7 +434,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setCitationMode}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="web-search-mode" className="text-xs">{t('askChat.webSearch')}</Label>
               <Switch
@@ -412,7 +443,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setWebSearch}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
               <List className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="pros-cons-mode" className="text-xs">{t('askChat.modeProsCons')}</Label>
               <Switch
@@ -421,7 +452,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setProsConsMode}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
               <Map className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="argument-map-mode" className="text-xs">{t('askChat.modeArgMap')}</Label>
               <Switch
