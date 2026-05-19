@@ -241,11 +241,11 @@ export default function GeneratePage() {
           {/* Results */}
           <AnimatedSection delay={150}>
             {generateLoading ? (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
+              <div key="generate-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
                 <StreamingIndicator messages={['Researching sources...', 'Building arguments...', 'Structuring case...', 'Adding evidence...', 'Finalizing...']} />
               </div>
             ) : generateResult ? (
-              <div className="space-y-4">
+              <div key="generate-results" className="motion-swap space-y-4">
                 <GenerateResults
                   result={generateResult}
                   onRegenerateSection={handleRegenerateSection}
@@ -255,8 +255,8 @@ export default function GeneratePage() {
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
-                <div className="text-6xl mb-4">🎯</div>
+              <div key="generate-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
+                <div className="motion-loading-card mb-4 text-6xl">🎯</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">Ready to Generate</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   Enter your motion and preferences to generate a complete debate case with arguments, counters, and strategic analysis.

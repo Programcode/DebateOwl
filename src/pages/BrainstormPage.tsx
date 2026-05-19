@@ -105,14 +105,16 @@ export default function BrainstormPage() {
           {/* Results */}
           <AnimatedSection delay={150}>
             {brainstormLoading ? (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
+              <div key="brainstorm-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
                 <StreamingIndicator messages={['Exploring angles...', 'Generating ideas...', 'Ranking options...', 'Finalizing...']} />
               </div>
             ) : brainstormResult ? (
-              <BrainstormResults result={brainstormResult} onDiscuss={handleDiscuss} />
+              <div key="brainstorm-results" className="motion-swap">
+                <BrainstormResults result={brainstormResult} onDiscuss={handleDiscuss} />
+              </div>
             ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">
-                <div className="text-6xl mb-4">💡</div>
+              <div key="brainstorm-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">
+                <div className="motion-loading-card text-6xl mb-4">💡</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('brainstorm.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('brainstorm.emptyDesc')}

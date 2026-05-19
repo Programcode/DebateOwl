@@ -25,7 +25,7 @@ export function SectionCard({
   icon,
 }: SectionCardProps) {
   return (
-    <Card className={cn('relative overflow-hidden', className)}>
+    <Card className={cn('motion-reveal relative overflow-hidden', className)}>
       {isLoading && <LoadingOverlay message={`Generating ${title.toLowerCase()}...`} />}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">

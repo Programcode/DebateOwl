@@ -26,12 +26,12 @@ describe('AttackForm', () => {
     const button = screen.getByRole('button', { name: /more options/i });
 
     expect(button).toHaveAttribute('aria-expanded', 'false');
-    expect(options?.className).toContain('max-h-0');
+    expect(options).toHaveAttribute('data-open', 'false');
 
     fireEvent.click(button);
 
     expect(button).toHaveAttribute('aria-expanded', 'true');
-    expect(options?.className).toContain('max-h-[32rem]');
+    expect(options).toHaveAttribute('data-open', 'true');
   });
 
   it('submits no mercy, logic-heavy, and both toggles on by default', async () => {
