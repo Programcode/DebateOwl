@@ -224,7 +224,7 @@ describe('AI Client Integration', () => {
                 [],
                 'general',
                 mockConfig,
-                { citationMode: true, webSearch: true }
+                { citationMode: true, webSearch: true, prosConsMode: true, argumentMapMode: true }
             );
 
             expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
@@ -235,6 +235,8 @@ describe('AI Client Integration', () => {
                         mode: 'general',
                         citationMode: true,
                         webSearch: true,
+                        prosConsMode: true,
+                        argumentMapMode: true,
                     }),
                 }),
             }));

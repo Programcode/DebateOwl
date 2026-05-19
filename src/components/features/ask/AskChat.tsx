@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff } from 'lucide-react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Markdown } from '@/components/ui/markdown';
@@ -27,7 +27,15 @@ interface Message {
 interface AskChatProps {
   messages: Message[];
   isLoading: boolean;
-  onSend: (message: string, mode: string, citationMode: boolean, files?: File[]) => void;
+  onSend: (
+    message: string,
+    mode: string,
+    citationMode: boolean,
+    webSearch: boolean,
+    prosConsMode: boolean,
+    argumentMapMode: boolean,
+    files?: File[]
+  ) => void;
   onClear: () => void;
   onSaveSource?: (title: string, content: string) => void;
 }
@@ -35,8 +43,6 @@ interface AskChatProps {
 const modeOptions = [
   { id: 'general', labelKey: 'askChat.modeGeneral', icon: MessageCircle },
   { id: 'clarify', labelKey: 'askChat.modeClarify', icon: HelpCircle },
-  { id: 'proscons', labelKey: 'askChat.modeProsCons', icon: List },
-  { id: 'argumentmap', labelKey: 'askChat.modeArgMap', icon: Map },
 ];
 
 const LOADING_MESSAGES_KEYS = [
@@ -95,6 +101,60 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </div>
         )}
 
+        {/* Citations */}
+        {output?.citations && output.citations.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <span className="text-xs font-medium text-muted-foreground">{t('askChat.citationResults')}</span>
+            <ul className="space-y-2">
+              {output.citations.map((citation: { claim: string; source?: string; verified: boolean; note?: string }, i: number) => (
+                <li key={i} className="rounded-md border border-border/60 bg-muted/30 p-2 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-foreground">{citation.claim}</span>
+                    <span className={cn(
+                      'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                      citation.verified ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    )}>
+                      {citation.verified ? t('askChat.verified') : t('askChat.unverified')}
+                    </span>
+                  </div>
+                  {citation.source && (
+                    <div className="mt-1 break-all text-muted-foreground">{citation.source}</div>
+                  )}
+                  {citation.note && (
+                    <div className="mt-1 text-muted-foreground">{citation.note}</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Web research */}
+        {output?.searchInfo?.webSearchUsed && (
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <span className="text-xs font-medium text-muted-foreground">{t('askChat.webResearchUsed')}</span>
+            {output.searchInfo.queries?.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {t('askChat.searchQueries')} {output.searchInfo.queries.join('; ')}
+              </div>
+            )}
+            {output.searchInfo.sources?.length > 0 && (
+              <ul className="space-y-1">
+                {output.searchInfo.sources.map((source: { title: string; url: string; verified: boolean }, i: number) => (
+                  <li key={`${source.url}-${i}`} className="text-xs">
+                    <a className="text-primary hover:underline break-all" href={source.url} target="_blank" rel="noreferrer">
+                      {source.title || source.url}
+                    </a>
+                    <span className="ml-2 text-muted-foreground">
+                      {source.verified ? t('askChat.verified') : t('askChat.unverified')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* Pros/Cons */}
         {output?.prosConsAnalysis && (
           <div className="grid gap-2 sm:grid-cols-2 pt-2 border-t border-border/50">
@@ -114,6 +174,45 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                 ))}
               </ul>
             </div>
+          </div>
+        )}
+
+        {/* Argument map */}
+        {output?.argumentMap && (
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <span className="text-xs font-medium text-muted-foreground">{t('askChat.argumentMap')}</span>
+            <div className="grid gap-2 text-xs">
+              <div className="rounded-md bg-muted/30 p-2">
+                <span className="font-medium text-foreground">{t('askChat.mainClaim')}</span>
+                <p className="mt-1 text-muted-foreground">{output.argumentMap.mainClaim}</p>
+              </div>
+              {[
+                [t('askChat.supportingPoints'), output.argumentMap.supportingPoints],
+                [t('askChat.counterpoints'), output.argumentMap.counterpoints],
+                [t('askChat.assumptions'), output.argumentMap.assumptions],
+              ].map(([label, items]) => (
+                Array.isArray(items) && items.length > 0 ? (
+                  <div key={String(label)} className="rounded-md bg-muted/30 p-2">
+                    <span className="font-medium text-foreground">{String(label)}</span>
+                    <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                      {items.map((item: string, i: number) => <li key={i}>• {item}</li>)}
+                    </ul>
+                  </div>
+                ) : null
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Uncertainties */}
+        {output?.uncertainties && output.uncertainties.length > 0 && (
+          <div className="space-y-1 pt-2 border-t border-border/50">
+            <span className="text-xs font-medium text-muted-foreground">{t('askChat.uncertainties')}</span>
+            <ul className="space-y-1">
+              {output.uncertainties.map((uncertainty: string, i: number) => (
+                <li key={i} className="text-xs text-muted-foreground">• {uncertainty}</li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -137,6 +236,9 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
   const [citationMode, setCitationMode] = useState(false);
+  const [webSearch, setWebSearch] = useState(false);
+  const [prosConsMode, setProsConsMode] = useState(false);
+  const [argumentMapMode, setArgumentMapMode] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -165,7 +267,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && files.length === 0) || isLoading) return;
-    onSend(input.trim(), mode, citationMode, files);
+    onSend(input.trim(), mode, citationMode, webSearch, prosConsMode, argumentMapMode, files);
     setInput('');
     setFiles([]);
     resetTranscript();
@@ -299,6 +401,33 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 id="citation-mode"
                 checked={citationMode}
                 onCheckedChange={setCitationMode}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="web-search-mode" className="text-xs">{t('askChat.webSearch')}</Label>
+              <Switch
+                id="web-search-mode"
+                checked={webSearch}
+                onCheckedChange={setWebSearch}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <List className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="pros-cons-mode" className="text-xs">{t('askChat.modeProsCons')}</Label>
+              <Switch
+                id="pros-cons-mode"
+                checked={prosConsMode}
+                onCheckedChange={setProsConsMode}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Map className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="argument-map-mode" className="text-xs">{t('askChat.modeArgMap')}</Label>
+              <Switch
+                id="argument-map-mode"
+                checked={argumentMapMode}
+                onCheckedChange={setArgumentMapMode}
               />
             </div>
           </div>

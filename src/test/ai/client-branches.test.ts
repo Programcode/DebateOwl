@@ -341,6 +341,8 @@ describe('AI client branch coverage', () => {
         input: expect.objectContaining({
           citationMode: false,
           webSearch: false,
+          prosConsMode: false,
+          argumentMapMode: false,
         }),
       }),
     }));
