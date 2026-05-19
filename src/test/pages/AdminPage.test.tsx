@@ -181,4 +181,77 @@ describe('AdminPage Integration', () => {
         expect(fallback).toHaveAttribute('title', unknownUserId);
         expect(screen.queryByText('Unknown user')).not.toBeInTheDocument();
     });
+
+    it('gifts trial access through the admin grant-trial action', async () => {
+        const targetUserId = '11111111-2222-4333-8444-555555555555';
+        const mockStats = {
+            totals: { requests: 0, cost: 0, successRate: 100 },
+            daily: [],
+            byFeature: {},
+            byUser: [],
+        };
+        const mockUsers = {
+            users: [{
+                id: targetUserId,
+                email: 'gift-me@example.com',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                lastSignIn: '2026-01-02T00:00:00.000Z',
+                requestCount: 3,
+                role: 'user',
+                subscriptionTier: 'expired',
+                trialEndsAt: '2026-03-01T00:00:00.000Z',
+                gracePeriodEndsAt: null,
+                dailyLimitOverride: null,
+            }],
+        };
+
+        const grantBody: Record<string, unknown> = {};
+        globalFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(mockStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(mockUsers) };
+            }
+            if (url.includes('action=grant-trial')) {
+                Object.assign(grantBody, JSON.parse(String(init?.body || '{}')));
+                return {
+                    ok: true,
+                    status: 200,
+                    text: async () => JSON.stringify({
+                        success: true,
+                        user_id: targetUserId,
+                        subscription_tier: 'trial',
+                        trial_ends_at: '2026-06-18T00:00:00.000Z',
+                        daily_limit_override: null,
+                    }),
+                };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
+
+        // Radix Tabs activates via mouseDown, not click.
+        const usersTab = await screen.findByRole('tab', { name: 'User Management' });
+        fireEvent.mouseDown(usersTab, { button: 0 });
+
+        const giftButton = await screen.findByRole('button', { name: /gift trial/i });
+        fireEvent.click(giftButton);
+
+        const dialogConfirm = await screen.findByRole('button', { name: /gift 30 days/i });
+        fireEvent.click(dialogConfirm);
+
+        await waitFor(() => {
+            expect(globalFetch.mock.calls.some(([url]) => String(url).includes('action=grant-trial'))).toBe(true);
+        });
+        expect(grantBody.userId).toBe(targetUserId);
+        expect(grantBody.days).toBe(30);
+    });
 });
