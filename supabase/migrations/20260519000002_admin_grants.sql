@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS public.admin_grants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  admin_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   target_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   grant_type text NOT NULL,
   starts_at timestamptz NOT NULL,
