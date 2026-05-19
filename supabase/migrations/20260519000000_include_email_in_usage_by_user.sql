@@ -1,5 +1,7 @@
 -- Return auth email with top usage rows so the admin dashboard does not expose raw user IDs.
 
+DROP FUNCTION IF EXISTS public.get_usage_by_user(integer, integer);
+
 CREATE OR REPLACE FUNCTION public.get_usage_by_user(days_back integer DEFAULT 7, limit_count integer DEFAULT 10)
 RETURNS TABLE (
     user_id uuid,
