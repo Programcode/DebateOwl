@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { formatEuropeanDate } from '@/lib/date-format';
 
 export default function LibraryPage() {
   const { t } = useTranslation();
@@ -52,7 +53,6 @@ export default function LibraryPage() {
     }
   };
 
-  const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString();
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
 
@@ -166,7 +166,7 @@ export default function LibraryPage() {
                               )}
                               <Badge variant="outline" className="text-[10px] py-0">{source.type.toUpperCase()}</Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground">{t('libraryPage.added')} {formatDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
+                            <p className="text-xs text-muted-foreground">{t('libraryPage.added')} {formatEuropeanDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
                             <p className="text-sm text-foreground line-clamp-2 mt-2">{source.content}</p>
                           </div>
                         </div>

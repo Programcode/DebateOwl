@@ -11,6 +11,7 @@ import { StaggeredContainer } from '@/components/ui/animated-section';
 import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { toast } from 'sonner';
+import { formatEuropeanDateTime } from '@/lib/date-format';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -113,7 +114,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           </Badge>
           <Badge variant="outline">{result.metadata?.format?.toUpperCase() || 'N/A'}</Badge>
           <span className="text-xs text-muted-foreground">
-            {t('generateResults.generated')} {result.metadata?.generatedAt ? new Date(result.metadata.generatedAt).toLocaleString() : 'N/A'}
+            {t('generateResults.generated')} {result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : 'N/A'}
           </span>
         </div>
         <div className="flex gap-2" data-tour="export-section">

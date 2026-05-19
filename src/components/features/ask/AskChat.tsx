@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
 import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
+import { formatEuropeanTime } from '@/lib/date-format';
 
 interface Message {
   id: string;
@@ -120,7 +121,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           {(() => {
             try {
               if (!message.timestamp) return '';
-              return new Date(message.timestamp).toLocaleTimeString();
+              return formatEuropeanTime(message.timestamp);
             } catch (e) {
               return '';
             }
