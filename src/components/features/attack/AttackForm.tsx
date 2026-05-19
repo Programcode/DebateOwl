@@ -1,8 +1,9 @@
 // src/components/features/attack/AttackForm.tsx
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Swords, Search } from 'lucide-react';
+import { ChevronDown, Swords, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +20,6 @@ import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 import { useSessionStore } from '@/lib/stores/session-store';
-import { useEffect } from 'react';
 
 interface AttackFormProps {
   onSubmit: (data: AttackInput) => void;
@@ -30,11 +30,12 @@ interface AttackFormProps {
 export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProps) {
   const { t } = useTranslation();
   const { attackForm, setAttackForm } = useSessionStore();
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<AttackInput>({
     resolver: zodResolver(AttackInputSchema),
     defaultValues: {
       caseText: importedCase || '',
-      aggressiveness: 'moderate',
+      aggressiveness: 'ruthless',
       judgeParadigm: 'logic',
       detectFallacies: true,
       analyzeWeighing: true,
@@ -90,69 +91,96 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
             )}
           </div>
 
-          {/* Settings Grid */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Aggressiveness */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('attackForm.intensity')}</Label>
-              <Select
-                value={currentValues.aggressiveness}
-                onValueChange={(value) => setValue('aggressiveness', value as AttackInput['aggressiveness'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mild">{t('attackForm.intensityMild')}</SelectItem>
-                  <SelectItem value="moderate">{t('attackForm.intensityModerate')}</SelectItem>
-                  <SelectItem value="ruthless">{t('attackForm.intensityRuthless')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Judge Paradigm */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
-              <Select
-                value={currentValues.judgeParadigm}
-                onValueChange={(value) => setValue('judgeParadigm', value as AttackInput['judgeParadigm'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="logic">{t('attackForm.paradigmLogic')}</SelectItem>
-                  <SelectItem value="values">{t('attackForm.paradigmValues')}</SelectItem>
-                  <SelectItem value="policy">{t('attackForm.paradigmPolicy')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Options */}
+          <div className="space-y-2 sm:max-w-xs">
+            <Label className="text-sm font-medium">{t('attackForm.options')}</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full justify-between"
+              aria-expanded={optionsOpen}
+              aria-controls="attack-options"
+              onClick={() => setOptionsOpen((open) => !open)}
+            >
+              <span className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                {t('attackForm.moreOptions')}
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${optionsOpen ? 'rotate-180' : ''}`} />
+            </Button>
           </div>
 
-          {/* Toggle Options */}
-          <div className="space-y-4 rounded-lg border border-border p-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
-                <p className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
+          <div
+            id="attack-options"
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              optionsOpen ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="space-y-4 pt-1">
+              {/* Settings Grid */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Aggressiveness */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">{t('attackForm.intensity')}</Label>
+                  <Select
+                    value={currentValues.aggressiveness}
+                    onValueChange={(value) => setValue('aggressiveness', value as AttackInput['aggressiveness'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mild">{t('attackForm.intensityMild')}</SelectItem>
+                      <SelectItem value="moderate">{t('attackForm.intensityModerate')}</SelectItem>
+                      <SelectItem value="ruthless">{t('attackForm.intensityRuthless')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Judge Paradigm */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
+                  <Select
+                    value={currentValues.judgeParadigm}
+                    onValueChange={(value) => setValue('judgeParadigm', value as AttackInput['judgeParadigm'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="logic">{t('attackForm.paradigmLogic')}</SelectItem>
+                      <SelectItem value="values">{t('attackForm.paradigmValues')}</SelectItem>
+                      <SelectItem value="policy">{t('attackForm.paradigmPolicy')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <Switch
-                checked={currentValues.detectFallacies}
-                onCheckedChange={(checked) => setValue('detectFallacies', checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
-                <p className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
+
+              {/* Toggle Options */}
+              <div className="space-y-4 rounded-lg border border-border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
+                  </div>
+                  <Switch
+                    checked={currentValues.detectFallacies}
+                    onCheckedChange={(checked) => setValue('detectFallacies', checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
+                  </div>
+                  <Switch
+                    checked={currentValues.analyzeWeighing}
+                    onCheckedChange={(checked) => setValue('analyzeWeighing', checked)}
+                  />
+                </div>
               </div>
-              <Switch
-                checked={currentValues.analyzeWeighing}
-                onCheckedChange={(checked) => setValue('analyzeWeighing', checked)}
-              />
             </div>
           </div>
-
 
 
           {/* Submit Button */}

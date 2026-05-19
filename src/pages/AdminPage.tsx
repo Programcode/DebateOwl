@@ -16,7 +16,7 @@ interface UsageStats {
     totals: { requests: number; cost: number; successRate: number };
     daily: Array<{ date: string; requests: number; cost: number; errors: number }>;
     byFeature: Record<string, number>;
-    byUser: Array<{ user_id: string; requests: number; cost: number }>;
+    byUser: Array<{ user_id: string; email?: string | null; requests: number; cost: number }>;
 }
 
 interface User {
@@ -25,15 +25,7 @@ interface User {
     createdAt: string;
     lastSignIn: string;
     requestCount: number;
-    limits: Array<{ limit_type: string; limit_value: number }>;
     role: string;
-}
-
-interface RateLimit {
-    id: string;
-    user_id: string | null;
-    limit_type: string;
-    limit_value: number;
 }
 
 interface PromoCode {
@@ -63,9 +55,7 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<UsageStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
-    const [limits, setLimits] = useState<RateLimit[]>([]);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-    const [newLimit, setNewLimit] = useState({ type: 'daily_requests', value: 100 });
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
     const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
@@ -145,16 +135,14 @@ export default function AdminPage() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [statsData, usersData, limitsData, promoData, subData] = await Promise.all([
+                const [statsData, usersData, promoData, subData] = await Promise.all([
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
-                    fetchAdminData('limits'),
                     fetchAdminData('promo-codes').catch(() => ({ codes: [] as PromoCode[] })),
                     fetchAdminData('subscribers').catch(() => ({ subscribers: [] as Subscriber[] })),
                 ]);
                 setStats(statsData);
                 setUsers(usersData.users || []);
-                setLimits(limitsData.limits || []);
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
                 setIsAdmin(true);
@@ -176,20 +164,6 @@ export default function AdminPage() {
         };
         loadData();
     }, [toast]);
-
-    const handleSetGlobalLimit = async () => {
-        try {
-            await postAdminData('set-limit', {
-                limitType: newLimit.type,
-                limitValue: newLimit.value,
-            });
-            toast({ title: 'Success', description: 'Global limit updated' });
-            const limitsData = await fetchAdminData('limits');
-            setLimits(limitsData.limits || []);
-        } catch (err) {
-            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to set limit', variant: 'destructive' });
-        }
-    };
 
     const handleSetUserRole = async (userId: string, role: string) => {
         try {
@@ -237,7 +211,7 @@ export default function AdminPage() {
                         <Settings2 className="h-8 w-8" />
                         Admin Dashboard
                     </h1>
-                    <p className="text-muted-foreground mt-1">Monitor usage, manage limits, and control access</p>
+                    <p className="text-muted-foreground mt-1">Monitor usage, manage users, and control access</p>
                 </div>
 
                 {/* Stats Overview */}
@@ -291,7 +265,6 @@ export default function AdminPage() {
                     <TabsList className="flex-wrap">
                         <TabsTrigger value="usage">Usage Analytics</TabsTrigger>
                         <TabsTrigger value="users">User Management</TabsTrigger>
-                        <TabsTrigger value="limits">Rate Limits</TabsTrigger>
                         <TabsTrigger value="promo-codes">
                             <Ticket className="h-4 w-4 mr-1" />
                             Promo Codes
@@ -370,7 +343,7 @@ export default function AdminPage() {
                                                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
                                                     {i + 1}
                                                 </div>
-                                                <span className="font-mono text-sm">{u.user_id.slice(0, 8)}...</span>
+                                                <span className="text-sm font-medium">{u.email || `${u.user_id.slice(0, 8)}...`}</span>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <Badge variant="secondary">{u.requests} requests</Badge>
@@ -436,70 +409,6 @@ export default function AdminPage() {
                                 </ScrollArea>
                             </CardContent>
                         </Card>
-                    </TabsContent>
-
-                    <TabsContent value="limits" className="space-y-6">
-                        <div className="grid gap-6 md:grid-cols-2">
-                            {/* Set Global Limit */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Set Global Limit</CardTitle>
-                                    <CardDescription>Apply rate limits to all users</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Limit Type</Label>
-                                        <select
-                                            className="w-full p-2 border rounded-md bg-background"
-                                            value={newLimit.type}
-                                            onChange={(e) => setNewLimit({ ...newLimit, type: e.target.value })}
-                                        >
-                                            <option value="daily_requests">Daily Requests</option>
-                                            <option value="daily_tokens">Daily Tokens</option>
-                                            <option value="per_minute">Requests per Minute</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Limit Value</Label>
-                                        <Input
-                                            type="number"
-                                            value={newLimit.value}
-                                            onChange={(e) => setNewLimit({ ...newLimit, value: parseInt(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <Button onClick={handleSetGlobalLimit} className="w-full">
-                                        Set Global Limit
-                                    </Button>
-                                </CardContent>
-                            </Card>
-
-                            {/* Current Limits */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Active Limits</CardTitle>
-                                    <CardDescription>Currently configured rate limits (most recent per type)</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {limits.length === 0 ? (
-                                            <p className="text-sm text-muted-foreground">No limits configured</p>
-                                        ) : (
-                                            limits.map((limit) => (
-                                                <div key={limit.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                    <div>
-                                                        <div className="font-medium">{limit.limit_type.replace('_', ' ')}</div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            {limit.user_id ? `User: ${limit.user_id.slice(0, 8)}...` : 'Global'}
-                                                        </div>
-                                                    </div>
-                                                    <Badge variant="secondary">{limit.limit_value}</Badge>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
                     </TabsContent>
 
                     {/* Promo Codes Tab */}

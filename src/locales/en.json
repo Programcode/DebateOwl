@@ -358,6 +358,8 @@
     "subtitle": "Find weaknesses and get improvement suggestions",
     "argument": "Your Argument",
     "argumentPlaceholder": "Paste your debate case or argument here...",
+    "options": "Options",
+    "moreOptions": "More options",
     "intensity": "Attack Intensity",
     "intensityMild": "Mild (Constructive)",
     "intensityModerate": "Moderate (Balanced)",

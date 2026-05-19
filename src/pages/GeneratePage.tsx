@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
+import { AnimatedSection } from '@/components/ui/animated-section';
 
 export default function GeneratePage() {
   const { generateResult, generateLoading, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData } = useSessionStore();
@@ -221,7 +222,7 @@ export default function GeneratePage() {
     <>
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Generate Arguments</h1>
             <p className="text-muted-foreground mt-1">
@@ -229,16 +230,16 @@ export default function GeneratePage() {
             </p>
           </div>
           <ModelSelector feature="generate" />
-        </div>
+        </AnimatedSection>
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[400px_1fr]">
           {/* Form */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
+          <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
             <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading} />
-          </div>
+          </AnimatedSection>
 
           {/* Results */}
-          <div>
+          <AnimatedSection delay={150}>
             {generateLoading ? (
               <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
                 <StreamingIndicator messages={['Researching sources...', 'Building arguments...', 'Structuring case...', 'Adding evidence...', 'Finalizing...']} />
@@ -262,7 +263,7 @@ export default function GeneratePage() {
                 </p>
               </div>
             )}
-          </div>
+          </AnimatedSection>
         </div>
       </div>
     </div>

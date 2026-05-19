@@ -25,6 +25,12 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+type UsageByUserRow = {
+    user_id: string;
+    requests: number;
+    cost: number;
+};
+
 async function isAdmin(userId: string): Promise<boolean> {
     const { data } = await supabase
         .from("user_roles")
@@ -111,13 +117,29 @@ Deno.serve(async (req) => {
             });
 
             // By user (top 10)
-            const { data: byUser } = await supabase.rpc("get_usage_by_user", { days_back: days, limit_count: 10 });
+            const { data: rawByUser } = await supabase.rpc("get_usage_by_user", { days_back: days, limit_count: 10 });
+            const byUser = (rawByUser || []) as UsageByUserRow[];
+            const userIds = byUser.map((row) => row.user_id).filter(Boolean);
+            const userEmails = new Map<string, string>();
+
+            if (userIds.length > 0) {
+                await Promise.all(userIds.map(async (listedUserId) => {
+                    const { data: listedUserData } = await supabase.auth.admin.getUserById(listedUserId);
+                    const email = listedUserData?.user?.email;
+                    if (email) userEmails.set(listedUserId, email);
+                }));
+            }
+
+            const byUserWithEmail = byUser.map((row) => ({
+                ...row,
+                email: userEmails.get(row.user_id) || null,
+            }));
 
             return new Response(JSON.stringify({
                 totals: { requests: totalRequests, cost: totalCost, successRate },
                 daily: daily || [],
                 byFeature: featureCounts,
-                byUser: byUser || [],
+                byUser: byUserWithEmail,
             }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });

@@ -9,6 +9,7 @@ import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
+import { AnimatedSection } from '@/components/ui/animated-section';
 
 export default function AskPage() {
   const { askMessages, askLoading, addAskMessage, setAskLoading, clearAskMessages, addSource } = useSessionStore();
@@ -111,17 +112,19 @@ export default function AskPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <AnimatedSection className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-foreground">{t('ask.title')}</h1>
           <ModelSelector feature="ask" />
-        </div>
-        <AskChat
-          messages={formattedMessages}
-          isLoading={askLoading}
-          onSend={handleSend}
-          onClear={clearAskMessages}
-          onSaveSource={handleSaveToLibrary}
-        />
+        </AnimatedSection>
+        <AnimatedSection delay={75}>
+          <AskChat
+            messages={formattedMessages}
+            isLoading={askLoading}
+            onSend={handleSend}
+            onClear={clearAskMessages}
+            onSaveSource={handleSaveToLibrary}
+          />
+        </AnimatedSection>
       </div>
 
       <LimitReachedModal

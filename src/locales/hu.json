@@ -358,6 +358,8 @@
     "subtitle": "Találd meg a gyengeségeket és kapj javítási javaslatokat",
     "argument": "Az Érved",
     "argumentPlaceholder": "Illeszd be a vitaesetedet vagy érvedet ide...",
+    "options": "Beállítások",
+    "moreOptions": "További beállítások",
     "intensity": "Támadás Intenzitása",
     "intensityMild": "Enyhe (Építő jellegű)",
     "intensityModerate": "Mérsékelt (Kiegyensúlyozott)",

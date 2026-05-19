@@ -130,7 +130,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           </div>
 
           {/* Main Options */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             {/* Side */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">{t('generateForm.side')}</Label>
@@ -184,24 +184,25 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               </Select>
             </div>
 
-            {/* More */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.more')}</Label>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full justify-between"
-                aria-expanded={advancedOpen}
-                aria-controls="generate-more-options"
-                onClick={() => setAdvancedOpen((open) => !open)}
-              >
-                <span className="flex items-center gap-2">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {t('generateForm.moreOptions')}
-                </span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${advancedOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </div>
+          </div>
+
+          {/* More */}
+          <div className="space-y-2 sm:max-w-xs">
+            <Label className="text-sm font-medium">{t('generateForm.more')}</Label>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full justify-between"
+              aria-expanded={advancedOpen}
+              aria-controls="generate-more-options"
+              onClick={() => setAdvancedOpen((open) => !open)}
+            >
+              <span className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                {t('generateForm.moreOptions')}
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${advancedOpen ? 'rotate-180' : ''}`} />
+            </Button>
           </div>
 
           <div

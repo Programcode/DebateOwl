@@ -358,6 +358,8 @@
     "subtitle": "Encuentra debilidades y obtén sugerencias de mejora",
     "argument": "Tu Argumento",
     "argumentPlaceholder": "Pega tu caso o argumento de debate aquí...",
+    "options": "Opciones",
+    "moreOptions": "Más opciones",
     "intensity": "Intensidad del Ataque",
     "intensityMild": "Leve (Constructivo)",
     "intensityModerate": "Moderado (Equilibrado)",
