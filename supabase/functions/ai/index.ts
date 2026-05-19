@@ -33,30 +33,34 @@ type Source = {
   type: string;
 };
 
-type ExaResult = { title?: string; url?: string; content?: string; description?: string };
-
 interface ResearchContext {
   searches: Array<{ query: string; results: string }>;
-  readContent: Array<{ url: string; content: string }>;
+  rankedResults: RankedSearchResult[];
+  readContent: Array<{ url: string; title: string; content: string; result?: RankedSearchResult }>;
   verifiedUrls: Set<string>;
 }
 
 interface ResearchOptions {
   maxFollowUpQueries: number; // 0 = skip AI follow-up entirely
   maxUrlsToRead: number;      // How many pages to read in full
+  maxSeedQueries: number;     // How many deterministic searches before AI follow-up
   overallTimeoutMs: number;   // Hard timeout for entire research
+  preferredSourceType?: string;
+  timeframe?: string;
 }
 
 const DEEP_RESEARCH: ResearchOptions = {
   maxFollowUpQueries: 2,
-  maxUrlsToRead: 3,
-  overallTimeoutMs: 30000,
+  maxUrlsToRead: 5,
+  maxSeedQueries: 4,
+  overallTimeoutMs: 35000,
 };
 
 const ASK_RESEARCH: ResearchOptions = {
-  maxFollowUpQueries: 1,
-  maxUrlsToRead: 3,
-  overallTimeoutMs: 25000,
+  maxFollowUpQueries: 2,
+  maxUrlsToRead: 4,
+  maxSeedQueries: 4,
+  overallTimeoutMs: 30000,
 };
 
 // Generate unique request ID for tracing
@@ -80,6 +84,15 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
+import {
+  buildSearchQueries,
+  formatRankedSearchResults,
+  rankSearchResults,
+  sourceTitleFromUrl,
+  type ExaResult,
+  type RankedSearchResult,
+  type ResearchSource,
+} from "./source-quality.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -510,10 +523,11 @@ async function exaSearch(query: string): Promise<ExaResult[]> {
     }
     const data = await response.json();
     if (!data?.results || !Array.isArray(data.results)) return [];
-    return data.results.map((r: { title?: string; url?: string; text?: string }) => ({
+    return data.results.map((r: { title?: string; url?: string; text?: string; publishedDate?: string }) => ({
       title: r.title,
       url: r.url,
       content: r.text,
+      publishedDate: r.publishedDate,
     }));
   } catch {
     console.warn(`[EXA] Search failed for: ${query}`);
@@ -554,10 +568,6 @@ async function verifyUrl(url: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function formatSearchResults(results: ExaResult[]): string {
-  return results.map((r) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content || r.description}\n---`).join("\n");
 }
 
 // ============== DEEP RESEARCH ==============
@@ -645,45 +655,55 @@ async function deepResearchInner(
 ): Promise<ResearchContext> {
   const context: ResearchContext = {
     searches: [],
+    rankedResults: [],
     readContent: [],
     verifiedUrls: new Set(),
   };
 
   console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
 
-  // Round 1: Initial search
-  const initialQuery = `${claim} ${region} statistics data`.trim();
-  const round1Results = await exaSearch(initialQuery);
-  const round1Text = formatSearchResults(round1Results);
-  context.searches.push({ query: initialQuery, results: round1Text });
-  console.log(`[RESEARCH] Round 1: ${round1Results.length} results`);
+  const preferredSourceType = options.preferredSourceType || "any";
+  const seedQueries = buildSearchQueries(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
+  const allResults: Array<ExaResult & { query: string }> = [];
 
-  // Extract URLs for reading
-  const urlsToRead = round1Results.slice(0, 3).map((r) => r.url).filter(Boolean) as string[];
+  const seedResults = await Promise.all(seedQueries.map(async (query) => {
+    const results = await exaSearch(query);
+    const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
+    context.searches.push({ query, results: formatRankedSearchResults(ranked) });
+    console.log(`[RESEARCH] Seed query "${query}": ${results.length} results`);
+    return results.map((result) => ({ ...result, query }));
+  }));
+  seedResults.forEach((results) => allResults.push(...results));
+
+  const initialRanked = rankSearchResults(allResults, claim, preferredSourceType);
+  const initialText = formatRankedSearchResults(initialRanked.slice(0, 12));
 
   // Round 2: AI generates follow-up queries (skipped in light mode)
   if (options.maxFollowUpQueries > 0) {
-    const followUpQueries = await generateFollowUpQueries(claim, round1Text, provider, model);
+    const followUpQueries = await generateFollowUpQueries(claim, initialText, provider, model);
     console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
       const results = await exaSearch(query);
-      const text = formatSearchResults(results);
-      context.searches.push({ query, results: text });
-      results.slice(0, 2).forEach((r) => {
-        if (r.url && !urlsToRead.includes(r.url)) urlsToRead.push(r.url);
-      });
+      const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
+      context.searches.push({ query, results: formatRankedSearchResults(ranked) });
+      allResults.push(...results.map((result) => ({ ...result, query })));
       return results.length;
     });
     await Promise.all(followUpPromises);
     console.log(`[RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
   }
 
-  // Round 3: Fetch full content from top URLs using Exa /contents endpoint
-  const readPromises = urlsToRead.slice(0, options.maxUrlsToRead).map(async (url) => {
+  context.rankedResults = rankSearchResults(allResults, claim, preferredSourceType);
+  const urlsToRead = context.rankedResults
+    .filter((result) => result.qualityLabel !== "weak" || context.rankedResults.filter((r) => r.qualityLabel !== "weak").length < 2)
+    .slice(0, options.maxUrlsToRead);
+
+  const readPromises = urlsToRead.map(async (result) => {
+    const url = result.url || "";
     const content = await exaGetContents(url);
     if (content) {
-      context.readContent.push({ url, content });
+      context.readContent.push({ url, title: result.title || sourceTitleFromUrl(url), content, result });
       context.verifiedUrls.add(url);
     }
     return content.length > 0;
@@ -713,7 +733,7 @@ async function deepResearch(
   } catch (err) {
     console.warn(`[RESEARCH] Timed out or failed after ${options.overallTimeoutMs}ms:`, err);
     // Return empty context so the AI call still proceeds without research
-    return { searches: [], readContent: [], verifiedUrls: new Set() };
+    return { searches: [], rankedResults: [], readContent: [], verifiedUrls: new Set() };
   }
 }
 
@@ -729,45 +749,119 @@ function buildResearchContext(research: ResearchContext): string {
   if (research.readContent.length > 0) {
     ctx += "\n=== FULL PAGE CONTENT (verified sources) ===\n\n";
     for (const page of research.readContent) {
-      ctx += `--- From: ${page.url} ---\n${page.content.slice(0, 4000)}\n\n`;
+      const quality = page.result ? `${page.result.sourceType}, ${page.result.qualityLabel}, ${page.result.qualityScore}/100` : "verified";
+      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}\n${page.content.slice(0, 4000)}\n\n`;
     }
   }
 
   return ctx;
 }
 
-function getResearchSources(research: ResearchContext): Array<{ title: string; url: string; verified: boolean }> {
+function getResearchSources(research: ResearchContext): ResearchSource[] {
   const seen = new Set<string>();
-  const sources: Array<{ title: string; url: string; verified: boolean }> = [];
+  const sources: ResearchSource[] = [];
 
   for (const page of research.readContent) {
     if (!page.url || seen.has(page.url)) continue;
     seen.add(page.url);
+    const result = page.result;
     sources.push({
-      title: page.url.replace(/^https?:\/\//, "").split("/")[0],
+      title: page.title || result?.title || sourceTitleFromUrl(page.url),
       url: page.url,
       verified: research.verifiedUrls.has(page.url),
+      sourceType: result?.sourceType || "generic",
+      qualityScore: result?.qualityScore || 50,
+      qualityLabel: result?.qualityLabel || "moderate",
     });
   }
 
   if (sources.length > 0) return sources.slice(0, 5);
 
-  for (const search of research.searches) {
-    const matches = search.results.match(/URL:\s*(https?:\/\/[^\s]+)/g) || [];
-    for (const match of matches) {
-      const url = match.replace(/^URL:\s*/, "").trim();
-      if (!url || seen.has(url)) continue;
-      seen.add(url);
-      sources.push({
-        title: url.replace(/^https?:\/\//, "").split("/")[0],
-        url,
-        verified: false,
-      });
-      if (sources.length >= 5) return sources;
-    }
+  for (const result of research.rankedResults) {
+    const url = result.url || "";
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    sources.push({
+      title: result.title || sourceTitleFromUrl(url),
+      url,
+      verified: false,
+      sourceType: result.sourceType,
+      qualityScore: result.qualityScore,
+      qualityLabel: result.qualityLabel,
+    });
+    if (sources.length >= 5) return sources;
   }
 
   return sources;
+}
+
+function withResearchPreferences(base: ResearchOptions, preferences: Partial<ResearchOptions>): ResearchOptions {
+  return { ...base, ...preferences };
+}
+
+function buildDiscoveredSources(research: ResearchContext) {
+  return research.readContent.map((item) => ({
+    title: item.title || sourceTitleFromUrl(item.url),
+    url: item.url,
+    content: item.content.slice(0, 1000),
+    qualityScore: item.result?.qualityScore,
+    sourceType: item.result?.sourceType,
+  }));
+}
+
+function enforceAttackControls(output: unknown, detectFallacies: boolean, analyzeWeighing: boolean) {
+  if (!output || typeof output !== "object") return;
+  const attackOutput = output as {
+    fallaciesDetected?: unknown[];
+    weighingAnalysis?: { currentWeighing?: string; missingComparisons?: string[]; improvementSuggestions?: string[] };
+  };
+
+  if (!detectFallacies) {
+    attackOutput.fallaciesDetected = [];
+  }
+  if (!analyzeWeighing) {
+    attackOutput.weighingAnalysis = {
+      currentWeighing: "Weighing analysis was not requested.",
+      missingComparisons: [],
+      improvementSuggestions: [],
+    };
+  }
+}
+
+function enforceBrainstormControls(output: unknown, side: string, outputMode: string) {
+  if (!output || typeof output !== "object") return;
+  const brainstormOutput = output as {
+    topFive?: Array<{ idea?: { side?: string } }>;
+    mindmap?: Array<{ items?: Array<{ side?: string }> }>;
+    buckets?: Array<{ ideas?: Array<{ side?: string }> }>;
+  };
+  const allowIdea = (idea?: { side?: string }) => side === "both" || !idea?.side || idea.side === side || idea.side === "neutral";
+
+  if (Array.isArray(brainstormOutput.topFive)) {
+    brainstormOutput.topFive = brainstormOutput.topFive.filter((item) => allowIdea(item.idea));
+  }
+  if (Array.isArray(brainstormOutput.mindmap)) {
+    brainstormOutput.mindmap = brainstormOutput.mindmap
+      .map((category) => ({ ...category, items: Array.isArray(category.items) ? category.items.filter(allowIdea) : [] }))
+      .filter((category) => (category.items || []).length > 0);
+  }
+  if (Array.isArray(brainstormOutput.buckets)) {
+    brainstormOutput.buckets = brainstormOutput.buckets
+      .map((bucket) => ({ ...bucket, ideas: Array.isArray(bucket.ideas) ? bucket.ideas.filter(allowIdea) : [] }))
+      .filter((bucket) => (bucket.ideas || []).length > 0);
+  }
+
+  if (outputMode !== "topfive") delete brainstormOutput.topFive;
+  if (outputMode !== "mindmap") delete brainstormOutput.mindmap;
+  if (outputMode !== "buckets") delete brainstormOutput.buckets;
+}
+
+function enforceGenerateControls(output: unknown, side: string, format: string) {
+  if (!output || typeof output !== "object" || !("metadata" in output)) return;
+  const generateOutput = output as { metadata?: { side?: string; format?: string; generatedAt?: string } };
+  if (!generateOutput.metadata) return;
+  generateOutput.metadata.side = side === "con" ? "con" : "pro";
+  generateOutput.metadata.format = format || "custom";
 }
 
 // ============== AI PROVIDER CALLS ==============
@@ -828,7 +922,7 @@ async function callAIOnce(
   messages: Array<{ role: string; content: string }>,
   temperature: number
 ): Promise<unknown> {
-  const effectiveSystemPrompt = withHumanizerInstructions(systemPrompt);
+  const effectiveSystemPrompt = systemPrompt;
   if (provider === "openai") {
     return await callOpenAI([{ role: "system", content: effectiveSystemPrompt }, ...messages], model, temperature);
   } else if (provider === "anthropic") {
@@ -882,7 +976,7 @@ async function callGoogle(messages: Array<{ role: string; content: string }>, mo
 
 function extractUrls(text: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.match(urlRegex) || [];
+  return (text.match(urlRegex) || []).map((url) => url.replace(/[),.;!?]+$/g, ""));
 }
 
 // ============== PROMPTS ==============
@@ -1161,6 +1255,8 @@ Output JSON:
 
 const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
 
+[DATE_CONTEXT]
+
 Output JSON matching:
 {
   "response": "string (markdown supported)",
@@ -1186,7 +1282,7 @@ async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string |
   let base = feature === "generate" ? GENERATE_PROMPT : feature === "attack" ? ATTACK_PROMPT : feature === "brainstorm" ? BRAINSTORM_PROMPT : feature === "factoids" ? FACTOIDS_PROMPT : ASK_PROMPT;
 
   // Inject current date context for features with web research
-  const webResearchFeatures: Feature[] = ["generate", "attack", "brainstorm", "factoids"];
+  const webResearchFeatures: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask"];
   if (webResearchFeatures.includes(feature)) {
     base = base.replace("[DATE_CONTEXT]", getCurrentDateContext());
   }
@@ -1295,9 +1391,14 @@ Deno.serve(async (req) => {
     if (feature === "factoids") {
       const claim = String(sanitizedInput.claim || "");
       const region = String(sanitizedInput.region || "");
+      const preferredSourceType = String(sanitizedInput.sourceType || "any");
+      const timeframe = String(sanitizedInput.timeframe || "");
 
       // Perform deep research with multiple search rounds
-      const research = await deepResearch(claim, region, provider, model, DEEP_RESEARCH);
+      const research = await deepResearch(claim, region, provider, model, withResearchPreferences(DEEP_RESEARCH, {
+        preferredSourceType,
+        timeframe,
+      }));
       const searchContext = buildResearchContext(research);
 
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
@@ -1379,7 +1480,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
       if (output && typeof output === "object") {
         const typedOutput = output as {
           citations?: Array<{ claim: string; source?: string; verified?: boolean; note?: string }>;
-          searchInfo?: { webSearchUsed: boolean; queries: string[]; sources: Array<{ title: string; url: string; verified: boolean }> };
+          searchInfo?: { webSearchUsed: boolean; queries: string[]; sources: ResearchSource[] };
           uncertainties?: string[];
         };
         const citations = typedOutput.citations;
@@ -1396,23 +1497,30 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
         if (shouldUseResearch) {
           typedOutput.searchInfo = {
             webSearchUsed: researchSources.length > 0,
-            queries: askSearchQuery ? [askSearchQuery] : [],
+            queries: askResearch?.searches.map((search) => search.query) || (askSearchQuery ? [askSearchQuery] : []),
             sources: researchSources,
           };
         } else {
           delete typedOutput.searchInfo;
         }
 
-        if (citationMode && researchSources.length > 0 && (!Array.isArray(typedOutput.citations) || typedOutput.citations.length === 0)) {
-          typedOutput.citations = researchSources.slice(0, 3).map((source) => ({
+        const citationFallbackSources = researchSources.filter((source) => source.qualityLabel !== "weak");
+        if (citationMode && citationFallbackSources.length > 0 && (!Array.isArray(typedOutput.citations) || typedOutput.citations.length === 0)) {
+          typedOutput.citations = citationFallbackSources.slice(0, 3).map((source) => ({
             claim: "Research source used for this answer",
             source: source.url,
             verified: source.verified,
-            note: source.title,
+            note: `${source.title} (${source.qualityLabel} ${source.sourceType})`,
           }));
           typedOutput.uncertainties = Array.isArray(typedOutput.uncertainties)
             ? typedOutput.uncertainties
             : [];
+        } else if (citationMode && researchSources.length > 0 && citationFallbackSources.length === 0) {
+          typedOutput.citations = [];
+          typedOutput.uncertainties = [
+            ...(Array.isArray(typedOutput.uncertainties) ? typedOutput.uncertainties : []),
+            "Search ran, but the available sources were too weak for citation fallback.",
+          ];
         }
         if (!citationMode) {
           typedOutput.citations = [];
@@ -1435,10 +1543,13 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
     if (feature === "generate") {
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
       const side = String(sanitizedInput.side || "pro");
+      const format = String(sanitizedInput.format || "custom");
 
       // Perform deep research to find supporting evidence
       console.log("[GENERATE] Starting deep research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model, DEEP_RESEARCH);
+      const research = await deepResearch(motion, "", provider, model, withResearchPreferences(DEEP_RESEARCH, {
+        preferredSourceType: "any",
+      }));
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
@@ -1464,13 +1575,10 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
           metadata.generatedAt = new Date().toISOString();
         }
       }
+      enforceGenerateControls(output, side, format);
 
       // Build discovered sources from research
-      const discoveredSources = research.readContent.map((item) => ({
-        title: item.url.replace(/^https?:\/\//, "").split("/")[0],
-        url: item.url,
-        content: item.content.slice(0, 1000),
-      }));
+      const discoveredSources = buildDiscoveredSources(research);
       console.log(`[GENERATE] Found ${discoveredSources.length} sources`);
 
       // Log usage and return with sources
@@ -1482,6 +1590,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
     // BRAINSTORM: Use research to inform argument angles
     if (feature === "brainstorm") {
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
+      const side = String(sanitizedInput.side || "both");
+      const outputMode = String(sanitizedInput.outputMode || "topfive");
 
       // Perform deep research to find relevant context
       console.log("[BRAINSTORM] Starting deep research for motion:", motion);
@@ -1492,13 +1602,10 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      enforceBrainstormControls(output, side, outputMode);
 
       // Build discovered sources from research
-      const discoveredSources = research.readContent.map((item) => ({
-        title: item.url.replace(/^https?:\/\//, "").split("/")[0],
-        url: item.url,
-        content: item.content.slice(0, 1000),
-      }));
+      const discoveredSources = buildDiscoveredSources(research);
       console.log(`[BRAINSTORM] Found ${discoveredSources.length} sources`);
 
       // Log usage and return with sources
@@ -1510,6 +1617,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
     // ATTACK: Use deep research for evidence-based critique
     if (feature === "attack") {
       const caseText = String(sanitizedInput.caseText || "");
+      const detectFallacies = typeof sanitizedInput.detectFallacies === "boolean" ? sanitizedInput.detectFallacies : true;
+      const analyzeWeighing = typeof sanitizedInput.analyzeWeighing === "boolean" ? sanitizedInput.analyzeWeighing : true;
 
       // Research the topic to find counter-evidence
       console.log("[ATTACK] Starting deep research for case analysis");
@@ -1519,12 +1628,9 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
-      const discoveredSources = research.readContent.map((item) => ({
-        title: item.url.replace(/^https?:\/\//, "").split("/")[0],
-        url: item.url,
-        content: item.content.slice(0, 1000),
-      }));
+      const discoveredSources = buildDiscoveredSources(research);
       console.log(`[ATTACK] Found ${discoveredSources.length} sources`);
 
       const latencyMs = Date.now() - startTime;
