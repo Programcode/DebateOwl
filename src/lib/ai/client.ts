@@ -712,6 +712,8 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
 export interface AskChatOptions {
   citationMode?: boolean;
   webSearch?: boolean;
+  prosConsMode?: boolean;
+  argumentMapMode?: boolean;
 }
 
 export async function askChat(
@@ -728,6 +730,8 @@ export async function askChat(
     mode,
     citationMode: Boolean(options.citationMode),
     webSearch: Boolean(options.webSearch),
+    prosConsMode: Boolean(options.prosConsMode),
+    argumentMapMode: Boolean(options.argumentMapMode),
   }, config) as { output: unknown };
   return data.output as AskOutput;
 }

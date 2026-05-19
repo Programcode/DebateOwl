@@ -86,7 +86,7 @@ vi.mock('@/components/features/subscription', () => ({
 vi.mock('@/components/features/ask/AskChat', () => ({
   AskChat: ({ onSend, onSaveSource }: { onSend: (...args: any[]) => Promise<void>, onSaveSource: (t: string, c: string) => void }) => (
     <div>
-      <button type="button" onClick={() => void onSend('How do I frame this?', 'general', true)} data-testid="ask-send">send</button>
+      <button type="button" onClick={() => void onSend('How do I frame this?', 'general', true, true, true, true)} data-testid="ask-send">send</button>
       <button type="button" onClick={() => onSaveSource('Saved Title', 'Saved Content')} data-testid="ask-save">save-source</button>
     </div>
   ),
@@ -159,6 +159,13 @@ describe('Conversation Pages', () => {
       expect(mockAskChat).toHaveBeenCalled();
     });
 
+    expect(mockAskChat).toHaveBeenCalledWith(
+      'How do I frame this?',
+      [],
+      'general',
+      { provider: 'openai', model: 'gpt-4o', temperature: 0.7 },
+      { citationMode: true, webSearch: true, prosConsMode: true, argumentMapMode: true }
+    );
     expect(sessionState.addAskMessage).toHaveBeenCalledWith({ role: 'user', content: 'How do I frame this?' });
     expect(sessionState.addAskMessage).toHaveBeenCalledWith({
       role: 'assistant',

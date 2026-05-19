@@ -736,6 +736,40 @@ function buildResearchContext(research: ResearchContext): string {
   return ctx;
 }
 
+function getResearchSources(research: ResearchContext): Array<{ title: string; url: string; verified: boolean }> {
+  const seen = new Set<string>();
+  const sources: Array<{ title: string; url: string; verified: boolean }> = [];
+
+  for (const page of research.readContent) {
+    if (!page.url || seen.has(page.url)) continue;
+    seen.add(page.url);
+    sources.push({
+      title: page.url.replace(/^https?:\/\//, "").split("/")[0],
+      url: page.url,
+      verified: research.verifiedUrls.has(page.url),
+    });
+  }
+
+  if (sources.length > 0) return sources.slice(0, 5);
+
+  for (const search of research.searches) {
+    const matches = search.results.match(/URL:\s*(https?:\/\/[^\s]+)/g) || [];
+    for (const match of matches) {
+      const url = match.replace(/^URL:\s*/, "").trim();
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      sources.push({
+        title: url.replace(/^https?:\/\//, "").split("/")[0],
+        url,
+        verified: false,
+      });
+      if (sources.length >= 5) return sources;
+    }
+  }
+
+  return sources;
+}
+
 // ============== AI PROVIDER CALLS ==============
 
 const HUMANIZER_INSTRUCTIONS = `HUMANIZER STYLE INSTRUCTIONS:
@@ -1128,7 +1162,25 @@ Output JSON:
 const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
 
 Output JSON matching:
-{ "response": "string (markdown supported)", "followUpQuestions": ["string"], "uncertainties": ["string"], "prosConsAnalysis": { "pros": [...], "cons": [...] }, "argumentMap": { "mainClaim": "string", "supportingPoints": [...], "counterpoints": [...], "assumptions": [...] } }`;
+{
+  "response": "string (markdown supported)",
+  "citations": [{ "claim": "string", "source": "string", "verified": boolean, "note": "string" }],
+  "searchInfo": { "webSearchUsed": boolean, "queries": ["string"], "sources": [{ "title": "string", "url": "string", "verified": boolean }] },
+  "followUpQuestions": ["string"],
+  "uncertainties": ["string"],
+  "prosConsAnalysis": { "pros": ["string"], "cons": ["string"] },
+  "argumentMap": { "mainClaim": "string", "supportingPoints": ["string"], "counterpoints": ["string"], "assumptions": ["string"] }
+}
+
+Rules:
+- Always return valid JSON with response, followUpQuestions, and uncertainties.
+- If Pros/Cons is ON, include prosConsAnalysis with useful entries. If it is OFF, omit prosConsAnalysis.
+- If Argument Map is ON, include argumentMap with useful entries. If it is OFF, omit argumentMap.
+- If Mode is clarify, make the response explain the unclear parts and include follow-up questions that would resolve ambiguity.
+- If Citation Mode is ON, include citations for factual claims when WEB RESEARCH RESULTS or WEB PAGE CONTEXT provide sources. Use exact URLs when available.
+- Do not invent citations. If no source is available, set citations to [] and add that limitation to uncertainties.
+- If Citation Mode is OFF, set citations to [] unless the user explicitly asks for sources.
+- The server fills searchInfo after your response.`;
 
 async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string | null, sources?: Source[]): Promise<string> {
   let base = feature === "generate" ? GENERATE_PROMPT : feature === "attack" ? ATTACK_PROMPT : feature === "brainstorm" ? BRAINSTORM_PROMPT : feature === "factoids" ? FACTOIDS_PROMPT : ASK_PROMPT;
@@ -1278,6 +1330,11 @@ Deno.serve(async (req) => {
       const mode = String(sanitizedInput.mode || "general");
       const citationMode = Boolean(sanitizedInput.citationMode);
       const webSearchEnabled = Boolean(sanitizedInput.webSearch);
+      const prosConsMode = Boolean(sanitizedInput.prosConsMode);
+      const argumentMapMode = Boolean(sanitizedInput.argumentMapMode);
+      const shouldUseResearch = webSearchEnabled || citationMode;
+      let askResearch: ResearchContext | null = null;
+      let askSearchQuery = "";
 
       // 1) Read URLs already shared in chat to ground the response in user-provided material
       const urls = new Set<string>();
@@ -1293,14 +1350,16 @@ Deno.serve(async (req) => {
         urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join("\n");
       }
 
-      // 2) Optional web search in Ask mode (AI decides when this message needs fresh data)
+      // 2) Optional web search in Ask mode. When the user explicitly enables
+      // web search or citations, perform research instead of leaving it to the model.
       let webSearchContext = "";
-      if (webSearchEnabled) {
+      if (shouldUseResearch) {
         const searchDecision = await decideAskSearch(message, history, provider, model);
-        if (searchDecision.shouldSearch) {
-          const research = await deepResearch(searchDecision.query, "", provider, model, ASK_RESEARCH);
-          if (research.searches.length > 0 || research.readContent.length > 0) {
-            webSearchContext = `\n\n${buildResearchContext(research)}`;
+        askSearchQuery = searchDecision.query || message.slice(0, 240);
+        if (askSearchQuery) {
+          askResearch = await deepResearch(askSearchQuery, "", provider, model, ASK_RESEARCH);
+          if (askResearch.searches.length > 0 || askResearch.readContent.length > 0) {
+            webSearchContext = `\n\n${buildResearchContext(askResearch)}`;
           }
         }
       }
@@ -1309,10 +1368,51 @@ Deno.serve(async (req) => {
       const prompt = `Message: ${message}
 Mode: ${mode}
 Mode Guidance: ${modeGuidance}
-Citation Mode: ${citationMode ? "ON - be conservative and source claims when possible" : "OFF"}
-Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}${urlContext}${webSearchContext}`;
+Citation Mode: ${citationMode ? "ON - cite sourced factual claims using the research or page context below" : "OFF"}
+Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}
+Pros/Cons: ${prosConsMode ? "ON - include prosConsAnalysis" : "OFF - omit prosConsAnalysis"}
+Argument Map: ${argumentMapMode ? "ON - include argumentMap" : "OFF - omit argumentMap"}
+Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
+
+      if (output && typeof output === "object") {
+        const typedOutput = output as {
+          citations?: Array<{ claim: string; source?: string; verified?: boolean; note?: string }>;
+          searchInfo?: { webSearchUsed: boolean; queries: string[]; sources: Array<{ title: string; url: string; verified: boolean }> };
+          uncertainties?: string[];
+        };
+        const citations = typedOutput.citations;
+        if (Array.isArray(citations)) {
+          await Promise.all(citations.map(async (citation) => {
+            const source = typeof citation.source === "string" ? citation.source : "";
+            const url = extractUrls(source)[0];
+            if (!url) return;
+            citation.verified = await verifyUrl(url);
+          }));
+        }
+
+        const researchSources = askResearch ? getResearchSources(askResearch) : [];
+        if (shouldUseResearch) {
+          typedOutput.searchInfo = {
+            webSearchUsed: researchSources.length > 0,
+            queries: askSearchQuery ? [askSearchQuery] : [],
+            sources: researchSources,
+          };
+        }
+
+        if (citationMode && researchSources.length > 0 && (!Array.isArray(typedOutput.citations) || typedOutput.citations.length === 0)) {
+          typedOutput.citations = researchSources.slice(0, 3).map((source) => ({
+            claim: "Research source used for this answer",
+            source: source.url,
+            verified: source.verified,
+            note: source.title,
+          }));
+          typedOutput.uncertainties = Array.isArray(typedOutput.uncertainties)
+            ? typedOutput.uncertainties
+            : [];
+        }
+      }
 
       // Log usage and return
       const latencyMs = Date.now() - startTime;

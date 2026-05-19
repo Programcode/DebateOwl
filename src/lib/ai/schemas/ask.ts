@@ -6,6 +6,8 @@ export const AskInputSchema = z.object({
   mode: z.enum(['general', 'clarify', 'summarize', 'proscons', 'argumentmap']),
   citationMode: z.boolean(),
   webSearch: z.boolean().optional(),
+  prosConsMode: z.boolean().optional(),
+  argumentMapMode: z.boolean().optional(),
   conversationHistory: z.array(z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string(),
@@ -22,6 +24,15 @@ export const AskOutputSchema = z.object({
     verified: z.boolean(),
     note: z.string().optional(),
   })).optional(),
+  searchInfo: z.object({
+    webSearchUsed: z.boolean(),
+    queries: z.array(z.string()),
+    sources: z.array(z.object({
+      title: z.string(),
+      url: z.string(),
+      verified: z.boolean(),
+    })),
+  }).optional(),
   followUpQuestions: z.array(z.string()),
   prosConsAnalysis: z.object({
     pros: z.array(z.string()),
