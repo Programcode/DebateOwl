@@ -133,7 +133,8 @@
     "headline": "Készülj Gyorsabban. Érvelj Okosabban. Nyerj Több Fordulót.",
     "subheadline": "MI-alapú vitafelkészülés, ami előnyt ad minden fordulóban.",
     "trialBadge": "3 napos ingyenes próba",
-    "requestsBadge": "5 MI kérés/nap",
+    "requestsBadge": "Napi MI prep",
+    "requestsBadgeValue": "Benne van",
     "proBadge": "$5/hó Pro",
     "cta": "Próba Indítása",
     "ctaSecondary": "Árak Megtekintése",
@@ -551,7 +552,7 @@
     "limitReached": "Napi Limit Elérve",
     "limitReachedDesc": "Felhasználtad a napi {{limit}} kérésedből {{current}} darabot. A limit éjfélkor (UTC) visszaáll.",
     "upgrade": "Frissítés Pro-ra — $5/hó",
-    "upgradeNote": "50 kérés/nap + fejlett MI modellek"
+    "upgradeNote": "Magasabb napi limit + fejlett MI modellek"
   },
   "modelModal": {
     "title": "Pro Modell",
@@ -576,7 +577,7 @@
     "freeFeature2": "Standard MI modellek",
     "freeFeature3": "Minden vitafunkció",
     "freeFeature4": "3 napos ingyenes próba",
-    "proFeature1": "50 MI kérés naponta",
+    "proFeature1": "Korlátlan MI kérések",
     "proFeature2": "Fejlett modellek (GPT-5.5, Claude Opus 4.7, Gemini 3.1 Pro)",
     "proFeature3": "Mélyreható kutatás Exa-val",
     "proFeature4": "Elsőbbségi feldolgozás",
