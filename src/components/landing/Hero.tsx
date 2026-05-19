@@ -7,7 +7,7 @@ const Hero = () => {
 
     const planHighlights = [
         { label: t('hero.trialBadge'), value: "3 days" },
-        { label: t('hero.requestsBadge'), value: "5 AI requests/day" },
+        { label: t('hero.requestsBadge'), value: t('hero.requestsBadgeValue') },
         { label: t('hero.proBadge'), value: "$5/month + tax" },
     ];
 

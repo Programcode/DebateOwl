@@ -133,7 +133,8 @@
     "headline": "Prepárate Más Rápido. Argumenta Mejor. Gana Más Rondas.",
     "subheadline": "Preparación de debate impulsada por IA que te da ventaja en cada ronda.",
     "trialBadge": "Prueba gratis de 3 días",
-    "requestsBadge": "5 solicitudes IA/día",
+    "requestsBadge": "Prep IA diaria",
+    "requestsBadgeValue": "Incluido",
     "proBadge": "$5/mes Pro",
     "cta": "Prueba Gratis",
     "ctaSecondary": "Ver Precios",
@@ -551,7 +552,7 @@
     "limitReached": "Límite Diario Alcanzado",
     "limitReachedDesc": "Has usado {{current}} de tus {{limit}} solicitudes diarias. Tu límite se restablece a medianoche UTC.",
     "upgrade": "Actualizar a Pro — $5/mes",
-    "upgradeNote": "50 solicitudes/día + modelos avanzados de IA"
+    "upgradeNote": "Límite diario más alto + modelos avanzados de IA"
   },
   "modelModal": {
     "title": "Modelo Pro",
@@ -576,7 +577,7 @@
     "freeFeature2": "Modelos estándar de IA",
     "freeFeature3": "Todas las funciones de debate",
     "freeFeature4": "Prueba gratis de 3 días",
-    "proFeature1": "50 solicitudes IA por día",
+    "proFeature1": "Solicitudes IA ilimitadas",
     "proFeature2": "Modelos avanzados (GPT-5.5, Claude Opus 4.7, Gemini 3.1 Pro)",
     "proFeature3": "Investigación profunda con Exa",
     "proFeature4": "Procesamiento prioritario",
