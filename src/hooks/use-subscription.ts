@@ -76,12 +76,17 @@ export function useSubscription(): SubscriptionState {
         );
 
         const promoEnd = data.grace_period_ends_at ? new Date(data.grace_period_ends_at) : null;
+        const trialEnd = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
+        const hasActiveTrialGift = Boolean(trialEnd && now < trialEnd);
 
         // Determine effective tier
         if (rawTier === 'legacy_free') {
           if (promoEnd && now < promoEnd) {
             setTier('legacy_free');
             setDailyLimit(data.daily_limit_override ? Math.max(50, data.daily_limit_override) : 50);
+          } else if (hasActiveTrialGift) {
+            setTier('trial');
+            setDailyLimit(data.daily_limit_override ? Math.max(5, data.daily_limit_override) : 5);
           } else {
             setTier('expired');
             setDailyLimit(data.daily_limit_override || 0);
@@ -90,7 +95,6 @@ export function useSubscription(): SubscriptionState {
           setTier('pro');
           setDailyLimit(data.daily_limit_override ? Math.max(50, data.daily_limit_override) : 50);
         } else if (rawTier === 'trial') {
-          const trialEnd = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
           if (trialEnd && now < trialEnd) {
             setTier('trial');
             setDailyLimit(data.daily_limit_override ? Math.max(5, data.daily_limit_override) : 5);
@@ -98,6 +102,9 @@ export function useSubscription(): SubscriptionState {
             setTier('expired');
             setDailyLimit(data.daily_limit_override || 0);
           }
+        } else if (hasActiveTrialGift) {
+          setTier('trial');
+          setDailyLimit(data.daily_limit_override ? Math.max(5, data.daily_limit_override) : 5);
         } else {
           setTier('expired');
           setDailyLimit(data.daily_limit_override || 0);

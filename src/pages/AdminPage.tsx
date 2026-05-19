@@ -141,8 +141,23 @@ export default function AdminPage() {
                     fetchAdminData('promo-codes').catch(() => ({ codes: [] as PromoCode[] })),
                     fetchAdminData('subscribers').catch(() => ({ subscribers: [] as Subscriber[] })),
                 ]);
-                setStats(statsData);
-                setUsers(usersData.users || []);
+                const loadedUsers = usersData.users || [];
+                const emailByUserId = new Map<string, string>();
+                loadedUsers.forEach((loadedUser: User) => {
+                    if (loadedUser.id && loadedUser.email) emailByUserId.set(loadedUser.id, loadedUser.email);
+                });
+                const enrichedStats = statsData
+                    ? {
+                        ...statsData,
+                        byUser: (statsData.byUser || []).map((usageUser: UsageStats['byUser'][number]) => ({
+                            ...usageUser,
+                            email: usageUser.email || emailByUserId.get(usageUser.user_id) || null,
+                        })),
+                    }
+                    : statsData;
+
+                setStats(enrichedStats);
+                setUsers(loadedUsers);
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
                 setIsAdmin(true);
