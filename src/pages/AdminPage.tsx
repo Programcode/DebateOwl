@@ -343,7 +343,7 @@ export default function AdminPage() {
                                                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
                                                     {i + 1}
                                                 </div>
-                                                <span className="text-sm font-medium">{u.email || `${u.user_id.slice(0, 8)}...`}</span>
+                                                <span className="text-sm font-medium">{u.email || 'Unknown user'}</span>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <Badge variant="secondary">{u.requests} requests</Badge>

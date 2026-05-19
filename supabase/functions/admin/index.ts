@@ -27,9 +27,46 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 type UsageByUserRow = {
     user_id: string;
+    email?: string | null;
     requests: number;
     cost: number;
 };
+
+async function getAuthEmailMap(userIds: string[]): Promise<Map<string, string>> {
+    const wantedIds = new Set(userIds.filter(Boolean));
+    const emails = new Map<string, string>();
+    if (wantedIds.size === 0) return emails;
+
+    await Promise.all([...wantedIds].map(async (listedUserId) => {
+        const { data, error } = await supabase.auth.admin.getUserById(listedUserId);
+        const email = data?.user?.email;
+        if (error) {
+            console.warn("[ADMIN] Failed to fetch top-user email", listedUserId, error.message);
+            return;
+        }
+        if (email) emails.set(listedUserId, email);
+    }));
+
+    if (emails.size === wantedIds.size) return emails;
+
+    for (let page = 1; page <= 10 && emails.size < wantedIds.size; page += 1) {
+        const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+        if (error) {
+            console.warn("[ADMIN] Failed to list auth users for top-user emails", error.message);
+            break;
+        }
+
+        for (const authUser of data?.users || []) {
+            if (wantedIds.has(authUser.id) && authUser.email) {
+                emails.set(authUser.id, authUser.email);
+            }
+        }
+
+        if (!data?.users || data.users.length < 1000) break;
+    }
+
+    return emails;
+}
 
 async function isAdmin(userId: string): Promise<boolean> {
     const { data } = await supabase
@@ -119,20 +156,15 @@ Deno.serve(async (req) => {
             // By user (top 10)
             const { data: rawByUser } = await supabase.rpc("get_usage_by_user", { days_back: days, limit_count: 10 });
             const byUser = (rawByUser || []) as UsageByUserRow[];
-            const userIds = byUser.map((row) => row.user_id).filter(Boolean);
-            const userEmails = new Map<string, string>();
-
-            if (userIds.length > 0) {
-                await Promise.all(userIds.map(async (listedUserId) => {
-                    const { data: listedUserData } = await supabase.auth.admin.getUserById(listedUserId);
-                    const email = listedUserData?.user?.email;
-                    if (email) userEmails.set(listedUserId, email);
-                }));
-            }
+            const missingEmailUserIds = byUser
+                .filter((row) => !row.email)
+                .map((row) => row.user_id)
+                .filter(Boolean);
+            const userEmails = await getAuthEmailMap(missingEmailUserIds);
 
             const byUserWithEmail = byUser.map((row) => ({
                 ...row,
-                email: userEmails.get(row.user_id) || null,
+                email: row.email || userEmails.get(row.user_id) || null,
             }));
 
             return new Response(JSON.stringify({

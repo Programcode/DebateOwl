@@ -93,7 +93,10 @@ describe('AdminPage Integration', () => {
             totals: { requests: 1234, cost: 5.67, successRate: 98.5 },
             daily: [{ date: 'Feb 01', requests: 100, cost: 0.5, errors: 2 }],
             byFeature: { generate: 50, ask: 50 },
-            byUser: [{ user_id: 'user-1', email: 'top@example.com', requests: 10, cost: 0.1 }],
+            byUser: [
+                { user_id: 'user-1', email: 'top@example.com', requests: 10, cost: 0.1 },
+                { user_id: '6c355d47-1111-4111-8111-111111111111', email: null, requests: 8, cost: 0.05 },
+            ],
         };
 
         const mockUsers = { users: [] };
@@ -127,6 +130,8 @@ describe('AdminPage Integration', () => {
         expect(screen.getByRole('tab', { name: 'Usage Analytics' })).toBeInTheDocument();
         expect(screen.queryByRole('tab', { name: 'Rate Limits' })).not.toBeInTheDocument();
         expect(screen.getByText('top@example.com')).toBeInTheDocument();
+        expect(screen.getByText('Unknown user')).toBeInTheDocument();
+        expect(screen.queryByText('6c355d47...')).not.toBeInTheDocument();
         expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
         expect(globalFetch.mock.calls.some(([url]) => String(url).includes('action=limits'))).toBe(false);
     });
