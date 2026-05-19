@@ -207,9 +207,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
 
           <div
             id="generate-more-options"
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              advancedOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
-            }`}
+            className="motion-expand"
+            data-open={advancedOpen}
           >
             <div className="grid gap-4 pt-1 sm:grid-cols-3">
               {/* Length */}
@@ -273,15 +272,15 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           {/* Submit Button */}
           <Button type="submit" className="w-full h-12" disabled={isLoading} data-tour="generate-button">
             {isLoading ? (
-              <>
+              <span className="motion-reveal inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
                 {t('generateForm.generating')}
-              </>
+              </span>
             ) : (
-              <>
+              <span className="inline-flex items-center">
                 <Wand2 className="mr-2 h-4 w-4" />
                 {t('generateForm.submit')}
-              </>
+              </span>
             )}
           </Button>
         </form>

@@ -112,9 +112,8 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
 
           <div
             id="attack-options"
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              optionsOpen ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'
-            }`}
+            className="motion-expand"
+            data-open={optionsOpen}
           >
             <div className="space-y-4 pt-1">
               {/* Settings Grid */}
@@ -186,15 +185,15 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
           {/* Submit Button */}
           <Button type="submit" variant="destructive" className="w-full h-12" disabled={isLoading}>
             {isLoading ? (
-              <>
+              <span className="motion-reveal inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
                 {t('attackForm.analyzing')}
-              </>
+              </span>
             ) : (
-              <>
+              <span className="inline-flex items-center">
                 <Search className="mr-2 h-4 w-4" />
                 {t('attackForm.submit')}
-              </>
+              </span>
             )}
           </Button>
         </form>

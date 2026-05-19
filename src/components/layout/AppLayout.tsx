@@ -62,7 +62,7 @@ export function AppLayout() {
                 to={item.path}
                 end={item.path === '/app'}
                 className={cn(
-                  "flex items-center gap-1.5 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  "motion-press flex items-center gap-1.5 px-2 lg:px-3 py-2 rounded-md text-sm font-medium",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
                 activeClassName="bg-primary/10 text-primary"
@@ -98,7 +98,7 @@ export function AppLayout() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <nav className="md:hidden border-t border-border bg-card p-4">
+          <nav className="motion-reveal md:hidden border-t border-border bg-card p-4">
             <div className="grid gap-2">
               {navItems.map((item) => (
                 <NavLink
@@ -107,7 +107,7 @@ export function AppLayout() {
                   end={item.path === '/app'}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
+                    "motion-press flex items-center gap-3 px-3 py-3 rounded-lg",
                     "text-muted-foreground hover:text-foreground hover:bg-accent"
                   )}
                   activeClassName="bg-primary/10 text-primary"
@@ -134,8 +134,8 @@ export function AppLayout() {
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p>DebateLab</p>
           <div className="flex items-center gap-4">
-            <a href="/terms" className="hover:text-foreground transition-colors">{t('footer.terms')}</a>
-            <a href="/privacy" className="hover:text-foreground transition-colors">{t('footer.privacy')}</a>
+            <a href="/terms" className="motion-press rounded-sm hover:text-foreground">{t('footer.terms')}</a>
+            <a href="/privacy" className="motion-press rounded-sm hover:text-foreground">{t('footer.privacy')}</a>
           </div>
         </div>
       </footer>

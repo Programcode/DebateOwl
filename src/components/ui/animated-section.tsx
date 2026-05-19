@@ -18,7 +18,7 @@ export function AnimatedSection({ delay = 0, children, className }: AnimatedSect
   return (
     <div
       className={cn(
-        'transition-all duration-300 ease-out',
+        'transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none',
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
         className
       )}
@@ -49,6 +49,13 @@ export function StaggeredContainer({ children, staggerMs = 200, className }: Sta
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .staggered-container > * {
+            opacity: 1;
+            transform: none;
+            animation: none;
           }
         }
       `}</style>

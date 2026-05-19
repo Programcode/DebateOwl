@@ -255,8 +255,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 <MessageBubble key={message.id} message={message} onSave={onSaveSource} />
               ))}
               {isLoading && (
-                <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true">
-                  <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="motion-swap flex gap-3" role="status" aria-live="polite" aria-atomic="true">
+                  <div className="motion-shimmer bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="typing-indicator">
                         <span className="typing-dot" />

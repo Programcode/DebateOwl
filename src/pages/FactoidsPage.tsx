@@ -110,19 +110,21 @@ export default function FactoidsPage() {
           {/* Results */}
           <AnimatedSection delay={150}>
             {factoidsLoading ? (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
+              <div key="factoids-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
                 <StreamingIndicator messages={['Searching sources...', 'Verifying citations...', 'Building context...', 'Finalizing...']} />
               </div>
             ) : factoidsResult ? (
-              <FactoidsResults
-                result={factoidsResult}
-                onVerify={handleVerify}
-                onDiscuss={handleDiscuss}
-                onSaveSource={handleSaveToLibrary}
-              />
+              <div key="factoids-results" className="motion-swap">
+                <FactoidsResults
+                  result={factoidsResult}
+                  onVerify={handleVerify}
+                  onDiscuss={handleDiscuss}
+                  onSaveSource={handleSaveToLibrary}
+                />
+              </div>
             ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
-                <div className="text-6xl mb-4">📚</div>
+              <div key="factoids-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
+                <div className="motion-loading-card text-6xl mb-4">📚</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('factoids.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('factoids.emptyDesc')}

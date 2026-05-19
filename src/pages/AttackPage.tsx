@@ -109,14 +109,16 @@ export default function AttackPage() {
           {/* Results */}
           <AnimatedSection delay={150}>
             {attackLoading ? (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
+              <div key="attack-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
                 <StreamingIndicator messages={['Analyzing argument...', 'Finding weaknesses...', 'Preparing critique...', 'Finalizing...']} />
               </div>
             ) : attackResult ? (
-              <AttackResults result={attackResult} onDiscuss={handleDiscuss} />
+              <div key="attack-results" className="motion-swap">
+                <AttackResults result={attackResult} onDiscuss={handleDiscuss} />
+              </div>
             ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">
-                <div className="text-6xl mb-4">⚔️</div>
+              <div key="attack-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">
+                <div className="motion-loading-card text-6xl mb-4">⚔️</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('attack.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('attack.emptyDesc')}
