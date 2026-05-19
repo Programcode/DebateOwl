@@ -141,8 +141,44 @@ describe('AdminPage Integration', () => {
         expect(screen.getByText('top@example.com')).toBeInTheDocument();
         expect(screen.getByText('joined@example.com')).toBeInTheDocument();
         expect(screen.queryByText('Unknown user')).not.toBeInTheDocument();
-        expect(screen.queryByText('6c355d47...')).not.toBeInTheDocument();
+        expect(screen.queryByText('6c355d47…')).not.toBeInTheDocument();
         expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
         expect(globalFetch.mock.calls.some(([url]) => String(url).includes('action=limits'))).toBe(false);
+    });
+
+    it('falls back to shortened user ID when no email is available', async () => {
+        const unknownUserId = 'abcd1234-5678-4abc-9def-000000000000';
+        const mockStats = {
+            totals: { requests: 5, cost: 0.01, successRate: 100 },
+            daily: [],
+            byFeature: { generate: 5 },
+            byUser: [
+                { user_id: unknownUserId, email: null, requests: 5, cost: 0.01 },
+            ],
+        };
+
+        globalFetch.mockImplementation(async (url: string) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(mockStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+        });
+
+        const fallback = await screen.findByText('abcd1234…');
+        expect(fallback).toHaveAttribute('title', unknownUserId);
+        expect(screen.queryByText('Unknown user')).not.toBeInTheDocument();
     });
 });

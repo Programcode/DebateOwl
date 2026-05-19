@@ -353,20 +353,29 @@ export default function AdminPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {stats?.byUser.map((u, i) => (
-                                        <div key={u.user_id} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                                                    {i + 1}
+                                    {stats?.byUser.map((u, i) => {
+                                        const shortId = u.user_id ? `${u.user_id.slice(0, 8)}…` : 'unknown';
+                                        const label = u.email || shortId;
+                                        return (
+                                            <div key={u.user_id} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                                                        {i + 1}
+                                                    </div>
+                                                    <span
+                                                        className="text-sm font-medium"
+                                                        title={u.user_id || undefined}
+                                                    >
+                                                        {label}
+                                                    </span>
                                                 </div>
-                                                <span className="text-sm font-medium">{u.email || 'Unknown user'}</span>
+                                                <div className="flex items-center gap-4">
+                                                    <Badge variant="secondary">{u.requests} requests</Badge>
+                                                    <span className="text-sm text-muted-foreground">${u.cost.toFixed(4)}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <Badge variant="secondary">{u.requests} requests</Badge>
-                                                <span className="text-sm text-muted-foreground">${u.cost.toFixed(4)}</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </CardContent>
                         </Card>
