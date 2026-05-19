@@ -99,7 +99,16 @@ describe('AdminPage Integration', () => {
             ],
         };
 
-        const mockUsers = { users: [] };
+        const mockUsers = {
+            users: [{
+                id: '6c355d47-1111-4111-8111-111111111111',
+                email: 'joined@example.com',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                lastSignIn: '2026-01-02T00:00:00.000Z',
+                requestCount: 8,
+                role: 'user',
+            }],
+        };
 
         globalFetch.mockImplementation(async (url: string) => {
             console.log('FETCH URL:', url); // Debug log
@@ -130,7 +139,8 @@ describe('AdminPage Integration', () => {
         expect(screen.getByRole('tab', { name: 'Usage Analytics' })).toBeInTheDocument();
         expect(screen.queryByRole('tab', { name: 'Rate Limits' })).not.toBeInTheDocument();
         expect(screen.getByText('top@example.com')).toBeInTheDocument();
-        expect(screen.getByText('Unknown user')).toBeInTheDocument();
+        expect(screen.getByText('joined@example.com')).toBeInTheDocument();
+        expect(screen.queryByText('Unknown user')).not.toBeInTheDocument();
         expect(screen.queryByText('6c355d47...')).not.toBeInTheDocument();
         expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
         expect(globalFetch.mock.calls.some(([url]) => String(url).includes('action=limits'))).toBe(false);

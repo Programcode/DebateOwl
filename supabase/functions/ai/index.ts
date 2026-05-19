@@ -161,6 +161,10 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
   const tier = user.subscription_tier || "trial";
   const now = new Date();
   const expired = { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+  const activeGiftTrial = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
+  const giftTrialInfo = activeGiftTrial && now < activeGiftTrial
+    ? { tier: "trial", dailyLimit: user.daily_limit_override ? Math.max(5, user.daily_limit_override) : 5, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
+    : null;
 
   // Legacy free users in grace period get pro-level access
   if (tier === "legacy_free") {
@@ -169,6 +173,7 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
       const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
       return { tier: "legacy_free", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
+    if (giftTrialInfo) return giftTrialInfo;
     // Grace period expired — treat as expired
     return expired;
   }
@@ -200,6 +205,7 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
       return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
 
+    if (giftTrialInfo) return giftTrialInfo;
     return expired;
   }
 
@@ -213,6 +219,8 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
     // Trial expired
     return expired;
   }
+
+  if (giftTrialInfo) return giftTrialInfo;
 
   // Expired
   return expired;
