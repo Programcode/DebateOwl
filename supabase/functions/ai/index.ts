@@ -1199,7 +1199,7 @@ async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string |
   const custom = customSystemPrompt ? `\n\nCUSTOM SYSTEM PROMPT:\n${customSystemPrompt}` : "";
 
   const sourceText = sources && sources.length ? `\n\nLOCAL KNOWLEDGE BASE (use as primary factual source):\n${sources.map((s) => `--- ${s.title} (${s.origin || s.type}) ---\n${s.content}\n`).join("\n")}` : "";
-  return `${base}${globalSection}${custom}${sourceText}`;
+  return withHumanizerInstructions(`${base}${globalSection}${custom}${sourceText}`);
 }
 
 // ============== MAIN HANDLER ==============
@@ -1399,6 +1399,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
             queries: askSearchQuery ? [askSearchQuery] : [],
             sources: researchSources,
           };
+        } else {
+          delete typedOutput.searchInfo;
         }
 
         if (citationMode && researchSources.length > 0 && (!Array.isArray(typedOutput.citations) || typedOutput.citations.length === 0)) {
@@ -1411,6 +1413,15 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
           typedOutput.uncertainties = Array.isArray(typedOutput.uncertainties)
             ? typedOutput.uncertainties
             : [];
+        }
+        if (!citationMode) {
+          typedOutput.citations = [];
+        }
+        if (!prosConsMode) {
+          delete (typedOutput as { prosConsAnalysis?: unknown }).prosConsAnalysis;
+        }
+        if (!argumentMapMode) {
+          delete (typedOutput as { argumentMap?: unknown }).argumentMap;
         }
       }
 
