@@ -7,13 +7,12 @@ import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen } from 'luci
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatEuropeanDateTime } from '@/lib/date-format';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useSessionStore();
-
-  const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString() + ' ' + new Date(timestamp).toLocaleTimeString();
 
   const handleLoadCase = (id: string) => {
     store.loadSavedCase(id);
@@ -77,7 +76,7 @@ export default function HistoryPage() {
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
                               <Badge variant="outline">{item.data.metadata?.side?.toUpperCase() || 'N/A'}</Badge>
-                              <span>{formatDate(item.createdAt)}</span>
+                              <span>{formatEuropeanDateTime(item.createdAt)}</span>
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -112,7 +111,7 @@ export default function HistoryPage() {
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5">
                         <div className="space-y-1">
                           <h4 className="font-semibold">{item.title}</h4>
-                          <p className="text-xs text-muted-foreground">{item.data.length} {t('historyPage.messages')} • {formatDate(item.createdAt)}</p>
+                          <p className="text-xs text-muted-foreground">{item.data.length} {t('historyPage.messages')} • {formatEuropeanDateTime(item.createdAt)}</p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => handleLoadChat(item.id)}>
                           <Eye className="h-4 w-4 mr-2" /> {t('historyPage.resume')}
@@ -142,7 +141,7 @@ export default function HistoryPage() {
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <span>{formatDate(item.createdAt)}</span>
+                              <span>{formatEuropeanDateTime(item.createdAt)}</span>
                             </div>
                           </div>
                           <Button variant="outline" size="sm" onClick={() => handleLoadAttack(item.id)}>
@@ -173,7 +172,7 @@ export default function HistoryPage() {
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <span>{formatDate(item.createdAt)}</span>
+                              <span>{formatEuropeanDateTime(item.createdAt)}</span>
                             </div>
                           </div>
                           <Button variant="outline" size="sm" onClick={() => handleLoadBrainstorm(item.id)}>
@@ -204,7 +203,7 @@ export default function HistoryPage() {
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <span>{formatDate(item.createdAt)}</span>
+                              <span>{formatEuropeanDateTime(item.createdAt)}</span>
                             </div>
                           </div>
                           <Button variant="outline" size="sm" onClick={() => handleLoadFactoids(item.id)}>

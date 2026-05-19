@@ -11,6 +11,7 @@ import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatEuropeanDate } from '@/lib/date-format';
 
 interface UsageStats {
     totals: { requests: number; cost: number; successRate: number };
@@ -390,7 +391,7 @@ export default function AdminPage() {
                                                         )}
                                                     </div>
                                                     <div className="text-sm text-muted-foreground">
-                                                        {user.requestCount} requests • Joined {new Date(user.createdAt).toLocaleDateString()}
+                                                        {user.requestCount} requests • Joined {formatEuropeanDate(user.createdAt)}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -604,7 +605,7 @@ export default function AdminPage() {
                                                     </div>
                                                     {sub.current_period_end && (
                                                         <p className="text-xs text-muted-foreground mt-1">
-                                                            Renews: {new Date(sub.current_period_end).toLocaleDateString()}
+                                                            Renews: {formatEuropeanDate(sub.current_period_end)}
                                                         </p>
                                                     )}
                                                 </div>

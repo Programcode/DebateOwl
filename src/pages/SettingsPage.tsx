@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
+import { formatEuropeanDate } from '@/lib/date-format';
 
 
 const tierLabels: Record<string, { label: string; color: string }> = {
@@ -155,7 +156,7 @@ export default function SettingsPage() {
                 <Badge className={`${tierInfo.color} text-white`}>{tierInfo.label}</Badge>
                 {subscription.tier === 'trial' && subscription.trialEndsAt && (
                   <span className="text-sm text-muted-foreground">
-                    Ends {new Date(subscription.trialEndsAt).toLocaleDateString()}
+                    Ends {formatEuropeanDate(subscription.trialEndsAt)}
                   </span>
                 )}
               </div>

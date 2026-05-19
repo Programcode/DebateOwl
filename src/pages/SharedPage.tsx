@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase/client';
 import { Loader2, Download, ExternalLink, Share2 } from 'lucide-react';
+import { formatEuropeanDate } from '@/lib/date-format';
 
 interface SharedItem {
     id: string;
@@ -148,7 +149,7 @@ export default function SharedPage() {
                                 </CardTitle>
                                 <CardDescription className="mt-1">
                                     <Badge variant="secondary" className="mr-2">{item.item_type}</Badge>
-                                    {t('sharedPage.sharedOn')} {new Date(item.created_at).toLocaleDateString()}
+                                    {t('sharedPage.sharedOn')} {formatEuropeanDate(item.created_at)}
                                     <span className="text-muted-foreground ml-2">• {item.view_count} {t('sharedPage.views')}</span>
                                 </CardDescription>
                             </div>

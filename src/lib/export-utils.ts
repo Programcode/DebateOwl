@@ -3,6 +3,7 @@ import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
+import { formatEuropeanDate } from './date-format';
 
 export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean> {
   try {
@@ -32,7 +33,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     const formatLabel = result.metadata.format ? result.metadata.format.toUpperCase() : 'UNKNOWN';
     const generatedAtDate = result.metadata.generatedAt ? new Date(result.metadata.generatedAt) : null;
     const generatedAtText = generatedAtDate && !Number.isNaN(generatedAtDate.getTime())
-      ? generatedAtDate.toLocaleDateString()
+      ? formatEuropeanDate(generatedAtDate)
       : 'Unknown';
 
     const contentions = Array.isArray(result.contentions) ? result.contentions : [];
@@ -542,4 +543,3 @@ export async function exportFactoidsToGoogleDocs(result: FactoidsOutput): Promis
   }
   return callGoogleDocsEdgeFunction('factoids', result);
 }
-
