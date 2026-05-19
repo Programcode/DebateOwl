@@ -9,8 +9,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { formatEuropeanDate } from '@/lib/date-format';
 
 interface UsageStats {
@@ -27,6 +35,10 @@ interface User {
     lastSignIn: string;
     requestCount: number;
     role: string;
+    subscriptionTier?: string | null;
+    trialEndsAt?: string | null;
+    gracePeriodEndsAt?: string | null;
+    dailyLimitOverride?: number | null;
 }
 
 interface PromoCode {
@@ -60,6 +72,10 @@ export default function AdminPage() {
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
     const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
+    const [giftTarget, setGiftTarget] = useState<User | null>(null);
+    const [giftDays, setGiftDays] = useState(30);
+    const [giftNotes, setGiftNotes] = useState('');
+    const [giftSubmitting, setGiftSubmitting] = useState(false);
     const { toast } = useToast();
 
     const fetchAdminData = async (action: string) => {
@@ -188,6 +204,46 @@ export default function AdminPage() {
             setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
         } catch (err) {
             toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update role', variant: 'destructive' });
+        }
+    };
+
+    const openGiftDialog = (user: User) => {
+        setGiftTarget(user);
+        setGiftDays(30);
+        setGiftNotes('');
+    };
+
+    const closeGiftDialog = () => {
+        setGiftTarget(null);
+        setGiftNotes('');
+    };
+
+    const handleGiftTrial = async () => {
+        if (!giftTarget) return;
+        const days = Math.max(1, Math.min(365, Math.floor(giftDays || 30)));
+        try {
+            setGiftSubmitting(true);
+            const result = await postAdminData('grant-trial', {
+                userId: giftTarget.id,
+                days,
+                notes: giftNotes.trim() || undefined,
+            });
+            toast({ title: 'Trial gifted', description: `${giftTarget.email} now has ${days} days of trial access.` });
+            setUsers(prev => prev.map(u => u.id === giftTarget.id
+                ? {
+                    ...u,
+                    subscriptionTier: result?.subscription_tier || 'trial',
+                    trialEndsAt: result?.trial_ends_at || u.trialEndsAt,
+                    gracePeriodEndsAt: null,
+                    dailyLimitOverride: result?.daily_limit_override ?? u.dailyLimitOverride,
+                }
+                : u
+            ));
+            closeGiftDialog();
+        } catch (err) {
+            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to gift trial', variant: 'destructive' });
+        } finally {
+            setGiftSubmitting(false);
         }
     };
 
@@ -402,11 +458,30 @@ export default function AdminPage() {
                                                     <div className="text-sm text-muted-foreground">
                                                         {user.requestCount} requests • Joined {formatEuropeanDate(user.createdAt)}
                                                     </div>
+                                                    {(user.subscriptionTier || user.trialEndsAt || user.gracePeriodEndsAt) && (
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {user.subscriptionTier && (
+                                                                <span className="capitalize">{user.subscriptionTier}</span>
+                                                            )}
+                                                            {user.trialEndsAt && (
+                                                                <> • Trial ends {formatEuropeanDate(user.trialEndsAt)}</>
+                                                            )}
+                                                            {user.gracePeriodEndsAt && (
+                                                                <> • Grace ends {formatEuropeanDate(user.gracePeriodEndsAt)}</>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Badge variant={user.role === 'admin' ? 'default' : user.role === 'banned' ? 'destructive' : 'secondary'}>
                                                         {user.role}
                                                     </Badge>
+                                                    {user.role !== 'banned' && (
+                                                        <Button size="sm" variant="outline" onClick={() => openGiftDialog(user)}>
+                                                            <Gift className="h-4 w-4 mr-1" />
+                                                            Gift trial
+                                                        </Button>
+                                                    )}
                                                     {user.role === 'banned' ? (
                                                         <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
                                                             <UserCheck className="h-4 w-4 mr-1" />
@@ -637,6 +712,55 @@ export default function AdminPage() {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            <Dialog open={giftTarget !== null} onOpenChange={(open) => { if (!open) closeGiftDialog(); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Gift trial access</DialogTitle>
+                        <DialogDescription>
+                            {giftTarget ? (
+                                <>Grant <span className="font-medium">{giftTarget.email}</span> trial access for a chosen number of days.</>
+                            ) : null}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        {giftTarget?.trialEndsAt && (
+                            <p className="text-xs text-muted-foreground">
+                                Current trial ends {formatEuropeanDate(giftTarget.trialEndsAt)}
+                            </p>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="gift-days">Days</Label>
+                            <Input
+                                id="gift-days"
+                                type="number"
+                                min={1}
+                                max={365}
+                                value={giftDays}
+                                onChange={(e) => setGiftDays(parseInt(e.target.value, 10) || 0)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="gift-notes">Notes (optional)</Label>
+                            <Input
+                                id="gift-notes"
+                                placeholder="e.g. tournament partner, support request"
+                                value={giftNotes}
+                                onChange={(e) => setGiftNotes(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={closeGiftDialog} disabled={giftSubmitting}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleGiftTrial} disabled={giftSubmitting || giftDays < 1 || giftDays > 365}>
+                            {giftSubmitting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Gift className="h-4 w-4 mr-1" />}
+                            Gift {giftDays} days
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -200,6 +200,12 @@ Deno.serve(async (req) => {
                         .eq("user_id", u.id)
                         .single();
 
+                    const { data: settings } = await supabase
+                        .from("user_settings")
+                        .select("subscription_tier, trial_ends_at, grace_period_ends_at, daily_limit_override")
+                        .eq("user_id", u.id)
+                        .maybeSingle();
+
                     return {
                         id: u.id,
                         email: u.email,
@@ -208,6 +214,10 @@ Deno.serve(async (req) => {
                         requestCount: count || 0,
                         limits: limits || [],
                         role: role?.role || "user",
+                        subscriptionTier: settings?.subscription_tier || null,
+                        trialEndsAt: settings?.trial_ends_at || null,
+                        gracePeriodEndsAt: settings?.grace_period_ends_at || null,
+                        dailyLimitOverride: settings?.daily_limit_override ?? null,
                     };
                 })
             );
@@ -303,6 +313,81 @@ Deno.serve(async (req) => {
             }
 
             return new Response(JSON.stringify({ success: true }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=grant-trial - Gift a trial / pro extension to a user
+        if (action === "grant-trial" && req.method === "POST") {
+            const body = await req.json();
+            const { userId, days = 30, dailyLimit, notes } = body as {
+                userId?: string;
+                days?: number;
+                dailyLimit?: number;
+                notes?: string;
+            };
+
+            if (!userId || !Number.isInteger(days) || days < 1 || days > 365) {
+                return new Response(JSON.stringify({ error: "Invalid grant parameters" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { data: targetUser, error: targetError } = await supabase.auth.admin.getUserById(userId);
+            if (targetError || !targetUser?.user) {
+                return new Response(JSON.stringify({ error: "Target user not found" }), {
+                    status: 404,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const now = new Date();
+            const trialEndsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+            const updatePayload: Record<string, unknown> = {
+                user_id: userId,
+                subscription_tier: "trial",
+                trial_ends_at: trialEndsAt.toISOString(),
+                grace_period_ends_at: null,
+            };
+            if (Number.isInteger(dailyLimit) && (dailyLimit as number) > 0) {
+                updatePayload.daily_limit_override = dailyLimit;
+            }
+
+            const { error: updateError } = await supabase
+                .from("user_settings")
+                .upsert(updatePayload, { onConflict: "user_id" });
+
+            if (updateError) {
+                return new Response(JSON.stringify({ error: updateError.message }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { error: auditError } = await supabase
+                .from("admin_grants")
+                .insert({
+                    admin_user_id: user.id,
+                    target_user_id: userId,
+                    grant_type: "trial",
+                    starts_at: now.toISOString(),
+                    ends_at: trialEndsAt.toISOString(),
+                    notes: notes || null,
+                });
+
+            if (auditError) {
+                console.warn("[ADMIN] grant-trial audit insert failed", auditError.message);
+            }
+
+            return new Response(JSON.stringify({
+                success: true,
+                user_id: userId,
+                subscription_tier: "trial",
+                trial_ends_at: trialEndsAt.toISOString(),
+                daily_limit_override: updatePayload.daily_limit_override ?? null,
+            }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
