@@ -296,8 +296,8 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Streaming is only available for basic OpenAI Ask chats" }, 400, corsHeaders);
   }
 
-  const message = sanitizeText(input.message, MAX_INPUT_LENGTH);
-  if (!message.trim()) return jsonResponse({ error: "Message is required" }, 400, corsHeaders);
+  const userMessage = sanitizeText(input.message, MAX_INPUT_LENGTH);
+  if (!userMessage.trim()) return jsonResponse({ error: "Message is required" }, 400, corsHeaders);
 
   const rateLimit = await checkRateLimit(user.id, model);
   if (!rateLimit.allowed) {
@@ -330,6 +330,10 @@ Deno.serve(async (req) => {
         controller.enqueue(encoder.encode(sse(event, payload)));
       };
 
+      const upstreamAbort = new AbortController();
+      const clientAbortHandler = () => upstreamAbort.abort();
+      req.signal.addEventListener("abort", clientAbortHandler);
+
       try {
         const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -339,11 +343,12 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             model,
-            messages: buildMessages(message, history, mode),
+            messages: buildMessages(userMessage, history, mode),
             temperature,
             stream: true,
             stream_options: { include_usage: true },
           }),
+          signal: upstreamAbort.signal,
         });
 
         if (!openaiResponse.ok || !openaiResponse.body) {
@@ -356,6 +361,7 @@ Deno.serve(async (req) => {
         let buffer = "";
 
         while (true) {
+          if (req.signal.aborted) break;
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -369,7 +375,13 @@ Deno.serve(async (req) => {
             const data = trimmed.slice("data:".length).trim();
             if (data === "[DONE]") continue;
 
-            const parsed = JSON.parse(data);
+            let parsed: { choices?: Array<{ delta?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+            try {
+              parsed = JSON.parse(data);
+            } catch {
+              // Skip malformed chunks rather than killing the whole stream.
+              continue;
+            }
             const delta = parsed.choices?.[0]?.delta?.content;
             if (typeof delta === "string" && delta) {
               accumulated += delta;
@@ -377,8 +389,8 @@ Deno.serve(async (req) => {
             }
 
             if (parsed.usage) {
-              inputTokens = parsed.usage.prompt_tokens;
-              outputTokens = parsed.usage.completion_tokens;
+              inputTokens = parsed.usage.prompt_tokens ?? inputTokens;
+              outputTokens = parsed.usage.completion_tokens ?? outputTokens;
             }
           }
         }
@@ -389,14 +401,29 @@ Deno.serve(async (req) => {
           uncertainties: accumulated.trim() ? [] : ["The model returned an empty streamed response."],
         };
 
-        emit("final", { output });
+        if (!req.signal.aborted) {
+          emit("final", { output });
+        }
         await logUsage(user.id, provider, model, inputTokens, outputTokens, Date.now() - startedAt);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Streaming failed";
-        emit("error", { message });
-        await logUsage(user.id, provider, model, inputTokens, outputTokens, Date.now() - startedAt, "error", "stream_error");
+        const errorMessage = err instanceof Error ? err.message : "Streaming failed";
+        const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
+        if (!isAbort) {
+          emit("error", { message: errorMessage });
+        }
+        await logUsage(
+          user.id,
+          provider,
+          model,
+          inputTokens,
+          outputTokens,
+          Date.now() - startedAt,
+          isAbort ? "cancelled" : "error",
+          isAbort ? "client_abort" : "stream_error",
+        );
       } finally {
-        controller.close();
+        req.signal.removeEventListener("abort", clientAbortHandler);
+        try { controller.close(); } catch { /* already closed */ }
       }
     },
   });
@@ -406,7 +433,6 @@ Deno.serve(async (req) => {
       ...corsHeaders,
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
     },
   });
 });

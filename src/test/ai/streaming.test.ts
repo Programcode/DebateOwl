@@ -19,6 +19,20 @@ describe('AI streaming helpers', () => {
     expect(second.buffer).toBe('');
   });
 
+  it('falls back to raw data string when SSE payload is not valid JSON', () => {
+    const result = consumeSSEChunk('', 'event: status\ndata: not-json-payload\n\n');
+    expect(result.events).toEqual([{ event: 'status', data: 'not-json-payload' }]);
+  });
+
+  it('parses multiple events in a single chunk', () => {
+    const chunk = 'event: delta\ndata: {"text":"A"}\n\nevent: delta\ndata: {"text":"B"}\n\n';
+    const result = consumeSSEChunk('', chunk);
+    expect(result.events).toEqual([
+      { event: 'delta', data: { text: 'A' } },
+      { event: 'delta', data: { text: 'B' } },
+    ]);
+  });
+
   it('only enables streaming for basic OpenAI ask chats', () => {
     expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(true);
     expect(isAskStreamingSupported({ provider: 'lovable', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(true);
@@ -26,6 +40,18 @@ describe('AI streaming helpers', () => {
     expect(isAskStreamingSupported(
       { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
       { citationMode: true }
+    )).toBe(false);
+    expect(isAskStreamingSupported(
+      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { webSearch: true }
+    )).toBe(false);
+    expect(isAskStreamingSupported(
+      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { prosConsMode: true }
+    )).toBe(false);
+    expect(isAskStreamingSupported(
+      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { argumentMapMode: true }
     )).toBe(false);
   });
 });

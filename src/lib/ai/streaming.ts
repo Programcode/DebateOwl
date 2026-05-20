@@ -12,6 +12,7 @@ export interface AskStreamOptions {
 export interface AskStreamHandlers {
   onDelta: (text: string) => void;
   onFinal?: (output: AskOutput) => void;
+  signal?: AbortSignal;
 }
 
 export type ParsedSSEEvent = {
@@ -99,6 +100,7 @@ export async function streamAskChat(
       model: config.model,
       temperature: config.temperature,
     }),
+    signal: handlers.signal,
   });
 
   if (!response.ok || !response.body) {
@@ -110,44 +112,56 @@ export async function streamAskChat(
   let buffer = '';
   let finalOutput: AskOutput | null = null;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  const abortHandler = () => {
+    reader.cancel().catch(() => undefined);
+  };
+  handlers.signal?.addEventListener('abort', abortHandler);
 
-    const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
-    buffer = parsed.buffer;
-
-    for (const event of parsed.events) {
-      if (event.event === 'delta' && typeof event.data === 'object' && event.data !== null && 'text' in event.data) {
-        const text = String((event.data as { text?: unknown }).text ?? '');
-        if (text) handlers.onDelta(text);
+  try {
+    while (true) {
+      if (handlers.signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
       }
+      const { done, value } = await reader.read();
+      if (done) break;
 
+      const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
+      buffer = parsed.buffer;
+
+      for (const event of parsed.events) {
+        if (event.event === 'delta' && typeof event.data === 'object' && event.data !== null && 'text' in event.data) {
+          const text = String((event.data as { text?: unknown }).text ?? '');
+          if (text) handlers.onDelta(text);
+        }
+
+        if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
+          finalOutput = (event.data as { output: AskOutput }).output;
+          handlers.onFinal?.(finalOutput);
+        }
+
+        if (event.event === 'error') {
+          const errMsg = typeof event.data === 'object' && event.data !== null && 'message' in event.data
+            ? String((event.data as { message?: unknown }).message)
+            : 'Streaming request failed';
+          throw new Error(errMsg);
+        }
+      }
+    }
+
+    const finalParsed = consumeSSEChunk('', `${buffer}\n\n`);
+    for (const event of finalParsed.events) {
       if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
         finalOutput = (event.data as { output: AskOutput }).output;
         handlers.onFinal?.(finalOutput);
       }
-
-      if (event.event === 'error') {
-        const message = typeof event.data === 'object' && event.data !== null && 'message' in event.data
-          ? String((event.data as { message?: unknown }).message)
-          : 'Streaming request failed';
-        throw new Error(message);
-      }
     }
-  }
 
-  const finalParsed = consumeSSEChunk('', `${buffer}\n\n`);
-  for (const event of finalParsed.events) {
-    if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
-      finalOutput = (event.data as { output: AskOutput }).output;
-      handlers.onFinal?.(finalOutput);
+    if (!finalOutput) {
+      throw new Error('Streaming request ended before a final response was received');
     }
-  }
 
-  if (!finalOutput) {
-    throw new Error('Streaming request ended before a final response was received');
+    return finalOutput;
+  } finally {
+    handlers.signal?.removeEventListener('abort', abortHandler);
   }
-
-  return finalOutput;
 }

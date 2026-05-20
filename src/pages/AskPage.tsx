@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { ToastAction } from '@/components/ui/toast';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 
 const MAX_AI_INPUT_LENGTH = 50000;
@@ -32,6 +32,11 @@ export default function AskPage() {
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
+  const streamAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    streamAbortRef.current?.abort();
+  }, []);
 
   const handleSend = async (
     message: string,
@@ -115,6 +120,10 @@ export default function AskPage() {
         };
         setStreamingAssistant(streamingMessage);
 
+        streamAbortRef.current?.abort();
+        const controller = new AbortController();
+        streamAbortRef.current = controller;
+
         try {
           result = await streamAskChat(fullMessage, history, mode, config, options, {
             onDelta: (text) => {
@@ -125,10 +134,21 @@ export default function AskPage() {
                 : current
               );
             },
+            signal: controller.signal,
           });
         } catch (streamError) {
           setStreamingAssistant(null);
+          const aborted = streamError instanceof DOMException && streamError.name === 'AbortError';
+          if (aborted) {
+            // User navigated away or started a new request — drop the partial silently.
+            return;
+          }
           if (receivedStreamText) {
+            toast({
+              title: t('ask.streamInterrupted', 'Response was interrupted'),
+              description: t('ask.streamInterruptedDesc', 'You can ask again to get a complete answer.'),
+              variant: 'destructive',
+            });
             result = {
               response: partialResponse.trim(),
               followUpQuestions: [],
@@ -136,6 +156,10 @@ export default function AskPage() {
             };
           } else {
             result = await askChat(fullMessage, history, mode, config, options);
+          }
+        } finally {
+          if (streamAbortRef.current === controller) {
+            streamAbortRef.current = null;
           }
         }
       } else {

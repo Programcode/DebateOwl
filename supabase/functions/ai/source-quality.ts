@@ -66,7 +66,7 @@ const POLICY_STAT_PATTERNS = [
 ];
 
 const LEGAL_CURRENT_PATTERNS = [
-  /\b(law|legal|court|supreme court|regulation|agency|statute|bill|act|ruling|judgment|case)\b/i,
+  /\b(law|legal|court|supreme court|regulation|agency|statute|ruling|judgment|jurisprudence|legislation)\b/i,
 ];
 
 function hostFromUrl(url?: string): string {
