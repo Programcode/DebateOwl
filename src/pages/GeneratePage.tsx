@@ -235,9 +235,9 @@ export default function GeneratePage() {
       <div className="max-w-6xl mx-auto">
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Generate Arguments</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('generate.title')}</h1>
             <p className="text-muted-foreground mt-1">
-              Create structured debate cases with AI-powered argument generation
+              {t('generate.subtitle')}
             </p>
           </div>
           <ModelSelector feature="generate" />
