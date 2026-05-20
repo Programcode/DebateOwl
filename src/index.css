@@ -442,6 +442,47 @@ All colors MUST be HSL.
   scroll-margin-top: 5rem;
 }
 
+/* Animated marching ants border on hover */
+.border-dashed:hover {
+  border-color: transparent;
+  background-image: repeating-linear-gradient(
+    0deg,
+    hsl(var(--primary) / 0.5),
+    hsl(var(--primary) / 0.5) 5px,
+    transparent 5px,
+    transparent 10px
+  ),
+  repeating-linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.5),
+    hsl(var(--primary) / 0.5) 5px,
+    transparent 5px,
+    transparent 10px
+  ),
+  repeating-linear-gradient(
+    180deg,
+    hsl(var(--primary) / 0.5),
+    hsl(var(--primary) / 0.5) 5px,
+    transparent 5px,
+    transparent 10px
+  ),
+  repeating-linear-gradient(
+    270deg,
+    hsl(var(--primary) / 0.5),
+    hsl(var(--primary) / 0.5) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  background-size: 1px 100%, 100% 1px, 1px 100%, 100% 1px;
+  background-repeat: no-repeat;
+  animation: marching-ants 0.4s linear infinite;
+}
+
+@keyframes marching-ants {
+  0% { background-position: 0 0, -10px 0, 100% -10px, 0 100%; }
+  100% { background-position: 0 -10px, 0 0, 100% 0, -10px 100%; }
+}
+
 /* ===== APPLE-LEVEL MICRO-INTERACTIONS ===== */
 
 /* Global smooth transitions on all interactive elements */

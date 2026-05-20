@@ -180,8 +180,9 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
 
         const side = result.metadata?.side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
         const format = result.metadata?.format?.toUpperCase() || 'Standard';
+        const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
 
-        addHeader(i18n.t('export.debateCase'), `${side} • ${format} Format`);
+        addHeader(motion || i18n.t('export.debateCase'), `${side} • ${format} Format`);
 
         // Exordio (if present)
         if (result.exordio) {
