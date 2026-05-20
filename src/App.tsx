@@ -11,6 +11,7 @@ import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for code splitting
@@ -54,6 +55,7 @@ const PageLoader = () => (
 function AnimatedRoutes() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
+  useSessionStorageSync();
 
   return (
     <AnimatePresence mode="wait" initial={false}>

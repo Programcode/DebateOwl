@@ -12,20 +12,23 @@ import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { ToastAction } from '@/components/ui/toast';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 
 const MAX_AI_INPUT_LENGTH = 50000;
 
 export default function AskPage() {
-  const { askMessages, askLoading, addAskMessage, setAskLoading, clearAskMessages, addSource } = useSessionStore();
-  const [streamingAssistant, setStreamingAssistant] = useState<{
-    id: string;
-    role: 'assistant';
-    content: string;
-    timestamp: number;
-    isStreaming: true;
-  } | null>(null);
+  const {
+    askMessages,
+    askLoading,
+    askStreamingAssistant,
+    addAskMessage,
+    setAskLoading,
+    setAskStreamingAssistant,
+    appendAskStreamingDelta,
+    clearAskMessages,
+    addSource,
+  } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
@@ -33,10 +36,6 @@ export default function AskPage() {
   const subError = useSubscriptionError();
   const { t } = useTranslation();
   const streamAbortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => () => {
-    streamAbortRef.current?.abort();
-  }, []);
 
   const handleSend = async (
     message: string,
@@ -118,7 +117,7 @@ export default function AskPage() {
           timestamp: Date.now(),
           isStreaming: true as const,
         };
-        setStreamingAssistant(streamingMessage);
+        setAskStreamingAssistant(streamingMessage);
 
         streamAbortRef.current?.abort();
         const controller = new AbortController();
@@ -138,20 +137,17 @@ export default function AskPage() {
                   const batch = pendingText;
                   pendingText = '';
                   flushTimer = null;
-                  setStreamingAssistant((current) => current
-                    ? { ...current, content: `${current.content}${batch}` }
-                    : current
-                  );
+                  appendAskStreamingDelta(batch);
                 }, 30);
               }
             },
             signal: controller.signal,
           });
         } catch (streamError) {
-          setStreamingAssistant(null);
+          setAskStreamingAssistant(null);
           const aborted = streamError instanceof DOMException && streamError.name === 'AbortError';
           if (aborted) {
-            // User navigated away or started a new request — drop the partial silently.
+            // A newer request replaced this one. Drop the partial silently.
             return;
           }
           if (receivedStreamText) {
@@ -183,7 +179,7 @@ export default function AskPage() {
         output: result
       });
     } catch (error) {
-      setStreamingAssistant(null);
+      setAskStreamingAssistant(null);
       console.error(error);
 
       if (subError.handleSubscriptionError(error)) {
@@ -210,7 +206,7 @@ export default function AskPage() {
         });
       }
     } finally {
-      setStreamingAssistant(null);
+      setAskStreamingAssistant(null);
       setAskLoading(false);
     }
   };
@@ -237,8 +233,8 @@ export default function AskPage() {
     timestamp: m.timestamp,
     output: m.output
   }));
-  const visibleMessages = streamingAssistant
-    ? [...formattedMessages, streamingAssistant]
+  const visibleMessages = askStreamingAssistant
+    ? [...formattedMessages, askStreamingAssistant]
     : formattedMessages;
 
   return (
