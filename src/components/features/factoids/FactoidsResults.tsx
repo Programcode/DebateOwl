@@ -22,6 +22,7 @@ interface FactoidsResultsProps {
   isVerifying?: boolean;
   onDiscuss?: () => void;
   onSaveSource?: (title: string, content: string, url?: string) => void;
+  onUseSuggestion?: (query: string) => void;
 }
 
 const verificationConfig = {
@@ -136,7 +137,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   );
 }
 
-export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource }: FactoidsResultsProps) {
+export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const displayFactoids = result.factoids.filter(f => f.citation?.verified === 'verified');
@@ -285,9 +286,11 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.open(`https://scholar.google.com/scholar?q=${encodeURIComponent(query)}`, '_blank')}
+                onClick={() => onUseSuggestion?.(query)}
+                disabled={!onUseSuggestion}
+                title={t('factoidsResults.useSuggestion', 'Search this')}
               >
-                <ExternalLink className="h-4 w-4" />
+                <Search className="h-4 w-4" />
               </Button>
             </div>
           ))}
