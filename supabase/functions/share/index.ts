@@ -34,6 +34,10 @@ function generateShareCode(): string {
     return code;
 }
 
+function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+    return error?.code === "23505" || Boolean(error?.message?.toLowerCase().includes("duplicate"));
+}
+
 Deno.serve(async (req: Request) => {
     const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
@@ -81,21 +85,6 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        // Generate unique share code
-        let shareCode = generateShareCode();
-        let attempts = 0;
-        while (attempts < 5) {
-            const { data: existing } = await supabase
-                .from("shared_items")
-                .select("id")
-                .eq("share_code", shareCode)
-                .single();
-
-            if (!existing) break;
-            shareCode = generateShareCode();
-            attempts++;
-        }
-
         // Calculate expiration
         let expiresAt: string | null = null;
         if (expiresInDays && typeof expiresInDays === 'number') {
@@ -104,22 +93,38 @@ Deno.serve(async (req: Request) => {
             expiresAt = expiry.toISOString();
         }
 
-        // Create shared item
-        const { data, error } = await supabase
-            .from("shared_items")
-            .insert({
-                share_code: shareCode,
-                item_type: itemType,
-                item_data: itemData,
-                title: title || `Shared ${itemType}`,
-                created_by: userId,
-                expires_at: expiresAt,
-            })
-            .select()
-            .single();
+        let data: { share_code: string; expires_at: string | null } | null = null;
+        let lastError: { code?: string; message?: string } | null = null;
 
-        if (error) {
-            console.error("[SHARE] Insert error:", error);
+        for (let attempts = 0; attempts < 5; attempts++) {
+            const shareCode = generateShareCode();
+            const result = await supabase
+                .from("shared_items")
+                .insert({
+                    share_code: shareCode,
+                    item_type: itemType,
+                    item_data: itemData,
+                    title: title || `Shared ${itemType}`,
+                    created_by: userId,
+                    expires_at: expiresAt,
+                })
+                .select("share_code, expires_at")
+                .single();
+
+            if (!result.error) {
+                data = result.data;
+                break;
+            }
+
+            lastError = result.error;
+            if (!isUniqueViolation(result.error)) {
+                break;
+            }
+            console.warn(`[SHARE] Share code collision, retrying (${attempts + 1}/5)`);
+        }
+
+        if (!data) {
+            console.error("[SHARE] Insert error:", lastError);
             return new Response(JSON.stringify({ error: "Failed to create share link" }), {
                 status: 500,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },

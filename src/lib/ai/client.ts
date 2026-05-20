@@ -8,6 +8,7 @@ import type { AskOutput } from './schemas/ask';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 // Request timeout in milliseconds (200 seconds)
 const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -282,6 +283,13 @@ async function callSupabaseAI(
     // Validate response has expected output
     if (!data?.output) {
       throw new AIResponseError('AI response missing output field', { requestId, details: { data } });
+    }
+
+    if (data.meta && typeof data.meta === 'object' && (data.meta as { truncated?: unknown }).truncated === true) {
+      toast({
+        title: 'Input was shortened',
+        description: 'The request was too large, so only the portion that fit was sent to the AI.',
+      });
     }
 
     return data;
