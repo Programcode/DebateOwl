@@ -399,6 +399,7 @@ function badRequest(message: string, corsHeaders: Record<string, string>) {
 }
 
 const MAX_INPUT_LENGTH = 50000;
+const MAX_ASK_CONTEXT_LENGTH = 32000;
 const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|text)/i,
   /disregard\s+(all\s+)?(previous|prior|above)/i,
@@ -406,19 +407,24 @@ const PROMPT_INJECTION_PATTERNS = [
   /you\s+are\s+now\s+(a|an)\s+/i,
   /new\s+instruction[s]?\s*:/i,
   /system\s*:\s*\[/i,
+  /<!--\s*system\s*:/i,
   /\[\s*SYSTEM\s*\]/i,
   /\{\s*"role"\s*:\s*"system"/i,
   /<\|im_start\|>/i,
   /<\|im_end\|>/i,
+  /<\|\s*system\s*\|>/i,
+  /<system>/i,
   /###\s*instruction/i,
   /\bDAN\s+mode\b/i,
   /jailbreak/i,
 ];
 
-function sanitizePromptInput(input: string, fieldName: string): { sanitized: string } | { rejected: string } {
-  if (typeof input !== "string") return { sanitized: "" };
-  // eslint-disable-next-line no-control-regex
-  let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+function sanitizePromptInput(input: string, fieldName: string): { sanitized: string; truncated: boolean } | { rejected: string } {
+  if (typeof input !== "string") return { sanitized: "", truncated: false };
+  const sanitized = input
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "");
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(sanitized)) {
       console.warn(`[SECURITY] Prompt injection attempt detected in ${fieldName}: ${sanitized.slice(0, 200)}`);
@@ -427,17 +433,19 @@ function sanitizePromptInput(input: string, fieldName: string): { sanitized: str
   }
   if (sanitized.length > MAX_INPUT_LENGTH) {
     console.warn(`[SECURITY] Input truncated in ${fieldName}: ${sanitized.length} chars -> ${MAX_INPUT_LENGTH}`);
-    sanitized = sanitized.slice(0, MAX_INPUT_LENGTH);
+    return { sanitized: sanitized.slice(0, MAX_INPUT_LENGTH), truncated: true };
   }
-  return { sanitized };
+  return { sanitized, truncated: false };
 }
 
-function sanitizeInput(input: Record<string, unknown>): { sanitized: Record<string, unknown> } | { rejected: string } {
+function sanitizeInput(input: Record<string, unknown>): { sanitized: Record<string, unknown>; truncated: boolean } | { rejected: string } {
   const result: Record<string, unknown> = {};
+  let truncated = false;
   for (const [key, value] of Object.entries(input)) {
     if (typeof value === "string") {
       const sanitizeResult = sanitizePromptInput(value, key);
       if ("rejected" in sanitizeResult) return sanitizeResult;
+      truncated = truncated || sanitizeResult.truncated;
       result[key] = sanitizeResult.sanitized;
     } else if (Array.isArray(value)) {
       const sanitizedArray: unknown[] = [];
@@ -446,6 +454,7 @@ function sanitizeInput(input: Record<string, unknown>): { sanitized: Record<stri
         if (typeof item === "object" && item !== null && "content" in item) {
           const contentResult = sanitizePromptInput(String((item as Record<string, unknown>).content || ""), `${key}[${i}].content`);
           if ("rejected" in contentResult) return contentResult;
+          truncated = truncated || contentResult.truncated;
           sanitizedArray.push({ ...item, content: contentResult.sanitized });
         } else {
           sanitizedArray.push(item);
@@ -456,7 +465,13 @@ function sanitizeInput(input: Record<string, unknown>): { sanitized: Record<stri
       result[key] = value;
     }
   }
-  return { sanitized: result };
+  return { sanitized: result, truncated };
+}
+
+function truncateTextToBudget(text: string, budget: number): { text: string; truncated: boolean } {
+  if (budget <= 0) return { text: "", truncated: text.length > 0 };
+  if (text.length <= budget) return { text, truncated: false };
+  return { text: text.slice(0, budget) + "\n[Context truncated to fit request limits.]", truncated: true };
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
@@ -1337,13 +1352,18 @@ Deno.serve(async (req) => {
     return badRequest(sanitizeResult.rejected, corsHeaders);
   }
   const sanitizedInput = sanitizeResult.sanitized;
+  let responseTruncated = sanitizeResult.truncated;
   if (customSystemPrompt) {
     const promptResult = sanitizePromptInput(customSystemPrompt, "customSystemPrompt");
     if ("rejected" in promptResult) {
       log(requestId, "WARN", "Custom prompt rejected", { reason: promptResult.rejected });
       return badRequest(promptResult.rejected, corsHeaders);
     }
+    responseTruncated = responseTruncated || promptResult.truncated;
   }
+  const successBody = (payload: Record<string, unknown>) => responseTruncated
+    ? { ...payload, meta: { truncated: true } }
+    : payload;
 
   // Require a valid user session for all AI requests.
   // The frontend already enforces auth; this protects the endpoint even when
@@ -1422,7 +1442,7 @@ Deno.serve(async (req) => {
       // Log usage and return
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
-      return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ASK: Optionally run web search and include URL context from chat
@@ -1467,14 +1487,26 @@ Deno.serve(async (req) => {
       }
 
       const modeGuidance = getAskModeGuidance(mode);
-      const prompt = `Message: ${message}
+      const basePrompt = `Message: ${message}
 Mode: ${mode}
 Mode Guidance: ${modeGuidance}
 Citation Mode: ${citationMode ? "ON - cite sourced factual claims using the research or page context below" : "OFF"}
 Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}
 Pros/Cons: ${prosConsMode ? "ON - include prosConsAnalysis" : "OFF - omit prosConsAnalysis"}
 Argument Map: ${argumentMapMode ? "ON - include argumentMap" : "OFF - omit argumentMap"}
-Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlContext}${webSearchContext}`;
+Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
+      const contextBudget = Math.max(0, MAX_ASK_CONTEXT_LENGTH - basePrompt.length);
+      const webSearchBudget = Math.max(0, contextBudget - urlContext.length);
+      const trimmedWebSearch = truncateTextToBudget(webSearchContext, webSearchBudget);
+      webSearchContext = trimmedWebSearch.text;
+      responseTruncated = responseTruncated || trimmedWebSearch.truncated;
+
+      const urlBudget = Math.max(0, contextBudget - webSearchContext.length);
+      const trimmedUrlContext = truncateTextToBudget(urlContext, urlBudget);
+      urlContext = trimmedUrlContext.text;
+      responseTruncated = responseTruncated || trimmedUrlContext.truncated;
+
+      const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
       const output = await callAI(provider, model, systemPrompt, messages, temperature);
 
@@ -1537,7 +1569,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
       // Log usage and return
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
-      return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // GENERATE: Use deep research for evidence-backed arguments
@@ -1585,7 +1617,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
-      return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // BRAINSTORM: Use research to inform argument angles
@@ -1612,7 +1644,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
-      return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ATTACK: Use deep research for evidence-based critique
@@ -1636,7 +1668,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
-      return new Response(JSON.stringify({ output, discoveredSources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fallback for any other feature
@@ -1646,7 +1678,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}${urlC
 
     const latencyMs = Date.now() - startTime;
     await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
-    return new Response(JSON.stringify({ output }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);

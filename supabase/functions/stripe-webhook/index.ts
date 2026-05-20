@@ -58,6 +58,26 @@ Deno.serve(async (req) => {
 
   console.log(`[WEBHOOK] Received event: ${event.type} (${event.id})`);
 
+  const { error: eventInsertError } = await supabase.from("webhook_events").insert({
+    id: event.id,
+    event_type: event.type,
+  });
+
+  if (eventInsertError) {
+    if (eventInsertError.code === "23505") {
+      console.log(`[WEBHOOK] Duplicate event ignored: ${event.id}`);
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    console.error("[WEBHOOK] Failed to record webhook event:", eventInsertError);
+    return new Response(JSON.stringify({ received: false, error: "Failed to record webhook event" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
