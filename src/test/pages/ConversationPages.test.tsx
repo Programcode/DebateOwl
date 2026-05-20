@@ -10,6 +10,8 @@ vi.mock('@/hooks/use-subscription', () => ({
 const mockNavigate = vi.fn();
 const mockToast = vi.fn();
 const mockAskChat = vi.fn();
+const mockIsAskStreamingSupported = vi.fn(() => false);
+const mockStreamAskChat = vi.fn();
 const mockBrainstorm = vi.fn();
 const mockFactoids = vi.fn();
 const mockIsTimeoutError = vi.fn(() => false);
@@ -77,6 +79,11 @@ vi.mock('@/lib/ai/client', () => ({
   isTimeoutError: (...args: any[]) => mockIsTimeoutError(...args),
 }));
 
+vi.mock('@/lib/ai/streaming', () => ({
+  isAskStreamingSupported: (...args: any[]) => mockIsAskStreamingSupported(...args),
+  streamAskChat: (...args: any[]) => mockStreamAskChat(...args),
+}));
+
 vi.mock('@/components/features/subscription', () => ({
   LimitReachedModal: () => null,
   ModelRestrictedModal: () => null,
@@ -142,6 +149,7 @@ describe('Conversation Pages', () => {
 
     subErrorState.handleSubscriptionError.mockReturnValue(false);
     mockIsTimeoutError.mockReturnValue(false);
+    mockIsAskStreamingSupported.mockReturnValue(false);
   });
 
   it('AskPage sends user message and appends AI response', async () => {
@@ -190,6 +198,35 @@ describe('Conversation Pages', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Request Timed Out' }));
+    });
+  });
+
+  it('AskPage streams basic ask replies when supported', async () => {
+    mockIsAskStreamingSupported.mockReturnValueOnce(true);
+    mockStreamAskChat.mockImplementationOnce(async (...args: any[]) => {
+      const handlers = args[5];
+      handlers.onDelta('Try ');
+      handlers.onDelta('value framing.');
+      return { response: 'Try value framing.', followUpQuestions: [], uncertainties: [] };
+    });
+
+    render(
+      <BrowserRouter>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+
+    await waitFor(() => {
+      expect(mockStreamAskChat).toHaveBeenCalled();
+    });
+
+    expect(mockAskChat).not.toHaveBeenCalled();
+    expect(sessionState.addAskMessage).toHaveBeenCalledWith({
+      role: 'assistant',
+      content: 'Try value framing.',
+      output: { response: 'Try value framing.', followUpQuestions: [], uncertainties: [] },
     });
   });
 

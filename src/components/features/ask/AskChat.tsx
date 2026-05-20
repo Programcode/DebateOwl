@@ -20,6 +20,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  isStreaming?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   output?: any;
 }
@@ -96,7 +97,14 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </Button>
         )}
         <div className="text-sm">
-          <Markdown>{message.content}</Markdown>
+          {message.content ? (
+            <Markdown>{message.content}</Markdown>
+          ) : message.isStreaming ? (
+            <span className="text-muted-foreground">{t('askChat.typing', 'Typing')}</span>
+          ) : null}
+          {message.isStreaming && (
+            <span className="streaming-caret" aria-hidden="true" />
+          )}
         </div>
 
         {/* Follow-up questions */}
@@ -276,6 +284,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const { toast } = useToast();
 
   const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
+  const hasStreamingMessage = messages.some((message) => message.isStreaming);
 
   // Cycle through loading messages
   useEffect(() => {
@@ -387,7 +396,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} onSave={onSaveSource} />
               ))}
-              {isLoading && (
+              {isLoading && !hasStreamingMessage && (
                 <div className="motion-swap flex gap-3" role="status" aria-live="polite" aria-atomic="true">
                   <div className="motion-shimmer bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
                     <div className="flex items-center gap-2">

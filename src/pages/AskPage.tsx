@@ -4,6 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
 import { askChat, isTimeoutError } from '@/lib/ai/client';
+import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
@@ -11,11 +12,20 @@ import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { ToastAction } from '@/components/ui/toast';
+import { useState } from 'react';
+import type { AskOutput } from '@/lib/ai/schemas/ask';
 
 const MAX_AI_INPUT_LENGTH = 50000;
 
 export default function AskPage() {
   const { askMessages, askLoading, addAskMessage, setAskLoading, clearAskMessages, addSource } = useSessionStore();
+  const [streamingAssistant, setStreamingAssistant] = useState<{
+    id: string;
+    role: 'assistant';
+    content: string;
+    timestamp: number;
+    isStreaming: true;
+  } | null>(null);
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
@@ -84,12 +94,53 @@ export default function AskPage() {
       addAskMessage({ role: 'user', content: displayContent });
       setAskLoading(true);
 
-      const result = await askChat(fullMessage, history, mode, config, {
+      const options = {
         citationMode,
         webSearch,
         prosConsMode,
         argumentMapMode,
-      });
+      };
+
+      let result: AskOutput;
+
+      if (isAskStreamingSupported(config, options)) {
+        let receivedStreamText = false;
+        let partialResponse = '';
+        const streamingMessage = {
+          id: `stream_${Date.now()}`,
+          role: 'assistant' as const,
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: true as const,
+        };
+        setStreamingAssistant(streamingMessage);
+
+        try {
+          result = await streamAskChat(fullMessage, history, mode, config, options, {
+            onDelta: (text) => {
+              receivedStreamText = true;
+              partialResponse += text;
+              setStreamingAssistant((current) => current
+                ? { ...current, content: `${current.content}${text}` }
+                : current
+              );
+            },
+          });
+        } catch (streamError) {
+          setStreamingAssistant(null);
+          if (receivedStreamText) {
+            result = {
+              response: partialResponse.trim(),
+              followUpQuestions: [],
+              uncertainties: [t('ask.streamInterrupted', 'The streamed response was interrupted before completion.')],
+            };
+          } else {
+            result = await askChat(fullMessage, history, mode, config, options);
+          }
+        }
+      } else {
+        result = await askChat(fullMessage, history, mode, config, options);
+      }
 
       addAskMessage({
         role: 'assistant',
@@ -97,6 +148,7 @@ export default function AskPage() {
         output: result
       });
     } catch (error) {
+      setStreamingAssistant(null);
       console.error(error);
 
       if (subError.handleSubscriptionError(error)) {
@@ -123,6 +175,7 @@ export default function AskPage() {
         });
       }
     } finally {
+      setStreamingAssistant(null);
       setAskLoading(false);
     }
   };
@@ -149,6 +202,9 @@ export default function AskPage() {
     timestamp: m.timestamp,
     output: m.output
   }));
+  const visibleMessages = streamingAssistant
+    ? [...formattedMessages, streamingAssistant]
+    : formattedMessages;
 
   return (
     <div className="container py-8 px-4">
@@ -159,7 +215,7 @@ export default function AskPage() {
         </AnimatedSection>
         <AnimatedSection delay={75}>
           <AskChat
-            messages={formattedMessages}
+            messages={visibleMessages}
             isLoading={askLoading}
             onSend={handleSend}
             onClear={clearAskMessages}

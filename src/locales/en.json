@@ -102,7 +102,8 @@
     "timeout": "Request Timed Out",
     "timeoutDesc": "The request took too long. Please try again.",
     "saved": "Saved",
-    "savedDesc": "Source added to library."
+    "savedDesc": "Source added to library.",
+    "streamInterrupted": "The streamed response was interrupted before completion."
   },
   "chat": {
     "error": "Chat Error",
@@ -554,6 +555,7 @@
   "askChat": {
     "title": "Ask Your Coach",
     "subtitle": "Get answers to debate questions",
+    "typing": "Typing",
     "startConversation": "Start a conversation",
     "startDesc": "Ask anything about debate strategy, arguments, or get help with your case.",
     "modeGeneral": "General",
