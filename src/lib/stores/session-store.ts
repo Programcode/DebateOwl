@@ -276,7 +276,10 @@ export const useSessionStore = create<SessionState>()(
       },
       removeSource: async (id) => {
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((s) => s.id !== id) }));
-        await supabase.from('sources').delete().eq('id', id);
+        const userId = await getUserId();
+        let query = supabase.from('sources').delete().eq('id', id);
+        if (userId) query = query.eq('user_id', userId);
+        await query;
       },
       toggleSource: async (id) => {
         const current = get().sourceLibrary.find((s) => s.id === id);
@@ -285,7 +288,10 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((s) => s.id === id ? { ...s, isActive: nextValue } : s),
         }));
-        await supabase.from('sources').update({ is_active: nextValue }).eq('id', id);
+        const userId = await getUserId();
+        let query = supabase.from('sources').update({ is_active: nextValue }).eq('id', id);
+        if (userId) query = query.eq('user_id', userId);
+        await query;
       },
       clearLibrary: async () => {
         const userId = await getUserId();
@@ -324,7 +330,10 @@ export const useSessionStore = create<SessionState>()(
       },
       deleteSavedCase: async (id) => {
         set((state) => ({ savedCases: state.savedCases.filter((c) => c.id !== id) }));
-        await supabase.from('cases').delete().eq('id', id);
+        const userId = await getUserId();
+        let query = supabase.from('cases').delete().eq('id', id);
+        if (userId) query = query.eq('user_id', userId);
+        await query;
       },
       loadSavedCase: (id) => {
         const item = get().savedCases.find((c) => c.id === id);
@@ -507,7 +516,10 @@ export const useSessionStore = create<SessionState>()(
 
       deleteSavedFlowchart: async (id) => {
         set((state) => ({ savedFlowcharts: state.savedFlowcharts.filter((c) => c.id !== id) }));
-        await supabase.from('flowcharts').delete().eq('id', id);
+        const userId = await getUserId();
+        let query = supabase.from('flowcharts').delete().eq('id', id);
+        if (userId) query = query.eq('user_id', userId);
+        await query;
       },
 
       hydrateFromServer: async () => {

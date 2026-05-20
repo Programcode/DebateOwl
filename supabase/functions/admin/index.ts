@@ -30,7 +30,24 @@ type UsageByUserRow = {
     email?: string | null;
     requests: number;
     cost: number;
+    unknownCostRequests?: number;
 };
+
+type CostAuditRow = {
+    user_id?: string | null;
+    cost_usd?: number | null;
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+};
+
+function hasUnknownCost(row: CostAuditRow) {
+    return row.cost_usd === null ||
+        row.cost_usd === undefined ||
+        row.input_tokens === null ||
+        row.input_tokens === undefined ||
+        row.output_tokens === null ||
+        row.output_tokens === undefined;
+}
 
 async function getAuthEmailMap(userIds: string[]): Promise<{ resolved: Map<string, string>; failed: string[] }> {
     const wantedIds = new Set(userIds.filter(Boolean));
@@ -141,11 +158,12 @@ Deno.serve(async (req) => {
             // Total requests and cost
             const { data: totals } = await supabase
                 .from("ai_requests")
-                .select("id, cost_usd, status")
+                .select("id, cost_usd, input_tokens, output_tokens, status")
                 .gte("created_at", since.toISOString());
 
             const totalRequests = totals?.length || 0;
             const totalCost = totals?.reduce((sum, r) => sum + (r.cost_usd || 0), 0) || 0;
+            const unknownCostRequests = totals?.filter(hasUnknownCost).length || 0;
             const successRate = totals?.length
                 ? (totals.filter(r => r.status === "success").length / totals.length) * 100
                 : 100;
@@ -172,14 +190,30 @@ Deno.serve(async (req) => {
                 .map((row) => row.user_id)
                 .filter(Boolean);
             const userEmails = await getAuthEmailMap(missingEmailUserIds);
+            const topUserIds = byUser.map((row) => row.user_id).filter(Boolean);
+            const unknownCostsByUser = new Map<string, number>();
+            if (topUserIds.length > 0) {
+                const { data: unknownCostRows } = await supabase
+                    .from("ai_requests")
+                    .select("user_id, cost_usd, input_tokens, output_tokens")
+                    .in("user_id", topUserIds)
+                    .gte("created_at", since.toISOString());
+
+                unknownCostRows?.forEach((row) => {
+                    if (!hasUnknownCost(row)) return;
+                    if (!row.user_id) return;
+                    unknownCostsByUser.set(row.user_id, (unknownCostsByUser.get(row.user_id) || 0) + 1);
+                });
+            }
 
             const byUserWithEmail = byUser.map((row) => ({
                 ...row,
                 email: row.email || userEmails.resolved.get(row.user_id) || null,
+                unknownCostRequests: unknownCostsByUser.get(row.user_id) || 0,
             }));
 
             return new Response(JSON.stringify({
-                totals: { requests: totalRequests, cost: totalCost, successRate },
+                totals: { requests: totalRequests, cost: totalCost, successRate, unknownCostRequests },
                 daily: daily || [],
                 byFeature: featureCounts,
                 byUser: byUserWithEmail,
