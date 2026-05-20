@@ -92,9 +92,9 @@ export default function HistoryPage() {
                   <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                    <div className="space-y-4 stagger-enter">
                       {store.savedCases.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors motion-list-item">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
