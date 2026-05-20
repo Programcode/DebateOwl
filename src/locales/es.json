@@ -120,6 +120,10 @@
     "system": "Sistema",
     "subscription": "Suscripción",
     "subscriptionDesc": "Tu plan actual y uso",
+    "tierTrial": "Prueba gratis",
+    "tierPro": "Pro",
+    "tierLegacyFree": "Gratis heredado",
+    "tierExpired": "Caducado",
     "ends": "Termina",
     "loading": "Cargando...",
     "manageSubscription": "Gestionar suscripción",
@@ -146,7 +150,16 @@
     "deleteAllData": "Eliminar todos mis datos",
     "deleteDialogTitle": "Eliminar todos los datos",
     "deleteDialogDesc": "Esto elimina permanentemente todos los casos, ataques, lluvias de ideas, datos, chats y fuentes de {{email}}. No se puede deshacer.",
-    "typeEmailConfirm": "Escribe tu email para confirmar"
+    "typeEmailConfirm": "Escribe tu email para confirmar",
+    "deleteCancelled": "Cancelado",
+    "deleteCancelledDesc": "El email no coincide. No se eliminó ningún dato.",
+    "deleteSuccess": "Datos eliminados",
+    "deleteSuccessDesc": "Todos tus datos guardados se eliminaron permanentemente.",
+    "deleteFailed": "Error",
+    "deleteFailedDesc": "No se pudieron eliminar los datos. Inténtalo de nuevo.",
+    "noSubscription": "No se encontró suscripción",
+    "noSubscriptionDesc": "Esta cuenta no está conectada a facturación de Stripe. Mejora a Pro para iniciar una suscripción.",
+    "portalError": "Error"
   },
   "login": {
     "title": "Iniciar Sesión en DebateLab",

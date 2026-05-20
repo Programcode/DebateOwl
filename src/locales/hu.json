@@ -120,6 +120,10 @@
     "system": "Rendszer",
     "subscription": "Előfizetés",
     "subscriptionDesc": "Jelenlegi csomagod és használatod",
+    "tierTrial": "Ingyenes próba",
+    "tierPro": "Pro",
+    "tierLegacyFree": "Korábbi ingyenes",
+    "tierExpired": "Lejárt",
     "ends": "Vége",
     "loading": "Betöltés...",
     "manageSubscription": "Előfizetés kezelése",
@@ -146,7 +150,16 @@
     "deleteAllData": "Összes adatom törlése",
     "deleteDialogTitle": "Összes adat törlése",
     "deleteDialogDesc": "Ez véglegesen törli {{email}} összes esetét, támadását, ötletelését, tényét, chatjét és forrását. Nem vonható vissza.",
-    "typeEmailConfirm": "Írd be az emailed a megerősítéshez"
+    "typeEmailConfirm": "Írd be az emailed a megerősítéshez",
+    "deleteCancelled": "Megszakítva",
+    "deleteCancelledDesc": "Az email nem egyezik. Nem töröltünk adatot.",
+    "deleteSuccess": "Adatok törölve",
+    "deleteSuccessDesc": "Az összes mentett adatod véglegesen törölve lett.",
+    "deleteFailed": "Hiba",
+    "deleteFailedDesc": "Nem sikerült törölni az adatokat. Próbáld újra.",
+    "noSubscription": "Nincs előfizetés",
+    "noSubscriptionDesc": "Ez a fiók nincs Stripe-számlázáshoz kapcsolva. Válts Pro-ra az előfizetés indításához.",
+    "portalError": "Hiba"
   },
   "login": {
     "title": "Bejelentkezés a DebateLab-ba",
