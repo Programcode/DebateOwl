@@ -389,6 +389,204 @@ All colors MUST be HSL.
   }
 }
 
+/* ===== APPLE-LEVEL MICRO-INTERACTIONS ===== */
+
+/* Global smooth transitions on all interactive elements */
+@layer base {
+  button, a, input, select, textarea, [role="button"] {
+    transition-property: transform, box-shadow, border-color, background-color, color, opacity;
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-fluid);
+  }
+
+  /* Smooth focus ring with glow */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5), 0 0 12px hsl(var(--primary) / 0.2);
+    border-radius: var(--radius);
+    transition: box-shadow var(--motion-duration-fast) var(--motion-ease-fluid);
+  }
+
+  /* Card hover glow border */
+  .card-hover-glow {
+    transition: border-color var(--motion-duration-normal) var(--motion-ease-fluid),
+                box-shadow var(--motion-duration-normal) var(--motion-ease-fluid),
+                transform var(--motion-duration-normal) var(--motion-ease-fluid);
+  }
+
+  .card-hover-glow:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1), 0 8px 24px hsl(var(--primary) / 0.08);
+    transform: translateY(-2px);
+  }
+}
+
+/* Page entrance animation */
+.page-enter {
+  animation: page-enter var(--motion-duration-slow) var(--motion-ease-fluid) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered list entrance */
+.stagger-enter > * {
+  animation: stagger-item var(--motion-duration-normal) var(--motion-ease-fluid) both;
+}
+
+.stagger-enter > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-enter > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-enter > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-enter > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-enter > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-enter > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-enter > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-enter > *:nth-child(8) { animation-delay: 350ms; }
+
+@keyframes stagger-item {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Nav item hover glow */
+.nav-glow {
+  position: relative;
+}
+
+.nav-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, hsl(var(--primary) / 0.12), transparent 70%);
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-fluid);
+  pointer-events: none;
+}
+
+.nav-glow:hover::after {
+  opacity: 1;
+}
+
+/* Active nav indicator pill */
+.nav-active-pill {
+  position: relative;
+}
+
+.nav-active-pill::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  border-radius: 1px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 6px hsl(var(--primary) / 0.4);
+  animation: nav-pill-in var(--motion-duration-normal) var(--motion-ease-fluid) both;
+}
+
+@keyframes nav-pill-in {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* Input focus glow */
+input:focus, textarea:focus, select:focus, [cmdk-input]:focus {
+  border-color: hsl(var(--primary) / 0.5) !important;
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1), 0 0 8px hsl(var(--primary) / 0.08) !important;
+}
+
+/* Progress bar glow pulse */
+[role="progressbar"] > div {
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+  transition: width 0.5s var(--motion-ease-fluid);
+}
+
+/* Toast slide-in */
+[data-sonner-toaster] [data-sonner-toast] {
+  animation: toast-slide-in 0.3s var(--motion-ease-fluid) both !important;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal/dialog backdrop blur + entrance */
+[data-state="open"][role="dialog"] {
+  animation: dialog-enter 0.25s var(--motion-ease-fluid) both;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Message bubble entrance */
+.message-enter {
+  animation: message-enter 0.3s var(--motion-ease-fluid) both;
+}
+
+@keyframes message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Scroll-triggered fade-in (used with IntersectionObserver or just on mount) */
+.fade-in-up {
+  animation: fade-in-up 0.5s var(--motion-ease-fluid) both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);

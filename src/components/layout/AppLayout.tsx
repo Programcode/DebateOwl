@@ -62,10 +62,10 @@ export function AppLayout() {
                 to={item.path}
                 end={item.path === '/app'}
                 className={cn(
-                  "motion-press flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium",
+                  "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
-                activeClassName="bg-primary/10 text-primary"
+                activeClassName="bg-primary/10 text-primary nav-active-pill"
               >
                 <item.icon className="h-4 w-4 shrink-0" />
                 <span className="hidden xl:inline">{t(`nav.${item.key}`)}</span>
@@ -125,7 +125,7 @@ export function AppLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 page-enter">
         <Outlet />
       </main>
 
