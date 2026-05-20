@@ -10,10 +10,15 @@ interface StreamingIndicatorProps {
 export function StreamingIndicator({ messages, intervalMs = 3000, className }: StreamingIndicatorProps) {
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [fading, setFading] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % messages.length);
+      setFading(true);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % messages.length);
+        setFading(false);
+      }, 200);
     }, intervalMs);
     return () => clearInterval(interval);
   }, [messages.length, intervalMs]);
@@ -34,7 +39,7 @@ export function StreamingIndicator({ messages, intervalMs = 3000, className }: S
         <span className="motion-loading-card absolute h-10 w-10 rounded-full bg-primary/10" />
         <span className="h-4 w-4 rounded-full bg-primary shadow-[0_0_24px_hsl(var(--primary)/0.55)]" />
       </div>
-      <div key={index} className="motion-swap text-sm font-medium text-muted-foreground" aria-live="polite">
+      <div key={index} className={cn('text-sm font-medium text-muted-foreground transition-opacity duration-200', fading ? 'opacity-0' : 'opacity-100')} aria-live="polite">
         {messages[index]}
       </div>
       <div className="motion-shimmer h-1.5 w-56 overflow-hidden rounded-full bg-muted" aria-hidden="true">

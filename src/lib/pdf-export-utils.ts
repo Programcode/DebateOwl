@@ -125,8 +125,8 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             margin: { left: margin, right: margin },
             styles: {
                 fontSize: 8,
-                cellPadding: 5,
-                minCellHeight: 12,
+                cellPadding: 6,
+                minCellHeight: 14,
                 textColor: COLORS.dark,
                 overflow: 'linebreak',
                 valign: 'top',
@@ -137,7 +137,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
                 fillColor: headerColor,
                 textColor: [255, 255, 255],
                 fontStyle: 'bold',
-                cellPadding: 4,
+                cellPadding: 5,
             },
             alternateRowStyles: {
                 fillColor: COLORS.light,
@@ -145,7 +145,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             rowPageBreak: 'avoid',
             pageBreak: 'auto',
             columnStyles: {
-                0: { cellWidth: 18 },
+                0: { cellWidth: 22 },
             },
         });
 

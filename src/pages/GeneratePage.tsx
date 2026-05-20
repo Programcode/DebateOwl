@@ -274,7 +274,7 @@ export default function GeneratePage() {
           <AnimatedSection delay={150}>
             {generateLoading ? (
               <div key="generate-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
-                <StreamingIndicator messages={['Reading the motion...', 'Checking source quality...', 'Building warrant chains...', 'Writing speech-ready impacts...', 'Preparing counters...', 'Finalizing the case...']} />
+                <StreamingIndicator messages={[t('generateForm.loadingMsg1'), t('generateForm.loadingMsg2'), t('generateForm.loadingMsg3'), t('generateForm.loadingMsg4'), t('generateForm.loadingMsg5')]} />
               </div>
             ) : generateResult ? (
               <div key="generate-results" className="motion-swap space-y-4">

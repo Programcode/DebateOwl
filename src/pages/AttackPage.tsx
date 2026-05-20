@@ -109,7 +109,7 @@ export default function AttackPage() {
           <AnimatedSection delay={150}>
             {attackLoading ? (
               <div key="attack-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
-                <StreamingIndicator messages={['Reading the case...', 'Testing warrants...', 'Checking fallacies...', 'Finding turns...', 'Writing cross-ex questions...', 'Finalizing the critique...']} />
+                <StreamingIndicator messages={[t('attackForm.loadingMsg1'), t('attackForm.loadingMsg2'), t('attackForm.loadingMsg3'), t('attackForm.loadingMsg4'), t('attackForm.loadingMsg5')]} />
               </div>
             ) : attackResult ? (
               <div key="attack-results" className="motion-swap">
