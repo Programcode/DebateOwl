@@ -124,6 +124,18 @@ const toTimestamp = (value: string | number) => {
   return new Date(value).getTime();
 };
 
+function settledData<T>(label: string, result: PromiseSettledResult<{ data?: T | null; error?: { message?: string } | null }>): T | null {
+  if (result.status === 'rejected') {
+    console.warn(`[SessionStore] Failed to hydrate ${label}:`, result.reason);
+    return null;
+  }
+  if (result.value.error) {
+    console.warn(`[SessionStore] Failed to hydrate ${label}:`, result.value.error.message || result.value.error);
+    return null;
+  }
+  return result.value.data ?? null;
+}
+
 async function getUserId() {
   const { data } = await supabase.auth.getUser();
   return data.user?.id || null;
@@ -256,8 +268,12 @@ export const useSessionStore = create<SessionState>()(
         await supabase.from('sources').update({ is_active: nextValue }).eq('id', id);
       },
       clearLibrary: async () => {
+        const userId = await getUserId();
+        if (!userId) {
+          throw new Error('Cannot clear library: No authenticated user');
+        }
         set({ sourceLibrary: [] });
-        await supabase.from('sources').delete().neq('id', '');
+        await supabase.from('sources').delete().eq('user_id', userId);
       },
 
       setGenerateResult: (result) => set({ generateResult: result }),
@@ -475,15 +491,7 @@ export const useSessionStore = create<SessionState>()(
       },
 
       hydrateFromServer: async () => {
-        const [
-          casesRes,
-          attacksRes,
-          brainstormsRes,
-          factoidsRes,
-          chatsRes,
-          flowchartsRes,
-          sourcesRes,
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           supabase.from('cases').select('*').order('created_at', { ascending: false }),
           supabase.from('attacks').select('*').order('created_at', { ascending: false }),
           supabase.from('brainstorms').select('*').order('created_at', { ascending: false }),
@@ -493,13 +501,33 @@ export const useSessionStore = create<SessionState>()(
           supabase.from('sources').select('*').order('created_at', { ascending: false }),
         ]);
 
-        const chatRows = (chatsRes.data || []) as SupabaseChatRow[];
+        const [
+          casesRes,
+          attacksRes,
+          brainstormsRes,
+          factoidsRes,
+          chatsRes,
+          flowchartsRes,
+          sourcesRes,
+        ] = results;
+
+        const casesData = settledData<SupabaseSavedRow<GenerateOutput>[]>('cases', casesRes);
+        const attacksData = settledData<SupabaseSavedRow<AttackOutput>[]>('attacks', attacksRes);
+        const brainstormsData = settledData<SupabaseSavedRow<BrainstormOutput>[]>('brainstorms', brainstormsRes);
+        const factoidsData = settledData<SupabaseSavedRow<FactoidsOutput>[]>('factoids', factoidsRes);
+        const chatsData = settledData<SupabaseChatRow[]>('chats', chatsRes);
+        const flowchartsData = settledData<SupabaseFlowchartRow[]>('flowcharts', flowchartsRes);
+        const sourcesData = settledData<SupabaseSourceRow[]>('sources', sourcesRes);
+
+        const chatRows = chatsData || [];
         const chatIds = chatRows.map((c) => c.id);
         const messagesRes = chatIds.length
-          ? await supabase.from('messages').select('*').in('chat_id', chatIds).order('created_at', { ascending: true })
-          : { data: [] as SupabaseMessageRow[] };
+          ? settledData<SupabaseMessageRow[]>('messages', await Promise.allSettled([
+            supabase.from('messages').select('*').in('chat_id', chatIds).order('created_at', { ascending: true })
+          ]).then(([result]) => result))
+          : [];
 
-        const caseRows = (casesRes.data || []) as SupabaseSavedRow<GenerateOutput>[];
+        const caseRows = casesData || [];
         const serverCases = caseRows.map((row) => ({
           id: row.id,
           data: row.output,
@@ -507,7 +535,7 @@ export const useSessionStore = create<SessionState>()(
           title: row.title,
         }));
 
-        const attackRows = (attacksRes.data || []) as SupabaseSavedRow<AttackOutput>[];
+        const attackRows = attacksData || [];
         const serverAttacks = attackRows.map((row) => ({
           id: row.id,
           data: row.output,
@@ -515,7 +543,7 @@ export const useSessionStore = create<SessionState>()(
           title: row.title,
         }));
 
-        const brainstormRows = (brainstormsRes.data || []) as SupabaseSavedRow<BrainstormOutput>[];
+        const brainstormRows = brainstormsData || [];
         const serverBrainstorms = brainstormRows.map((row) => ({
           id: row.id,
           data: row.output,
@@ -523,7 +551,7 @@ export const useSessionStore = create<SessionState>()(
           title: row.title,
         }));
 
-        const factoidRows = (factoidsRes.data || []) as SupabaseSavedRow<FactoidsOutput>[];
+        const factoidRows = factoidsData || [];
         const serverFactoids = factoidRows.map((row) => ({
           id: row.id,
           data: row.output,
@@ -531,7 +559,7 @@ export const useSessionStore = create<SessionState>()(
           title: row.title,
         }));
 
-        const flowchartRows = (flowchartsRes.data || []) as SupabaseFlowchartRow[];
+        const flowchartRows = flowchartsData || [];
         const serverFlowcharts = flowchartRows.map((row) => ({
           id: row.id,
           data: { nodes: row.nodes, edges: row.edges },
@@ -540,7 +568,7 @@ export const useSessionStore = create<SessionState>()(
         }));
 
         const messageMap = new Map<string, Message[]>();
-        const messageRows = (messagesRes.data || []) as SupabaseMessageRow[];
+        const messageRows = messagesRes || [];
         messageRows.forEach((row) => {
           const list = messageMap.get(row.chat_id) || [];
           list.push({
@@ -560,7 +588,7 @@ export const useSessionStore = create<SessionState>()(
           data: messageMap.get(row.id) || [],
         }));
 
-        const sourceRows = (sourcesRes.data || []) as SupabaseSourceRow[];
+        const sourceRows = sourcesData || [];
         const serverSources = sourceRows.map((row) => ({
           id: row.id,
           title: row.title,

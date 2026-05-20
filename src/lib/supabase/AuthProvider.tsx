@@ -42,8 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) console.warn('[Auth] getSession error:', error.message);
         setSession(data.session ?? null);
         if (data.session) {
-          hydrateSessionStore()?.catch?.((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
-          hydrateSettingsStore()?.catch?.((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+          hydrateSessionStore().catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
+          hydrateSettingsStore().catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
         }
       } catch (err) {
         console.warn('[Auth] init failed:', err);
@@ -89,8 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSettingsStore();
       }
 
-      hydrateSessionStore()?.catch?.((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
-      hydrateSettingsStore()?.catch?.((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+      hydrateSessionStore().catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
+      hydrateSettingsStore().catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
     });
 
     return () => {

@@ -172,18 +172,19 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
   }
 
   const tier = user.subscription_tier || "trial";
+  const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
   const now = new Date();
-  const expired = { tier: "expired", dailyLimit: user.daily_limit_override || 0, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+  const expired = { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
   const activeGiftTrial = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
   const giftTrialInfo = activeGiftTrial && now < activeGiftTrial
-    ? { tier: "trial", dailyLimit: user.daily_limit_override ? Math.max(5, user.daily_limit_override) : 5, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
+    ? { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
     : null;
 
   // Legacy free users in grace period get pro-level access
   if (tier === "legacy_free") {
     const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
     if (graceEnd && now < graceEnd) {
-      const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+      const limit = limitOrDefault(50);
       return { tier: "legacy_free", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
     if (giftTrialInfo) return giftTrialInfo;
@@ -197,7 +198,7 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
   if (tier === "pro") {
     const promoEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
     if (promoEnd && now < promoEnd) {
-      const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+      const limit = limitOrDefault(50);
       return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
 
@@ -214,7 +215,7 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
     );
 
     if (activeSubscription) {
-      const limit = user.daily_limit_override ? Math.max(50, user.daily_limit_override) : 50;
+      const limit = limitOrDefault(50);
       return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
 
@@ -226,7 +227,7 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
   if (tier === "trial") {
     const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
     if (trialEnd && now < trialEnd) {
-      const limit = user.daily_limit_override ? Math.max(5, user.daily_limit_override) : 5;
+      const limit = limitOrDefault(5);
       return { tier: "trial", dailyLimit: limit, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
     // Trial expired
