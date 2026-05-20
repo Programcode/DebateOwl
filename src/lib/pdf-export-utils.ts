@@ -43,53 +43,70 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         format: 'a4',
     });
 
-    const margin = 20;
+    const margin = 22;
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
     const contentWidth = pageWidth - margin * 2;
-    let y = margin;
+    const state = { y: margin };
 
     const checkPageBreak = (neededHeight: number) => {
-        if (y + neededHeight > pageHeight - margin - 15) {
+        if (state.y + neededHeight > pageHeight - margin - 15) {
             doc.addPage();
-            y = margin;
+            state.y = margin;
         }
     };
 
     const addHeader = (title: string, subtitle?: string) => {
-        // Logo area (colored bar)
+        // Gradient-style header with primary color bar
         doc.setFillColor(...COLORS.primary);
-        doc.rect(0, 0, pageWidth, 35, 'F');
+        doc.rect(0, 0, pageWidth, 40, 'F');
 
-        // Title
+        // Subtle darker accent strip at bottom of header
+        doc.setFillColor(37, 99, 235);
+        doc.rect(0, 37, pageWidth, 3, 'F');
+
+        // Title - large and bold
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text(title, margin, 20);
+        const titleLines = doc.splitTextToSize(title, contentWidth - 40);
+        doc.text(titleLines, margin, 18);
 
         if (subtitle) {
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'normal');
-            doc.text(subtitle, margin, 28);
+            doc.setTextColor(219, 234, 254);
+            doc.text(subtitle, margin, titleLines.length > 1 ? 28 : 26);
         }
 
-        // DebateLab branding
-        doc.setFontSize(10);
-        doc.text('DebateLab', pageWidth - margin - 20, 20);
+        // DebateLab branding - right aligned
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('DebateLab', pageWidth - margin, 10, { align: 'right' });
 
-        y = 45;
+        state.y = 50;
         doc.setTextColor(...COLORS.dark);
     };
 
     const addSectionTitle = (title: string, color: [number, number, number] = COLORS.primary) => {
-        checkPageBreak(15);
-        doc.setFillColor(...color);
-        doc.rect(margin, y, 4, 8, 'F');
+        checkPageBreak(18);
+        state.y += 6; // Extra space before section
+
+        // Section title text - 14pt bold
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.dark);
-        doc.text(title, margin + 8, y + 6);
-        y += 12;
+        doc.text(title, margin, state.y);
+
+        // Colored underline beneath the title
+        const titleWidth = doc.getTextWidth(title);
+        state.y += 2;
+        doc.setDrawColor(...color);
+        doc.setLineWidth(0.8);
+        doc.line(margin, state.y, margin + titleWidth + 4, state.y);
+
+        state.y += 8;
     };
 
     const addParagraph = (text: string, indent = 0) => {
@@ -97,21 +114,22 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...COLORS.dark);
         const lines = doc.splitTextToSize(text, contentWidth - indent);
-        checkPageBreak(lines.length * 5);
-        doc.text(lines, margin + indent, y);
-        y += lines.length * 5 + 3;
+        checkPageBreak(lines.length * 4.8 + 2);
+        doc.text(lines, margin + indent, state.y);
+        state.y += lines.length * 4.8 + 4;
     };
 
     const addBulletList = (items: string[], indent = 0) => {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...COLORS.dark);
         items.forEach((item) => {
             const lines = doc.splitTextToSize(`• ${item}`, contentWidth - indent - 5);
-            checkPageBreak(lines.length * 5);
-            doc.text(lines, margin + indent, y);
-            y += lines.length * 5 + 2;
+            checkPageBreak(lines.length * 4.8 + 2);
+            doc.text(lines, margin + indent, state.y);
+            state.y += lines.length * 4.8 + 3;
         });
-        y += 2;
+        state.y += 3;
     };
 
     const addTable = (headers: string[], rows: string[][], options?: { headerColor?: [number, number, number] }) => {
@@ -119,7 +137,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         checkPageBreak(30);
 
         autoTable(doc, {
-            startY: y,
+            startY: state.y,
             head: [headers],
             body: rows,
             margin: { left: margin, right: margin },
@@ -149,14 +167,20 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             },
         });
 
-        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+        state.y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     };
 
     const addFooter = () => {
         const pageCount = doc.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
+            // Subtle footer line
+            doc.setDrawColor(...COLORS.secondary);
+            doc.setLineWidth(0.3);
+            doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+            // Footer text
             doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
             doc.setTextColor(...COLORS.secondary);
             doc.text(
                 `Generated by DebateLab • ${formatEuropeanDate(new Date())} • Page ${i} of ${pageCount}`,
@@ -167,7 +191,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         }
     };
 
-    return { doc, y, pageHeight, margin, contentWidth, checkPageBreak, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter };
+    return { doc, get y() { return state.y; }, set y(v: number) { state.y = v; }, pageHeight, margin, contentWidth, checkPageBreak, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter };
 }
 
 // ============================================================
@@ -176,59 +200,158 @@ async function createPDFDocument(): Promise<PDFHelpers> {
 export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> {
     try {
         const pdf = await createPDFDocument();
-        const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter } = pdf;
+        const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addFooter } = pdf;
 
         const side = result.metadata?.side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
         const format = result.metadata?.format?.toUpperCase() || 'Standard';
         const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
+        const margin = pdf.margin;
+        const contentWidth = pdf.contentWidth;
+        const pageWidth = doc.internal.pageSize.width;
 
         addHeader(motion || i18n.t('export.debateCase'), `${side} • ${format} Format`);
+
+        // Helper: colored separator line between major sections
+        const addSeparator = (color: [number, number, number] = COLORS.secondary) => {
+            pdf.checkPageBreak(8);
+            pdf.y += 4;
+            doc.setDrawColor(...color);
+            doc.setLineWidth(0.3);
+            doc.line(margin, pdf.y, pageWidth - margin, pdf.y);
+            pdf.y += 6;
+        };
+
+        // Helper: subsection label (12pt bold)
+        const addSubsectionLabel = (label: string, indent = 0) => {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...COLORS.dark);
+            pdf.checkPageBreak(8);
+            doc.text(label, margin + indent, pdf.y);
+            pdf.y += 6;
+        };
+
+        // Helper: contention block with colored left accent bar
+        const addContentionBlock = (
+            index: number,
+            claim: string,
+            details: { label: string; text: string }[],
+            accentColor: [number, number, number]
+        ) => {
+            const blockIndent = 6;
+            const textIndent = blockIndent + 4;
+
+            // Estimate block height for page break check
+            const estimatedHeight = 12 + details.length * 14;
+            pdf.checkPageBreak(estimatedHeight);
+
+            const blockStartY = pdf.y;
+
+            // Contention title
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...COLORS.dark);
+            doc.text(`Contention #${index + 1}`, margin + textIndent, pdf.y);
+            pdf.y += 5;
+
+            // Claim text
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...accentColor);
+            const claimLines = doc.splitTextToSize(claim, contentWidth - textIndent - 2);
+            doc.text(claimLines, margin + textIndent, pdf.y);
+            pdf.y += claimLines.length * 4.8 + 4;
+
+            // Detail fields
+            details.forEach(({ label, text }) => {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...COLORS.secondary);
+                pdf.checkPageBreak(10);
+                doc.text(label, margin + textIndent, pdf.y);
+                pdf.y += 4.5;
+
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...COLORS.dark);
+                const lines = doc.splitTextToSize(text, contentWidth - textIndent - 2);
+                pdf.checkPageBreak(lines.length * 4.8);
+                doc.text(lines, margin + textIndent, pdf.y);
+                pdf.y += lines.length * 4.8 + 3;
+            });
+
+            // Draw the accent bar on the left side spanning the full block
+            const blockEndY = pdf.y;
+            doc.setFillColor(...accentColor);
+            doc.roundedRect(margin, blockStartY - 3, 3, blockEndY - blockStartY + 3, 1, 1, 'F');
+
+            pdf.y += 6;
+        };
 
         // Exordio (if present)
         if (result.exordio) {
             addSectionTitle(i18n.t('export.exordio'), COLORS.primary);
             if (result.exordio.hook) {
-                addParagraph(`${i18n.t('export.hook')}: ${result.exordio.hook}`);
+                addSubsectionLabel(i18n.t('export.hook'));
+                addParagraph(result.exordio.hook, 2);
             }
             if (result.exordio.transition) {
-                addParagraph(`${i18n.t('export.transition')}: ${result.exordio.transition}`);
+                addSubsectionLabel(i18n.t('export.transition'));
+                addParagraph(result.exordio.transition, 2);
             }
+            addSeparator(COLORS.primary);
         }
 
         // Case Structure
         addSectionTitle(`${i18n.t('export.thesis')} & ${i18n.t('export.framework')}`);
         addParagraph(result.caseStructure?.thesis || 'No thesis provided');
         if (result.caseStructure?.framework) {
-            addParagraph(`${i18n.t('export.framework')}: ${result.caseStructure.framework}`);
+            addSubsectionLabel(i18n.t('export.framework'));
+            addParagraph(result.caseStructure.framework, 2);
         }
         if (result.caseStructure?.burdenOfProof) {
-            addParagraph(`${i18n.t('export.burdenOfProof')}: ${result.caseStructure.burdenOfProof}`);
+            addSubsectionLabel(i18n.t('export.burdenOfProof'));
+            addParagraph(result.caseStructure.burdenOfProof, 2);
         }
+        addSeparator(COLORS.success);
 
-        // Arguments
+        // Arguments with accent bars
         if (result.contentions?.length) {
             addSectionTitle(i18n.t('export.arguments'), COLORS.success);
+
+            // Cycle through accent colors for visual variety
+            const accentColors: [number, number, number][] = [
+                COLORS.primary,
+                COLORS.success,
+                COLORS.warning,
+                [139, 92, 246], // Purple
+            ];
+
             result.contentions.forEach((c, i) => {
-                addParagraph(`Contention #${i + 1}: ${c.claim || ''}`, 0);
-                if (c.reasoning) addParagraph(`${i18n.t('export.reasoning')}: ${c.reasoning}`, 8);
-                if (c.evidence) addParagraph(`${i18n.t('export.evidence')}: ${c.evidence}`, 8);
-                if (c.impact) addParagraph(`${i18n.t('export.impact')}: ${c.impact}`, 8);
+                const details: { label: string; text: string }[] = [];
+                if (c.reasoning) details.push({ label: i18n.t('export.reasoning'), text: c.reasoning });
+                if (c.evidence) details.push({ label: i18n.t('export.evidence'), text: c.evidence });
+                if (c.impact) details.push({ label: i18n.t('export.impact'), text: c.impact });
+
+                addContentionBlock(i, c.claim || '', details, accentColors[i % accentColors.length]);
             });
+            addSeparator(COLORS.warning);
         }
 
         // Predicted Opponent Case
         if (result.predictedOpponentCase?.likelyArguments?.length) {
             addSectionTitle(i18n.t('export.predictedOpponent'), COLORS.warning);
             addBulletList(result.predictedOpponentCase.likelyArguments);
+            addSeparator(COLORS.danger);
         }
 
         // Counters
         if (result.counters?.length) {
             addSectionTitle(i18n.t('export.counters'), COLORS.danger);
             result.counters.forEach((c) => {
-                addParagraph(`${i18n.t('export.target')}: ${c.targetArgument || ''}`, 0);
-                if (c.counterpoint) addParagraph(`${i18n.t('export.counter')}: ${c.counterpoint}`, 8);
-                if (c.rebuttal) addParagraph(`${i18n.t('export.rebuttal')}: ${c.rebuttal}`, 8);
+                addSubsectionLabel(`${i18n.t('export.target')}: ${c.targetArgument || ''}`);
+                if (c.counterpoint) addParagraph(`${i18n.t('export.counter')}: ${c.counterpoint}`, 4);
+                if (c.rebuttal) addParagraph(`${i18n.t('export.rebuttal')}: ${c.rebuttal}`, 4);
+                pdf.y += 3;
             });
         }
 
