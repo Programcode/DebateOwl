@@ -690,6 +690,243 @@ input:focus, textarea:focus, select:focus, [cmdk-input]:focus {
   }
 }
 
+/* ===== ADDITIONAL MICRO-INTERACTIONS ===== */
+
+/* Switch toggle bounce */
+[role="switch"][data-state="checked"] > span {
+  animation: switch-bounce 0.3s var(--motion-ease-fluid);
+}
+
+@keyframes switch-bounce {
+  0% { transform: translateX(0) scale(1); }
+  40% { transform: translateX(100%) scale(0.85, 1.15); }
+  70% { transform: translateX(100%) scale(1.05, 0.95); }
+  100% { transform: translateX(100%) scale(1); }
+}
+
+/* Checkbox tick draw */
+[role="checkbox"][data-state="checked"] svg {
+  animation: check-draw 0.2s ease-out both;
+}
+
+@keyframes check-draw {
+  from { stroke-dashoffset: 20; opacity: 0; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* Badge pulse on appear */
+.badge-pulse {
+  animation: badge-pop 0.3s var(--motion-ease-fluid) both;
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Tooltip entrance */
+[data-state="delayed-open"][data-side] {
+  animation: tooltip-in 0.15s var(--motion-ease-fluid) both;
+}
+
+[data-state="closed"][data-side] {
+  animation: tooltip-out 0.1s ease-in both;
+}
+
+@keyframes tooltip-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes tooltip-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+/* Dropdown menu items stagger */
+[role="menu"] [role="menuitem"],
+[data-radix-collection-item] {
+  animation: menu-item-in 0.15s var(--motion-ease-fluid) both;
+}
+
+[role="menu"] [role="menuitem"]:nth-child(1) { animation-delay: 0ms; }
+[role="menu"] [role="menuitem"]:nth-child(2) { animation-delay: 30ms; }
+[role="menu"] [role="menuitem"]:nth-child(3) { animation-delay: 60ms; }
+[role="menu"] [role="menuitem"]:nth-child(4) { animation-delay: 90ms; }
+[role="menu"] [role="menuitem"]:nth-child(5) { animation-delay: 120ms; }
+
+@keyframes menu-item-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Select dropdown items */
+[role="option"] {
+  transition: background-color 0.1s, transform 0.1s;
+}
+
+[role="option"]:active {
+  transform: scale(0.98);
+}
+
+/* Accordion expand/collapse */
+[data-state="open"] > [data-accordion-content] {
+  animation: accordion-open 0.25s var(--motion-ease-fluid);
+}
+
+@keyframes accordion-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab indicator slide */
+[role="tablist"] [data-state="active"] {
+  position: relative;
+}
+
+[role="tablist"] [data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: hsl(var(--primary));
+  border-radius: 1px;
+  animation: tab-slide 0.2s var(--motion-ease-fluid) both;
+}
+
+@keyframes tab-slide {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Icon spin on hover (for refresh/reload buttons) */
+button:hover > svg.lucide-rotate-ccw,
+button:hover > svg.lucide-refresh-cw {
+  animation: icon-spin 0.5s var(--motion-ease-fluid);
+}
+
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* Copy button feedback */
+button:active > svg.lucide-copy,
+button:active > svg.lucide-clipboard {
+  animation: copy-bounce 0.2s ease-out;
+}
+
+@keyframes copy-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.8); }
+  100% { transform: scale(1); }
+}
+
+/* Trash icon shake on hover */
+button:hover > svg.lucide-trash-2,
+button:hover > svg.lucide-trash {
+  animation: trash-shake 0.3s ease-in-out;
+}
+
+@keyframes trash-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+/* Heart/bookmark fill animation */
+button:active > svg.lucide-bookmark,
+button:active > svg.lucide-heart {
+  animation: heart-pop 0.3s var(--motion-ease-fluid);
+}
+
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Slider thumb pulse when dragging */
+[role="slider"]:active::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: hsl(var(--primary) / 0.2);
+  animation: slider-pulse 0.6s ease-out infinite;
+}
+
+@keyframes slider-pulse {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Skeleton loading shimmer */
+.motion-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.motion-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.04), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* Ripple effect on button click */
+button:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), hsl(var(--primary) / 0.15), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+button:not(:disabled):active::after {
+  opacity: 1;
+}
+
+/* Smooth counter/number transitions */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.2s var(--motion-ease-fluid);
+}
+
+/* Hover lift for cards */
+.hover-lift {
+  transition: transform 0.2s var(--motion-ease-fluid), box-shadow 0.2s var(--motion-ease-fluid);
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px hsl(var(--foreground) / 0.08);
+}
+
+/* Glow text on hover */
+.glow-text:hover {
+  text-shadow: 0 0 12px hsl(var(--primary) / 0.4);
+}
+
+/* Subtle parallax tilt on card hover */
+.tilt-card {
+  transition: transform 0.3s var(--motion-ease-fluid);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.tilt-card:hover {
+  transform: rotateX(-1deg) rotateY(1deg) translateY(-2px);
+}
+
 @keyframes gridMove {
   0% {
     background-position: 0 0;

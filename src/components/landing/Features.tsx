@@ -58,7 +58,7 @@ const Features = () => {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: index * 0.06 }}
                             viewport={{ once: true }}
-                            className="feature-card group"
+                            className="feature-card group tilt-card"
                         >
                             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 transition-colors group-hover:border-primary/40">
                                 <feature.icon className="h-6 w-6 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
