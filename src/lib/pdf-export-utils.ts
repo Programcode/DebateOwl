@@ -124,20 +124,28 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             body: rows,
             margin: { left: margin, right: margin },
             styles: {
-                fontSize: 9,
-                cellPadding: 3,
+                fontSize: 8,
+                cellPadding: 5,
+                minCellHeight: 12,
                 textColor: COLORS.dark,
+                overflow: 'linebreak',
+                valign: 'top',
+                lineWidth: 0.1,
+                lineColor: [226, 232, 240],
             },
             headStyles: {
                 fillColor: headerColor,
                 textColor: [255, 255, 255],
                 fontStyle: 'bold',
+                cellPadding: 4,
             },
             alternateRowStyles: {
                 fillColor: COLORS.light,
             },
+            rowPageBreak: 'avoid',
+            pageBreak: 'auto',
             columnStyles: {
-                0: { cellWidth: 'auto' },
+                0: { cellWidth: 18 },
             },
         });
 
