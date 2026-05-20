@@ -14,7 +14,7 @@ import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
 export default function FactoidsPage() {
-  const { factoidsResult, factoidsLoading, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource } = useSessionStore();
+  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource, setFactoidsForm } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
   const askConfig = getFeatureConfig('ask');
@@ -46,6 +46,19 @@ export default function FactoidsPage() {
   const handleVerify = async () => {
     // TODO: Implement verification
     console.log('Verifying sources...');
+  };
+
+  const handleUseSuggestion = (query: string) => {
+    const nextInput: FactoidsInput = {
+      claim: query,
+      direction: factoidsForm.direction || 'for',
+      region: factoidsForm.region || '',
+      sourceType: factoidsForm.sourceType || 'any',
+      timeframe: factoidsForm.timeframe || '',
+      sourceCount: factoidsForm.sourceCount || 5,
+    };
+    setFactoidsForm(nextInput);
+    void handleSubmit(nextInput);
   };
 
   const handleSaveToLibrary = (title: string, content: string, url?: string) => {
@@ -119,6 +132,7 @@ export default function FactoidsPage() {
                   onVerify={handleVerify}
                   onDiscuss={handleDiscuss}
                   onSaveSource={handleSaveToLibrary}
+                  onUseSuggestion={handleUseSuggestion}
                 />
               </div>
             ) : (
