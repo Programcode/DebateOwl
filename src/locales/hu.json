@@ -988,6 +988,10 @@
   },
   "langSwitcher": {
     "label": "Nyelv",
+    "title": "Nyelv",
+    "description": "Válaszd ki az alkalmazás nyelvét és az AI válaszok nyelvét.",
+    "uiLanguage": "Felület nyelve",
+    "outputLanguage": "AI kimenet nyelve",
     "en": "English",
     "es": "Español",
     "hu": "Magyar"

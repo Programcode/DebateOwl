@@ -988,6 +988,10 @@
   },
   "langSwitcher": {
     "label": "Language",
+    "title": "Language",
+    "description": "Choose the app language and the language used in AI outputs.",
+    "uiLanguage": "Interface language",
+    "outputLanguage": "AI output language",
     "en": "English",
     "es": "Español",
     "hu": "Magyar"

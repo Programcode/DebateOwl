@@ -74,9 +74,7 @@ export function AppLayout() {
           </nav>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="hidden xl:block">
-              <LanguageSwitcher />
-            </div>
+            <LanguageSwitcher />
             <ThemeToggle />
             <NavLink to="/app/settings">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings">

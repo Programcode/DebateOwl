@@ -120,16 +120,16 @@ describe('ModelSelector', () => {
     expect(trigger.tagName).toBeDefined();
   });
 
-  it('trigger has text-xs class for small text', () => {
+  it('trigger uses form-sized text', () => {
     render(<ModelSelector feature="generate" />);
     const trigger = screen.getByRole('combobox');
-    expect(trigger.className).toContain('text-xs');
+    expect(trigger.className).toContain('text-sm');
   });
 
-  it('renders with correct width classes', () => {
+  it('renders full width inside forms', () => {
     render(<ModelSelector feature="generate" />);
     const trigger = screen.getByRole('combobox');
-    expect(trigger.className).toContain('w-[160px]');
+    expect(trigger.className).toContain('w-full');
   });
 
   it('calls setFeatureConfig from store', () => {
