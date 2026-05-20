@@ -988,6 +988,10 @@
   },
   "langSwitcher": {
     "label": "Idioma",
+    "title": "Idioma",
+    "description": "Elige el idioma de la app y el idioma usado en las respuestas de IA.",
+    "uiLanguage": "Idioma de la interfaz",
+    "outputLanguage": "Idioma de salida de IA",
     "en": "English",
     "es": "Español",
     "hu": "Magyar"
