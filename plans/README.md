@@ -5,11 +5,15 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 ## Active Plans
 
 - [Admin announcements](./admin-announcements.md)
-- [Admin trial gifts](./admin-trial-gifts.md)
 - [Ask and sitewide search quality](./search-quality.md)
 - [Control honesty and deterministic toggles](./control-honesty.md)
 - [Debate sparring and streaming](./sparring-and-streaming.md)
 - [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
 - [Source auto-import](./source-auto-import.md)
-- [Top users email fallback](./top-users-email-fallback.md)
 - [Animation polish](./animation-polish.md)
+
+## Done
+
+- [Bug and polish cleanup](./done/bugs.txt)
+- [Admin trial gifts](./done/admin-trial-gifts.md)
+- [Top users email fallback](./done/top-users-email-fallback.md)
