@@ -76,7 +76,7 @@ export default function GeneratePage() {
       motion: generateForm.motion,
       side: generateForm.side || 'pro',
       format: generateForm.format || 'custom',
-      role: generateForm.role || 'intro',
+      role: generateForm.role || 'r1',
       length: generateForm.length || 'standard',
       audience: generateForm.audience || 'intermediate',
       tone: generateForm.tone || 'formal',

@@ -26,6 +26,7 @@ export default function AskPage() {
     setAskStreamingAssistant,
     appendAskStreamingDelta,
     clearAskMessages,
+    saveCurrentChat,
     addSource,
   } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
@@ -211,6 +212,12 @@ export default function AskPage() {
     }
   };
 
+  const handleSaveChat = () => {
+    const title = askMessages[0]?.content?.slice(0, 60) || 'Chat';
+    void saveCurrentChat(title);
+    toast({ title: t('ask.chatSaved', 'Chat saved'), description: t('ask.chatSavedDesc', 'You can load it from History.') });
+  };
+
   const handleSaveToLibrary = (title: string, content: string) => {
       const saveResult = addSource({ title, content, type: 'text', folder: 'Ask' });
       const showSuccess = () => toast({ title: t('ask.saved'), description: t('ask.savedDesc') });
@@ -249,6 +256,7 @@ export default function AskPage() {
             isLoading={askLoading}
             onSend={handleSend}
             onClear={clearAskMessages}
+            onSaveChat={handleSaveChat}
             onSaveSource={handleSaveToLibrary}
           />
         </AnimatedSection>
