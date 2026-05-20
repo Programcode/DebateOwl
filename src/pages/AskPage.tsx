@@ -10,6 +10,7 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
 import { AnimatedSection } from '@/components/ui/animated-section';
+import { ToastAction } from '@/components/ui/toast';
 
 const MAX_AI_INPUT_LENGTH = 50000;
 
@@ -107,7 +108,19 @@ export default function AskPage() {
           variant: "destructive"
         });
       } else {
-        toast({ title: t('ask.failed'), description: getUserFacingAIError(error) || t('ask.failedDesc'), variant: "destructive" });
+        toast({
+          title: t('ask.failed'),
+          description: getUserFacingAIError(error) || t('ask.retryableFailedDesc', "Couldn't reach the AI. Check your connection and retry."),
+          variant: "destructive",
+          action: (
+            <ToastAction
+              altText={t('common.retry', 'Retry')}
+              onClick={() => void handleSend(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files)}
+            >
+              {t('common.retry', 'Retry')}
+            </ToastAction>
+          ),
+        });
       }
     } finally {
       setAskLoading(false);

@@ -410,6 +410,7 @@ export default function FlowchartPage() {
                                                         size="icon"
                                                         className="h-8 w-8 text-destructive opacity-70 hover:opacity-100"
                                                         onClick={(e) => handleDeleteFlowchart(item.id, e)}
+                                                        aria-label={t('common.delete', 'Delete')}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>

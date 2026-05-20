@@ -275,7 +275,12 @@ export default function TimerPage() {
             </SelectContent>
           </Select>
 
-          <Button variant="ghost" size="icon" onClick={() => setSoundEnabled(!soundEnabled)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            aria-label={soundEnabled ? t('timer.disableSound', 'Disable sound') : t('timer.enableSound', 'Enable sound')}
+          >
             {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5 text-muted-foreground" />}
           </Button>
         </div>
