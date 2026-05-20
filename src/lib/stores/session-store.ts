@@ -16,6 +16,14 @@ interface Message {
   output?: AskOutput | GenerateOutput | AttackOutput | BrainstormOutput | FactoidsOutput;
 }
 
+interface StreamingAskMessage {
+  id: string;
+  role: 'assistant';
+  content: string;
+  timestamp: number;
+  isStreaming: true;
+}
+
 export interface Source {
   id: string;
   title: string;
@@ -53,6 +61,7 @@ interface SessionState {
 
   askMessages: Message[];
   askLoading: boolean;
+  askStreamingAssistant: StreamingAskMessage | null;
 
   savedCases: SavedItem<GenerateOutput>[];
   savedAttacks: SavedItem<AttackOutput>[];
@@ -96,6 +105,8 @@ interface SessionState {
 
   addAskMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   setAskLoading: (loading: boolean) => void;
+  setAskStreamingAssistant: (message: StreamingAskMessage | null) => void;
+  appendAskStreamingDelta: (text: string) => void;
   clearAskMessages: () => void;
   saveCurrentChat: (title: string) => Promise<void>;
   loadSavedChat: (id: string) => void;
@@ -154,6 +165,22 @@ function settledData<T>(label: string, result: PromiseSettledResult<{ data?: T |
     return null;
   }
   return result.value.data ?? null;
+}
+
+function mergeSavedItems<T>(localItems: SavedItem<T>[], serverItems: SavedItem<T>[]) {
+  const merged = new Map<string, SavedItem<T>>();
+  [...localItems, ...serverItems].forEach((item) => {
+    merged.set(item.id, item);
+  });
+  return Array.from(merged.values()).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function mergeSources(localSources: Source[], serverSources: Source[]) {
+  const merged = new Map<string, Source>();
+  [...localSources, ...serverSources].forEach((source) => {
+    merged.set(source.id, source);
+  });
+  return Array.from(merged.values()).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 async function getUserId() {
@@ -229,6 +256,7 @@ export const useSessionStore = create<SessionState>()(
       factoidsLoading: false,
       askMessages: [] as Message[],
       askLoading: false,
+      askStreamingAssistant: null,
 
       savedCases: [] as SavedItem<GenerateOutput>[],
       savedAttacks: [] as SavedItem<AttackOutput>[],
@@ -449,7 +477,13 @@ export const useSessionStore = create<SessionState>()(
         ],
       })),
       setAskLoading: (loading) => set({ askLoading: loading }),
-      clearAskMessages: () => set({ askMessages: [] }),
+      setAskStreamingAssistant: (message) => set({ askStreamingAssistant: message }),
+      appendAskStreamingDelta: (text) => set((state) => ({
+        askStreamingAssistant: state.askStreamingAssistant
+          ? { ...state.askStreamingAssistant, content: `${state.askStreamingAssistant.content}${text}` }
+          : state.askStreamingAssistant,
+      })),
+      clearAskMessages: () => set({ askMessages: [], askStreamingAssistant: null, askLoading: false }),
       saveCurrentChat: async (title) => {
         const current = get().askMessages;
         if (current.length === 0) return;
@@ -650,15 +684,15 @@ export const useSessionStore = create<SessionState>()(
 
         if (!hasServerData) return;
 
-        set({
-          savedCases: serverCases,
-          savedAttacks: serverAttacks,
-          savedBrainstorms: serverBrainstorms,
-          savedFactoids: serverFactoids,
-          savedChats: serverChats,
-          savedFlowcharts: serverFlowcharts,
-          sourceLibrary: serverSources,
-        });
+        set((state) => ({
+          savedCases: mergeSavedItems(state.savedCases, serverCases),
+          savedAttacks: mergeSavedItems(state.savedAttacks, serverAttacks),
+          savedBrainstorms: mergeSavedItems(state.savedBrainstorms, serverBrainstorms),
+          savedFactoids: mergeSavedItems(state.savedFactoids, serverFactoids),
+          savedChats: mergeSavedItems(state.savedChats, serverChats),
+          savedFlowcharts: mergeSavedItems(state.savedFlowcharts, serverFlowcharts),
+          sourceLibrary: mergeSources(state.sourceLibrary, serverSources),
+        }));
       },
 
       clearAllData: async () => {
@@ -707,6 +741,7 @@ export const useSessionStore = create<SessionState>()(
         brainstormResult: null,
         factoidsResult: null,
         askMessages: [],
+        askStreamingAssistant: null,
       }),
 
       clearSession: () => set({
@@ -715,6 +750,7 @@ export const useSessionStore = create<SessionState>()(
         brainstormResult: null,
         factoidsResult: null,
         askMessages: [],
+        askStreamingAssistant: null,
         pendingFlowchartData: null,
         generateForm: {},
         attackForm: {},
