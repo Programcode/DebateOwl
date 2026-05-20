@@ -21,7 +21,7 @@ const HowItWorks = () => {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
                         {t('howItWorks.title')}
                     </h2>
                     <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -43,7 +43,7 @@ const HowItWorks = () => {
                                 className="relative flex flex-col items-center text-center"
                             >
                                 <div className="relative mb-6">
-                                    <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center relative z-10 transition-transform duration-300 group-hover:scale-105">
+                                    <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center relative z-10 transition-transform duration-300 hover:scale-110">
                                         <step.icon className="w-8 h-8 text-primary" />
                                     </div>
                                     <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-md">

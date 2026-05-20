@@ -24,7 +24,7 @@ interface GenerateResultsProps {
 function ArgumentCard({ contention, index }: { contention: Contention; index: number }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+    <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item card-hover-glow">
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-semibold text-foreground">
           <span className="text-primary mr-2">#{index + 1}</span>

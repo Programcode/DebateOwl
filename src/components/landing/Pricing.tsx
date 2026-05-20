@@ -33,7 +33,7 @@ const Pricing = () => {
                     viewport={{ once: true }}
                     className="mb-14 text-center"
                 >
-                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
                         {t('pricing.title')}
                     </h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
@@ -47,7 +47,7 @@ const Pricing = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                         viewport={{ once: true }}
-                        className="rounded-2xl border border-border/70 bg-card/80 p-7 shadow-sm backdrop-blur"
+                        className="rounded-2xl border border-border/70 bg-card/80 p-7 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
                     >
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
@@ -62,7 +62,7 @@ const Pricing = () => {
 
                         <ul className="mt-6 space-y-3">
                             {TRIAL_FEATURES.map((feature) => (
-                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
+                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90 transition-colors duration-200 hover:text-foreground">
                                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{feature}</span>
                                 </li>
@@ -80,7 +80,7 @@ const Pricing = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                         viewport={{ once: true }}
-                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur ring-1 ring-primary/10"
+                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur ring-1 ring-primary/10 transition-all duration-300 hover:-translate-y-1"
                     >
                         <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
                             <Sparkles className="h-3.5 w-3.5" />
@@ -100,7 +100,7 @@ const Pricing = () => {
 
                         <ul className="mt-6 space-y-3">
                             {PRO_FEATURES.map((feature) => (
-                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
+                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90 transition-colors duration-200 hover:text-foreground">
                                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{feature}</span>
                                 </li>

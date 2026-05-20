@@ -28,7 +28,7 @@ const FAQ = () => {
                     viewport={{ once: true }}
                     className="mb-12 text-center"
                 >
-                    <h2 className="mb-4 text-3xl font-bold">{t('faq.title')}</h2>
+                    <h2 className="mb-4 text-3xl font-bold tracking-tight">{t('faq.title')}</h2>
                     <p className="text-muted-foreground">Pricing, workflow, and product details at a glance.</p>
                 </motion.div>
 

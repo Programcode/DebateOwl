@@ -26,7 +26,7 @@ const WhatsNew = () => {
                         <Sparkles className="h-4 w-4 text-primary" />
                         {t('whatsNew.title')}
                     </div>
-                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
                         {t('whatsNew.title')}
                     </h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
@@ -42,13 +42,13 @@ const WhatsNew = () => {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.45, delay: index * 0.08 }}
                             viewport={{ once: true }}
-                            className="rounded-2xl border border-border/70 bg-card/75 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                            className="group rounded-2xl border border-border/70 bg-card/75 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
                         >
                             <div className="mb-4 flex items-center justify-between">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                                    <update.icon className="h-5 w-5 text-primary" />
+                                    <update.icon className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110" />
                                 </div>
-                                <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
                                     {update.badge}
                                 </span>
                             </div>
