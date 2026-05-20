@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
@@ -88,7 +89,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {store.savedCases.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t('historyPage.emptyCases')}</p>
+                  <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
@@ -126,7 +127,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {store.savedChats.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t('historyPage.emptyChats')}</p>
+                  <EmptyState icon={MessageCircle} title={t('historyPage.emptyChats')} description={t('historyPage.emptyChatsDesc', 'Saved coaching chats will appear here.')} actionLabel={t('historyPage.startChat', 'Start a chat')} onAction={() => navigate('/app/ask')} />
                 ) : (
                   <div className="space-y-4">
                     {store.savedChats.map((item) => (
@@ -154,7 +155,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {store.savedAttacks.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t('historyPage.emptyAttacks')}</p>
+                  <EmptyState icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
@@ -185,7 +186,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {store.savedBrainstorms.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t('historyPage.emptyBrainstorms')}</p>
+                  <EmptyState icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
@@ -216,7 +217,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {store.savedFactoids.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t('historyPage.emptyFactoids')}</p>
+                  <EmptyState icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
