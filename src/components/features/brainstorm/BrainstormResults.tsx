@@ -12,6 +12,7 @@ import { exportBrainstormToPdf } from '@/lib/pdf-export-utils';
 import { exportBrainstormToDocx, exportBrainstormToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -152,6 +153,14 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
             {t('brainstormResults.discuss')}
           </Button>
         </div>
+      )}
+
+      {!result.topFive?.length && !result.mindmap?.length && !result.buckets?.length && (
+        <EmptyState
+          icon={Lightbulb}
+          title={t('brainstormResults.noIdeasTitle', 'No ideas returned')}
+          description={t('brainstormResults.noIdeasDesc', 'Try a more specific motion or switch the output format, then brainstorm again.')}
+        />
       )}
 
       {/* Top Five */}
