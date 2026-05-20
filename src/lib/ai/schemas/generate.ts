@@ -51,6 +51,9 @@ export const GenerateOutputSchema = z.object({
     side: z.enum(['pro', 'con']),
     format: z.string(),
     generatedAt: z.string(),
+    model: z.string().optional(),
+    provider: z.string().optional(),
+    durationMs: z.number().optional(),
   }),
 });
 
