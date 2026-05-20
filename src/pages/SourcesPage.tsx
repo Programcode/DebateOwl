@@ -129,7 +129,7 @@ export default function SourcesPage() {
 
         <div className="mt-8 space-y-6 text-sm leading-6 text-foreground">
           <section>
-            <p>
+            <p className="text-muted-foreground">
               The following sources were consulted during the research and development of DebateLab.
               They are listed alphabetically by author surname or institutional name, following APA
               citation conventions.
@@ -140,7 +140,7 @@ export default function SourcesPage() {
             <h2 className="text-lg font-semibold mb-4">References</h2>
             <ol className="list-decimal list-inside space-y-4">
               {sources.map((source, index) => (
-                <li key={index} className="pl-2">
+                <li key={index} className="pl-2 leading-relaxed">
                   <span className="font-medium">{source.authors}</span>{" "}
                   <em>{source.title}</em>{" "}
                   {source.year}.{" "}
@@ -148,7 +148,7 @@ export default function SourcesPage() {
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80"
+                    className="text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80 transition-colors"
                   >
                     {source.url}
                   </a>{" "}

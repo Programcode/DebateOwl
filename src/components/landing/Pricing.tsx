@@ -80,7 +80,7 @@ const Pricing = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                         viewport={{ once: true }}
-                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur"
+                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur ring-1 ring-primary/10"
                     >
                         <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
                             <Sparkles className="h-3.5 w-3.5" />

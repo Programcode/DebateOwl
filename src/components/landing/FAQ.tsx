@@ -19,7 +19,7 @@ const FAQ = () => {
     ];
 
     return (
-        <section className="bg-secondary/5 py-24">
+        <section id="faq" className="bg-secondary/5 py-24">
             <div className="section-container max-w-3xl">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

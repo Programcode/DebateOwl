@@ -265,7 +265,7 @@ export default function TimerPage() {
           <Select value={formatId} onValueChange={(val) => {
             setFormatId(val);
           }}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[200px]" aria-label={t('timer.selectFormat', 'Select debate format')}>
               <SelectValue placeholder={t('timer.selectFormat')} />
             </SelectTrigger>
             <SelectContent>
@@ -305,12 +305,12 @@ export default function TimerPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Timer Display */}
-            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner transition-all">
+            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner transition-all" role="timer" aria-live="polite" aria-atomic="true">
               <div className={`absolute inset-0 rounded-full border-8 border-primary transition-all duration-1000`}
                 style={{ clipPath: `inset(${100 - progress}% 0 0 0)` }} />
 
               <div className="text-center z-10 flex flex-col items-center justify-center">
-                <div className={`text-6xl sm:text-7xl font-mono font-bold tracking-tighter tabular-nums ${timeLeft < 30 && timeLeft > 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                <div className={`text-6xl sm:text-7xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-300 ${timeLeft < 30 && timeLeft > 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
                   {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </div>
                 <div className="text-sm text-muted-foreground mt-4 font-medium uppercase tracking-widest flex items-center gap-2">
@@ -348,6 +348,7 @@ export default function TimerPage() {
                 variant="outline"
                 className="h-16 w-16 shadow-sm"
                 onClick={resetTimer}
+                aria-label={t('timer.resetKey', 'Reset timer')}
               >
                 <RotateCcw className="h-6 w-6" />
               </Button>
