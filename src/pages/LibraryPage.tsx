@@ -162,8 +162,10 @@ export default function LibraryPage() {
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
-  const folders: string[] = [];
-  const visibleSources = sourceLibrary;
+  const folders = Array.from(new Set(sourceLibrary.map(s => s.folder || 'General').filter(Boolean))).sort();
+  const visibleSources = selectedFolder === 'all'
+    ? sourceLibrary
+    : sourceLibrary.filter(s => (s.folder || 'General') === selectedFolder);
   const handleCreateFolder = () => {};
   const handleRemoveSource = (source: Source) => {
     void Promise.resolve(removeSource(source.id)).then(() => {
@@ -178,13 +180,22 @@ export default function LibraryPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={() => setIsAdding(!isAdding)}>
                 <Plus className="h-4 w-4 mr-1" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast({ title: t('libraryPage.foldersComingSoon', 'Folders coming soon') })}>
-                <FolderPlus className="h-4 w-4 mr-1" /> {t('libraryPage.folders', 'Folders')}
-              </Button>
+              <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+                <SelectTrigger className="h-9 w-[140px]">
+                  <FolderPlus className="h-4 w-4 mr-1" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('libraryPage.allFolders', 'All')}</SelectItem>
+                  {folders.map((f) => (
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="text-destructive" disabled={isClearing}>
@@ -298,6 +309,35 @@ export default function LibraryPage() {
                   value={newSource.content}
                   onChange={(e) => setNewSource({ ...newSource, content: e.target.value })}
                 />
+              </div>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-2">
+                  <Label>{t('libraryPage.folder', 'Folder')}</Label>
+                  <div className="flex gap-2">
+                    <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['General', ...folders.filter(f => f !== 'General')].map((f) => (
+                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder={t('libraryPage.newFolderPlaceholder', 'New folder...')}
+                      className="w-36"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newFolderName.trim()) {
+                          setNewSource({ ...newSource, folder: newFolderName.trim() });
+                          setNewFolderName('');
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
               <Button onClick={() => void handleAdd()} className="w-full">{t('libraryPage.saveToLibrary')}</Button>
             </CardContent>

@@ -23,7 +23,7 @@ import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
 export default function GeneratePage() {
-  const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData } = useSessionStore();
+  const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
   const askConfig = getFeatureConfig('ask');
@@ -33,6 +33,16 @@ export default function GeneratePage() {
   const { t } = useTranslation();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
+
+  const handleUndo = () => {
+    const prev = (autosavedCases || []).find(item => item.data !== generateResult);
+    if (prev) {
+      setGenerateResult(prev.data);
+      toast({ title: t('generate.undone', 'Reverted'), description: t('generate.undoneDesc', 'Loaded previous generation.') });
+    } else {
+      toast({ title: t('generate.noUndo', 'Nothing to undo'), variant: 'destructive' });
+    }
+  };
 
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
@@ -298,6 +308,7 @@ export default function GeneratePage() {
                   onRegenerateSection={handleRegenerateSection}
                   onDiscuss={handleDiscuss}
                   onSave={handleSave}
+                  onUndo={handleUndo}
                   onImportFlowchart={handleImportFlowchart}
                 />
               </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles, Clipboard } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles, Clipboard, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -19,6 +19,7 @@ interface GenerateResultsProps {
   onRegenerateSection?: (section: string) => void;
   onDiscuss?: () => void;
   onSave?: () => void;
+  onUndo?: () => void;
   onImportFlowchart?: () => void;
 }
 
@@ -69,7 +70,7 @@ function formatDuration(ms?: number) {
   return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`;
 }
 
-export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onImportFlowchart }: GenerateResultsProps) {
+export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
 
@@ -168,6 +169,12 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
               <Button variant="outline" size="sm" onClick={onImportFlowchart}>
                 <GitBranch className="h-4 w-4 mr-1.5" />
                 {t('generateResults.flowcharts')}
+              </Button>
+            )}
+            {onUndo && (
+              <Button variant="outline" size="sm" onClick={onUndo}>
+                <Undo2 className="h-4 w-4 mr-1.5" />
+                {t('generateResults.undo', 'Undo')}
               </Button>
             )}
           </div>
