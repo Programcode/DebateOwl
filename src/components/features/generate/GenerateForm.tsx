@@ -88,8 +88,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <CardContent className="pt-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Motion Input with Voice */}
           <div className="space-y-2">
             <Label htmlFor="motion" className="text-sm font-medium">
@@ -179,9 +179,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
 
           <ModelSelector feature="generate" showLabel />
 
-          {/* More */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">{t('generateForm.more')}</Label>
+          {/* More Options */}
+          <div>
             <Button
               type="button"
               variant="outline"

@@ -264,7 +264,7 @@ export default function GeneratePage() {
           </div>
         </AnimatedSection>
 
-        <div className="grid gap-8 grid-cols-1 lg:grid-cols-[400px_1fr]">
+        <div className="grid gap-8 grid-cols-1 lg:grid-cols-[440px_1fr]">
           {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
             <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading} />
