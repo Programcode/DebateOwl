@@ -11,6 +11,7 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 - [Model cost accounting](./model-cost-accounting.md)
 - [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
 - [Source auto-import](./source-auto-import.md)
+- [Streaming AI](./streaming-ai.md)
 - [Animation polish](./animation-polish.md)
 
 ## Done

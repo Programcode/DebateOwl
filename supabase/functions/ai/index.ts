@@ -822,6 +822,7 @@ function buildDiscoveredSources(research: ResearchContext) {
     content: item.content.slice(0, 1000),
     qualityScore: item.result?.qualityScore,
     sourceType: item.result?.sourceType,
+    qualityLabel: item.result?.qualityLabel,
   }));
 }
 

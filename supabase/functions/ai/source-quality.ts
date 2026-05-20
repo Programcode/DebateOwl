@@ -61,6 +61,14 @@ const OFFICIAL_DEBATE_PATTERNS = [
   /\bcalicotab\b/i,
 ];
 
+const POLICY_STAT_PATTERNS = [
+  /\b(policy|statistics?|data|poverty|income|education|health|energy|climate|inflation|gdp|employment|crime)\b/i,
+];
+
+const LEGAL_CURRENT_PATTERNS = [
+  /\b(law|legal|court|supreme court|regulation|agency|statute|bill|act|ruling|judgment|case)\b/i,
+];
+
 function hostFromUrl(url?: string): string {
   if (!url) return "";
   try {
@@ -203,13 +211,25 @@ export function buildSearchQueries(claim: string, region = "", preferredSourceTy
   if (preferredSourceType === "academic") queries.unshift(`${base} study journal university ${years}`.trim());
   if (preferredSourceType === "news") queries.unshift(`${base} Reuters AP BBC report ${years}`.trim());
 
+  if (POLICY_STAT_PATTERNS.some((pattern) => pattern.test(base))) {
+    queries.unshift(`${base} World Bank OECD IMF UN data ${years}`.trim());
+    queries.unshift(`${base} government agency statistics ${years}`.trim());
+    queries.unshift(`${base} academic study meta analysis ${years}`.trim());
+  }
+
+  if (LEGAL_CURRENT_PATTERNS.some((pattern) => pattern.test(base))) {
+    queries.unshift(`${base} official law court agency ${years}`.trim());
+    queries.unshift(`${base} primary source statute ruling regulation ${years}`.trim());
+    queries.unshift(`${base} Reuters AP legal analysis ${years}`.trim());
+  }
+
   if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(base)) || /\bdebate|debating\b/i.test(base)) {
     queries.unshift(`${base} tab results official`.trim());
     queries.unshift(`${base} Tabbycat Calicotab results`.trim());
     queries.unshift(`${base} WSDC WUDC official results`.trim());
   }
 
-  return Array.from(new Set(queries.filter(Boolean))).slice(0, 4);
+  return Array.from(new Set(queries.filter(Boolean))).slice(0, 6);
 }
 
 export function formatRankedSearchResults(results: RankedSearchResult[]): string {
