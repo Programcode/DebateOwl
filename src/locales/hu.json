@@ -103,7 +103,8 @@
     "timeoutDesc": "A kérés túl sokáig tartott. Próbáld újra.",
     "saved": "Mentve",
     "savedDesc": "Forrás hozzáadva a könyvtárhoz.",
-    "streamInterrupted": "A streamelt válasz a befejezés előtt megszakadt."
+    "streamInterrupted": "A streamelt válasz a befejezés előtt megszakadt.",
+    "streamInterruptedDesc": "Kérdezz újra a teljes válaszért."
   },
   "chat": {
     "error": "Chat Hiba",
@@ -823,6 +824,8 @@
     "importReadyDesc": "Mentés előtt nézd át a kinyert szöveget.",
     "importFailed": "Import sikertelen",
     "importFailedDesc": "Nem sikerült importálni ezt a forrást.",
+    "duplicateSource": "A forrás már a könyvtárban van",
+    "duplicateSourceDesc": "Ez a URL vagy fájl már mentve van.",
     "fileTooLarge": "Túl nagy fájl",
     "fileTooLargeDesc": "Válassz 250 KB alatti szövegfájlt.",
     "fileEmpty": "Ebben a fájlban nincs olvasható szöveg.",

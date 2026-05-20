@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl } from "./url-validation.ts";
+
+// Re-export helpers so existing callers (if any) keep working.
+export { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl };
 
 const ALLOWED_ORIGINS = [
   "https://debate.pi-stack.org",
@@ -10,6 +14,8 @@ const ALLOWED_ORIGINS = [
 
 const MAX_CONTENT_CHARS = 50_000;
 const FETCH_TIMEOUT_MS = 10_000;
+const MAX_REDIRECTS = 5;
+const DAILY_IMPORT_LIMIT = 50;
 
 function getCorsHeaders(origin: string | null) {
   const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -31,60 +37,75 @@ function jsonResponse(body: unknown, status: number, headers: Record<string, str
   });
 }
 
-function isPrivateIpv4(hostname: string) {
-  const parts = hostname.split(".").map((part) => Number(part));
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [a, b] = parts;
-  return (
-    a === 10 ||
-    a === 127 ||
-    a === 0 ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168)
-  );
+async function isUserBanned(userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .single();
+  return data?.role === "banned";
 }
 
-function validatePublicHttpUrl(rawUrl: string) {
-  let parsed: URL;
+async function countTodaysImports(userId: string): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const { count } = await supabase
+    .from("ai_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("feature", "import_source")
+    .gte("created_at", startOfDay.toISOString());
+  return count ?? 0;
+}
+
+async function logImport(userId: string, status: "success" | "error", errorCode?: string, latencyMs?: number) {
   try {
-    parsed = new URL(rawUrl);
-  } catch {
-    throw new Error("Enter a valid URL.");
+    await supabase.from("ai_requests").insert({
+      user_id: userId,
+      feature: "import_source",
+      provider: "url",
+      model: "url-import",
+      latency_ms: latencyMs,
+      status,
+      error_code: errorCode,
+    });
+  } catch (err) {
+    console.warn("[IMPORT_SOURCE] logImport failed", err instanceof Error ? err.message : String(err));
   }
-
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error("Only http and https URLs can be imported.");
-  }
-
-  const hostname = parsed.hostname.toLowerCase();
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname === "0.0.0.0" ||
-    hostname === "::1" ||
-    hostname.startsWith("[") ||
-    isPrivateIpv4(hostname)
-  ) {
-    throw new Error("Private and local network URLs cannot be imported.");
-  }
-
-  parsed.hash = "";
-  return parsed;
 }
 
-async function fetchWithTimeout(url: string) {
+async function fetchWithTimeout(initialUrl: URL) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, {
-      headers: {
-        "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
-        "User-Agent": "DebateLabSourceImporter/1.0",
-      },
-      signal: controller.signal,
-    });
+    let currentUrl = initialUrl;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+      const response = await fetch(currentUrl.toString(), {
+        headers: {
+          "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
+          "User-Agent": "DebateLabSourceImporter/1.0",
+        },
+        signal: controller.signal,
+        redirect: "manual",
+      });
+
+      // Manual redirect handling so we can re-validate against SSRF on every hop.
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location) {
+          throw new Error("Redirect without Location header.");
+        }
+        if (hop === MAX_REDIRECTS) {
+          throw new Error("Too many redirects.");
+        }
+        const nextUrl = new URL(location, currentUrl);
+        currentUrl = validatePublicHttpUrl(nextUrl.toString());
+        continue;
+      }
+
+      return { response, finalUrl: currentUrl };
+    }
+    throw new Error("Too many redirects.");
   } finally {
     clearTimeout(timeout);
   }
@@ -164,17 +185,38 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Invalid token" }, 401, corsHeaders);
   }
 
+  if (await isUserBanned(user.id)) {
+    return jsonResponse({ error: "Your account has been suspended. Please contact support.", code: "banned" }, 403, corsHeaders);
+  }
+
+  const todaysImports = await countTodaysImports(user.id);
+  if (todaysImports >= DAILY_IMPORT_LIMIT) {
+    return jsonResponse({
+      error: `You've reached the daily import limit (${DAILY_IMPORT_LIMIT}). Try again tomorrow.`,
+      code: "limit_reached",
+      limit: DAILY_IMPORT_LIMIT,
+      current: todaysImports,
+    }, 429, corsHeaders);
+  }
+
+  const startedAt = Date.now();
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
+      return jsonResponse({ error: "Invalid JSON body." }, 400, corsHeaders);
+    }
     const parsedUrl = validatePublicHttpUrl(String(body.url || "").trim());
-    const response = await fetchWithTimeout(parsedUrl.toString());
+    const { response, finalUrl } = await fetchWithTimeout(parsedUrl);
 
     if (!response.ok) {
+      await logImport(user.id, "error", `upstream_${response.status}`, Date.now() - startedAt);
       return jsonResponse({ error: `Could not fetch source (${response.status}).` }, 502, corsHeaders);
     }
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("text/plain") && !contentType.includes("application/xhtml+xml")) {
+      await logImport(user.id, "error", "unsupported_type", Date.now() - startedAt);
       return jsonResponse({ error: "Only HTML and plain text pages can be imported from a URL." }, 415, corsHeaders);
     }
 
@@ -183,26 +225,29 @@ Deno.serve(async (req) => {
     const content = normalizeText(isHtml ? stripHtml(raw) : raw);
 
     if (content.split(/\s+/).filter(Boolean).length < 20) {
+      await logImport(user.id, "error", "too_short", Date.now() - startedAt);
       return jsonResponse({ error: "This page did not contain enough readable text to import." }, 422, corsHeaders);
     }
 
-    const title = isHtml ? getTitle(raw, parsedUrl.hostname) : parsedUrl.pathname.split("/").pop() || parsedUrl.hostname;
+    const title = isHtml ? getTitle(raw, finalUrl.hostname) : finalUrl.pathname.split("/").pop() || finalUrl.hostname;
     const author = isHtml ? getMeta(raw, ["author", "article:author"]) : undefined;
     const publishedDate = isHtml ? getMeta(raw, ["article:published_time", "date", "dc.date", "pubdate"]) : undefined;
     const excerpt = content.slice(0, 220).replace(/\s+\S*$/, "").trim();
 
+    await logImport(user.id, "success", undefined, Date.now() - startedAt);
     return jsonResponse({
       title,
       content,
       wordCount: content.split(/\s+/).filter(Boolean).length,
       author,
       publishedDate,
-      domain: parsedUrl.hostname,
+      domain: finalUrl.hostname,
       excerpt,
-      url: parsedUrl.toString(),
+      url: finalUrl.toString(),
     }, 200, corsHeaders);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to import source.";
+    await logImport(user.id, "error", "exception", Date.now() - startedAt);
     return jsonResponse({ error: message }, 400, corsHeaders);
   }
 });

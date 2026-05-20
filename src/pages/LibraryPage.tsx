@@ -54,7 +54,7 @@ export default function LibraryPage() {
       toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
-    await Promise.resolve(addSource(newSource));
+    await addSource(newSource);
     setNewSource({ title: '', content: '', type: 'text', origin: '' });
     setIsAdding(false);
     toast({ title: t('libraryPage.sourceAdded'), description: t('libraryPage.sourceAddedDesc') });
@@ -120,12 +120,21 @@ export default function LibraryPage() {
 
   const handleSavePreview = async () => {
     if (!importPreview?.title || !importPreview.content) return;
-    await Promise.resolve(addSource({
+    const trimmedOrigin = importPreview.origin?.trim();
+    if (trimmedOrigin && sourceLibrary.some(existing => existing.origin?.trim() === trimmedOrigin)) {
+      toast({
+        title: t('libraryPage.duplicateSource', 'Source already in library'),
+        description: t('libraryPage.duplicateSourceDesc', 'This URL or file is already saved.'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    await addSource({
       title: importPreview.title.trim(),
       content: importPreview.content.trim(),
       type: importPreview.type,
       origin: importPreview.origin,
-    }));
+    });
     setImportPreview(null);
     setImportUrl('');
     setIsAdding(false);

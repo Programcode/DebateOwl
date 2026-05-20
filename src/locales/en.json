@@ -103,7 +103,8 @@
     "timeoutDesc": "The request took too long. Please try again.",
     "saved": "Saved",
     "savedDesc": "Source added to library.",
-    "streamInterrupted": "The streamed response was interrupted before completion."
+    "streamInterrupted": "The streamed response was interrupted before completion.",
+    "streamInterruptedDesc": "You can ask again to get a complete answer."
   },
   "chat": {
     "error": "Chat Error",
@@ -823,6 +824,8 @@
     "importReadyDesc": "Review the extracted text before saving.",
     "importFailed": "Import Failed",
     "importFailedDesc": "Could not import this source.",
+    "duplicateSource": "Source already in library",
+    "duplicateSourceDesc": "This URL or file is already saved.",
     "fileTooLarge": "File Too Large",
     "fileTooLargeDesc": "Choose a text file under 250 KB.",
     "fileEmpty": "This file has no readable text.",

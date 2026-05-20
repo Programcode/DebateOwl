@@ -103,7 +103,8 @@
     "timeoutDesc": "La solicitud tardó demasiado. Inténtalo de nuevo.",
     "saved": "Guardado",
     "savedDesc": "Fuente añadida a la biblioteca.",
-    "streamInterrupted": "La respuesta en streaming se interrumpió antes de completarse."
+    "streamInterrupted": "La respuesta en streaming se interrumpió antes de completarse.",
+    "streamInterruptedDesc": "Puedes preguntar de nuevo para obtener una respuesta completa."
   },
   "chat": {
     "error": "Error de Chat",
@@ -823,6 +824,8 @@
     "importReadyDesc": "Revisa el texto extraído antes de guardarlo.",
     "importFailed": "Error al importar",
     "importFailedDesc": "No se pudo importar esta fuente.",
+    "duplicateSource": "La fuente ya está en la biblioteca",
+    "duplicateSourceDesc": "Esta URL o archivo ya está guardado.",
     "fileTooLarge": "Archivo demasiado grande",
     "fileTooLargeDesc": "Elige un archivo de texto menor de 250 KB.",
     "fileEmpty": "Este archivo no tiene texto legible.",
