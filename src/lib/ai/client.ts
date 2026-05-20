@@ -601,21 +601,26 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
     };
   };
 
+  const normalizeTopFiveItems = (items: unknown[]) => items
+    .map((item: unknown, index) => {
+      if (!item || typeof item !== 'object') {
+        const idea = normalizeIdea({ title: String(item || `Idea ${index + 1}`), description: String(item || '') });
+        return idea ? { rank: index + 1, idea, whyTop: '' } : null;
+      }
+      const entry = item as Record<string, unknown>;
+      const idea = normalizeIdea(entry.idea || entry);
+      if (!idea) return null;
+      return {
+        rank: typeof entry.rank === 'number' ? entry.rank : index + 1,
+        idea,
+        whyTop: String(entry.whyTop || entry.rationale || entry.reason || ''),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
   // Transform topFive if present
   if (response.topFive && Array.isArray(response.topFive)) {
-    result.topFive = response.topFive
-      .map((item: unknown) => {
-        if (!item || typeof item !== 'object') return null;
-        const t = item as Record<string, unknown>;
-        const idea = normalizeIdea(t.idea);
-        if (!idea) return null;
-        return {
-          rank: typeof t.rank === 'number' ? t.rank : 0,
-          idea,
-          whyTop: String(t.whyTop || ''),
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
+    result.topFive = normalizeTopFiveItems(response.topFive);
   }
 
   // Transform mindmap if present
@@ -653,7 +658,15 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
       .filter((b): b is NonNullable<typeof b> => b !== null && b.ideas.length > 0);
   }
 
-  return result;
+  if (!result.topFive?.length && !result.mindmap?.length && !result.buckets?.length) {
+    const fallbackItems = [response.ideas, response.angles, response.recommendations, response.results]
+      .find((value): value is unknown[] => Array.isArray(value));
+    if (fallbackItems) {
+      result.topFive = normalizeTopFiveItems(fallbackItems).slice(0, 5);
+    }
+  }
+
+  return cleanGeneratedOutput(result);
 }
 
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<GenerateOutput> {
