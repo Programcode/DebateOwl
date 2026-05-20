@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles, Clipboard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -73,6 +73,28 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
 
+  const handleCopyToClipboard = () => {
+    const lines: string[] = [];
+    lines.push(`THESIS: ${result.caseStructure?.thesis || ''}`);
+    lines.push(`FRAMEWORK: ${result.caseStructure?.framework || ''}`);
+    lines.push('');
+    result.contentions?.forEach((c, i) => {
+      lines.push(`CONTENTION #${i + 1}: ${c.claim}`);
+      lines.push(`  Reasoning: ${c.reasoning}`);
+      lines.push(`  Evidence: ${c.evidence}`);
+      lines.push(`  Impact: ${c.impact}`);
+      lines.push('');
+    });
+    if (result.counters?.length) {
+      lines.push('PREPARED COUNTERS:');
+      result.counters.forEach(c => {
+        lines.push(`  vs "${c.targetArgument}": ${c.counterpoint}`);
+      });
+    }
+    void navigator.clipboard.writeText(lines.join('\n'));
+    toast.success(t('generateResults.copiedToClipboard', 'Copied to clipboard'));
+  };
+
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
     try {
@@ -127,47 +149,55 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           {modelText && <><span>•</span><span>{modelText}</span></>}
           {durationText && <><span>•</span><span>{durationText}</span></>}
         </div>
-        <div className="flex flex-wrap gap-2" data-tour="export-section">
-          {onSave && (
-            <Button variant="outline" size="sm" onClick={onSave}>
-              <Save className="h-4 w-4 mr-2" />
-              {t('generateResults.save')}
-            </Button>
-          )}
-          {onDiscuss && (
-            <Button variant="outline" size="sm" onClick={onDiscuss}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              {t('generateResults.discuss')}
-            </Button>
-          )}
-          {onImportFlowchart && (
-            <Button variant="outline" size="sm" onClick={onImportFlowchart}>
-              <GitBranch className="h-4 w-4 mr-2" />
-              {t('generateResults.flowcharts')}
-            </Button>
-          )}
-          <AutoSavedSourcesUndo />
-          <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
-            <FileDown className="h-4 w-4 mr-2" />
-            {t('generateResults.word')}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => exportCaseToPdf(result)}>
-            <FileText className="h-4 w-4 mr-2" />
-            {t('generateResults.pdf')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGoogleDocsExport}
-            disabled={isExportingGDocs}
-          >
-            {isExportingGDocs ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <FileUp className="h-4 w-4 mr-2" />
+        <div className="space-y-2" data-tour="export-section">
+          <div className="flex flex-wrap gap-2">
+            {onSave && (
+              <Button variant="outline" size="sm" onClick={onSave}>
+                <Save className="h-4 w-4 mr-1.5" />
+                {t('generateResults.save')}
+              </Button>
             )}
-            {t('generateResults.googleDocs')}
-          </Button>
+            {onDiscuss && (
+              <Button variant="outline" size="sm" onClick={onDiscuss}>
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                {t('generateResults.discuss')}
+              </Button>
+            )}
+            <AutoSavedSourcesUndo />
+            {onImportFlowchart && (
+              <Button variant="outline" size="sm" onClick={onImportFlowchart}>
+                <GitBranch className="h-4 w-4 mr-1.5" />
+                {t('generateResults.flowcharts')}
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
+              <Clipboard className="h-4 w-4 mr-1.5" />
+              {t('generateResults.clipboard', 'Clipboard')}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
+              <FileDown className="h-4 w-4 mr-1.5" />
+              {t('generateResults.word')}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportCaseToPdf(result)}>
+              <FileText className="h-4 w-4 mr-1.5" />
+              {t('generateResults.pdf')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGoogleDocsExport}
+              disabled={isExportingGDocs}
+            >
+              {isExportingGDocs ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <FileUp className="h-4 w-4 mr-1.5" />
+              )}
+              {t('generateResults.googleDocs')}
+            </Button>
+          </div>
         </div>
       </div>
 
