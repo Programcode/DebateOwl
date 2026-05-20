@@ -36,10 +36,12 @@ export default defineConfig(({ mode }) => ({
           'vendor-form': ['react-hook-form', '@hookform/resolvers', 'zod'],
           'vendor-query': ['@tanstack/react-query'],
           'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-flow': ['reactflow'],
+          'vendor-export-pdf': ['jspdf', 'jspdf-autotable'],
+          'vendor-export-docx': ['docx'],
         },
       },
     },
-    // Increase warning limit since we're splitting into chunks
-    chunkSizeWarningLimit: 300,
+    chunkSizeWarningLimit: 700,
   },
 }));
