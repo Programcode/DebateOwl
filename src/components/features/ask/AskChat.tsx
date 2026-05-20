@@ -137,7 +137,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                       {citation.source}
                     </a>
                   ) : citation.source ? (
-                    <div className="mt-1 break-all text-muted-foreground">{citation.source}</div>
+                    <div className="mt-1 break-words [overflow-wrap:anywhere] text-muted-foreground">{citation.source}</div>
                   ) : null}
                   {citation.note && (
                     <div className="mt-1 text-muted-foreground">{citation.note}</div>
@@ -176,7 +176,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                         {source.verified ? t('askChat.verified') : t('askChat.unverified')}
                       </span>
                     </div>
-                    <a className="mt-1 block text-primary hover:underline break-all" href={source.url} target="_blank" rel="noreferrer">
+                    <a className="mt-1 block text-primary hover:underline break-words [overflow-wrap:anywhere]" href={source.url} target="_blank" rel="noreferrer">
                       {source.title || source.url}
                     </a>
                   </li>

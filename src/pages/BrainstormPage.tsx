@@ -51,7 +51,10 @@ export default function BrainstormPage() {
     let summary = "I'd like to discuss these brainstormed ideas.\n\n";
 
     if (brainstormResult.topFive) {
-      summary += "**Top Ideas:**\n" + brainstormResult.topFive.map(i => `- ${i.idea.title} (${i.idea.side?.toUpperCase() || 'N/A'})`).join('\n');
+      summary += "**Top Ideas:**\n" + brainstormResult.topFive.map((i) => {
+        const side = i.idea.side ? t(`brainstormResults.${i.idea.side}`, i.idea.side) : 'N/A';
+        return `- ${i.idea.title} (${side})`;
+      }).join('\n');
     } else if (brainstormResult.buckets) {
       summary += "**Key Buckets:**\n" + brainstormResult.buckets.map(b => `- ${b.name}: ${b.keyInsight}`).join('\n');
     }

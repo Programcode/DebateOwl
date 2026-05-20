@@ -85,7 +85,15 @@ const nodeIcons: Record<NodeType, React.ReactNode> = {
 
 // Custom node component
 function CustomNode({ data }: { data: FlowNodeData }) {
+    const { t } = useTranslation();
     const colors = nodeColors[data.type];
+    const typeLabelKey = {
+        thesis: 'flowchart.legendThesis',
+        contention: 'flowchart.typeArgument',
+        attack: 'flowchart.typeAttack',
+        rebuttal: 'flowchart.typeRebuttal',
+        dropped: 'flowchart.typeDropped',
+    }[data.type];
     return (
         <div
             className={`px-4 py-3 shadow-lg rounded-lg border-2 ${colors.border} ${colors.bg} ${colors.text} min-w-[150px] max-w-[250px] relative`}
@@ -93,8 +101,8 @@ function CustomNode({ data }: { data: FlowNodeData }) {
             <Handle type="target" position={Position.Top} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
             <div className="flex items-center gap-2 mb-1">
                 {nodeIcons[data.type]}
-                <Badge variant="secondary" className="text-xs bg-white/20">
-                    {data.type.toUpperCase()}
+                <Badge variant="secondary" className="text-xs uppercase bg-white/20">
+                    {t(typeLabelKey)}
                 </Badge>
             </div>
             <div className="font-semibold text-sm">{data.label}</div>
