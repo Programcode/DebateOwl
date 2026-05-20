@@ -29,11 +29,11 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
-const tierLabels: Record<string, { label: string; color: string }> = {
-  trial: { label: 'Free Trial', color: 'bg-blue-500' },
-  pro: { label: 'Pro', color: 'bg-amber-500' },
-  legacy_free: { label: 'Legacy Free', color: 'bg-green-500' },
-  expired: { label: 'Expired', color: 'bg-red-500' },
+const tierLabels: Record<string, { labelKey: string; color: string }> = {
+  trial: { labelKey: 'settings.tierTrial', color: 'bg-blue-500' },
+  pro: { labelKey: 'settings.tierPro', color: 'bg-amber-500' },
+  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'bg-green-500' },
+  expired: { labelKey: 'settings.tierExpired', color: 'bg-red-500' },
 };
 
 export default function SettingsPage() {
@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
   const handleDeleteAllData = () => {
     if (deleteEmail !== user?.email) {
-      toast({ title: "Cancelled", description: "Email didn't match. No data was deleted." });
+      toast({ title: t('settings.deleteCancelled'), description: t('settings.deleteCancelledDesc') });
       return;
     }
 
@@ -91,10 +91,10 @@ export default function SettingsPage() {
       localStorage.removeItem('debate-trainer-storage');
       setDeleteDialogOpen(false);
       setDeleteEmail('');
-      toast({ title: "Data Deleted", description: "All your saved data has been permanently removed." });
+      toast({ title: t('settings.deleteSuccess'), description: t('settings.deleteSuccessDesc') });
     }).catch((error) => {
       console.error('Failed to delete data:', error);
-      toast({ title: "Error", description: "Failed to delete data. Please try again.", variant: "destructive" });
+      toast({ title: t('settings.deleteFailed'), description: t('settings.deleteFailedDesc'), variant: "destructive" });
     });
   };
 
@@ -106,13 +106,13 @@ export default function SettingsPage() {
       const message = err instanceof Error ? err.message : 'Failed to open billing portal';
       if (message.toLowerCase().includes('no active subscription')) {
         toast({
-          title: 'No Subscription Found',
-          description: 'This account is not connected to Stripe billing. Upgrade to Pro to start a subscription.',
+          title: t('settings.noSubscription'),
+          description: t('settings.noSubscriptionDesc'),
         });
         setPricingOpen(true);
       } else {
         toast({
-          title: 'Error',
+          title: t('settings.portalError'),
           description: message,
           variant: 'destructive',
         });
@@ -161,7 +161,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Badge className={`${tierInfo.color} text-white`}>{tierInfo.label}</Badge>
+                <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
                 {subscription.tier === 'trial' && subscription.trialEndsAt && (
                   <span className="text-sm text-muted-foreground">
                     {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}

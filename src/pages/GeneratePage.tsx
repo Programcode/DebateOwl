@@ -268,9 +268,9 @@ export default function GeneratePage() {
             ) : (
               <div key="generate-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
                 <div className="motion-loading-card mb-4 text-6xl">🎯</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Ready to Generate</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('generate.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Enter your motion and preferences to generate a complete debate case with arguments, counters, and strategic analysis.
+                  {t('generate.emptyDesc')}
                 </p>
               </div>
             )}
