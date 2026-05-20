@@ -35,7 +35,7 @@ const SocialProof = () => {
                                 viewport={{ once: true }}
                                 className="rounded-xl border border-border/70 bg-card/70 px-4 py-4"
                             >
-                                <div className="text-2xl font-bold text-foreground">{item.value}</div>
+                                <div className="text-2xl font-bold text-foreground tabular-nums">{item.value}</div>
                                 <div className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</div>
                             </motion.div>
                         ))}

@@ -141,7 +141,7 @@ export default function SettingsPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <Settings className="h-5 w-5 text-primary" />
             </div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
           </div>
           <p className="text-muted-foreground">
             {t('settings.subtitle')}
@@ -356,6 +356,7 @@ export default function SettingsPage() {
               id="delete-email"
               value={deleteEmail}
               onChange={(event) => setDeleteEmail(event.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && deleteEmail === user?.email) handleDeleteAllData(); }}
               placeholder={user?.email || ''}
             />
           </div>

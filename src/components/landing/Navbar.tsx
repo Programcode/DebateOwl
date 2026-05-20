@@ -38,7 +38,7 @@ const Navbar = () => {
                             <a
                                 key={link.href}
                                 href={link.href}
-                                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:text-foreground rounded-sm"
                             >
                                 {link.label}
                             </a>
@@ -57,6 +57,7 @@ const Navbar = () => {
                         onClick={() => setIsOpen(!isOpen)}
                         className="p-2 text-foreground md:hidden"
                         aria-label="Toggle menu"
+                        aria-expanded={isOpen}
                     >
                         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>

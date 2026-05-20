@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const modeKeys = [
   { key: 'generate', icon: Sparkles, href: '/app/generate' },
@@ -33,9 +32,6 @@ export default function HomePage() {
 
   return (
     <div className="container px-4 py-8">
-      <div className="flex justify-end">
-        <LanguageSwitcher />
-      </div>
       <div className="mx-auto flex min-h-[72vh] max-w-5xl flex-col justify-center">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground">{t('home.title')}</h1>
@@ -44,7 +40,7 @@ export default function HomePage() {
 
         <div className="grid gap-4 md:grid-cols-3 stagger-enter">
           {modeKeys.map((mode) => (
-            <Link key={mode.key} to={mode.href} className="group">
+            <Link key={mode.key} to={mode.href} className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
               <Card
                 className={cn(
                   'h-full border-border/70 bg-card/60 transition-all',
@@ -53,10 +49,10 @@ export default function HomePage() {
               >
                 <CardHeader>
                   <div className="mb-3 flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
                       <mode.icon className="h-5 w-5" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
                   <CardTitle className="text-lg">{t(`home.${mode.key}`)}</CardTitle>
                   <CardDescription>{t(`home.${mode.key}Desc`)}</CardDescription>

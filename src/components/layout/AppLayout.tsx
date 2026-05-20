@@ -55,7 +55,7 @@ export function AppLayout() {
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 overflow-x-auto scrollbar-hide">
+          <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-0.5 xl:gap-1 overflow-x-auto scrollbar-hide">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -98,8 +98,8 @@ export function AppLayout() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <nav className="motion-reveal lg:hidden border-t border-border bg-card p-4">
-            <div className="grid gap-2">
+          <nav className="motion-reveal lg:hidden border-t border-border bg-card p-4" aria-label="Mobile navigation">
+            <div className="grid gap-1">
               {navItems.map((item) => (
                 <NavLink
                   key={item.path}
@@ -107,10 +107,10 @@ export function AppLayout() {
                   end={item.path === '/app'}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    "motion-press flex items-center gap-3 px-3 py-3 rounded-lg",
+                    "motion-press flex items-center gap-3 px-3 py-2.5 rounded-lg",
                     "text-muted-foreground hover:text-foreground hover:bg-accent"
                   )}
-                  activeClassName="bg-primary/10 text-primary"
+                  activeClassName="bg-primary/10 text-primary font-semibold"
                 >
                   <item.icon className="h-5 w-5" />
                   <div>
@@ -132,10 +132,10 @@ export function AppLayout() {
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
-          <p>DebateLab</p>
+          <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">
-            <a href="/terms" className="motion-press rounded-sm hover:text-foreground">{t('footer.terms')}</a>
-            <a href="/privacy" className="motion-press rounded-sm hover:text-foreground">{t('footer.privacy')}</a>
+            <a href="/terms" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.terms')}</a>
+            <a href="/privacy" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.privacy')}</a>
           </div>
         </div>
       </footer>

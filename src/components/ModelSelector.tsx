@@ -32,7 +32,7 @@ export function ModelSelector({ feature }: ModelSelectorProps) {
           }
         }}
       >
-        <SelectTrigger className="h-8 text-xs w-[160px] sm:w-[200px]">
+        <SelectTrigger className="h-8 text-xs w-[160px] sm:w-[200px]" aria-label={`Select AI model for ${feature}`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
