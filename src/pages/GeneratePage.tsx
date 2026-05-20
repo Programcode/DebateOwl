@@ -19,7 +19,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
-import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
@@ -240,7 +239,6 @@ export default function GeneratePage() {
               {t('generate.subtitle')}
             </p>
           </div>
-          <ModelSelector feature="generate" />
         </AnimatedSection>
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[400px_1fr]">

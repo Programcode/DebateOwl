@@ -14,6 +14,7 @@ import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
 import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
 import { formatEuropeanTime } from '@/lib/date-format';
+import { ModelSelector } from '@/components/ModelSelector';
 
 interface Message {
   id: string;
@@ -426,6 +427,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       </CardContent>
 
       <div className="shrink-0 border-t border-border p-4 space-y-3">
+        <ModelSelector feature="ask" showLabel />
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex gap-1">
             {modeOptions.map((option) => (

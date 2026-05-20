@@ -11,7 +11,6 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
@@ -97,7 +96,6 @@ export default function AttackPage() {
               {t('attack.subtitle')}
             </p>
           </div>
-          <ModelSelector feature="attack" />
         </AnimatedSection>
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">

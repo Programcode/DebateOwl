@@ -4,24 +4,33 @@ import { Badge } from '@/components/ui/badge';
 import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSubscription } from '@/hooks/use-subscription';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface ModelSelectorProps {
   feature: FeatureTab;
+  className?: string;
+  showLabel?: boolean;
 }
 
 const allModels = DEFAULT_PROVIDERS
   .filter(p => p.id === 'google' || p.id === 'openai' || p.id === 'anthropic')
   .flatMap(p => p.models.map(m => ({ ...m, provider: p.id, providerName: p.name })));
 
-export function ModelSelector({ feature }: ModelSelectorProps) {
+export function ModelSelector({ feature, className, showLabel = false }: ModelSelectorProps) {
   const { featureConfigs, setFeatureConfig } = useSettingsStore();
   const { isPro } = useSubscription();
   const config = featureConfigs?.[feature];
   const currentModel = config?.model || 'gemini-3-flash-preview';
 
   return (
-    <div className="flex items-center gap-2">
-      <Cpu className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
+    <div className={cn("space-y-2", className)}>
+      {showLabel && (
+        <Label className="flex items-center gap-2 text-sm font-medium">
+          <Cpu className="h-4 w-4 text-muted-foreground" />
+          AI model
+        </Label>
+      )}
       <Select
         value={currentModel}
         onValueChange={(model) => {
@@ -32,7 +41,7 @@ export function ModelSelector({ feature }: ModelSelectorProps) {
           }
         }}
       >
-        <SelectTrigger className="h-8 text-xs w-[160px] sm:w-[200px]" aria-label={`Select AI model for ${feature}`}>
+        <SelectTrigger className="h-10 w-full text-sm" aria-label={`Select AI model for ${feature}`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -11,7 +11,6 @@ import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { useToast } from '@/hooks/use-toast';
-import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
@@ -96,7 +95,6 @@ export default function BrainstormPage() {
               {t('brainstorm.subtitle')}
             </p>
           </div>
-          <ModelSelector feature="brainstorm" />
         </AnimatedSection>
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
