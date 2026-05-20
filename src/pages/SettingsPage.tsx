@@ -286,16 +286,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* AI Model Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('settings.aiModels')}</CardTitle>
-            <CardDescription>
-              {t('settings.aiModelsDesc')}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
         {isAdmin && (
           <Card className="mt-8 mb-8 border-primary/20 bg-primary/5">
             <CardHeader>

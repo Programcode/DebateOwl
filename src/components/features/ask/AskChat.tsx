@@ -260,8 +260,12 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
         <span className="text-[10px] text-muted-foreground">
           {(() => {
             try {
-              if (!message.timestamp) return '';
-              return formatEuropeanTime(message.timestamp);
+              const parts: string[] = [];
+              if (message.timestamp) parts.push(formatEuropeanTime(message.timestamp));
+              if (message.role === 'assistant' && message.output?.durationMs) {
+                parts.push(`${(message.output.durationMs / 1000).toFixed(1)}s`);
+              }
+              return parts.join(' • ');
             } catch (e) {
               return '';
             }
@@ -426,9 +430,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
         </ScrollArea>
       </CardContent>
 
-      <div className="shrink-0 border-t border-border p-4 space-y-3">
-        <ModelSelector feature="ask" showLabel className="max-w-xs" />
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="shrink-0 border-t border-border p-4 space-y-2">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             {modeOptions.map((option) => (
               <Button
@@ -443,6 +446,9 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               </Button>
             ))}
           </div>
+          <ModelSelector feature="ask" className="w-48 shrink-0" />
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-4">
             <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
               <Quote className="h-4 w-4 text-muted-foreground" />

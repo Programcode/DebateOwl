@@ -70,6 +70,10 @@ interface SessionState {
   savedFactoids: SavedItem<FactoidsOutput>[];
   savedChats: SavedItem<Message[]>[];
   savedFlowcharts: SavedItem<FlowchartData>[];
+  autosavedCases: SavedItem<GenerateOutput>[];
+  autosavedAttacks: SavedItem<AttackOutput>[];
+  autosavedBrainstorms: SavedItem<BrainstormOutput>[];
+  autosavedFactoids: SavedItem<FactoidsOutput>[];
   sourceLibrary: Source[];
 
   // Persisted Form State
@@ -265,6 +269,10 @@ export const useSessionStore = create<SessionState>()(
       savedFactoids: [] as SavedItem<FactoidsOutput>[],
       savedChats: [] as SavedItem<Message[]>[],
       savedFlowcharts: [] as SavedItem<FlowchartData>[],
+      autosavedCases: [] as SavedItem<GenerateOutput>[],
+      autosavedAttacks: [] as SavedItem<AttackOutput>[],
+      autosavedBrainstorms: [] as SavedItem<BrainstormOutput>[],
+      autosavedFactoids: [] as SavedItem<FactoidsOutput>[],
       sourceLibrary: [] as Source[],
 
       generateForm: {},
@@ -343,7 +351,13 @@ export const useSessionStore = create<SessionState>()(
         await supabase.from('sources').delete().eq('user_id', userId);
       },
 
-      setGenerateResult: (result) => set({ generateResult: result }),
+      setGenerateResult: (result) => {
+        set({ generateResult: result });
+        if (result) {
+          const item: SavedItem<GenerateOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: result.caseStructure?.thesis?.slice(0, 60) || 'Untitled' };
+          set((state) => ({ autosavedCases: [item, ...state.autosavedCases].slice(0, 3) }));
+        }
+      },
       setGenerateLoading: (loading) => set({ generateLoading: loading }),
       saveCurrentCase: async (title) => {
         const current = get().generateResult;
@@ -379,7 +393,13 @@ export const useSessionStore = create<SessionState>()(
         if (item) set({ generateResult: item.data });
       },
 
-      setAttackResult: (result) => set({ attackResult: result }),
+      setAttackResult: (result) => {
+        set({ attackResult: result });
+        if (result) {
+          const item: SavedItem<AttackOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: result.overallAssessment?.summary?.slice(0, 60) || 'Attack' };
+          set((state) => ({ autosavedAttacks: [item, ...state.autosavedAttacks].slice(0, 3) }));
+        }
+      },
       setAttackLoading: (loading) => set({ attackLoading: loading }),
       saveCurrentAttack: async (title) => {
         const current = get().attackResult;
@@ -410,7 +430,13 @@ export const useSessionStore = create<SessionState>()(
         if (item) set({ attackResult: item.data });
       },
 
-      setBrainstormResult: (result) => set({ brainstormResult: result }),
+      setBrainstormResult: (result) => {
+        set({ brainstormResult: result });
+        if (result) {
+          const item: SavedItem<BrainstormOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: 'Brainstorm' };
+          set((state) => ({ autosavedBrainstorms: [item, ...state.autosavedBrainstorms].slice(0, 3) }));
+        }
+      },
       setBrainstormLoading: (loading) => set({ brainstormLoading: loading }),
       saveCurrentBrainstorm: async (title) => {
         const current = get().brainstormResult;
@@ -441,7 +467,13 @@ export const useSessionStore = create<SessionState>()(
         if (item) set({ brainstormResult: item.data });
       },
 
-      setFactoidsResult: (result) => set({ factoidsResult: result }),
+      setFactoidsResult: (result) => {
+        set({ factoidsResult: result });
+        if (result) {
+          const item: SavedItem<FactoidsOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: 'Factoids' };
+          set((state) => ({ autosavedFactoids: [item, ...state.autosavedFactoids].slice(0, 3) }));
+        }
+      },
       setFactoidsLoading: (loading) => set({ factoidsLoading: loading }),
       saveCurrentFactoids: async (title) => {
         const current = get().factoidsResult;

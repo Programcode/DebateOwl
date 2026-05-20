@@ -105,6 +105,7 @@ export default function AskPage() {
       };
 
       let result: AskOutput;
+      const askStartTime = Date.now();
 
       if (isAskStreamingSupported(config, options)) {
         let receivedStreamText = false;
@@ -175,7 +176,7 @@ export default function AskPage() {
       addAskMessage({
         role: 'assistant',
         content: result.response,
-        output: result
+        output: { ...result, durationMs: Date.now() - askStartTime }
       });
     } catch (error) {
       setAskStreamingAssistant(null);

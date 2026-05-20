@@ -184,7 +184,7 @@ describe('Conversation Pages', () => {
     expect(sessionState.addAskMessage).toHaveBeenCalledWith({
       role: 'assistant',
       content: 'Try value framing.',
-      output: { response: 'Try value framing.', followUpQuestions: [], uncertainties: [] },
+      output: expect.objectContaining({ response: 'Try value framing.', followUpQuestions: [], uncertainties: [] }),
     });
     expect(sessionState.setAskLoading).toHaveBeenCalledWith(true);
     expect(sessionState.setAskLoading).toHaveBeenCalledWith(false);
@@ -232,7 +232,7 @@ describe('Conversation Pages', () => {
     expect(sessionState.addAskMessage).toHaveBeenCalledWith({
       role: 'assistant',
       content: 'Try value framing.',
-      output: { response: 'Try value framing.', followUpQuestions: [], uncertainties: [] },
+      output: expect.objectContaining({ response: 'Try value framing.', followUpQuestions: [], uncertainties: [] }),
     });
   });
 
