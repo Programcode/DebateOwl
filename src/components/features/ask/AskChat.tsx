@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search } from 'lucide-react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Markdown } from '@/components/ui/markdown';
@@ -39,6 +39,7 @@ interface AskChatProps {
     files?: File[]
   ) => void;
   onClear: () => void;
+  onSaveChat?: () => void;
   onSaveSource?: (title: string, content: string) => void;
 }
 
@@ -276,7 +277,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   );
 });
 
-export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: AskChatProps) {
+export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, onSaveSource }: AskChatProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
@@ -385,10 +386,18 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClear}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            {t('askChat.clear')}
-          </Button>
+          <div className="flex gap-1">
+            {onSaveChat && messages.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={onSaveChat}>
+                <Save className="mr-2 h-4 w-4" />
+                {t('askChat.save', 'Save')}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={onClear}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('askChat.clear')}
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -446,10 +455,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               </Button>
             ))}
           </div>
-          <ModelSelector feature="ask" className="w-48 shrink-0" />
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-4">
+        <div className="flex items-center gap-2 flex-wrap">
             <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
               <Quote className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="citation-mode" className="text-xs">{t('askChat.citations')}</Label>
@@ -486,7 +493,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setArgumentMapMode}
               />
             </div>
-          </div>
+            <ModelSelector feature="ask" className="w-44 shrink-0" />
         </div>
 
         {files.length > 0 && (

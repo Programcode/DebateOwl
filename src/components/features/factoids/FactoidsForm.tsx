@@ -111,7 +111,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
                 onValueChange={(value) => setValue('sourceType', value as FactoidsInput['sourceType'])}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={t('factoidsForm.sourceAny')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">{t('factoidsForm.sourceAny')}</SelectItem>
@@ -164,9 +164,9 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
                 placeholder={t('factoidsForm.timeframePlaceholder')}
               />
             </div>
-          </div>
 
-          <ModelSelector feature="factoids" showLabel />
+            <ModelSelector feature="factoids" showLabel />
+          </div>
 
 
           {/* Submit Button */}

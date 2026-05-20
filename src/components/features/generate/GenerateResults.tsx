@@ -118,15 +118,14 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
     <StaggeredContainer className="space-y-6">
       {/* Metadata */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
           </Badge>
-          <span className="text-xs text-muted-foreground">
-            {modelText ? `${modelText} • ` : ''}
-            {durationText ? `${durationText} • ` : ''}
-            {result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : ''}
-          </span>
+          <span>•</span>
+          <span>{result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : ''}</span>
+          {modelText && <><span>•</span><span>{modelText}</span></>}
+          {durationText && <><span>•</span><span>{durationText}</span></>}
         </div>
         <div className="flex flex-wrap gap-2" data-tour="export-section">
           {onSave && (

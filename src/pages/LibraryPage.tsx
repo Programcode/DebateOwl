@@ -179,8 +179,11 @@ export default function LibraryPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
           </div>
           <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsAdding(!isAdding)}>
-                <Plus className="h-4 w-4 mr-2" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
+              <Button variant="outline" size="sm" onClick={() => setIsAdding(!isAdding)}>
+                <Plus className="h-4 w-4 mr-1" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => toast({ title: t('libraryPage.foldersComingSoon', 'Folders coming soon') })}>
+                <FolderPlus className="h-4 w-4 mr-1" /> {t('libraryPage.folders', 'Folders')}
               </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -238,7 +241,7 @@ export default function LibraryPage() {
                     <input
                       id="source-file"
                       type="file"
-                      accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+                      accept=".txt,.md,.csv,.pdf,.docx,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       className="absolute inset-0 cursor-pointer opacity-0"
                       onChange={(event) => void handleFileImport(event.target.files?.[0])}
                     />
@@ -326,55 +329,42 @@ export default function LibraryPage() {
                 </div>
               ) : (
                 <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-4 stagger-enter">
+                  <div className="space-y-2 stagger-enter">
                     {visibleSources.map((source) => (
-                      <div key={source.id} className={`flex items-start justify-between p-4 border rounded-lg transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
-                        <div className="flex gap-4 items-start">
-                          <div className={`mt-1 p-2 rounded-lg ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                            {source.type === 'url' ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                      <div key={source.id} className={`flex items-center justify-between gap-3 px-3 py-2.5 border rounded-lg transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
+                        <div className="flex gap-3 items-center min-w-0">
+                          <div className={`p-1.5 rounded-md shrink-0 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                            {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                           </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
                               {source.origin?.startsWith('http') ? (
-                                <a
-                                  href={source.origin}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="group flex items-center gap-2"
-                                >
-                                  <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
-                                    {source.title}
-                                  </h4>
-                                  <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <a href={source.origin} target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-foreground hover:text-primary transition-colors truncate">
+                                  {source.title}
                                 </a>
                               ) : (
-                                <h4 className="font-semibold">{source.title}</h4>
+                                <span className="font-medium text-sm truncate">{source.title}</span>
                               )}
-                              <Badge variant="outline" className="text-[10px] py-0">{source.type.toUpperCase()}</Badge>
+                              <Badge variant="outline" className="text-[9px] py-0 shrink-0">{source.type.toUpperCase()}</Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground">{t('libraryPage.added')} {formatEuropeanDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{formatEuropeanDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-4 ml-4 shrink-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              {source.isActive ? t('libraryPage.active') : t('libraryPage.disabled')}
-                            </span>
-                            <Switch
-                              checked={source.isActive}
-                              onCheckedChange={() => toggleSource(source.id)}
-                              aria-label={`Toggle ${source.title} in knowledge base`}
-                            />
-                          </div>
+                        <div className="flex items-center gap-2 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive h-8 w-8"
+                            className="text-destructive h-7 w-7"
                             onClick={() => handleRemoveSource(source)}
                             aria-label={`Delete ${source.title}`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
+                          <Switch
+                            checked={source.isActive}
+                            onCheckedChange={() => toggleSource(source.id)}
+                            aria-label={`Toggle ${source.title}`}
+                          />
                         </div>
                       </div>
                     ))}
