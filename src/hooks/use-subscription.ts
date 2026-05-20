@@ -51,6 +51,7 @@ export function useSubscription(): SubscriptionState {
 
       if (data) {
         const rawTier = (data.subscription_tier || 'trial') as SubscriptionTier;
+        const limitOrDefault = (defaultLimit: number) => data.daily_limit_override ?? defaultLimit;
         const now = new Date();
         let billingRows: BillingRow[] = [];
 
@@ -83,31 +84,31 @@ export function useSubscription(): SubscriptionState {
         if (rawTier === 'legacy_free') {
           if (promoEnd && now < promoEnd) {
             setTier('legacy_free');
-            setDailyLimit(data.daily_limit_override ? Math.max(50, data.daily_limit_override) : 50);
+            setDailyLimit(limitOrDefault(50));
           } else if (hasActiveTrialGift) {
             setTier('trial');
-            setDailyLimit(data.daily_limit_override ? Math.max(5, data.daily_limit_override) : 5);
+            setDailyLimit(limitOrDefault(5));
           } else {
             setTier('expired');
-            setDailyLimit(data.daily_limit_override || 0);
+            setDailyLimit(limitOrDefault(0));
           }
         } else if (rawTier === 'pro' && ((promoEnd && now < promoEnd) || activeStripeSubscription)) {
           setTier('pro');
-          setDailyLimit(data.daily_limit_override ? Math.max(50, data.daily_limit_override) : 50);
+          setDailyLimit(limitOrDefault(50));
         } else if (rawTier === 'trial') {
           if (trialEnd && now < trialEnd) {
             setTier('trial');
-            setDailyLimit(data.daily_limit_override ? Math.max(5, data.daily_limit_override) : 5);
+            setDailyLimit(limitOrDefault(5));
           } else {
             setTier('expired');
-            setDailyLimit(data.daily_limit_override || 0);
+            setDailyLimit(limitOrDefault(0));
           }
         } else if (hasActiveTrialGift) {
           setTier('trial');
-          setDailyLimit(data.daily_limit_override ? Math.max(5, data.daily_limit_override) : 5);
+          setDailyLimit(limitOrDefault(5));
         } else {
           setTier('expired');
-          setDailyLimit(data.daily_limit_override || 0);
+          setDailyLimit(limitOrDefault(0));
         }
 
         setTrialEndsAt(data.trial_ends_at);

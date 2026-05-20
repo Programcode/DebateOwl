@@ -162,26 +162,6 @@ export function isAIModelRestrictionError(error: unknown): error is AIModelRestr
   return error instanceof AIModelRestrictionError || (error instanceof Error && error.name === 'AIModelRestrictionError');
 }
 
-/**
- * Wraps a promise with a timeout. Rejects with TimeoutError if the promise
- * doesn't resolve within the specified time.
- */
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout>;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new TimeoutError());
-    }, timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    clearTimeout(timeoutId!);
-  }
-}
-
 async function callSupabaseAI(
   feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask',
   input: Record<string, unknown>,
@@ -227,17 +207,15 @@ async function callSupabaseAI(
     sources: activeSources,
   };
 
-  try {
-    // Use a custom AbortController with our timeout to prevent premature abort
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
+  try {
     const { data, error } = await supabase.functions.invoke('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: requestBody,
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
 
     const elapsed = Math.round(performance.now() - startTime);
 
@@ -332,6 +310,8 @@ async function callSupabaseAI(
     }
 
     throw new AIError(message, { requestId });
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

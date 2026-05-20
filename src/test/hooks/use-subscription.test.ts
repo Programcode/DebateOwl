@@ -111,7 +111,7 @@ describe('useSubscription', () => {
     expect(fromMock).not.toHaveBeenCalled();
   });
 
-  it('loads active trial state with minimum trial limit and billing enabled', async () => {
+  it('loads active trial state with override limit and billing enabled', async () => {
     mockAuthState.user = { id: 'user-1' };
     mockResponses.userSettings = {
       subscription_tier: 'trial',
@@ -131,7 +131,7 @@ describe('useSubscription', () => {
     expect(result.current.tier).toBe('trial');
     expect(result.current.isTrialActive).toBe(true);
     expect(result.current.isExpired).toBe(false);
-    expect(result.current.dailyLimit).toBe(5);
+    expect(result.current.dailyLimit).toBe(2);
     expect(result.current.dailyUsed).toBe(3);
     expect(result.current.hasStripeBilling).toBe(true);
     expect(result.current.trialEndsAt).toBe('2099-12-31T00:00:00.000Z');
@@ -192,7 +192,7 @@ describe('useSubscription', () => {
     });
 
     expect(result.current.isPro).toBe(true);
-    expect(result.current.dailyLimit).toBe(50);
+    expect(result.current.dailyLimit).toBe(20);
 
     mockResponses.userSettings = {
       subscription_tier: 'legacy_free',
