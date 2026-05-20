@@ -123,13 +123,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Fetch the full subscription from Stripe
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-  // Upsert subscription record — first check if a row already exists for this user
-  const { data: existingRow } = await supabase.from("subscriptions")
-    .select("id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-
   const subscriptionRow = {
     user_id: userId,
     stripe_customer_id: customerId,
@@ -144,12 +137,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
   };
 
-  const { error: subError } = existingRow
-    ? await supabase.from("subscriptions")
-        .update(subscriptionRow)
-        .eq("id", existingRow.id)
-    : await supabase.from("subscriptions")
-        .insert(subscriptionRow);
+  const { error: subError } = await supabase.from("subscriptions")
+    .upsert(subscriptionRow, { onConflict: "stripe_subscription_id" });
 
   if (subError) {
     console.error("[WEBHOOK] Failed to upsert subscription:", subError);
@@ -158,6 +147,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Update user tier to pro
   const { error: userError } = await supabase.from("user_settings").update({
     subscription_tier: "pro",
+    grace_period_ends_at: null,
     updated_at: new Date().toISOString(),
   }).eq("user_id", userId);
 
@@ -284,6 +274,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     if (sub?.user_id) {
       await supabase.from("user_settings").update({
         subscription_tier: "pro",
+        grace_period_ends_at: null,
         updated_at: new Date().toISOString(),
       }).eq("user_id", sub.user_id);
     }

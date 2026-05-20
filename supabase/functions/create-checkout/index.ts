@@ -344,6 +344,23 @@ Deno.serve(async (req) => {
       }
 
       if (promo && promo.type === "discount") {
+        const { data: existingRedemption, error: redemptionLookupError } = await supabase.from("user_promos")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("promo_code_id", promo.id)
+          .maybeSingle();
+
+        if (redemptionLookupError) {
+          console.warn(`[CHECKOUT] Promo redemption lookup warning for ${promoCode}: ${redemptionLookupError.message}`);
+        }
+
+        if (existingRedemption) {
+          return new Response(JSON.stringify({ error: "You've already redeemed this promo code" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
         sessionParams.allow_promotion_codes = true;
       }
     }
