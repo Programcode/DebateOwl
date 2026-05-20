@@ -94,13 +94,16 @@ ${searchContext}`;
   }
 
   if (feature === "factoids") {
-    return `Find evidence for claim: "${asString(input.claim)}"
+    const direction = asString(input.direction, "for");
+    const directionLabel = direction === "against" ? "against" : "in favor of";
+    return `Find evidence ${directionLabel} this statement: "${asString(input.claim)}"
 
 ${searchContext}
 
-Region: ${asString(input.region)}
+Region: ${asString(input.region, "Global")}
 Source Type: ${asString(input.sourceType, "any")}
 Timeframe: ${asString(input.timeframe, "Recent (last 5 years)")}
+Source Count: ${asString(input.sourceCount, "5")}
 Language: ${languageLabel(asString(input.language, "en"))} (${asString(input.language, "en")})`;
   }
 

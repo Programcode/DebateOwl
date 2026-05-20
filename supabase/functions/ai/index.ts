@@ -1278,6 +1278,9 @@ EVIDENCE QUALITY STANDARDS:
 - Note source credibility: peer-reviewed > government > news > think tank > blog
 - Flag potential bias in sources
 - Explain methodology limitations
+- Respect the requested source type exactly. If academic is requested, use scholarly or peer-reviewed sources only. If government is requested, use official government or intergovernmental sources only. If news is requested, use established news sources only.
+- Return only verified sources with exact URLs from the research context. Do not include pending or unverified citations.
+- Return the requested number of sources unless fewer verified matching sources exist.
 
 For each factoid, think about:
 - How would a debater card this? (short claim + key stat)
@@ -1450,9 +1453,10 @@ Deno.serve(async (req) => {
     // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
       const claim = String(sanitizedInput.claim || "");
-      const region = String(sanitizedInput.region || "");
+      const region = String(sanitizedInput.region || "Global");
       const preferredSourceType = String(sanitizedInput.sourceType || "any");
       const timeframe = String(sanitizedInput.timeframe || "");
+      const sourceCount = Math.min(15, Math.max(3, Number(sanitizedInput.sourceCount || 5)));
 
       // Perform deep research with multiple search rounds
       const research = await deepResearch(claim, region, provider, model, withResearchPreferences(DEEP_RESEARCH, {
@@ -1471,12 +1475,18 @@ Deno.serve(async (req) => {
       if (output && typeof output === "object" && "factoids" in output) {
         const factoids = (output as { factoids: Array<{ citation: { url: string; verified: string } }> }).factoids;
         const verifyPromises = factoids.map(async (f) => {
-          if (f.citation?.url && !research.verifiedUrls.has(f.citation.url)) {
+          if (f.citation?.url && research.verifiedUrls.has(f.citation.url)) {
+            f.citation.verified = "verified";
+          } else if (f.citation?.url) {
             const isValid = await verifyUrl(f.citation.url);
             f.citation.verified = isValid ? "verified" : "unverified";
           }
         });
         await Promise.all(verifyPromises);
+        (output as { factoids: Array<{ citation: { verified: string } }>; verificationStatus?: string }).factoids = factoids
+          .filter((f) => f.citation?.verified === "verified")
+          .slice(0, sourceCount);
+        (output as { verificationStatus?: string }).verificationStatus = "complete";
       }
 
       // Log usage and return

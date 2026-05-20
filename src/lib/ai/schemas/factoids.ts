@@ -3,9 +3,11 @@ import { z } from 'zod';
 
 export const FactoidsInputSchema = z.object({
   claim: z.string().min(1, 'Claim is required'),
-  region: z.string().min(1, 'Region is required'),
+  direction: z.enum(['for', 'against']).default('for'),
+  region: z.string().optional(),
   sourceType: z.enum(['academic', 'government', 'news', 'any']),
   timeframe: z.string().optional(),
+  sourceCount: z.coerce.number().min(3).max(15).default(5),
 });
 
 export type FactoidsInput = z.infer<typeof FactoidsInputSchema>;

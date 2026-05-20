@@ -603,7 +603,8 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
 
   const normalizeTopFiveItems = (items: unknown[]) => items
     .map((item: unknown, index) => {
-      if (!item || typeof item !== 'object') {
+      if (!item) return null;
+      if (typeof item !== 'object') {
         const idea = normalizeIdea({ title: String(item || `Idea ${index + 1}`), description: String(item || '') });
         return idea ? { rank: index + 1, idea, whyTop: '' } : null;
       }
@@ -740,9 +741,20 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
   if (config.provider === 'mock') return mockFactoids(input.claim);
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
-  const inputWithLanguage = { ...input, language } as Record<string, unknown>;
+  const inputWithLanguage = {
+    ...input,
+    region: input.region?.trim() || 'Global',
+    sourceCount: input.sourceCount || 5,
+    language,
+  } as Record<string, unknown>;
   const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
-  return data.output as FactoidsOutput;
+  const output = data.output as FactoidsOutput;
+  return {
+    ...output,
+    factoids: (output.factoids || [])
+      .filter((factoid) => factoid.citation?.verified === 'verified')
+      .slice(0, input.sourceCount || 5),
+  };
 }
 
 export interface AskChatOptions {

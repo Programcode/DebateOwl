@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FactoidsInputSchema, type FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -34,9 +35,11 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
     resolver: zodResolver(FactoidsInputSchema),
     defaultValues: {
       claim: '',
+      direction: 'for',
       region: '',
       timeframe: '',
       sourceType: 'any',
+      sourceCount: 5,
       ...factoidsForm, // Override with persisted state
     },
   });
@@ -84,27 +87,20 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
 
           {/* Settings Grid */}
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Region */}
             <div className="space-y-2">
-              <Label htmlFor="region" className="text-sm font-medium">{t('factoidsForm.region')} <span className="text-destructive">*</span></Label>
-              <Input
-                id="region"
-                {...register('region')}
-                placeholder={t('factoidsForm.regionPlaceholder')}
-              />
-              {errors.region && (
-                <p className="text-sm text-destructive">{errors.region.message}</p>
-              )}
-            </div>
-
-            {/* Timeframe */}
-            <div className="space-y-2">
-              <Label htmlFor="timeframe" className="text-sm font-medium">{t('factoidsForm.timeframe')}</Label>
-              <Input
-                id="timeframe"
-                {...register('timeframe')}
-                placeholder={t('factoidsForm.timeframePlaceholder')}
-              />
+              <Label className="text-sm font-medium">{t('factoidsForm.direction', 'Position')}</Label>
+              <Select
+                value={currentValues.direction}
+                onValueChange={(value) => setValue('direction', value as FactoidsInput['direction'])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="for">{t('factoidsForm.directionFor', 'In favor')}</SelectItem>
+                  <SelectItem value="against">{t('factoidsForm.directionAgainst', 'Against')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Evidence Strength */}
@@ -124,6 +120,49 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
                   <SelectItem value="news">{t('factoidsForm.sourceNews')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">{t('factoidsForm.sourceCount', 'Sources')}</Label>
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  {currentValues.sourceCount || 5}
+                </span>
+              </div>
+              <Slider
+                value={[currentValues.sourceCount || 5]}
+                min={3}
+                max={15}
+                step={1}
+                onValueChange={([value]) => setValue('sourceCount', value, { shouldDirty: true })}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>3</span>
+                <span>15</span>
+              </div>
+            </div>
+
+            {/* Region */}
+            <div className="space-y-2">
+              <Label htmlFor="region" className="text-sm font-medium">{t('factoidsForm.region')}</Label>
+              <Input
+                id="region"
+                {...register('region')}
+                placeholder={t('factoidsForm.regionPlaceholder')}
+              />
+              {errors.region && (
+                <p className="text-sm text-destructive">{errors.region.message}</p>
+              )}
+            </div>
+
+            {/* Timeframe */}
+            <div className="space-y-2">
+              <Label htmlFor="timeframe" className="text-sm font-medium">{t('factoidsForm.timeframe')}</Label>
+              <Input
+                id="timeframe"
+                {...register('timeframe')}
+                placeholder={t('factoidsForm.timeframePlaceholder')}
+              />
             </div>
           </div>
 

@@ -19,8 +19,11 @@ const mockIsTimeoutError = vi.fn(() => false);
 const sessionState = {
   askMessages: [] as any[],
   askLoading: false,
+  askStreamingAssistant: null as any,
   addAskMessage: vi.fn(),
   setAskLoading: vi.fn(),
+  setAskStreamingAssistant: vi.fn(),
+  appendAskStreamingDelta: vi.fn(),
   clearAskMessages: vi.fn(),
   addSource: vi.fn(),
   brainstormResult: null as any,
@@ -142,6 +145,7 @@ describe('Conversation Pages', () => {
 
     sessionState.askMessages = [];
     sessionState.askLoading = false;
+    sessionState.askStreamingAssistant = null;
     sessionState.brainstormResult = null;
     sessionState.brainstormLoading = false;
     sessionState.factoidsResult = null;
@@ -150,6 +154,8 @@ describe('Conversation Pages', () => {
     subErrorState.handleSubscriptionError.mockReturnValue(false);
     mockIsTimeoutError.mockReturnValue(false);
     mockIsAskStreamingSupported.mockReturnValue(false);
+    sessionState.setAskStreamingAssistant.mockClear();
+    sessionState.appendAskStreamingDelta.mockClear();
   });
 
   it('AskPage sends user message and appends AI response', async () => {
