@@ -24,6 +24,8 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { formatEuropeanDate } from '@/lib/date-format';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 
 const tierLabels: Record<string, { label: string; color: string }> = {
@@ -43,6 +45,8 @@ export default function SettingsPage() {
   const [pricingOpen, setPricingOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -76,12 +80,7 @@ export default function SettingsPage() {
   }, [user]);
 
   const handleDeleteAllData = () => {
-    if (!confirm(`Are you sure you want to delete ALL your saved data?\n\nThis will permanently delete all cases, attacks, brainstorms, factoids, chats, and sources for ${user?.email}.\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    const typedEmail = prompt(`To confirm deletion, please type your email address:\n${user?.email}`);
-    if (typedEmail !== user?.email) {
+    if (deleteEmail !== user?.email) {
       toast({ title: "Cancelled", description: "Email didn't match. No data was deleted." });
       return;
     }
@@ -89,6 +88,8 @@ export default function SettingsPage() {
     void clearAllData().then(() => {
       clearSession();
       localStorage.removeItem('debate-trainer-storage');
+      setDeleteDialogOpen(false);
+      setDeleteEmail('');
       toast({ title: "Data Deleted", description: "All your saved data has been permanently removed." });
     }).catch((error) => {
       console.error('Failed to delete data:', error);
@@ -308,7 +309,7 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="destructive" size="sm" onClick={handleDeleteAllData}>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete All My Data
             </Button>
@@ -323,6 +324,31 @@ export default function SettingsPage() {
         onOpenChange={setPricingOpen}
         onPromoRedeemed={() => void subscription.refresh()}
       />
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete all data</DialogTitle>
+            <DialogDescription>
+              This permanently deletes all cases, attacks, brainstorms, factoids, chats, and sources for {user?.email}. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="delete-email">Type your email to confirm</Label>
+            <Input
+              id="delete-email"
+              value={deleteEmail}
+              onChange={(event) => setDeleteEmail(event.target.value)}
+              placeholder={user?.email || ''}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email}>
+              Delete All My Data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
