@@ -1,4 +1,5 @@
 // src/pages/GeneratePage.tsx
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -14,6 +15,9 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } from 'reactflow';
 
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
@@ -28,6 +32,8 @@ export default function GeneratePage() {
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
 
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
@@ -62,11 +68,16 @@ export default function GeneratePage() {
 
   const handleSave = () => {
     if (!generateResult) return;
-    const title = window.prompt(t('generate.savePrompt'), generateResult.caseStructure.thesis.slice(0, 50));
-    if (title) {
-      saveCurrentCase(title);
-      toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
-    }
+    setSaveTitle(generateResult.caseStructure.thesis.slice(0, 50));
+    setSaveDialogOpen(true);
+  };
+
+  const confirmSave = () => {
+    const title = saveTitle.trim();
+    if (!title) return;
+    void saveCurrentCase(title);
+    setSaveDialogOpen(false);
+    toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
   };
 
   const handleDiscuss = async () => {
@@ -288,6 +299,22 @@ export default function GeneratePage() {
       open={subError.pricingModalOpen}
       onOpenChange={subError.setPricingModalOpen}
     />
+    <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('generate.saveCase', 'Save case')}</DialogTitle>
+          <DialogDescription>{t('generate.savePrompt')}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="case-title">{t('generate.caseTitle', 'Case title')}</Label>
+          <Input id="case-title" value={saveTitle} onChange={(event) => setSaveTitle(event.target.value)} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+          <Button onClick={confirmSave} disabled={!saveTitle.trim()}>{t('common.save', 'Save')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

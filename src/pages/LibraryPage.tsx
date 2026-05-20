@@ -12,6 +12,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { formatEuropeanDate } from '@/lib/date-format';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function LibraryPage() {
   const { t } = useTranslation();
@@ -40,11 +51,10 @@ export default function LibraryPage() {
 
   const handleClearLibrary = async () => {
     if (isClearing) return;
-    const confirmed = window.confirm(t('libraryPage.clearConfirm'));
-    if (!confirmed) return;
     setIsClearing(true);
     try {
       await Promise.resolve(clearLibrary());
+      toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.clearSuccess', 'Library cleared.') });
     } catch (error) {
       console.error('Failed to clear library:', error);
       toast({ title: "Error", description: t('libraryPage.clearFailed'), variant: "destructive" });
@@ -70,9 +80,25 @@ export default function LibraryPage() {
             <Button variant="outline" onClick={() => setIsAdding(!isAdding)}>
               <Plus className="h-4 w-4 mr-2" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
             </Button>
-            <Button variant="ghost" className="text-destructive" onClick={handleClearLibrary} disabled={isClearing}>
-              <Trash2 className="h-4 w-4 mr-2" /> {isClearing ? t('libraryPage.clearing') : t('libraryPage.clearAll')}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" className="text-destructive" disabled={isClearing}>
+                  <Trash2 className="h-4 w-4 mr-2" /> {isClearing ? t('libraryPage.clearing') : t('libraryPage.clearAll')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('libraryPage.clearAll')}</AlertDialogTitle>
+                  <AlertDialogDescription>{t('libraryPage.clearConfirm')}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void handleClearLibrary()}>
+                    {t('libraryPage.clearAll')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 
