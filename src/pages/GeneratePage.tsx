@@ -40,6 +40,7 @@ export default function GeneratePage() {
       const result = await generateCase(data, config);
       setGenerateResult(result);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
+      setTimeout(() => document.getElementById('generate-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch (error) {
       console.error('Failed to generate case:', error);
 
@@ -277,7 +278,7 @@ export default function GeneratePage() {
                 <StreamingIndicator messages={[t('generateForm.loadingMsg1'), t('generateForm.loadingMsg2'), t('generateForm.loadingMsg3'), t('generateForm.loadingMsg4'), t('generateForm.loadingMsg5')]} />
               </div>
             ) : generateResult ? (
-              <div key="generate-results" className="motion-swap space-y-4">
+              <div key="generate-results" id="generate-results" className="motion-swap space-y-4">
                 <GenerateResults
                   result={generateResult}
                   onRegenerateSection={handleRegenerateSection}
