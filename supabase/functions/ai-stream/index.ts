@@ -56,8 +56,17 @@ const PRO_MODELS = new Set([
 ]);
 
 const OPENAI_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-4o", "gpt-4o-mini"]);
+const GOOGLE_MODELS = new Set(["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview"]);
+const ANTHROPIC_MODELS = new Set(["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]);
 const MAX_INPUT_LENGTH = 50000;
 const MAX_HISTORY_ITEMS = 8;
+
+function getProviderForModel(model: string): "openai" | "google" | "anthropic" | null {
+  if (OPENAI_MODELS.has(model)) return "openai";
+  if (GOOGLE_MODELS.has(model)) return "google";
+  if (ANTHROPIC_MODELS.has(model)) return "anthropic";
+  return null;
+}
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
   return new Response(JSON.stringify(body), {
@@ -286,14 +295,16 @@ Deno.serve(async (req) => {
   const provider = body.provider === "lovable" ? "openai" : String(body.provider || "openai");
   const model = sanitizeText(body.model, 80) || "gpt-5.4-mini";
   const input = body.input && typeof body.input === "object" ? body.input as Record<string, unknown> : {};
-  const advancedMode = Boolean(input.citationMode || input.webSearch || input.prosConsMode || input.argumentMapMode);
 
   if (body.feature !== "ask") {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
-  if (provider !== "openai" || !OPENAI_MODELS.has(model) || advancedMode) {
-    return jsonResponse({ error: "Streaming is only available for basic OpenAI Ask chats" }, 400, corsHeaders);
+  const advancedMode = Boolean(input.citationMode || input.webSearch || input.prosConsMode || input.argumentMapMode);
+  const resolvedProvider = getProviderForModel(model) || (provider === "openai" ? "openai" : provider === "google" ? "google" : provider === "anthropic" ? "anthropic" : null);
+
+  if (!resolvedProvider || advancedMode) {
+    return jsonResponse({ error: "Streaming is not available for this model/mode combination" }, 400, corsHeaders);
   }
 
   const userMessage = sanitizeText(input.message, MAX_INPUT_LENGTH);
@@ -310,8 +321,16 @@ Deno.serve(async (req) => {
   }
 
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!openaiKey) {
-    return jsonResponse({ error: "OpenAI is not configured" }, 500, corsHeaders);
+  const googleKey = Deno.env.get("GOOGLE_API_KEY");
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+
+  const providerKey = resolvedProvider === "openai" ? openaiKey
+    : resolvedProvider === "google" ? googleKey
+    : resolvedProvider === "anthropic" ? anthropicKey
+    : null;
+
+  if (!providerKey) {
+    return jsonResponse({ error: `${resolvedProvider} is not configured` }, 500, corsHeaders);
   }
 
   const mode = sanitizeText(input.mode, 40) || "general";
@@ -335,62 +354,132 @@ Deno.serve(async (req) => {
       req.signal.addEventListener("abort", clientAbortHandler);
 
       try {
-        const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            messages: buildMessages(userMessage, history, mode),
-            temperature,
-            stream: true,
-            stream_options: { include_usage: true },
-          }),
-          signal: upstreamAbort.signal,
-        });
+        const messages = buildMessages(userMessage, history, mode);
 
-        if (!openaiResponse.ok || !openaiResponse.body) {
-          const errorText = await openaiResponse.text();
-          throw new Error(errorText || `OpenAI request failed (${openaiResponse.status})`);
-        }
+        if (resolvedProvider === "openai") {
+          const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model, messages, temperature, stream: true, stream_options: { include_usage: true } }),
+            signal: upstreamAbort.signal,
+          });
+          if (!response.ok || !response.body) throw new Error(await response.text() || `OpenAI ${response.status}`);
 
-        const reader = openaiResponse.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          if (req.signal.aborted) break;
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith("data:")) continue;
-
-            const data = trimmed.slice("data:".length).trim();
-            if (data === "[DONE]") continue;
-
-            let parsed: { choices?: Array<{ delta?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
-            try {
-              parsed = JSON.parse(data);
-            } catch {
-              // Skip malformed chunks rather than killing the whole stream.
-              continue;
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            if (req.signal.aborted) break;
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const data = trimmed.slice("data:".length).trim();
+              if (data === "[DONE]") continue;
+              let parsed: Record<string, unknown>;
+              try { parsed = JSON.parse(data); } catch { continue; }
+              const delta = (parsed.choices as Array<{ delta?: { content?: string } }>)?.[0]?.delta?.content;
+              if (typeof delta === "string" && delta) { accumulated += delta; emit("delta", { text: delta }); }
+              const usage = parsed.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+              if (usage) { inputTokens = usage.prompt_tokens ?? inputTokens; outputTokens = usage.completion_tokens ?? outputTokens; }
             }
-            const delta = parsed.choices?.[0]?.delta?.content;
-            if (typeof delta === "string" && delta) {
-              accumulated += delta;
-              emit("delta", { text: delta });
-            }
+          }
 
-            if (parsed.usage) {
-              inputTokens = parsed.usage.prompt_tokens ?? inputTokens;
-              outputTokens = parsed.usage.completion_tokens ?? outputTokens;
+        } else if (resolvedProvider === "google") {
+          const geminiMessages = messages.map((m) => ({
+            role: m.role === "assistant" ? "model" : m.role === "system" ? "user" : "user",
+            parts: [{ text: m.content }],
+          }));
+          // Gemini API: system instruction is separate
+          const systemInstruction = messages.find((m) => m.role === "system");
+          const contents = geminiMessages.filter((_, i) => messages[i].role !== "system");
+
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${providerKey}`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents,
+              ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction.content }] } } : {}),
+              generationConfig: { temperature },
+            }),
+            signal: upstreamAbort.signal,
+          });
+          if (!response.ok || !response.body) throw new Error(await response.text() || `Gemini ${response.status}`);
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            if (req.signal.aborted) break;
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const data = trimmed.slice("data:".length).trim();
+              let parsed: Record<string, unknown>;
+              try { parsed = JSON.parse(data); } catch { continue; }
+              const candidates = parsed.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
+              const text = candidates?.[0]?.content?.parts?.[0]?.text;
+              if (typeof text === "string" && text) { accumulated += text; emit("delta", { text }); }
+              const usageMeta = parsed.usageMetadata as { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
+              if (usageMeta) { inputTokens = usageMeta.promptTokenCount ?? inputTokens; outputTokens = usageMeta.candidatesTokenCount ?? outputTokens; }
+            }
+          }
+
+        } else if (resolvedProvider === "anthropic") {
+          const systemMsg = messages.find((m) => m.role === "system")?.content || "";
+          const anthropicMessages = messages.filter((m) => m.role !== "system").map((m) => ({ role: m.role, content: m.content }));
+
+          const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": providerKey,
+              "anthropic-version": "2023-06-01",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ model, max_tokens: 4096, system: systemMsg, messages: anthropicMessages, temperature, stream: true }),
+            signal: upstreamAbort.signal,
+          });
+          if (!response.ok || !response.body) throw new Error(await response.text() || `Anthropic ${response.status}`);
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            if (req.signal.aborted) break;
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith("event:")) continue;
+              if (!trimmed.startsWith("data:")) continue;
+              const data = trimmed.slice("data:".length).trim();
+              let parsed: Record<string, unknown>;
+              try { parsed = JSON.parse(data); } catch { continue; }
+              if (parsed.type === "content_block_delta") {
+                const delta = (parsed.delta as { text?: string })?.text;
+                if (typeof delta === "string" && delta) { accumulated += delta; emit("delta", { text: delta }); }
+              }
+              if (parsed.type === "message_start") {
+                const usage = (parsed.message as { usage?: { input_tokens?: number } })?.usage;
+                if (usage) inputTokens = usage.input_tokens;
+              }
+              if (parsed.type === "message_delta") {
+                const usage = (parsed as { usage?: { output_tokens?: number } }).usage;
+                if (usage) outputTokens = usage.output_tokens;
+              }
             }
           }
         }
@@ -404,7 +493,7 @@ Deno.serve(async (req) => {
         if (!req.signal.aborted) {
           emit("final", { output });
         }
-        await logUsage(user.id, provider, model, inputTokens, outputTokens, Date.now() - startedAt);
+        await logUsage(user.id, resolvedProvider, model, inputTokens, outputTokens, Date.now() - startedAt);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Streaming failed";
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
@@ -413,7 +502,7 @@ Deno.serve(async (req) => {
         }
         await logUsage(
           user.id,
-          provider,
+          resolvedProvider,
           model,
           inputTokens,
           outputTokens,

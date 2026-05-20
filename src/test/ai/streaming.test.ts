@@ -33,10 +33,12 @@ describe('AI streaming helpers', () => {
     ]);
   });
 
-  it('only enables streaming for basic OpenAI ask chats', () => {
+  it('enables streaming for OpenAI, Google, and Anthropic basic ask chats', () => {
     expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(true);
     expect(isAskStreamingSupported({ provider: 'lovable', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(true);
-    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(true);
+    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', temperature: 0.7 })).toBe(true);
+    expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported(
       { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
       { citationMode: true }
