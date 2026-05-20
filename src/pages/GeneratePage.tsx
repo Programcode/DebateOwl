@@ -49,7 +49,7 @@ export default function GeneratePage() {
       if (isAIAuthError(error)) {
         toast({ title: t('generate.authRequired'), description: error.message, variant: "destructive" });
       } else if (isAIRateLimitError(error)) {
-        toast({ title: t('rateLimit.title'), description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} requests)` : ''}`, variant: "destructive" });
+        toast({ title: t('rateLimit.title'), description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} uses)` : ''}`, variant: "destructive" });
       } else if (isTimeoutError(error)) {
         toast({ title: t('generate.timeout'), description: t('generate.timeoutDesc'), variant: "destructive" });
       } else {
