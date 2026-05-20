@@ -48,7 +48,7 @@ describe('supabase prompt-builder', () => {
       language: 'en',
     }, 'CTX');
 
-    expect(prompt).toContain('Find evidence for claim: "Solar is cheaper than coal"');
+    expect(prompt).toContain('Find evidence in favor of this statement: "Solar is cheaper than coal"');
     expect(prompt).toContain('Source Type: government');
     expect(prompt).toContain('Language: English (en)');
   });
