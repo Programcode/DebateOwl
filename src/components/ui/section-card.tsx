@@ -25,7 +25,7 @@ export function SectionCard({
   icon,
 }: SectionCardProps) {
   return (
-    <Card className={cn('motion-reveal relative overflow-hidden', className)}>
+    <Card className={cn('motion-reveal card-hover-glow relative overflow-hidden', className)}>
       {isLoading && <LoadingOverlay message={`Generating ${title.toLowerCase()}...`} />}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
@@ -42,7 +42,7 @@ export function SectionCard({
               size="icon"
               onClick={onRegenerate}
               disabled={isLoading}
-              className="h-8 w-8 shrink-0"
+              className="h-8 w-8 shrink-0 hover-icon-spin"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>

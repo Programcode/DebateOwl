@@ -38,7 +38,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   const tradeoffs = Array.isArray(idea.tradeoffs) ? idea.tradeoffs : [];
 
   return (
-    <div className={cn('rounded-lg border p-4 space-y-3', strengthColors[strength] || strengthColors.moderate)}>
+    <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item', strengthColors[strength] || strengthColors.moderate)}>
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-semibold text-foreground">{idea.title || t('brainstormResults.untitled')}</h4>
         <div className="flex gap-1 shrink-0">

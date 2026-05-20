@@ -236,7 +236,7 @@ export default function GeneratePage() {
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('generate.title')}</h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 transition-colors duration-300">
               {t('generate.subtitle')}
             </p>
           </div>

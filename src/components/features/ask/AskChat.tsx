@@ -434,7 +434,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 variant={mode === option.id ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setMode(option.id)}
-                className="text-xs"
+                className="text-xs transition-all duration-200"
               >
                 <option.icon className="mr-1 h-3 w-3" />
                 {t(option.labelKey)}
@@ -442,7 +442,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
             ))}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-4">
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
               <Quote className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="citation-mode" className="text-xs">{t('askChat.citations')}</Label>
               <Switch
@@ -451,7 +451,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setCitationMode}
               />
             </div>
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="web-search-mode" className="text-xs">{t('askChat.webSearch')}</Label>
               <Switch
@@ -460,7 +460,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setWebSearch}
               />
             </div>
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
               <List className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="pros-cons-mode" className="text-xs">{t('askChat.modeProsCons')}</Label>
               <Switch
@@ -469,7 +469,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                 onCheckedChange={setProsConsMode}
               />
             </div>
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
               <Map className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="argument-map-mode" className="text-xs">{t('askChat.modeArgMap')}</Label>
               <Switch
@@ -484,7 +484,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {files.map((file) => (
-              <div key={file.name} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs">
+              <div key={file.name} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs motion-list-item">
                 <Paperclip className="h-3 w-3" />
                 <span className="max-w-[100px] truncate">{file.name}</span>
                 <button

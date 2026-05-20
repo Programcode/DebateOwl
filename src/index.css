@@ -834,6 +834,45 @@ input:focus, textarea:focus, select:focus, [cmdk-input]:focus {
   }
 }
 
+/* Scroll-triggered reveal for sections */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s var(--motion-ease-fluid), transform 0.6s var(--motion-ease-fluid);
+}
+
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Subtle pulse for empty state icons */
+.motion-breathe {
+  animation: motion-breathe 3s ease-in-out infinite;
+}
+
+@keyframes motion-breathe {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+/* Icon spin on hover for interactive elements */
+.hover-icon-spin:hover > svg {
+  transform: rotate(90deg);
+  transition: transform 0.3s var(--motion-ease-fluid);
+}
+
+/* Smooth color transition for text elements */
+.text-transition {
+  transition: color 0.2s var(--motion-ease-fluid);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

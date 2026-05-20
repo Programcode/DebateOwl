@@ -42,7 +42,7 @@ const Features = () => {
                     viewport={{ once: true }}
                     className="mb-16 text-center"
                 >
-                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
+                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
                         {t('features.title')}
                     </h2>
                     <p className="mx-auto mt-4 max-w-3xl text-lg text-muted-foreground">
@@ -61,10 +61,10 @@ const Features = () => {
                             className="feature-card group"
                         >
                             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 transition-colors group-hover:border-primary/40">
-                                <feature.icon className="h-6 w-6 text-primary" />
+                                <feature.icon className="h-6 w-6 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
                             </div>
                             <h3 className="mb-2 text-xl font-semibold text-foreground">{feature.title}</h3>
-                            <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+                            <p className="text-sm leading-relaxed text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80">{feature.description}</p>
                         </motion.div>
                     ))}
                 </div>
