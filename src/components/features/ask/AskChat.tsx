@@ -70,7 +70,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   const output = message.output;
 
   return (
-    <div className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('flex gap-3 message-enter', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-3 space-y-3 relative group',
