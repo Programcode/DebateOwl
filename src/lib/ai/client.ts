@@ -458,6 +458,25 @@ function isProviderErrorCode(code?: string): boolean {
   return !!code && /quota|billing|api[_-]?key|provider|insufficient|overloaded|rate/i.test(code);
 }
 
+function cleanGeneratedString(value: string) {
+  return value
+    .replace(/[—–]/g, ', ')
+    .replace(/\b(Magnitude|Probability|Timeframe):\s*/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function cleanGeneratedOutput<T>(value: T): T {
+  if (typeof value === 'string') return cleanGeneratedString(value) as T;
+  if (Array.isArray(value)) return value.map(cleanGeneratedOutput) as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, cleanGeneratedOutput(child)])
+    ) as T;
+  }
+  return value;
+}
+
 /**
  * Transforms AI generate response from various formats to the expected GenerateOutput schema.
  * This handles cases where the AI returns a different structure than requested.
@@ -474,7 +493,7 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
         transition: String(ex.transition || ''),
       };
     }
-    return result;
+    return cleanGeneratedOutput(result);
   }
 
   // Transform from wrong format to correct format
@@ -551,7 +570,7 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
     };
   }
 
-  return result;
+  return cleanGeneratedOutput(result);
 }
 
 /**

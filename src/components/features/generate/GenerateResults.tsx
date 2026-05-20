@@ -62,6 +62,12 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
   );
 }
 
+function formatDuration(ms?: number) {
+  if (!ms || ms < 0) return null;
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`;
+}
+
 export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onImportFlowchart }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
@@ -104,6 +110,9 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
     );
   }
 
+  const durationText = formatDuration(result.metadata?.durationMs);
+  const modelText = result.metadata?.model || result.metadata?.provider;
+
   return (
     <StaggeredContainer className="space-y-6">
       {/* Metadata */}
@@ -112,12 +121,13 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
           </Badge>
-          <Badge variant="outline">{result.metadata?.format?.toUpperCase() || 'N/A'}</Badge>
+          {modelText && <Badge variant="outline">{modelText}</Badge>}
           <span className="text-xs text-muted-foreground">
             {t('generateResults.generated')} {result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : 'N/A'}
+            {durationText ? ` • ${durationText}` : ''}
           </span>
         </div>
-        <div className="flex gap-2" data-tour="export-section">
+        <div className="ml-auto flex flex-wrap justify-end gap-2" data-tour="export-section">
           {onSave && (
             <Button variant="outline" size="sm" onClick={onSave}>
               <Save className="h-4 w-4 mr-2" />

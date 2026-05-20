@@ -904,10 +904,31 @@ const HUMANIZER_INSTRUCTIONS = `HUMANIZER STYLE INSTRUCTIONS:
 - Write like a strong human debate coach, not a generic AI assistant. Be direct and concrete.
 - Avoid inflated significance claims, promotional language, vague expert attributions, superficial "-ing" analysis, forced rule-of-three phrasing, synonym cycling, chatbot filler, and generic upbeat conclusions.
 - Vary sentence rhythm where prose is requested, but keep structured JSON fields concise.
-- Do not use em dashes at all. Use commas, colons, parentheses, or separate sentences instead.`;
+- Do not use em dashes at all. Use commas, colons, parentheses, or separate sentences instead.
+- Do not write parameter labels inside argument prose, for example "Magnitude:", "Probability:", or "Timeframe:".
+- When the user needs debate material, write lines that can be spoken in round, not table notes or rubric fragments.`;
 
 function withHumanizerInstructions(systemPrompt: string): string {
   return `${systemPrompt}\n\n${HUMANIZER_INSTRUCTIONS}`;
+}
+
+function cleanGeneratedText(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value
+      .replace(/[—–]/g, ", ")
+      .replace(/\b(Magnitude|Probability|Timeframe):\s*/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+  if (Array.isArray(value)) return value.map(cleanGeneratedText);
+  if (value && typeof value === "object") {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      cleaned[key] = cleanGeneratedText(child);
+    }
+    return cleaned;
+  }
+  return value;
 }
 
 async function callAI(
@@ -1105,7 +1126,7 @@ The output MUST include the "exordio" field when the role is "intro". For other 
       "evidence": "Specific stats, studies, expert quotes FROM THE PROVIDED RESEARCH. Cite sources with dates.",
       "needsSource": false,
       "sourceQuery": "",
-      "impact": "The SO WHAT - magnitude, probability, and timeframe of the harm/benefit"
+      "impact": "A cohesive, speech-ready impact paragraph. Explain why the judge should care using magnitude, probability, and timeframe naturally, but never label them as separate parameters."
     }
   ],
   "predictedOpponentCase": {
@@ -1139,7 +1160,8 @@ REQUIREMENTS:
 3. Include 5-8 predicted opponent arguments with pre-written counters.
 4. USE THE WEB RESEARCH - cite real 2025-2026 statistics and sources.
 5. ALWAYS set needsSource to false.
-6. Write the ENTIRE output in the language specified by the user. All arguments, evidence, descriptions, and analysis must be in that language.`;
+6. Write the ENTIRE output in the language specified by the user. All arguments, evidence, descriptions, and analysis must be in that language.
+7. Every contention should read like something a debater can actually say in a speech. Do not output table-like notes or field labels inside prose.`;
 
 const ATTACK_PROMPT = `You are a ruthless, experienced competitive debater tasked with tearing apart an opponent's case. Analyze this case like you're prepping to destroy it in finals.
 
@@ -1442,7 +1464,8 @@ Deno.serve(async (req) => {
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
 
-      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      let output = await callAI(provider, model, systemPrompt, messages, temperature);
+      output = cleanGeneratedText(output);
 
       // Post-process: verify URLs in the response
       if (output && typeof output === "object" && "factoids" in output) {
@@ -1525,7 +1548,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
-      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      let output = await callAI(provider, model, systemPrompt, messages, temperature);
+      output = cleanGeneratedText(output);
 
       if (output && typeof output === "object") {
         const typedOutput = output as {
@@ -1607,7 +1631,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
       // Build prompt with research context
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      let output = await callAI(provider, model, systemPrompt, messages, temperature);
+      output = cleanGeneratedText(output);
 
       // Post-process: force needsSource to false since we provided research
       if (output && typeof output === "object" && "contentions" in output) {
@@ -1619,13 +1644,15 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Post-process: fix timestamp
       if (output && typeof output === "object" && "metadata" in output) {
-        const metadata = (output as { metadata: { generatedAt?: string } }).metadata;
+        const metadata = (output as { metadata: { generatedAt?: string; model?: string; provider?: string; durationMs?: number } }).metadata;
         if (!metadata.generatedAt ||
           metadata.generatedAt === "CURRENT_ISO_TIMESTAMP" ||
           metadata.generatedAt.includes("CURRENT") ||
           isNaN(new Date(metadata.generatedAt).getTime())) {
           metadata.generatedAt = new Date().toISOString();
         }
+        metadata.model = model;
+        metadata.provider = provider;
       }
       enforceGenerateControls(output, side, format, length, role);
 
@@ -1635,6 +1662,10 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
+      if (output && typeof output === "object" && "metadata" in output) {
+        const metadata = (output as { metadata: { durationMs?: number } }).metadata;
+        metadata.durationMs = latencyMs;
+      }
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -1653,7 +1684,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
       // Build prompt with research context
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      let output = await callAI(provider, model, systemPrompt, messages, temperature);
+      output = cleanGeneratedText(output);
       enforceBrainstormControls(output, side, outputMode);
 
       // Build discovered sources from research
@@ -1679,7 +1711,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const output = await callAI(provider, model, systemPrompt, messages, temperature);
+      let output = await callAI(provider, model, systemPrompt, messages, temperature);
+      output = cleanGeneratedText(output);
       enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
       const discoveredSources = buildDiscoveredSources(research);
@@ -1693,7 +1726,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
     // Fallback for any other feature
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    const output = await callAI(provider, model, systemPrompt, messages, temperature);
+    let output = await callAI(provider, model, systemPrompt, messages, temperature);
+    output = cleanGeneratedText(output);
 
     const latencyMs = Date.now() - startTime;
     await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
