@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +9,24 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatEuropeanDateTime } from '@/lib/date-format';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useSessionStore();
+  const { toast } = useToast();
+  const [caseToDelete, setCaseToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const handleLoadCase = (id: string) => {
     store.loadSavedCase(id);
@@ -37,6 +51,14 @@ export default function HistoryPage() {
   const handleLoadFactoids = (id: string) => {
     store.loadSavedFactoids(id);
     navigate('/app/factoids');
+  };
+
+  const confirmDeleteCase = () => {
+    if (!caseToDelete) return;
+    void store.deleteSavedCase(caseToDelete.id).then(() => {
+      toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.caseDeleted', 'Saved case deleted.') });
+    });
+    setCaseToDelete(null);
   };
 
   return (
@@ -83,7 +105,7 @@ export default function HistoryPage() {
                             <Button variant="outline" size="sm" onClick={() => handleLoadCase(item.id)}>
                               <Eye className="h-4 w-4 mr-2" /> {t('historyPage.load')}
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => store.deleteSavedCase(item.id)} aria-label={`Delete ${item.title}`}>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setCaseToDelete({ id: item.id, title: item.title })} aria-label={`Delete ${item.title}`}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -218,6 +240,20 @@ export default function HistoryPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        <AlertDialog open={Boolean(caseToDelete)} onOpenChange={(open) => !open && setCaseToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('historyPage.deleteCaseTitle', 'Delete saved case?')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('historyPage.deleteCaseDesc', 'This removes the saved case from your history.')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteCase}>{t('common.delete', 'Delete')}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

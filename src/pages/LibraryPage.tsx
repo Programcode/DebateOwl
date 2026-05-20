@@ -65,6 +65,11 @@ export default function LibraryPage() {
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
+  const handleRemoveSource = (source: Source) => {
+    void Promise.resolve(removeSource(source.id)).then(() => {
+      toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
+    });
+  };
 
   return (
     <div className="container py-8 px-4">
@@ -211,7 +216,7 @@ export default function LibraryPage() {
                             variant="ghost"
                             size="icon"
                             className="text-destructive h-8 w-8"
-                            onClick={() => removeSource(source.id)}
+                            onClick={() => handleRemoveSource(source)}
                             aria-label={`Delete ${source.title}`}
                           >
                             <Trash2 className="h-4 w-4" />
