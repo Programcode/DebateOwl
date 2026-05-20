@@ -185,9 +185,6 @@ export default function LibraryPage() {
         <div className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t('libraryPage.subtitle')}
-            </p>
           </div>
           <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsAdding(!isAdding)}>

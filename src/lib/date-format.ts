@@ -20,7 +20,13 @@ const TIME_FORMATTER = new Intl.DateTimeFormat('en-GB', {
 });
 
 function toValidDate(value: Date | number | string): Date | null {
-  const date = value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  // Date-only strings (e.g. "2026-05-20") are parsed as UTC midnight by spec.
+  // Append T00:00 so they're treated as local time instead.
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    value = value + 'T00:00';
+  }
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 

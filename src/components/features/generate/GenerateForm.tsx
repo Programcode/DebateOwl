@@ -204,13 +204,13 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           >
             <div className="grid gap-4 pt-1 sm:grid-cols-3">
               {/* Length */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">{t('generateForm.length')}</Label>
+              <div className="space-y-2 min-w-0">
+                <Label className="text-sm font-medium truncate block">{t('generateForm.length')}</Label>
                 <Select
                   value={currentValues.length}
                   onValueChange={(value) => setValue('length', value as GenerateInput['length'])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -222,13 +222,13 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               </div>
 
               {/* Audience */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">{t('generateForm.audience')}</Label>
+              <div className="space-y-2 min-w-0">
+                <Label className="text-sm font-medium truncate block">{t('generateForm.audience')}</Label>
                 <Select
                   value={currentValues.audience}
                   onValueChange={(value) => setValue('audience', value as GenerateInput['audience'])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,13 +240,13 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               </div>
 
               {/* Tone */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">{t('generateForm.tone')}</Label>
+              <div className="space-y-2 min-w-0">
+                <Label className="text-sm font-medium truncate block">{t('generateForm.tone')}</Label>
                 <Select
                   value={currentValues.tone}
                   onValueChange={(value) => setValue('tone', value as GenerateInput['tone'])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

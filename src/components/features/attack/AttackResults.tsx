@@ -133,14 +133,19 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">{t('attackResults.caseStrength')}</span>
-              <div className="flex items-center gap-2">
-                <span className={cn(
+              <span className={cn(
                   'text-lg font-bold',
                   result.overallAssessment.score >= 70 ? 'text-primary' :
                     result.overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
                 )}>
                   {result.overallAssessment.score}/100
-                </span>
+              </span>
+            </div>
+            <Progress
+              value={result.overallAssessment.score}
+              className="h-3"
+            />
+            <div className="flex flex-wrap gap-2 mt-3">
                 <AutoSavedSourcesUndo />
                 <Button variant="outline" size="sm" onClick={() => exportAttackToPdf(result)}>
                   <FileText className="h-4 w-4 mr-2" />
@@ -169,12 +174,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                     {t('attackResults.discuss')}
                   </Button>
                 )}
-              </div>
             </div>
-            <Progress
-              value={result.overallAssessment.score}
-              className="h-3"
-            />
           </div>
 
           <div className="flex gap-4 text-sm">

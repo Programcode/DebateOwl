@@ -62,7 +62,14 @@ interface Subscriber {
     current_period_end: string | null;
 }
 
-const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+const COLORS: Record<string, string> = {
+  generate: '#3b82f6',
+  attack: '#ef4444',
+  brainstorm: '#f59e0b',
+  factoids: '#10b981',
+  ask: '#8b5cf6',
+};
+const COLORS_FALLBACK = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6'];
 
 function formatKnownCost(cost: number, unknownCostRequests = 0) {
     if (cost > 0 && unknownCostRequests > 0) return `$${cost.toFixed(4)} + ${unknownCostRequests} unknown`;
@@ -402,8 +409,8 @@ export default function AdminPage() {
                                                     outerRadius={100}
                                                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                                 >
-                                                    {featureData.map((_, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    {featureData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name] || COLORS_FALLBACK[index % COLORS_FALLBACK.length]} />
                                                     ))}
                                                 </Pie>
                                                 <Tooltip />

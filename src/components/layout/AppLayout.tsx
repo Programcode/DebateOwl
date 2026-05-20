@@ -45,24 +45,24 @@ export function AppLayout() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]">
         <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
               <img src="/favicon.ico" alt="DebateLab" className="h-full w-full object-cover" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-foreground">DebateLab</h1>
+              <h1 className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</h1>
             </div>
           </div>
 
           {/* Desktop Nav */}
-          <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-0.5 xl:gap-1 overflow-x-auto scrollbar-hide">
+          <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-0.5 xl:gap-1 overflow-x-auto scrollbar-hide ml-4">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 end={item.path === '/app'}
                 className={cn(
-                  "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium",
+                  "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
                 activeClassName="bg-primary/10 text-primary nav-active-pill"
