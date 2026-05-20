@@ -49,6 +49,7 @@ export function useSpeechToText() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -59,6 +60,7 @@ export function useSpeechToText() {
       recognitionInstance.lang = 'en-US'; // Could be dynamic based on settings
 
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
+        setError(null);
         let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
@@ -78,6 +80,7 @@ export function useSpeechToText() {
 
       recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error', event.error);
+        setError(event.error);
         setIsListening(false);
       };
 
@@ -85,13 +88,21 @@ export function useSpeechToText() {
     }
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (recognition && !isListening) {
       try {
+        setError(null);
+        if (navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+        }
         recognition.start();
         setIsListening(true);
       } catch (e) {
         console.error("Failed to start speech recognition", e);
+        const name = e instanceof DOMException ? e.name : '';
+        setError(name === 'NotAllowedError' || name === 'PermissionDeniedError' ? 'not-allowed' : 'start-failed');
+        setIsListening(false);
       }
     }
   }, [recognition, isListening]);
@@ -105,11 +116,13 @@ export function useSpeechToText() {
 
   const resetTranscript = useCallback(() => {
     setTranscript('');
+    setError(null);
   }, []);
 
   return {
     isListening,
     transcript,
+    error,
     startListening,
     stopListening,
     resetTranscript,

@@ -55,7 +55,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   }, [watch, setGenerateForm]);
 
   // Voice input integration
-  const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();
+  const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();
 
   // Sync transcript to motion field
   useEffect(() => {
@@ -69,7 +69,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       stopListening();
     } else {
       resetTranscript();
-      startListening();
+      void startListening();
     }
   };
 
@@ -124,6 +124,13 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                 </span>
                 {t('generateForm.listening')}
               </div>
+            )}
+            {voiceError && (
+              <p className="text-sm text-destructive">
+                {voiceError === 'not-allowed'
+                  ? t('voice.permissionDenied', 'Microphone access is blocked. Allow microphone access in your browser settings and try again.')
+                  : t('voice.startFailed', 'Dictation could not start. Check your microphone and try again.')}
+              </p>
             )}
             {errors.motion && (
               <p className="text-sm text-destructive">{errors.motion.message}</p>

@@ -31,6 +31,10 @@
     "flowchart": "Map arguments",
     "history": "Saved items"
   },
+  "voice": {
+    "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
+    "startFailed": "Dictation could not start. Check your microphone and try again."
+  },
   "home": {
     "title": "DebateLab",
     "subtitle": "Choose a mode to start.",
