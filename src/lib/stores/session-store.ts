@@ -124,6 +124,26 @@ const toTimestamp = (value: string | number) => {
   return new Date(value).getTime();
 };
 
+function mergeFormState<T extends Record<string, unknown>>(current: Partial<T>, partial: Partial<T>): Partial<T> {
+  const next: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(partial)) {
+    const currentValue = next[key];
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      currentValue &&
+      typeof currentValue === 'object' &&
+      !Array.isArray(currentValue)
+    ) {
+      next[key] = { ...currentValue, ...value };
+    } else {
+      next[key] = value;
+    }
+  }
+  return next as Partial<T>;
+}
+
 function settledData<T>(label: string, result: PromiseSettledResult<{ data?: T | null; error?: { message?: string } | null }>): T | null {
   if (result.status === 'rejected') {
     console.warn(`[SessionStore] Failed to hydrate ${label}:`, result.reason);
@@ -208,10 +228,10 @@ export const useSessionStore = create<SessionState>()(
       brainstormForm: {},
       factoidsForm: {},
 
-      setGenerateForm: (data) => set((state) => ({ generateForm: { ...state.generateForm, ...data } })),
-      setAttackForm: (data) => set((state) => ({ attackForm: { ...state.attackForm, ...data } })),
-      setBrainstormForm: (data) => set((state) => ({ brainstormForm: { ...state.brainstormForm, ...data } })),
-      setFactoidsForm: (data) => set((state) => ({ factoidsForm: { ...state.factoidsForm, ...data } })),
+      setGenerateForm: (data) => set((state) => ({ generateForm: mergeFormState(state.generateForm, data) })),
+      setAttackForm: (data) => set((state) => ({ attackForm: mergeFormState(state.attackForm, data) })),
+      setBrainstormForm: (data) => set((state) => ({ brainstormForm: mergeFormState(state.brainstormForm, data) })),
+      setFactoidsForm: (data) => set((state) => ({ factoidsForm: mergeFormState(state.factoidsForm, data) })),
 
       pendingFlowchartData: null as FlowchartData | null,
       setPendingFlowchartData: (data) => set({ pendingFlowchartData: data }),

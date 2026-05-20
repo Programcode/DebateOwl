@@ -804,7 +804,15 @@ Deno.serve(async (req: Request) => {
     try {
         console.log("[GDOC] Parsing request body...");
         const body = await req.json();
-        const mode = (body.mode || 'generate') as ExportMode;
+        const rawMode = typeof body.mode === "string" ? body.mode : "generate";
+        const validModes: ExportMode[] = ["generate", "attack", "brainstorm", "factoids"];
+        if (!validModes.includes(rawMode as ExportMode)) {
+            return new Response(JSON.stringify({ error: "Invalid export mode" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+        const mode = rawMode as ExportMode;
         const data = body.data || body.caseData; // Support both new and legacy format
         let accessToken = body.accessToken as string | undefined;
         const refreshToken = body.refreshToken as string | undefined;
@@ -917,8 +925,8 @@ Deno.serve(async (req: Request) => {
         // Create Google Doc with retry on 401
         let createDocResponse = await createGoogleDoc(accessToken!);
 
-        // If 401 and we have a refresh token, try refreshing and retry once
-        if (createDocResponse.status === 401 && refreshToken && !newAccessToken) {
+        // If 401 and we have a refresh token, try refreshing and retry once.
+        if (createDocResponse.status === 401 && refreshToken) {
             console.log("[GDOC] Got 401, attempting token refresh...");
             newAccessToken = await refreshAccessToken();
             if (newAccessToken) {
@@ -942,7 +950,7 @@ Deno.serve(async (req: Request) => {
                 }
 
                 return new Response(JSON.stringify({
-                    error: `Google API error: ${googleError}`,
+                    error: `Google API error: ${googleError}. Re-authenticate with Google and try again.`,
                     code: "AUTH_EXPIRED",
                     details: errorText
                 }), {
@@ -959,6 +967,16 @@ Deno.serve(async (req: Request) => {
 
         const docData = await createDocResponse.json();
         const documentId = docData.documentId;
+        if (typeof documentId !== "string" || documentId.length === 0) {
+            console.error("[GDOC] Create document response missing documentId:", JSON.stringify(docData));
+            return new Response(JSON.stringify({
+                error: "Google did not return a document ID. Re-authenticate with Google and try again.",
+                code: "MISSING_DOCUMENT_ID"
+            }), {
+                status: 502,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
         const documentUrl = `https://docs.google.com/document/d/${documentId}/edit`;
 
         console.log(`[GDOC] Created document: ${documentId} for mode: ${mode}`);
