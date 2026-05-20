@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const tierLabels: Record<string, { label: string; color: string }> = {
@@ -123,7 +124,13 @@ export default function SettingsPage() {
   const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
   const usagePercent = subscription.dailyLimit > 0 ? Math.min(100, (subscription.dailyUsed / subscription.dailyLimit) * 100) : 100;
   const canManageStripeBilling = subscription.tier === 'pro' && subscription.hasStripeBilling;
-  const upgradeLabel = subscription.tier === 'pro' ? 'Set Up Billing' : 'Upgrade to Pro';
+  const upgradeLabel = subscription.tier === 'pro' ? t('settings.setUpBilling') : t('settings.upgradeToPro');
+  const midnightUtc = new Date();
+  midnightUtc.setUTCDate(midnightUtc.getUTCDate() + 1);
+  midnightUtc.setUTCHours(0, 0, 0, 0);
+  const resetMs = Math.max(0, midnightUtc.getTime() - Date.now());
+  const resetHours = Math.floor(resetMs / 3_600_000);
+  const resetMinutes = Math.floor((resetMs % 3_600_000) / 60_000);
 
   return (
     <div className="container py-8 px-4">
@@ -133,10 +140,10 @@ export default function SettingsPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <Settings className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
           </div>
           <p className="text-muted-foreground">
-            Configure your account and AI preferences
+            {t('settings.subtitle')}
           </p>
         </div>
 
@@ -145,10 +152,10 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-amber-500" />
-              <CardTitle>Subscription</CardTitle>
+              <CardTitle>{t('settings.subscription')}</CardTitle>
             </div>
             <CardDescription>
-              Your current plan and usage
+              {t('settings.subscriptionDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -157,7 +164,7 @@ export default function SettingsPage() {
                 <Badge className={`${tierInfo.color} text-white`}>{tierInfo.label}</Badge>
                 {subscription.tier === 'trial' && subscription.trialEndsAt && (
                   <span className="text-sm text-muted-foreground">
-                    Ends {formatEuropeanDate(subscription.trialEndsAt)}
+                    {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
                   </span>
                 )}
               </div>
@@ -169,7 +176,7 @@ export default function SettingsPage() {
                   disabled={portalLoading}
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  {portalLoading ? 'Loading...' : 'Manage Subscription'}
+                  {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
                 </Button>
               ) : (
                 <Button size="sm" onClick={() => setPricingOpen(true)}>
@@ -182,15 +189,23 @@ export default function SettingsPage() {
             {/* Usage Bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Daily Usage</span>
+                <span className="text-muted-foreground">{t('settings.dailyUsage')}</span>
                 <span className="font-medium">
-                  {subscription.dailyUsed} / {subscription.dailyLimit} requests
+                  {subscription.dailyUsed} / {subscription.dailyLimit} {t('settings.requests')}
                 </span>
               </div>
               <Progress value={usagePercent} className="h-2" />
-              <p className="text-xs text-muted-foreground">
-                Resets at midnight UTC
-              </p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      {t('settings.resetsIn', { hours: resetHours, minutes: resetMinutes })}
+                      <Info className="h-3 w-3" />
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('settings.usageHelp')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
@@ -198,8 +213,8 @@ export default function SettingsPage() {
         {/* Global Settings */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Global Settings</CardTitle>
-            <CardDescription>App-wide preferences</CardDescription>
+            <CardTitle>{t('settings.globalSettings')}</CardTitle>
+            <CardDescription>{t('settings.globalSettingsDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
@@ -251,20 +266,20 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-primary" />
-              <CardTitle>Account</CardTitle>
+              <CardTitle>{t('settings.account')}</CardTitle>
             </div>
             <CardDescription>
-              Signed in with Google. API keys are managed securely on the server.
+              {t('settings.accountDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Signed in as</p>
-                <p className="font-medium">{user?.email || 'Unknown user'}</p>
+                <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
+                <p className="font-medium">{user?.email || t('settings.unknownUser')}</p>
               </div>
               <Button variant="outline" onClick={() => void signOut()}>
-                Sign out
+                {t('settings.signOut')}
               </Button>
             </div>
           </CardContent>
@@ -273,9 +288,9 @@ export default function SettingsPage() {
         {/* AI Model Info */}
         <Card>
           <CardHeader>
-            <CardTitle>AI Models</CardTitle>
+            <CardTitle>{t('settings.aiModels')}</CardTitle>
             <CardDescription>
-              Select your preferred model directly from each feature page using the model dropdown in the header.
+              {t('settings.aiModelsDesc')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -285,15 +300,15 @@ export default function SettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
-                <CardTitle>Admin</CardTitle>
+                <CardTitle>{t('settings.admin')}</CardTitle>
               </div>
               <CardDescription>
-                Open the admin dashboard for usage, users, limits, and promo codes.
+                {t('settings.adminDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline">
-                <Link to="/app/admin">Open Admin Panel</Link>
+                <Link to="/app/admin">{t('settings.openAdmin')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -303,15 +318,15 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <Card className="border-destructive/20 bg-destructive/5 mt-8">
           <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
             <CardDescription>
-              Permanently delete all your saved data. This only affects your account ({user?.email}).
+              {t('settings.dangerDesc', { email: user?.email })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete All My Data
+              {t('settings.deleteAllData')}
             </Button>
           </CardContent>
         </Card>
@@ -327,13 +342,13 @@ export default function SettingsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete all data</DialogTitle>
+            <DialogTitle>{t('settings.deleteDialogTitle')}</DialogTitle>
             <DialogDescription>
-              This permanently deletes all cases, attacks, brainstorms, factoids, chats, and sources for {user?.email}. This action cannot be undone.
+              {t('settings.deleteDialogDesc', { email: user?.email })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="delete-email">Type your email to confirm</Label>
+            <Label htmlFor="delete-email">{t('settings.typeEmailConfirm')}</Label>
             <Input
               id="delete-email"
               value={deleteEmail}
@@ -342,9 +357,9 @@ export default function SettingsPage() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
             <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email}>
-              Delete All My Data
+              {t('settings.deleteAllData')}
             </Button>
           </DialogFooter>
         </DialogContent>
