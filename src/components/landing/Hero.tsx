@@ -129,9 +129,9 @@ const PHASE_TIMINGS: Record<Phase, number> = {
 };
 
 const OUTPUT_CONTENT = {
-    thesis: "Regulating major platforms improves transparency and protects public discourse.",
-    contention: "Public-utility standards reduce arbitrary moderation and increase accountability.",
-    impact: "Better democratic participation through fairer information access.",
+    thesis: "Your strongest opening argument, backed by evidence.",
+    contention: "A clear reasoning chain that judges can follow.",
+    impact: "Why this matters more than anything the opponent says.",
 };
 
 const TypewriterText = ({ text, durationMs }: { text: string; durationMs: number }) => {
@@ -193,26 +193,26 @@ const HeroPreview = () => {
                         <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                         <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                     </div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Generate Page Preview</p>
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">DebateLab</p>
                 </div>
 
                 <div className="grid gap-4 bg-background/95 p-5 lg:grid-cols-[1.1fr_0.9fr]">
                     {/* Left panel — static inputs */}
                     <div className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4">
-                        <h3 className="text-base font-semibold text-foreground">Case Generator</h3>
+                        <h3 className="text-base font-semibold text-foreground">Your Topic</h3>
                         <div className="space-y-3">
                             <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Resolution</p>
-                                <p className="mt-1 text-sm text-foreground">THBT social media should be treated as a public utility.</p>
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Topic</p>
+                                <p className="mt-1 text-sm text-foreground">Should schools ban phones?</p>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="rounded-md border border-border/70 bg-background px-3 py-2">
                                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Side</p>
-                                    <p className="mt-1 text-sm text-foreground">Affirmative</p>
+                                    <p className="mt-1 text-sm text-foreground">In favor</p>
                                 </div>
                                 <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Contentions</p>
-                                    <p className="mt-1 text-sm text-foreground">3</p>
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Role</p>
+                                    <p className="mt-1 text-sm text-foreground">Opening</p>
                                 </div>
                             </div>
                             {/* Generate button with shimmer effect */}
@@ -247,7 +247,7 @@ const HeroPreview = () => {
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-emerald-200/80 bg-emerald-50/80 p-3 dark:border-emerald-900 dark:bg-emerald-950/60"
                             >
-                                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Thesis</p>
+                                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Main Argument</p>
                                 <p className="mt-1 text-xs text-emerald-900/90 dark:text-emerald-100/90">
                                     {phase === "thesis" ? <TypewriterText text={OUTPUT_CONTENT.thesis} durationMs={1500} /> : OUTPUT_CONTENT.thesis}
                                 </p>
@@ -261,7 +261,7 @@ const HeroPreview = () => {
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-sky-200/80 bg-sky-50/80 p-3 dark:border-sky-900 dark:bg-sky-950/60"
                             >
-                                <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Contention 1</p>
+                                <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Reasoning</p>
                                 <p className="mt-1 text-xs text-sky-900/90 dark:text-sky-100/90">
                                     {phase === "contention" ? <TypewriterText text={OUTPUT_CONTENT.contention} durationMs={1500} /> : OUTPUT_CONTENT.contention}
                                 </p>
