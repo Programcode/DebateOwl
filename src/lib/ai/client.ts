@@ -687,6 +687,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
           content: source.content,
           type: 'url',
           origin: source.url,
+          folder: 'Auto-saved',
         });
       } catch {
         toast({
@@ -722,6 +723,7 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
           content: source.content,
           type: 'url',
           origin: source.url,
+          folder: 'Auto-saved',
         });
       } catch {
         toast({

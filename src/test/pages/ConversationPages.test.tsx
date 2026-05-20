@@ -245,7 +245,7 @@ describe('Conversation Pages', () => {
 
     fireEvent.click(screen.getByTestId('ask-save'));
 
-    expect(sessionState.addSource).toHaveBeenCalledWith({ title: 'Saved Title', content: 'Saved Content', type: 'text' });
+    expect(sessionState.addSource).toHaveBeenCalledWith({ title: 'Saved Title', content: 'Saved Content', type: 'text', folder: 'Ask' });
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Saved' }));
   });
 
@@ -363,6 +363,7 @@ describe('Conversation Pages', () => {
       content: 'Fact content',
       type: 'url',
       origin: 'https://example.com',
+      folder: 'Factoids',
     });
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Saved to Library' }));
   });

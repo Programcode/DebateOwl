@@ -62,7 +62,7 @@ export default function FactoidsPage() {
   };
 
   const handleSaveToLibrary = (title: string, content: string, url?: string) => {
-    addSource({ title, content, type: 'url', origin: url });
+    addSource({ title, content, type: 'url', origin: url, folder: 'Factoids' });
     toast({ title: t('factoids.savedToLibrary'), description: t('factoids.savedToLibraryDesc') });
   };
 
