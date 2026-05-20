@@ -15,6 +15,7 @@ import { exportAttackToPdf } from '@/lib/pdf-export-utils';
 import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
+import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
 
 
 interface AttackResultsProps {
@@ -140,6 +141,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
                 )}>
                   {result.overallAssessment.score}/100
                 </span>
+                <AutoSavedSourcesUndo />
                 <Button variant="outline" size="sm" onClick={() => exportAttackToPdf(result)}>
                   <FileText className="h-4 w-4 mr-2" />
                   PDF

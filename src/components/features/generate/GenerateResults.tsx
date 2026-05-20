@@ -12,6 +12,7 @@ import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
+import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -146,6 +147,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
               {t('generateResults.flowcharts')}
             </Button>
           )}
+          <AutoSavedSourcesUndo />
           <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
             <FileDown className="h-4 w-4 mr-2" />
             {t('generateResults.word')}

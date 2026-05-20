@@ -879,6 +879,11 @@
     "clearFailed": "Failed to clear sources",
     "clearConfirm": "Are you sure you want to clear all sources?"
   },
+  "autoSavedSources": {
+    "undo": "Undo auto-saved sources",
+    "removedTitle": "Auto-saved sources removed",
+    "removedDesc": "{{count}} auto-saved source removed from your library."
+  },
   "sharedPage": {
     "title": "Shared Content",
     "noCode": "No share code provided",

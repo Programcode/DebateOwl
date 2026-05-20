@@ -879,6 +879,11 @@
     "clearFailed": "Error al borrar fuentes",
     "clearConfirm": "¿Estás seguro de que quieres borrar todas las fuentes?"
   },
+  "autoSavedSources": {
+    "undo": "Deshacer fuentes autoguardadas",
+    "removedTitle": "Fuentes autoguardadas eliminadas",
+    "removedDesc": "{{count}} fuente autoguardada eliminada de tu biblioteca."
+  },
   "sharedPage": {
     "title": "Contenido Compartido",
     "noCode": "No se proporcionó código de compartir",
