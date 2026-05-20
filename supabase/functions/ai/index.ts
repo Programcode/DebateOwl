@@ -872,12 +872,23 @@ function enforceBrainstormControls(output: unknown, side: string, outputMode: st
   if (outputMode !== "buckets") delete brainstormOutput.buckets;
 }
 
-function enforceGenerateControls(output: unknown, side: string, format: string) {
+function enforceGenerateControls(output: unknown, side: string, format: string, length: string, role: string) {
   if (!output || typeof output !== "object" || !("metadata" in output)) return;
-  const generateOutput = output as { metadata?: { side?: string; format?: string; generatedAt?: string } };
+  const generateOutput = output as {
+    exordio?: unknown;
+    contentions?: unknown[];
+    metadata?: { side?: string; format?: string; generatedAt?: string };
+  };
   if (!generateOutput.metadata) return;
   generateOutput.metadata.side = side === "con" ? "con" : "pro";
   generateOutput.metadata.format = format || "custom";
+  if (role !== "intro" && "exordio" in generateOutput) {
+    delete generateOutput.exordio;
+  }
+  if (Array.isArray(generateOutput.contentions)) {
+    const target = length === "brief" ? 2 : length === "comprehensive" ? 4 : 3;
+    generateOutput.contentions = generateOutput.contentions.slice(0, target);
+  }
 }
 
 // ============== AI PROVIDER CALLS ==============
@@ -1577,6 +1588,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
       const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
       const side = String(sanitizedInput.side || "pro");
       const format = String(sanitizedInput.format || "custom");
+      const length = String(sanitizedInput.length || "standard");
+      const role = String(sanitizedInput.role || "intro");
 
       // Perform deep research to find supporting evidence
       console.log("[GENERATE] Starting deep research for motion:", motion);
@@ -1608,7 +1621,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
           metadata.generatedAt = new Date().toISOString();
         }
       }
-      enforceGenerateControls(output, side, format);
+      enforceGenerateControls(output, side, format, length, role);
 
       // Build discovered sources from research
       const discoveredSources = buildDiscoveredSources(research);

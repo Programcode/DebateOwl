@@ -11,6 +11,9 @@ describe('supabase prompt-builder', () => {
 
     expect(prompt).toContain('Motion: This house supports public transit subsidies');
     expect(prompt).toContain('Side: pro');
+    expect(prompt).toContain('Length Instruction: Return exactly 3 contentions');
+    expect(prompt).toContain('Audience Instruction: Assume a trained debater');
+    expect(prompt).toContain('Tone Instruction: Use polished, judge-facing language');
     expect(prompt).toContain('Language: Spanish (es)');
     expect(prompt).toContain('SEARCH CONTEXT');
   });
@@ -57,12 +60,13 @@ describe('supabase prompt-builder', () => {
     }, '');
 
     expect(prompt).toContain('Mode: unknown-mode');
-    expect(prompt).toContain('Mode Guidance: Give a balanced, practical coaching answer.');
+    expect(prompt).toContain('Mode Guidance: Give a direct coaching answer');
   });
 
   it('returns ask mode guidance for known and unknown modes', () => {
-    expect(getAskModeGuidance('argumentmap')).toBe('Map the claim, supports, counters, and assumptions explicitly.');
-    expect(getAskModeGuidance('not-a-mode')).toBe('Give a balanced, practical coaching answer.');
+    expect(getAskModeGuidance('argumentmap')).toContain('include argumentMap');
+    expect(getAskModeGuidance('clarify')).toContain('follow-up questions');
+    expect(getAskModeGuidance('not-a-mode')).toContain('direct coaching answer');
   });
 
   it('uses fallback values for non-string generate fields', () => {

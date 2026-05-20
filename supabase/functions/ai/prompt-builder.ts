@@ -1,11 +1,11 @@
 export type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask";
 
 const ASK_MODE_GUIDANCE: Record<string, string> = {
-  general: "Give a balanced, practical coaching answer.",
-  clarify: "Explain concepts simply and resolve ambiguity.",
-  summarize: "Provide a concise summary with key takeaways.",
-  proscons: "Structure the response around clear pros and cons.",
-  argumentmap: "Map the claim, supports, counters, and assumptions explicitly.",
+  general: "Give a direct coaching answer with concrete debate tactics and no forced extra sections.",
+  clarify: "Define unclear terms, identify ambiguities, explain what changes based on each interpretation, and include follow-up questions.",
+  summarize: "Provide a concise summary with key takeaways and no new claims.",
+  proscons: "Structure the response around clear pros and cons and include prosConsAnalysis.",
+  argumentmap: "Map the claim, supports, counters, and assumptions explicitly and include argumentMap.",
 };
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -33,13 +33,34 @@ export function getAskModeGuidance(mode: string): string {
 export function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searchContext: string): string {
   if (feature === "generate") {
     const language = asString(input.language, "en");
+    const length = asString(input.length, "standard");
+    const audience = asString(input.audience, "intermediate");
+    const tone = asString(input.tone, "formal");
+    const lengthInstruction = {
+      brief: "Return exactly 2 contentions. Keep each contention compact: one short warrant chain, one evidence point, and one impact.",
+      standard: "Return exactly 3 contentions. Use moderate reasoning depth with clear warrants, evidence, and impacts.",
+      comprehensive: "Return exactly 4 contentions. Use deeper warrant chains, more clash framing, and more developed impact comparison.",
+    }[length] || "Return exactly 3 contentions. Use moderate reasoning depth with clear warrants, evidence, and impacts.";
+    const audienceInstruction = {
+      beginner: "Assume a newer debater: define debate jargon briefly and use straightforward explanation density.",
+      intermediate: "Assume a trained debater: use normal tournament vocabulary with concise explanations.",
+      advanced: "Assume an advanced debater: use dense strategic framing, weighing, and clash vocabulary without over-explaining basics.",
+    }[audience] || "Assume a trained debater: use normal tournament vocabulary with concise explanations.";
+    const toneInstruction = {
+      formal: "Use polished, judge-facing language with controlled phrasing.",
+      conversational: "Use natural spoken-round phrasing without slang or filler.",
+      aggressive: "Use sharper strategic phrasing and clearer attack language while staying professional.",
+    }[tone] || "Use polished, judge-facing language with controlled phrasing.";
     return `Motion: ${asString(input.motion)}
 Side: ${asString(input.side, "pro")}
 Format: ${asString(input.format, "custom")}
 Role: ${asString(input.role, "intro")}
-Length: ${asString(input.length, "standard")}
-Audience: ${asString(input.audience, "intermediate")}
-Tone: ${asString(input.tone, "formal")}
+Length: ${length}
+Length Instruction: ${lengthInstruction}
+Audience: ${audience}
+Audience Instruction: ${audienceInstruction}
+Tone: ${tone}
+Tone Instruction: ${toneInstruction}
 Language: ${languageLabel(language)} (${language}) — Write ALL output in this language.
 
 ${searchContext}`;
