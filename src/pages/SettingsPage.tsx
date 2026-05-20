@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
+import { AdminDeveloperPanel } from '@/components/features/settings/AdminDeveloperPanel';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -313,6 +314,8 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+
+        {isAdmin && <AdminDeveloperPanel />}
 
 
         {/* Danger Zone */}
