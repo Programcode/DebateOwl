@@ -68,6 +68,7 @@ export const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'Google Gemini',
     models: [
       { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', description: '', maxTokens: 2000000, isProOnly: true },
+      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', description: '', maxTokens: 1000000 },
       { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', description: '', maxTokens: 1000000 },
       { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', description: '', maxTokens: 1000000 },
     ],
