@@ -8,6 +8,7 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 - [Ask and sitewide search quality](./search-quality.md)
 - [Control honesty and deterministic toggles](./control-honesty.md)
 - [Debate sparring and streaming](./sparring-and-streaming.md)
+- [Model cost accounting](./model-cost-accounting.md)
 - [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
 - [Source auto-import](./source-auto-import.md)
 - [Animation polish](./animation-polish.md)
