@@ -30,6 +30,7 @@ export interface Source {
   content: string;
   type: 'url' | 'file' | 'text';
   origin?: string;
+  folder?: string;
   createdAt: number;
   isActive: boolean;
 }
@@ -309,6 +310,7 @@ export const useSessionStore = create<SessionState>()(
                   content: data.content,
                   type: data.type,
                   origin: data.origin || undefined,
+                  folder: localItem.folder,
                   isActive: data.is_active,
                   createdAt: toTimestamp(data.created_at),
                 }

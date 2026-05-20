@@ -211,7 +211,7 @@ export default function AskPage() {
   };
 
   const handleSaveToLibrary = (title: string, content: string) => {
-      const saveResult = addSource({ title, content, type: 'text' });
+      const saveResult = addSource({ title, content, type: 'text', folder: 'Ask' });
       const showSuccess = () => toast({ title: t('ask.saved'), description: t('ask.savedDesc') });
       const showFailure = () => toast({
           title: t('ask.saveFailed', 'Save failed'),

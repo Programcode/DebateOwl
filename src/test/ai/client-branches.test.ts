@@ -253,6 +253,7 @@ describe('AI client branch coverage', () => {
       content: 'A content',
       type: 'url',
       origin: 'https://a.com',
+      folder: 'Auto-saved',
     });
   });
 
@@ -318,6 +319,7 @@ describe('AI client branch coverage', () => {
       content: 'C content',
       type: 'url',
       origin: 'https://c.com',
+      folder: 'Auto-saved',
     });
   });
 

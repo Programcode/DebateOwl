@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function LibraryPage() {
   const { t } = useTranslation();
@@ -36,8 +37,11 @@ export default function LibraryPage() {
     title: '',
     content: '',
     type: 'text' as Source['type'],
-    origin: ''
+    origin: '',
+    folder: 'General',
   });
+  const [selectedFolder, setSelectedFolder] = useState('all');
+  const [newFolderName, setNewFolderName] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [importPreview, setImportPreview] = useState<{
@@ -55,7 +59,7 @@ export default function LibraryPage() {
       return;
     }
     await addSource(newSource);
-    setNewSource({ title: '', content: '', type: 'text', origin: '' });
+    setNewSource({ title: '', content: '', type: 'text', origin: '', folder: newSource.folder });
     setIsAdding(false);
     toast({ title: t('libraryPage.sourceAdded'), description: t('libraryPage.sourceAddedDesc') });
   };
@@ -134,6 +138,7 @@ export default function LibraryPage() {
       content: importPreview.content.trim(),
       type: importPreview.type,
       origin: importPreview.origin,
+      folder: newSource.folder,
     });
     setImportPreview(null);
     setImportUrl('');
@@ -157,6 +162,17 @@ export default function LibraryPage() {
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
+  const folders = Array.from(new Set(['General', ...sourceLibrary.map((source) => source.folder || 'General')])).sort();
+  const visibleSources = selectedFolder === 'all'
+    ? sourceLibrary
+    : sourceLibrary.filter((source) => (source.folder || 'General') === selectedFolder);
+  const handleCreateFolder = () => {
+    const folder = newFolderName.trim();
+    if (!folder) return;
+    setNewSource((source) => ({ ...source, folder }));
+    setSelectedFolder(folder);
+    setNewFolderName('');
+  };
   const handleRemoveSource = (source: Source) => {
     void Promise.resolve(removeSource(source.id)).then(() => {
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
@@ -292,6 +308,40 @@ export default function LibraryPage() {
                   />
                 </div>
               </div>
+              <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+                <div className="space-y-2">
+                  <Label>{t('libraryPage.folder', 'Folder')}</Label>
+                  <Select value={newSource.folder} onValueChange={(folder) => setNewSource({ ...newSource, folder })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-folder">{t('libraryPage.newFolder', 'New folder')}</Label>
+                  <Input
+                    id="new-folder"
+                    value={newFolderName}
+                    onChange={(event) => setNewFolderName(event.target.value)}
+                    placeholder={t('libraryPage.newFolderPlaceholder', 'e.g., Economy evidence')}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        handleCreateFolder();
+                      }
+                    }}
+                  />
+                </div>
+                <Button type="button" variant="outline" className="self-end" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+                  <FolderPlus className="h-4 w-4" />
+                  <span className="sr-only">{t('libraryPage.createFolder', 'Create folder')}</span>
+                </Button>
+              </div>
               <div className="space-y-2">
                 <Label>{t('libraryPage.contentLabel')}</Label>
                 <Textarea
@@ -314,9 +364,20 @@ export default function LibraryPage() {
                 <CardDescription>{t('libraryPage.yourKBDesc')}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+                  <SelectTrigger className="h-8 w-[150px]" aria-label={t('libraryPage.folderFilter', 'Filter folder')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('libraryPage.allFolders', 'All folders')}</SelectItem>
+                    {folders.map((folder) => (
+                      <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                   <Database className="h-3 w-3 mr-1" />
-                  {sourceLibrary.length} {t('libraryPage.sourcesCount')}
+                  {visibleSources.length} {t('libraryPage.sourcesCount')}
                 </Badge>
               </div>
             </CardHeader>
@@ -332,7 +393,7 @@ export default function LibraryPage() {
               ) : (
                 <ScrollArea className="h-[600px] pr-4">
                   <div className="space-y-4 stagger-enter">
-                    {sourceLibrary.map((source) => (
+                    {visibleSources.map((source) => (
                       <div key={source.id} className={`flex items-start justify-between p-4 border rounded-lg transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
                         <div className="flex gap-4 items-start">
                           <div className={`mt-1 p-2 rounded-lg ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
@@ -356,6 +417,7 @@ export default function LibraryPage() {
                                 <h4 className="font-semibold">{source.title}</h4>
                               )}
                               <Badge variant="outline" className="text-[10px] py-0">{source.type.toUpperCase()}</Badge>
+                              <Badge variant="secondary" className="text-[10px] py-0">{source.folder || 'General'}</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground">{t('libraryPage.added')} {formatEuropeanDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
                             <p className="text-sm text-foreground line-clamp-2 mt-2">{source.content}</p>

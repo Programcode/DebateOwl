@@ -144,6 +144,7 @@ describe('LibraryPage', () => {
         content: 'Imported content with enough debate evidence.',
         type: 'url',
         origin: 'https://example.com/article',
+        folder: 'General',
       });
     });
   });
