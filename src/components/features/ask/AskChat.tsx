@@ -286,7 +286,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
+  const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
   const hasStreamingMessage = messages.some((message) => message.isStreaming);
 
   // Auto-scroll to bottom on new messages or streaming content
@@ -364,7 +364,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       stopListening();
     } else {
       resetTranscript();
-      startListening();
+      void startListening();
     }
   };
 
@@ -499,6 +499,13 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
               </div>
             ))}
           </div>
+        )}
+        {voiceError && (
+          <p className="text-sm text-destructive">
+            {voiceError === 'not-allowed'
+              ? t('voice.permissionDenied', 'Microphone access is blocked. Allow microphone access in your browser settings and try again.')
+              : t('voice.startFailed', 'Dictation could not start. Check your microphone and try again.')}
+          </p>
         )}
 
         <form onSubmit={handleSubmit} className="flex gap-2">

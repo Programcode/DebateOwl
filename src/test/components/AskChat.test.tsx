@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { AskChat } from '@/components/features/ask/AskChat';
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
+}));
+
 describe('AskChat', () => {
   it('sends citation and web search toggles with the message', () => {
     const onSend = vi.fn();

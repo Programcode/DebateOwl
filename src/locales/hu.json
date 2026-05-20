@@ -31,6 +31,10 @@
     "flowchart": "Érvek térképezése",
     "history": "Mentett elemek"
   },
+  "voice": {
+    "permissionDenied": "A mikrofonhozzáférés blokkolva van. Engedélyezd a mikrofont a böngésző beállításaiban, majd próbáld újra.",
+    "startFailed": "A diktálás nem indítható el. Ellenőrizd a mikrofont, majd próbáld újra."
+  },
   "home": {
     "title": "DebateLab",
     "subtitle": "Válassz egy módot a kezdéshez.",

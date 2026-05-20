@@ -31,6 +31,10 @@
     "flowchart": "Mapear argumentos",
     "history": "Elementos guardados"
   },
+  "voice": {
+    "permissionDenied": "El acceso al micrófono está bloqueado. Permite el acceso al micrófono en el navegador e inténtalo de nuevo.",
+    "startFailed": "No se pudo iniciar el dictado. Revisa el micrófono e inténtalo de nuevo."
+  },
   "home": {
     "title": "DebateLab",
     "subtitle": "Elige un modo para comenzar.",
