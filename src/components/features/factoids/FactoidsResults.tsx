@@ -162,7 +162,6 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
             onClick: () => window.open(exportResult.documentUrl, '_blank'),
           },
         });
-        window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
         toast.error(exportResult.error || t('factoidsResults.authRequired'), {
           description: t('factoidsResults.authRequiredDesc'),

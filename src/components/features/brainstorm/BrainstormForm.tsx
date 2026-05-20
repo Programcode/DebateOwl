@@ -136,7 +136,7 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-primary-foreground"
+            className="w-full h-12"
             disabled={isLoading}
           >
             {isLoading ? (

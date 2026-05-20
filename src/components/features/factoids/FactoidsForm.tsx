@@ -129,7 +129,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
 
 
           {/* Submit Button */}
-          <Button type="submit" variant="secondary" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12" disabled={isLoading}>
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
