@@ -354,7 +354,8 @@ export const useSessionStore = create<SessionState>()(
       setGenerateResult: (result) => {
         set({ generateResult: result });
         if (result) {
-          const item: SavedItem<GenerateOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: result.caseStructure?.thesis?.slice(0, 60) || 'Untitled' };
+          const motion = get().generateForm?.motion || result.caseStructure?.thesis?.slice(0, 80) || 'Untitled';
+          const item: SavedItem<GenerateOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: motion };
           set((state) => ({ autosavedCases: [item, ...state.autosavedCases].slice(0, 3) }));
         }
       },

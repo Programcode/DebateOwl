@@ -22,7 +22,8 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     const { saveAs } = await import('file-saver');
 
     const thesis = result.caseStructure.thesis?.trim() || 'Untitled Thesis';
-    const thesisTitle = thesis.split('.')[0] || thesis;
+    const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
+    const thesisTitle = motion || thesis.split('.')[0] || thesis;
     const framework = result.caseStructure.framework?.trim() || 'No framework provided.';
     const burdenOfProof = result.caseStructure.burdenOfProof?.trim() || 'No burden of proof provided.';
     const sideLabel = result.metadata.side === 'pro'

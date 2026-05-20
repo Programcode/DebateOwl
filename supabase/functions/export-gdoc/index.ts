@@ -357,7 +357,8 @@ function buildGenerateContent(data: GenerateData) {
     } = createDocumentBuilder();
 
     const thesis = data.caseStructure?.thesis?.trim() || 'Untitled Thesis';
-    const thesisTitle = thesis.length > 200 ? thesis.substring(0, 197) + '...' : thesis;
+    const motion = (data.metadata as Record<string, unknown>)?.motion as string | undefined;
+    const thesisTitle = motion || (thesis.length > 200 ? thesis.substring(0, 197) + '...' : thesis);
 
     // Title - Centered, large, bold
     const titleRange = insertText(`${thesisTitle}\n`);

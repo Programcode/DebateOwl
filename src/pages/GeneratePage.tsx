@@ -38,8 +38,11 @@ export default function GeneratePage() {
     setGenerateLoading(true);
     try {
       const result = await generateCase(data, config);
-      // Always stamp with real local time
-      if (result.metadata) result.metadata.generatedAt = new Date().toISOString();
+      // Always stamp with real local time and motion
+      if (result.metadata) {
+        result.metadata.generatedAt = new Date().toISOString();
+        (result.metadata as Record<string, unknown>).motion = data.motion;
+      }
       setGenerateResult(result);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
       setTimeout(() => document.getElementById('generate-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -102,7 +105,7 @@ export default function GeneratePage() {
 
   const handleSave = () => {
     if (!generateResult) return;
-    setSaveTitle(generateResult.caseStructure.thesis.slice(0, 50));
+    setSaveTitle(generateForm?.motion || generateResult.caseStructure.thesis.slice(0, 50));
     setSaveDialogOpen(true);
   };
 
