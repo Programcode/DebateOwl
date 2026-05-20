@@ -434,8 +434,8 @@ describe('Factoids Schema', () => {
             expect(FactoidsInputSchema.safeParse({ ...validInput, claim: '' }).success).toBe(false);
         });
 
-        it('rejects empty region', () => {
-            expect(FactoidsInputSchema.safeParse({ ...validInput, region: '' }).success).toBe(false);
+        it('accepts empty region (defaults to Global)', () => {
+            expect(FactoidsInputSchema.safeParse({ ...validInput, region: '' }).success).toBe(true);
         });
 
         it('rejects invalid sourceType', () => {

@@ -13,6 +13,14 @@ vi.mock('@/lib/stores/session-store', () => ({
   }),
 }));
 
+vi.mock('@/lib/supabase/AuthProvider', () => ({
+  useAuth: () => ({ user: { id: 'test' }, session: { access_token: 'test' } }),
+}));
+
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ tier: 'pro', canAccessProModels: true }),
+}));
+
 describe('AttackForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
