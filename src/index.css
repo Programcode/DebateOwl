@@ -528,12 +528,32 @@ All colors MUST be HSL.
   animation-delay: 0.4s;
 }
 
+.streaming-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  vertical-align: -0.15em;
+  animation: streaming-caret-blink 0.9s steps(2, start) infinite;
+}
+
 @keyframes typing-bounce {
   0%, 60%, 100% {
     transform: translateY(0);
   }
   30% {
     transform: translateY(-4px);
+  }
+}
+
+@keyframes streaming-caret-blink {
+  0%, 45% {
+    opacity: 1;
+  }
+  46%, 100% {
+    opacity: 0.18;
   }
 }
 

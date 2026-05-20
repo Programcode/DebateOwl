@@ -102,7 +102,8 @@
     "timeout": "Időtúllépés",
     "timeoutDesc": "A kérés túl sokáig tartott. Próbáld újra.",
     "saved": "Mentve",
-    "savedDesc": "Forrás hozzáadva a könyvtárhoz."
+    "savedDesc": "Forrás hozzáadva a könyvtárhoz.",
+    "streamInterrupted": "A streamelt válasz a befejezés előtt megszakadt."
   },
   "chat": {
     "error": "Chat Hiba",
@@ -554,6 +555,7 @@
   "askChat": {
     "title": "Kérdezd az Edződ",
     "subtitle": "Kapj válaszokat vitakérdésekre",
+    "typing": "Gépelés",
     "startConversation": "Indíts beszélgetést",
     "startDesc": "Kérdezz bármit vitastratégiáról, érvekről, vagy kérj segítséget az esetedhez.",
     "modeGeneral": "Általános",
