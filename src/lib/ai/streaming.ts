@@ -29,7 +29,7 @@ export function isAskStreamingSupported(config: ProviderConfig, options: AskStre
     options.argumentMapMode
   );
 
-  return provider === 'openai' && !advancedStructuredMode;
+  return !advancedStructuredMode && ['openai', 'google', 'anthropic'].includes(provider);
 }
 
 function parseEventBlock(block: string): ParsedSSEEvent | null {
