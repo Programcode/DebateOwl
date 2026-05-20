@@ -23,8 +23,11 @@ Deno.test("generate prompt includes language and generation controls", () => {
   assertIncludes(prompt, "Format: custom");
   assertIncludes(prompt, "Role: r1");
   assertIncludes(prompt, "Length: comprehensive");
+  assertIncludes(prompt, "Length Instruction: Return exactly 4 contentions");
   assertIncludes(prompt, "Audience: advanced");
+  assertIncludes(prompt, "Audience Instruction: Assume an advanced debater");
   assertIncludes(prompt, "Tone: aggressive");
+  assertIncludes(prompt, "Tone Instruction: Use sharper strategic phrasing");
   assertIncludes(prompt, "Language: Spanish (es)");
   assertIncludes(prompt, "SEARCH CONTEXT");
 });
@@ -84,12 +87,12 @@ Deno.test("ask prompt includes mode guidance", () => {
   }, "");
 
   assertIncludes(prompt, "Mode: argumentmap");
-  assertIncludes(prompt, "Mode Guidance: Map the claim, supports, counters, and assumptions explicitly.");
+  assertIncludes(prompt, "Mode Guidance: Map the claim, supports, counters, and assumptions explicitly and include argumentMap.");
 });
 
 Deno.test("ask mode guidance falls back to general", () => {
   const guidance = getAskModeGuidance("unknown-mode");
-  if (guidance !== "Give a balanced, practical coaching answer.") {
+  if (!guidance.includes("direct coaching answer")) {
     throw new Error(`Expected fallback guidance, got "${guidance}"`);
   }
 });
