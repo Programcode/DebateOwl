@@ -366,7 +366,12 @@
     "stopListening": "Hallgatás leállítása",
     "startVoice": "Hangbevitel indítása",
     "stopVoice": "Hangbevitel leállítása",
-    "dictate": "Diktáld az indítványt"
+    "dictate": "Diktáld az indítványt",
+    "loadingMsg1": "Indítvány olvasása...",
+    "loadingMsg2": "Érvelési láncok építése...",
+    "loadingMsg3": "Beszédre kész hatások írása...",
+    "loadingMsg4": "Ellenérvek előkészítése...",
+    "loadingMsg5": "Eset véglegesítése..."
   },
   "generateResults": {
     "incomplete": "Generálás Befejezetlen",
@@ -435,7 +440,12 @@
     "analyzeWeighing": "Súlyozás Elemzése",
     "analyzeWeighingDesc": "Hatás-összehasonlítás és prioritizálás értékelése",
     "analyzing": "Eset Elemzése...",
-    "submit": "Gyengeségek Keresése"
+    "submit": "Gyengeségek Keresése",
+    "loadingMsg1": "Esetstruktúra elemzése...",
+    "loadingMsg2": "Logikai rések keresése...",
+    "loadingMsg3": "Cáfolatok kidolgozása...",
+    "loadingMsg4": "Feltételezések tesztelése...",
+    "loadingMsg5": "Kritika véglegesítése..."
   },
   "attackResults": {
     "overall": "Összesített Értékelés",
@@ -487,7 +497,12 @@
     "existing": "Ami Már Megvan (Opcionális)",
     "existingPlaceholder": "Oszd meg az ötleteidet vagy szögeket, amiket már fontolóra vettél...",
     "generating": "Ötletek Generálása...",
-    "submit": "Ötletelés Indítása"
+    "submit": "Ötletelés Indítása",
+    "loadingMsg1": "Szögek feltárása...",
+    "loadingMsg2": "Ötletek összekapcsolása...",
+    "loadingMsg3": "Szokatlan utak keresése...",
+    "loadingMsg4": "Rangsorolás eredetiség szerint...",
+    "loadingMsg5": "Ötletelés véglegesítése..."
   },
   "brainstormResults": {
     "clarification": "Pontosítás Szükséges",
@@ -532,7 +547,12 @@
     "sourceGovernment": "Kormányzati Források",
     "sourceNews": "Fő Hírek",
     "finding": "Bizonyítékok Keresése...",
-    "submit": "Tények Keresése"
+    "submit": "Tények Keresése",
+    "loadingMsg1": "Adatbázisok keresése...",
+    "loadingMsg2": "Hivatkozások ellenőrzése...",
+    "loadingMsg3": "Források keresztellenőrzése...",
+    "loadingMsg4": "Rangsorolás megbízhatóság szerint...",
+    "loadingMsg5": "Bizonyítékok véglegesítése..."
   },
   "factoidsResults": {
     "verificationStatus": "Ellenőrzési Állapot",

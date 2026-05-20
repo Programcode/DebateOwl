@@ -366,7 +366,12 @@
     "stopListening": "Dejar de escuchar",
     "startVoice": "Iniciar entrada de voz",
     "stopVoice": "Detener entrada de voz",
-    "dictate": "Dicta tu moción"
+    "dictate": "Dicta tu moción",
+    "loadingMsg1": "Leyendo la moción...",
+    "loadingMsg2": "Construyendo cadenas de razonamiento...",
+    "loadingMsg3": "Escribiendo impactos para el discurso...",
+    "loadingMsg4": "Preparando contraargumentos...",
+    "loadingMsg5": "Finalizando el caso..."
   },
   "generateResults": {
     "incomplete": "Generación Incompleta",
@@ -435,7 +440,12 @@
     "analyzeWeighing": "Analizar Ponderación",
     "analyzeWeighingDesc": "Evaluar la comparación y priorización de impactos",
     "analyzing": "Analizando Caso...",
-    "submit": "Encontrar Debilidades"
+    "submit": "Encontrar Debilidades",
+    "loadingMsg1": "Analizando la estructura del caso...",
+    "loadingMsg2": "Buscando vacíos lógicos...",
+    "loadingMsg3": "Elaborando refutaciones...",
+    "loadingMsg4": "Probando suposiciones...",
+    "loadingMsg5": "Finalizando la crítica..."
   },
   "attackResults": {
     "overall": "Evaluación General",
@@ -487,7 +497,12 @@
     "existing": "Lo Que Ya Tienes (Opcional)",
     "existingPlaceholder": "Comparte ideas o ángulos que ya hayas considerado...",
     "generating": "Generando Ideas...",
-    "submit": "Comenzar Lluvia de Ideas"
+    "submit": "Comenzar Lluvia de Ideas",
+    "loadingMsg1": "Explorando ángulos...",
+    "loadingMsg2": "Conectando ideas...",
+    "loadingMsg3": "Buscando caminos no convencionales...",
+    "loadingMsg4": "Clasificando por originalidad...",
+    "loadingMsg5": "Finalizando lluvia de ideas..."
   },
   "brainstormResults": {
     "clarification": "Aclaración Necesaria",
@@ -532,7 +547,12 @@
     "sourceGovernment": "Fuentes Gubernamentales",
     "sourceNews": "Noticias Principales",
     "finding": "Buscando Evidencia...",
-    "submit": "Buscar Datos"
+    "submit": "Buscar Datos",
+    "loadingMsg1": "Buscando en bases de datos...",
+    "loadingMsg2": "Verificando citas...",
+    "loadingMsg3": "Cruzando referencias...",
+    "loadingMsg4": "Clasificando por fiabilidad...",
+    "loadingMsg5": "Finalizando evidencia..."
   },
   "factoidsResults": {
     "verificationStatus": "Estado de Verificación",

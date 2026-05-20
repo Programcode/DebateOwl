@@ -20,19 +20,19 @@ describe('StreamingIndicator', () => {
 
   it('cycles to second message after interval', () => {
     render(<StreamingIndicator messages={messages} intervalMs={3000} />);
-    act(() => { vi.advanceTimersByTime(3000); });
+    act(() => { vi.advanceTimersByTime(3200); });
     expect(screen.getByText('Generating...')).toBeDefined();
   });
 
   it('cycles to third message', () => {
     render(<StreamingIndicator messages={messages} intervalMs={3000} />);
-    act(() => { vi.advanceTimersByTime(6000); });
+    act(() => { vi.advanceTimersByTime(6400); });
     expect(screen.getByText('Almost done...')).toBeDefined();
   });
 
   it('wraps around to first message', () => {
     render(<StreamingIndicator messages={messages} intervalMs={3000} />);
-    act(() => { vi.advanceTimersByTime(9000); });
+    act(() => { vi.advanceTimersByTime(9600); });
     expect(screen.getByText('Analyzing...')).toBeDefined();
   });
 
@@ -58,7 +58,7 @@ describe('StreamingIndicator', () => {
 
   it('accepts custom interval', () => {
     render(<StreamingIndicator messages={messages} intervalMs={1000} />);
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(1200); });
     expect(screen.getByText('Generating...')).toBeDefined();
   });
 

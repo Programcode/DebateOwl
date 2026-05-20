@@ -366,7 +366,12 @@
     "stopListening": "Stop listening",
     "startVoice": "Start voice input",
     "stopVoice": "Stop voice input",
-    "dictate": "Dictate your motion"
+    "dictate": "Dictate your motion",
+    "loadingMsg1": "Reading the motion...",
+    "loadingMsg2": "Building warrant chains...",
+    "loadingMsg3": "Writing speech-ready impacts...",
+    "loadingMsg4": "Preparing counters...",
+    "loadingMsg5": "Finalizing the case..."
   },
   "generateResults": {
     "incomplete": "Generation Incomplete",
@@ -435,7 +440,12 @@
     "analyzeWeighing": "Analyze Weighing",
     "analyzeWeighingDesc": "Evaluate impact comparison and prioritization",
     "analyzing": "Analyzing Case...",
-    "submit": "Find Weaknesses"
+    "submit": "Find Weaknesses",
+    "loadingMsg1": "Analyzing the case structure...",
+    "loadingMsg2": "Finding logical gaps...",
+    "loadingMsg3": "Crafting rebuttals...",
+    "loadingMsg4": "Stress-testing assumptions...",
+    "loadingMsg5": "Finalizing the critique..."
   },
   "attackResults": {
     "overall": "Overall Assessment",
@@ -487,7 +497,12 @@
     "existing": "What You Already Have (Optional)",
     "existingPlaceholder": "Share any ideas or angles you've already considered...",
     "generating": "Generating Ideas...",
-    "submit": "Start Brainstorming"
+    "submit": "Start Brainstorming",
+    "loadingMsg1": "Exploring angles...",
+    "loadingMsg2": "Connecting ideas...",
+    "loadingMsg3": "Finding unconventional paths...",
+    "loadingMsg4": "Ranking by originality...",
+    "loadingMsg5": "Finalizing brainstorm..."
   },
   "brainstormResults": {
     "clarification": "Clarification Needed",
@@ -532,7 +547,12 @@
     "sourceGovernment": "Government Sources",
     "sourceNews": "Major News",
     "finding": "Finding Evidence...",
-    "submit": "Find Factoids"
+    "submit": "Find Factoids",
+    "loadingMsg1": "Searching databases...",
+    "loadingMsg2": "Verifying citations...",
+    "loadingMsg3": "Cross-referencing sources...",
+    "loadingMsg4": "Ranking by reliability...",
+    "loadingMsg5": "Finalizing evidence..."
   },
   "factoidsResults": {
     "verificationStatus": "Verification Status",

@@ -123,7 +123,7 @@ export default function FactoidsPage() {
           <AnimatedSection delay={150}>
             {factoidsLoading ? (
               <div key="factoids-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
-                <StreamingIndicator messages={['Searching matching sources...', 'Filtering weak citations...', 'Opening source pages...', 'Verifying URLs...', 'Writing debate use notes...', 'Finalizing evidence...']} />
+                <StreamingIndicator messages={[t('factoidsForm.loadingMsg1'), t('factoidsForm.loadingMsg2'), t('factoidsForm.loadingMsg3'), t('factoidsForm.loadingMsg4'), t('factoidsForm.loadingMsg5')]} />
               </div>
             ) : factoidsResult ? (
               <div key="factoids-results" className="motion-swap">
