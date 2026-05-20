@@ -13,6 +13,7 @@ import { exportBrainstormToDocx, exportBrainstormToGoogleDocs } from '@/lib/expo
 import { toast } from 'sonner';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -127,6 +128,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
     <StaggeredContainer className="space-y-6">
       {onDiscuss && (
         <div className="flex justify-end gap-2">
+          <AutoSavedSourcesUndo />
           <Button variant="outline" size="sm" onClick={() => exportBrainstormToPdf(result)}>
             <FileText className="h-4 w-4 mr-2" />
             PDF

@@ -879,6 +879,11 @@
     "clearFailed": "Nem sikerült törölni a forrásokat",
     "clearConfirm": "Biztosan törölni szeretnéd az összes forrást?"
   },
+  "autoSavedSources": {
+    "undo": "Automatikus források visszavonása",
+    "removedTitle": "Automatikus források eltávolítva",
+    "removedDesc": "{{count}} automatikusan mentett forrás eltávolítva a könyvtáradból."
+  },
   "sharedPage": {
     "title": "Megosztott Tartalom",
     "noCode": "Nincs megosztási kód megadva",
