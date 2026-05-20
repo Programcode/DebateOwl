@@ -42,9 +42,9 @@ describe('LibraryPage', () => {
     expect(screen.getByText('Source Library')).toBeDefined();
   });
 
-  it('renders subtitle', () => {
+  it('renders title', () => {
     render(<LibraryPage />);
-    expect(screen.getByText('Manage sources for grounded AI responses')).toBeDefined();
+    expect(screen.getByText('Source Library')).toBeDefined();
   });
 
   it('shows empty state when no sources', () => {

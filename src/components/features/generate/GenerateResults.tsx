@@ -117,7 +117,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
   return (
     <StaggeredContainer className="space-y-6">
       {/* Metadata */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
@@ -128,7 +128,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
             {durationText ? ` • ${durationText}` : ''}
           </span>
         </div>
-        <div className="ml-auto flex flex-wrap justify-end gap-2" data-tour="export-section">
+        <div className="flex flex-wrap gap-2" data-tour="export-section">
           {onSave && (
             <Button variant="outline" size="sm" onClick={onSave}>
               <Save className="h-4 w-4 mr-2" />
