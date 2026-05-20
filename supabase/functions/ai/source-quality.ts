@@ -202,34 +202,47 @@ export function rankSearchResults(
 export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
   const base = `${claim} ${region}`.trim().replace(/\s+/g, " ");
   const years = timeframe || (/\b202[0-9]\b/.test(base) ? "" : "2025 2026");
-  const queries = [
-    `${base} official data results ${years}`.trim(),
-    `${base} statistics report evidence ${years}`.trim(),
-  ];
+  const queries: string[] = [];
 
-  if (preferredSourceType === "government") queries.unshift(`${base} site:gov ${years}`.trim());
-  if (preferredSourceType === "academic") queries.unshift(`${base} study journal university ${years}`.trim());
-  if (preferredSourceType === "news") queries.unshift(`${base} Reuters AP BBC report ${years}`.trim());
+  // Topic-specific queries first (highest priority)
+  if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(base)) || /\bdebate|debating\b/i.test(base)) {
+    queries.push(`${base} tab results official`.trim());
+    queries.push(`${base} Tabbycat Calicotab results`.trim());
+  }
 
   if (POLICY_STAT_PATTERNS.some((pattern) => pattern.test(base))) {
-    queries.unshift(`${base} World Bank OECD IMF UN data ${years}`.trim());
-    queries.unshift(`${base} government agency statistics ${years}`.trim());
-    queries.unshift(`${base} academic study meta analysis ${years}`.trim());
+    queries.push(`${base} World Bank OECD IMF UN data ${years}`.trim());
+    queries.push(`${base} government statistics report ${years}`.trim());
   }
 
   if (LEGAL_CURRENT_PATTERNS.some((pattern) => pattern.test(base))) {
-    queries.unshift(`${base} official law court agency ${years}`.trim());
-    queries.unshift(`${base} primary source statute ruling regulation ${years}`.trim());
-    queries.unshift(`${base} Reuters AP legal analysis ${years}`.trim());
+    queries.push(`${base} official law court ruling ${years}`.trim());
+    queries.push(`${base} primary source legislation regulation ${years}`.trim());
   }
 
-  if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(base)) || /\bdebate|debating\b/i.test(base)) {
-    queries.unshift(`${base} tab results official`.trim());
-    queries.unshift(`${base} Tabbycat Calicotab results`.trim());
-    queries.unshift(`${base} WSDC WUDC official results`.trim());
+  // Preferred source type queries
+  if (preferredSourceType === "government") queries.push(`${base} site:gov ${years}`.trim());
+  if (preferredSourceType === "academic") queries.push(`${base} study journal university ${years}`.trim());
+  if (preferredSourceType === "news") queries.push(`${base} Reuters AP BBC report ${years}`.trim());
+
+  // General fallback queries
+  queries.push(`${base} official data evidence ${years}`.trim());
+  queries.push(`${base} statistics report study ${years}`.trim());
+
+  // Deduplicate by checking token overlap (>80% overlap = skip)
+  const deduplicated: string[] = [];
+  for (const q of queries) {
+    const qTokens = new Set(q.toLowerCase().split(/\s+/));
+    const isDuplicate = deduplicated.some((existing) => {
+      const existingTokens = new Set(existing.toLowerCase().split(/\s+/));
+      const intersection = [...qTokens].filter((t) => existingTokens.has(t)).length;
+      const smaller = Math.min(qTokens.size, existingTokens.size);
+      return smaller > 0 && intersection / smaller > 0.85;
+    });
+    if (!isDuplicate) deduplicated.push(q);
   }
 
-  return Array.from(new Set(queries.filter(Boolean))).slice(0, 6);
+  return deduplicated.slice(0, 6);
 }
 
 export function formatRankedSearchResults(results: RankedSearchResult[]): string {

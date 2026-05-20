@@ -544,6 +544,7 @@ All colors MUST be HSL.
 [data-streaming="true"] {
   transition: max-height 0.2s ease-out, padding 0.2s ease-out;
   overflow: hidden;
+  word-break: break-word;
 }
 
 /* Glow on the bottom edge of the bubble while streaming */

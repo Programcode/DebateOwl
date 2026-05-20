@@ -755,6 +755,7 @@ async function deepResearch(
 
 function buildResearchContext(research: ResearchContext): string {
   let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
+  ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only — do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
 
   // Add search results
   for (const search of research.searches) {
@@ -766,7 +767,8 @@ function buildResearchContext(research: ResearchContext): string {
     ctx += "\n=== FULL PAGE CONTENT (verified sources) ===\n\n";
     for (const page of research.readContent) {
       const quality = page.result ? `${page.result.sourceType}, ${page.result.qualityLabel}, ${page.result.qualityScore}/100` : "verified";
-      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}\n${page.content.slice(0, 4000)}\n\n`;
+      const warning = page.result?.qualityLabel === "weak" ? " [WEAK — do not cite as evidence]" : "";
+      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, 4000)}\n\n`;
     }
   }
 
@@ -779,6 +781,7 @@ function getResearchSources(research: ResearchContext): ResearchSource[] {
 
   for (const page of research.readContent) {
     if (!page.url || seen.has(page.url)) continue;
+    if (page.result?.qualityLabel === "weak") continue; // Quality floor: weak sources can't be cited
     seen.add(page.url);
     const result = page.result;
     sources.push({
@@ -793,9 +796,11 @@ function getResearchSources(research: ResearchContext): ResearchSource[] {
 
   if (sources.length > 0) return sources.slice(0, 5);
 
+  // Fallback: if no strong/moderate read content, use ranked results (excluding weak)
   for (const result of research.rankedResults) {
     const url = result.url || "";
     if (!url || seen.has(url)) continue;
+    if (result.qualityLabel === "weak") continue;
     seen.add(url);
     sources.push({
       title: result.title || sourceTitleFromUrl(url),
