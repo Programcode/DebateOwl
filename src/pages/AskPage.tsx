@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ModelSelector } from '@/components/ModelSelector';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
+const MAX_AI_INPUT_LENGTH = 50000;
+
 export default function AskPage() {
   const { askMessages, askLoading, addAskMessage, setAskLoading, clearAskMessages, addSource } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
@@ -33,9 +35,6 @@ export default function AskPage() {
     if (files && files.length > 0) {
       displayContent += `\n\n[Attachments: ${files.map(f => f.name).join(', ')}]`;
     }
-
-    addAskMessage({ role: 'user', content: displayContent });
-    setAskLoading(true);
 
     try {
       let fileContext = "";
@@ -72,6 +71,17 @@ export default function AskPage() {
 
       const history = askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
+      if (fullMessage.length > MAX_AI_INPUT_LENGTH) {
+        toast({
+          title: t('ask.inputTooLargeTitle', 'Message is too large'),
+          description: t('ask.inputTooLargeDesc', 'Remove some attachment text or shorten your question before sending.'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      addAskMessage({ role: 'user', content: displayContent });
+      setAskLoading(true);
 
       const result = await askChat(fullMessage, history, mode, config, {
         citationMode,
@@ -105,8 +115,18 @@ export default function AskPage() {
   };
 
   const handleSaveToLibrary = (title: string, content: string) => {
-    addSource({ title, content, type: 'text' });
-    toast({ title: t('ask.saved'), description: t('ask.savedDesc') });
+      const saveResult = addSource({ title, content, type: 'text' });
+      const showSuccess = () => toast({ title: t('ask.saved'), description: t('ask.savedDesc') });
+      const showFailure = () => toast({
+          title: t('ask.saveFailed', 'Save failed'),
+          description: t('ask.saveFailedDesc', 'The source could not be saved. Please try again.'),
+          variant: 'destructive',
+        });
+      if (saveResult && typeof saveResult.then === 'function') {
+        saveResult.then(showSuccess).catch(showFailure);
+      } else {
+        showSuccess();
+      }
   };
 
   const formattedMessages = askMessages.map(m => ({

@@ -648,12 +648,20 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   if (data.discoveredSources && data.discoveredSources.length > 0) {
     const session = useSessionStore.getState();
     for (const source of data.discoveredSources) {
-      await session.addSource({
-        title: source.title,
-        content: source.content,
-        type: 'url',
-        origin: source.url,
-      });
+      try {
+        await session.addSource({
+          title: source.title,
+          content: source.content,
+          type: 'url',
+          origin: source.url,
+        });
+      } catch {
+        toast({
+          title: 'Source save failed',
+          description: `Could not save "${source.title}" to your library.`,
+          variant: 'destructive',
+        });
+      }
     }
     console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
   }
@@ -675,12 +683,20 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
   if (data.discoveredSources && data.discoveredSources.length > 0) {
     const session = useSessionStore.getState();
     for (const source of data.discoveredSources) {
-      await session.addSource({
-        title: source.title,
-        content: source.content,
-        type: 'url',
-        origin: source.url,
-      });
+      try {
+        await session.addSource({
+          title: source.title,
+          content: source.content,
+          type: 'url',
+          origin: source.url,
+        });
+      } catch {
+        toast({
+          title: 'Source save failed',
+          description: `Could not save "${source.title}" to your library.`,
+          variant: 'destructive',
+        });
+      }
     }
     console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
   }

@@ -32,22 +32,24 @@ type UsageByUserRow = {
     cost: number;
 };
 
-async function getAuthEmailMap(userIds: string[]): Promise<Map<string, string>> {
+async function getAuthEmailMap(userIds: string[]): Promise<{ resolved: Map<string, string>; failed: string[] }> {
     const wantedIds = new Set(userIds.filter(Boolean));
     const emails = new Map<string, string>();
-    if (wantedIds.size === 0) return emails;
+    const failed = new Set<string>();
+    if (wantedIds.size === 0) return { resolved: emails, failed: [] };
 
     await Promise.all([...wantedIds].map(async (listedUserId) => {
         const { data, error } = await supabase.auth.admin.getUserById(listedUserId);
         const email = data?.user?.email;
         if (error) {
             console.warn("[ADMIN] Failed to fetch top-user email", listedUserId, error.message);
+            failed.add(listedUserId);
             return;
         }
         if (email) emails.set(listedUserId, email);
     }));
 
-    if (emails.size === wantedIds.size) return emails;
+    if (emails.size === wantedIds.size) return { resolved: emails, failed: [] };
 
     for (let page = 1; page <= 10 && emails.size < wantedIds.size; page += 1) {
         const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
@@ -59,13 +61,16 @@ async function getAuthEmailMap(userIds: string[]): Promise<Map<string, string>> 
         for (const authUser of data?.users || []) {
             if (wantedIds.has(authUser.id) && authUser.email) {
                 emails.set(authUser.id, authUser.email);
+                failed.delete(authUser.id);
             }
         }
 
         if (!data?.users || data.users.length < 1000) break;
     }
 
-    return emails;
+    const unresolved = [...wantedIds].filter((id) => !emails.has(id));
+    unresolved.forEach((id) => failed.add(id));
+    return { resolved: emails, failed: [...failed] };
 }
 
 async function isAdmin(userId: string): Promise<boolean> {
@@ -75,6 +80,12 @@ async function isAdmin(userId: string): Promise<boolean> {
         .eq("user_id", userId)
         .single();
     return data?.role === "admin";
+}
+
+async function assertCurrentAdmin(userId: string) {
+    if (!(await isAdmin(userId))) {
+        throw new Error("Admin role no longer active");
+    }
 }
 
 Deno.serve(async (req) => {
@@ -164,7 +175,7 @@ Deno.serve(async (req) => {
 
             const byUserWithEmail = byUser.map((row) => ({
                 ...row,
-                email: row.email || userEmails.get(row.user_id) || null,
+                email: row.email || userEmails.resolved.get(row.user_id) || null,
             }));
 
             return new Response(JSON.stringify({
@@ -172,6 +183,7 @@ Deno.serve(async (req) => {
                 daily: daily || [],
                 byFeature: featureCounts,
                 byUser: byUserWithEmail,
+                emailLookupFailures: userEmails.failed.length,
             }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -246,6 +258,7 @@ Deno.serve(async (req) => {
                 limit_value: limitValue,
                 updated_at: new Date().toISOString(),
             };
+            await assertCurrentAdmin(user.id);
 
             if (userId) {
                 ({ error } = await supabase
@@ -297,6 +310,7 @@ Deno.serve(async (req) => {
                 });
             }
 
+            await assertCurrentAdmin(user.id);
             const { error } = await supabase
                 .from("user_roles")
                 .upsert({
@@ -355,6 +369,7 @@ Deno.serve(async (req) => {
                 updatePayload.daily_limit_override = dailyLimit;
             }
 
+            await assertCurrentAdmin(user.id);
             const { error: updateError } = await supabase
                 .from("user_settings")
                 .upsert(updatePayload, { onConflict: "user_id" });
@@ -445,6 +460,7 @@ Deno.serve(async (req) => {
                 });
             }
 
+            await assertCurrentAdmin(user.id);
             const { error } = await supabase
                 .from("global_prompts")
                 .upsert({
@@ -479,6 +495,7 @@ Deno.serve(async (req) => {
                 });
             }
 
+            await assertCurrentAdmin(user.id);
             const { error } = await supabase
                 .from("global_prompts")
                 .delete()
@@ -528,6 +545,7 @@ Deno.serve(async (req) => {
                 });
             }
 
+            await assertCurrentAdmin(user.id);
             const { error } = await supabase.from("promo_codes").insert({
                 code: code.toUpperCase(),
                 type,
@@ -560,6 +578,7 @@ Deno.serve(async (req) => {
                 });
             }
 
+            await assertCurrentAdmin(user.id);
             const { error } = await supabase.from("promo_codes").update({
                 is_active: isActive,
             }).eq("id", id);
@@ -617,6 +636,12 @@ Deno.serve(async (req) => {
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         console.error("[ADMIN API ERROR]", message);
+        if (message === "Admin role no longer active") {
+            return new Response(JSON.stringify({ error: message }), {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
         return new Response(JSON.stringify({ error: message }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
