@@ -1,6 +1,4 @@
 export default function SourcesPage() {
-  const updated = "March 9, 2026";
-
   const sources = [
     {
       authors: "AITHAL, V.; SILVER, J.",
@@ -128,7 +126,6 @@ export default function SourcesPage() {
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-3xl px-4 py-10">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Sources</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Last updated: {updated}</p>
 
         <div className="mt-8 space-y-6 text-sm leading-6 text-foreground">
           <section>
@@ -151,7 +148,7 @@ export default function SourcesPage() {
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary underline underline-offset-2 break-all hover:text-primary/80"
+                    className="text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80"
                   >
                     {source.url}
                   </a>{" "}

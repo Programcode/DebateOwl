@@ -287,8 +287,9 @@ export default function TimerPage() {
                 <Button
                   key={s.id}
                   variant={idx === currentSpeechIdx ? "default" : "outline"}
+                  data-state={idx === currentSpeechIdx ? "active" : "inactive"}
                   onClick={() => handleSpeechSelect(idx)}
-                  className={`transition-all ${idx === currentSpeechIdx ? s.color : "opacity-70 hover:opacity-100"}`}
+                  className={`transition-all data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=active]:ring-offset-2 ${idx === currentSpeechIdx ? s.color : "opacity-70 hover:opacity-100"}`}
                   size="sm"
                 >
                   {t(s.labelKey)} ({s.minutes}m)
