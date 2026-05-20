@@ -42,7 +42,7 @@ export default function HomePage() {
           <p className="mt-2 text-sm text-muted-foreground">{t('home.subtitle')}</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 stagger-enter">
           {modeKeys.map((mode) => (
             <Link key={mode.key} to={mode.href} className="group">
               <Card

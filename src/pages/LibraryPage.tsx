@@ -331,9 +331,9 @@ export default function LibraryPage() {
                 </div>
               ) : (
                 <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-4">
+                  <div className="space-y-4 stagger-enter">
                     {sourceLibrary.map((source) => (
-                      <div key={source.id} className={`flex items-start justify-between p-4 border rounded-lg transition-colors ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
+                      <div key={source.id} className={`flex items-start justify-between p-4 border rounded-lg transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
                         <div className="flex gap-4 items-start">
                           <div className={`mt-1 p-2 rounded-lg ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                             {source.type === 'url' ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
