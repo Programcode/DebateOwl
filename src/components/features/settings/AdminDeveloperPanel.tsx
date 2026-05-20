@@ -22,8 +22,8 @@ export function AdminDeveloperPanel() {
 
   const handleSwitch = async () => {
     if (!confirmTarget) return;
-    await supabase.auth.signOut();
     setActiveEnv(confirmTarget);
+    await supabase.auth.signOut();
     window.location.reload();
   };
 
