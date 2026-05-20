@@ -40,8 +40,8 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
           <Icon className={cn('h-5 w-5 mt-0.5', config.color)} />
           <div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={cn('text-xs', config.color)}>
-                {weakness.severity.toUpperCase()}
+              <Badge variant="outline" className={cn('text-xs uppercase', config.color)}>
+                {t(`attackResults.severity.${weakness.severity}`, weakness.severity)}
               </Badge>
               <Badge variant="outline" className="text-xs">{weakness.type}</Badge>
             </div>

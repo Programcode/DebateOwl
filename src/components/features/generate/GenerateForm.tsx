@@ -270,7 +270,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
 
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading} data-tour="generate-button">
+          <Button type="submit" className="w-full h-12" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
             {isLoading ? (
               <span className="motion-reveal inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />

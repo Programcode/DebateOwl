@@ -183,7 +183,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
 
 
           {/* Submit Button */}
-          <Button type="submit" variant="destructive" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12" disabled={isLoading}>
             {isLoading ? (
               <span className="motion-reveal inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
