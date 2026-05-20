@@ -20,6 +20,7 @@ import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 import { useSessionStore } from '@/lib/stores/session-store';
+import { ModelSelector } from '@/components/ModelSelector';
 
 interface AttackFormProps {
   onSubmit: (data: AttackInput) => void;
@@ -92,7 +93,9 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
           </div>
 
           {/* Options */}
-          <div className="space-y-2 sm:max-w-xs">
+          <ModelSelector feature="attack" showLabel />
+
+          <div className="space-y-2">
             <Label className="text-sm font-medium">{t('attackForm.options')}</Label>
             <Button
               type="button"

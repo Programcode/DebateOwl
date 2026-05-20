@@ -19,6 +19,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
+import { ModelSelector } from '@/components/ModelSelector';
 
 interface BrainstormFormProps {
   onSubmit: (data: BrainstormInput) => void;
@@ -119,6 +120,8 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
               </Select>
             </div>
           </div>
+
+          <ModelSelector feature="brainstorm" showLabel />
 
           {/* Context */}
           <div className="space-y-2">

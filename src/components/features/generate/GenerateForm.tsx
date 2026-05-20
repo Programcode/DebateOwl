@@ -19,6 +19,7 @@ import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/genera
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
+import { ModelSelector } from '@/components/ModelSelector';
 
 
 interface GenerateFormProps {
@@ -130,7 +131,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           </div>
 
           {/* Main Options */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {/* Side */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">{t('generateForm.side')}</Label>
@@ -144,23 +145,6 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                 <SelectContent>
                   <SelectItem value="pro">{t('generateForm.sidePro')}</SelectItem>
                   <SelectItem value="con">{t('generateForm.sideCon')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Format */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.format')}</Label>
-              <Select
-                value={currentValues.format}
-                onValueChange={(value) => setValue('format', value as GenerateInput['format'])}
-                disabled
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">{t('generateForm.formatStandard')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -186,8 +170,10 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
 
           </div>
 
+          <ModelSelector feature="generate" showLabel />
+
           {/* More */}
-          <div className="space-y-2 sm:max-w-xs">
+          <div className="space-y-2">
             <Label className="text-sm font-medium">{t('generateForm.more')}</Label>
             <Button
               type="button"

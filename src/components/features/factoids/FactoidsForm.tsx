@@ -19,6 +19,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
+import { ModelSelector } from '@/components/ModelSelector';
 
 interface FactoidsFormProps {
   onSubmit: (data: FactoidsInput) => void;
@@ -126,6 +127,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
             </div>
           </div>
 
+          <ModelSelector feature="factoids" showLabel />
 
 
           {/* Submit Button */}

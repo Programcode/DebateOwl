@@ -10,7 +10,6 @@ import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
-import { ModelSelector } from '@/components/ModelSelector';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
@@ -98,7 +97,6 @@ export default function FactoidsPage() {
               {t('factoids.subtitle')}
             </p>
           </div>
-          <ModelSelector feature="factoids" />
         </AnimatedSection>
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
