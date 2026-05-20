@@ -22,10 +22,10 @@ import {
 import { formatEuropeanDate } from '@/lib/date-format';
 
 interface UsageStats {
-    totals: { requests: number; cost: number; successRate: number };
+    totals: { requests: number; cost: number; successRate: number; unknownCostRequests?: number };
     daily: Array<{ date: string; requests: number; cost: number; errors: number }>;
     byFeature: Record<string, number>;
-    byUser: Array<{ user_id: string; email?: string | null; requests: number; cost: number }>;
+    byUser: Array<{ user_id: string; email?: string | null; requests: number; cost: number; unknownCostRequests?: number }>;
 }
 
 interface User {
@@ -63,6 +63,13 @@ interface Subscriber {
 }
 
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+
+function formatKnownCost(cost: number, unknownCostRequests = 0) {
+    if (cost > 0 && unknownCostRequests > 0) return `$${cost.toFixed(4)} + ${unknownCostRequests} unknown`;
+    if (cost > 0) return `$${cost.toFixed(4)}`;
+    if (unknownCostRequests > 0) return 'Unknown';
+    return '$0.0000';
+}
 
 export default function AdminPage() {
     const [loading, setLoading] = useState(true);
@@ -305,8 +312,14 @@ export default function AdminPage() {
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">${stats?.totals.cost.toFixed(4) || '0.00'}</div>
-                            <p className="text-xs text-muted-foreground">Estimated API costs</p>
+                            <div className="text-2xl font-bold">
+                                {stats ? formatKnownCost(stats.totals.cost, stats.totals.unknownCostRequests) : '$0.0000'}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {stats?.totals.unknownCostRequests
+                                    ? `${stats.totals.unknownCostRequests} requests missing token data`
+                                    : 'Known API costs'}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -427,7 +440,9 @@ export default function AdminPage() {
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <Badge variant="secondary">{u.requests} requests</Badge>
-                                                    <span className="text-sm text-muted-foreground">${u.cost.toFixed(4)}</span>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {formatKnownCost(u.cost, u.unknownCostRequests)}
+                                                    </span>
                                                 </div>
                                             </div>
                                         );

@@ -137,7 +137,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                   </div>
                   {citation.source && getFirstUrl(citation.source) ? (
                     <a
-                      className="mt-1 block break-all text-primary hover:underline"
+                      className="mt-1 block break-words text-primary hover:underline [overflow-wrap:anywhere]"
                       href={getFirstUrl(citation.source)}
                       target="_blank"
                       rel="noreferrer"

@@ -12,6 +12,7 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 - [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
 - [Source auto-import](./source-auto-import.md)
 - [Streaming AI](./streaming-ai.md)
+- [System prompt improvement](./system-prompt-improvement.md)
 - [Animation polish](./animation-polish.md)
 
 ## Done
