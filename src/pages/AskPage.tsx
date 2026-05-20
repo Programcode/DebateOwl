@@ -125,14 +125,25 @@ export default function AskPage() {
         streamAbortRef.current = controller;
 
         try {
-          result = await streamAskChat(fullMessage, history, mode, config, options, {
+          let pendingText = '';
+        let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+        result = await streamAskChat(fullMessage, history, mode, config, options, {
             onDelta: (text) => {
               receivedStreamText = true;
               partialResponse += text;
-              setStreamingAssistant((current) => current
-                ? { ...current, content: `${current.content}${text}` }
-                : current
-              );
+              pendingText += text;
+              if (!flushTimer) {
+                flushTimer = setTimeout(() => {
+                  const batch = pendingText;
+                  pendingText = '';
+                  flushTimer = null;
+                  setStreamingAssistant((current) => current
+                    ? { ...current, content: `${current.content}${batch}` }
+                    : current
+                  );
+                }, 30);
+              }
             },
             signal: controller.signal,
           });
@@ -232,7 +243,7 @@ export default function AskPage() {
 
   return (
     <div className="container py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <AnimatedSection className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-foreground">{t('ask.title')}</h1>
           <ModelSelector feature="ask" />

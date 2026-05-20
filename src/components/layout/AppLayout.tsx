@@ -55,26 +55,26 @@ export function AppLayout() {
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-0.5 lg:gap-1">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 overflow-x-auto scrollbar-hide">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 end={item.path === '/app'}
                 className={cn(
-                  "motion-press flex items-center gap-1.5 px-2 lg:px-3 py-2 rounded-md text-sm font-medium",
+                  "motion-press flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
                 activeClassName="bg-primary/10 text-primary"
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                <span className="hidden lg:inline">{t(`nav.${item.key}`)}</span>
+                <span className="hidden xl:inline">{t(`nav.${item.key}`)}</span>
               </NavLink>
             ))}
           </nav>
 
-          <div className="flex items-center gap-1.5">
-            <div className="hidden lg:block">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="hidden xl:block">
               <LanguageSwitcher />
             </div>
             <ThemeToggle />
@@ -86,7 +86,7 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-muted-foreground"
+              className="lg:hidden text-muted-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
               aria-expanded={mobileMenuOpen}
@@ -98,7 +98,7 @@ export function AppLayout() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <nav className="motion-reveal md:hidden border-t border-border bg-card p-4">
+          <nav className="motion-reveal lg:hidden border-t border-border bg-card p-4">
             <div className="grid gap-2">
               {navItems.map((item) => (
                 <NavLink

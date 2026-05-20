@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.ai]
 verify_jwt = false
 
+[functions.ai-stream]
+verify_jwt = false
+
 [functions.admin]
 verify_jwt = false
 
@@ -22,6 +25,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.redeem-promo]
+verify_jwt = false
+
+[functions.import-source]
 verify_jwt = false
 
 # Stripe webhook calls come from Stripe (no Supabase JWT), so gateway JWT
