@@ -429,14 +429,14 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
       <div className="shrink-0 border-t border-border p-4 space-y-3">
         <ModelSelector feature="ask" showLabel className="max-w-xs" />
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             {modeOptions.map((option) => (
               <Button
                 key={option.id}
                 variant={mode === option.id ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setMode(option.id)}
-                className="text-xs transition-all duration-200"
+                className="text-xs transition-all duration-200 shrink-0"
               >
                 <option.icon className="mr-1 h-3 w-3" />
                 {t(option.labelKey)}
