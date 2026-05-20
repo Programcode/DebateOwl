@@ -23,7 +23,7 @@ import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 
 export default function GeneratePage() {
-  const { generateResult, generateLoading, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData } = useSessionStore();
+  const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
   const askConfig = getFeatureConfig('ask');
@@ -39,6 +39,7 @@ export default function GeneratePage() {
     try {
       const result = await generateCase(data, config);
       setGenerateResult(result);
+      toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to generate case:', error);
 
@@ -60,9 +61,31 @@ export default function GeneratePage() {
   };
 
   const handleRegenerateSection = (section: string) => {
-    // For now, regenerate entire case
-    // TODO: Implement section-specific regeneration
-    console.log('Regenerate section:', section);
+    const data = { ...generateForm } as Partial<GenerateInput>;
+    if (!data.motion || !generateResult) {
+      toast({ title: t('generate.regenerateUnavailable', 'Cannot regenerate yet'), description: t('generate.regenerateUnavailableDesc', 'Generate a case first, then retry a section.'), variant: 'destructive' });
+      return;
+    }
+
+    setGenerateLoading(true);
+    void generateCase(data as GenerateInput, config)
+      .then((next) => {
+        setGenerateResult({
+          ...generateResult,
+          ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
+          ...(section === 'contentions' ? { contentions: next.contentions } : {}),
+          ...(section === 'opponent' ? { predictedOpponentCase: next.predictedOpponentCase } : {}),
+          ...(section === 'counters' ? { counters: next.counters } : {}),
+          ...(section === 'exordio' ? { exordio: next.exordio } : {}),
+          metadata: next.metadata,
+        });
+        toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
+      })
+      .catch((error) => {
+        console.error('Failed to regenerate section:', error);
+        toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: 'destructive' });
+      })
+      .finally(() => setGenerateLoading(false));
   };
 
   const handleSave = () => {
@@ -251,7 +274,7 @@ export default function GeneratePage() {
           <AnimatedSection delay={150}>
             {generateLoading ? (
               <div key="generate-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
-                <StreamingIndicator messages={['Researching sources...', 'Building arguments...', 'Structuring case...', 'Adding evidence...', 'Finalizing...']} />
+                <StreamingIndicator messages={['Reading the motion...', 'Checking source quality...', 'Building warrant chains...', 'Writing speech-ready impacts...', 'Preparing counters...', 'Finalizing the case...']} />
               </div>
             ) : generateResult ? (
               <div key="generate-results" className="motion-swap space-y-4">

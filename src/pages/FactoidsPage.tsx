@@ -28,6 +28,7 @@ export default function FactoidsPage() {
     try {
       const result = await factoids(data, config);
       setFactoidsResult(result);
+      toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to find factoids:', error);
       if (!subError.handleSubscriptionError(error)) {
@@ -109,7 +110,7 @@ export default function FactoidsPage() {
           <AnimatedSection delay={150}>
             {factoidsLoading ? (
               <div key="factoids-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
-                <StreamingIndicator messages={['Searching sources...', 'Verifying citations...', 'Building context...', 'Finalizing...']} />
+                <StreamingIndicator messages={['Searching matching sources...', 'Filtering weak citations...', 'Opening source pages...', 'Verifying URLs...', 'Writing debate use notes...', 'Finalizing evidence...']} />
               </div>
             ) : factoidsResult ? (
               <div key="factoids-results" className="motion-swap">

@@ -29,6 +29,7 @@ export default function BrainstormPage() {
     try {
       const result = await brainstorm(data, config);
       setBrainstormResult(result);
+      toast({ title: t('brainstorm.complete', 'Brainstorm complete'), description: t('brainstorm.completeDesc', 'Your argument angles are ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to brainstorm:', error);
       if (!subError.handleSubscriptionError(error)) {
@@ -107,7 +108,7 @@ export default function BrainstormPage() {
           <AnimatedSection delay={150}>
             {brainstormLoading ? (
               <div key="brainstorm-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
-                <StreamingIndicator messages={['Exploring angles...', 'Generating ideas...', 'Ranking options...', 'Finalizing...']} />
+                <StreamingIndicator messages={['Mapping the motion...', 'Looking for clash angles...', 'Testing strategic tradeoffs...', 'Ranking the strongest ideas...', 'Writing next steps...', 'Finalizing brainstorm...']} />
               </div>
             ) : brainstormResult ? (
               <div key="brainstorm-results" className="motion-swap">

@@ -29,6 +29,7 @@ export default function AttackPage() {
     try {
       const result = await attackCase(data, config);
       setAttackResult(result);
+      toast({ title: t('attack.complete', 'Attack analysis complete'), description: t('attack.completeDesc', 'The critique is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to attack case:', error);
       if (!subError.handleSubscriptionError(error)) {
@@ -108,7 +109,7 @@ export default function AttackPage() {
           <AnimatedSection delay={150}>
             {attackLoading ? (
               <div key="attack-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
-                <StreamingIndicator messages={['Analyzing argument...', 'Finding weaknesses...', 'Preparing critique...', 'Finalizing...']} />
+                <StreamingIndicator messages={['Reading the case...', 'Testing warrants...', 'Checking fallacies...', 'Finding turns...', 'Writing cross-ex questions...', 'Finalizing the critique...']} />
               </div>
             ) : attackResult ? (
               <div key="attack-results" className="motion-swap">
