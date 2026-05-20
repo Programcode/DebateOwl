@@ -78,6 +78,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             ? 'bg-primary text-primary-foreground rounded-br-sm'
             : 'bg-card border border-border rounded-bl-sm'
         )}
+        data-streaming={message.isStreaming ? 'true' : undefined}
       >
         {!isUser && onSave && (
           <Button
@@ -281,10 +282,16 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   const [files, setFiles] = useState<File[]>([]);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const { isListening, transcript, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
   const hasStreamingMessage = messages.some((message) => message.isStreaming);
+
+  // Auto-scroll to bottom on new messages or streaming content
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
+  }, [messages]);
 
   // Cycle through loading messages
   useEffect(() => {
@@ -361,7 +368,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
   };
 
   return (
-    <Card className="flex flex-col h-[700px] border-primary/20">
+    <Card className="flex flex-col h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
       <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -412,6 +419,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveSource }: 
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </ScrollArea>
