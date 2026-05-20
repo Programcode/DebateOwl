@@ -119,7 +119,7 @@ export default function GeneratePage() {
 
   const handleImportFlowchart = () => {
     if (!generateResult?.caseStructure || !generateResult?.contentions) {
-      toast({ title: "Import Failed", description: "No valid case data to import.", variant: "destructive" });
+      toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartNoData'), variant: "destructive" });
       return;
     }
 
@@ -222,10 +222,10 @@ export default function GeneratePage() {
 
       setPendingFlowchartData({ nodes, edges });
       navigate('/app/flowchart');
-      toast({ title: "Case Imported", description: "Your case has been imported to Flowcharts." });
+      toast({ title: t('generate.flowchartImported'), description: t('generate.flowchartImportedDesc') });
     } catch (error) {
       console.error('Failed to import flowchart:', error);
-      toast({ title: "Import Failed", description: "Could not build flowchart from case data.", variant: "destructive" });
+      toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartImportFailedDesc'), variant: "destructive" });
     }
   };
 
