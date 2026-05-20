@@ -122,10 +122,10 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
           </Badge>
-          {modelText && <Badge variant="outline">{modelText}</Badge>}
           <span className="text-xs text-muted-foreground">
-            {t('generateResults.generated')} {result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : 'N/A'}
-            {durationText ? ` • ${durationText}` : ''}
+            {modelText ? `${modelText} • ` : ''}
+            {durationText ? `${durationText} • ` : ''}
+            {result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : ''}
           </span>
         </div>
         <div className="flex flex-wrap gap-2" data-tour="export-section">

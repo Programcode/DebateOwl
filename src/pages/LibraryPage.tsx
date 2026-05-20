@@ -162,17 +162,9 @@ export default function LibraryPage() {
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
-  const folders = Array.from(new Set(['General', ...sourceLibrary.map((source) => source.folder || 'General')])).sort();
-  const visibleSources = selectedFolder === 'all'
-    ? sourceLibrary
-    : sourceLibrary.filter((source) => (source.folder || 'General') === selectedFolder);
-  const handleCreateFolder = () => {
-    const folder = newFolderName.trim();
-    if (!folder) return;
-    setNewSource((source) => ({ ...source, folder }));
-    setSelectedFolder(folder);
-    setNewFolderName('');
-  };
+  const folders: string[] = [];
+  const visibleSources = sourceLibrary;
+  const handleCreateFolder = () => {};
   const handleRemoveSource = (source: Source) => {
     void Promise.resolve(removeSource(source.id)).then(() => {
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
@@ -287,63 +279,19 @@ export default function LibraryPage() {
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('libraryPage.titleLabel')}</Label>
-                  <Input
-                    placeholder={t('libraryPage.titlePlaceholder')}
-                    value={newSource.title}
-                    onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('libraryPage.originLabel')}</Label>
-                  <Input
-                    placeholder={t('libraryPage.originPlaceholder')}
-                    value={newSource.origin}
-                    onChange={(e) => setNewSource({ ...newSource, origin: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
-                <div className="space-y-2">
-                  <Label>{t('libraryPage.folder', 'Folder')}</Label>
-                  <Select value={newSource.folder} onValueChange={(folder) => setNewSource({ ...newSource, folder })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {folders.map((folder) => (
-                        <SelectItem key={folder} value={folder}>{folder}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-folder">{t('libraryPage.newFolder', 'New folder')}</Label>
-                  <Input
-                    id="new-folder"
-                    value={newFolderName}
-                    onChange={(event) => setNewFolderName(event.target.value)}
-                    placeholder={t('libraryPage.newFolderPlaceholder', 'e.g., Economy evidence')}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        handleCreateFolder();
-                      }
-                    }}
-                  />
-                </div>
-                <Button type="button" variant="outline" className="self-end" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
-                  <FolderPlus className="h-4 w-4" />
-                  <span className="sr-only">{t('libraryPage.createFolder', 'Create folder')}</span>
-                </Button>
+              <div className="space-y-2">
+                <Label>{t('libraryPage.titleLabel')}</Label>
+                <Input
+                  placeholder={t('libraryPage.titlePlaceholder')}
+                  value={newSource.title}
+                  onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>{t('libraryPage.contentLabel')}</Label>
                 <Textarea
                   placeholder={t('libraryPage.contentPlaceholder')}
-                  className="min-h-[200px]"
+                  className="min-h-[120px]"
                   value={newSource.content}
                   onChange={(e) => setNewSource({ ...newSource, content: e.target.value })}
                 />
@@ -361,17 +309,6 @@ export default function LibraryPage() {
                 <CardDescription>{t('libraryPage.yourKBDesc')}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-                  <SelectTrigger className="h-8 w-[150px]" aria-label={t('libraryPage.folderFilter', 'Filter folder')}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('libraryPage.allFolders', 'All folders')}</SelectItem>
-                    {folders.map((folder) => (
-                      <SelectItem key={folder} value={folder}>{folder}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                   <Database className="h-3 w-3 mr-1" />
                   {visibleSources.length} {t('libraryPage.sourcesCount')}
@@ -414,10 +351,8 @@ export default function LibraryPage() {
                                 <h4 className="font-semibold">{source.title}</h4>
                               )}
                               <Badge variant="outline" className="text-[10px] py-0">{source.type.toUpperCase()}</Badge>
-                              <Badge variant="secondary" className="text-[10px] py-0">{source.folder || 'General'}</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground">{t('libraryPage.added')} {formatEuropeanDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
-                            <p className="text-sm text-foreground line-clamp-2 mt-2">{source.content}</p>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-4 ml-4 shrink-0">

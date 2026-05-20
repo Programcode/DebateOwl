@@ -38,6 +38,8 @@ export default function GeneratePage() {
     setGenerateLoading(true);
     try {
       const result = await generateCase(data, config);
+      // Always stamp with real local time
+      if (result.metadata) result.metadata.generatedAt = new Date().toISOString();
       setGenerateResult(result);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
       setTimeout(() => document.getElementById('generate-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -62,14 +64,23 @@ export default function GeneratePage() {
   };
 
   const handleRegenerateSection = (section: string) => {
-    const data = { ...generateForm } as Partial<GenerateInput>;
-    if (!data.motion || !generateResult) {
+    if (!generateForm?.motion || !generateResult) {
       toast({ title: t('generate.regenerateUnavailable', 'Cannot regenerate yet'), description: t('generate.regenerateUnavailableDesc', 'Generate a case first, then retry a section.'), variant: 'destructive' });
       return;
     }
 
+    const data: GenerateInput = {
+      motion: generateForm.motion,
+      side: generateForm.side || 'pro',
+      format: generateForm.format || 'custom',
+      role: generateForm.role || 'intro',
+      length: generateForm.length || 'standard',
+      audience: generateForm.audience || 'intermediate',
+      tone: generateForm.tone || 'formal',
+    };
+
     setGenerateLoading(true);
-    void generateCase(data as GenerateInput, config)
+    void generateCase(data, config)
       .then((next) => {
         setGenerateResult({
           ...generateResult,

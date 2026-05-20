@@ -204,17 +204,15 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             addParagraph(`${i18n.t('export.burdenOfProof')}: ${result.caseStructure.burdenOfProof}`);
         }
 
-        // Arguments Table
+        // Arguments
         if (result.contentions?.length) {
             addSectionTitle(i18n.t('export.arguments'), COLORS.success);
-            const rows = result.contentions.map((c, i) => [
-                `#${i + 1}`,
-                c.claim || '',
-                c.reasoning || '',
-                c.evidence || '',
-                c.impact || '',
-            ]);
-            addTable(['#', 'Claim', i18n.t('export.reasoning'), i18n.t('export.evidence'), i18n.t('export.impact')], rows, { headerColor: COLORS.success });
+            result.contentions.forEach((c, i) => {
+                addParagraph(`Contention #${i + 1}: ${c.claim || ''}`, 0);
+                if (c.reasoning) addParagraph(`${i18n.t('export.reasoning')}: ${c.reasoning}`, 8);
+                if (c.evidence) addParagraph(`${i18n.t('export.evidence')}: ${c.evidence}`, 8);
+                if (c.impact) addParagraph(`${i18n.t('export.impact')}: ${c.impact}`, 8);
+            });
         }
 
         // Predicted Opponent Case
@@ -226,12 +224,11 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
         // Counters
         if (result.counters?.length) {
             addSectionTitle(i18n.t('export.counters'), COLORS.danger);
-            const counterRows = result.counters.map((c) => [
-                c.targetArgument || '',
-                c.counterpoint || '',
-                c.rebuttal || '',
-            ]);
-            addTable([i18n.t('export.target'), i18n.t('export.counter'), i18n.t('export.rebuttal')], counterRows, { headerColor: COLORS.danger });
+            result.counters.forEach((c) => {
+                addParagraph(`${i18n.t('export.target')}: ${c.targetArgument || ''}`, 0);
+                if (c.counterpoint) addParagraph(`${i18n.t('export.counter')}: ${c.counterpoint}`, 8);
+                if (c.rebuttal) addParagraph(`${i18n.t('export.rebuttal')}: ${c.rebuttal}`, 8);
+            });
         }
 
         addFooter();
