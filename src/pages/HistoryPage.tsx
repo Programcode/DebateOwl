@@ -88,7 +88,25 @@ export default function HistoryPage() {
                 <CardDescription>{t('historyPage.casesDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
-                {store.savedCases.length === 0 ? (
+                {(store.autosavedCases?.length ?? 0) > 0 && (
+                  <div className="mb-6">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">{t('historyPage.autosaved', 'Autosaved')}</p>
+                    <div className="space-y-3">
+                      {(store.autosavedCases || []).map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 border border-dashed rounded-lg bg-muted/30">
+                          <div className="space-y-1">
+                            <h4 className="font-medium text-sm">{item.title}</h4>
+                            <span className="text-xs text-muted-foreground">{formatEuropeanDateTime(item.createdAt)}</span>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => { store.setGenerateResult(item.data); navigate('/app/generate'); }}>
+                            <Eye className="h-4 w-4 mr-1" /> {t('historyPage.load')}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {store.savedCases.length === 0 && (store.autosavedCases?.length ?? 0) === 0 ? (
                   <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
