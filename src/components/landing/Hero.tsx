@@ -1,3 +1,4 @@
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
@@ -115,71 +116,182 @@ const Hero = () => {
     );
 };
 
-const HeroPreview = () => (
-    <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.35 }}
-        className="relative"
-    >
-        <div className="absolute -inset-8 bg-gradient-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-                <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                </div>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Generate Page Preview</p>
-            </div>
-            <div className="grid gap-4 bg-background/95 p-5 lg:grid-cols-[1.1fr_0.9fr]">
-                <div className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4">
-                    <h3 className="text-base font-semibold text-foreground">Case Generator</h3>
-                    <div className="space-y-3">
-                        <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Resolution</p>
-                            <p className="mt-1 text-sm text-foreground">THBT social media should be treated as a public utility.</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Side</p>
-                                <p className="mt-1 text-sm text-foreground">Affirmative</p>
-                            </div>
-                            <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Contentions</p>
-                                <p className="mt-1 text-sm text-foreground">3</p>
-                            </div>
-                        </div>
-                        <div className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">
-                            Generate Case
-                        </div>
+// Animation phases for the demo loop
+type Phase = "idle" | "shimmer" | "generating" | "thesis" | "contention" | "impact";
+
+const PHASE_TIMINGS: Record<Phase, number> = {
+    idle: 800,
+    shimmer: 1200,
+    generating: 1200,
+    thesis: 1800,
+    contention: 1800,
+    impact: 1800,
+};
+
+const OUTPUT_CONTENT = {
+    thesis: "Regulating major platforms improves transparency and protects public discourse.",
+    contention: "Public-utility standards reduce arbitrary moderation and increase accountability.",
+    impact: "Better democratic participation through fairer information access.",
+};
+
+const TypewriterText = ({ text, durationMs }: { text: string; durationMs: number }) => {
+    const [displayed, setDisplayed] = React.useState("");
+    const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+    React.useEffect(() => {
+        let i = 0;
+        setDisplayed("");
+        const charInterval = durationMs / text.length;
+        intervalRef.current = setInterval(() => {
+            i++;
+            setDisplayed(text.slice(0, i));
+            if (i >= text.length && intervalRef.current) clearInterval(intervalRef.current);
+        }, charInterval);
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    }, [text, durationMs]);
+
+    return <>{displayed}<span className="animate-pulse">|</span></>;
+};
+
+const HeroPreview = () => {
+    const [phase, setPhase] = React.useState<Phase>("idle");
+
+    React.useEffect(() => {
+        const phases: Phase[] = ["idle", "shimmer", "generating", "thesis", "contention", "impact"];
+        let idx = 0;
+        let timeout: ReturnType<typeof setTimeout>;
+
+        const advance = () => {
+            idx = (idx + 1) % phases.length;
+            setPhase(phases[idx]);
+            timeout = setTimeout(advance, PHASE_TIMINGS[phases[idx]]);
+        };
+
+        timeout = setTimeout(advance, PHASE_TIMINGS[phases[0]]);
+        return () => clearTimeout(timeout);
+    }, []);
+
+    const showThesis = phase === "thesis" || phase === "contention" || phase === "impact";
+    const showContention = phase === "contention" || phase === "impact";
+    const showImpact = phase === "impact";
+    const isGenerating = phase === "generating";
+    const isShimmer = phase === "shimmer";
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.35 }}
+            className="relative"
+        >
+            <div className="absolute -inset-8 bg-gradient-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-2xl backdrop-blur-xl">
+                {/* Browser chrome */}
+                <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                     </div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Generate Page Preview</p>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Live Output Snapshot</p>
-                    <div className="rounded-md border border-emerald-200/80 bg-emerald-50/80 p-3 dark:border-emerald-900 dark:bg-emerald-950/60">
-                        <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Thesis</p>
-                        <p className="mt-1 text-xs text-emerald-900/90 dark:text-emerald-100/90">
-                            Regulating major platforms improves transparency and protects public discourse.
-                        </p>
+                <div className="grid gap-4 bg-background/95 p-5 lg:grid-cols-[1.1fr_0.9fr]">
+                    {/* Left panel — static inputs */}
+                    <div className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4">
+                        <h3 className="text-base font-semibold text-foreground">Case Generator</h3>
+                        <div className="space-y-3">
+                            <div className="rounded-md border border-border/70 bg-background px-3 py-2">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Resolution</p>
+                                <p className="mt-1 text-sm text-foreground">THBT social media should be treated as a public utility.</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="rounded-md border border-border/70 bg-background px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Side</p>
+                                    <p className="mt-1 text-sm text-foreground">Affirmative</p>
+                                </div>
+                                <div className="rounded-md border border-border/70 bg-background px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Contentions</p>
+                                    <p className="mt-1 text-sm text-foreground">3</p>
+                                </div>
+                            </div>
+                            {/* Generate button with shimmer effect */}
+                            <div className={`relative overflow-hidden rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-shadow ${isShimmer ? "shadow-[0_0_16px_4px_rgba(var(--primary-rgb,99,102,241),0.5)]" : ""}`}>
+                                Generate Case
+                                {isShimmer && (
+                                    <span className="absolute inset-0 animate-[shimmer_1s_ease-in-out] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                                )}
+                            </div>
+                        </div>
                     </div>
-                    <div className="rounded-md border border-sky-200/80 bg-sky-50/80 p-3 dark:border-sky-900 dark:bg-sky-950/60">
-                        <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Contention 1</p>
-                        <p className="mt-1 text-xs text-sky-900/90 dark:text-sky-100/90">
-                            Public-utility standards reduce arbitrary moderation and increase accountability.
-                        </p>
-                    </div>
-                    <div className="rounded-md border border-amber-200/80 bg-amber-50/80 p-3 dark:border-amber-900 dark:bg-amber-950/60">
-                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Impact</p>
-                        <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
-                            Better democratic participation through fairer information access.
-                        </p>
+
+                    {/* Right panel — animated output */}
+                    <div className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Live Output</p>
+
+                        {isGenerating && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="flex items-center gap-2 rounded-md border border-border/70 bg-background p-3"
+                            >
+                                <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                                <span className="text-xs text-muted-foreground animate-pulse">Generating...</span>
+                            </motion.div>
+                        )}
+
+                        {showThesis && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="rounded-md border border-emerald-200/80 bg-emerald-50/80 p-3 dark:border-emerald-900 dark:bg-emerald-950/60"
+                            >
+                                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Thesis</p>
+                                <p className="mt-1 text-xs text-emerald-900/90 dark:text-emerald-100/90">
+                                    {phase === "thesis" ? <TypewriterText text={OUTPUT_CONTENT.thesis} durationMs={1500} /> : OUTPUT_CONTENT.thesis}
+                                </p>
+                            </motion.div>
+                        )}
+
+                        {showContention && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="rounded-md border border-sky-200/80 bg-sky-50/80 p-3 dark:border-sky-900 dark:bg-sky-950/60"
+                            >
+                                <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Contention 1</p>
+                                <p className="mt-1 text-xs text-sky-900/90 dark:text-sky-100/90">
+                                    {phase === "contention" ? <TypewriterText text={OUTPUT_CONTENT.contention} durationMs={1500} /> : OUTPUT_CONTENT.contention}
+                                </p>
+                            </motion.div>
+                        )}
+
+                        {showImpact && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="rounded-md border border-amber-200/80 bg-amber-50/80 p-3 dark:border-amber-900 dark:bg-amber-950/60"
+                            >
+                                <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Impact</p>
+                                <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
+                                    <TypewriterText text={OUTPUT_CONTENT.impact} durationMs={1500} />
+                                </p>
+                            </motion.div>
+                        )}
+
+                        {(phase === "idle" || phase === "shimmer") && (
+                            <div className="flex h-24 items-center justify-center rounded-md border border-dashed border-border/70 bg-background/50">
+                                <p className="text-xs text-muted-foreground">Output will appear here...</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-        </div>
-    </motion.div>
-);
+        </motion.div>
+    );
+};
 
 export default Hero;
