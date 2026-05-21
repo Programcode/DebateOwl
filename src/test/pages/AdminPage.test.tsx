@@ -63,7 +63,7 @@ describe('AdminPage Integration', () => {
     it('renders loading state initially', async () => {
         globalFetch.mockImplementation(() => new Promise(() => { }));
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AdminPage />
             </BrowserRouter>
         );
@@ -78,7 +78,7 @@ describe('AdminPage Integration', () => {
         });
 
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AdminPage />
             </BrowserRouter>
         );
@@ -122,7 +122,7 @@ describe('AdminPage Integration', () => {
         });
 
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AdminPage />
             </BrowserRouter>
         );
@@ -168,7 +168,7 @@ describe('AdminPage Integration', () => {
         });
 
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AdminPage />
             </BrowserRouter>
         );
@@ -231,7 +231,7 @@ describe('AdminPage Integration', () => {
         });
 
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AdminPage />
             </BrowserRouter>
         );

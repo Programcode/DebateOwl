@@ -125,7 +125,7 @@ export async function mockAttackCase(caseText: string): Promise<AttackOutput> {
         description: 'Weighing mechanism is unclear',
         whyWeak: 'Without clear weighing, judges cannot easily compare your impacts to opponent\'s.',
         howOpponentAttacks: '"They haven\'t told you why their impacts matter more than ours."',
-        improvedVersion: 'Add explicit weighing: magnitude, probability, timeframe, and reversibility comparisons.',
+        improvedVersion: 'Add a short weighing paragraph that explains who is affected, how likely the harm is, when it happens, and why that matters more.',
       },
     ],
     fallaciesDetected: [
@@ -160,9 +160,9 @@ export async function mockAttackCase(caseText: string): Promise<AttackOutput> {
     weighingAnalysis: {
       currentWeighing: 'The case mentions importance but lacks comparative analysis.',
       missingComparisons: [
-        'Magnitude: How many people affected vs. opponent\'s claims',
-        'Probability: Likelihood of outcomes materializing',
-        'Timeframe: When impacts occur and duration',
+        'How many people are affected compared with the opponent\'s claims',
+        'How likely the outcomes are to happen in practice',
+        'When the impacts happen and how long they last',
       ],
       improvementSuggestions: [
         'Add a dedicated weighing paragraph before conclusion',
@@ -250,7 +250,7 @@ export async function mockBrainstorm(motion: string, outputMode: string): Promis
       'Test arguments with practice judges',
     ],
     warningsAndTradeoffs: [
-      'Avoid combining too many angles—focus wins debates',
+      'Avoid combining too many angles, focus wins debates',
       'Economic arguments need current data to be credible',
       'Rights-based framing works best with clear real-world harms',
     ],

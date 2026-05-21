@@ -46,6 +46,7 @@ async function getUserId() {
 
 async function upsertSettings(payload: {
   language: string;
+  output_language: string;
   theme: string;
   feature_configs: Record<string, ProviderConfig>;
   custom_system_prompt: string | null;
@@ -74,6 +75,7 @@ export const useSettingsStore = create<SettingsState>()(
         void i18n.changeLanguage(language);
         void upsertSettings({
           language,
+          output_language: get().outputLanguage,
           theme: get().theme,
           feature_configs: get().featureConfigs,
           custom_system_prompt: get().customSystemPrompt ?? null,
@@ -83,6 +85,7 @@ export const useSettingsStore = create<SettingsState>()(
         set({ outputLanguage });
         void upsertSettings({
           language: get().language,
+          output_language: outputLanguage,
           theme: get().theme,
           feature_configs: get().featureConfigs,
           custom_system_prompt: get().customSystemPrompt ?? null,
@@ -92,6 +95,7 @@ export const useSettingsStore = create<SettingsState>()(
         set({ theme });
         void upsertSettings({
           language: get().language,
+          output_language: get().outputLanguage,
           theme,
           feature_configs: get().featureConfigs,
           custom_system_prompt: get().customSystemPrompt ?? null,
@@ -101,6 +105,7 @@ export const useSettingsStore = create<SettingsState>()(
         set({ customSystemPrompt: prompt });
         void upsertSettings({
           language: get().language,
+          output_language: get().outputLanguage,
           theme: get().theme,
           feature_configs: get().featureConfigs,
           custom_system_prompt: prompt || null,
@@ -119,6 +124,7 @@ export const useSettingsStore = create<SettingsState>()(
         }));
         void upsertSettings({
           language: get().language,
+          output_language: get().outputLanguage,
           theme: get().theme,
           feature_configs: get().featureConfigs,
           custom_system_prompt: get().customSystemPrompt ?? null,
@@ -145,6 +151,7 @@ export const useSettingsStore = create<SettingsState>()(
 
         set({
           language: (data.language as 'en' | 'es' | 'hu') || 'en',
+          outputLanguage: (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en',
           theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
           featureConfigs: mergedConfigs,
           customSystemPrompt: data.custom_system_prompt || undefined,
@@ -154,6 +161,7 @@ export const useSettingsStore = create<SettingsState>()(
       resetLocalData: () => {
         set({
           language: 'en',
+          outputLanguage: 'en',
           theme: 'system',
           customSystemPrompt: undefined,
           featureConfigs: getDefaultFeatureConfigs(),

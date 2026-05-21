@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function LibraryPage() {
   const { t } = useTranslation();
-  const { sourceLibrary, addSource, removeSource, toggleSource, clearLibrary } = useSessionStore();
+  const { sourceLibrary, sourceFolders, addSource, createSourceFolder, removeSource, toggleSource, clearLibrary } = useSessionStore();
   const { toast } = useToast();
 
   const [isAdding, setIsAdding] = useState(false);
@@ -162,11 +162,25 @@ export default function LibraryPage() {
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
-  const folders = Array.from(new Set(sourceLibrary.map(s => s.folder || 'General').filter(Boolean))).sort();
+  const folders = Array.from(new Set([
+    ...(sourceFolders || ['General']),
+    ...sourceLibrary.map(s => s.folder || 'General').filter(Boolean),
+  ])).sort();
   const visibleSources = selectedFolder === 'all'
     ? sourceLibrary
     : sourceLibrary.filter(s => (s.folder || 'General') === selectedFolder);
-  const handleCreateFolder = () => {};
+  const handleCreateFolder = () => {
+    const folder = newFolderName.trim();
+    if (!folder) return;
+    createSourceFolder(folder);
+    setNewSource({ ...newSource, folder });
+    setSelectedFolder(folder);
+    setNewFolderName('');
+    toast({
+      title: t('libraryPage.folderCreated', 'Folder created'),
+      description: t('libraryPage.folderCreatedDesc', 'New sources can now be saved there.'),
+    });
+  };
   const handleRemoveSource = (source: Source) => {
     void Promise.resolve(removeSource(source.id)).then(() => {
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
@@ -196,6 +210,29 @@ export default function LibraryPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex gap-1">
+                <Input
+                  aria-label={t('libraryPage.newFolder', 'New Folder')}
+                  className="h-9 w-36"
+                  placeholder={t('libraryPage.newFolderPlaceholder', 'Folder name...')}
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateFolder();
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={handleCreateFolder}
+                  disabled={!newFolderName.trim()}
+                  aria-label={t('libraryPage.createFolder', 'Create folder')}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="text-destructive" disabled={isClearing}>
@@ -330,12 +367,19 @@ export default function LibraryPage() {
                       value={newFolderName}
                       onChange={(e) => setNewFolderName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newFolderName.trim()) {
-                          setNewSource({ ...newSource, folder: newFolderName.trim() });
-                          setNewFolderName('');
-                        }
+                        if (e.key === 'Enter') handleCreateFolder();
                       }}
                     />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleCreateFolder}
+                      disabled={!newFolderName.trim()}
+                      aria-label={t('libraryPage.createFolder', 'Create folder')}
+                    >
+                      <FolderPlus className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -162,7 +162,7 @@ describe('Conversation Pages', () => {
     mockAskChat.mockResolvedValueOnce({ response: 'Try value framing.', followUpQuestions: [], uncertainties: [] });
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AskPage />
       </BrowserRouter>
     );
@@ -195,7 +195,7 @@ describe('Conversation Pages', () => {
     mockIsTimeoutError.mockReturnValueOnce(true);
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AskPage />
       </BrowserRouter>
     );
@@ -217,7 +217,7 @@ describe('Conversation Pages', () => {
     });
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AskPage />
       </BrowserRouter>
     );
@@ -238,7 +238,7 @@ describe('Conversation Pages', () => {
 
   it('AskPage saves source to library', () => {
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AskPage />
       </BrowserRouter>
     );
@@ -253,7 +253,7 @@ describe('Conversation Pages', () => {
     mockBrainstorm.mockResolvedValueOnce({ needsMoreInfo: false, nextSteps: ['A'], warningsAndTradeoffs: [] });
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <BrainstormPage />
       </BrowserRouter>
     );
@@ -279,7 +279,7 @@ describe('Conversation Pages', () => {
     mockAskChat.mockResolvedValueOnce({ response: 'Expand this angle.', followUpQuestions: [], uncertainties: [] });
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <BrainstormPage />
       </BrowserRouter>
     );
@@ -301,7 +301,7 @@ describe('Conversation Pages', () => {
     mockFactoids.mockResolvedValueOnce({ factoids: [], searchSuggestions: [], warnings: [], verificationStatus: 'complete' });
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <FactoidsPage />
       </BrowserRouter>
     );
@@ -327,7 +327,7 @@ describe('Conversation Pages', () => {
     mockAskChat.mockResolvedValueOnce({ response: 'Use this evidence in rebuttal.', followUpQuestions: [], uncertainties: [] });
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <FactoidsPage />
       </BrowserRouter>
     );
@@ -351,7 +351,7 @@ describe('Conversation Pages', () => {
     };
 
     render(
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <FactoidsPage />
       </BrowserRouter>
     );

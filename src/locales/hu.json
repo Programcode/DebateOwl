@@ -31,6 +31,9 @@
     "flowchart": "Érvek térképezése",
     "history": "Mentett elemek"
   },
+  "common": {
+    "export": "Exportálás"
+  },
   "voice": {
     "permissionDenied": "A mikrofonhozzáférés blokkolva van. Engedélyezd a mikrofont a böngésző beállításaiban, majd próbáld újra.",
     "startFailed": "A diktálás nem indítható el. Ellenőrizd a mikrofont, majd próbáld újra."
@@ -858,6 +861,8 @@
     "newFolder": "Új mappa",
     "newFolderPlaceholder": "Mappa neve...",
     "createFolder": "Mappa létrehozása",
+    "folderCreated": "Mappa létrehozva",
+    "folderCreatedDesc": "Az új forrásokat már ide is mentheted.",
     "folderFilter": "Mappaszűrő",
     "allFolders": "Minden mappa",
     "importUrlRequired": "Adj meg egy importálandó URL-t.",

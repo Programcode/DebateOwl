@@ -486,6 +486,10 @@ Deno.serve(async (req) => {
 
         const output = {
           response: accumulated.trim(),
+          model,
+          provider: resolvedProvider,
+          durationMs: Date.now() - startedAt,
+          generatedAt: new Date().toISOString(),
           followUpQuestions: [],
           uncertainties: accumulated.trim() ? [] : ["The model returned an empty streamed response."],
         };

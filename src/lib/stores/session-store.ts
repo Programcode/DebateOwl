@@ -74,6 +74,7 @@ interface SessionState {
   autosavedAttacks: SavedItem<AttackOutput>[];
   autosavedBrainstorms: SavedItem<BrainstormOutput>[];
   autosavedFactoids: SavedItem<FactoidsOutput>[];
+  sourceFolders: string[];
   sourceLibrary: Source[];
 
   // Persisted Form State
@@ -120,6 +121,7 @@ interface SessionState {
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
+  createSourceFolder: (folder: string) => void;
   removeSource: (id: string) => Promise<void>;
   toggleSource: (id: string) => Promise<void>;
   clearLibrary: () => Promise<void>;
@@ -183,9 +185,22 @@ function mergeSavedItems<T>(localItems: SavedItem<T>[], serverItems: SavedItem<T
 function mergeSources(localSources: Source[], serverSources: Source[]) {
   const merged = new Map<string, Source>();
   [...localSources, ...serverSources].forEach((source) => {
-    merged.set(source.id, source);
+    merged.set(source.id, { ...source, folder: normalizeFolder(source.folder) });
   });
   return Array.from(merged.values()).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function normalizeFolder(folder?: string | null) {
+  const trimmed = folder?.trim();
+  return trimmed || 'General';
+}
+
+function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
+  return Array.from(new Set([
+    'General',
+    ...currentFolders.map(normalizeFolder),
+    ...sources.map((source) => normalizeFolder(source.folder)),
+  ])).sort((a, b) => a.localeCompare(b));
 }
 
 async function getUserId() {
@@ -244,6 +259,7 @@ interface SupabaseSourceRow {
   content: string;
   type: 'url' | 'file' | 'text';
   origin: string | null;
+  folder?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -273,6 +289,7 @@ export const useSessionStore = create<SessionState>()(
       autosavedAttacks: [] as SavedItem<AttackOutput>[],
       autosavedBrainstorms: [] as SavedItem<BrainstormOutput>[],
       autosavedFactoids: [] as SavedItem<FactoidsOutput>[],
+      sourceFolders: ['General'] as string[],
       sourceLibrary: [] as Source[],
 
       generateForm: {},
@@ -290,8 +307,12 @@ export const useSessionStore = create<SessionState>()(
 
       addSource: async (source) => {
         const localId = generateId();
-        const localItem: Source = { ...source, id: localId, createdAt: Date.now(), isActive: true };
-        set((state) => ({ sourceLibrary: [localItem, ...state.sourceLibrary] }));
+        const folder = normalizeFolder(source.folder);
+        const localItem: Source = { ...source, folder, id: localId, createdAt: Date.now(), isActive: true };
+        set((state) => ({
+          sourceFolders: mergeSourceFolders(state.sourceFolders, [localItem]),
+          sourceLibrary: [localItem, ...state.sourceLibrary],
+        }));
 
         const userId = await getUserId();
         if (!userId) return;
@@ -303,6 +324,7 @@ export const useSessionStore = create<SessionState>()(
             content: source.content,
             type: source.type,
             origin: source.origin || null,
+            folder,
             is_active: true,
           })
           .select('*')
@@ -318,7 +340,7 @@ export const useSessionStore = create<SessionState>()(
                   content: data.content,
                   type: data.type,
                   origin: data.origin || undefined,
-                  folder: localItem.folder,
+                  folder: normalizeFolder(data.folder || localItem.folder),
                   isActive: data.is_active,
                   createdAt: toTimestamp(data.created_at),
                 }
@@ -326,6 +348,12 @@ export const useSessionStore = create<SessionState>()(
             ),
           }));
         }
+      },
+      createSourceFolder: (folder) => {
+        const normalized = normalizeFolder(folder);
+        set((state) => ({
+          sourceFolders: mergeSourceFolders([...state.sourceFolders, normalized], state.sourceLibrary),
+        }));
       },
       removeSource: async (id) => {
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((s) => s.id !== id) }));
@@ -703,6 +731,7 @@ export const useSessionStore = create<SessionState>()(
           content: row.content,
           type: row.type,
           origin: row.origin || undefined,
+          folder: normalizeFolder(row.folder),
           isActive: row.is_active,
           createdAt: toTimestamp(row.created_at),
         }));
@@ -726,6 +755,7 @@ export const useSessionStore = create<SessionState>()(
           savedFactoids: mergeSavedItems(state.savedFactoids, serverFactoids),
           savedChats: mergeSavedItems(state.savedChats, serverChats),
           savedFlowcharts: mergeSavedItems(state.savedFlowcharts, serverFlowcharts),
+          sourceFolders: mergeSourceFolders(state.sourceFolders, serverSources),
           sourceLibrary: mergeSources(state.sourceLibrary, serverSources),
         }));
       },
@@ -760,6 +790,7 @@ export const useSessionStore = create<SessionState>()(
           savedFactoids: [],
           savedChats: [],
           savedFlowcharts: [],
+          sourceFolders: ['General'],
           sourceLibrary: [],
         });
       },
@@ -770,6 +801,7 @@ export const useSessionStore = create<SessionState>()(
         savedFactoids: [],
         savedChats: [],
         savedFlowcharts: [],
+        sourceFolders: ['General'],
         sourceLibrary: [],
         generateResult: null,
         attackResult: null,

@@ -111,7 +111,7 @@ describe('GeneratePage Integration', () => {
     it('renders the empty state initially', () => {
         // Override store mock for this test if needed, but default is null result
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -132,7 +132,7 @@ describe('GeneratePage Integration', () => {
         (generateCase as Mock).mockResolvedValue(mockResult);
 
         render(
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <GeneratePage />
             </BrowserRouter>
         );

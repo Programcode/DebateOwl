@@ -31,6 +31,9 @@
     "flowchart": "Mapear argumentos",
     "history": "Elementos guardados"
   },
+  "common": {
+    "export": "Exportar"
+  },
   "voice": {
     "permissionDenied": "El acceso al micrófono está bloqueado. Permite el acceso al micrófono en el navegador e inténtalo de nuevo.",
     "startFailed": "No se pudo iniciar el dictado. Revisa el micrófono e inténtalo de nuevo."
@@ -858,6 +861,8 @@
     "newFolder": "Nueva carpeta",
     "newFolderPlaceholder": "Nombre de carpeta...",
     "createFolder": "Crear carpeta",
+    "folderCreated": "Carpeta creada",
+    "folderCreatedDesc": "Ahora puedes guardar nuevas fuentes ahí.",
     "folderFilter": "Filtro de carpeta",
     "allFolders": "Todas las carpetas",
     "importUrlRequired": "Introduce una URL para importar.",

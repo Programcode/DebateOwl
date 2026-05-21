@@ -681,11 +681,16 @@ async function deepResearchInner(
   const preferredSourceType = options.preferredSourceType || "any";
   const seedQueries = buildSearchQueries(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
   const allResults: Array<ExaResult & { query: string }> = [];
+  const matchesPreferredSourceType = (result: RankedSearchResult) => (
+    preferredSourceType === "any" ||
+    result.sourceType === preferredSourceType
+  );
 
   const seedResults = await Promise.all(seedQueries.map(async (query) => {
     const results = await exaSearch(query);
     const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
-    context.searches.push({ query, results: formatRankedSearchResults(ranked) });
+    const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
+    context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
     console.log(`[RESEARCH] Seed query "${query}": ${results.length} results`);
     return results.map((result) => ({ ...result, query }));
   }));
@@ -702,7 +707,8 @@ async function deepResearchInner(
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
       const results = await exaSearch(query);
       const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
-      context.searches.push({ query, results: formatRankedSearchResults(ranked) });
+      const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
+      context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
       allResults.push(...results.map((result) => ({ ...result, query })));
       return results.length;
     });
@@ -711,7 +717,10 @@ async function deepResearchInner(
   }
 
   context.rankedResults = rankSearchResults(allResults, claim, preferredSourceType);
-  const urlsToRead = context.rankedResults
+  const readCandidates = preferredSourceType === "any"
+    ? context.rankedResults
+    : context.rankedResults.filter(matchesPreferredSourceType);
+  const urlsToRead = readCandidates
     .filter((result) => result.qualityLabel !== "weak" || context.rankedResults.filter((r) => r.qualityLabel !== "weak").length < 2)
     .slice(0, options.maxUrlsToRead);
 
@@ -755,7 +764,7 @@ async function deepResearch(
 
 function buildResearchContext(research: ResearchContext): string {
   let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
-  ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only — do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
+  ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only, do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
 
   // Add search results
   for (const search of research.searches) {
@@ -767,7 +776,7 @@ function buildResearchContext(research: ResearchContext): string {
     ctx += "\n=== FULL PAGE CONTENT (verified sources) ===\n\n";
     for (const page of research.readContent) {
       const quality = page.result ? `${page.result.sourceType}, ${page.result.qualityLabel}, ${page.result.qualityScore}/100` : "verified";
-      const warning = page.result?.qualityLabel === "weak" ? " [WEAK — do not cite as evidence]" : "";
+      const warning = page.result?.qualityLabel === "weak" ? " [WEAK, do not cite as evidence]" : "";
       ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, 4000)}\n\n`;
     }
   }
@@ -1041,12 +1050,12 @@ This is a 4-speaker team debate format. Each speaker has a distinct job:
 
 --- INTRODUCTOR (4 minutes) ---
 The Introductor sets the entire narrative. Their job:
-1. EXORDIO: Open with a compelling hook — a real-world anecdote, startling statistic, powerful rhetorical question, or vivid scenario. This is NOT optional. Every good Introductor opens with an exordio that grabs the judge's attention. Then bridge smoothly into the topic.
-2. DEFINITIONS: Define key terms strategically (not dictionary definitions — frame them to favor your side).
+1. EXORDIO: Open with a compelling hook, a real-world anecdote, startling statistic, powerful rhetorical question, or vivid scenario. This is NOT optional. Every good Introductor opens with an exordio that grabs the judge's attention. Then bridge smoothly into the topic.
+2. DEFINITIONS: Define key terms strategically (not dictionary definitions, frame them to favor your side).
 3. FRAMEWORK: Establish the evaluative lens (utilitarian, rights-based, pragmatic, etc.).
 4. THESIS: State your team's central claim clearly and memorably.
-5. ARGUMENT ROADMAP: Preview the structure — "Our team will show three things..."
-The Introductor does NOT present full arguments — they set up the battlefield.
+5. ARGUMENT ROADMAP: Preview the structure, "Our team will show three things..."
+The Introductor does NOT present full arguments, they set up the battlefield.
 
 --- R1 - First Speaker (6 minutes) ---
 R1 is the workhorse. Their job:
@@ -1056,7 +1065,7 @@ R1 provides the substance. They make the team's case undeniable with concrete ev
 
 --- R2 - Second Speaker (6 minutes) ---
 R2 is the strategist. Their job:
-- EXTEND R1's arguments: Don't just repeat — deepen. Add new evidence, new warranting, responses to likely attacks on R1's case.
+- EXTEND R1's arguments: Don't just repeat, deepen. Add new evidence, new warranting, responses to likely attacks on R1's case.
 - CLASH: Directly engage with opponent arguments. Identify the central disagreements and explain why your side wins each clash.
 - WEIGHING: Compare impacts. Use magnitude, probability, and timeframe to show why your harms/benefits matter more.
 R2 wins the debate by controlling the narrative and winning the key clashes.
@@ -1069,11 +1078,11 @@ The Conclusor crystallizes. Their job:
 - STRONG CLOSE: End with a powerful, memorable statement that ties back to the exordio or thesis.
 The Conclusor is the last voice the judge hears. Make it count.
 
-=== WRITING STYLE — Sound like a REAL debater ===
+=== WRITING STYLE, Sound like a REAL debater ===
 
 DO:
 - Use debate terminology naturally: "weighing", "impacts", "links", "warrants", "brightlines", "uniqueness", "magnitude", "probability", "timeframe", "turns", "mitigations"
-- Write arguments as you would speak them in round — confident, persuasive, conversational
+- Write arguments as you would speak them in round, confident, persuasive, conversational
 - Vary sentence length. Mix short punchy sentences with longer analytical ones.
 - Use rhetorical questions: "What happens when we ignore this?"
 - Use transitions that sound human: "Look, here's the thing...", "What does this mean in practice?", "And this is where it gets interesting..."
@@ -1088,7 +1097,7 @@ DO NOT:
 - Say "One could argue" or "It could be said"
 - Say "It is worth mentioning" or "It is crucial to understand"
 - Use any robotic AI filler phrases. If it sounds like a Wikipedia article, rewrite it.
-- Start every sentence with "The" — vary your sentence openings
+- Start every sentence with "The", vary your sentence openings
 
 === JSON SCHEMA ===
 
@@ -1096,7 +1105,7 @@ The output MUST include the "exordio" field when the role is "intro". For other 
 
 {
   "exordio": {
-    "hook": "A compelling opening — anecdote, startling statistic, rhetorical question, or vivid scenario that grabs attention. Should be 2-4 sentences. Make it vivid and specific, not generic.",
+    "hook": "A compelling opening, anecdote, startling statistic, rhetorical question, or vivid scenario that grabs attention. Should be 2-4 sentences. Make it vivid and specific, not generic.",
     "transition": "A smooth 1-2 sentence bridge from the hook into the topic and your team's position."
   },
   "caseStructure": {
@@ -1476,8 +1485,21 @@ Deno.serve(async (req) => {
         (output as { verificationStatus?: string }).verificationStatus = "complete";
       }
 
-      // Log usage and return
       const latencyMs = Date.now() - startTime;
+      if (output && typeof output === "object") {
+        const askOutput = output as {
+          model?: string;
+          provider?: string;
+          durationMs?: number;
+          generatedAt?: string;
+        };
+        askOutput.model = model;
+        askOutput.provider = provider;
+        askOutput.durationMs = latencyMs;
+        askOutput.generatedAt = new Date().toISOString();
+      }
+
+      // Log usage and return
       await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
       return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
