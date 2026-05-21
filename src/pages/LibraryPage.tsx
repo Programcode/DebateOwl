@@ -1,4 +1,4 @@
-import { useState, type AriaAttributes, type CSSProperties } from 'react';
+import { useEffect, useState, type AriaAttributes, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { List } from 'react-window';
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X, Save, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 const SOURCE_ROW_HEIGHT = 92;
 const SOURCE_LIST_HEIGHT = 600;
@@ -33,6 +41,7 @@ interface SourceRowProps {
   sources: Source[];
   onRemove: (source: Source) => void;
   onToggle: (id: string) => void;
+  onOpen: (source: Source) => void;
   manualEntryLabel: string;
   folderLabel: string;
 }
@@ -43,6 +52,7 @@ function SourceRow({
   sources,
   onRemove,
   onToggle,
+  onOpen,
   manualEntryLabel,
   folderLabel,
   ariaAttributes,
@@ -52,7 +62,18 @@ function SourceRow({
 
   return (
     <div style={style} {...ariaAttributes} className="px-1 pb-2">
-      <div className={`flex h-[84px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpen(source)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpen(source);
+          }
+        }}
+        className={`flex h-[84px] cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors motion-list-item hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <div className={`shrink-0 rounded-md p-1.5 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
             {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
@@ -60,7 +81,7 @@ function SourceRow({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               {source.origin?.startsWith('http') ? (
-                <a href={source.origin} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium text-foreground transition-colors hover:text-primary">
+                <a href={source.origin} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium text-foreground transition-colors hover:text-primary">
                   {source.title}
                   <ExternalLink className="h-3 w-3 shrink-0" />
                 </a>
@@ -88,13 +109,17 @@ function SourceRow({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-destructive"
-            onClick={() => onRemove(source)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove(source);
+            }}
             aria-label={`Delete ${source.title}`}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
           <Switch
             checked={source.isActive}
+            onClick={(event) => event.stopPropagation()}
             onCheckedChange={() => onToggle(source.id)}
             aria-label={`Toggle ${source.title}`}
           />
@@ -106,7 +131,7 @@ function SourceRow({
 
 export default function LibraryPage() {
   const { t } = useTranslation();
-  const { sourceLibrary, sourceFolders, addSource, createSourceFolder, removeSource, toggleSource, clearLibrary } = useSessionStore();
+  const { sourceLibrary, sourceFolders, addSource, createSourceFolder, updateSource, removeSource, toggleSource, clearLibrary } = useSessionStore();
   const { toast } = useToast();
 
   const [isAdding, setIsAdding] = useState(false);
@@ -123,6 +148,15 @@ export default function LibraryPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [sourceDraft, setSourceDraft] = useState<Pick<Source, 'title' | 'content' | 'type' | 'origin' | 'folder' | 'isActive'>>({
+    title: '',
+    content: '',
+    type: 'text',
+    origin: '',
+    folder: 'General',
+    isActive: true,
+  });
   const [importPreview, setImportPreview] = useState<{
     title: string;
     content: string;
@@ -266,6 +300,19 @@ export default function LibraryPage() {
         source.folder || 'General',
       ].some((value) => value.toLowerCase().includes(query));
     });
+  const selectedSource = selectedSourceId ? sourceLibrary.find((source) => source.id === selectedSourceId) || null : null;
+
+  useEffect(() => {
+    if (!selectedSource) return;
+    setSourceDraft({
+      title: selectedSource.title,
+      content: selectedSource.content,
+      type: selectedSource.type,
+      origin: selectedSource.origin || '',
+      folder: selectedSource.folder || 'General',
+      isActive: selectedSource.isActive,
+    });
+  }, [selectedSource]);
   const handleCreateFolder = () => {
     const folder = newFolderName.trim();
     if (!folder) return;
@@ -280,8 +327,33 @@ export default function LibraryPage() {
   };
   const handleRemoveSource = (source: Source) => {
     void Promise.resolve(removeSource(source.id)).then(() => {
+      if (selectedSourceId === source.id) {
+        setSelectedSourceId(null);
+      }
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
     });
+  };
+  const handleSaveSourceDraft = async () => {
+    if (!selectedSource) return;
+    if (!sourceDraft.title.trim() || !sourceDraft.content.trim()) {
+      toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
+      return;
+    }
+
+    await updateSource(selectedSource.id, {
+      title: sourceDraft.title,
+      content: sourceDraft.content,
+      type: sourceDraft.type,
+      origin: sourceDraft.origin,
+      folder: sourceDraft.folder,
+      isActive: sourceDraft.isActive,
+    });
+    toast({ title: t('libraryPage.sourceUpdated', 'Source updated'), description: t('libraryPage.sourceUpdatedDesc', 'Your source changes were saved.') });
+  };
+  const handleCopySource = async () => {
+    if (!selectedSource) return;
+    await navigator.clipboard?.writeText(`${selectedSource.title}\n\n${selectedSource.content}`);
+    toast({ title: t('common.copied', 'Copied'), description: t('libraryPage.sourceCopied', 'Source copied to clipboard.') });
   };
 
   return (
@@ -600,6 +672,7 @@ export default function LibraryPage() {
                       sources: visibleSources,
                       onRemove: handleRemoveSource,
                       onToggle: toggleSource,
+                      onOpen: (source: Source) => setSelectedSourceId(source.id),
                       manualEntryLabel: t('libraryPage.manualEntry'),
                       folderLabel: t('libraryPage.folder', 'Folder'),
                     }}
@@ -632,6 +705,128 @@ export default function LibraryPage() {
           </Card>
         </div>
       </div>
+      <Sheet open={Boolean(selectedSource)} onOpenChange={(open) => !open && setSelectedSourceId(null)}>
+        <SheetContent side="right" className="flex w-full flex-col overflow-hidden p-0 sm:max-w-xl">
+          {selectedSource && (
+            <>
+              <SheetHeader className="border-b px-5 py-4 text-left">
+                <div className="flex items-start gap-3 pr-8">
+                  <div className={`rounded-md p-2 ${sourceDraft.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {sourceDraft.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <SheetTitle className="truncate">{sourceDraft.title || t('libraryPage.untitledSource', 'Untitled source')}</SheetTitle>
+                    <SheetDescription className="mt-1">
+                      {[sourceDraft.folder || 'General', formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto px-5 py-5">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="source-detail-title">{t('libraryPage.titleLabel')}</Label>
+                    <Input
+                      id="source-detail-title"
+                      value={sourceDraft.title}
+                      onChange={(event) => setSourceDraft({ ...sourceDraft, title: event.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{t('libraryPage.folder', 'Folder')}</Label>
+                      <Select value={sourceDraft.folder || 'General'} onValueChange={(folder) => setSourceDraft({ ...sourceDraft, folder })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {['General', ...folders.filter(f => f !== 'General')].map((folder) => (
+                            <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('libraryPage.typeLabel', 'Type')}</Label>
+                      <Select value={sourceDraft.type} onValueChange={(type) => setSourceDraft({ ...sourceDraft, type: type as Source['type'] })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">{t('libraryPage.textSource', 'Text')}</SelectItem>
+                          <SelectItem value="url">{t('libraryPage.urlSource', 'URL')}</SelectItem>
+                          <SelectItem value="file">{t('libraryPage.fileSource', 'File')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="source-detail-origin">{t('libraryPage.originLabel', 'Origin')}</Label>
+                    <Input
+                      id="source-detail-origin"
+                      value={sourceDraft.origin || ''}
+                      placeholder={t('libraryPage.originPlaceholder', 'URL, file name, or citation note')}
+                      onChange={(event) => setSourceDraft({ ...sourceDraft, origin: event.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">{t('libraryPage.useForGrounding', 'Use for AI grounding')}</p>
+                      <p className="text-xs text-muted-foreground">{t('libraryPage.useForGroundingDesc', 'Inactive sources stay saved but are ignored by generation.')}</p>
+                    </div>
+                    <Switch
+                      checked={sourceDraft.isActive}
+                      onCheckedChange={(checked) => setSourceDraft({ ...sourceDraft, isActive: checked })}
+                      aria-label={t('libraryPage.useForGrounding', 'Use for AI grounding')}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="source-detail-content">{t('libraryPage.contentLabel')}</Label>
+                    <Textarea
+                      id="source-detail-content"
+                      className="min-h-[320px] resize-y"
+                      value={sourceDraft.content}
+                      onChange={(event) => setSourceDraft({ ...sourceDraft, content: event.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <SheetFooter className="gap-2 border-t px-5 py-4 sm:justify-between sm:space-x-0">
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => void handleCopySource()}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    {t('common.copy', 'Copy')}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" variant="ghost" className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('common.delete', 'Delete')}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('libraryPage.deleteSourceTitle', 'Delete source?')}</AlertDialogTitle>
+                        <AlertDialogDescription>{t('libraryPage.deleteSourceDesc', 'This removes the source from your synced library.')}</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleRemoveSource(selectedSource)}>
+                          {t('common.delete', 'Delete')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                <Button type="button" onClick={() => void handleSaveSourceDraft()}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {t('common.save', 'Save')}
+                </Button>
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
