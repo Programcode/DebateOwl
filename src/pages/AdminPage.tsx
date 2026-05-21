@@ -68,8 +68,9 @@ const COLORS: Record<string, string> = {
   brainstorm: '#f59e0b',
   factoids: '#10b981',
   ask: '#8b5cf6',
+  import_source: '#64748b',
 };
-const COLORS_FALLBACK = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6'];
+const COLORS_FALLBACK = ['#64748b', '#94a3b8', '#475569'];
 
 const FEATURE_LABELS: Record<string, string> = {
   generate: 'Generate',
@@ -77,6 +78,7 @@ const FEATURE_LABELS: Record<string, string> = {
   brainstorm: 'Brainstorm',
   factoids: 'Factoids',
   ask: 'Ask',
+  import_source: 'Source Import',
 };
 
 function normalizeFeatureName(feature: string) {
