@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -66,6 +67,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
 export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
+  const [showDriveAuth, setShowDriveAuth] = useState(false);
 
   const handleDocxExport = async () => {
     const success = await exportBrainstormToDocx(result);
@@ -89,9 +91,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
         });
         window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || t('brainstormResults.authRequired'), {
-          description: t('brainstormResults.authRequiredDesc'),
-        });
+        setShowDriveAuth(true);
       } else {
         toast.error(exportResult.error || t('brainstormResults.exportFailedGdocs'));
       }
@@ -126,6 +126,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
 
   return (
     <StaggeredContainer className="space-y-6">
+      <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
       {onDiscuss && (
         <div className="flex flex-wrap gap-2">
           <AutoSavedSourcesUndo />

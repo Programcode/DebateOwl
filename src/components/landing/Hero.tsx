@@ -37,7 +37,7 @@ const Hero = () => {
                         >
                             <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/80">
                                 <Sparkles className="h-4 w-4 text-primary" />
-                                New in 2026: subscriptions, flowcharts, and upgraded timer tools
+                                New in 2026: faster sign-in, Drive exports, flowcharts, and smarter prep tools
                             </span>
                         </motion.div>
 

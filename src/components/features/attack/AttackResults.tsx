@@ -16,6 +16,7 @@ import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils
 import { toast } from 'sonner';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 
 interface AttackResultsProps {
@@ -82,6 +83,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
 export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
+  const [showDriveAuth, setShowDriveAuth] = useState(false);
 
   const criticalCount = result.weaknesses.filter(w => w.severity === 'critical').length;
   const majorCount = result.weaknesses.filter(w => w.severity === 'major').length;
@@ -109,9 +111,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
         });
         window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || t('attackResults.authRequired'), {
-          description: t('attackResults.authRequiredDesc'),
-        });
+        setShowDriveAuth(true);
       } else {
         toast.error(exportResult.error || t('attackResults.exportFailedGdocs'));
       }
@@ -124,6 +124,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
 
   return (
     <StaggeredContainer className="space-y-6">
+      <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
       {/* Overall Assessment */}
       <SectionCard
         title={t('attackResults.overall')}

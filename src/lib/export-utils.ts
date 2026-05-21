@@ -501,7 +501,13 @@ async function callGoogleDocsEdgeFunction(
 
     if (!response.ok) {
       console.error('[GDocs Export] Error response:', response.status, respData);
-      if (respData.code === 'AUTH_EXPIRED' || respData.code === 'REFRESH_FAILED' || response.status === 401) {
+      if (
+        respData.code === 'AUTH_EXPIRED' ||
+        respData.code === 'REFRESH_FAILED' ||
+        respData.code === 'DRIVE_SCOPE_REQUIRED' ||
+        response.status === 401 ||
+        response.status === 403
+      ) {
         return { success: false, error: respData.error || 'Authorization expired.', requiresReauth: true };
       }
       return { success: false, error: respData.error || 'Failed to export to Google Docs' };

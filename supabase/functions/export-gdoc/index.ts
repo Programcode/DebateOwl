@@ -940,28 +940,40 @@ Deno.serve(async (req: Request) => {
             const errorText = await createDocResponse.text();
             console.error("[GDOC] Failed to create document:", errorText);
 
-            if (createDocResponse.status === 401) {
-                // Parse Google's error for more details
-                let googleError = "Unknown error";
-                try {
-                    const parsed = JSON.parse(errorText);
-                    googleError = parsed.error?.message || parsed.error_description || errorText;
-                } catch {
-                    googleError = errorText;
-                }
+            // Parse Google's error for more details
+            let googleError = "Unknown error";
+            let googleReason = "";
+            try {
+                const parsed = JSON.parse(errorText);
+                googleError = parsed.error?.message || parsed.error_description || errorText;
+                googleReason = parsed.error?.errors?.[0]?.reason || parsed.error?.status || "";
+            } catch {
+                googleError = errorText;
+            }
 
+            if (createDocResponse.status === 401 || createDocResponse.status === 403) {
                 return new Response(JSON.stringify({
-                    error: `Google API error: ${googleError}. Re-authenticate with Google and try again.`,
-                    code: "AUTH_EXPIRED",
+                    error: createDocResponse.status === 403
+                        ? "Google Drive permission is missing or insufficient. Connect Google Drive and try again."
+                        : `Google API error: ${googleError}. Re-authenticate with Google and try again.`,
+                    code: createDocResponse.status === 403 ? "DRIVE_SCOPE_REQUIRED" : "AUTH_EXPIRED",
+                    googleStatus: createDocResponse.status,
+                    googleReason,
                     details: errorText
                 }), {
-                    status: 401,
+                    status: createDocResponse.status,
                     headers: { ...corsHeaders, "Content-Type": "application/json" }
                 });
             }
 
-            return new Response(JSON.stringify({ error: "Failed to create Google Doc" }), {
-                status: 500,
+            return new Response(JSON.stringify({
+                error: "Failed to create Google Doc",
+                code: "GOOGLE_DOC_CREATE_FAILED",
+                googleStatus: createDocResponse.status,
+                googleReason,
+                details: errorText
+            }), {
+                status: 502,
                 headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }

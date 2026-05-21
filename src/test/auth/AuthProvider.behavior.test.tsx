@@ -45,6 +45,7 @@ const {
 });
 
 vi.mock('@/lib/supabase/client', () => ({
+  SUPABASE_URL: 'https://example.supabase.co',
   supabase: {
     auth: {
       getSession: getSessionMock,
@@ -220,7 +221,12 @@ describe('AuthProvider behavior', () => {
     expect(resetSettingsStoreMock).toHaveBeenCalled();
   });
 
-  it('signInWithGoogle delegates to Supabase OAuth with expected options', async () => {
+  it('signInWithGoogle gets a Supabase OAuth URL and redirects', async () => {
+    signInWithOAuthMock.mockResolvedValue({
+      data: { url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=test' },
+      error: null,
+    });
+
     render(
       <AuthProvider>
         <AuthConsumer />
@@ -234,11 +240,8 @@ describe('AuthProvider behavior', () => {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/app`,
-          scopes: 'https://www.googleapis.com/auth/drive.file',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          skipBrowserRedirect: true,
+          queryParams: undefined,
         },
       });
     });
