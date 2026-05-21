@@ -5,10 +5,28 @@ const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const APP_SHELL = [
   '/',
   '/app',
+  '/app/generate',
+  '/app/attack',
+  '/app/brainstorm',
+  '/app/factoids',
+  '/app/ask',
+  '/app/library',
+  '/app/timer',
+  '/app/flowchart',
+  '/app/history',
+  '/app/settings',
   '/index.html',
   '/config.js',
   '/manifest.webmanifest',
   '/favicon.ico',
+  '/hero-visual.png',
+];
+
+const API_PATH_PREFIXES = [
+  '/auth/v1',
+  '/rest/v1',
+  '/functions/v1',
+  '/storage/v1',
 ];
 
 self.addEventListener('install', (event) => {
@@ -39,6 +57,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -60,7 +84,10 @@ async function navigationFallback(request) {
     }
     return response;
   } catch {
-    return (await caches.match('/index.html')) || caches.match('/');
+    return (await caches.match('/index.html')) ||
+      new Response('<!doctype html><title>Offline</title><main style="font-family:system-ui;padding:2rem"><h1>Offline</h1><p>DebateLab is unavailable until your connection returns.</p></main>', {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
   }
 }
 
@@ -70,6 +97,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (API_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(navigationFallback(request));

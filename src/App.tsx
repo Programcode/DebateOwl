@@ -13,6 +13,7 @@ import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour"
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { Loader2 } from "lucide-react";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -112,6 +113,7 @@ const App = () => (
         <TooltipProvider delayDuration={200}>
           <Toaster />
           <Sonner />
+          <OfflineIndicator />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Suspense fallback={<PageLoader />}>
               <AnimatedRoutes />
