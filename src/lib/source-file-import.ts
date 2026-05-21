@@ -1,4 +1,4 @@
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
 
 const MAX_FILE_BYTES = 8_000_000;
 const MAX_EXTRACTED_CHARS = 120_000;
