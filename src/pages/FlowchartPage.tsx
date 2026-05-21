@@ -51,7 +51,8 @@ import {
     AlertTriangle,
     Save,
     FolderOpen,
-    Clock
+    Clock,
+    LayoutGrid
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,6 +60,7 @@ import { toast } from 'sonner';
 
 // Custom node types
 type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
+type EdgeKind = 'support' | 'attack' | 'rebuttal';
 
 interface FlowNodeData {
     label: string;
@@ -129,6 +131,12 @@ function CustomNode({ data }: { data: FlowNodeData }) {
 
 const nodeTypes = {
     custom: CustomNode,
+};
+
+const edgeStyles: Record<EdgeKind, { label: string; stroke: string }> = {
+    support: { label: 'Support', stroke: '#10b981' },
+    attack: { label: 'Attack', stroke: '#ef4444' },
+    rebuttal: { label: 'Rebuttal', stroke: '#3b82f6' },
 };
 
 // Initial sample data
@@ -212,21 +220,25 @@ export default function FlowchartPage() {
     const [newNodeStrength, setNewNodeStrength] = useState<'strong' | 'moderate' | 'weak'>('moderate');
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+    const [selectedEdgeType, setSelectedEdgeType] = useState<EdgeKind>('support');
 
     const onConnect = useCallback(
         (connection: Connection) => {
+            const edgeStyle = edgeStyles[selectedEdgeType];
             setEdges((eds) =>
                 addEdge(
                     {
                         ...connection,
                         animated: true,
+                        label: edgeStyle.label,
+                        style: { stroke: edgeStyle.stroke, strokeWidth: 2 },
                         markerEnd: { type: MarkerType.ArrowClosed },
                     },
                     eds
                 )
             );
         },
-        [setEdges]
+        [selectedEdgeType, setEdges]
     );
 
     const handleSaveNode = useCallback(() => {
@@ -329,12 +341,40 @@ export default function FlowchartPage() {
         setSelectedNode(null);
     }, [selectedNode, setNodes, setEdges]);
 
+    const autoLayout = useCallback(() => {
+        const lanes: Record<NodeType, number> = {
+            thesis: 60,
+            contention: 230,
+            attack: 420,
+            rebuttal: 610,
+            dropped: 420,
+        };
+        const grouped = nodes.reduce((acc, node) => {
+            const type = node.data.type;
+            acc[type] = [...(acc[type] || []), node.id];
+            return acc;
+        }, {} as Record<NodeType, string[]>);
+
+        setNodes((currentNodes) => currentNodes.map((node) => {
+            const group = grouped[node.data.type] || [node.id];
+            const index = group.indexOf(node.id);
+            const spacing = node.data.type === 'thesis' ? 0 : 280;
+            const x = 400 + (index - (group.length - 1) / 2) * spacing;
+            return { ...node, position: { x, y: lanes[node.data.type] } };
+        }));
+        window.setTimeout(() => {
+            document.querySelector('.react-flow__controls-fitview')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }, 80);
+    }, [nodes, setNodes]);
+
     const exportToPng = useCallback(() => {
         const flowElement = document.querySelector('.react-flow') as HTMLElement;
         if (!flowElement) return;
 
         toPng(flowElement, {
-            backgroundColor: '#1e1e2e',
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--background')
+                ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--background')})`
+                : '#ffffff',
             width: flowElement.offsetWidth,
             height: flowElement.offsetHeight,
         }).then((dataUrl) => {
@@ -537,6 +577,22 @@ export default function FlowchartPage() {
                                 </>
                             )}
 
+                            <Select value={selectedEdgeType} onValueChange={(value) => setSelectedEdgeType(value as EdgeKind)}>
+                                <SelectTrigger className="h-9 w-[132px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="support">{t('flowchart.edgeSupport', 'Support')}</SelectItem>
+                                    <SelectItem value="attack">{t('flowchart.edgeAttack', 'Attack')}</SelectItem>
+                                    <SelectItem value="rebuttal">{t('flowchart.edgeRebuttal', 'Rebuttal')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Button variant="outline" size="sm" onClick={autoLayout}>
+                                <LayoutGrid className="h-4 w-4 mr-2" />
+                                {t('flowchart.autoLayout', 'Auto layout')}
+                            </Button>
+
                             <Button variant="outline" size="sm" onClick={exportToPng}>
                                 <Download className="h-4 w-4 mr-2" />
                                 {t('flowchart.exportPng')}
@@ -563,6 +619,40 @@ export default function FlowchartPage() {
                             <AlertTriangle className="h-3 w-3" /> {t('flowchart.legendDropped')}: {stats.dropped || 0}
                         </Badge>
                     </div>
+
+                    {selectedNode && (
+                        <div className="border-b bg-card/70 p-4">
+                            {(() => {
+                                const node = nodes.find((item) => item.id === selectedNode);
+                                if (!node) return null;
+                                return (
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="secondary">{t('flowchart.selectedNode', 'Selected')}</Badge>
+                                                <h3 className="truncate text-sm font-semibold">{node.data.label}</h3>
+                                            </div>
+                                            {node.data.description && (
+                                                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{node.data.description}</p>
+                                            )}
+                                        </div>
+                                        <div className="flex shrink-0 gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => openEditDialog(node)}>
+                                                <GitBranch className="h-4 w-4 mr-2" />
+                                                {t('flowchart.edit')}
+                                            </Button>
+                                            {selectedNode !== 'thesis' && (
+                                                <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    {t('flowchart.delete')}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    )}
 
                     {/* Flow Canvas */}
                     <div className="h-[50vh] min-h-[400px] w-full">

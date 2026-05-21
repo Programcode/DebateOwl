@@ -231,6 +231,16 @@ export default function GeneratePage() {
               type: 'attack'
             }
           });
+
+          const targetContentionId = contentions.length ? `c-${i % contentions.length}` : 'thesis';
+          edges.push({
+            id: `e-${targetContentionId}-${id}`,
+            source: targetContentionId,
+            target: id,
+            label: 'Attack',
+            style: { stroke: '#ef4444', strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed }
+          });
         });
       }
 

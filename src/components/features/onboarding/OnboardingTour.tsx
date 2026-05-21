@@ -10,7 +10,7 @@ export function OnboardingTour() {
     const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
     const location = useLocation();
 
-    const allTourSteps: Step[] = [
+    const allTourSteps = useMemo<Step[]>(() => [
         {
             target: 'body',
             content: (
@@ -107,7 +107,7 @@ export function OnboardingTour() {
             ),
             placement: 'center',
         },
-    ];
+    ], [t]);
 
     const tourSteps = useMemo(() => {
         if (typeof document === 'undefined') return allTourSteps;
