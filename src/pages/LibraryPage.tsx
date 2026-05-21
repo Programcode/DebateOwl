@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Sheet,
   SheetContent,
@@ -159,7 +160,9 @@ export default function LibraryPage() {
   const [selectedFolder, setSelectedFolder] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [folderRenameValue, setFolderRenameValue] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'folder'>('newest');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -305,6 +308,22 @@ export default function LibraryPage() {
         source.origin || '',
         source.folder || 'General',
       ].some((value) => value.toLowerCase().includes(query));
+    })
+    .slice()
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return a.createdAt - b.createdAt;
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '');
+        case 'folder': {
+          const folderCmp = (a.folder || 'General').localeCompare(b.folder || 'General');
+          return folderCmp !== 0 ? folderCmp : (a.title || '').localeCompare(b.title || '');
+        }
+        case 'newest':
+        default:
+          return b.createdAt - a.createdAt;
+      }
     });
   const selectedSource = selectedSourceId ? sourceLibrary.find((source) => source.id === selectedSourceId) || null : null;
 
@@ -329,6 +348,7 @@ export default function LibraryPage() {
     setNewSource({ ...newSource, folder });
     setSelectedFolder(folder);
     setNewFolderName('');
+    setNewFolderOpen(false);
     toast({
       title: t('libraryPage.folderCreated', 'Folder created'),
       description: t('libraryPage.folderCreatedDesc', 'New sources can now be saved there.'),
@@ -400,8 +420,8 @@ export default function LibraryPage() {
                 <Plus className="h-4 w-4 mr-1" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
               </Button>
               <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-                <SelectTrigger className="h-9 w-[140px]">
-                  <FolderPlus className="h-4 w-4 mr-1" />
+                <SelectTrigger className="h-9 w-[160px]">
+                  <Folder className="h-4 w-4 mr-1" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -411,29 +431,56 @@ export default function LibraryPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex gap-1">
-                <Input
-                  aria-label={t('libraryPage.newFolder', 'New Folder')}
-                  className="h-9 w-36"
-                  placeholder={t('libraryPage.newFolderPlaceholder', 'Folder name...')}
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateFolder();
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleCreateFolder}
-                  disabled={!newFolderName.trim()}
-                  aria-label={t('libraryPage.createFolder', 'Create folder')}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              </div>
+              <Popover open={newFolderOpen} onOpenChange={setNewFolderOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('libraryPage.newFolder', 'New folder')}
+                  >
+                    <FolderPlus className="h-4 w-4 mr-1" />
+                    {t('libraryPage.newFolder', 'New folder')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-folder-input" className="text-sm">{t('libraryPage.newFolder', 'New folder')}</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="new-folder-input"
+                        autoFocus
+                        placeholder={t('libraryPage.newFolderPlaceholder', 'Folder name...')}
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCreateFolder();
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={handleCreateFolder}
+                        disabled={!newFolderName.trim()}
+                        aria-label={t('libraryPage.createFolder', 'Create folder')}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                <SelectTrigger className="h-9 w-[150px]" aria-label={t('libraryPage.sortBy', 'Sort by')}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">{t('libraryPage.sortNewest', 'Date added (newest)')}</SelectItem>
+                  <SelectItem value="oldest">{t('libraryPage.sortOldest', 'Date added (oldest)')}</SelectItem>
+                  <SelectItem value="title">{t('libraryPage.sortTitle', 'Name (A–Z)')}</SelectItem>
+                  <SelectItem value="folder">{t('libraryPage.sortFolder', 'Folder')}</SelectItem>
+                </SelectContent>
+              </Select>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="text-destructive" disabled={isClearing}>
@@ -481,29 +528,28 @@ export default function LibraryPage() {
               <CardDescription>{t('libraryPage.addNewDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-                <div className="space-y-2">
-                  <Label htmlFor="source-url">{t('libraryPage.importUrlLabel')}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="source-url"
-                      placeholder={t('libraryPage.importUrlPlaceholder')}
-                      value={importUrl}
-                      onChange={(e) => setImportUrl(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') void handleImportUrl();
-                      }}
-                    />
-                    <Button type="button" variant="secondary" onClick={() => void handleImportUrl()} disabled={isImportingUrl}>
-                      {isImportingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                      <span className="sr-only">{t('libraryPage.importUrl')}</span>
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{t('libraryPage.importUrlHelp', 'Auto import creates an editable draft. Review it before saving to your library.')}</p>
+              <div className="space-y-2">
+                <Label htmlFor="source-url">{t('libraryPage.importUrlLabel')}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="source-url"
+                    placeholder={t('libraryPage.importUrlPlaceholder')}
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void handleImportUrl();
+                    }}
+                  />
+                  <Button type="button" variant="secondary" onClick={() => void handleImportUrl()} disabled={isImportingUrl} aria-label={t('libraryPage.importUrl')}>
+                    {isImportingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="source-file">{t('libraryPage.importFileLabel')}</Label>
-                  <Button type="button" variant="outline" className="relative w-full overflow-hidden lg:w-44">
+                <p className="text-xs text-muted-foreground">{t('libraryPage.importUrlHelp', 'Auto import creates an editable draft. Review it before saving to your library.')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="source-file">{t('libraryPage.importFileLabel')}</Label>
+                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden">
+                  <label htmlFor="source-file" className="cursor-pointer">
                     <Upload className="h-4 w-4 mr-2" />
                     {t('libraryPage.chooseFile')}
                     <input
@@ -513,8 +559,8 @@ export default function LibraryPage() {
                       className="absolute inset-0 cursor-pointer opacity-0"
                       onChange={(event) => void handleFileImport(event.target.files?.[0])}
                     />
-                  </Button>
-                </div>
+                  </label>
+                </Button>
               </div>
 
               {importPreview && (
@@ -596,41 +642,19 @@ export default function LibraryPage() {
                   onChange={(e) => setNewSource({ ...newSource, content: e.target.value })}
                 />
               </div>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1 space-y-2">
-                  <Label>{t('libraryPage.folder', 'Folder')}</Label>
-                  <div className="flex gap-2">
-                    <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                          <SelectItem key={f} value={f}>{f}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      placeholder={t('libraryPage.newFolderPlaceholder', 'New folder...')}
-                      className="w-36"
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleCreateFolder();
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="icon"
-                      onClick={handleCreateFolder}
-                      disabled={!newFolderName.trim()}
-                      aria-label={t('libraryPage.createFolder', 'Create folder')}
-                    >
-                      <FolderPlus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <Label>{t('libraryPage.folder', 'Folder')}</Label>
+                <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['General', ...folders.filter(f => f !== 'General')].map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('libraryPage.newFolderHint', 'Need a new folder? Use the "New folder" button up top.')}</p>
               </div>
               <Button onClick={() => void handleAdd()} className="w-full">{t('libraryPage.saveToLibrary')}</Button>
             </CardContent>
