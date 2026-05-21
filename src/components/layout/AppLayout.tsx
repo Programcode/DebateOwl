@@ -61,6 +61,7 @@ export function AppLayout() {
                 key={item.path}
                 to={item.path}
                 end={item.path === '/app'}
+                data-tour={`nav-${item.key}`}
                 className={cn(
                   "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap",
                   "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -77,7 +78,7 @@ export function AppLayout() {
             <LanguageSwitcher />
             <ThemeToggle />
             <NavLink to="/app/settings">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Settings" data-tour="nav-settings">
                 <Settings className="h-5 w-5" />
               </Button>
             </NavLink>

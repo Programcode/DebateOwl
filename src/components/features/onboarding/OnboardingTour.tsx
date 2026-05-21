@@ -1,5 +1,5 @@
 // src/components/features/onboarding/OnboardingTour.tsx
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
@@ -10,7 +10,7 @@ export function OnboardingTour() {
     const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
     const location = useLocation();
 
-    const tourSteps: Step[] = [
+    const allTourSteps: Step[] = [
         {
             target: 'body',
             content: (
@@ -25,41 +25,75 @@ export function OnboardingTour() {
             disableBeacon: true,
         },
         {
-            target: '#motion',
+            target: '[data-tour="mode-generate"], [data-tour="nav-generate"]',
             content: (
                 <div>
-                    <h3 className="font-semibold mb-1">{t('onboarding.step1')}</h3>
+                    <h3 className="font-semibold mb-1">{t('onboarding.generate')}</h3>
                     <p className="text-sm text-muted-foreground">
-                        {t('onboarding.step1Desc')}
+                        {t('onboarding.generateDesc')}
                     </p>
                 </div>
             ),
             placement: 'bottom',
         },
         {
-            target: '[data-tour="generate-button"]',
+            target: '[data-tour="mode-attack"], [data-tour="nav-attack"]',
             content: (
                 <div>
-                    <h3 className="font-semibold mb-1">{t('onboarding.step2')}</h3>
+                    <h3 className="font-semibold mb-1">{t('onboarding.attack')}</h3>
                     <p className="text-sm text-muted-foreground">
-                        {t('onboarding.step2Desc')}
+                        {t('onboarding.attackDesc')}
                     </p>
                 </div>
             ),
-            placement: 'top',
+            placement: 'bottom',
         },
         {
-            target: '[data-tour="export-section"]',
+            target: '[data-tour="mode-brainstorm"], [data-tour="nav-brainstorm"]',
             content: (
                 <div>
-                    <h3 className="font-semibold mb-1">{t('onboarding.step3')}</h3>
+                    <h3 className="font-semibold mb-1">{t('onboarding.brainstorm')}</h3>
                     <p className="text-sm text-muted-foreground">
-                        {t('onboarding.step3Desc')}
+                        {t('onboarding.brainstormDesc')}
                     </p>
                 </div>
             ),
-            placement: 'left',
-            spotlightClicks: false,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-factoids"], [data-tour="nav-factoids"]',
+            content: <TourCopy title={t('onboarding.factoids')} description={t('onboarding.factoidsDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-ask"], [data-tour="nav-ask"]',
+            content: <TourCopy title={t('onboarding.ask')} description={t('onboarding.askDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-library"], [data-tour="nav-library"]',
+            content: <TourCopy title={t('onboarding.library')} description={t('onboarding.libraryDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-timer"], [data-tour="nav-timer"]',
+            content: <TourCopy title={t('onboarding.timer')} description={t('onboarding.timerDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-flowchart"], [data-tour="nav-flowchart"]',
+            content: <TourCopy title={t('onboarding.flowchart')} description={t('onboarding.flowchartDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-history"], [data-tour="nav-history"]',
+            content: <TourCopy title={t('onboarding.history')} description={t('onboarding.historyDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="nav-settings"]',
+            content: <TourCopy title={t('onboarding.settings')} description={t('onboarding.settingsDesc')} />,
+            placement: 'bottom',
         },
         {
             target: 'body',
@@ -75,18 +109,29 @@ export function OnboardingTour() {
         },
     ];
 
+    const tourSteps = useMemo(() => {
+        if (typeof document === 'undefined') return allTourSteps;
+        return allTourSteps.map((step) => {
+            if (step.target === 'body') return step;
+            const target = String(step.target);
+            return document.querySelector(target)
+                ? step
+                : { ...step, target: 'body', placement: 'center' as const };
+        });
+    }, [allTourSteps]);
+
     // Start tour automatically for new users
     useEffect(() => {
-        if (hasCompletedOnboarding || location.pathname !== '/app/generate') return;
+        if (hasCompletedOnboarding || location.pathname !== '/app') return;
 
-        // Small delay to ensure DOM is ready on Generate page
+        // Small delay to ensure DOM is ready on the mode overview.
         const timer = setTimeout(() => startTour(), 500);
         return () => clearTimeout(timer);
     }, [hasCompletedOnboarding, location.pathname, startTour]);
 
-    // Prevent broken tooltips if user navigates away from Generate mid-tour
+    // Prevent broken tooltips if user navigates away from the app mid-tour
     useEffect(() => {
-        if (isTourRunning && location.pathname !== '/app/generate') {
+        if (isTourRunning && !location.pathname.startsWith('/app')) {
             stopTour();
         }
     }, [isTourRunning, location.pathname, stopTour]);
@@ -149,5 +194,14 @@ export function OnboardingTour() {
                 skip: t('onboarding.skip'),
             }}
         />
+    );
+}
+
+function TourCopy({ title, description }: { title: string; description: string }) {
+    return (
+        <div>
+            <h3 className="font-semibold mb-1">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
     );
 }
