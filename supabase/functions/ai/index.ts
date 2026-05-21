@@ -850,28 +850,15 @@ function enforceAttackControls(output: unknown, detectFallacies: boolean, analyz
   }
 }
 
-function enforceBrainstormControls(output: unknown, side: string, outputMode: string) {
+function enforceBrainstormControls(output: unknown, _side: string, outputMode: string) {
   if (!output || typeof output !== "object") return;
   const brainstormOutput = output as {
     topFive?: Array<{ idea?: { side?: string } }>;
     mindmap?: Array<{ items?: Array<{ side?: string }> }>;
     buckets?: Array<{ ideas?: Array<{ side?: string }> }>;
   };
-  const allowIdea = (idea?: { side?: string }) => side === "both" || !idea?.side || idea.side === side || idea.side === "neutral";
-
-  if (Array.isArray(brainstormOutput.topFive)) {
-    brainstormOutput.topFive = brainstormOutput.topFive.filter((item) => allowIdea(item.idea));
-  }
-  if (Array.isArray(brainstormOutput.mindmap)) {
-    brainstormOutput.mindmap = brainstormOutput.mindmap
-      .map((category) => ({ ...category, items: Array.isArray(category.items) ? category.items.filter(allowIdea) : [] }))
-      .filter((category) => (category.items || []).length > 0);
-  }
-  if (Array.isArray(brainstormOutput.buckets)) {
-    brainstormOutput.buckets = brainstormOutput.buckets
-      .map((bucket) => ({ ...bucket, ideas: Array.isArray(bucket.ideas) ? bucket.ideas.filter(allowIdea) : [] }))
-      .filter((bucket) => (bucket.ideas || []).length > 0);
-  }
+  // The prompt already controls side. Post-filtering by side can erase useful
+  // neutral or comparative ideas, so only enforce the requested output mode.
 
   if (outputMode !== "topfive") delete brainstormOutput.topFive;
   if (outputMode !== "mindmap") delete brainstormOutput.mindmap;

@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
+import { buildGoogleOAuthUrl } from './oauth-url';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 
@@ -9,7 +10,7 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (options?: { driveAccess?: boolean }) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -22,12 +23,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
   const resetSessionStore = useSessionStore((state) => state.resetLocalData);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
+  const currentUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     let mounted = true;
 
+    const hydrateOAuthHashSession = async () => {
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+      if (!hash) return null;
+
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const providerToken = params.get('provider_token');
+      const providerRefreshToken = params.get('provider_refresh_token');
+      const errorDescription = params.get('error_description');
+
+      if (errorDescription) {
+        throw new Error(errorDescription);
+      }
+
+      if (!accessToken || !refreshToken) return null;
+
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) throw error;
+
+      if (providerToken) localStorage.setItem('google_provider_token', providerToken);
+      if (providerRefreshToken) localStorage.setItem('google_provider_refresh_token', providerRefreshToken);
+
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+      return data.session;
+    };
+
     const init = async () => {
       try {
+        const oauthSession = await hydrateOAuthHashSession();
+        if (!mounted) return;
+
+        if (oauthSession) {
+          setSession(oauthSession);
+          currentUserIdRef.current = oauthSession.user?.id;
+          setLoading(false);
+          Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
+          Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+          return;
+        }
+
         // In some browser states (stalled locks, blocked storage, extensions),
         // getSession() can hang long enough to look like a frozen app. If it
         // doesn't resolve quickly, fail open to the login route and rely on
@@ -41,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = getSessionResult;
         if (error) console.warn('[Auth] getSession error:', error.message);
         setSession(data.session ?? null);
+        currentUserIdRef.current = data.session?.user?.id;
         if (data.session) {
           Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
           Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
@@ -59,8 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
 
-      const prevUserId = session?.user?.id;
+      const prevUserId = currentUserIdRef.current;
       const nextUserId = newSession?.user?.id;
+      currentUserIdRef.current = nextUserId;
       setSession(newSession);
       setLoading(false);
 
@@ -97,24 +144,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [hydrateSessionStore, hydrateSettingsStore, resetSessionStore, resetSettingsStore, session?.user?.id]);
+  }, [hydrateSessionStore, hydrateSettingsStore, resetSessionStore, resetSettingsStore]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
     user: session?.user ?? null,
     loading,
-    signInWithGoogle: async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/app`,
-          scopes: 'https://www.googleapis.com/auth/drive.file',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+    signInWithGoogle: async ({ driveAccess = false } = {}) => {
+      const fallbackUrl = buildGoogleOAuthUrl({ driveAccess });
+      const result = await Promise.race([
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/app`,
+            skipBrowserRedirect: true,
+            ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
+            queryParams: driveAccess
+              ? {
+                access_type: 'offline',
+                prompt: 'consent',
+              }
+              : undefined,
           },
-        },
-      });
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
+      ]);
+
+      if (result?.error) throw result.error;
+
+      const redirectUrl = result?.data?.url || fallbackUrl;
+      window.location.assign(redirectUrl);
     },
     signOut: async () => {
       await supabase.auth.signOut();

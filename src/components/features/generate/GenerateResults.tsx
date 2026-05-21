@@ -13,6 +13,7 @@ import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -73,6 +74,7 @@ function formatDuration(ms?: number) {
 export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
+  const [showDriveAuth, setShowDriveAuth] = useState(false);
 
   const handleCopyToClipboard = () => {
     const lines: string[] = [];
@@ -109,9 +111,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
         });
         window.open(exportResult.documentUrl, '_blank');
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || t('generateResults.authRequired'), {
-          description: t('generateResults.authRequiredDesc'),
-        });
+        setShowDriveAuth(true);
       } else {
         toast.error(exportResult.error || t('generateResults.exportFailed'));
       }
@@ -139,6 +139,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
 
   return (
     <StaggeredContainer className="space-y-6">
+      <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
       {/* Metadata */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">

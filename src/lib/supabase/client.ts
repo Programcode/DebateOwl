@@ -1,22 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
+import { getActiveEnv, SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
 
 export { SUPABASE_URL };
 
-// In some browsers/dev setups, the Navigator Lock API can be flaky and cause
-// auth/session calls to fail with AbortError ("operation was aborted").
-// Disabling auth locks in dev avoids local auth hangs without impacting prod.
-const disableAuthLocks = import.meta.env.DEV;
+// Supabase Auth uses Navigator Locks for cross-tab session coordination. In this
+// app that lock can make click-to-login and OAuth callback handling wait for the
+// SDK's full 10s timeout when a browser tab leaves behind a stale lock. Running
+// auth work directly is a better tradeoff than making sign-in feel broken.
+const runWithoutAuthLock = async <T>(
+  _name: string,
+  _acquireTimeout: number,
+  fn: () => Promise<T>
+) => await fn();
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    ...(disableAuthLocks
-      ? {
-        lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => await fn(),
-      }
-      : {}),
+    storageKey: `debate-auth-${getActiveEnv()}`,
+    lockAcquireTimeout: 1500,
+    lock: runWithoutAuthLock,
   },
 });

@@ -15,6 +15,7 @@ import { exportFactoidsToDocx, exportFactoidsToGoogleDocs } from '@/lib/export-u
 import { toast } from 'sonner';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 
 interface FactoidsResultsProps {
@@ -141,6 +142,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
 export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
+  const [showDriveAuth, setShowDriveAuth] = useState(false);
   const displayFactoids = result.factoids.filter(f => f.citation?.verified === 'verified');
   const verifiedCount = displayFactoids.length;
   const totalCount = Math.max(displayFactoids.length, 1);
@@ -166,9 +168,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
           },
         });
       } else if (exportResult.requiresReauth) {
-        toast.error(exportResult.error || t('factoidsResults.authRequired'), {
-          description: t('factoidsResults.authRequiredDesc'),
-        });
+        setShowDriveAuth(true);
       } else {
         toast.error(exportResult.error || t('factoidsResults.exportFailedGdocs'));
       }
@@ -181,6 +181,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
 
   return (
     <StaggeredContainer className="space-y-6">
+      <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
       {onDiscuss && (
         <div className="flex flex-wrap gap-2">
           <AutoSavedSourcesUndo />

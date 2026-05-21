@@ -1,0 +1,77 @@
+Email and Demo Code Sign-In Plan
+
+Goals
+
+- Keep Google sign-in as the quickest path for normal users.
+- Add email sign-in for users who do not want Google.
+- Add admin-created demo accounts that can sign in with a short code only.
+- Make demo access easy to reset, expire, and audit from the admin page.
+
+Recommended Auth Model
+
+Use Supabase Auth for real user sessions in all cases. Do not create a separate local-only auth mode, because the rest of the app already relies on auth.uid(), RLS, subscriptions, usage tracking, saved items, and Edge Function JWT validation.
+
+Email Sign-In
+
+1. Enable Supabase email auth.
+2. Add an email form on LoginPage.
+3. Prefer magic-link/OTP first:
+   - User enters email.
+   - Supabase sends sign-in link or six-digit OTP.
+   - App verifies OTP and creates a normal Supabase session.
+4. Add password sign-up later only if needed. Magic-link keeps the product simpler for students and demo users.
+
+Demo Code Sign-In
+
+Create a demo_access_codes table:
+
+- id uuid primary key
+- code_hash text not null unique
+- label text not null
+- email text not null unique
+- role text default 'user'
+- expires_at timestamptz
+- max_uses int
+- use_count int default 0
+- created_by uuid references auth.users(id)
+- last_used_at timestamptz
+- disabled_at timestamptz
+- created_at timestamptz default now()
+
+Code rules:
+
+- Store only a hash, never the raw code.
+- Generate human-friendly codes such as DEMO-7KQ4-MV9P.
+- Rate-limit attempts by IP and browser fingerprint.
+- Expire codes by default after the event/demo date.
+
+Demo Code Login Flow
+
+1. Login page shows a "Demo code" tab.
+2. User enters code.
+3. Client calls a new Supabase Edge Function, demo-code-login.
+4. Function validates the code using the service role key.
+5. Function creates or finds a Supabase Auth user for the code's assigned email.
+6. Function returns a magic link or OTP-style session handoff.
+7. Client receives a normal Supabase session, so existing app logic works unchanged.
+
+Preferred implementation detail: use Supabase Admin APIs to generate a magic link for the demo account, then return the link target/session flow to the client. If Supabase cannot safely return a session directly, use an OTP email alias owned by the app for demo-only users.
+
+Admin UI
+
+Add a "Demo access" section to AdminPage:
+
+- Create code with label, expiry, max uses, and optional role.
+- Copy raw code once after creation.
+- Disable a code.
+- Reset use count.
+- See last used time and assigned demo email.
+
+Rollout Order
+
+1. Add email magic-link/OTP sign-in.
+2. Add database migration and Edge Function for demo codes.
+3. Add admin UI to create/disable codes.
+4. Add Login page tabs: Google, Email, Demo code.
+5. Add tests for email submit, code submit, expired code, disabled code, max-use code, and admin creation.
+6. Update Terms/Privacy text to say users can sign in with Google, email, or admin-issued demo codes.
