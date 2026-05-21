@@ -31,6 +31,9 @@
     "flowchart": "Map arguments",
     "history": "Saved items"
   },
+  "common": {
+    "export": "Export"
+  },
   "voice": {
     "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
     "startFailed": "Dictation could not start. Check your microphone and try again."
@@ -858,6 +861,8 @@
     "newFolder": "New Folder",
     "newFolderPlaceholder": "Folder name...",
     "createFolder": "Create folder",
+    "folderCreated": "Folder created",
+    "folderCreatedDesc": "New sources can now be saved there.",
     "folderFilter": "Folder filter",
     "allFolders": "All folders",
     "importUrlRequired": "Enter a URL to import.",

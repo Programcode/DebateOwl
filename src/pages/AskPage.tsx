@@ -177,7 +177,13 @@ export default function AskPage() {
       addAskMessage({
         role: 'assistant',
         content: result.response,
-        output: { ...result, durationMs: Date.now() - askStartTime }
+        output: {
+          ...result,
+          model: result.model || config.model,
+          provider: result.provider || (config.provider === 'lovable' ? 'openai' : config.provider),
+          durationMs: result.durationMs || Date.now() - askStartTime,
+          generatedAt: result.generatedAt || new Date().toISOString(),
+        }
       });
     } catch (error) {
       setAskStreamingAssistant(null);

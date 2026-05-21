@@ -18,6 +18,10 @@ export type AskInput = z.infer<typeof AskInputSchema>;
 
 export const AskOutputSchema = z.object({
   response: z.string(),
+  model: z.string().optional(),
+  provider: z.string().optional(),
+  durationMs: z.number().optional(),
+  generatedAt: z.string().optional(),
   citations: z.array(z.object({
     claim: z.string(),
     source: z.string().optional(),

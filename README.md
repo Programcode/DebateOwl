@@ -1515,7 +1515,7 @@ See [REVIEW_AND_ROADMAP.md](./REVIEW_AND_ROADMAP.md) for detailed roadmap.
 
 - [ ] Team workspaces and sharing
 - [ ] Usage analytics dashboard
-- [ ] Offline mode (PWA)
+- [x] Offline viewing foundation (PWA app shell, route chunk preloading, local saved work)
 - [ ] AI debate partner (voice practice)
 - [ ] Evidence database with semantic search
 - [ ] Mobile apps (iOS/Android)

@@ -263,6 +263,11 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             try {
               const parts: string[] = [];
               if (message.timestamp) parts.push(formatEuropeanTime(message.timestamp));
+              if (message.role === 'assistant' && message.output?.model) {
+                parts.push(message.output.model);
+              } else if (message.role === 'assistant' && message.output?.provider) {
+                parts.push(message.output.provider);
+              }
               if (message.role === 'assistant' && message.output?.durationMs) {
                 parts.push(`${(message.output.durationMs / 1000).toFixed(1)}s`);
               }

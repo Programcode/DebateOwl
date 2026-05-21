@@ -152,7 +152,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           {durationText && <><span>•</span><span>{durationText}</span></>}
         </div>
         <div className="space-y-2" data-tour="export-section">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {onSave && (
               <Button variant="outline" size="sm" onClick={onSave}>
                 <Save className="h-4 w-4 mr-1.5" />
@@ -179,7 +179,10 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
               </Button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+              {t('common.export', 'Export')}
+            </span>
             <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
               <Clipboard className="h-4 w-4 mr-1.5" />
               {t('generateResults.clipboard', 'Clipboard')}

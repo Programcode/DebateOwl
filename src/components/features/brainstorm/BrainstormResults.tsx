@@ -128,7 +128,10 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
     <StaggeredContainer className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
       {onDiscuss && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+            {t('common.export', 'Export')}
+          </span>
           <AutoSavedSourcesUndo />
           <Button variant="outline" size="sm" onClick={() => exportBrainstormToPdf(result)}>
             <FileText className="h-4 w-4 mr-2" />
