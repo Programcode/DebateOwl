@@ -81,4 +81,25 @@ describe('AskChat', () => {
     expect(screen.getByText((content) => content.includes('Simple to explain'))).toBeDefined();
     expect(screen.getByText((content) => content.includes('Local policy varies'))).toBeDefined();
   });
+
+  it('keeps saved chats collapsed by default and loads a selected chat', () => {
+    const onLoadChat = vi.fn();
+
+    render(
+      <AskChat
+        messages={[]}
+        isLoading={false}
+        onSend={vi.fn()}
+        onClear={vi.fn()}
+        savedChats={[{ id: 'chat-1', title: 'School phone bans', createdAt: Date.now(), messageCount: 4 }]}
+        onLoadChat={onLoadChat}
+      />
+    );
+
+    expect(screen.queryByText('School phone bans')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Open saved chats'));
+    fireEvent.click(screen.getByText('School phone bans'));
+
+    expect(onLoadChat).toHaveBeenCalledWith('chat-1');
+  });
 });
