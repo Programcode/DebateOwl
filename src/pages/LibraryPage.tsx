@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const SOURCE_ROW_HEIGHT = 74;
+const SOURCE_ROW_HEIGHT = 92;
 const SOURCE_LIST_HEIGHT = 600;
 
 interface SourceRowProps {
@@ -34,6 +34,7 @@ interface SourceRowProps {
   onRemove: (source: Source) => void;
   onToggle: (id: string) => void;
   manualEntryLabel: string;
+  folderLabel: string;
 }
 
 function SourceRow({
@@ -43,6 +44,7 @@ function SourceRow({
   onRemove,
   onToggle,
   manualEntryLabel,
+  folderLabel,
   ariaAttributes,
 }: SourceRowProps & { index: number; style: CSSProperties; ariaAttributes: AriaAttributes }) {
   const source = sources[index];
@@ -50,7 +52,7 @@ function SourceRow({
 
   return (
     <div style={style} {...ariaAttributes} className="px-1 pb-2">
-      <div className={`flex h-[66px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
+      <div className={`flex h-[84px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
         <div className="flex min-w-0 items-center gap-3">
           <div className={`shrink-0 rounded-md p-1.5 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
             {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
@@ -58,15 +60,23 @@ function SourceRow({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               {source.origin?.startsWith('http') ? (
-                <a href={source.origin} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-foreground transition-colors hover:text-primary">
+                <a href={source.origin} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium text-foreground transition-colors hover:text-primary">
                   {source.title}
+                  <ExternalLink className="h-3 w-3 shrink-0" />
                 </a>
               ) : (
                 <span className="truncate text-sm font-medium">{source.title}</span>
               )}
               <Badge variant="outline" className="shrink-0 py-0 text-[9px]">{source.type.toUpperCase()}</Badge>
             </div>
-            <p className="truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
+            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+              <Badge variant="secondary" className="max-w-[140px] truncate py-0 text-[10px]">
+                <Folder className="mr-1 h-3 w-3" />
+                {folderLabel}: {source.folder || 'General'}
+              </Badge>
+              <span className="truncate text-[11px] text-muted-foreground">{source.content}</span>
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -105,6 +115,7 @@ export default function LibraryPage() {
     folder: 'General',
   });
   const [selectedFolder, setSelectedFolder] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
@@ -115,6 +126,7 @@ export default function LibraryPage() {
     origin: string;
     wordCount?: number;
     domain?: string;
+    excerpt?: string;
   } | null>(null);
 
   const handleAdd = async () => {
@@ -145,6 +157,7 @@ export default function LibraryPage() {
         origin: imported.url,
         wordCount: imported.wordCount,
         domain: imported.domain,
+        excerpt: imported.excerpt,
       });
       toast({ title: t('libraryPage.importReady'), description: t('libraryPage.importReadyDesc') });
     } catch (error) {
@@ -160,6 +173,13 @@ export default function LibraryPage() {
 
   const handleFileImport = async (file: File | undefined) => {
     if (!file) return;
+    const supportedTextTypes = new Set(['text/plain', 'text/markdown', 'text/csv', 'application/json']);
+    const supportedExtensions = new Set(['txt', 'md', 'markdown', 'csv', 'json']);
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    if (file.type && !file.type.startsWith('text/') && !supportedTextTypes.has(file.type) && !supportedExtensions.has(extension)) {
+      toast({ title: t('libraryPage.unsupportedFile', 'Unsupported file'), description: t('libraryPage.unsupportedFileDesc', 'Import plain text, Markdown, CSV, or JSON. PDF/DOCX parsing is not reliable here yet.'), variant: 'destructive' });
+      return;
+    }
     if (file.size > 250_000) {
       toast({ title: t('libraryPage.fileTooLarge'), description: t('libraryPage.fileTooLargeDesc'), variant: "destructive" });
       return;
@@ -189,7 +209,7 @@ export default function LibraryPage() {
   const handleSavePreview = async () => {
     if (!importPreview?.title || !importPreview.content) return;
     const trimmedOrigin = importPreview.origin?.trim();
-    if (trimmedOrigin && sourceLibrary.some(existing => existing.origin?.trim() === trimmedOrigin)) {
+    if (trimmedOrigin && sourceLibrary.some(existing => existing.origin?.trim().toLowerCase() === trimmedOrigin.toLowerCase())) {
       toast({
         title: t('libraryPage.duplicateSource', 'Source already in library'),
         description: t('libraryPage.duplicateSourceDesc', 'This URL or file is already saved.'),
@@ -230,13 +250,22 @@ export default function LibraryPage() {
     ...(sourceFolders || ['General']),
     ...sourceLibrary.map(s => s.folder || 'General').filter(Boolean),
   ])).sort();
-  const visibleSources = selectedFolder === 'all'
-    ? sourceLibrary
-    : sourceLibrary.filter(s => (s.folder || 'General') === selectedFolder);
+  const visibleSources = sourceLibrary
+    .filter((source) => selectedFolder === 'all' || (source.folder || 'General') === selectedFolder)
+    .filter((source) => {
+      const query = searchQuery.trim().toLowerCase();
+      if (!query) return true;
+      return [
+        source.title,
+        source.content,
+        source.origin || '',
+        source.folder || 'General',
+      ].some((value) => value.toLowerCase().includes(query));
+    });
   const handleCreateFolder = () => {
     const folder = newFolderName.trim();
     if (!folder) return;
-    createSourceFolder(folder);
+    void createSourceFolder(folder);
     setNewSource({ ...newSource, folder });
     setSelectedFolder(folder);
     setNewFolderName('');
@@ -254,11 +283,12 @@ export default function LibraryPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-8 flex justify-between items-start">
+        <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t('libraryPage.subtitle')}</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setIsAdding(!isAdding)}>
                 <Plus className="h-4 w-4 mr-1" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
               </Button>
@@ -319,10 +349,28 @@ export default function LibraryPage() {
           </div>
         </div>
 
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border bg-card px-4 py-3">
+            <p className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.totalSources', 'Total sources')}</p>
+            <p className="mt-1 text-2xl font-semibold">{sourceLibrary.length}</p>
+          </div>
+          <div className="rounded-lg border bg-card px-4 py-3">
+            <p className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.activeSources', 'Active sources')}</p>
+            <p className="mt-1 text-2xl font-semibold">{activeSourceCount}</p>
+          </div>
+          <div className="rounded-lg border bg-card px-4 py-3">
+            <p className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.syncedFolders', 'Synced folders')}</p>
+            <p className="mt-1 text-2xl font-semibold">{folders.length}</p>
+          </div>
+        </div>
+
         {isAdding && (
           <Card className="mb-8 border-primary/20 bg-primary/5">
             <CardHeader>
-              <CardTitle>{t('libraryPage.addNewTitle')}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                {t('libraryPage.addNewTitle')}
+              </CardTitle>
               <CardDescription>{t('libraryPage.addNewDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -344,6 +392,7 @@ export default function LibraryPage() {
                       <span className="sr-only">{t('libraryPage.importUrl')}</span>
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground">{t('libraryPage.importUrlHelp', 'Auto import creates an editable draft. Review it before saving to your library.')}</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="source-file">{t('libraryPage.importFileLabel')}</Label>
@@ -353,7 +402,7 @@ export default function LibraryPage() {
                     <input
                       id="source-file"
                       type="file"
-                      accept=".txt,.md,.csv,.pdf,.docx,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      accept=".txt,.md,.markdown,.csv,.json,text/plain,text/markdown,text/csv,application/json"
                       className="absolute inset-0 cursor-pointer opacity-0"
                       onChange={(event) => void handleFileImport(event.target.files?.[0])}
                     />
@@ -362,7 +411,7 @@ export default function LibraryPage() {
               </div>
 
               {importPreview && (
-                <div className="rounded-lg border bg-background p-4 space-y-3">
+                <div className="space-y-3 rounded-lg border bg-background p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium">{t('libraryPage.importPreview')}</p>
@@ -374,6 +423,9 @@ export default function LibraryPage() {
                       {t('libraryPage.saveImported')}
                     </Button>
                   </div>
+                  {importPreview.excerpt && (
+                    <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">{importPreview.excerpt}</p>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="import-title">{t('libraryPage.titleLabel')}</Label>
                     <Input
@@ -381,6 +433,19 @@ export default function LibraryPage() {
                       value={importPreview.title}
                       onChange={(e) => setImportPreview({ ...importPreview, title: e.target.value })}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('libraryPage.folder', 'Folder')}</Label>
+                    <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['General', ...folders.filter(f => f !== 'General')].map((f) => (
+                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="import-content">{t('libraryPage.contentLabel')}</Label>
@@ -393,6 +458,12 @@ export default function LibraryPage() {
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center gap-3 pt-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.manualSource', 'Manual source')}</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
 
               <div className="space-y-2">
                 <Label>{t('libraryPage.titleLabel')}</Label>
@@ -454,7 +525,8 @@ export default function LibraryPage() {
 
         <div className="grid gap-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <CardTitle className="text-xl">{t('libraryPage.yourKBTitle')}</CardTitle>
                 <CardDescription>{t('libraryPage.yourKBDesc')}</CardDescription>
@@ -464,6 +536,45 @@ export default function LibraryPage() {
                   <Database className="h-3 w-3 mr-1" />
                   {visibleSources.length} {t('libraryPage.sourcesCount')}
                 </Badge>
+              </div>
+              </div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9 pr-9"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder={t('libraryPage.searchPlaceholder', 'Search sources, folders, or content...')}
+                    aria-label={t('libraryPage.searchSources', 'Search sources')}
+                  />
+                  {searchQuery && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                      onClick={() => setSearchQuery('')}
+                      aria-label={t('common.clear', 'Clear')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {['all', ...folders].map((folder) => (
+                    <Button
+                      key={folder}
+                      type="button"
+                      variant={selectedFolder === folder ? 'default' : 'outline'}
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => setSelectedFolder(folder)}
+                    >
+                      {folder === 'all' ? t('libraryPage.allFolders', 'All folders') : folder}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -486,6 +597,7 @@ export default function LibraryPage() {
                       onRemove: handleRemoveSource,
                       onToggle: toggleSource,
                       manualEntryLabel: t('libraryPage.manualEntry'),
+                      folderLabel: t('libraryPage.folder', 'Folder'),
                     }}
                     overscanCount={8}
                     className="scrollbar-thin"

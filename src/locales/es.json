@@ -902,7 +902,16 @@
     "sourceAdded": "Fuente Añadida",
     "sourceAddedDesc": "Tu fuente está disponible para fundamentación.",
     "clearFailed": "Error al borrar fuentes",
-    "clearConfirm": "¿Estás seguro de que quieres borrar todas las fuentes?"
+    "clearConfirm": "¿Estás seguro de que quieres borrar todas las fuentes?",
+    "importUrlHelp": "Auto import creates an editable draft. Review it before saving to your library.",
+    "unsupportedFile": "Unsupported file",
+    "unsupportedFileDesc": "Import plain text, Markdown, CSV, or JSON. PDF/DOCX parsing is not reliable here yet.",
+    "totalSources": "Total sources",
+    "activeSources": "Active sources",
+    "syncedFolders": "Synced folders",
+    "manualSource": "Manual source",
+    "searchSources": "Search sources",
+    "searchPlaceholder": "Search sources, folders, or content..."
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",

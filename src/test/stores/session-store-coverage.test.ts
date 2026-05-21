@@ -43,6 +43,7 @@ describe('session-store coverage paths', () => {
       savedFactoids: [],
       savedChats: [],
       savedFlowcharts: [],
+      sourceFolders: ['General'],
       sourceLibrary: [],
       pendingFlowchartData: null,
       generateForm: {},
@@ -233,6 +234,9 @@ describe('session-store coverage paths', () => {
         },
       ],
     });
+    setMockTableResponse('source_folders', {
+      order: [{ id: 'folder_1', name: 'Tournament', created_at: nowIso }],
+    });
 
     await useSessionStore.getState().hydrateFromServer();
 
@@ -244,6 +248,14 @@ describe('session-store coverage paths', () => {
     expect(state.savedChats[0].data).toHaveLength(1);
     expect(state.savedFlowcharts).toHaveLength(1);
     expect(state.sourceLibrary).toHaveLength(1);
+    expect(state.sourceFolders).toContain('Tournament');
+  });
+
+  it('persists empty source folders for cross-device sync', async () => {
+    await useSessionStore.getState().createSourceFolder('Round 1');
+
+    expect(useSessionStore.getState().sourceFolders).toContain('Round 1');
+    expect(supabaseMock.from).toHaveBeenCalledWith('source_folders');
   });
 
   it('does not overwrite local state when server has no persisted data', async () => {
@@ -258,6 +270,7 @@ describe('session-store coverage paths', () => {
     setMockTableResponse('chats', { order: [] });
     setMockTableResponse('flowcharts', { order: [] });
     setMockTableResponse('sources', { order: [] });
+    setMockTableResponse('source_folders', { order: [] });
 
     await useSessionStore.getState().hydrateFromServer();
 

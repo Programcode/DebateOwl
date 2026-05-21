@@ -902,7 +902,16 @@
     "sourceAdded": "Forrás Hozzáadva",
     "sourceAddedDesc": "A forrásod elérhető megalapozáshoz.",
     "clearFailed": "Nem sikerült törölni a forrásokat",
-    "clearConfirm": "Biztosan törölni szeretnéd az összes forrást?"
+    "clearConfirm": "Biztosan törölni szeretnéd az összes forrást?",
+    "importUrlHelp": "Auto import creates an editable draft. Review it before saving to your library.",
+    "unsupportedFile": "Unsupported file",
+    "unsupportedFileDesc": "Import plain text, Markdown, CSV, or JSON. PDF/DOCX parsing is not reliable here yet.",
+    "totalSources": "Total sources",
+    "activeSources": "Active sources",
+    "syncedFolders": "Synced folders",
+    "manualSource": "Manual source",
+    "searchSources": "Search sources",
+    "searchPlaceholder": "Search sources, folders, or content..."
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",

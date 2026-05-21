@@ -121,7 +121,7 @@ interface SessionState {
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
-  createSourceFolder: (folder: string) => void;
+  createSourceFolder: (folder: string) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   toggleSource: (id: string) => Promise<void>;
   clearLibrary: () => Promise<void>;
@@ -264,6 +264,12 @@ interface SupabaseSourceRow {
   created_at: string;
 }
 
+interface SupabaseSourceFolderRow {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
@@ -316,6 +322,9 @@ export const useSessionStore = create<SessionState>()(
 
         const userId = await getUserId();
         if (!userId) return;
+        await supabase
+          .from('source_folders')
+          .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
         const { data } = await supabase
           .from('sources')
           .insert({
@@ -349,11 +358,16 @@ export const useSessionStore = create<SessionState>()(
           }));
         }
       },
-      createSourceFolder: (folder) => {
+      createSourceFolder: async (folder) => {
         const normalized = normalizeFolder(folder);
         set((state) => ({
           sourceFolders: mergeSourceFolders([...state.sourceFolders, normalized], state.sourceLibrary),
         }));
+        const userId = await getUserId();
+        if (!userId) return;
+        await supabase
+          .from('source_folders')
+          .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' });
       },
       removeSource: async (id) => {
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((s) => s.id !== id) }));
@@ -375,8 +389,12 @@ export const useSessionStore = create<SessionState>()(
         if (!userId) {
           throw new Error('Cannot clear library: No authenticated user');
         }
-        set({ sourceLibrary: [] });
+        set({ sourceLibrary: [], sourceFolders: ['General'] });
         await supabase.from('sources').delete().eq('user_id', userId);
+        await supabase.from('source_folders').delete().eq('user_id', userId);
+        await supabase
+          .from('source_folders')
+          .upsert({ user_id: userId, name: 'General' }, { onConflict: 'user_id,name' });
       },
 
       setGenerateResult: (result) => {
@@ -635,6 +653,7 @@ export const useSessionStore = create<SessionState>()(
           supabase.from('chats').select('*').order('created_at', { ascending: false }),
           supabase.from('flowcharts').select('*').order('created_at', { ascending: false }),
           supabase.from('sources').select('*').order('created_at', { ascending: false }),
+          supabase.from('source_folders').select('*').order('created_at', { ascending: true }),
         ]);
 
         const [
@@ -645,6 +664,7 @@ export const useSessionStore = create<SessionState>()(
           chatsRes,
           flowchartsRes,
           sourcesRes,
+          sourceFoldersRes,
         ] = results;
 
         const casesData = settledData<SupabaseSavedRow<GenerateOutput>[]>('cases', casesRes);
@@ -654,6 +674,7 @@ export const useSessionStore = create<SessionState>()(
         const chatsData = settledData<SupabaseChatRow[]>('chats', chatsRes);
         const flowchartsData = settledData<SupabaseFlowchartRow[]>('flowcharts', flowchartsRes);
         const sourcesData = settledData<SupabaseSourceRow[]>('sources', sourcesRes);
+        const sourceFoldersData = settledData<SupabaseSourceFolderRow[]>('source_folders', sourceFoldersRes);
 
         const chatRows = chatsData || [];
         const chatIds = chatRows.map((c) => c.id);
@@ -725,6 +746,7 @@ export const useSessionStore = create<SessionState>()(
         }));
 
         const sourceRows = sourcesData || [];
+        const sourceFolderRows = sourceFoldersData || [];
         const serverSources = sourceRows.map((row) => ({
           id: row.id,
           title: row.title,
@@ -735,6 +757,7 @@ export const useSessionStore = create<SessionState>()(
           isActive: row.is_active,
           createdAt: toTimestamp(row.created_at),
         }));
+        const serverSourceFolders = sourceFolderRows.map((row) => normalizeFolder(row.name));
 
         const hasServerData = [
           serverCases.length,
@@ -744,6 +767,7 @@ export const useSessionStore = create<SessionState>()(
           serverChats.length,
           serverFlowcharts.length,
           serverSources.length,
+          serverSourceFolders.length,
         ].some((count) => count > 0);
 
         if (!hasServerData) return;
@@ -755,7 +779,7 @@ export const useSessionStore = create<SessionState>()(
           savedFactoids: mergeSavedItems(state.savedFactoids, serverFactoids),
           savedChats: mergeSavedItems(state.savedChats, serverChats),
           savedFlowcharts: mergeSavedItems(state.savedFlowcharts, serverFlowcharts),
-          sourceFolders: mergeSourceFolders(state.sourceFolders, serverSources),
+          sourceFolders: mergeSourceFolders([...state.sourceFolders, ...serverSourceFolders], serverSources),
           sourceLibrary: mergeSources(state.sourceLibrary, serverSources),
         }));
       },
@@ -777,6 +801,7 @@ export const useSessionStore = create<SessionState>()(
         await supabase.from('factoids').delete().eq('user_id', userId);
         await supabase.from('flowcharts').delete().eq('user_id', userId);
         await supabase.from('sources').delete().eq('user_id', userId);
+        await supabase.from('source_folders').delete().eq('user_id', userId);
         await supabase.from('source_files').delete().eq('user_id', userId);
         await supabase.from('ai_requests').delete().eq('user_id', userId);
         await supabase.from('api_keys').delete().eq('user_id', userId);

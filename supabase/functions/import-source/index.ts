@@ -138,19 +138,46 @@ function getTitle(html: string, fallback: string) {
 }
 
 function stripHtml(html: string) {
-  const mainMatch = html.match(/<(article|main)[^>]*>([\s\S]*?)<\/\1>/i);
-  const scoped = mainMatch?.[2] || html;
-  return decodeEntities(scoped
+  const cleaned = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<(nav|footer|header|aside|form|noscript|svg|iframe)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<template[\s\S]*?<\/template>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(nav|footer|header|aside|form|svg|iframe|button)[\s\S]*?<\/\1>/gi, " ");
+
+  const candidates: string[] = [];
+  const blockPattern = /<(article|main|section|div)[^>]*(?:id|class)=["'][^"']*(?:article|content|story|post|entry|main|body|reader)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/gi;
+  for (const match of cleaned.matchAll(blockPattern)) {
+    if (match[2]) candidates.push(match[2]);
+  }
+  const semanticMatch = cleaned.match(/<(article|main)[^>]*>([\s\S]*?)<\/\1>/i);
+  if (semanticMatch?.[2]) candidates.push(semanticMatch[2]);
+  candidates.push(cleaned);
+
+  const textCandidates = candidates
+    .map((candidate) => htmlToText(candidate))
+    .filter((text) => text.split(/\s+/).filter(Boolean).length >= 20);
+
+  return textCandidates.sort((a, b) => scoreReadableText(b) - scoreReadableText(a))[0] || htmlToText(cleaned);
+}
+
+function htmlToText(html: string) {
+  return decodeEntities(html
     .replace(/<\/(p|div|section|article|main|h[1-6]|li|blockquote|tr)>/gi, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim());
+}
+
+function scoreReadableText(text: string) {
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const paragraphs = text.split(/\n{2,}/).filter((part) => part.trim().split(/\s+/).length >= 12).length;
+  const punctuation = (text.match(/[.!?]/g) || []).length;
+  const navPenalty = (text.match(/\b(cookie|subscribe|sign in|advertisement|privacy policy|all rights reserved)\b/gi) || []).length * 30;
+  return words + paragraphs * 80 + punctuation * 4 - navPenalty;
 }
 
 function normalizeText(text: string) {
