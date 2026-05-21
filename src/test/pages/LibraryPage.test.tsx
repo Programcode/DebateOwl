@@ -12,6 +12,9 @@ const mockStore = {
   addSource: vi.fn(),
   createSourceFolder: vi.fn(),
   updateSource: vi.fn(),
+  renameSourceFolder: vi.fn(),
+  deleteSourceFolder: vi.fn(),
+  setFolderActive: vi.fn(),
   removeSource: vi.fn(),
   toggleSource: vi.fn(),
   clearLibrary: vi.fn(),
@@ -37,6 +40,9 @@ describe('LibraryPage', () => {
     mockStore.addSource.mockResolvedValue(undefined);
     mockStore.createSourceFolder.mockResolvedValue(undefined);
     mockStore.updateSource.mockResolvedValue(undefined);
+    mockStore.renameSourceFolder.mockResolvedValue(undefined);
+    mockStore.deleteSourceFolder.mockResolvedValue(undefined);
+    mockStore.setFolderActive.mockResolvedValue(undefined);
     mockStore.removeSource.mockResolvedValue(undefined);
     mockStore.toggleSource.mockResolvedValue(undefined);
     mockStore.clearLibrary.mockResolvedValue(undefined);
@@ -219,6 +225,54 @@ describe('LibraryPage', () => {
         content: 'Updated evidence text',
         folder: 'General',
       }));
+    });
+  });
+
+  it('renames the selected source folder', async () => {
+    mockStore.sourceFolders = ['General', 'Round 1'];
+    mockStore.sourceLibrary = [
+      {
+        id: '1',
+        title: 'Round Source',
+        content: 'Evidence text',
+        type: 'text',
+        folder: 'Round 1',
+        isActive: true,
+        createdAt: Date.now(),
+      },
+    ];
+    render(<LibraryPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Round 1' }));
+    const renameInput = (await screen.findAllByLabelText('Rename folder'))[0];
+    fireEvent.change(renameInput, { target: { value: 'Finals' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename folder' }));
+
+    await waitFor(() => {
+      expect(mockStore.renameSourceFolder).toHaveBeenCalledWith('Round 1', 'Finals');
+    });
+  });
+
+  it('can deactivate a selected folder', async () => {
+    mockStore.sourceFolders = ['General', 'Round 1'];
+    mockStore.sourceLibrary = [
+      {
+        id: '1',
+        title: 'Round Source',
+        content: 'Evidence text',
+        type: 'text',
+        folder: 'Round 1',
+        isActive: true,
+        createdAt: Date.now(),
+      },
+    ];
+    render(<LibraryPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Round 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Deactivate' }));
+
+    await waitFor(() => {
+      expect(mockStore.setFolderActive).toHaveBeenCalledWith('Round 1', false);
     });
   });
 });

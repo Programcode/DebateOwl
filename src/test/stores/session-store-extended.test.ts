@@ -166,6 +166,54 @@ describe('Session Store Extended', () => {
             expect(useSessionStore.getState().sourceFolders).toContain('Round 2');
         });
 
+        it('renames and deletes synced source folders', async () => {
+            await act(async () => {
+                await useSessionStore.getState().addSource({
+                    type: 'text',
+                    title: 'Round source',
+                    content: 'Evidence',
+                    folder: 'Round 1',
+                });
+            });
+
+            await act(async () => {
+                await useSessionStore.getState().renameSourceFolder('Round 1', 'Finals');
+            });
+
+            expect(useSessionStore.getState().sourceFolders).toContain('Finals');
+            expect(useSessionStore.getState().sourceLibrary[0].folder).toBe('Finals');
+
+            await act(async () => {
+                await useSessionStore.getState().deleteSourceFolder('Finals', 'move-to-general');
+            });
+
+            expect(useSessionStore.getState().sourceFolders).not.toContain('Finals');
+            expect(useSessionStore.getState().sourceLibrary[0].folder).toBe('General');
+        });
+
+        it('updates active state for every source in a folder', async () => {
+            await act(async () => {
+                await useSessionStore.getState().addSource({
+                    type: 'text',
+                    title: 'A',
+                    content: 'Evidence A',
+                    folder: 'Batch',
+                });
+                await useSessionStore.getState().addSource({
+                    type: 'text',
+                    title: 'B',
+                    content: 'Evidence B',
+                    folder: 'Batch',
+                });
+            });
+
+            await act(async () => {
+                await useSessionStore.getState().setFolderActive('Batch', false);
+            });
+
+            expect(useSessionStore.getState().sourceLibrary.every((source) => !source.isActive)).toBe(true);
+        });
+
         it('clears all sources', async () => {
             // Add multiple sources
             await act(async () => {

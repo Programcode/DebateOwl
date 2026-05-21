@@ -123,6 +123,10 @@ interface SessionState {
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
+  renameSourceFolder: (oldName: string, newName: string) => Promise<void>;
+  deleteSourceFolder: (name: string, mode: 'empty-only' | 'move-to-general') => Promise<void>;
+  moveSourceToFolder: (sourceId: string, folder: string) => Promise<void>;
+  setFolderActive: (folder: string, isActive: boolean) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   toggleSource: (id: string) => Promise<void>;
   clearLibrary: () => Promise<void>;
@@ -222,6 +226,17 @@ async function applyUserScopedIdFilter(query: EqQuery, userId: string | null, id
     }
   }
   await query.eq('id', id);
+}
+
+async function applyUserScopedColumnFilter(query: EqQuery, userId: string | null, column: string, value: string) {
+  if (userId) {
+    const scoped = query.eq('user_id', userId);
+    if (scoped && typeof (scoped as EqQuery).eq === 'function') {
+      await (scoped as EqQuery).eq(column, value);
+      return;
+    }
+  }
+  await query.eq(column, value);
 }
 
 interface SupabaseSavedRow<T> {
@@ -412,6 +427,74 @@ export const useSessionStore = create<SessionState>()(
           userId,
           id,
         );
+      },
+      renameSourceFolder: async (oldName, newName) => {
+        const from = normalizeFolder(oldName);
+        const to = normalizeFolder(newName);
+        if (from === 'General' || from === to) return;
+
+        set((state) => {
+          const renamedSources = state.sourceLibrary.map((source) =>
+            normalizeFolder(source.folder) === from ? { ...source, folder: to } : source
+          );
+          return {
+            sourceFolders: mergeSourceFolders(
+              state.sourceFolders.map((folder) => normalizeFolder(folder) === from ? to : folder),
+              renamedSources,
+            ),
+            sourceLibrary: renamedSources,
+          };
+        });
+
+        const userId = await getUserId();
+        if (!userId) return;
+        await supabase
+          .from('source_folders')
+          .upsert({ user_id: userId, name: to }, { onConflict: 'user_id,name' });
+        await applyUserScopedColumnFilter(supabase.from('sources').update({ folder: to }), userId, 'folder', from);
+        await applyUserScopedColumnFilter(supabase.from('source_folders').delete(), userId, 'name', from);
+      },
+      deleteSourceFolder: async (name, mode) => {
+        const folder = normalizeFolder(name);
+        if (folder === 'General') return;
+        const affected = get().sourceLibrary.filter((source) => normalizeFolder(source.folder) === folder);
+        if (affected.length > 0 && mode === 'empty-only') {
+          throw new Error('Folder is not empty');
+        }
+
+        set((state) => ({
+          sourceFolders: mergeSourceFolders(
+            state.sourceFolders.filter((existing) => normalizeFolder(existing) !== folder),
+            state.sourceLibrary.map((source) =>
+              normalizeFolder(source.folder) === folder ? { ...source, folder: 'General' } : source
+            ),
+          ).filter((existing) => existing !== folder),
+          sourceLibrary: state.sourceLibrary.map((source) =>
+            normalizeFolder(source.folder) === folder ? { ...source, folder: 'General' } : source
+          ),
+        }));
+
+        const userId = await getUserId();
+        if (!userId) return;
+        if (affected.length > 0) {
+          await applyUserScopedColumnFilter(supabase.from('sources').update({ folder: 'General' }), userId, 'folder', folder);
+        }
+        await applyUserScopedColumnFilter(supabase.from('source_folders').delete(), userId, 'name', folder);
+      },
+      moveSourceToFolder: async (sourceId, folder) => {
+        await get().updateSource(sourceId, { folder });
+      },
+      setFolderActive: async (folder, isActive) => {
+        const normalized = normalizeFolder(folder);
+        set((state) => ({
+          sourceLibrary: state.sourceLibrary.map((source) =>
+            normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
+          ),
+        }));
+
+        const userId = await getUserId();
+        if (!userId) return;
+        await applyUserScopedColumnFilter(supabase.from('sources').update({ is_active: isActive }), userId, 'folder', normalized);
       },
       removeSource: async (id) => {
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((s) => s.id !== id) }));
