@@ -71,6 +71,27 @@ const COLORS: Record<string, string> = {
 };
 const COLORS_FALLBACK = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6'];
 
+const FEATURE_LABELS: Record<string, string> = {
+  generate: 'Generate',
+  attack: 'Attack',
+  brainstorm: 'Brainstorm',
+  factoids: 'Factoids',
+  ask: 'Ask',
+};
+
+function normalizeFeatureName(feature: string) {
+  return feature.trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function getFeatureColor(feature: string, index: number) {
+  return COLORS[normalizeFeatureName(feature)] || COLORS_FALLBACK[index % COLORS_FALLBACK.length];
+}
+
+function getFeatureLabel(feature: string) {
+  const normalized = normalizeFeatureName(feature);
+  return FEATURE_LABELS[normalized] || feature;
+}
+
 function formatKnownCost(cost: number, unknownCostRequests = 0) {
     if (cost > 0 && unknownCostRequests > 0) return `$${cost.toFixed(4)} + ${unknownCostRequests} unknown`;
     if (cost > 0) return `$${cost.toFixed(4)}`;
@@ -287,7 +308,12 @@ export default function AdminPage() {
         );
     }
 
-    const featureData = stats ? Object.entries(stats.byFeature).map(([name, value]) => ({ name, value })) : [];
+    const featureData = stats ? Object.entries(stats.byFeature).map(([name, value], index) => ({
+        name,
+        label: getFeatureLabel(name),
+        value,
+        color: getFeatureColor(name, index),
+    })) : [];
 
     return (
         <div className="container py-8 px-4">
@@ -407,15 +433,23 @@ export default function AdminPage() {
                                                     cx="50%"
                                                     cy="50%"
                                                     outerRadius={100}
-                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    label={({ payload, percent }) => `${payload.label} ${(percent * 100).toFixed(0)}%`}
                                                 >
                                                     {featureData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name] || COLORS_FALLBACK[index % COLORS_FALLBACK.length]} />
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
                                                     ))}
                                                 </Pie>
                                                 <Tooltip />
                                             </PieChart>
                                         </ResponsiveContainer>
+                                    </div>
+                                    <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                                        {featureData.map((entry) => (
+                                            <div key={entry.name} className="flex items-center gap-2">
+                                                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                                                <span className="text-muted-foreground">{entry.label}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </CardContent>
                             </Card>
