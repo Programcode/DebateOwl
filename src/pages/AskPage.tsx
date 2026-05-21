@@ -27,6 +27,8 @@ export default function AskPage() {
     appendAskStreamingDelta,
     clearAskMessages,
     saveCurrentChat,
+    loadSavedChat,
+    savedChats,
     addSource,
   } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
@@ -263,6 +265,13 @@ export default function AskPage() {
             onSend={handleSend}
             onClear={clearAskMessages}
             onSaveChat={handleSaveChat}
+            savedChats={savedChats.map((chat) => ({
+              id: chat.id,
+              title: chat.title,
+              createdAt: chat.createdAt,
+              messageCount: chat.data.length,
+            }))}
+            onLoadChat={loadSavedChat}
             onSaveSource={handleSaveToLibrary}
           />
         </AnimatedSection>

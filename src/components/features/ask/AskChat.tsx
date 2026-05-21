@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save } from 'lucide-react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save, PanelLeftOpen, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Markdown } from '@/components/ui/markdown';
@@ -13,8 +13,9 @@ import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
 import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
-import { formatEuropeanTime } from '@/lib/date-format';
+import { formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
 import { ModelSelector } from '@/components/ModelSelector';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 interface Message {
   id: string;
@@ -40,7 +41,16 @@ interface AskChatProps {
   ) => void;
   onClear: () => void;
   onSaveChat?: () => void;
+  savedChats?: SavedChatSummary[];
+  onLoadChat?: (id: string) => void;
   onSaveSource?: (title: string, content: string) => void;
+}
+
+interface SavedChatSummary {
+  id: string;
+  title: string;
+  createdAt: number;
+  messageCount: number;
 }
 
 const modeOptions = [
@@ -282,7 +292,61 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   );
 });
 
-export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, onSaveSource }: AskChatProps) {
+function SavedChatsPanel({
+  savedChats,
+  onLoadChat,
+  onNewChat,
+  onClose,
+}: {
+  savedChats: SavedChatSummary[];
+  onLoadChat?: (id: string) => void;
+  onNewChat: () => void;
+  onClose?: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const handleLoad = (id: string) => {
+    onLoadChat?.(id);
+    onClose?.();
+  };
+
+  return (
+    <div className="flex h-full flex-col gap-3">
+      <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => { onNewChat(); onClose?.(); }}>
+        <PlusCircle className="mr-2 h-4 w-4" />
+        {t('askChat.newChat', 'New chat')}
+      </Button>
+      {savedChats.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed p-4 text-center">
+          <MessageCircle className="mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm font-medium">{t('askChat.noSavedChats', 'No saved chats yet')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('askChat.noSavedChatsDesc', 'Saved coaching chats will appear here.')}</p>
+        </div>
+      ) : (
+        <ScrollArea className="min-h-0 flex-1 pr-2">
+          <div className="space-y-2">
+            {savedChats.map((chat) => (
+              <button
+                key={chat.id}
+                type="button"
+                className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => handleLoad(chat.id)}
+              >
+                <div className="truncate text-sm font-medium">{chat.title}</div>
+                <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>{formatEuropeanDate(chat.createdAt)}</span>
+                  <span>{t('askChat.messageCount', '{{count}} messages', { count: chat.messageCount })}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
+  );
+}
+
+export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, savedChats = [], onLoadChat, onSaveSource }: AskChatProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
@@ -292,6 +356,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, onSa
   const [argumentMapMode, setArgumentMapMode] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -379,6 +445,64 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, onSa
   };
 
   return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 lg:hidden">
+        <Button variant="outline" size="sm" onClick={() => setMobileSidebarOpen(true)}>
+          <PanelLeftOpen className="mr-2 h-4 w-4" />
+          {t('askChat.savedChats', 'Saved chats')}
+        </Button>
+        <span className="text-xs text-muted-foreground">{savedChats.length} {t('askChat.saved', 'saved')}</span>
+      </div>
+
+      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <SheetContent side="left" className="w-[86vw] p-4">
+          <SheetHeader>
+            <SheetTitle>{t('askChat.savedChats', 'Saved chats')}</SheetTitle>
+            <SheetDescription>{t('askChat.savedChatsDesc', 'Resume prior coaching conversations.')}</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 h-[calc(100vh-8rem)]">
+            <SavedChatsPanel
+              savedChats={savedChats}
+              onLoadChat={onLoadChat}
+              onNewChat={onClear}
+              onClose={() => setMobileSidebarOpen(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <div className={cn('grid gap-3', desktopSidebarOpen ? 'lg:grid-cols-[280px_1fr]' : 'lg:grid-cols-[auto_1fr]')}>
+        <aside className="hidden lg:block">
+          {desktopSidebarOpen ? (
+            <Card className="flex h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20">
+              <CardHeader className="shrink-0 pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base">{t('askChat.savedChats', 'Saved chats')}</CardTitle>
+                    <CardDescription>{t('askChat.savedChatsDesc', 'Resume prior coaching conversations.')}</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setDesktopSidebarOpen(false)} aria-label={t('common.close', 'Close')}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="min-h-0 flex-1">
+                <SavedChatsPanel savedChats={savedChats} onLoadChat={onLoadChat} onNewChat={onClear} />
+              </CardContent>
+            </Card>
+          ) : (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] w-12 border-primary/20"
+              onClick={() => setDesktopSidebarOpen(true)}
+              aria-label={t('askChat.openSavedChats', 'Open saved chats')}
+            >
+              <PanelLeftOpen className="h-5 w-5" />
+            </Button>
+          )}
+        </aside>
+
     <Card className="flex flex-col h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
       <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent shrink-0">
         <div className="flex items-center justify-between">
@@ -572,5 +696,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, onSa
         </form>
       </div>
     </Card>
+      </div>
+    </div>
   );
 }
