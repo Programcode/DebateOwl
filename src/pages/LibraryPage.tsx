@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X, Save, Copy } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X, Save, Copy, Pencil, FolderMinus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -132,7 +132,19 @@ function SourceRow({
 
 export default function LibraryPage() {
   const { t } = useTranslation();
-  const { sourceLibrary, sourceFolders, addSource, createSourceFolder, updateSource, removeSource, toggleSource, clearLibrary } = useSessionStore();
+  const {
+    sourceLibrary,
+    sourceFolders,
+    addSource,
+    createSourceFolder,
+    updateSource,
+    renameSourceFolder,
+    deleteSourceFolder,
+    setFolderActive,
+    removeSource,
+    toggleSource,
+    clearLibrary,
+  } = useSessionStore();
   const { toast } = useToast();
 
   const [isAdding, setIsAdding] = useState(false);
@@ -147,6 +159,7 @@ export default function LibraryPage() {
   const [selectedFolder, setSelectedFolder] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
+  const [folderRenameValue, setFolderRenameValue] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -306,6 +319,9 @@ export default function LibraryPage() {
       isActive: selectedSource.isActive,
     });
   }, [selectedSource]);
+  useEffect(() => {
+    setFolderRenameValue(selectedFolder === 'all' ? '' : selectedFolder);
+  }, [selectedFolder]);
   const handleCreateFolder = () => {
     const folder = newFolderName.trim();
     if (!folder) return;
@@ -324,6 +340,28 @@ export default function LibraryPage() {
         setSelectedSourceId(null);
       }
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
+    });
+  };
+  const handleRenameFolder = async () => {
+    if (selectedFolder === 'all' || selectedFolder === 'General') return;
+    const nextName = folderRenameValue.trim();
+    if (!nextName || nextName === selectedFolder) return;
+    await renameSourceFolder(selectedFolder, nextName);
+    setSelectedFolder(nextName);
+    toast({ title: t('libraryPage.folderRenamed', 'Folder renamed'), description: t('libraryPage.folderRenamedDesc', 'Sources in this folder were moved to the new name.') });
+  };
+  const handleDeleteSelectedFolder = async () => {
+    if (selectedFolder === 'all' || selectedFolder === 'General') return;
+    await deleteSourceFolder(selectedFolder, 'move-to-general');
+    setSelectedFolder('General');
+    toast({ title: t('libraryPage.folderDeleted', 'Folder deleted'), description: t('libraryPage.folderDeletedDesc', 'Sources were moved to General.') });
+  };
+  const handleSetSelectedFolderActive = async (isActive: boolean) => {
+    if (selectedFolder === 'all') return;
+    await setFolderActive(selectedFolder, isActive);
+    toast({
+      title: isActive ? t('libraryPage.folderActivated', 'Folder activated') : t('libraryPage.folderDeactivated', 'Folder deactivated'),
+      description: isActive ? t('libraryPage.folderActivatedDesc', 'All sources in this folder are active.') : t('libraryPage.folderDeactivatedDesc', 'Sources stay saved but will not ground AI outputs.'),
     });
   };
   const handleSaveSourceDraft = async () => {
@@ -652,6 +690,75 @@ export default function LibraryPage() {
                   ))}
                 </div>
               </div>
+              {selectedFolder !== 'all' && (
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{t('libraryPage.folderActions', 'Folder actions')}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('libraryPage.folderActionsDesc', 'Rename, delete, or change grounding for every source in this folder.')}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <div className="flex gap-2">
+                        <Input
+                          aria-label={t('libraryPage.renameFolder', 'Rename folder')}
+                          className="h-9 min-w-0 sm:w-44"
+                          value={folderRenameValue}
+                          disabled={selectedFolder === 'General'}
+                          onChange={(event) => setFolderRenameValue(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') void handleRenameFolder();
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 shrink-0"
+                          disabled={selectedFolder === 'General' || !folderRenameValue.trim() || folderRenameValue.trim() === selectedFolder}
+                          onClick={() => void handleRenameFolder()}
+                          aria-label={t('libraryPage.renameFolder', 'Rename folder')}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => void handleSetSelectedFolderActive(true)}>
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                          {t('libraryPage.activateFolder', 'Activate')}
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => void handleSetSelectedFolderActive(false)}>
+                          <ShieldAlert className="mr-2 h-4 w-4" />
+                          {t('libraryPage.deactivateFolder', 'Deactivate')}
+                        </Button>
+                        {selectedFolder !== 'General' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button type="button" variant="ghost" size="sm" className="text-destructive">
+                                <FolderMinus className="mr-2 h-4 w-4" />
+                                {t('common.delete', 'Delete')}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t('libraryPage.deleteFolderTitle', 'Delete folder?')}</AlertDialogTitle>
+                                <AlertDialogDescription>{t('libraryPage.deleteFolderDesc', 'Sources in this folder will move to General. The sources themselves will not be deleted.')}</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => void handleDeleteSelectedFolder()}>
+                                  {t('common.delete', 'Delete')}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {sourceLibrary.length === 0 ? (
