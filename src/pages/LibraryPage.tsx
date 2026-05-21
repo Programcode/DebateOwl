@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { importSourceFromUrl } from '@/lib/source-import';
+import { importSourceFile, SourceFileImportError } from '@/lib/source-file-import';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -165,6 +166,8 @@ export default function LibraryPage() {
     wordCount?: number;
     domain?: string;
     excerpt?: string;
+    fileType?: string;
+    warnings?: string[];
   } | null>(null);
 
   const handleAdd = async () => {
@@ -211,37 +214,27 @@ export default function LibraryPage() {
 
   const handleFileImport = async (file: File | undefined) => {
     if (!file) return;
-    const supportedTextTypes = new Set(['text/plain', 'text/markdown', 'text/csv', 'application/json']);
-    const supportedExtensions = new Set(['txt', 'md', 'markdown', 'csv', 'json']);
-    const extension = file.name.split('.').pop()?.toLowerCase() || '';
-    if (file.type && !file.type.startsWith('text/') && !supportedTextTypes.has(file.type) && !supportedExtensions.has(extension)) {
-      toast({ title: t('libraryPage.unsupportedFile', 'Unsupported file'), description: t('libraryPage.unsupportedFileDesc', 'Import plain text, Markdown, CSV, or JSON. PDF/DOCX parsing is not reliable here yet.'), variant: 'destructive' });
-      return;
+    try {
+      const imported = await importSourceFile(file);
+      setImportPreview({
+        title: imported.title,
+        content: imported.content,
+        type: 'file',
+        origin: imported.origin,
+        wordCount: imported.wordCount,
+        fileType: imported.fileType.toUpperCase(),
+        warnings: imported.warnings,
+      });
+    } catch (error) {
+      const isSourceError = error instanceof SourceFileImportError;
+      toast({
+        title: isSourceError && error.code === 'unsupported'
+          ? t('libraryPage.unsupportedFile', 'Unsupported file')
+          : t('libraryPage.importFailed', 'Import failed'),
+        description: isSourceError ? error.message : t('libraryPage.fileReadFailed'),
+        variant: 'destructive',
+      });
     }
-    if (file.size > 250_000) {
-      toast({ title: t('libraryPage.fileTooLarge'), description: t('libraryPage.fileTooLargeDesc'), variant: "destructive" });
-      return;
-    }
-
-    const text = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error(t('libraryPage.fileReadFailed')));
-      reader.readAsText(file);
-    });
-    const content = text.trim();
-    if (!content) {
-      toast({ title: t('libraryPage.fileEmpty'), variant: "destructive" });
-      return;
-    }
-
-    setImportPreview({
-      title: file.name.replace(/\.[^.]+$/, '') || file.name,
-      content,
-      type: 'file',
-      origin: file.name,
-      wordCount: content.split(/\s+/).filter(Boolean).length,
-    });
   };
 
   const handleSavePreview = async () => {
@@ -478,7 +471,7 @@ export default function LibraryPage() {
                     <input
                       id="source-file"
                       type="file"
-                      accept=".txt,.md,.markdown,.csv,.json,text/plain,text/markdown,text/csv,application/json"
+                      accept=".txt,.md,.markdown,.csv,.json,.pdf,.docx,text/plain,text/markdown,text/csv,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       className="absolute inset-0 cursor-pointer opacity-0"
                       onChange={(event) => void handleFileImport(event.target.files?.[0])}
                     />
@@ -492,7 +485,7 @@ export default function LibraryPage() {
                     <div>
                       <p className="text-sm font-medium">{t('libraryPage.importPreview')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[importPreview.domain || importPreview.origin, importPreview.wordCount ? `${importPreview.wordCount} ${t('libraryPage.words')}` : null].filter(Boolean).join(' • ')}
+                        {[importPreview.domain || importPreview.fileType || importPreview.origin, importPreview.wordCount ? `${importPreview.wordCount} ${t('libraryPage.words')}` : null].filter(Boolean).join(' • ')}
                       </p>
                     </div>
                     <Button type="button" size="sm" onClick={() => void handleSavePreview()}>
@@ -501,6 +494,13 @@ export default function LibraryPage() {
                   </div>
                   {importPreview.excerpt && (
                     <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">{importPreview.excerpt}</p>
+                  )}
+                  {Boolean(importPreview.warnings?.length) && (
+                    <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                      {importPreview.warnings?.map((warning) => (
+                        <p key={warning}>{warning}</p>
+                      ))}
+                    </div>
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="import-title">{t('libraryPage.titleLabel')}</Label>
