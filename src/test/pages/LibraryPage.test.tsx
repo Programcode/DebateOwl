@@ -8,7 +8,10 @@ vi.mock('@/hooks/use-toast', () => ({
 
 const mockStore = {
   sourceLibrary: [] as any[],
+  sourceFolders: ['General'] as string[],
   addSource: vi.fn(),
+  createSourceFolder: vi.fn(),
+  updateSource: vi.fn(),
   removeSource: vi.fn(),
   toggleSource: vi.fn(),
   clearLibrary: vi.fn(),
@@ -30,7 +33,10 @@ describe('LibraryPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.sourceLibrary = [];
+    mockStore.sourceFolders = ['General'];
     mockStore.addSource.mockResolvedValue(undefined);
+    mockStore.createSourceFolder.mockResolvedValue(undefined);
+    mockStore.updateSource.mockResolvedValue(undefined);
     mockStore.removeSource.mockResolvedValue(undefined);
     mockStore.toggleSource.mockResolvedValue(undefined);
     mockStore.clearLibrary.mockResolvedValue(undefined);
@@ -78,7 +84,7 @@ describe('LibraryPage', () => {
 
   it('renders sources when present', () => {
     mockStore.sourceLibrary = [
-      { id: '1', title: 'Source 1', content: 'Content', type: 'text', isActive: true, addedAt: Date.now() },
+      { id: '1', title: 'Source 1', content: 'Content', type: 'text', isActive: true, createdAt: Date.now() },
     ];
     render(<LibraryPage />);
     expect(screen.getByText('Source 1')).toBeDefined();
@@ -86,8 +92,8 @@ describe('LibraryPage', () => {
 
   it('renders multiple sources', () => {
     mockStore.sourceLibrary = [
-      { id: '1', title: 'Source A', content: 'A', type: 'text', isActive: true, addedAt: Date.now() },
-      { id: '2', title: 'Source B', content: 'B', type: 'url', isActive: false, addedAt: Date.now() },
+      { id: '1', title: 'Source A', content: 'A', type: 'text', isActive: true, createdAt: Date.now() },
+      { id: '2', title: 'Source B', content: 'B', type: 'url', isActive: false, createdAt: Date.now() },
     ];
     render(<LibraryPage />);
     expect(screen.getByText('Source A')).toBeDefined();
@@ -96,7 +102,7 @@ describe('LibraryPage', () => {
 
   it('shows grounding status', () => {
     mockStore.sourceLibrary = [
-      { id: '1', title: 'Active Source', content: 'C', type: 'text', isActive: true, addedAt: Date.now() },
+      { id: '1', title: 'Active Source', content: 'C', type: 'text', isActive: true, createdAt: Date.now() },
     ];
     render(<LibraryPage />);
     expect(screen.getByText('Grounding Active')).toBeDefined();
@@ -104,7 +110,7 @@ describe('LibraryPage', () => {
 
   it('shows grounding disabled when no active sources', () => {
     mockStore.sourceLibrary = [
-      { id: '1', title: 'Inactive', content: 'C', type: 'text', isActive: false, addedAt: Date.now() },
+      { id: '1', title: 'Inactive', content: 'C', type: 'text', isActive: false, createdAt: Date.now() },
     ];
     render(<LibraryPage />);
     expect(screen.getByText('Grounding Disabled')).toBeDefined();
@@ -180,9 +186,39 @@ describe('LibraryPage', () => {
 
   it('shows source count badge', () => {
     mockStore.sourceLibrary = [
-      { id: '1', title: 'S1', content: 'C', type: 'text', isActive: true, addedAt: Date.now() },
+      { id: '1', title: 'S1', content: 'C', type: 'text', isActive: true, createdAt: Date.now() },
     ];
     render(<LibraryPage />);
     expect(screen.getByText(/1 sources/)).toBeDefined();
+  });
+
+  it('opens a source detail sheet and saves edits', async () => {
+    mockStore.sourceFolders = ['General', 'Round 1'];
+    mockStore.sourceLibrary = [
+      {
+        id: '1',
+        title: 'Editable Source',
+        content: 'Original evidence text',
+        type: 'text',
+        folder: 'General',
+        isActive: true,
+        createdAt: Date.now(),
+      },
+    ];
+    render(<LibraryPage />);
+
+    fireEvent.click(screen.getByText('Editable Source'));
+    const titleInput = await screen.findByDisplayValue('Editable Source');
+    fireEvent.change(titleInput, { target: { value: 'Updated Source' } });
+    fireEvent.change(screen.getByLabelText('Content'), { target: { value: 'Updated evidence text' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(mockStore.updateSource).toHaveBeenCalledWith('1', expect.objectContaining({
+        title: 'Updated Source',
+        content: 'Updated evidence text',
+        folder: 'General',
+      }));
+    });
   });
 });

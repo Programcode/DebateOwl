@@ -122,6 +122,7 @@ interface SessionState {
 
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
+  updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   toggleSource: (id: string) => Promise<void>;
   clearLibrary: () => Promise<void>;
@@ -368,6 +369,49 @@ export const useSessionStore = create<SessionState>()(
         await supabase
           .from('source_folders')
           .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' });
+      },
+      updateSource: async (id, patch) => {
+        const current = get().sourceLibrary.find((s) => s.id === id);
+        if (!current) return;
+
+        const normalizedPatch: Partial<Omit<Source, 'id' | 'createdAt'>> = { ...patch };
+        if (patch.folder !== undefined) {
+          normalizedPatch.folder = normalizeFolder(patch.folder);
+        }
+        if (patch.origin !== undefined) {
+          normalizedPatch.origin = patch.origin.trim() || undefined;
+        }
+        const nextSource: Source = {
+          ...current,
+          ...normalizedPatch,
+          title: normalizedPatch.title?.trim() || current.title,
+          content: normalizedPatch.content?.trim() || current.content,
+        };
+
+        set((state) => ({
+          sourceFolders: mergeSourceFolders(state.sourceFolders, [nextSource]),
+          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? nextSource : source),
+        }));
+
+        const userId = await getUserId();
+        if (!userId) return;
+        if (nextSource.folder) {
+          await supabase
+            .from('source_folders')
+            .upsert({ user_id: userId, name: nextSource.folder }, { onConflict: 'user_id,name' });
+        }
+        await applyUserScopedIdFilter(
+          supabase.from('sources').update({
+            title: nextSource.title,
+            content: nextSource.content,
+            type: nextSource.type,
+            origin: nextSource.origin || null,
+            folder: nextSource.folder || 'General',
+            is_active: nextSource.isActive,
+          }),
+          userId,
+          id,
+        );
       },
       removeSource: async (id) => {
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((s) => s.id !== id) }));

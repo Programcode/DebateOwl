@@ -137,6 +137,35 @@ describe('Session Store Extended', () => {
             expect(useSessionStore.getState().sourceLibrary[0].isActive).toBe(false);
         });
 
+        it('updates source details and synced folders', async () => {
+            await act(async () => {
+                await useSessionStore.getState().addSource({
+                    type: 'text',
+                    title: 'Draft source',
+                    content: 'Original content',
+                    folder: 'General',
+                });
+            });
+
+            const sourceId = useSessionStore.getState().sourceLibrary[0].id;
+
+            await act(async () => {
+                await useSessionStore.getState().updateSource(sourceId, {
+                    title: 'Updated source',
+                    content: 'Updated content',
+                    folder: 'Round 2',
+                    isActive: false,
+                });
+            });
+
+            const updated = useSessionStore.getState().sourceLibrary[0];
+            expect(updated.title).toBe('Updated source');
+            expect(updated.content).toBe('Updated content');
+            expect(updated.folder).toBe('Round 2');
+            expect(updated.isActive).toBe(false);
+            expect(useSessionStore.getState().sourceFolders).toContain('Round 2');
+        });
+
         it('clears all sources', async () => {
             // Add multiple sources
             await act(async () => {
