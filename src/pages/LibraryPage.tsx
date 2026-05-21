@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, type AriaAttributes, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
+import { List } from 'react-window';
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { formatEuropeanDate } from '@/lib/date-format';
@@ -25,6 +25,70 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const SOURCE_ROW_HEIGHT = 74;
+const SOURCE_LIST_HEIGHT = 600;
+
+interface SourceRowProps {
+  sources: Source[];
+  onRemove: (source: Source) => void;
+  onToggle: (id: string) => void;
+  manualEntryLabel: string;
+}
+
+function SourceRow({
+  index,
+  style,
+  sources,
+  onRemove,
+  onToggle,
+  manualEntryLabel,
+  ariaAttributes,
+}: SourceRowProps & { index: number; style: CSSProperties; ariaAttributes: AriaAttributes }) {
+  const source = sources[index];
+  if (!source) return null;
+
+  return (
+    <div style={style} {...ariaAttributes} className="px-1 pb-2">
+      <div className={`flex h-[66px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={`shrink-0 rounded-md p-1.5 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+            {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              {source.origin?.startsWith('http') ? (
+                <a href={source.origin} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-foreground transition-colors hover:text-primary">
+                  {source.title}
+                </a>
+              ) : (
+                <span className="truncate text-sm font-medium">{source.title}</span>
+              )}
+              <Badge variant="outline" className="shrink-0 py-0 text-[9px]">{source.type.toUpperCase()}</Badge>
+            </div>
+            <p className="truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive"
+            onClick={() => onRemove(source)}
+            aria-label={`Delete ${source.title}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+          <Switch
+            checked={source.isActive}
+            onCheckedChange={() => onToggle(source.id)}
+            aria-label={`Toggle ${source.title}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function LibraryPage() {
   const { t } = useTranslation();
@@ -412,48 +476,22 @@ export default function LibraryPage() {
                   </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-2 stagger-enter">
-                    {visibleSources.map((source) => (
-                      <div key={source.id} className={`flex items-center justify-between gap-3 px-3 py-2.5 border rounded-lg transition-colors motion-list-item ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}>
-                        <div className="flex gap-3 items-center min-w-0">
-                          <div className={`p-1.5 rounded-md shrink-0 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                            {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              {source.origin?.startsWith('http') ? (
-                                <a href={source.origin} target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-foreground hover:text-primary transition-colors truncate">
-                                  {source.title}
-                                </a>
-                              ) : (
-                                <span className="font-medium text-sm truncate">{source.title}</span>
-                              )}
-                              <Badge variant="outline" className="text-[9px] py-0 shrink-0">{source.type.toUpperCase()}</Badge>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground truncate">{formatEuropeanDate(source.createdAt)} • {source.origin || t('libraryPage.manualEntry')}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive h-7 w-7"
-                            onClick={() => handleRemoveSource(source)}
-                            aria-label={`Delete ${source.title}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Switch
-                            checked={source.isActive}
-                            onCheckedChange={() => toggleSource(source.id)}
-                            aria-label={`Toggle ${source.title}`}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="h-[600px] pr-1 stagger-enter">
+                  <List
+                    rowComponent={SourceRow}
+                    rowCount={visibleSources.length}
+                    rowHeight={SOURCE_ROW_HEIGHT}
+                    rowProps={{
+                      sources: visibleSources,
+                      onRemove: handleRemoveSource,
+                      onToggle: toggleSource,
+                      manualEntryLabel: t('libraryPage.manualEntry'),
+                    }}
+                    overscanCount={8}
+                    className="scrollbar-thin"
+                    style={{ height: SOURCE_LIST_HEIGHT }}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
