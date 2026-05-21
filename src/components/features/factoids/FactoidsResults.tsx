@@ -1,7 +1,7 @@
 // src/components/features/factoids/FactoidsResults.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, MessageSquare, Bookmark, FileText, FileDown, Loader2 } from 'lucide-react';
+import { ExternalLink, AlertTriangle, CheckCircle, Clock, Search, Lightbulb, Bookmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -13,8 +13,7 @@ import { validateUrl } from '@/lib/validation/url';
 import { exportFactoidsToPdf } from '@/lib/pdf-export-utils';
 import { exportFactoidsToDocx, exportFactoidsToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
-import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
-import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 
@@ -182,39 +181,14 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
   return (
     <StaggeredContainer className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {onDiscuss && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-            {t('common.export', 'Export')}
-          </span>
-          <AutoSavedSourcesUndo />
-          <Button variant="outline" size="sm" onClick={() => exportFactoidsToPdf(result)}>
-            <FileText className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDocxExport}>
-            <FileDown className="h-4 w-4 mr-2" />
-            DOCX
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGoogleDocsExport}
-            disabled={isExportingGDocs}
-          >
-            {isExportingGDocs ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <GoogleDocsIcon className="h-4 w-4 mr-2" />
-            )}
-            Google Docs
-          </Button>
-          <Button variant="outline" size="sm" onClick={onDiscuss}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {t('factoidsResults.discuss')}
-          </Button>
-        </div>
-      )}
+      <ExportToolbar
+        onPdf={() => exportFactoidsToPdf(result)}
+        onDocx={handleDocxExport}
+        onGoogleDocs={handleGoogleDocsExport}
+        isExportingGDocs={isExportingGDocs}
+        onDiscuss={onDiscuss}
+        discussLabel={t('factoidsResults.discuss')}
+      />
 
       {/* Verification Status */}
       <SectionCard

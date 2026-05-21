@@ -1,9 +1,8 @@
 // src/components/features/attack/AttackResults.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, AlertTriangle, Info, MessageSquare, Scale, Lightbulb, FileText, FileDown, Loader2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -14,8 +13,7 @@ import { cn } from '@/lib/utils';
 import { exportAttackToPdf } from '@/lib/pdf-export-utils';
 import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
-import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
-import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 
@@ -155,38 +153,15 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
               value={overallAssessment.score}
               className="h-3"
             />
-            <div className="flex flex-wrap items-center justify-end gap-2 mt-3">
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                  {t('common.export', 'Export')}
-                </span>
-                <AutoSavedSourcesUndo />
-                <Button variant="outline" size="sm" onClick={() => exportAttackToPdf(result)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDocxExport}>
-                  <FileDown className="h-4 w-4 mr-2" />
-                  DOCX
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGoogleDocsExport}
-                  disabled={isExportingGDocs}
-                >
-                  {isExportingGDocs ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <GoogleDocsIcon className="h-4 w-4 mr-2" />
-                  )}
-                  Google Docs
-                </Button>
-                {onDiscuss && (
-                  <Button variant="outline" size="sm" onClick={onDiscuss}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    {t('attackResults.discuss')}
-                  </Button>
-                )}
+            <div className="mt-3">
+              <ExportToolbar
+                onPdf={() => exportAttackToPdf(result)}
+                onDocx={handleDocxExport}
+                onGoogleDocs={handleGoogleDocsExport}
+                isExportingGDocs={isExportingGDocs}
+                onDiscuss={onDiscuss}
+                discussLabel={t('attackResults.discuss')}
+              />
             </div>
           </div>
 

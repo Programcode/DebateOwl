@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, FileDown, FileText, Save, GitBranch, FileUp, Loader2, Sparkles, Clipboard, Undo2 } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, Save, GitBranch, Sparkles, Clipboard, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -12,7 +12,7 @@ import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
-import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 
 interface GenerateResultsProps {
@@ -151,64 +151,47 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
           {modelText && <><span>•</span><span>{modelText}</span></>}
           {durationText && <><span>•</span><span>{durationText}</span></>}
         </div>
-        <div className="space-y-2" data-tour="export-section">
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {onSave && (
-              <Button variant="outline" size="sm" onClick={onSave}>
-                <Save className="h-4 w-4 mr-1.5" />
-                {t('generateResults.save')}
+        <div data-tour="export-section">
+          <ExportToolbar
+            onPdf={() => exportCaseToPdf(result)}
+            onDocx={() => exportCaseToDocx(result)}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            extraExports={(
+              <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
+                <Clipboard className="mr-2 h-4 w-4" />
+                {t('generateResults.clipboard', 'Clipboard')}
               </Button>
             )}
-            {onDiscuss && (
-              <Button variant="outline" size="sm" onClick={onDiscuss}>
-                <MessageSquare className="h-4 w-4 mr-1.5" />
-                {t('generateResults.discuss')}
-              </Button>
+            secondaryActions={(
+              <>
+                {onSave && (
+                  <Button variant="outline" size="sm" onClick={onSave}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {t('generateResults.save')}
+                  </Button>
+                )}
+                {onDiscuss && (
+                  <Button variant="outline" size="sm" onClick={onDiscuss}>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    {t('generateResults.discuss')}
+                  </Button>
+                )}
+                {onImportFlowchart && (
+                  <Button variant="outline" size="sm" onClick={onImportFlowchart}>
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    {t('generateResults.flowcharts')}
+                  </Button>
+                )}
+                {onUndo && (
+                  <Button variant="outline" size="sm" onClick={onUndo}>
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    {t('generateResults.undo', 'Undo')}
+                  </Button>
+                )}
+              </>
             )}
-            <AutoSavedSourcesUndo />
-            {onImportFlowchart && (
-              <Button variant="outline" size="sm" onClick={onImportFlowchart}>
-                <GitBranch className="h-4 w-4 mr-1.5" />
-                {t('generateResults.flowcharts')}
-              </Button>
-            )}
-            {onUndo && (
-              <Button variant="outline" size="sm" onClick={onUndo}>
-                <Undo2 className="h-4 w-4 mr-1.5" />
-                {t('generateResults.undo', 'Undo')}
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-              {t('common.export', 'Export')}
-            </span>
-            <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
-              <Clipboard className="h-4 w-4 mr-1.5" />
-              {t('generateResults.clipboard', 'Clipboard')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => exportCaseToDocx(result)}>
-              <FileDown className="h-4 w-4 mr-1.5" />
-              {t('generateResults.word')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => exportCaseToPdf(result)}>
-              <FileText className="h-4 w-4 mr-1.5" />
-              {t('generateResults.pdf')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGoogleDocsExport}
-              disabled={isExportingGDocs}
-            >
-              {isExportingGDocs ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <FileUp className="h-4 w-4 mr-1.5" />
-              )}
-              {t('generateResults.googleDocs')}
-            </Button>
-          </div>
+          />
         </div>
       </div>
 
