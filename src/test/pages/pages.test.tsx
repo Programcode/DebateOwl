@@ -90,6 +90,12 @@ describe('Pages', () => {
             expect(screen.getByText('Factoids')).toBeInTheDocument();
             expect(screen.getByText('Ask')).toBeInTheDocument();
         });
+
+        it('adds stable tour targets to mode cards', () => {
+            const { container } = renderWithRouter(<HomePage />, '/app');
+            expect(container.querySelector('[data-tour="mode-generate"]')).toBeInTheDocument();
+            expect(container.querySelector('[data-tour="mode-flowchart"]')).toBeInTheDocument();
+        });
     });
 
     describe('NotFound', () => {

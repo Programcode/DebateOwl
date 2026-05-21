@@ -42,6 +42,7 @@ export default function HomePage() {
           {modeKeys.map((mode) => (
             <Link key={mode.key} to={mode.href} className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
               <Card
+                data-tour={`mode-${mode.key}`}
                 className={cn(
                   'h-full border-border/70 bg-card/60 hover-lift',
                   'hover:border-primary/40 hover:bg-card'
