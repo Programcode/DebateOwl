@@ -1,8 +1,9 @@
 import { SUPABASE_URL } from './client';
+import { getOAuthRedirectUrl } from '@/lib/native';
 
 export function buildGoogleOAuthUrl({
   driveAccess = false,
-  redirectTo = `${window.location.origin}/app`,
+  redirectTo = getOAuthRedirectUrl(),
 }: {
   driveAccess?: boolean;
   redirectTo?: string;

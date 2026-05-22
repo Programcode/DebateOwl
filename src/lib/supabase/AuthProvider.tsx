@@ -4,6 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { NATIVE_OAUTH_HASH_KEY, getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 
 interface AuthContextValue {
   session: Session | null;
@@ -28,9 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const hydrateOAuthHashSession = async () => {
-      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+      const hash = window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : sessionStorage.getItem(NATIVE_OAUTH_HASH_KEY) || '';
       if (!hash) return null;
 
+      sessionStorage.removeItem(NATIVE_OAUTH_HASH_KEY);
       const params = new URLSearchParams(hash);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
@@ -158,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: getOAuthRedirectUrl(),
           skipBrowserRedirect: true,
           ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
           queryParams: driveAccess
@@ -173,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
-      window.location.assign(data.url);
+      await openExternalUrl(data.url);
     },
     signOut: async () => {
       await supabase.auth.signOut();
