@@ -177,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
-      await openExternalUrl(data.url);
+      void openExternalUrl(data.url);
     },
     signOut: async () => {
       await supabase.auth.signOut();

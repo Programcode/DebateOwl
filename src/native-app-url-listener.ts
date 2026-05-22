@@ -1,5 +1,5 @@
 import { App } from '@capacitor/app';
-import { NATIVE_OAUTH_HASH_KEY, closeExternalBrowser, isNativeApp } from '@/lib/native';
+import { NATIVE_OAUTH_HASH_KEY, NATIVE_URL_SCHEME, closeExternalBrowser, isNativeApp } from '@/lib/native';
 
 export function registerNativeAppUrlListener() {
   if (!isNativeApp()) return;
@@ -12,7 +12,7 @@ export function registerNativeAppUrlListener() {
       return;
     }
 
-    if (parsedUrl.protocol !== 'app.debatelab.mobile:') return;
+    if (parsedUrl.protocol !== `${NATIVE_URL_SCHEME}:`) return;
 
     if (parsedUrl.host === 'auth' && parsedUrl.hash) {
       sessionStorage.setItem(NATIVE_OAUTH_HASH_KEY, parsedUrl.hash.slice(1));

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.debatelab.mobile',
+  appId: 'com.adam.debatelab',
   appName: 'DebateLab',
   webDir: 'dist',
   ios: {
@@ -13,8 +13,17 @@ const config: CapacitorConfig = {
     iosScheme: 'capacitor',
   },
   plugins: {
+    Keyboard: {
+      resize: 'body',
+      style: 'DEFAULT',
+    },
     SplashScreen: {
       launchAutoHide: true,
+      backgroundColor: '#0f172a',
+    },
+    StatusBar: {
+      overlaysWebView: false,
+      style: 'DEFAULT',
       backgroundColor: '#0f172a',
     },
   },
