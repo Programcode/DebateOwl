@@ -20,9 +20,9 @@ interface ExportToolbarProps {
 }
 
 // Unified export bar used by every feature's results view.
-// All elements left-aligned in a single wrapping group so the visual order
-// matches the DOM order in every locale (longer translated labels can wrap to
-// a second line, but never reorder).
+// Left-aligned tag, right-aligned action buttons in a single wrapping group so
+// the visual order matches the DOM order in every locale (longer translated
+// labels can wrap to a second line, but never reorder).
 export function ExportToolbar({
   onPdf,
   onDocx,
@@ -36,11 +36,11 @@ export function ExportToolbar({
 }: ExportToolbarProps) {
   const { t } = useTranslation();
   return (
-    <div className="flex w-full flex-wrap items-center justify-start gap-2">
+    <div className="flex w-full flex-wrap items-center justify-between gap-2">
       <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
         {t('common.export', 'Export')}
       </span>
-      <div className="flex flex-wrap items-center justify-start gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {showUndo && <AutoSavedSourcesUndo />}
         {extraExports}
         <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={onPdf}>
