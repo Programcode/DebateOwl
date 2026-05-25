@@ -65,10 +65,11 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
   );
 }
 
-function formatDuration(ms?: number) {
+function formatDuration(ms: number | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (!ms || ms < 0) return null;
-  if (ms < 1000) return `${ms} ms`;
-  return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`;
+  if (ms < 1000) return t('generateResults.durationMs', { value: ms });
+  const value = (ms / 1000).toFixed(ms < 10000 ? 1 : 0);
+  return t('generateResults.durationS', { value });
 }
 
 export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart }: GenerateResultsProps) {
@@ -134,8 +135,9 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
     );
   }
 
-  const durationText = formatDuration(result.metadata?.durationMs);
-  const modelText = result.metadata?.model || result.metadata?.provider;
+  const durationText = formatDuration(result.metadata?.durationMs, t);
+  const modelName = result.metadata?.model || result.metadata?.provider;
+  const modelText = modelName ? t('generateResults.modelLabel', { value: modelName }) : null;
 
   return (
     <StaggeredContainer className="space-y-6">
