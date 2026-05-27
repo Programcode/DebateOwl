@@ -2,7 +2,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
-import { buildGoogleOAuthUrl } from './oauth-url';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 
@@ -151,29 +150,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: session?.user ?? null,
     loading,
     signInWithGoogle: async ({ driveAccess = false } = {}) => {
-      const fallbackUrl = buildGoogleOAuthUrl({ driveAccess });
-      const result = await Promise.race([
-        supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/app`,
-            skipBrowserRedirect: true,
-            ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
-            queryParams: driveAccess
-              ? {
-                access_type: 'offline',
-                prompt: 'consent',
-              }
-              : undefined,
-          },
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
-      ]);
+      // Always use the SDK-generated URL so PKCE's code_verifier is written
+      // to storage before redirect. The previous Promise.race against a 1200ms
+      // timeout could fall back to a hand-built URL that skipped PKCE — Google
+      // would then call back to /app but the SDK couldn't exchange the code,
+      // leaving the user stuck on "Redirecting…" until manual refresh.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/app`,
+          skipBrowserRedirect: true,
+          ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
+          queryParams: driveAccess
+            ? {
+              access_type: 'offline',
+              prompt: 'consent',
+            }
+            : undefined,
+        },
+      });
 
-      if (result?.error) throw result.error;
+      if (error) throw error;
+      if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
-      const redirectUrl = result?.data?.url || fallbackUrl;
-      window.location.assign(redirectUrl);
+      window.location.assign(data.url);
     },
     signOut: async () => {
       await supabase.auth.signOut();
