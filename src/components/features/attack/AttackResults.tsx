@@ -85,9 +85,18 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
 
-  const criticalCount = result.weaknesses.filter(w => w.severity === 'critical').length;
-  const majorCount = result.weaknesses.filter(w => w.severity === 'major').length;
-  const minorCount = result.weaknesses.filter(w => w.severity === 'minor').length;
+  // Guard against malformed/legacy persisted results so navigating back to
+  // this page renders an empty state instead of crashing the route.
+  const weaknesses = Array.isArray(result?.weaknesses) ? result.weaknesses : [];
+  const fallaciesDetected = Array.isArray(result?.fallaciesDetected) ? result.fallaciesDetected : [];
+  const crossExQuestions = Array.isArray(result?.crossExQuestions) ? result.crossExQuestions : [];
+  const overallAssessment = result?.overallAssessment ?? { summary: '', score: 0, strengthAreas: [] };
+  const strengthAreas = Array.isArray(overallAssessment.strengthAreas) ? overallAssessment.strengthAreas : [];
+  const weighingAnalysis = result?.weighingAnalysis;
+
+  const criticalCount = weaknesses.filter(w => w.severity === 'critical').length;
+  const majorCount = weaknesses.filter(w => w.severity === 'major').length;
+  const minorCount = weaknesses.filter(w => w.severity === 'minor').length;
 
   const handleDocxExport = async () => {
     const success = await exportAttackToDocx(result);
@@ -128,7 +137,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
       {/* Overall Assessment */}
       <SectionCard
         title={t('attackResults.overall')}
-        description={result.overallAssessment.summary}
+        description={overallAssessment.summary}
       >
         <div className="space-y-4">
           <div>
@@ -136,14 +145,14 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
               <span className="text-sm font-medium text-foreground">{t('attackResults.caseStrength')}</span>
               <span className={cn(
                   'text-lg font-bold',
-                  result.overallAssessment.score >= 70 ? 'text-primary' :
-                    result.overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
+                  overallAssessment.score >= 70 ? 'text-primary' :
+                    overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
                 )}>
-                  {result.overallAssessment.score}/100
+                  {overallAssessment.score}/100
               </span>
             </div>
             <Progress
-              value={result.overallAssessment.score}
+              value={overallAssessment.score}
               className="h-3"
             />
             <div className="flex flex-wrap items-center justify-end gap-2 mt-3">
@@ -199,9 +208,9 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.strengths')}</h4>
             <ul className="space-y-1">
-              {result.overallAssessment.strengthAreas.map((strength, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-primary mt-1">✓</span>
+              {strengthAreas.map((strength, i) => (
+                <li key={i} className="flex items-baseline gap-2 text-sm">
+                  <span className="text-primary leading-none">✓</span>
                   <span className="text-foreground">{strength}</span>
                 </li>
               ))}
@@ -213,12 +222,12 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
       {/* Weaknesses */}
       < SectionCard
         title={t('attackResults.weaknesses')}
-        description={`${result.weaknesses.length} ${t('attackResults.weaknessesCount')}`
+        description={`${weaknesses.length} ${t('attackResults.weaknessesCount')}`
         }
         icon={< AlertCircle className="h-5 w-5" />}
       >
         <div className="space-y-4">
-          {result.weaknesses.map((weakness) => (
+          {weaknesses.map((weakness) => (
             <WeaknessCard key={weakness.id} weakness={weakness} />
           ))}
         </div>
@@ -226,13 +235,13 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
 
       {/* Fallacies */}
       {
-        result.fallaciesDetected.length > 0 && (
+        fallaciesDetected.length > 0 && (
           <SectionCard
             title={t('attackResults.fallacies')}
             description={t('attackResults.fallaciesDesc')}
           >
             <div className="space-y-3">
-              {result.fallaciesDetected.map((fallacy, i) => (
+              {fallaciesDetected.map((fallacy, i) => (
                 <div key={i} className="rounded-lg border border-border p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <Badge variant="destructive">{fallacy.name}</Badge>
@@ -253,7 +262,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
         icon={<MessageSquare className="h-5 w-5" />}
       >
         <div className="space-y-4">
-          {result.crossExQuestions.map((q, i) => (
+          {crossExQuestions.map((q, i) => (
             <div key={i} className="rounded-lg border border-border p-4">
               <p className="font-medium text-foreground mb-2">"{q.question}"</p>
               <div className="grid gap-2 text-sm">
@@ -272,42 +281,44 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
       </SectionCard>
 
       {/* Weighing Analysis */}
-      <SectionCard
-        title={t('attackResults.weighing')}
-        description={t('attackResults.weighingDesc')}
-        icon={<Scale className="h-5 w-5" />}
-      >
-        <div className="space-y-4">
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('attackResults.currentWeighing')}</h4>
-            <p className="text-foreground">{result.weighingAnalysis.currentWeighing}</p>
+      {weighingAnalysis && (
+        <SectionCard
+          title={t('attackResults.weighing')}
+          description={t('attackResults.weighingDesc')}
+          icon={<Scale className="h-5 w-5" />}
+        >
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('attackResults.currentWeighing')}</h4>
+              <p className="text-foreground">{weighingAnalysis.currentWeighing}</p>
+            </div>
+            <Separator />
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.missingComparisons')}</h4>
+              <ul className="space-y-1">
+                {(weighingAnalysis.missingComparisons ?? []).map((comparison, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <span className="text-destructive mt-1">•</span>
+                    <span className="text-foreground">{comparison}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Separator />
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.improvements')}</h4>
+              <ul className="space-y-1">
+                {(weighingAnalysis.improvementSuggestions ?? []).map((suggestion, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <span className="text-primary mt-1">→</span>
+                    <span className="text-foreground">{suggestion}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <Separator />
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.missingComparisons')}</h4>
-            <ul className="space-y-1">
-              {result.weighingAnalysis.missingComparisons.map((comparison, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-destructive mt-1">•</span>
-                  <span className="text-foreground">{comparison}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Separator />
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.improvements')}</h4>
-            <ul className="space-y-1">
-              {result.weighingAnalysis.improvementSuggestions.map((suggestion, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-primary mt-1">→</span>
-                  <span className="text-foreground">{suggestion}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      )}
     </StaggeredContainer >
   );
 }
