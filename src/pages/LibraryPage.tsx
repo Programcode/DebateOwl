@@ -71,9 +71,13 @@ function SourceRow({
             </div>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
             <div className="mt-1 flex min-w-0 items-center gap-1.5">
-              <Badge variant="secondary" className="max-w-[140px] truncate py-0 text-[10px]">
-                <Folder className="mr-1 h-3 w-3" />
-                {folderLabel}: {source.folder || 'General'}
+              <Badge
+                variant="secondary"
+                className="shrink-0 max-w-[200px] truncate py-0 text-[10px]"
+                title={`${folderLabel}: ${source.folder || 'General'}`}
+              >
+                <Folder className="mr-1 h-3 w-3 shrink-0" />
+                <span className="truncate">{source.folder || 'General'}</span>
               </Badge>
               <span className="truncate text-[11px] text-muted-foreground">{source.content}</span>
             </div>
