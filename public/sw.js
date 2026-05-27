@@ -67,12 +67,19 @@ async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
 
-  const response = await fetch(request);
-  if (response.ok) {
-    const cache = await caches.open(RUNTIME_CACHE);
-    cache.put(request, response.clone());
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    // Offline and not cached. Return a 504 so the browser/app sees a real
+    // response instead of a network-level failure — prevents blank-page on
+    // route navigation when a lazy chunk wasn't yet cached.
+    return new Response('', { status: 504, statusText: 'Offline' });
   }
-  return response;
 }
 
 async function navigationFallback(request) {
