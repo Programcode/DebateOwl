@@ -13,16 +13,17 @@ interface ExportToolbarProps {
   onDiscuss?: () => void;
   discussLabel?: string;
   showUndo?: boolean;
-  /** Extra export buttons rendered before PDF/DOCX/Google Docs on row 1. */
+  /** Buttons that appear on the export row, between the EXPORT tag and PDF/DOCX/Google Docs (e.g. Clipboard). */
   extraExports?: ReactNode;
-  /** Action buttons rendered on row 2 (e.g. flowchart import, save, undo). */
+  /** Buttons that appear on the top row (Save, Discuss, Flowcharts, Undo, etc.). */
   secondaryActions?: ReactNode;
 }
 
 // Unified export bar used by every feature's results view.
-// Left-aligned tag, right-aligned action buttons in a single wrapping group so
-// the visual order matches the DOM order in every locale (longer translated
-// labels can wrap to a second line, but never reorder).
+// Two explicit rows, both left-aligned:
+//   Row 1 (top):    secondary actions — Save, Discuss, Flowcharts, Undo, AutoSavedSourcesUndo
+//   Row 2 (bottom): EXPORT tag, extra export buttons (e.g. Clipboard), PDF, DOCX, Google Docs
+// Layout chosen by user 2026-05-27; see feedback-exports memory.
 export function ExportToolbar({
   onPdf,
   onDocx,
@@ -35,13 +36,27 @@ export function ExportToolbar({
   secondaryActions,
 }: ExportToolbarProps) {
   const { t } = useTranslation();
+
+  const hasTopRow = !!secondaryActions || showUndo || !!onDiscuss;
+
   return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-2">
-      <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-        {t('common.export', 'Export')}
-      </span>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {showUndo && <AutoSavedSourcesUndo />}
+    <div className="flex w-full flex-col items-start gap-2">
+      {hasTopRow && (
+        <div className="flex w-full flex-wrap items-center justify-start gap-2">
+          {secondaryActions}
+          {onDiscuss && (
+            <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={onDiscuss}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              {discussLabel || t('common.discuss', 'Discuss')}
+            </Button>
+          )}
+          {showUndo && <AutoSavedSourcesUndo />}
+        </div>
+      )}
+      <div className="flex w-full flex-wrap items-center justify-start gap-2">
+        <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+          {t('common.export', 'Export')}
+        </span>
         {extraExports}
         <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={onPdf}>
           <FileText className="mr-2 h-4 w-4" />
@@ -65,13 +80,6 @@ export function ExportToolbar({
           )}
           Google Docs
         </Button>
-        {onDiscuss && (
-          <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={onDiscuss}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            {discussLabel || t('common.discuss', 'Discuss')}
-          </Button>
-        )}
-        {secondaryActions}
       </div>
     </div>
   );
