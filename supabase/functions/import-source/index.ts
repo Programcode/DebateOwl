@@ -116,9 +116,17 @@ function decodeEntities(text: string) {
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, "\"")
-    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
     .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">");
+    .replace(/&gt;/gi, ">")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      const code = parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    });
 }
 
 function getMeta(html: string, names: string[]) {
@@ -144,7 +152,9 @@ function stripHtml(html: string) {
     .replace(/<template[\s\S]*?<\/template>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<(nav|footer|header|aside|form|svg|iframe|button)[\s\S]*?<\/\1>/gi, " ");
+    .replace(/<(nav|footer|header|aside|form|svg|iframe|button)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<(div|section)[^>]*role=["'](banner|navigation|complementary|search|contentinfo)["'][\s\S]*?<\/\1>/gi, " ")
+    .replace(/<(div|section)[^>]*(?:id|class)=["'][^"']*(?:cookie|consent|banner|nav(?:bar|igation)?|menu|sidebar|header|footer|subscribe|newsletter|social|share|paywall)[^"']*["'][\s\S]*?<\/\1>/gi, " ");
 
   const candidates: string[] = [];
   const blockPattern = /<(article|main|section|div)[^>]*(?:id|class)=["'][^"']*(?:article|content|story|post|entry|main|body|reader)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/gi;
@@ -180,8 +190,48 @@ function scoreReadableText(text: string) {
   return words + paragraphs * 80 + punctuation * 4 - navPenalty;
 }
 
+const UI_PHRASE_PATTERNS = [
+  /^skip to (?:main )?content\b/i,
+  /^skip to navigation\b/i,
+  /^jump to (?:main )?content\b/i,
+  /^site search\b/i,
+  /^search\.{3}$/i,
+  /^watch live\b/i,
+  /^sign in\b/i,
+  /^sign up\b/i,
+  /^subscribe\b/i,
+  /^accept (?:all )?cookies\b/i,
+  /^manage cookies\b/i,
+  /^cookie (?:settings|policy|preferences)\b/i,
+  /^menu\b/i,
+  /^toggle (?:menu|navigation)\b/i,
+  /^close menu\b/i,
+  /^advertisement\b/i,
+];
+
+function stripLeadingUiPhrases(text: string) {
+  let result = text;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const trimmed = result.replace(/^[\s\n\r]+/, "");
+    for (const pattern of UI_PHRASE_PATTERNS) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        result = trimmed.slice(match[0].length);
+        changed = true;
+        break;
+      }
+    }
+    if (!changed && trimmed !== result) {
+      result = trimmed;
+    }
+  }
+  return result;
+}
+
 function normalizeText(text: string) {
-  return text
+  return stripLeadingUiPhrases(text)
     .replace(/\r/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n[ \t]+/g, "\n")
