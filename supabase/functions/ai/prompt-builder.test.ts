@@ -73,7 +73,7 @@ Deno.test("factoids prompt includes source filters and language", () => {
     language: "en",
   }, "SEARCH CONTEXT");
 
-  assertIncludes(prompt, "Find evidence for claim: \"Solar is cheaper than coal\"");
+  assertIncludes(prompt, "Find evidence in favor of this statement: \"Solar is cheaper than coal\"");
   assertIncludes(prompt, "Region: United States");
   assertIncludes(prompt, "Source Type: government");
   assertIncludes(prompt, "Timeframe: 2020-2025");
