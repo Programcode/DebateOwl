@@ -316,6 +316,7 @@ describe('AuthProvider behavior', () => {
     );
 
     await act(async () => {
+      // Keep this in sync with AUTH_OPERATION_TIMEOUT_MS in AuthProvider.
       await vi.advanceTimersByTimeAsync(4000);
     });
 

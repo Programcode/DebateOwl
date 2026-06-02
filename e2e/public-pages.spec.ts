@@ -39,7 +39,9 @@ for (const locale of LOCALES) {
         const fatalErrors = consoleErrors.filter((msg) =>
           !msg.includes('Failed to load resource') &&
           !msg.includes('favicon') &&
-          !msg.toLowerCase().includes('warning'),
+          !msg.includes('net::ERR_') &&
+          !/^Failed to fetch(:|$)/.test(msg) &&
+          !/^Warning:/.test(msg),
         );
         expect(fatalErrors, fatalErrors.join('\n')).toEqual([]);
       });

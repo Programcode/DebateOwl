@@ -41,7 +41,7 @@ export function AppLayout() {
   const { t } = useTranslation();
 
   return (
-    <div className="native-safe-screen flex min-h-screen flex-col bg-background">
+    <div className="native-safe-screen flex flex-col bg-background">
       {/* Header */}
       <header className="native-safe-top sticky top-0 z-50 border-b border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]">
         <div className="container flex h-16 items-center justify-between px-4">
@@ -129,7 +129,7 @@ export function AppLayout() {
       </main>
 
       {/* Footer */}
-      <footer className="native-safe-bottom border-t border-border bg-card/50 py-4">
+      <footer className="native-safe-bottom border-t border-border bg-card/50 pt-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">

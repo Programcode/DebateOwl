@@ -168,7 +168,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
                 {t('generateResults.clipboard', 'Clipboard')}
               </Button>
             )}
-            secondaryActions={(
+            secondaryActions={(onSave || onDiscuss || onImportFlowchart || onUndo) ? (
               <>
                 {onSave && (
                   <Button variant="outline" size="sm" onClick={onSave}>
@@ -195,7 +195,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
                   </Button>
                 )}
               </>
-            )}
+            ) : undefined}
           />
         </div>
       </div>
