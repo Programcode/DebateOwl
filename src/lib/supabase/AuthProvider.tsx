@@ -39,18 +39,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hydrateOAuthCallbackSession = async () => {
       const code = new URLSearchParams(window.location.search).get('code');
       if (code) {
-        const { data, error } = await withAuthTimeout(
-          supabase.auth.exchangeCodeForSession(code),
-          'OAuth code exchange timeout',
-        );
-        if (error) throw error;
+        const cleanupOAuthParams = () => {
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.delete('code');
+          nextUrl.searchParams.delete('state');
+          nextUrl.searchParams.delete('error');
+          nextUrl.searchParams.delete('error_description');
+          window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
+        };
 
-        const nextUrl = new URL(window.location.href);
-        nextUrl.searchParams.delete('code');
-        nextUrl.searchParams.delete('state');
-        nextUrl.searchParams.delete('error');
-        nextUrl.searchParams.delete('error_description');
-        window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
+        let result: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
+        try {
+          result = await withAuthTimeout(
+            supabase.auth.exchangeCodeForSession(code),
+            'OAuth code exchange timeout',
+          );
+        } finally {
+          cleanupOAuthParams();
+        }
+
+        const { data, error } = result;
+        if (error) throw error;
         return data.session;
       }
 

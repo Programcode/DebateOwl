@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setLocale } from './helpers/auth';
 
 const LOCALES = ['en', 'es', 'hu'] as const;
 const PUBLIC_ROUTES = [
@@ -11,17 +12,7 @@ const PUBLIC_ROUTES = [
 for (const locale of LOCALES) {
   test.describe(`public pages [${locale}]`, () => {
     test.beforeEach(async ({ page }) => {
-      await page.addInitScript((lang) => {
-        const stored = {
-          state: { language: lang, outputLanguage: lang, theme: 'system' },
-          version: 0,
-        };
-        try {
-          window.localStorage.setItem('debate-trainer-settings', JSON.stringify(stored));
-        } catch {
-          /* ignore */
-        }
-      }, locale);
+      await setLocale(page, locale);
     });
 
     for (const route of PUBLIC_ROUTES) {

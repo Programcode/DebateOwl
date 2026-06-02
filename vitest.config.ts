@@ -25,7 +25,9 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 90,
-        // Branch/function thresholds are calibrated to the selected-scope baseline.
+        // thresholds.branches is 81.56% in the current selected-scope baseline.
+        // TODO: ratchet branches/functions back to 90 after covering conditional
+        // gaps in stripe.ts, AuthProvider.tsx, session-store.ts, and ai/client.ts.
         branches: 80,
         functions: 89,
         lines: 90,
