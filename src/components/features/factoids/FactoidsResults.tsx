@@ -15,6 +15,7 @@ import { exportFactoidsToDocx, exportFactoidsToGoogleDocs } from '@/lib/export-u
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { openExternalUrl } from '@/lib/native';
 
 
 interface FactoidsResultsProps {
@@ -160,10 +161,12 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
     try {
       const exportResult = await exportFactoidsToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
+        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+          .catch(() => toast.error(t('factoidsResults.exportError')));
         toast.success(t('factoidsResults.exportedGdocs'), {
           action: {
             label: t('factoidsResults.open'),
-            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+            onClick: openDocument,
           },
         });
       } else if (exportResult.requiresReauth) {

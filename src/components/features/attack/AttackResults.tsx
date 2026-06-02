@@ -15,6 +15,7 @@ import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { openExternalUrl } from '@/lib/native';
 
 
 interface AttackResultsProps {
@@ -110,13 +111,15 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
     try {
       const exportResult = await exportAttackToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
+        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+          .catch(() => toast.error(t('attackResults.exportError')));
         toast.success(t('attackResults.exportedGdocs'), {
           action: {
             label: t('attackResults.open'),
-            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+            onClick: openDocument,
           },
         });
-        window.open(exportResult.documentUrl, '_blank');
+        openDocument();
       } else if (exportResult.requiresReauth) {
         setShowDriveAuth(true);
       } else {

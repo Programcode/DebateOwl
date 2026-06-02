@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { openExternalUrl } from '@/lib/native';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
@@ -104,13 +105,15 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
     try {
       const exportResult = await exportCaseToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
+        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+          .catch(() => toast.error(t('generateResults.exportError')));
         toast.success(t('generateResults.exportedGdocs'), {
           action: {
             label: t('generateResults.open'),
-            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+            onClick: openDocument,
           },
         });
-        window.open(exportResult.documentUrl, '_blank');
+        openDocument();
       } else if (exportResult.requiresReauth) {
         setShowDriveAuth(true);
       } else {

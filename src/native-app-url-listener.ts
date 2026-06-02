@@ -1,30 +1,55 @@
 import { App } from '@capacitor/app';
-import { NATIVE_OAUTH_HASH_KEY, NATIVE_URL_SCHEME, closeExternalBrowser, isNativeApp } from '@/lib/native';
+import { NATIVE_URL_SCHEME, closeExternalBrowser, isNativeApp } from '@/lib/native';
+
+interface NativeAppUrlAction {
+  route: string;
+}
+
+export function resolveNativeAppUrl(url: string): NativeAppUrlAction | null {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return null;
+  }
+
+  if (parsedUrl.protocol !== `${NATIVE_URL_SCHEME}:`) return null;
+
+  if (parsedUrl.host === 'auth' && parsedUrl.pathname === '/callback') {
+    if (parsedUrl.searchParams.has('code')) {
+      return { route: `/app${parsedUrl.search}` };
+    }
+
+    return null;
+  }
+
+  if (parsedUrl.host !== 'app') return null;
+
+  return {
+    route: `/app${parsedUrl.pathname}${parsedUrl.search}`,
+  };
+}
+
+async function handleNativeAppUrl(url: string) {
+  const action = resolveNativeAppUrl(url);
+  if (!action) return;
+
+  await closeExternalBrowser();
+  window.location.assign(action.route);
+}
 
 export function registerNativeAppUrlListener() {
   if (!isNativeApp()) return;
 
-  App.addListener('appUrlOpen', async ({ url }) => {
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(url);
-    } catch {
-      return;
+  App.getLaunchUrl().then((launchUrl) => {
+    if (launchUrl?.url) {
+      return handleNativeAppUrl(launchUrl.url);
     }
-
-    if (parsedUrl.protocol !== `${NATIVE_URL_SCHEME}:`) return;
-
-    if (parsedUrl.host === 'auth' && parsedUrl.hash) {
-      sessionStorage.setItem(NATIVE_OAUTH_HASH_KEY, parsedUrl.hash.slice(1));
-      await closeExternalBrowser();
-      window.location.assign('/app');
-      return;
-    }
-
-    await closeExternalBrowser();
-    const route = parsedUrl.host === 'app' ? `/app${parsedUrl.pathname}${parsedUrl.search}` : '/app';
-    window.location.assign(route);
   }).catch((error) => {
+    console.warn('[Native] Failed to read launch URL:', error);
+  });
+
+  App.addListener('appUrlOpen', ({ url }) => handleNativeAppUrl(url)).catch((error) => {
     console.warn('[Native] Failed to register app URL listener:', error);
   });
 }

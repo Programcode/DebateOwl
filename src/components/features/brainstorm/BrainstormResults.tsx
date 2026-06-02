@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { openExternalUrl } from '@/lib/native';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -81,13 +82,15 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
     try {
       const exportResult = await exportBrainstormToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
+        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+          .catch(() => toast.error(t('brainstormResults.exportError')));
         toast.success(t('brainstormResults.exportedGdocs'), {
           action: {
             label: t('brainstormResults.open'),
-            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+            onClick: openDocument,
           },
         });
-        window.open(exportResult.documentUrl, '_blank');
+        openDocument();
       } else if (exportResult.requiresReauth) {
         setShowDriveAuth(true);
       } else {
