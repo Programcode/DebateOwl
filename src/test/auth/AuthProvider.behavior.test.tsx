@@ -378,13 +378,24 @@ describe('AuthProvider behavior', () => {
 
   it('throws if useAuth is used outside provider', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const expectedError = 'useAuth must be used within AuthProvider';
+    const preventExpectedErrorLog = (event: ErrorEvent) => {
+      if (event.error instanceof Error && event.error.message === expectedError) {
+        event.preventDefault();
+      }
+    };
 
     function BrokenConsumer() {
       useAuth();
       return null;
     }
 
-    expect(() => render(<BrokenConsumer />)).toThrow('useAuth must be used within AuthProvider');
-    errorSpy.mockRestore();
+    window.addEventListener('error', preventExpectedErrorLog);
+    try {
+      expect(() => render(<BrokenConsumer />)).toThrow(expectedError);
+    } finally {
+      window.removeEventListener('error', preventExpectedErrorLog);
+      errorSpy.mockRestore();
+    }
   });
 });
