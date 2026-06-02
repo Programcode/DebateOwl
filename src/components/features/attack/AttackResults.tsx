@@ -1,7 +1,7 @@
 // src/components/features/attack/AttackResults.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';

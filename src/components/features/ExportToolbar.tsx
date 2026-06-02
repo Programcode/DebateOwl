@@ -31,7 +31,7 @@ export function ExportToolbar({
   isExportingGDocs = false,
   onDiscuss,
   discussLabel,
-  showUndo = true,
+  showUndo = false,
   extraExports,
   secondaryActions,
 }: ExportToolbarProps) {
