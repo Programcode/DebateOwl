@@ -32,7 +32,10 @@
     "history": "Saved items"
   },
   "common": {
-    "export": "Export"
+    "export": "Export",
+    "pdf": "PDF",
+    "docx": "DOCX",
+    "googleDocs": "Google Docs"
   },
   "voice": {
     "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
