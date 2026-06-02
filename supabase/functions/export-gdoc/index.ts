@@ -35,7 +35,8 @@ const ALLOWED_ORIGINS = [
     "https://debate.pi-stack.org",
     "http://localhost:5173",
     "http://localhost:8080",
-    "http://127.0.0.1:54321"
+    "http://127.0.0.1:54321",
+    "capacitor://localhost"
 ];
 
 function getCorsHeaders(origin: string | null) {
