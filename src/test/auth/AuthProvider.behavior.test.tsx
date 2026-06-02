@@ -323,6 +323,7 @@ describe('AuthProvider behavior', () => {
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
     expect(warnSpy).toHaveBeenCalledWith('[Auth] init failed:', expect.any(Error));
+    expect(window.location.search).toBe('');
 
     warnSpy.mockRestore();
     vi.useRealTimers();

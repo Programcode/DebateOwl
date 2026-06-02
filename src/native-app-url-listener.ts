@@ -5,6 +5,8 @@ interface NativeAppUrlAction {
   route: string;
 }
 
+const handledNativeUrls = new Set<string>();
+
 export function resolveNativeAppUrl(url: string): NativeAppUrlAction | null {
   let parsedUrl: URL;
   try {
@@ -58,18 +60,24 @@ async function handleNativeAppUrl(url: string) {
   window.location.assign(action.route);
 }
 
+async function handleNativeAppUrlOnce(url: string) {
+  if (handledNativeUrls.has(url)) return;
+  handledNativeUrls.add(url);
+  await handleNativeAppUrl(url);
+}
+
 export function registerNativeAppUrlListener() {
   if (!isNativeApp()) return;
 
   App.getLaunchUrl().then((launchUrl) => {
     if (launchUrl?.url) {
-      return handleNativeAppUrl(launchUrl.url);
+      return handleNativeAppUrlOnce(launchUrl.url);
     }
   }).catch((error) => {
     console.warn('[Native] Failed to read launch URL:', error);
   });
 
-  App.addListener('appUrlOpen', ({ url }) => handleNativeAppUrl(url)).catch((error) => {
+  App.addListener('appUrlOpen', ({ url }) => handleNativeAppUrlOnce(url)).catch((error) => {
     console.warn('[Native] Failed to register app URL listener:', error);
   });
 }
