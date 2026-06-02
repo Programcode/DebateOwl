@@ -19,9 +19,6 @@ vi.mock('@/lib/ai/client', () => ({
 
 // Mock hooks
 const mockNavigate = vi.fn();
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual('react-router-dom');
     return {
@@ -31,9 +28,6 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockToast = vi.fn();
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: mockToast }),
 }));
@@ -44,13 +38,11 @@ const mockSetGenerateResult = vi.fn();
 const mockSaveCurrentCase = vi.fn();
 const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
+let mockGenerateResult: any = null;
 
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
 vi.mock('@/lib/stores/session-store', () => ({
     useSessionStore: () => ({
-        generateResult: null as any, // Default state
+        generateResult: mockGenerateResult,
         generateLoading: false,
         setGenerateResult: mockSetGenerateResult,
         setGenerateLoading: mockSetGenerateLoading,
@@ -62,9 +54,6 @@ vi.mock('@/lib/stores/session-store', () => ({
     }),
 }));
 
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
 vi.mock('@/lib/stores/settings-store', () => ({
     useSettingsStore: () => ({
         getFeatureConfig: vi.fn(() => ({ model: 'google' })),
@@ -72,9 +61,6 @@ vi.mock('@/lib/stores/settings-store', () => ({
 }));
 
 // Mock child components to simplify integration test (focus on page logic + wiring)
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
 vi.mock('@/components/features/generate/GenerateForm', () => ({
     GenerateForm: ({ onSubmit, isLoading }: { onSubmit: (data: unknown) => void, isLoading: boolean }) => (
         <div data-testid="generate-form">
@@ -89,9 +75,6 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
     ),
 }));
 
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
 vi.mock('@/components/features/generate/GenerateResults', () => ({
     GenerateResults: ({ result, onRegenerateSection, onDiscuss }: { result: { caseStructure: { thesis: string } }, onRegenerateSection: unknown, onDiscuss: () => void }) => (
         <div data-testid="generate-results">
@@ -106,6 +89,7 @@ import { generateCase } from '@/lib/ai/client';
 describe('GeneratePage Integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGenerateResult = null;
     });
 
     it('renders the empty state initially', () => {
@@ -154,28 +138,30 @@ describe('GeneratePage Integration', () => {
     });
 
     it('displays results when store has data', () => {
-        // Override useSessionStore to return a result
-        const mockStore = {
-            generateResult: {
-                caseStructure: { thesis: 'Existing Thesis' },
-                contentions: [] as any[],
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Existing Thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {
+                likelyArguments: [] as any[],
+                strategicWeaknesses: [] as any[],
+                keyClashes: [] as any[],
             },
-            generateLoading: false,
-            setGenerateResult: mockSetGenerateResult,
-            setGenerateLoading: mockSetGenerateLoading,
-            saveCurrentCase: mockSaveCurrentCase,
+            counters: [] as any[],
+            metadata: {
+                side: 'pro',
+                format: 'bp',
+                generatedAt: '2024-01-01T00:00:00Z',
+            },
         };
 
-        // We need to re-mock or use a spy implementation. 
-vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
-}));
-        // Since vi.mock is hoisted, we can't easily change it per test unless we use vi.doMock or modify the return value of a spy.
-        // Ideally we'd use a real store with mocked initial state, but for now we'll rely on the fact that 
-        // we mocked the module. To change implementation per test, we should have mocked the *hook implementaiton*.
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <GeneratePage />
+            </BrowserRouter>
+        );
 
-        // Let's retry mocking strategy: Mock the hook to return a variable we can control?
-        // Or just accept that simpler tests are better for now. 
-        // I'll skip this "state present" test if I can't easily re-mock, or refactor the mock above to be dynamic.
+        expect(screen.getByTestId('generate-results')).toBeInTheDocument();
+        expect(screen.getByText('Results for Existing Thesis')).toBeInTheDocument();
+        expect(screen.queryByText('Ready to Generate')).not.toBeInTheDocument();
     });
 });
