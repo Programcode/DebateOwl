@@ -32,7 +32,10 @@
     "history": "Mentett elemek"
   },
   "common": {
-    "export": "Exportálás"
+    "export": "Exportálás",
+    "pdf": "PDF",
+    "docx": "DOCX",
+    "googleDocs": "Google Docs"
   },
   "voice": {
     "permissionDenied": "A mikrofonhozzáférés blokkolva van. Engedélyezd a mikrofont a böngésző beállításaiban, majd próbáld újra.",

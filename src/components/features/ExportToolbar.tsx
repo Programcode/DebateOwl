@@ -61,11 +61,11 @@ export function ExportToolbar({
         {extraExports}
         <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={onPdf}>
           <FileText className="mr-2 h-4 w-4" />
-          PDF
+          {t('common.pdf', 'PDF')}
         </Button>
         <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={onDocx}>
           <FileDown className="mr-2 h-4 w-4" />
-          DOCX
+          {t('common.docx', 'DOCX')}
         </Button>
         <Button
           variant="outline"
@@ -79,7 +79,7 @@ export function ExportToolbar({
           ) : (
             <GoogleDocsIcon className="mr-2 h-4 w-4" />
           )}
-          Google Docs
+          {t('common.googleDocs', 'Google Docs')}
         </Button>
       </div>
     </div>
