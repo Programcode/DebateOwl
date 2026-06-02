@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import { getEdgeFunctionErrorMessage } from '@/lib/supabase/edge-function-error';
-import { getAppRedirectUrl, openExternalUrl } from '@/lib/native';
+import { getWebAppRedirectUrl, openExternalUrl } from '@/lib/native';
 
 const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID || '';
 if (!STRIPE_PRICE_ID) {
@@ -21,8 +21,8 @@ export async function redirectToCheckout(promoCode?: string): Promise<void> {
     promoCode?: string;
     priceId?: string;
   } = {
-    successUrl: `${getAppRedirectUrl('/app/settings')}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${getAppRedirectUrl('/app/settings')}?checkout=canceled`,
+    successUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=canceled`,
     promoCode,
   };
   if (STRIPE_PRICE_ID) {
@@ -51,7 +51,7 @@ export async function redirectToPortal(): Promise<void> {
   const { data, error } = await supabase.functions.invoke('create-portal', {
     headers: { Authorization: `Bearer ${accessToken}` },
     body: {
-      returnUrl: getAppRedirectUrl('/app/settings'),
+      returnUrl: getWebAppRedirectUrl('/app/settings'),
     },
   });
 

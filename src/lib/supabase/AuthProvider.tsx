@@ -4,7 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
-import { NATIVE_OAUTH_HASH_KEY, getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
+import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 
 interface AuthContextValue {
   session: Session | null;
@@ -15,6 +15,14 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AUTH_OPERATION_TIMEOUT_MS = 4000;
+
+function withAuthTimeout<T>(operation: Promise<T>, message: string): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), AUTH_OPERATION_TIMEOUT_MS)),
+  ]);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -28,43 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const hydrateOAuthHashSession = async () => {
-      const hash = window.location.hash.startsWith('#')
-        ? window.location.hash.slice(1)
-        : sessionStorage.getItem(NATIVE_OAUTH_HASH_KEY) || '';
-      if (!hash) return null;
+    const hydrateOAuthCallbackSession = async () => {
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        const { data, error } = await withAuthTimeout(
+          supabase.auth.exchangeCodeForSession(code),
+          'OAuth code exchange timeout',
+        );
+        if (error) throw error;
 
-      sessionStorage.removeItem(NATIVE_OAUTH_HASH_KEY);
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      const providerToken = params.get('provider_token');
-      const providerRefreshToken = params.get('provider_refresh_token');
-      const errorDescription = params.get('error_description');
-
-      if (errorDescription) {
-        throw new Error(errorDescription);
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('code');
+        window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
+        return data.session;
       }
 
-      if (!accessToken || !refreshToken) return null;
-
-      const { data, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-
-      if (error) throw error;
-
-      if (providerToken) localStorage.setItem('google_provider_token', providerToken);
-      if (providerRefreshToken) localStorage.setItem('google_provider_refresh_token', providerRefreshToken);
-
-      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
-      return data.session;
+      return null;
     };
 
     const init = async () => {
       try {
-        const oauthSession = await hydrateOAuthHashSession();
+        const oauthSession = await hydrateOAuthCallbackSession();
         if (!mounted) return;
 
         if (oauthSession) {
@@ -82,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // onAuthStateChange to populate the session when available.
         const getSessionResult = await Promise.race([
           supabase.auth.getSession(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 4000)),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), AUTH_OPERATION_TIMEOUT_MS)),
         ]);
 
         if (!mounted) return;
@@ -177,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
-      void openExternalUrl(data.url);
+      await openExternalUrl(data.url);
     },
     signOut: async () => {
       await supabase.auth.signOut();

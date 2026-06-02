@@ -4,6 +4,10 @@ import { Keyboard, KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { isNativeApp, openExternalUrl } from '@/lib/native';
 
+export function shouldOpenExternalUrl(url: URL): boolean {
+  return url.protocol === 'http:' || url.protocol === 'https:';
+}
+
 export function configureNativeRuntime() {
   if (!isNativeApp()) return;
 
@@ -63,12 +67,12 @@ export function configureNativeRuntime() {
       return;
     }
 
-    const isExternal = url.protocol === 'http:' || url.protocol === 'https:';
-    const opensNewContext = link.target === '_blank' || link.rel.includes('external');
-    if (!isExternal || !opensNewContext) return;
+    if (!shouldOpenExternalUrl(url)) return;
 
     event.preventDefault();
-    void openExternalUrl(url.toString());
+    void openExternalUrl(url.toString()).catch((error) => {
+      console.warn('[Native] Failed to open external URL:', error);
+    });
   });
 
   document.addEventListener('pointerup', (event) => {
