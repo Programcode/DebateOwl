@@ -169,6 +169,7 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
             onClick: openDocument,
           },
         });
+        openDocument();
       } else if (exportResult.requiresReauth) {
         setShowDriveAuth(true);
       } else {
