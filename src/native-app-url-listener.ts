@@ -30,9 +30,29 @@ export function resolveNativeAppUrl(url: string): NativeAppUrlAction | null {
   };
 }
 
+function isNativeAuthErrorUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    return (
+      parsedUrl.protocol === `${NATIVE_URL_SCHEME}:` &&
+      parsedUrl.host === 'auth' &&
+      parsedUrl.pathname === '/callback' &&
+      (parsedUrl.searchParams.has('error') || parsedUrl.searchParams.has('error_description'))
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function handleNativeAppUrl(url: string) {
   const action = resolveNativeAppUrl(url);
-  if (!action) return;
+  if (!action) {
+    if (isNativeAuthErrorUrl(url)) {
+      await closeExternalBrowser();
+      window.location.assign('/login');
+    }
+    return;
+  }
 
   await closeExternalBrowser();
   window.location.assign(action.route);

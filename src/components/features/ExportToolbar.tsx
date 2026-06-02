@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, FileDown, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,8 @@ export function ExportToolbar({
 }: ExportToolbarProps) {
   const { t } = useTranslation();
 
-  const hasTopRow = !!secondaryActions || showUndo || !!onDiscuss;
+  const hasSecondaryActions = Children.toArray(secondaryActions).filter(Boolean).length > 0;
+  const hasTopRow = hasSecondaryActions || showUndo || !!onDiscuss;
 
   return (
     <div className="flex w-full flex-col items-start gap-2">

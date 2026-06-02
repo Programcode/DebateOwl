@@ -47,6 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete('code');
+        nextUrl.searchParams.delete('state');
+        nextUrl.searchParams.delete('error');
+        nextUrl.searchParams.delete('error_description');
         window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
         return data.session;
       }

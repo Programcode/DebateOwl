@@ -11,6 +11,8 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
+      // Omit `all` intentionally: this is a selected-scope gate for the audited
+      // runtime modules below, not a misleading sitewide coverage claim.
       include: [
         "src/lib/ai/client.ts",
         "src/lib/stores/session-store.ts",
@@ -23,8 +25,7 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 90,
-        // Selected-scope coverage: branch/function baselines reflect the current audited
-        // hooks, stores, auth, Stripe, AI client, and prompt-builder set.
+        // Branch/function thresholds are calibrated to the selected-scope baseline.
         branches: 80,
         functions: 89,
         lines: 90,

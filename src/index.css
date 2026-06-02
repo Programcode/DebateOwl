@@ -435,7 +435,7 @@ All colors MUST be HSL.
   }
 
   .native-safe-bottom {
-    padding-bottom: max(var(--native-safe-bottom, 0px), 0px);
+    padding-bottom: max(calc(var(--native-safe-bottom, 0px) + 1rem), 1rem);
   }
 
   .native-main-content {

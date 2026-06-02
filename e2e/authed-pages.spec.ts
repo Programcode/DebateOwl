@@ -33,9 +33,9 @@ for (const locale of LOCALES) {
           if (text.includes('Failed to load resource')) return;
           if (text.includes('favicon')) return;
           if (text.includes('net::ERR_')) return;
-          if (text.includes('Failed to fetch')) return;
+          if (/^Failed to fetch(:|$)/.test(text)) return;
           if (text.includes('Auth] hydrate')) return;
-          if (text.toLowerCase().includes('warning')) return;
+          if (/^Warning:/.test(text)) return;
           consoleErrors.push(`console: ${text}`);
         });
 

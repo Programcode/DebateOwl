@@ -45,7 +45,11 @@ export function configureNativeRuntime() {
   App.addListener('backButton', ({ canGoBack }) => {
     if (canGoBack) {
       window.history.back();
+      return;
     }
+    void App.exitApp().catch((error) => {
+      console.warn('[Native] Failed to exit app from back button:', error);
+    });
   }).catch((error) => {
     console.warn('[Native] Failed to register back button listener:', error);
   });
