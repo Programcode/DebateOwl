@@ -3,13 +3,16 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const PUBLIC_WEB_APP_ORIGIN = "https://debate.pi-stack.org";
+
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
-    "https://debate.pi-stack.org",
+    PUBLIC_WEB_APP_ORIGIN,
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://localhost:5173",
-    "http://127.0.0.1:54321"
+    "http://127.0.0.1:54321",
+    "capacitor://localhost"
 ];
 
 function getCorsHeaders(origin: string | null) {
@@ -133,7 +136,7 @@ Deno.serve(async (req: Request) => {
 
         return new Response(JSON.stringify({
             shareCode: data.share_code,
-            shareUrl: `${req.headers.get("origin") || "https://debate.pi-stack.org"}/share/${data.share_code}`,
+            shareUrl: `${PUBLIC_WEB_APP_ORIGIN}/share/${data.share_code}`,
             expiresAt: data.expires_at,
         }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

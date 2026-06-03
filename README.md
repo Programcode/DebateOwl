@@ -429,6 +429,23 @@ The application requires a Supabase project for authentication and edge function
 3. Deploy the Edge Function (see [Deployment](#deployment))
 4. Add API keys as Supabase secrets
 
+### iOS and iPadOS
+
+The iOS/iPadOS app is a Capacitor shell around the Vite build.
+
+```bash
+npm run ios:build
+npm run ios:open
+```
+
+The native bundle identifier is `com.adam.debatelab`, and the app URL scheme is `debatelab://`.
+
+OAuth setup notes:
+
+- In Google Cloud, keep the authorized redirect URI as the Supabase HTTPS callback, for example `https://<project-ref>.supabase.co/auth/v1/callback`.
+- In Supabase Authentication URL Configuration, add the native callback `debatelab://auth/callback` as an allowed redirect URL.
+- Do not add `debatelab://auth/callback` to Google Cloud Web OAuth redirect URIs; Google only accepts `http` or `https` there.
+
 ---
 
 ## Project Structure
@@ -1285,6 +1302,8 @@ jobs:
 | `npm run dev` | Start dev server (port 8080) |
 | `npm run build` | Production build to `dist/` |
 | `npm run build:dev` | Development build with source maps |
+| `npm run ios:build` | Build web assets and sync the iOS app |
+| `npm run ios:open` | Open the native iOS project in Xcode |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |
 | `npm test` | Run tests once |

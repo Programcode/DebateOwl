@@ -32,6 +32,11 @@ coverage/
 .vite/
 .playwright-cli/
 
+# Playwright artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Deploy tool state
 .vercel/
 .netlify/
