@@ -1,9 +1,8 @@
 // src/components/features/brainstorm/BrainstormResults.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb, MessageSquare, FileText, FileDown, Loader2 } from 'lucide-react';
+import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
 import { StaggeredContainer } from '@/components/ui/animated-section';
@@ -11,10 +10,10 @@ import { cn } from '@/lib/utils';
 import { exportBrainstormToPdf } from '@/lib/pdf-export-utils';
 import { exportBrainstormToDocx, exportBrainstormToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
-import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 import { EmptyState } from '@/components/ui/empty-state';
-import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { openExternalUrl } from '@/lib/native';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
@@ -83,13 +82,15 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
     try {
       const exportResult = await exportBrainstormToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
+        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+          .catch(() => toast.error(t('brainstormResults.exportError')));
         toast.success(t('brainstormResults.exportedGdocs'), {
           action: {
             label: t('brainstormResults.open'),
-            onClick: () => window.open(exportResult.documentUrl, '_blank'),
+            onClick: openDocument,
           },
         });
-        window.open(exportResult.documentUrl, '_blank');
+        openDocument();
       } else if (exportResult.requiresReauth) {
         setShowDriveAuth(true);
       } else {
@@ -127,39 +128,14 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
   return (
     <StaggeredContainer className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {onDiscuss && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-            {t('common.export', 'Export')}
-          </span>
-          <AutoSavedSourcesUndo />
-          <Button variant="outline" size="sm" onClick={() => exportBrainstormToPdf(result)}>
-            <FileText className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDocxExport}>
-            <FileDown className="h-4 w-4 mr-2" />
-            DOCX
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGoogleDocsExport}
-            disabled={isExportingGDocs}
-          >
-            {isExportingGDocs ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <GoogleDocsIcon className="h-4 w-4 mr-2" />
-            )}
-            Google Docs
-          </Button>
-          <Button variant="outline" size="sm" onClick={onDiscuss}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {t('brainstormResults.discuss')}
-          </Button>
-        </div>
-      )}
+      <ExportToolbar
+        onPdf={() => exportBrainstormToPdf(result)}
+        onDocx={handleDocxExport}
+        onGoogleDocs={handleGoogleDocsExport}
+        isExportingGDocs={isExportingGDocs}
+        onDiscuss={onDiscuss}
+        discussLabel={t('brainstormResults.discuss')}
+      />
 
       {!result.topFive?.length && !result.mindmap?.length && !result.buckets?.length && (
         <EmptyState

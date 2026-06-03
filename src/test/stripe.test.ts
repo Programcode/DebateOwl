@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getSessionMock, invokeMock } = vi.hoisted(() => ({
+const { getSessionMock, invokeMock, getWebAppRedirectUrlMock, openExternalUrlMock } = vi.hoisted(() => ({
   getSessionMock: vi.fn(),
   invokeMock: vi.fn(),
+  getWebAppRedirectUrlMock: vi.fn(),
+  openExternalUrlMock: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -14,6 +16,11 @@ vi.mock('@/lib/supabase/client', () => ({
       invoke: invokeMock,
     },
   },
+}));
+
+vi.mock('@/lib/native', () => ({
+  getWebAppRedirectUrl: getWebAppRedirectUrlMock,
+  openExternalUrl: openExternalUrlMock,
 }));
 
 const loadStripeModule = async () => {
@@ -28,6 +35,8 @@ describe('stripe helpers', () => {
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'token-123' } },
     });
+    getWebAppRedirectUrlMock.mockImplementation((path: string) => `${window.location.origin}${path}`);
+    openExternalUrlMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -54,6 +63,23 @@ describe('stripe helpers', () => {
         promoCode: 'PROMO10',
         successUrl: `${window.location.origin}/app/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${window.location.origin}/app/settings?checkout=canceled`,
+      }),
+    });
+    expect(openExternalUrlMock).toHaveBeenCalledWith(`${window.location.origin}/checkout`);
+  });
+
+  it('uses public HTTPS callback URLs for native checkout', async () => {
+    getWebAppRedirectUrlMock.mockImplementation((path: string) => `https://debate.pi-stack.org${path}`);
+    invokeMock.mockResolvedValueOnce({ data: { url: 'https://checkout.stripe.com/session' }, error: null });
+    const { redirectToCheckout } = await loadStripeModule();
+
+    await redirectToCheckout();
+
+    expect(invokeMock).toHaveBeenCalledWith('create-checkout', {
+      headers: { Authorization: 'Bearer token-123' },
+      body: expect.objectContaining({
+        successUrl: 'https://debate.pi-stack.org/app/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://debate.pi-stack.org/app/settings?checkout=canceled',
       }),
     });
   });

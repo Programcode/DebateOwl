@@ -4,12 +4,12 @@ import type { GenerateOutput } from '@/lib/ai/schemas/generate';
 
 // Mock docx and file-saver
 vi.mock('docx', () => ({
-    Document: vi.fn().mockImplementation(() => ({})),
+    Document: vi.fn(function DocumentMock() {}),
     Packer: {
         toBlob: vi.fn().mockResolvedValue(new Blob(['test'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })),
     },
-    Paragraph: vi.fn().mockImplementation(() => ({})),
-    TextRun: vi.fn().mockImplementation(() => ({})),
+    Paragraph: vi.fn(function ParagraphMock() {}),
+    TextRun: vi.fn(function TextRunMock() {}),
     HeadingLevel: { HEADING_1: 'HEADING_1', HEADING_2: 'HEADING_2' },
     AlignmentType: { CENTER: 'CENTER' },
 }));

@@ -32,7 +32,10 @@
     "history": "Saved items"
   },
   "common": {
-    "export": "Export"
+    "export": "Export",
+    "pdf": "PDF",
+    "docx": "DOCX",
+    "googleDocs": "Google Docs"
   },
   "voice": {
     "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
@@ -382,6 +385,10 @@
     "proposition": "In favor",
     "opposition": "Against",
     "generated": "Generated",
+    "modelLabel": "Model: {{value}}",
+    "durationMs": "{{value}} ms",
+    "durationS": "{{value}}s",
+    "clipboard": "Clipboard",
     "save": "Save",
     "discuss": "Discuss",
     "flowcharts": "Flowcharts",
@@ -702,7 +709,7 @@
     "step3": "Step 3: Save & Export",
     "step3Desc": "After generating, you can save your case to history or export it as a Word document.",
     "generate": "Generate",
-    "generateDesc": "Create complete cases, compare sides, and export polished prep.",
+    "generateDesc": "Create complete cases, organize arguments, and export polished prep.",
     "attack": "Attack",
     "attackDesc": "Stress-test arguments and find weak points before round.",
     "brainstorm": "Brainstorm",

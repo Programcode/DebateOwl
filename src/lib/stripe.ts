@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import { getEdgeFunctionErrorMessage } from '@/lib/supabase/edge-function-error';
+import { getWebAppRedirectUrl, openExternalUrl } from '@/lib/native';
 
 const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID || '';
 if (!STRIPE_PRICE_ID) {
@@ -20,8 +21,8 @@ export async function redirectToCheckout(promoCode?: string): Promise<void> {
     promoCode?: string;
     priceId?: string;
   } = {
-    successUrl: `${window.location.origin}/app/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${window.location.origin}/app/settings?checkout=canceled`,
+    successUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=canceled`,
     promoCode,
   };
   if (STRIPE_PRICE_ID) {
@@ -36,7 +37,7 @@ export async function redirectToCheckout(promoCode?: string): Promise<void> {
   if (error) throw new Error(await getEdgeFunctionErrorMessage(error) || 'Failed to create checkout session');
   if (!data?.url) throw new Error('No checkout URL returned');
 
-  window.location.href = data.url;
+  await openExternalUrl(data.url);
 }
 
 /**
@@ -50,14 +51,14 @@ export async function redirectToPortal(): Promise<void> {
   const { data, error } = await supabase.functions.invoke('create-portal', {
     headers: { Authorization: `Bearer ${accessToken}` },
     body: {
-      returnUrl: `${window.location.origin}/app/settings`,
+      returnUrl: getWebAppRedirectUrl('/app/settings'),
     },
   });
 
   if (error) throw new Error(await getEdgeFunctionErrorMessage(error) || 'Failed to create portal session');
   if (!data?.url) throw new Error('No portal URL returned');
 
-  window.location.href = data.url;
+  await openExternalUrl(data.url);
 }
 
 /**

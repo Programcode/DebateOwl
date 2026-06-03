@@ -4,6 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 
 interface AuthContextValue {
   session: Session | null;
@@ -14,6 +15,14 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AUTH_OPERATION_TIMEOUT_MS = 4000;
+
+function withAuthTimeout<T>(operation: Promise<T>, message: string): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), AUTH_OPERATION_TIMEOUT_MS)),
+  ]);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -27,40 +36,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const hydrateOAuthHashSession = async () => {
-      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
-      if (!hash) return null;
+    const hydrateOAuthCallbackSession = async () => {
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        const cleanupOAuthParams = () => {
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.delete('code');
+          nextUrl.searchParams.delete('state');
+          nextUrl.searchParams.delete('error');
+          nextUrl.searchParams.delete('error_description');
+          window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
+        };
 
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      const providerToken = params.get('provider_token');
-      const providerRefreshToken = params.get('provider_refresh_token');
-      const errorDescription = params.get('error_description');
+        let result: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
+        try {
+          result = await withAuthTimeout(
+            supabase.auth.exchangeCodeForSession(code),
+            'OAuth code exchange timeout',
+          );
+        } finally {
+          cleanupOAuthParams();
+        }
 
-      if (errorDescription) {
-        throw new Error(errorDescription);
+        const { data, error } = result;
+        if (error) throw error;
+        return data.session;
       }
 
-      if (!accessToken || !refreshToken) return null;
-
-      const { data, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-
-      if (error) throw error;
-
-      if (providerToken) localStorage.setItem('google_provider_token', providerToken);
-      if (providerRefreshToken) localStorage.setItem('google_provider_refresh_token', providerRefreshToken);
-
-      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
-      return data.session;
+      return null;
     };
 
     const init = async () => {
       try {
-        const oauthSession = await hydrateOAuthHashSession();
+        const oauthSession = await hydrateOAuthCallbackSession();
         if (!mounted) return;
 
         if (oauthSession) {
@@ -78,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // onAuthStateChange to populate the session when available.
         const getSessionResult = await Promise.race([
           supabase.auth.getSession(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), 4000)),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), AUTH_OPERATION_TIMEOUT_MS)),
         ]);
 
         if (!mounted) return;
@@ -158,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: getOAuthRedirectUrl(),
           skipBrowserRedirect: true,
           ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
           queryParams: driveAccess
@@ -173,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
-      window.location.assign(data.url);
+      await openExternalUrl(data.url);
     },
     signOut: async () => {
       await supabase.auth.signOut();

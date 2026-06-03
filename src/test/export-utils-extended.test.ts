@@ -6,12 +6,12 @@ import type { BrainstormOutput } from '@/lib/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
 
 vi.mock('docx', () => ({
-  Document: vi.fn().mockImplementation(() => ({})),
+  Document: vi.fn(function DocumentMock() {}),
   Packer: {
     toBlob: vi.fn().mockResolvedValue(new Blob(['test'])),
   },
-  Paragraph: vi.fn().mockImplementation(() => ({})),
-  TextRun: vi.fn().mockImplementation(() => ({})),
+  Paragraph: vi.fn(function ParagraphMock() {}),
+  TextRun: vi.fn(function TextRunMock() {}),
   HeadingLevel: { HEADING_1: 'HEADING_1', HEADING_2: 'HEADING_2' },
   AlignmentType: { CENTER: 'CENTER' },
 }));
