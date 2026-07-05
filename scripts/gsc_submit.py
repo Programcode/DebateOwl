@@ -28,6 +28,9 @@ URLS = [
     'https://debate.pi-stack.org/ai-tools-for-debate-students',
     'https://debate.pi-stack.org/wsdc-debate-practice',
     'https://debate.pi-stack.org/about-debatelab',
+    'https://debate.pi-stack.org/debatelab',
+    'https://debate.pi-stack.org/debatelab-ai',
+    'https://debate.pi-stack.org/debate-lab',
     'https://debate.pi-stack.org/terms',
     'https://debate.pi-stack.org/privacy',
 ]
