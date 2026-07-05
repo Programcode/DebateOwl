@@ -6,13 +6,33 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://debate.pi-stack.org/terms</loc>
+    <loc>https://debate.pi-stack.org/ai-debate-practice</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://debate.pi-stack.org/debate-case-generator</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://debate.pi-stack.org/debate-rebuttal-practice</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://debate.pi-stack.org/ai-debate-coach</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://debate.pi-stack.org/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
   </url>
   <url>
     <loc>https://debate.pi-stack.org/privacy</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
   </url>
 </urlset>
