@@ -1,5 +1,13 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /app
+Disallow: /app/
+Disallow: /login
+Disallow: /share/
+Disallow: /admin
+Disallow: /settings
+Disallow: /history
+Disallow: /private
 
 Sitemap: https://debate.pi-stack.org/sitemap.xml

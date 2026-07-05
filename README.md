@@ -2,7 +2,9 @@
 
 > The ultimate AI-powered research and preparation suite for competitive debaters.
 
-**🌐 Live Demo:** [https://debate.pi-stack.org](https://debate.pi-stack.org)
+**🌐 Live App:** [https://debate.pi-stack.org](https://debate.pi-stack.org)
+
+Public DebateLab guides: [AI debate practice](https://debate.pi-stack.org/ai-debate-practice), [debate case generator](https://debate.pi-stack.org/debate-case-generator), [rebuttal practice](https://debate.pi-stack.org/debate-rebuttal-practice), [AI debate coach](https://debate.pi-stack.org/ai-debate-coach), and [about DebateLab](https://debate.pi-stack.org/about-debatelab).
 
 ---
 

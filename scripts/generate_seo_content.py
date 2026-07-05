@@ -1,157 +1,98 @@
+#!/usr/bin/env python3
 from pathlib import Path
 import html
 import json
+from datetime import date
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
+BASE = "https://debate.pi-stack.org"
+TODAY = date.today().isoformat()
 
 CSS = """
-:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1080px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;padding:28px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav a{color:var(--muted);text-decoration:none;margin-left:20px}.hero{padding:58px 0 42px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:900px;font-size:clamp(2.4rem,6.4vw,5.5rem);line-height:.96;letter-spacing:-.075em;margin:22px 0}.lead{max-width:780px;color:var(--muted);font-size:clamp(1.1rem,2vw,1.32rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:42px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:38px 0}.article{max-width:820px}.article h2{font-size:clamp(1.7rem,3vw,2.45rem);letter-spacing:-.04em;line-height:1.14;margin-top:2.1rem}.article h3{font-size:1.3rem;letter-spacing:-.025em}.article p,.article li{color:var(--muted)}.article strong{color:var(--text)}.faq details{border-top:1px solid var(--line);padding:18px 0}.faq summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);margin-top:42px;padding:26px 0 40px;color:var(--muted);font-size:.95rem}.list{padding-left:1.2rem}.list li{margin:.5rem 0}@media(max-width:820px){.grid{grid-template-columns:1fr}.nav{align-items:flex-start;gap:16px;flex-direction:column}.nav a{margin:0 14px 0 0}.hero h1{letter-spacing:-.055em}}
+:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
 """.strip()
 
 PAGES = [
-    {
-        "slug": "ai-debate-practice",
-        "title": "AI Debate Practice Platform | DebateLab",
-        "description": "Practice debate online with DebateLab: AI opponents, targeted drills, rebuttal feedback, evidence research, argument flowcharts, and tournament-ready prep tools.",
-        "eyebrow": "DebateLab guide",
-        "h1": "AI Debate Practice for Stronger Cases, Rebuttals, and Speeches",
-        "lead": "A practical guide to using AI for debate preparation without turning every round into a generic chatbot prompt.",
-        "sections": [
-            ("Why AI debate practice needs structure", [
-                "Good debate prep is not just asking an AI model for arguments. Debaters need claims, warrants, impacts, weighing, evidence, and responses that fit the format they are preparing for.",
-                "DebateLab is built around that workflow: generate a case, attack it, gather sources, map the clash, ask for coaching, and practice with a timer before the round starts."
-            ]),
-            ("What to practice before a round", [
-                "Start by writing the motion in plain language. Then identify the burdens for each side, the likely clashes, and the judge questions that decide the round.",
-                "Use AI debate practice to stress-test your weakest link: a missing warrant, an overclaimed impact, a weak comparative, or a rebuttal that answers the wrong part of the argument."
-            ]),
-            ("How DebateLab helps", [
-                "DebateLab connects case generation, rebuttal practice, evidence finding, argument flowcharts, coaching, and timers in one debate-prep workspace.",
-                "That matters for SEO and for users: public pages explain the product, while private app pages stay protected behind login."
-            ]),
-        ],
-        "features": ["Generate structured cases", "Practice rebuttals", "Map clash and weighing"],
-        "faq": [("Can Google index private DebateLab app pages?", "No. Googlebot cannot log in, so private dashboards should stay noindexed while public guides and feature pages provide crawlable context."), ("Is AI debate practice useful for beginners?", "Yes. Beginners get structure and examples, while advanced debaters use it to move through prep faster."), ("Should the app pages be public?", "User data and dashboards should remain private. Public feature pages should explain what those tools do.")],
-    },
-    {
-        "slug": "debate-case-generator",
-        "title": "AI Debate Case Generator | DebateLab",
-        "description": "Generate structured debate cases with claims, warrants, impacts, counters, and evidence suggestions for any motion or side using DebateLab.",
-        "eyebrow": "Feature guide",
-        "h1": "Generate Structured Debate Cases in Minutes",
-        "lead": "A debate case generator should create a starting structure you can improve, verify, and adapt for your format.",
-        "sections": [
-            ("What a useful debate case includes", ["A strong case separates claims from warrants and impacts. It also makes the weighing explicit so the judge knows why your argument matters more than the other side's.", "DebateLab helps turn a motion into contentions, reasoning chains, counters, and prep notes instead of a flat paragraph of generic arguments."]),
-            ("How to use generated cases responsibly", ["Generated cases are a draft, not a substitute for research. The best workflow is to generate structure, check the assumptions, add verified evidence, and then practice attacking the case yourself.", "This is why DebateLab links case generation to source finding, rebuttal practice, and flowcharts."]),
-            ("From case draft to round strategy", ["Once the case exists, the real question is what the other side can exploit. Use DebateLab to find weak warrants, missing examples, and impact comparisons before the round."])
-        ],
-        "features": ["Claims and warrants", "Impacts and weighing", "Counters and prep notes"],
-        "faq": [("Does DebateLab write the whole case for me?", "It helps generate a structured draft, then you should edit, verify, and adapt it."), ("Can I choose a side?", "Yes. Case prep starts from the motion and the side you are preparing."), ("Does it include evidence?", "DebateLab can help find evidence leads, but you should always verify original sources.")]
-    },
-    {
-        "slug": "debate-rebuttal-practice",
-        "title": "Debate Rebuttal Practice & Argument Analyzer | DebateLab",
-        "description": "Practice rebuttals with DebateLab. Analyze arguments, find weak warrants, missing weighing, logical gaps, and cross-examination traps before your round.",
-        "eyebrow": "Feature guide",
-        "h1": "Practice Rebuttals Before Your Opponent Finds the Weakness",
-        "lead": "Rebuttal practice is where debate prep becomes strategic: you decide which link to attack and why that attack wins the round.",
-        "sections": [
-            ("What makes a rebuttal effective", ["A good rebuttal does not answer every sentence. It attacks the part of the argument that matters: the warrant, evidence quality, internal link, impact, or weighing comparison.", "DebateLab helps identify those pressure points so your prep produces sharper responses."]),
-            ("Train with your own cases", ["Paste a case, speech, or contention and ask what a strong opponent would attack. Then build blocks that answer the most likely objections.", "This is especially useful when preparing alone and you do not have a teammate available to pressure-test your arguments."]),
-            ("Use cross-examination as a weapon", ["Weak warrants often become strong cross-examination questions. DebateLab can help turn hidden assumptions into questions that expose the other side's burden."])
-        ],
-        "features": ["Find weak warrants", "Build targeted blocks", "Practice weighing and collapse"],
-        "faq": [("Can DebateLab analyze my argument?", "Yes. You can use it to find logical gaps, missing weighing, and likely attacks."), ("Does rebuttal practice work for any format?", "The principles apply broadly, though you should adapt timing and style to your event."), ("Can it suggest cross-examination questions?", "Yes. Weak assumptions can be turned into pressure questions.")]
-    },
-    {
-        "slug": "ai-debate-coach",
-        "title": "AI Debate Coach for Strategy, Structure & Practice | DebateLab",
-        "description": "Ask DebateLab’s AI debate coach for help with strategy, argument structure, weighing, rebuttals, speeches, prep questions, and practice feedback.",
-        "eyebrow": "Feature guide",
-        "h1": "Ask an AI Debate Coach for Round-Ready Prep",
-        "lead": "A debate coach helps you choose the right strategy, not just produce more words. DebateLab gives debaters a focused AI coach for practice and preparation.",
-        "sections": [
-            ("What an AI debate coach should do", ["The useful coach asks what the round is about, what side you are on, what your burden is, and what the judge needs to compare.", "DebateLab is designed to support strategy, structure, weighing, rebuttals, and speech practice rather than generic essay writing."]),
-            ("Use coaching to improve faster", ["After a practice speech, ask what was unclear, what was under-warranted, and what should become the collapse. Then repeat with a narrower drill.", "That loop turns feedback into deliberate practice instead of vague advice."]),
-            ("Public guidance, private workspace", ["The coaching explanations can be public and indexable. Your saved cases, history, and private prep should remain protected behind login."])
-        ],
-        "features": ["Strategy help", "Speech structure", "Practice feedback"],
-        "faq": [("Can an AI coach replace a human coach?", "No. It is a practice tool, not a substitute for a great human coach or team."), ("What can I ask it?", "Strategy, structure, rebuttals, weighing, speech drills, and prep questions."), ("Is my private prep public?", "No. Private app content should stay behind login and out of search.")]
-    },
+    {"slug":"ai-debate-practice","title":"AI Debate Practice Platform | DebateLab","description":"Practice debate online with DebateLab: AI opponents, targeted drills, rebuttal feedback, evidence research, argument flowcharts, and tournament-ready prep tools.","eyebrow":"DebateLab guide","h1":"AI Debate Practice for Stronger Cases, Rebuttals, and Speeches","lead":"Use a focused debate workspace for cases, rebuttals, sources, flowcharts, coaching, and timed practice.","features":["Practice against AI opponents","Turn feedback into drills","Keep private prep out of search"],"sections":[("Why AI debate practice needs structure",["Good practice is not just asking a chatbot for arguments. Debaters need claims, warrants, impacts, weighing, evidence, and responses that fit their format.","DebateLab connects the workflow: generate a case, attack it, gather sources, map clash, ask for coaching, and practice before the round starts."]),("What to practice before a round",["Start by writing the motion in plain language. Identify each side's burdens, likely clashes, and the judge questions that decide the round.","Use AI debate practice to stress-test the weakest link: a missing warrant, overclaimed impact, weak comparative, or rebuttal that answers the wrong issue."]),("How DebateLab helps",["Public guides explain the product clearly while saved cases, history, and private dashboards stay protected behind login."])]},
+    {"slug":"debate-case-generator","title":"AI Debate Case Generator | DebateLab","description":"Generate structured debate cases with claims, warrants, impacts, counters, and evidence suggestions for any motion or side using DebateLab.","eyebrow":"Feature guide","h1":"Generate Structured Debate Cases in Minutes","lead":"Create a starting structure you can improve, verify, and adapt for your format.","features":["Claims and warrants","Impacts and weighing","Counters and prep notes"],"sections":[("What a useful debate case includes",["A strong case separates claims from warrants and impacts. It also makes weighing explicit so the judge knows why your argument matters more.","DebateLab helps turn a motion into contentions, reasoning chains, counters, and prep notes instead of a flat paragraph of generic arguments."]),("Use generated cases responsibly",["Generated cases are drafts. The best workflow is to generate structure, check assumptions, add verified evidence, and then practice attacking the case yourself."]),("From draft to round strategy",["Once the case exists, the real question is what the other side can exploit. Use DebateLab to find weak warrants, missing examples, and impact comparisons."])]},
+    {"slug":"debate-rebuttal-practice","title":"Debate Rebuttal Practice & Argument Analyzer | DebateLab","description":"Practice rebuttals with DebateLab. Analyze arguments, find weak warrants, missing weighing, logical gaps, and cross-examination traps before your round.","eyebrow":"Feature guide","h1":"Practice Rebuttals Before Your Opponent Finds the Weakness","lead":"Choose the link to attack, explain why it matters, and turn pressure into round-winning collapse.","features":["Find weak warrants","Build targeted blocks","Practice weighing and collapse"],"sections":[("What makes a rebuttal effective",["A good rebuttal does not answer every sentence. It attacks the part of the argument that matters: warrant, evidence quality, internal link, impact, or weighing comparison.","DebateLab helps identify those pressure points so your prep produces sharper responses."]),("Train with your own cases",["Paste a case, speech, or contention and ask what a strong opponent would attack. Then build blocks that answer the most likely objections."]),("Use cross-examination as a weapon",["Weak warrants often become strong cross-examination questions. DebateLab can help turn hidden assumptions into questions that expose the other side's burden."])]},
+    {"slug":"ai-debate-coach","title":"AI Debate Coach for Strategy, Structure & Practice | DebateLab","description":"Ask DebateLab's AI debate coach for help with strategy, argument structure, weighing, rebuttals, speeches, prep questions, and practice feedback.","eyebrow":"Feature guide","h1":"Ask an AI Debate Coach for Round-Ready Prep","lead":"Get focused help with strategy, structure, weighing, rebuttals, speeches, and practice feedback.","features":["Strategy help","Speech structure","Practice feedback"],"sections":[("What an AI debate coach should do",["The useful coach asks what the round is about, what side you are on, what your burden is, and what the judge needs to compare.","DebateLab supports strategy, structure, weighing, rebuttals, and speech practice rather than generic essay writing."]),("Use coaching to improve faster",["After a practice speech, ask what was unclear, what was under-warranted, and what should become the collapse. Then repeat with a narrower drill."]),("Public guidance, private workspace",["Coaching explanations can be public and indexable. Your saved cases, history, and private prep remain protected behind login."])]},
+    {"slug":"debate-evidence-finder","title":"Debate Evidence Finder for Source-Backed Cases | DebateLab","description":"Find evidence leads for debate cases with DebateLab, then verify original sources, citations, warrants, and impact links before using them in round.","eyebrow":"Research workflow","h1":"Find Better Debate Evidence Without Losing the Argument","lead":"Use AI to locate research directions, then verify sources and connect evidence to warrants.","features":["Evidence leads","Citation checks","Impact links"],"sections":[("Evidence is not the argument",["Cards win rounds only when they support a clear warrant. A source should answer a burden, not decorate a speech.","DebateLab helps move from a claim to research leads, source checks, and the impact comparison the judge must evaluate."]),("Verify before you read it aloud",["Open the original source, check date and author, confirm the quote, and explain why the evidence proves your link. Never rely on an AI summary alone."]),("Connect research to clash",["The best evidence pages are tied to specific clashes: solvency, harms, tradeoffs, comparative examples, and weighing."])]},
+    {"slug":"argument-flowchart","title":"Argument Flowchart Tool for Debate Prep | DebateLab","description":"Map debate arguments, clash, links, impacts, and weighing with DebateLab's argument flowchart workflow for clearer speeches and rebuttals.","eyebrow":"Flowing guide","h1":"Map the Clash With an Argument Flowchart","lead":"Turn cases and rebuttals into a visual map of claims, warrants, impacts, and weighing.","features":["Visual clash maps","Link chains","Weighing notes"],"sections":[("Why flowcharts help debaters",["Debate rounds become messy fast. A flowchart keeps the important relationships visible: what claim depends on which warrant, where the clash sits, and what impact comparison matters."]),("Build from the motion outward",["Start with burdens, add each contention, then connect evidence and rebuttals. If a link is missing, the map makes the gap obvious."]),("Use the map for speeches",["Before speaking, choose the path that wins the round. A good flowchart helps you collapse instead of spreading yourself thin."])]},
+    {"slug":"online-debate-timer","title":"Online Debate Timer for Practice Rounds | DebateLab","description":"Use DebateLab as an online debate timer for speech practice, prep drills, rebuttal timing, and tournament-ready pacing across formats.","eyebrow":"Practice tool","h1":"Practice With an Online Debate Timer","lead":"Train pacing, prep discipline, and speech structure before the round starts.","features":["Speech timing","Prep drills","Pacing feedback"],"sections":[("Timing changes strategy",["A great argument can still lose if it arrives too late or takes too long. Timed practice forces you to pick the strongest material."]),("Drill one skill at a time",["Use short timers for rebuttal blocks, longer timers for full speeches, and prep timers to simulate tournament pressure."]),("Pair timing with feedback",["After each timed speech, use DebateLab to identify unclear structure, missing weighing, and the next drill to repeat."])]},
+    {"slug":"how-to-write-a-debate-case","title":"How to Write a Debate Case | DebateLab Guide","description":"Learn how to write a debate case with a clear motion analysis, burdens, contentions, warrants, evidence, impacts, and weighing using DebateLab.","eyebrow":"How-to guide","h1":"How to Write a Debate Case","lead":"Move from motion analysis to contentions, warrants, evidence, impacts, and weighing.","features":["Motion analysis","Contention structure","Weighing"],"sections":[("Start with burdens",["Before writing contentions, define what your side must prove. A case that misses the burden can sound polished and still lose."]),("Write contentions as reasoning chains",["Each contention should connect claim, warrant, evidence, impact, and weighing. If one piece is missing, mark it before you practice."]),("Pressure-test the draft",["Use DebateLab to attack your own case. The strongest final version usually comes after finding the easiest rebuttals first."])]},
+    {"slug":"how-to-practice-rebuttals","title":"How to Practice Rebuttals for Debate | DebateLab Guide","description":"Learn how to practice debate rebuttals with drills for warrants, evidence quality, impact weighing, cross-examination, and speech collapse.","eyebrow":"How-to guide","h1":"How to Practice Debate Rebuttals","lead":"Build sharper responses by attacking warrants, evidence, impacts, and weighing one drill at a time.","features":["Rebuttal drills","Cross-ex questions","Collapse practice"],"sections":[("Do not rebut everything",["Good rebuttal practice teaches selection. Answer the argument that determines the round, not every sentence your opponent says."]),("Use repeatable drills",["Run separate drills for weak warrants, missing examples, evidence quality, impact defense, and comparative weighing."]),("Turn attacks into speeches",["After finding objections, practice explaining them under time. The goal is a clean speech, not a long list of notes."])]},
+    {"slug":"debate-weighing-guide","title":"Debate Weighing Guide: Magnitude, Probability, Timeframe | DebateLab","description":"Use DebateLab's debate weighing guide to compare magnitude, probability, timeframe, reversibility, scope, and judge-ready impact calculus.","eyebrow":"Strategy guide","h1":"Debate Weighing Guide for Cleaner Impact Calculus","lead":"Compare impacts with magnitude, probability, timeframe, reversibility, scope, and link strength.","features":["Impact calculus","Judge framing","Strategic collapse"],"sections":[("Weighing tells the judge what matters",["Two teams can both win offense. Weighing explains which impact should be prioritized and why that comparison is fair."]),("Use more than magnitude",["Magnitude matters, but so do probability, timeframe, reversibility, scope, and link strength. DebateLab helps you test which comparison is strongest."]),("Make weighing early",["The best teams do not wait until the final speech to compare impacts. Build weighing into cases, rebuttals, and summaries."])]},
+    {"slug":"ai-tools-for-debate-students","title":"AI Tools for Debate Students | DebateLab","description":"Compare useful AI tools for debate students, including case generation, rebuttal practice, evidence research, coaching, flowcharts, and timers.","eyebrow":"Student guide","h1":"AI Tools for Debate Students","lead":"Choose tools that improve preparation without replacing research, coaching, or judgment.","features":["Case prep","Research support","Practice feedback"],"sections":[("What students actually need",["Debate students need more than text generation. Useful tools support research, structure, drills, feedback, flowcharts, and timed practice."]),("Keep humans in the loop",["AI can suggest arguments and objections, but students should verify sources, adapt style, and make strategic choices themselves."]),("Why DebateLab combines workflows",["DebateLab brings core prep tasks into one place so students can move from case draft to rebuttal drill to speech practice."])]},
+    {"slug":"wsdc-debate-practice","title":"WSDC Debate Practice With AI Drills | DebateLab","description":"Practice WSDC debate with DebateLab: motion analysis, proposition and opposition burdens, speeches, rebuttals, points of information, and weighing.","eyebrow":"Format guide","h1":"WSDC Debate Practice With AI Drills","lead":"Prepare motions, burdens, speeches, POIs, rebuttals, and weighing for World Schools style debates.","features":["Motion prep","POI practice","Team line checks"],"sections":[("WSDC prep starts with the motion",["Define the model, burdens, stakeholders, and clashes before writing speeches. The strongest prep starts with clear framing."]),("Practice team roles",["Use DebateLab to draft first speaker setup, second speaker extensions, third speaker rebuttal, and reply speech framing."]),("Train POIs and weighing",["Points of information expose weak warrants. DebateLab can help generate likely POIs and compare impacts before practice rounds."])]},
+    {"slug":"about-debatelab","title":"About DebateLab AI Debate Practice | DebateLab","description":"Learn about DebateLab, an AI-powered debate practice workspace for students, coaches, and competitive debaters preparing cases and rebuttals.","eyebrow":"About DebateLab","h1":"DebateLab AI Debate Practice","lead":"DebateLab is a focused workspace for debate cases, rebuttals, evidence, flowcharts, coaching, and timed practice.","features":["Built for debaters","Public guides","Private workspace"],"sections":[("What DebateLab is",["DebateLab is an AI-powered debate practice platform for students and competitive debaters who need structured prep instead of generic chatbot output."]),("What DebateLab AI helps with",["The product focuses on case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timing."]),("How public and private pages differ",["Public pages explain the workflows. Private app routes hold saved prep, account settings, histories, and user-specific data."])]},
 ]
 
-TEMPLATE = """<!doctype html>
+FAQS = [
+    ("Is DebateLab an AI debate practice platform?", "Yes. DebateLab focuses on debate prep workflows such as cases, rebuttals, evidence, flowcharts, coaching, and timing."),
+    ("Can Google index private DebateLab app pages?", "No. Private dashboards and account routes should remain noindexed while public guides provide crawlable context."),
+    ("Should students verify AI-generated debate evidence?", "Yes. AI can suggest research leads, but students should check original sources before using evidence in round."),
+]
+
+NAV = [("AI practice","/ai-debate-practice"),("Case generator","/debate-case-generator"),("Rebuttals","/debate-rebuttal-practice"),("About","/about-debatelab"),("Open app","/app")]
+
+def page_url(slug):
+    return f"{BASE}/{slug}"
+
+def esc(s):
+    return html.escape(s, quote=True)
+
+def internal_links(current):
+    links = [(p["title"].replace(" | DebateLab", ""), "/" + p["slug"]) for p in PAGES if p["slug"] != current]
+    chosen = links[:6]
+    if current in [p["slug"] for p in PAGES[:6]]:
+        chosen = links[6:12]
+    return "\n".join(f'<a href="{esc(href)}">{esc(label)}</a>' for label, href in chosen[:6])
+
+def render_page(page):
+    feature_cards = "".join(f'<article class="card"><h3>{esc(feature)}</h3><p class="muted">A crawlable overview of a DebateLab workflow that opens into the private app.</p></article>' for feature in page["features"])
+    article = []
+    for heading, paragraphs in page["sections"]:
+        article.append(f"<h2>{esc(heading)}</h2>")
+        for paragraph in paragraphs:
+            article.append(f"<p>{esc(paragraph)}</p>")
+    faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in FAQS)
+    nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
+    json_ld = json.dumps({"@context":"https://schema.org","@graph":[{"@type":"Article","headline":page["h1"],"name":page["title"],"url":page_url(page["slug"]),"description":page["description"],"dateModified":TODAY,"publisher":{"@type":"Organization","name":"DebateLab","url":BASE + "/","sameAs":["https://github.com/Programcode/DebateLab"]}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}} for q,a in FAQS]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DebateLab","item":BASE + "/"},{"@type":"ListItem","position":2,"name":page["h1"],"item":page_url(page["slug"])}]}]}, separators=(",", ":"))
+    return f'''<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{title}</title>
-  <meta name="description" content="{description}" />
+  <title>{esc(page["title"])}</title>
+  <meta name="description" content="{esc(page["description"])}" />
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
-  <link rel="canonical" href="https://debate.pi-stack.org/{slug}" />
+  <link rel="canonical" href="{page_url(page["slug"])}" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="DebateLab" />
-  <meta property="og:title" content="{title}" />
-  <meta property="og:description" content="{description}" />
-  <meta property="og:url" content="https://debate.pi-stack.org/{slug}" />
-  <meta property="og:image" content="https://debate.pi-stack.org/hero-visual.png" />
+  <meta property="og:title" content="{esc(page["title"])}" />
+  <meta property="og:description" content="{esc(page["description"])}" />
+  <meta property="og:url" content="{page_url(page["slug"])}" />
+  <meta property="og:image" content="{BASE}/hero-visual.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="/seo-pages.css" />
-  <script type="application/ld+json">{json_ld}</script>
+  <script type="application/ld+json">{html.escape(json_ld, quote=False)}</script>
 </head>
 <body>
   <main class="wrap">
-    <nav class="nav" aria-label="Primary">
-      <a class="brand" href="/">DebateLab</a>
-      <div><a href="/ai-debate-practice">AI practice</a><a href="/debate-case-generator">Case generator</a><a href="/debate-rebuttal-practice">Rebuttals</a><a href="/app">Open app</a></div>
-    </nav>
-    <section class="hero">
-      <span class="eyebrow">{eyebrow}</span>
-      <h1>{h1}</h1>
-      <p class="lead">{lead}</p>
-      <div class="cta"><a class="btn primary" href="/app">Start practicing</a><a class="btn secondary" href="/">See DebateLab</a></div>
-    </section>
+    <nav class="nav" aria-label="Primary"><a class="brand" href="/">DebateLab</a><div>{nav}</div></nav>
+    <div class="breadcrumb"><a href="/">DebateLab</a> / {esc(page["h1"])}</div>
+    <section class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{esc(page["lead"])}</p><div class="cta"><a class="btn primary" href="/app">Start practicing</a><a class="btn secondary" href="/">See DebateLab</a></div></section>
     <section class="grid" aria-label="Highlights">{feature_cards}</section>
-    <article class="article section">{article_html}</article>
-    <section class="section faq article">
-      <h2>Frequently asked questions</h2>
-      {faq_html}
-    </section>
+    <article class="article section">{"".join(article)}</article>
+    <section class="section article"><h2>Related DebateLab guides</h2><div class="links">{internal_links(page["slug"])}</div></section>
+    <section class="section faq article"><h2>Frequently asked questions</h2>{faq_html}</section>
   </main>
-  <footer class="footer"><div class="wrap">DebateLab — AI-powered debate practice, case prep, rebuttal training, evidence research, flowcharts, and coaching. <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></div></footer>
+  <footer class="footer"><div class="wrap">DebateLab AI debate practice links: <a href="/about-debatelab">About</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
 </body>
 </html>
-"""
-
-def render_page(page):
-    article = []
-    for heading, paragraphs in page["sections"]:
-        article.append(f"<h2>{html.escape(heading)}</h2>")
-        for paragraph in paragraphs:
-            article.append(f"<p>{html.escape(paragraph)}</p>")
-    faq_html = "".join(f"<details><summary>{html.escape(q)}</summary><p>{html.escape(a)}</p></details>" for q, a in page["faq"])
-    feature_cards = "".join(f"<article class=\"card\"><h3>{html.escape(feature)}</h3><p class=\"muted\">A public, crawlable overview of a DebateLab workflow that opens into the private app.</p></article>" for feature in page["features"])
-    json_ld = json.dumps({
-        "@context": "https://schema.org",
-        "@graph": [
-            {"@type": "Article", "headline": page["h1"], "name": page["title"], "url": f"https://debate.pi-stack.org/{page['slug']}", "description": page["description"], "publisher": {"@type": "Organization", "name": "DebateLab", "url": "https://debate.pi-stack.org/"}},
-            {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in page["faq"]]},
-        ],
-    }, separators=(",", ":"))
-    return TEMPLATE.format(
-        title=html.escape(page["title"]),
-        description=html.escape(page["description"]),
-        slug=page["slug"],
-        eyebrow=html.escape(page["eyebrow"]),
-        h1=html.escape(page["h1"]),
-        lead=html.escape(page["lead"]),
-        feature_cards=feature_cards,
-        article_html="\n".join(article),
-        faq_html=faq_html,
-        json_ld=html.escape(json_ld, quote=False),
-    )
-
+'''
 
 def main():
     (PUBLIC / "seo-pages.css").write_text(CSS + "\n")
@@ -160,38 +101,29 @@ def main():
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "index.html").write_text(render_page(page))
 
-    sitemap = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-        '  <url>',
-        '    <loc>https://debate.pi-stack.org/</loc>',
-        '    <changefreq>weekly</changefreq>',
-        '    <priority>1.0</priority>',
-        '  </url>',
-    ]
-    for page in PAGES:
-        sitemap.extend([
-            '  <url>',
-            f'    <loc>https://debate.pi-stack.org/{page["slug"]}</loc>',
-            '    <changefreq>monthly</changefreq>',
-            '    <priority>0.8</priority>',
-            '  </url>',
-        ])
-    sitemap.extend([
-        '  <url>',
-        '    <loc>https://debate.pi-stack.org/terms</loc>',
-        '    <changefreq>yearly</changefreq>',
-        '    <priority>0.2</priority>',
-        '  </url>',
-        '  <url>',
-        '    <loc>https://debate.pi-stack.org/privacy</loc>',
-        '    <changefreq>yearly</changefreq>',
-        '    <priority>0.2</priority>',
-        '  </url>',
-        '</urlset>',
-    ])
+    sitemap = ['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    urls = [(BASE + "/", "weekly", "1.0")] + [(page_url(p["slug"]), "monthly", "0.8") for p in PAGES] + [(BASE + "/terms", "yearly", "0.2"), (BASE + "/privacy", "yearly", "0.2")]
+    for loc, freq, priority in urls:
+        sitemap.extend(["  <url>", f"    <loc>{loc}</loc>", f"    <lastmod>{TODAY}</lastmod>", f"    <changefreq>{freq}</changefreq>", f"    <priority>{priority}</priority>", "  </url>"])
+    sitemap.append("</urlset>")
     (PUBLIC / "sitemap.xml").write_text("\n".join(sitemap) + "\n")
-    print(f"Generated {len(PAGES)} public SEO pages and updated sitemap")
+
+    robots = """User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /app/
+Disallow: /login
+Disallow: /share/
+Disallow: /admin
+Disallow: /settings
+Disallow: /history
+Disallow: /private
+
+Sitemap: https://debate.pi-stack.org/sitemap.xml
+"""
+    (PUBLIC / "robots.txt").write_text(robots)
+    print(f"Generated {len(PAGES)} public SEO pages and updated sitemap/robots")
 
 if __name__ == "__main__":
     main()
