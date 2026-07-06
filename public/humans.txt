@@ -1,0 +1,4 @@
+DebateLab by Programcode
+Site: https://debate.pi-stack.org/
+Purpose: AI debate preparation for students and competitive debaters.
+Key pages: /debatelab, /debatelab-by-programcode, /what-is-debatelab, /debatelab-ai, /about-debatelab
