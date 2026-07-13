@@ -21,6 +21,17 @@ function loadConfig(): VercelConfig {
   return JSON.parse(readFileSync(path, "utf8")) as VercelConfig;
 }
 
+function loadPackageJson(): {
+  engines?: { node?: string };
+  dependencies?: Record<string, string>;
+} {
+  return JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
+}
+
+function loadMainSource(): string {
+  return readFileSync(resolve(process.cwd(), "src/main.tsx"), "utf8");
+}
+
 function headersFor(config: VercelConfig, source: string) {
   return Object.fromEntries(
     (config.headers?.find((rule) => rule.source === source)?.headers ?? []).map(({ key, value }) => [key, value]),
@@ -78,5 +89,21 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headersFor(config, "/assets/(.*)")["Cache-Control"]).toBe(
       "public, max-age=31536000, immutable",
     );
+  });
+
+  it("pins the Vercel runtime to Node 22", () => {
+    expect(loadPackageJson().engines?.node).toBe("22.x");
+  });
+
+  it("includes Vercel Web Analytics and Speed Insights in the app root", () => {
+    const packageJson = loadPackageJson();
+    const mainSource = loadMainSource();
+
+    expect(packageJson.dependencies).toHaveProperty("@vercel/analytics");
+    expect(packageJson.dependencies).toHaveProperty("@vercel/speed-insights");
+    expect(mainSource).toContain('import { Analytics } from "@vercel/analytics/react"');
+    expect(mainSource).toContain('import { SpeedInsights } from "@vercel/speed-insights/react"');
+    expect(mainSource).toContain("<Analytics />");
+    expect(mainSource).toContain("<SpeedInsights />");
   });
 });
