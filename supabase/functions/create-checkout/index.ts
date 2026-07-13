@@ -3,6 +3,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
+import {
+  findCustomerOwnedByUser,
+  isAllowedCheckoutRedirectUrl,
+} from "./checkout-security.ts";
 
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
@@ -40,15 +44,6 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-function isValidHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function isStripePriceId(value: string): boolean {
   return /^price_[A-Za-z0-9]+$/.test(value);
 }
@@ -62,10 +57,6 @@ class AppError extends Error {
     this.status = status;
     this.details = details;
   }
-}
-
-function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
-  return "deleted" in customer && customer.deleted;
 }
 
 function isDeletedPrice(price: Stripe.Price | Stripe.DeletedPrice): price is Stripe.DeletedPrice {
@@ -171,34 +162,13 @@ async function findCustomerIdByUser(user: { id: string; email?: string | null })
       query: `metadata['user_id']:'${user.id}'`,
       limit: 1,
     });
-    const fromMetadata = result.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
-      !isDeletedCustomer(customer)
-    );
-    if (fromMetadata && !isDeletedCustomer(fromMetadata)) {
-      return fromMetadata.id;
+    const customerId = findCustomerOwnedByUser(result.data, user.id);
+    if (customerId) {
+      return customerId;
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "search failed";
     console.warn(`[CHECKOUT] Customer search warning for ${user.id}: ${message}`);
-  }
-
-  if (!user.email) {
-    return null;
-  }
-
-  const candidates = await stripe.customers.list({ email: user.email, limit: 10 });
-  const matchingByMetadata = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
-    !isDeletedCustomer(customer) && customer.metadata?.user_id === user.id
-  );
-  if (matchingByMetadata && !isDeletedCustomer(matchingByMetadata)) {
-    return matchingByMetadata.id;
-  }
-
-  const firstActive = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
-    !isDeletedCustomer(customer)
-  );
-  if (firstActive && !isDeletedCustomer(firstActive)) {
-    return firstActive.id;
   }
 
   return null;
@@ -295,8 +265,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!isValidHttpUrl(successUrl) || !isValidHttpUrl(cancelUrl)) {
-      return new Response(JSON.stringify({ error: "successUrl and cancelUrl must be valid HTTP(S) URLs" }), {
+    if (!isAllowedCheckoutRedirectUrl(successUrl) || !isAllowedCheckoutRedirectUrl(cancelUrl)) {
+      return new Response(JSON.stringify({ error: "successUrl and cancelUrl must use an approved app origin" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
