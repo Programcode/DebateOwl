@@ -3,6 +3,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
+import {
+  duplicateWebhookResponse,
+  webhookFailureResponse,
+} from "./webhook-event-lifecycle.ts";
 
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
@@ -58,26 +62,6 @@ Deno.serve(async (req) => {
 
   console.log(`[WEBHOOK] Received event: ${event.type} (${event.id})`);
 
-  const { error: eventInsertError } = await supabase.from("webhook_events").insert({
-    id: event.id,
-    event_type: event.type,
-  });
-
-  if (eventInsertError) {
-    if (eventInsertError.code === "23505") {
-      console.log(`[WEBHOOK] Duplicate event ignored: ${event.id}`);
-      return new Response(JSON.stringify({ received: true, duplicate: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    console.error("[WEBHOOK] Failed to record webhook event:", eventInsertError);
-    return new Response(JSON.stringify({ received: false, error: "Failed to record webhook event" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -110,10 +94,33 @@ Deno.serve(async (req) => {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    const failure = webhookFailureResponse(message);
     console.error(`[WEBHOOK] Error processing ${event.type}:`, message);
-    // Return 200 to avoid Stripe retrying — log the error for debugging
-    return new Response(JSON.stringify({ received: true, error: message }), {
-      status: 200,
+    // Return 5xx so Stripe retries. The idempotency record is written only after success.
+    return new Response(JSON.stringify(failure), {
+      status: failure.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { error: eventInsertError } = await supabase.from("webhook_events").insert({
+    id: event.id,
+    event_type: event.type,
+  });
+
+  if (eventInsertError) {
+    if (eventInsertError.code === "23505") {
+      const duplicate = duplicateWebhookResponse();
+      console.log(`[WEBHOOK] Duplicate event ignored: ${event.id}`);
+      return new Response(JSON.stringify({ received: true, ...duplicate }), {
+        status: duplicate.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const failure = webhookFailureResponse("Failed to record webhook event");
+    console.error("[WEBHOOK] Failed to record webhook event:", eventInsertError);
+    return new Response(JSON.stringify(failure), {
+      status: failure.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -131,8 +138,7 @@ Deno.serve(async (req) => {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id;
   if (!userId) {
-    console.error("[WEBHOOK] checkout.session.completed missing user_id in metadata");
-    return;
+    throw new Error("checkout.session.completed missing user_id in metadata");
   }
 
   const subscriptionId = session.subscription as string;
@@ -162,6 +168,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (subError) {
     console.error("[WEBHOOK] Failed to upsert subscription:", subError);
+    throw new Error(`Failed to upsert subscription: ${subError.message}`);
   }
 
   // Update user tier to pro
@@ -173,6 +180,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (userError) {
     console.error("[WEBHOOK] Failed to update user tier:", userError);
+    throw new Error(`Failed to update user tier: ${userError.message}`);
   }
 
   console.log(`[WEBHOOK] User ${userId} upgraded to Pro`);
@@ -193,6 +201,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
   if (error) {
     console.error("[WEBHOOK] Failed to update subscription on payment success:", error);
+    throw new Error(`Failed to update subscription on payment success: ${error.message}`);
   }
 
   console.log(`[WEBHOOK] Payment succeeded for subscription ${subscriptionId}`);
@@ -215,6 +224,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   if (subError) {
     console.error("[WEBHOOK] Failed to update subscription on payment failure:", subError);
+    throw new Error(`Failed to update subscription on payment failure: ${subError.message}`);
   }
 
   // Downgrade user immediately per spec
@@ -250,6 +260,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   if (subError) {
     console.error("[WEBHOOK] Failed to update subscription on deletion:", subError);
+    throw new Error(`Failed to update subscription on deletion: ${subError.message}`);
   }
 
   // Downgrade user
@@ -282,6 +293,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   if (error) {
     console.error("[WEBHOOK] Failed to update subscription:", error);
+    throw new Error(`Failed to update subscription: ${error.message}`);
   }
 
   // If subscription went active, ensure user is pro
@@ -292,11 +304,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       .maybeSingle();
 
     if (sub?.user_id) {
-      await supabase.from("user_settings").update({
+      const { error: userError } = await supabase.from("user_settings").update({
         subscription_tier: "pro",
         grace_period_ends_at: null,
         updated_at: new Date().toISOString(),
       }).eq("user_id", sub.user_id);
+
+      if (userError) {
+        throw new Error(`Failed to upgrade user after subscription update: ${userError.message}`);
+      }
     }
   }
 

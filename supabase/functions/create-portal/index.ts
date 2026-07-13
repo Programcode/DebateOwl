@@ -3,6 +3,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
+import {
+  findCustomerOwnedByUser,
+  isAllowedCheckoutRedirectUrl,
+} from "../create-checkout/checkout-security.ts";
 
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
@@ -38,19 +42,6 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-function isValidHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
-  return "deleted" in customer && customer.deleted;
-}
-
 async function findCustomerIdByUser(user: { id: string; email?: string | null }): Promise<string | null> {
   const { data: sub, error: subError } = await supabase
     .from("subscriptions")
@@ -73,21 +64,7 @@ async function findCustomerIdByUser(user: { id: string; email?: string | null })
   }
 
   const candidates = await stripe.customers.list({ email: user.email, limit: 10 });
-  const matchingByMetadata = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
-    !isDeletedCustomer(customer) && customer.metadata?.user_id === user.id
-  );
-  if (matchingByMetadata && !isDeletedCustomer(matchingByMetadata)) {
-    return matchingByMetadata.id;
-  }
-
-  const firstActive = candidates.data.find((customer: Stripe.Customer | Stripe.DeletedCustomer) =>
-    !isDeletedCustomer(customer)
-  );
-  if (firstActive && !isDeletedCustomer(firstActive)) {
-    return firstActive.id;
-  }
-
-  return null;
+  return findCustomerOwnedByUser(candidates.data, user.id);
 }
 
 function classifyStripeError(err: unknown): { status: number; message: string } {
@@ -172,8 +149,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!isValidHttpUrl(returnUrl)) {
-      return new Response(JSON.stringify({ error: "returnUrl must be a valid HTTP(S) URL" }), {
+    if (!isAllowedCheckoutRedirectUrl(returnUrl)) {
+      return new Response(JSON.stringify({ error: "returnUrl must use an approved app origin" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
