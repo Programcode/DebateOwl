@@ -43,11 +43,6 @@ export default function FactoidsPage() {
     }
   };
 
-  const handleVerify = async () => {
-    // TODO: Implement verification
-    console.log('Verifying sources...');
-  };
-
   const handleUseSuggestion = (query: string) => {
     const nextInput: FactoidsInput = {
       claim: query,
@@ -129,7 +124,6 @@ export default function FactoidsPage() {
               <div key="factoids-results" className="motion-swap">
                 <FactoidsResults
                   result={factoidsResult}
-                  onVerify={handleVerify}
                   onDiscuss={handleDiscuss}
                   onSaveSource={handleSaveToLibrary}
                   onUseSuggestion={handleUseSuggestion}

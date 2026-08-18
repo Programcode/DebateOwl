@@ -20,8 +20,6 @@ import { openExternalUrl } from '@/lib/native';
 
 interface FactoidsResultsProps {
   result: FactoidsOutput;
-  onVerify?: () => void;
-  isVerifying?: boolean;
   onDiscuss?: () => void;
   onSaveSource?: (title: string, content: string, url?: string) => void;
   onUseSuggestion?: (query: string) => void;
@@ -139,7 +137,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   );
 }
 
-export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
+export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -208,15 +206,6 @@ export function FactoidsResults({ result, onVerify, isVerifying, onDiscuss, onSa
               {Math.round((verifiedCount / totalCount) * 100)}%
             </span>
           </div>
-          {result.factoids.length !== displayFactoids.length && onVerify && (
-            <Button
-              onClick={onVerify}
-              disabled={isVerifying}
-              className="w-full"
-            >
-              {isVerifying ? t('factoidsResults.verifying') : t('factoidsResults.verifyAll')}
-            </Button>
-          )}
         </div>
       </SectionCard>
 
