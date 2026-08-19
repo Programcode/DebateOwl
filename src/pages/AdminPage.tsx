@@ -271,7 +271,7 @@ export default function AdminPage() {
                     ...u,
                     subscriptionTier: result?.subscription_tier || 'trial',
                     trialEndsAt: result?.trial_ends_at || u.trialEndsAt,
-                    gracePeriodEndsAt: null,
+                    gracePeriodEndsAt: null as string | null,
                     dailyLimitOverride: result?.daily_limit_override ?? u.dailyLimitOverride,
                 }
                 : u

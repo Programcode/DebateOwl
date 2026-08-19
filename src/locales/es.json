@@ -972,9 +972,8 @@
     "views": "vistas",
     "loginRequired": "Inicio de Sesión Requerido",
     "loginRequiredDesc": "Inicia sesión para importar este contenido a tu cuenta.",
-    "imported": "Importado",
-    "importedDesc": "Contenido añadido a tu cuenta.",
-    "importSuccess": "Importado exitosamente",
+    "importNotAvailable": "La importación aún no está disponible",
+    "importNotAvailableDesc": "Guardar contenido compartido en tu cuenta estará disponible próximamente.",
     "importFailed": "Error al importar contenido"
   },
   "privacyPage": {

@@ -23,7 +23,7 @@ export function preloadOfflineRoutes() {
     void Promise.allSettled(preloaders.map((load) => load()));
   };
 
-  if ('requestIdleCallback' in window) {
+  if (typeof window.requestIdleCallback === 'function') {
     window.requestIdleCallback(run, { timeout: 8000 });
     return;
   }

@@ -111,7 +111,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
     try {
       const exportResult = await exportAttackToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
-        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+        const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
           .catch(() => toast.error(t('attackResults.exportError')));
         toast.success(t('attackResults.exportedGdocs'), {
           action: {

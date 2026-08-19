@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl } from "./url-validation.ts";
+import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
+import { readBoundedText } from "./resource-limits.ts";
 
 // Re-export helpers so existing callers (if any) keep working.
 export { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl };
@@ -47,16 +48,14 @@ async function isUserBanned(userId: string): Promise<boolean> {
   return data?.role === "banned";
 }
 
-async function countTodaysImports(userId: string): Promise<number> {
-  const startOfDay = new Date();
-  startOfDay.setUTCHours(0, 0, 0, 0);
-  const { count } = await supabase
-    .from("ai_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("feature", "import_source")
-    .gte("created_at", startOfDay.toISOString());
-  return count ?? 0;
+async function consumeDailyImportQuota(userId: string): Promise<{ allowed: boolean; currentCount: number }> {
+  const { data, error } = await supabase.rpc("consume_daily_quota", {
+    p_user_id: userId,
+    p_limit: DAILY_IMPORT_LIMIT,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return { allowed: Boolean(row?.allowed), currentCount: row?.current_count ?? 0 };
 }
 
 async function logImport(userId: string, status: "success" | "error", errorCode?: string, latencyMs?: number) {
@@ -81,6 +80,7 @@ async function fetchWithTimeout(initialUrl: URL) {
   try {
     let currentUrl = initialUrl;
     for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+      await validateResolvedPublicHost(currentUrl);
       const response = await fetch(currentUrl.toString(), {
         headers: {
           "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
@@ -267,13 +267,19 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Your account has been suspended. Please contact support.", code: "banned" }, 403, corsHeaders);
   }
 
-  const todaysImports = await countTodaysImports(user.id);
-  if (todaysImports >= DAILY_IMPORT_LIMIT) {
+  let quota: { allowed: boolean; currentCount: number };
+  try {
+    quota = await consumeDailyImportQuota(user.id);
+  } catch (err) {
+    console.error("[IMPORT_SOURCE] quota reservation failed", err instanceof Error ? err.message : String(err));
+    return jsonResponse({ error: "Unable to verify your quota. Please try again." }, 500, corsHeaders);
+  }
+  if (!quota.allowed) {
     return jsonResponse({
       error: `You've reached the daily import limit (${DAILY_IMPORT_LIMIT}). Try again tomorrow.`,
       code: "limit_reached",
       limit: DAILY_IMPORT_LIMIT,
-      current: todaysImports,
+      current: quota.currentCount,
     }, 429, corsHeaders);
   }
 
@@ -298,7 +304,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Only HTML and plain text pages can be imported from a URL." }, 415, corsHeaders);
     }
 
-    const raw = await response.text();
+    const raw = await readBoundedText(response);
     const isHtml = contentType.includes("html") || /<html|<article|<main|<p[\s>]/i.test(raw);
     const content = normalizeText(isHtml ? stripHtml(raw) : raw);
 

@@ -132,7 +132,10 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
     .eq("user_id", userId)
     .single();
 
-  if (!user) return { tier: "trial", dailyLimit: 5, canAccessProModels: false };
+  // A settings row is provisioned for every account on signup and can no
+  // longer be deleted by the client (see 20260819000000 security_hardening.sql).
+  // A missing row is untrusted, not a new user — fail closed.
+  if (!user) return { tier: "expired", dailyLimit: 0, canAccessProModels: false };
 
   const tier = user.subscription_tier || "trial";
   const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
@@ -216,18 +219,25 @@ async function checkRateLimit(userId: string, model: string): Promise<RateLimitR
       return { allowed: false, reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.", code: "upgrade_required", statusCode: 403 };
     }
 
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const { count, error } = await supabase
-      .from("ai_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", todayStart.toISOString());
+    if (dailyLimit <= 0) {
+      return { allowed: false, reason: "Your daily request limit is currently set to zero. Contact support if this seems wrong.", code: "limit_reached", limit: 0, current: 0, statusCode: 402 };
+    }
 
-    if (error) return { allowed: true };
+    // Atomically reserve today's request slot server-side so concurrent requests
+    // can't race past the limit (see consume_daily_quota in the security hardening migration).
+    const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
+      p_user_id: userId,
+      p_limit: dailyLimit,
+    });
 
-    const current = count || 0;
-    if (dailyLimit > 0 && current >= dailyLimit) {
+    if (quotaError) {
+      console.error("[AI STREAM] Quota reservation failed:", quotaError);
+      return { allowed: false, reason: "Unable to verify your quota. Please try again.", statusCode: 500 };
+    }
+
+    const quotaRow = Array.isArray(quota) ? quota[0] : quota;
+    const current = quotaRow?.current_count ?? 0;
+    if (!quotaRow?.allowed) {
       return { allowed: false, reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`, code: "limit_reached", limit: dailyLimit, current, statusCode: 402 };
     }
 
@@ -293,7 +303,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Invalid JSON body" }, 400, corsHeaders);
   }
 
-  const provider = body.provider === "lovable" ? "openai" : String(body.provider || "openai");
   const model = sanitizeText(body.model, 80) || "gpt-5.4-mini";
   const input = body.input && typeof body.input === "object" ? body.input as Record<string, unknown> : {};
 
@@ -302,7 +311,9 @@ Deno.serve(async (req) => {
   }
 
   const advancedMode = Boolean(input.citationMode || input.webSearch || input.prosConsMode || input.argumentMapMode);
-  const resolvedProvider = getProviderForModel(model) || (provider === "openai" ? "openai" : provider === "google" ? "google" : provider === "anthropic" ? "anthropic" : null);
+  // Provider is derived strictly from the allowlisted model, never from the
+  // client-supplied provider field, so an unlisted model can't reach any provider API.
+  const resolvedProvider = getProviderForModel(model);
 
   if (!resolvedProvider || advancedMode) {
     return jsonResponse({ error: "Streaming is not available for this model/mode combination" }, 400, corsHeaders);

@@ -85,6 +85,7 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
+import { validatePublicHttpUrl } from "../_shared/url-validation.ts";
 import {
   buildSearchQueries,
   formatRankedSearchResults,
@@ -109,6 +110,29 @@ const PRO_MODELS = new Set([
   "claude-sonnet-4-6",
   "gemini-3.1-pro-preview",
 ]);
+
+// Every model this endpoint will call, mapped to its provider. The client
+// picks a model; the server derives (and trusts) the provider from this
+// allowlist rather than the client-supplied provider field, so an arbitrary
+// or unlisted model/provider pair can never reach a provider API or bypass
+// PRO_MODELS gating.
+const MODEL_PROVIDERS: Record<string, Provider> = {
+  "gpt-5.5": "openai",
+  "gpt-5.4": "openai",
+  "gpt-5.4-mini": "openai",
+  "claude-opus-4-7": "anthropic",
+  "claude-sonnet-4-6": "anthropic",
+  "claude-haiku-4-5-20251001": "anthropic",
+  "gemini-3.1-pro-preview": "google",
+  "gemini-3-flash-preview": "google",
+  "gemini-3.1-flash-lite-preview": "google",
+};
+
+function providerForModel(model: string): Provider {
+  const provider = MODEL_PROVIDERS[model];
+  if (!provider) throw new Error("Unsupported model or provider combination");
+  return provider;
+}
 
 interface RateLimitResult {
   allowed: boolean;
@@ -167,10 +191,11 @@ async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
     .eq("user_id", userId)
     .single();
 
-  if (!user) {
-    // No settings row — treat as new trial user
-    return { tier: "trial", dailyLimit: 5, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
-  }
+  // A settings row is provisioned for every account by the on_auth_user_created
+  // trigger and can no longer be deleted by the client (see 20260819000000
+  // security_hardening.sql). A missing row is therefore untrusted, not a new
+  // user — fail closed instead of granting a fresh trial.
+  if (!user) return { tier: "expired", dailyLimit: 0, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
 
   const tier = user.subscription_tier || "trial";
   const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
@@ -309,25 +334,33 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
       };
     }
 
-    // Count today's requests (UTC)
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-
-    const { count, error: countError } = await supabase
-      .from("ai_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", todayStart.toISOString());
-
-    if (countError) {
-      console.warn("[RATE LIMIT] Error counting requests:", countError);
-      return { allowed: true }; // Fail open
+    if (dailyLimit <= 0) {
+      return {
+        allowed: false,
+        reason: "Your daily request limit is currently set to zero. Contact support if this seems wrong.",
+        code: "limit_reached",
+        limit: 0,
+        current: 0,
+        statusCode: 402,
+      };
     }
 
-    const currentCount = count || 0;
+    // Atomically reserve today's request slot server-side so concurrent requests
+    // can't race past the limit (see consume_daily_quota in the security hardening migration).
+    const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
+      p_user_id: userId,
+      p_limit: dailyLimit,
+    });
 
-    // Check against subscription limit
-    if (dailyLimit > 0 && currentCount >= dailyLimit) {
+    if (quotaError) {
+      console.error("[RATE LIMIT] Quota reservation failed:", quotaError);
+      return { allowed: false, reason: "Unable to verify your quota. Please try again.", statusCode: 500 };
+    }
+
+    const quotaRow = Array.isArray(quota) ? quota[0] : quota;
+    const currentCount = quotaRow?.current_count ?? 0;
+
+    if (!quotaRow?.allowed) {
       return {
         allowed: false,
         reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`,
@@ -389,8 +422,6 @@ async function logUsage(
     console.warn("[USAGE LOG] Failed to log:", err);
   }
 }
-
-const DEFAULT_PROVIDER = (Deno.env.get("AI_DEFAULT_PROVIDER") || "google") as Provider;
 
 function badRequest(message: string, corsHeaders: Record<string, string>) {
   return new Response(JSON.stringify({ error: message }), {
@@ -580,8 +611,18 @@ async function exaGetContents(url: string): Promise<string> {
 
 async function verifyUrl(url: string): Promise<boolean> {
   try {
-    const response = await fetchWithTimeout(url, { method: "HEAD" }, 5000);
-    return response.ok;
+    let currentUrl = validatePublicHttpUrl(url);
+    for (let hop = 0; hop <= 5; hop += 1) {
+      const response = await fetchWithTimeout(currentUrl.toString(), { method: "HEAD", redirect: "manual" }, 5000);
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location || hop === 5) return false;
+        currentUrl = validatePublicHttpUrl(new URL(location, currentUrl).toString());
+        continue;
+      }
+      return response.ok;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -1374,8 +1415,14 @@ Deno.serve(async (req) => {
   }
   const feature = body.feature as Feature | undefined;
   const input = body.input as Record<string, unknown> | undefined;
-  const provider = (body.provider as Provider | undefined) || DEFAULT_PROVIDER;
   const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-3-flash-preview";
+  let provider: Provider;
+  try {
+    provider = providerForModel(model);
+  } catch (err) {
+    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model });
+    return badRequest(err instanceof Error ? err.message : "Unsupported model or provider combination", corsHeaders);
+  }
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
   const sources = (body.sources as Source[] | undefined) || [];

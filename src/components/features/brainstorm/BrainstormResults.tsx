@@ -82,7 +82,7 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
     try {
       const exportResult = await exportBrainstormToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
-        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+        const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
           .catch(() => toast.error(t('brainstormResults.exportError')));
         toast.success(t('brainstormResults.exportedGdocs'), {
           action: {

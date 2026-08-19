@@ -112,8 +112,8 @@ export async function streamAskChat(
   let buffer = '';
   let finalOutput: AskOutput | null = null;
 
-  const abortHandler = () => {
-    reader.cancel().catch(() => undefined);
+  const abortHandler = (): void => {
+    reader.cancel().catch((): undefined => undefined);
   };
   handlers.signal?.addEventListener('abort', abortHandler);
 

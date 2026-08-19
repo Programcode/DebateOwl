@@ -972,9 +972,8 @@
     "views": "megtekintés",
     "loginRequired": "Bejelentkezés Szükséges",
     "loginRequiredDesc": "Jelentkezz be a tartalom fiókodba importálásához.",
-    "imported": "Importálva",
-    "importedDesc": "Tartalom hozzáadva a fiókodhoz.",
-    "importSuccess": "Sikeresen importálva",
+    "importNotAvailable": "Az importálás még nem elérhető",
+    "importNotAvailableDesc": "A megosztott tartalom fiókba mentése hamarosan érkezik.",
     "importFailed": "Nem sikerült importálni a tartalmat"
   },
   "privacyPage": {

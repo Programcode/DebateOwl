@@ -142,7 +142,6 @@ async function readPdfFile(file: File) {
 
     const document = await pdfjs.getDocument({
       data: new Uint8Array(await readFileAsArrayBuffer(file)),
-      isEvalSupported: false,
       useWorkerFetch: false,
     }).promise;
 

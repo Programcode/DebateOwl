@@ -972,9 +972,8 @@
     "views": "views",
     "loginRequired": "Login Required",
     "loginRequiredDesc": "Sign in to import this content to your account.",
-    "imported": "Imported",
-    "importedDesc": "Content added to your account.",
-    "importSuccess": "Successfully imported",
+    "importNotAvailable": "Importing isn't available yet",
+    "importNotAvailableDesc": "Saving shared content to your account is coming soon.",
     "importFailed": "Failed to import content"
   },
   "privacyPage": {

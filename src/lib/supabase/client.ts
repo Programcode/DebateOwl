@@ -10,6 +10,5 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: true,
     flowType: 'pkce',
     storageKey: `debate-auth-${getActiveEnv()}`,
-    lockAcquireTimeout: 1500,
   },
 });

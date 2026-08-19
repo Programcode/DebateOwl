@@ -79,10 +79,10 @@ const FORMATS: DebateFormat[] = [
 // Simple audio synth
 const playSignal = (type: 'beep' | 'double-beep' | 'alarm') => {
   try {
-    const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContext) return;
+    const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
 
-    const ctx = new AudioContext();
+    const ctx = new AudioContextCtor();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -137,6 +137,7 @@ export default function TimerPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const deadlineRef = useRef<number | null>(null);
 
   // Reset when format changes
   useEffect(() => {
@@ -157,32 +158,42 @@ export default function TimerPage() {
     }
   }, [currentFormat, currentSpeechIdx]);
 
+  // Drives the countdown off a deadline timestamp (self-correcting against
+  // setInterval drift/throttling) and only recreates the interval when
+  // isRunning changes, not on every tick. The updater stays pure — no
+  // side effects here; see the effect below for signals/completion.
   useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          const next = prev - 1;
-
-          if (soundEnabled) {
-            if (next === 60) playSignal('beep');
-            if (next === 0) playSignal('double-beep');
-          }
-
-          if (next <= 0) {
-            setIsRunning(false);
-            setIsFinished(true);
-            return 0;
-          }
-          return next;
-        });
-      }, 1000);
-    } else {
+    if (!isRunning) {
       if (timerRef.current) clearInterval(timerRef.current);
+      deadlineRef.current = null;
+      return;
     }
+
+    deadlineRef.current = Date.now() + timeLeft * 1000;
+    timerRef.current = setInterval(() => {
+      if (deadlineRef.current === null) return;
+      const remaining = Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+    }, 1000);
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRunning, timeLeft, soundEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRunning]);
+
+  // Reacts to the countdown value to trigger signals and mark completion.
+  useEffect(() => {
+    if (!isRunning) return;
+    if (soundEnabled) {
+      if (timeLeft === 60) playSignal('beep');
+      if (timeLeft === 0) playSignal('double-beep');
+    }
+    if (timeLeft === 0) {
+      setIsRunning(false);
+      setIsFinished(true);
+    }
+  }, [timeLeft, isRunning, soundEnabled]);
 
   const toggleTimer = useCallback(() => setIsRunning(prev => !prev), []);
 

@@ -105,7 +105,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
     try {
       const exportResult = await exportCaseToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
-        const openDocument = () => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
+        const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
           .catch(() => toast.error(t('generateResults.exportError')));
         toast.success(t('generateResults.exportedGdocs'), {
           action: {

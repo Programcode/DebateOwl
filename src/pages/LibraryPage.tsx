@@ -795,7 +795,7 @@ export default function LibraryPage() {
                 </div>
               ) : (
                 <div className="h-[600px] pr-1 stagger-enter">
-                  <List
+                  <List<SourceRowProps>
                     rowComponent={SourceRow}
                     rowCount={visibleSources.length}
                     rowHeight={SOURCE_ROW_HEIGHT}

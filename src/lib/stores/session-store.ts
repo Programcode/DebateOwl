@@ -299,7 +299,7 @@ export const useSessionStore = create<SessionState>()(
       factoidsLoading: false,
       askMessages: [] as Message[],
       askLoading: false,
-      askStreamingAssistant: null,
+      askStreamingAssistant: null as StreamingAskMessage | null,
 
       savedCases: [] as SavedItem<GenerateOutput>[],
       savedAttacks: [] as SavedItem<AttackOutput>[],

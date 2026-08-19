@@ -39,9 +39,7 @@ export default function SharedPage() {
 
             try {
                 const { data, error: fetchError } = await supabase
-                    .from('shared_items')
-                    .select('*')
-                    .eq('share_code', code)
+                    .rpc('get_shared_item', { p_share_code: code })
                     .single();
 
                 if (fetchError || !data) {
@@ -50,13 +48,7 @@ export default function SharedPage() {
                     return;
                 }
 
-                // Increment view count
-                await supabase
-                    .from('shared_items')
-                    .update({ view_count: (data.view_count || 0) + 1 })
-                    .eq('id', data.id);
-
-                setItem(data);
+                setItem(data as SharedItem);
             } catch (err) {
                 setError(t('sharedPage.loadFailed'));
             } finally {
@@ -83,21 +75,10 @@ export default function SharedPage() {
                 return;
             }
 
-            switch (item.item_type) {
-                case 'case':
-                case 'attack':
-                case 'brainstorm':
-                case 'factoids':
-                case 'chat':
-                case 'sources':
-                    toast({ title: t('sharedPage.imported'), description: t('sharedPage.importedDesc') });
-                    break;
-                default:
-                    toast({ title: t('sharedPage.imported'), description: t('sharedPage.importedDesc') });
-            }
-
-            toast({ title: t('sharedPage.importSuccess'), description: t('sharedPage.importedDesc') });
-            navigate('/app/history');
+            toast({
+                title: t('sharedPage.importNotAvailable'),
+                description: t('sharedPage.importNotAvailableDesc'),
+            });
         } catch (err) {
             toast({
                 title: 'Error',

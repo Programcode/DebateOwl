@@ -30,9 +30,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 function generateShareCode(): string {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
     let code = '';
-    for (let i = 0; i < 8; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < bytes.length; i++) {
+        code += chars.charAt(bytes[i] % chars.length);
     }
     return code;
 }
@@ -66,6 +67,13 @@ Deno.serve(async (req: Request) => {
         } catch {
             // Continue as anonymous
         }
+    }
+
+    if (!userId) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
     }
 
     try {

@@ -59,3 +59,26 @@ export function validatePublicHttpUrl(rawUrl: string): URL {
   parsed.hash = "";
   return parsed;
 }
+
+// Re-checks the hostname's *resolved* addresses, not just its literal text, so a
+// public-looking domain that resolves to a private/link-local IP (DNS rebinding)
+// is still rejected. Call this immediately before every fetch, including redirect hops.
+export async function validateResolvedPublicHost(url: URL): Promise<void> {
+  const hostname = url.hostname.toLowerCase();
+  if (isPrivateIpv4(hostname) || isPrivateIpv6(hostname)) {
+    throw new Error("Private and local network URLs cannot be imported.");
+  }
+
+  const results = await Promise.allSettled([
+    Deno.resolveDns(hostname, "A"),
+    Deno.resolveDns(hostname, "AAAA"),
+  ]);
+  const addresses = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+
+  if (addresses.length === 0) {
+    throw new Error("Could not resolve host.");
+  }
+  if (addresses.some((address) => isPrivateIpv4(address) || isPrivateIpv6(address))) {
+    throw new Error("Private and local network URLs cannot be imported.");
+  }
+}
