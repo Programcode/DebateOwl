@@ -62,3 +62,5 @@ humanizer.md
 *.info
 !README.md
 !**/README.md
+.vercel
+.env*
