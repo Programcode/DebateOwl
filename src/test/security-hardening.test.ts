@@ -10,6 +10,7 @@ const stream = read('supabase/functions/ai-stream/index.ts');
 const importer = read('supabase/functions/import-source/index.ts');
 const share = read('supabase/functions/share/index.ts');
 const promo = read('supabase/functions/redeem-promo/index.ts');
+const demoLogin = read('supabase/functions/demo-code-login/index.ts');
 
 describe('security hardening regressions', () => {
   it('makes entitlements and usage ledger service-controlled and fails closed for missing state', () => {
@@ -26,6 +27,8 @@ describe('security hardening regressions', () => {
     for (const source of [ai, stream, importer]) expect(source).toContain('consume_daily_quota');
     expect(ai).toContain('Unable to verify your quota');
     expect(stream).toContain('Unable to verify your quota');
+    expect(ai).not.toContain('return { allowed: true }; // Fail open');
+    expect(stream).not.toContain('return { allowed: true };\n  } catch');
   });
 
   it('uses code-scoped sharing and disallows anonymous share creation', () => {
@@ -60,5 +63,11 @@ describe('security hardening regressions', () => {
     expect(ai).toContain('Unsupported model or provider combination');
     expect(ai).toContain('validatePublicHttpUrl(url)');
     expect(ai).toContain('redirect: "manual"');
+  });
+
+  it('reserves demo-code uses atomically before issuing a session handoff', () => {
+    expect(demoLogin).toContain('consume_demo_access_code');
+    expect(demoLogin).not.toContain('use_count: demoCode.use_count + 1');
+    expect(read('supabase/migrations/20260820080000_security_scan_fixes.sql')).toContain('use_count = use_count + 1');
   });
 });

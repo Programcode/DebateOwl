@@ -242,8 +242,9 @@ async function checkRateLimit(userId: string, model: string): Promise<RateLimitR
     }
 
     return { allowed: true, limit: dailyLimit, current };
-  } catch {
-    return { allowed: true };
+  } catch (err) {
+    console.error("[AI STREAM] Rate-limit check failed:", err);
+    return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
   }
 }
 

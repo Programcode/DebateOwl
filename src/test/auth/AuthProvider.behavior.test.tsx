@@ -387,7 +387,7 @@ describe('AuthProvider behavior', () => {
       }
     };
 
-    function BrokenConsumer() {
+    function BrokenConsumer(): null {
       useAuth();
       return null;
     }

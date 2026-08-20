@@ -373,8 +373,8 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
 
     return { allowed: true, limit: dailyLimit, current: currentCount };
   } catch (err) {
-    console.warn("[RATE LIMIT] Check failed:", err);
-    return { allowed: true }; // Fail open
+    console.error("[RATE LIMIT] Check failed:", err);
+    return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
   }
 }
 

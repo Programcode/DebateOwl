@@ -256,8 +256,10 @@ describe('AI Client Integration', () => {
 
             await factoids({
                 claim: 'Solar is cheaper than coal',
+                direction: 'for',
                 region: 'United States',
                 sourceType: 'government',
+                sourceCount: 5,
                 timeframe: '2020-2025',
             }, mockConfig);
 

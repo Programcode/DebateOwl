@@ -243,15 +243,20 @@ Deno.serve(async (req) => {
 
     if (settingsError) throw settingsError;
 
-    const { error: usageError } = await supabase
-      .from("demo_access_codes")
-      .update({
-        use_count: demoCode.use_count + 1,
-        last_used_at: new Date().toISOString(),
-      })
-      .eq("id", demoCode.id);
-
-    if (usageError) throw usageError;
+    // Reserve the use atomically before issuing a credential. A stale read plus
+    // an ordinary update would let concurrent requests oversubscribe max_uses.
+    const { data: reservation, error: reservationError } = await supabase.rpc("consume_demo_access_code", {
+      p_code_id: demoCode.id,
+    });
+    if (reservationError) throw reservationError;
+    const reservationRow = Array.isArray(reservation) ? reservation[0] : reservation;
+    if (!reservationRow?.reserved) {
+      await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "max_uses" });
+      return new Response(JSON.stringify({ error: "This demo code has no uses left." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",

@@ -27,7 +27,6 @@ function streamFromChunks(chunks: string[]): ReadableStream<Uint8Array> {
 
 function mockFetchOnce(body: BodyInit | null, init: ResponseInit = { status: 200 }) {
   const fetchMock = vi.fn(async () => new Response(body, init));
-  // @ts-expect-error overriding global for the test
   globalThis.fetch = fetchMock;
   return fetchMock;
 }

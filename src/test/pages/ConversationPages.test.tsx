@@ -79,21 +79,21 @@ vi.mock('@/lib/stores/settings-store', () => ({
 }));
 
 vi.mock('@/lib/ai/client', () => ({
-  askChat: (...args: any[]) => mockAskChat(...args),
-  brainstorm: (...args: any[]) => mockBrainstorm(...args),
-  factoids: (...args: any[]) => mockFactoids(...args),
-  isTimeoutError: (...args: any[]) => mockIsTimeoutError(...args),
+  askChat: (...args: unknown[]) => (mockAskChat as (...callArgs: unknown[]) => unknown)(...args),
+  brainstorm: (...args: unknown[]) => (mockBrainstorm as (...callArgs: unknown[]) => unknown)(...args),
+  factoids: (...args: unknown[]) => (mockFactoids as (...callArgs: unknown[]) => unknown)(...args),
+  isTimeoutError: (...args: unknown[]) => (mockIsTimeoutError as (...callArgs: unknown[]) => unknown)(...args),
 }));
 
 vi.mock('@/lib/ai/streaming', () => ({
-  isAskStreamingSupported: (...args: any[]) => mockIsAskStreamingSupported(...args),
-  streamAskChat: (...args: any[]) => mockStreamAskChat(...args),
+  isAskStreamingSupported: (...args: unknown[]) => (mockIsAskStreamingSupported as (...callArgs: unknown[]) => unknown)(...args),
+  streamAskChat: (...args: unknown[]) => (mockStreamAskChat as (...callArgs: unknown[]) => unknown)(...args),
 }));
 
 vi.mock('@/components/features/subscription', () => ({
-  LimitReachedModal: () => null,
-  ModelRestrictedModal: () => null,
-  PricingModal: () => null,
+  LimitReachedModal: (): null => null,
+  ModelRestrictedModal: (): null => null,
+  PricingModal: (): null => null,
 }));
 
 vi.mock('@/components/features/ask/AskChat', () => ({

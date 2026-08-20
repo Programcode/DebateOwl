@@ -1,9 +1,9 @@
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import AdminPage from '@/pages/AdminPage';
 import { BrowserRouter } from 'react-router-dom';
+import type { ReactElement, ReactNode } from 'react';
 
 // Hoist mocks
 const { mockSupabase, mockToast } = vi.hoisted(() => ({
@@ -22,23 +22,23 @@ vi.mock('@/lib/supabase/client', () => ({
 
 // Mock Recharts
 vi.mock('recharts', () => {
-    const ResponsiveContainer = ({ children }: any) => <div>{children}</div>;
+    const ResponsiveContainer = ({ children }: { children?: ReactNode }): ReactElement => <div>{children}</div>;
     return {
         ResponsiveContainer,
         BarChart: () => <div data-testid="bar-chart">Bar Chart</div>,
-        Bar: () => null,
-        XAxis: () => null,
-        YAxis: () => null,
-        CartesianGrid: () => null,
-        Tooltip: () => null,
+        Bar: (): null => null,
+        XAxis: (): null => null,
+        YAxis: (): null => null,
+        CartesianGrid: (): null => null,
+        Tooltip: (): null => null,
         PieChart: () => <div data-testid="pie-chart">Pie Chart</div>,
-        Pie: () => null,
-        Cell: () => null,
+        Pie: (): null => null,
+        Cell: (): null => null,
     };
 });
 
 vi.mock('@/hooks/use-toast', () => ({
-    useToast: () => ({ toast: mockToast }),
+    useToast: (): { toast: typeof mockToast } => ({ toast: mockToast }),
 }));
 
 // Mock global fetch
@@ -89,7 +89,7 @@ describe('AdminPage Integration', () => {
     });
 
     it('loads and displays analytics when admin', async () => {
-        const mockStats = {
+        const mockStats: Record<string, unknown> = {
             totals: { requests: 1234, cost: 5.67, successRate: 98.5 },
             daily: [{ date: 'Feb 01', requests: 100, cost: 0.5, errors: 2 }],
             byFeature: { generate: 50, ask: 50 },
@@ -148,9 +148,9 @@ describe('AdminPage Integration', () => {
 
     it('falls back to shortened user ID when no email is available', async () => {
         const unknownUserId = 'abcd1234-5678-4abc-9def-000000000000';
-        const mockStats = {
+        const mockStats: Record<string, unknown> = {
             totals: { requests: 5, cost: 0.01, successRate: 100 },
-            daily: [],
+            daily: [] as unknown[],
             byFeature: { generate: 5 },
             byUser: [
                 { user_id: unknownUserId, email: null, requests: 5, cost: 0.01 },
@@ -186,11 +186,11 @@ describe('AdminPage Integration', () => {
         const targetUserId = '11111111-2222-4333-8444-555555555555';
         const mockStats = {
             totals: { requests: 0, cost: 0, successRate: 100 },
-            daily: [],
+            daily: [] as unknown[],
             byFeature: {},
-            byUser: [],
+            byUser: [] as unknown[],
         };
-        const mockUsers = {
+        const mockUsers: Record<string, unknown> = {
             users: [{
                 id: targetUserId,
                 email: 'gift-me@example.com',

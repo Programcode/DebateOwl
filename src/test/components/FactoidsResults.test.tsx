@@ -1,15 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
+import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
 
 vi.mock('@/components/features/ExportToolbar', () => ({
-  ExportToolbar: () => null,
+  ExportToolbar: (): null => null,
 }));
 vi.mock('@/components/features/export/GoogleDriveAuthModal', () => ({
-  GoogleDriveAuthModal: () => null,
+  GoogleDriveAuthModal: (): null => null,
 }));
 
-const result = {
+const result: FactoidsOutput = {
   factoids: [{
     id: 'fact-1',
     shortClaim: 'A pending claim',

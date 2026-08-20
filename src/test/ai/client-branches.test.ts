@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
-import type { GenerateInput } from '@/lib/ai/schemas/generate';
+import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 
 const {
   getSessionMock,
@@ -86,10 +86,9 @@ const validGenerateInput: GenerateInput = {
   length: 'brief',
   audience: 'beginner',
   tone: 'formal',
-  language: 'en',
 };
 
-const validGenerateOutput = {
+const validGenerateOutput: GenerateOutput = {
   caseStructure: {
     thesis: 'Universal basic income improves economic resilience',
     framework: 'Welfare economics',

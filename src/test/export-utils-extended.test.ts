@@ -59,10 +59,15 @@ describe('Export Utils - Extended', () => {
   };
 
   const validAttack: AttackOutput = {
-    overallAssessment: { score: 75, summary: 'Decent case' },
-    weaknesses: [{ description: 'Weak point', severity: 'high', whyWeak: 'Because', howOpponentAttacks: 'Like this', improvedVersion: 'Better' }],
+    overallAssessment: { score: 75, summary: 'Decent case', strengthAreas: ['Clear framework'] },
+    weaknesses: [{ id: 'weakness-1', type: 'logical', description: 'Weak point', severity: 'major', whyWeak: 'Because', howOpponentAttacks: 'Like this', improvedVersion: 'Better' }],
     fallaciesDetected: [],
     crossExQuestions: [],
+    weighingAnalysis: {
+      currentWeighing: 'None',
+      missingComparisons: [],
+      improvementSuggestions: [],
+    },
   };
 
   const validBrainstorm: BrainstormOutput = {

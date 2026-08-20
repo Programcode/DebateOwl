@@ -57,10 +57,11 @@ describe('settings-store branch coverage', () => {
     const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
     expect(onRehydrateStorage).toBeTypeOf('function');
 
-    const afterRehydrate = onRehydrateStorage?.();
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
 
     // Covers the `if (!state) return` branch.
-    afterRehydrate?.(undefined as any);
+    afterRehydrate(undefined as any);
 
     const partialState = {
       featureConfigs: undefined,
@@ -69,7 +70,7 @@ describe('settings-store branch coverage', () => {
       wikiResearchEnabled: undefined,
     } as any;
 
-    afterRehydrate?.(partialState);
+    afterRehydrate(partialState);
 
     expect(partialState.featureConfigs.generate).toBeDefined();
     expect(partialState.language).toBe('en');

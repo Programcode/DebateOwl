@@ -10,17 +10,19 @@ import {
 vi.mock('@/lib/supabase/client', () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from '@/lib/stores/session-store';
+import type { BrainstormOutput } from '@/lib/ai/schemas/brainstorm';
+import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
 
 const nowIso = '2026-02-12T10:00:00.000Z';
 
-const brainstormOutput = {
+const brainstormOutput: BrainstormOutput = {
   needsMoreInfo: false,
   clarifyingQuestions: [],
   nextSteps: ['step'],
   warningsAndTradeoffs: [],
 };
 
-const factoidsOutput = {
+const factoidsOutput: FactoidsOutput = {
   factoids: [],
   searchSuggestions: [],
   warnings: [],
