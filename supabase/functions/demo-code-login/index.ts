@@ -49,8 +49,16 @@ async function hashCode(code: string) {
 }
 
 function getIpAddress(req: Request) {
-  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || req.headers.get("x-real-ip") || null;
+  // The right-most entry in X-Forwarded-For is the one appended by our own
+  // trusted edge proxy; earlier entries can be forged by the client. Taking
+  // the first entry (as this used to) let an attacker spoof a fresh IP on
+  // every request and bypass the rate limit below entirely.
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const parts = forwarded.split(",").map((part) => part.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
+  return req.headers.get("x-real-ip") || null;
 }
 
 async function recordAttempt(input: {
@@ -269,7 +277,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[DEMO_CODE] Error:", message);
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
