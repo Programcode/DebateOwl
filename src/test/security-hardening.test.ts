@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20260819000000_security_hardening.sql');
+const advisorMigration = read('supabase/migrations/20260820090000_advisor_security_cleanup.sql');
 const ai = read('supabase/functions/ai/index.ts');
 const stream = read('supabase/functions/ai-stream/index.ts');
 const importer = read('supabase/functions/import-source/index.ts');
@@ -61,13 +62,21 @@ describe('security hardening regressions', () => {
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
     expect(ai).toContain('function providerForModel');
     expect(ai).toContain('Unsupported model or provider combination');
-    expect(ai).toContain('validatePublicHttpUrl(url)');
-    expect(ai).toContain('redirect: "manual"');
+    expect(ai).toContain('Do not fetch model-provided citation URLs');
+    expect(ai).not.toContain('fetchWithTimeout(currentUrl.toString(), { method: "HEAD"');
   });
 
   it('reserves demo-code uses atomically before issuing a session handoff', () => {
     expect(demoLogin).toContain('consume_demo_access_code');
     expect(demoLogin).not.toContain('use_count: demoCode.use_count + 1');
     expect(read('supabase/migrations/20260820080000_security_scan_fixes.sql')).toContain('use_count = use_count + 1');
+  });
+
+  it('keeps trigger and internal security-definer functions out of the Data API', () => {
+    expect(advisorMigration).toContain('REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated');
+    expect(advisorMigration).toContain('REVOKE ALL ON FUNCTION public.increment_share_view(text) FROM PUBLIC, anon, authenticated');
+    expect(advisorMigration).toContain('REVOKE ALL ON FUNCTION public.require_admin() FROM PUBLIC, anon, authenticated');
+    expect(advisorMigration).toContain('REVOKE ALL ON FUNCTION public.redeem_promo_code_atomic(text) FROM PUBLIC, anon');
+    expect(advisorMigration).toContain('GRANT EXECUTE ON FUNCTION public.redeem_promo_code_atomic(text) TO authenticated');
   });
 });

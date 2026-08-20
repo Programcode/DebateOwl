@@ -85,7 +85,6 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
-import { validatePublicHttpUrl } from "../_shared/url-validation.ts";
 import {
   buildSearchQueries,
   formatRankedSearchResults,
@@ -610,22 +609,12 @@ async function exaGetContents(url: string): Promise<string> {
 }
 
 async function verifyUrl(url: string): Promise<boolean> {
-  try {
-    let currentUrl = validatePublicHttpUrl(url);
-    for (let hop = 0; hop <= 5; hop += 1) {
-      const response = await fetchWithTimeout(currentUrl.toString(), { method: "HEAD", redirect: "manual" }, 5000);
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("location");
-        if (!location || hop === 5) return false;
-        currentUrl = validatePublicHttpUrl(new URL(location, currentUrl).toString());
-        continue;
-      }
-      return response.ok;
-    }
-    return false;
-  } catch {
-    return false;
-  }
+  // Do not fetch model-provided citation URLs from the Edge Function. A URL
+  // that is syntactically public can still resolve to a private service after
+  // validation, and the deployed runtime cannot safely pin DNS resolution.
+  // Citations remain visible but are explicitly marked unverified.
+  void url;
+  return false;
 }
 
 // ============== DEEP RESEARCH ==============
