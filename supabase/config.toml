@@ -34,3 +34,8 @@ verify_jwt = false
 # verification must be disabled for this endpoint.
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Demo code sign-in happens before the caller has a Supabase session, so
+# there is no JWT yet to verify at the gateway.
+[functions.demo-code-login]
+verify_jwt = false
