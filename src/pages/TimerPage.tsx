@@ -76,13 +76,17 @@ const FORMATS: DebateFormat[] = [
   }
 ];
 
+let audioContext: AudioContext | null = null;
+
 // Simple audio synth
-const playSignal = (type: 'beep' | 'double-beep' | 'alarm') => {
+const playSignal = async (type: 'beep' | 'double-beep' | 'alarm') => {
   try {
     const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
     if (!AudioContextCtor) return;
 
-    const ctx = new AudioContextCtor();
+    audioContext ??= new AudioContextCtor();
+    const ctx = audioContext;
+    if (ctx.state === 'suspended') await ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -136,8 +140,14 @@ export default function TimerPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number | null>(null);
+  const timeLeftRef = useRef(timeLeft);
+  const previousTimeLeftRef = useRef(timeLeft);
+
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
 
   // Reset when format changes
   useEffect(() => {
@@ -163,31 +173,34 @@ export default function TimerPage() {
   // isRunning changes, not on every tick. The updater stays pure — no
   // side effects here; see the effect below for signals/completion.
   useEffect(() => {
-    if (!isRunning) {
+    if (!isRunning || timeLeftRef.current <= 0) {
       if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
       deadlineRef.current = null;
       return;
     }
 
-    deadlineRef.current = Date.now() + timeLeft * 1000;
+    deadlineRef.current = Date.now() + timeLeftRef.current * 1000;
     timerRef.current = setInterval(() => {
       if (deadlineRef.current === null) return;
-      const remaining = Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
       setTimeLeft(remaining);
     }, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning]);
 
   // Reacts to the countdown value to trigger signals and mark completion.
   useEffect(() => {
+    const previousTimeLeft = previousTimeLeftRef.current;
+    previousTimeLeftRef.current = timeLeft;
     if (!isRunning) return;
     if (soundEnabled) {
-      if (timeLeft === 60) playSignal('beep');
-      if (timeLeft === 0) playSignal('double-beep');
+      if (previousTimeLeft > 60 && timeLeft <= 60 && timeLeft > 0) void playSignal('beep');
+      if (timeLeft === 0) void playSignal('double-beep');
     }
     if (timeLeft === 0) {
       setIsRunning(false);

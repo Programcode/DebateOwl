@@ -120,17 +120,15 @@ export default function AskPage() {
           timestamp: Date.now(),
           isStreaming: true as const,
         };
-        setAskStreamingAssistant(streamingMessage);
-
         streamAbortRef.current?.abort();
         const controller = new AbortController();
         streamAbortRef.current = controller;
-
-        try {
-          let pendingText = '';
+        setAskStreamingAssistant(streamingMessage);
+        let pendingText = '';
         let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-        result = await streamAskChat(fullMessage, history, mode, config, options, {
+        try {
+          result = await streamAskChat(fullMessage, history, mode, config, options, {
             onDelta: (text) => {
               receivedStreamText = true;
               partialResponse += text;
@@ -140,14 +138,17 @@ export default function AskPage() {
                   const batch = pendingText;
                   pendingText = '';
                   flushTimer = null;
-                  appendAskStreamingDelta(batch);
+                  if (streamAbortRef.current === controller) {
+                    appendAskStreamingDelta(batch);
+                  }
                 }, 30);
               }
             },
             signal: controller.signal,
           });
         } catch (streamError) {
-          setAskStreamingAssistant(null);
+          const ownsStream = streamAbortRef.current === controller;
+          if (ownsStream) setAskStreamingAssistant(null);
           const aborted = streamError instanceof DOMException && streamError.name === 'AbortError';
           if (aborted) {
             // A newer request replaced this one. Drop the partial silently.
@@ -168,7 +169,16 @@ export default function AskPage() {
             result = await askChat(fullMessage, history, mode, config, options);
           }
         } finally {
-          if (streamAbortRef.current === controller) {
+          const ownsStream = streamAbortRef.current === controller;
+          if (flushTimer) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+          }
+          if (ownsStream && pendingText) {
+            appendAskStreamingDelta(pendingText);
+          }
+          pendingText = '';
+          if (ownsStream) {
             streamAbortRef.current = null;
           }
         }
@@ -188,7 +198,7 @@ export default function AskPage() {
         }
       });
     } catch (error) {
-      setAskStreamingAssistant(null);
+      if (!streamAbortRef.current) setAskStreamingAssistant(null);
       console.error(error);
 
       if (subError.handleSubscriptionError(error)) {
@@ -215,8 +225,10 @@ export default function AskPage() {
         });
       }
     } finally {
-      setAskStreamingAssistant(null);
-      setAskLoading(false);
+      if (!streamAbortRef.current) {
+        setAskStreamingAssistant(null);
+        setAskLoading(false);
+      }
     }
   };
 

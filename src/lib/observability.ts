@@ -34,3 +34,7 @@ export function captureProductEvent(name: string, properties?: Record<string, un
     posthog.capture(name, properties);
   }
 }
+
+export function captureException(error: unknown, context?: Record<string, unknown>): void {
+  if (import.meta.env.VITE_SENTRY_DSN) Sentry.captureException(error, { extra: context });
+}

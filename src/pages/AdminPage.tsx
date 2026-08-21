@@ -132,14 +132,14 @@ export default function AdminPage() {
         const text = await response.text();
 
         if (!response.ok) {
+            let serverMessage: string | undefined;
             try {
                 const error = JSON.parse(text);
-                throw new Error(error.error || 'Request failed');
-            } catch {
-                if (response.status === 401) throw new Error('Not authenticated');
-                if (response.status === 403) throw new Error('Admin access required');
-                throw new Error(`Request failed: ${response.status}`);
-            }
+                serverMessage = typeof error.error === 'string' ? error.error : undefined;
+            } catch { /* non-JSON error response */ }
+            if (response.status === 401) throw new Error('Not authenticated');
+            if (response.status === 403) throw new Error('Admin access required');
+            throw new Error(serverMessage || `Request failed: ${response.status}`);
         }
 
         try {
@@ -168,14 +168,14 @@ export default function AdminPage() {
         const text = await response.text();
 
         if (!response.ok) {
+            let serverMessage: string | undefined;
             try {
                 const error = JSON.parse(text);
-                throw new Error(error.error || 'Request failed');
-            } catch {
-                if (response.status === 401) throw new Error('Not authenticated');
-                if (response.status === 403) throw new Error('Admin access required');
-                throw new Error(`Request failed: ${response.status}`);
-            }
+                serverMessage = typeof error.error === 'string' ? error.error : undefined;
+            } catch { /* non-JSON error response */ }
+            if (response.status === 401) throw new Error('Not authenticated');
+            if (response.status === 403) throw new Error('Admin access required');
+            throw new Error(serverMessage || `Request failed: ${response.status}`);
         }
 
         try {

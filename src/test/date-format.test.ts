@@ -3,15 +3,18 @@ import { formatEuropeanDate, formatEuropeanDateTime, formatEuropeanTime } from '
 
 describe('date-format', () => {
   it('formats dates as dd/mm/yyyy', () => {
-    expect(formatEuropeanDate('2026-05-19T13:45:00.000Z')).toMatch(/^19\/05\/2026$/);
+    const localDate = new Date(2026, 4, 19, 13, 45);
+    expect(formatEuropeanDate(localDate)).toBe('19/05/2026');
   });
 
   it('formats date-times with dd/mm/yyyy and 24-hour time', () => {
-    expect(formatEuropeanDateTime('2026-05-19T13:45:00.000Z')).toMatch(/^19\/05\/2026, \d{2}:\d{2}$/);
+    const localDate = new Date(2026, 4, 19, 13, 45);
+    expect(formatEuropeanDateTime(localDate)).toBe('19/05/2026, 13:45');
   });
 
   it('formats time with 24-hour clock', () => {
-    expect(formatEuropeanTime('2026-05-19T13:45:00.000Z')).toMatch(/^\d{2}:\d{2}$/);
+    const localDate = new Date(2026, 4, 19, 13, 45);
+    expect(formatEuropeanTime(localDate)).toBe('13:45');
   });
 
   it('returns fallback for invalid values', () => {

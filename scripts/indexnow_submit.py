@@ -60,6 +60,8 @@ def submit(endpoint: str, urls: list[str]) -> tuple[int, str]:
             return response.status, body
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", errors="replace")
+    except urllib.error.URLError as exc:
+        return 0, f"request_error={exc.reason}"
 
 
 def main() -> int:

@@ -37,6 +37,7 @@ export const FactoidsOutputSchema = z.object({
   searchSuggestions: z.array(z.string()),
   warnings: z.array(z.string()),
   verificationStatus: z.enum(['pending', 'inProgress', 'complete']),
+  filteredOutCount: z.number().int().nonnegative().optional(),
 });
 
 export type FactoidsOutput = z.infer<typeof FactoidsOutputSchema>;

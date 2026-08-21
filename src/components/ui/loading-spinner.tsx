@@ -32,7 +32,7 @@ export function LoadingOverlay({ message = 'Processing...' }: LoadingOverlayProp
       <div className="motion-loading-card">
         <LoadingSpinner size="lg" />
       </div>
-      <p className="text-sm font-medium text-muted-foreground">{message}</p>
+      <p className="text-sm font-medium text-muted-foreground" role="status" aria-live="polite">{message}</p>
       <div className="h-1 w-40 overflow-hidden rounded-full bg-muted">
         <div className="motion-loading-bar h-full rounded-full bg-primary" />
       </div>

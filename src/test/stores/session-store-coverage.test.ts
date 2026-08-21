@@ -55,6 +55,37 @@ describe('session-store coverage paths', () => {
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
   });
 
+  it('persists source content but excludes transient loading and streaming state', () => {
+    const source = {
+      id: 'local-source',
+      title: 'Local source',
+      content: 'Guest and offline content must survive reloads.',
+      type: 'text' as const,
+      createdAt: Date.now(),
+      isActive: true,
+    };
+    const state = {
+      ...useSessionStore.getState(),
+      generateLoading: true,
+      sourceLibrary: [source],
+      askStreamingAssistant: {
+        id: 'streaming',
+        role: 'assistant' as const,
+        content: 'Partial response',
+        timestamp: Date.now(),
+        isStreaming: true as const,
+      },
+    };
+    const partialize = useSessionStore.persist.getOptions().partialize;
+
+    expect(partialize).toBeTypeOf('function');
+    const persisted = partialize!(state) as Partial<typeof state>;
+
+    expect(persisted.sourceLibrary).toEqual([source]);
+    expect(persisted).not.toHaveProperty('generateLoading');
+    expect(persisted).not.toHaveProperty('askStreamingAssistant');
+  });
+
   it('early-returns save helpers when there is no current result/message', async () => {
     await useSessionStore.getState().saveCurrentCase('no-case');
     await useSessionStore.getState().saveCurrentAttack('no-attack');
@@ -302,11 +333,13 @@ describe('session-store coverage paths', () => {
       table,
     }) as any);
 
-    await useSessionStore.getState().hydrateFromServer();
-    expect(useSessionStore.getState().savedCases).toHaveLength(0);
-    expect(useSessionStore.getState().sourceLibrary).toHaveLength(0);
-
-    if (originalFrom) supabaseMock.from.mockImplementation(originalFrom);
+    try {
+      await useSessionStore.getState().hydrateFromServer();
+      expect(useSessionStore.getState().savedCases).toHaveLength(0);
+      expect(useSessionStore.getState().sourceLibrary).toHaveLength(0);
+    } finally {
+      if (originalFrom) supabaseMock.from.mockImplementation(originalFrom);
+    }
   });
 
   it('clearAllData deletes by user and clears local state', async () => {

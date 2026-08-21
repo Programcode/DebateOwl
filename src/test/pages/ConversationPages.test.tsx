@@ -239,6 +239,49 @@ describe('Conversation Pages', () => {
     });
   });
 
+  it('drops buffered deltas from an aborted stream when a newer request starts', async () => {
+    mockIsAskStreamingSupported.mockReturnValue(true);
+    let firstHandlers: any;
+    mockStreamAskChat
+      .mockImplementationOnce((...args: any[]) => {
+        firstHandlers = args[5];
+        return new Promise((_resolve, reject) => {
+          firstHandlers.signal.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        });
+      })
+      .mockImplementationOnce(async (...args: any[]) => {
+        const handlers = args[5];
+        handlers.onDelta('new response');
+        return { response: 'new response', followUpQuestions: [], uncertainties: [] };
+      });
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+    await waitFor(() => expect(firstHandlers).toBeDefined());
+    firstHandlers.onDelta('stale response');
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+
+    await waitFor(() => {
+      expect(mockStreamAskChat).toHaveBeenCalledTimes(2);
+      expect(sessionState.addAskMessage).toHaveBeenCalledWith(expect.objectContaining({
+        role: 'assistant',
+        content: 'new response',
+      }));
+    });
+
+    expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalledWith('stale response');
+  });
+
   it('AskPage saves source to library', () => {
     render(
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -345,7 +388,7 @@ describe('Conversation Pages', () => {
     expect(sessionState.addAskMessage).toHaveBeenCalledWith(expect.objectContaining({ role: 'assistant', content: 'Use this evidence in rebuttal.' }));
   });
 
-  it('FactoidsPage saves selected evidence to source library', () => {
+  it('FactoidsPage saves selected evidence to source library', async () => {
     sessionState.factoidsResult = {
       factoids: [{ shortClaim: 'Claim A', citation: { publisher: 'Source A' } }],
       searchSuggestions: [],
@@ -361,13 +404,15 @@ describe('Conversation Pages', () => {
 
     fireEvent.click(screen.getByTestId('factoids-save'));
 
-    expect(sessionState.addSource).toHaveBeenCalledWith({
-      title: 'Fact source',
-      content: 'Fact content',
-      type: 'url',
-      origin: 'https://example.com',
-      folder: 'Factoids',
+    await waitFor(() => {
+      expect(sessionState.addSource).toHaveBeenCalledWith({
+        title: 'Fact source',
+        content: 'Fact content',
+        type: 'url',
+        origin: 'https://example.com',
+        folder: 'Factoids',
+      });
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Saved to Library' }));
     });
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Saved to Library' }));
   });
 });

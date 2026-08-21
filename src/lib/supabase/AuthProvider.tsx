@@ -36,6 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    // Older clients persisted this long-lived credential. Purge it even when
+    // the existing Supabase session remains signed in.
+    localStorage.removeItem('google_provider_refresh_token');
+
     const hydrateOAuthCallbackSession = async () => {
       const code = new URLSearchParams(window.location.search).get('code');
       if (code) {
@@ -125,15 +129,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[Auth] Storing new provider_token');
         localStorage.setItem('google_provider_token', newSession.provider_token);
       }
-      if (newSession?.provider_refresh_token) {
-        console.log('[Auth] Storing new provider_refresh_token');
-        localStorage.setItem('google_provider_refresh_token', newSession.provider_refresh_token);
-      }
 
       if (!nextUserId) {
         resetSessionStore();
         resetSettingsStore();
         localStorage.removeItem('google_provider_token');
+        // Remove refresh tokens written by older clients as well; this client
+        // never persists them because they are long-lived credentials.
         localStorage.removeItem('google_provider_refresh_token');
         return;
       }

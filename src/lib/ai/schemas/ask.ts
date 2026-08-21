@@ -1,6 +1,14 @@
 // src/lib/ai/schemas/ask.ts
 import { z } from 'zod';
 
+const SafeWebUrlSchema = z.string().url().refine(
+  (value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  },
+  'Source URLs must use http or https',
+);
+
 export const AskInputSchema = z.object({
   message: z.string().min(1, 'Message is required'),
   mode: z.enum(['general', 'clarify', 'summarize', 'proscons', 'argumentmap']),
@@ -33,7 +41,7 @@ export const AskOutputSchema = z.object({
     queries: z.array(z.string()),
     sources: z.array(z.object({
       title: z.string(),
-      url: z.string(),
+      url: SafeWebUrlSchema,
       verified: z.boolean(),
       sourceType: z.string().optional(),
       qualityScore: z.number().optional(),

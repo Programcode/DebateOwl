@@ -180,7 +180,9 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
             )}
             {output.searchInfo.sources?.length > 0 && (
               <ul className="space-y-1">
-                {output.searchInfo.sources.map((source: { title: string; url: string; verified: boolean; sourceType?: string; qualityScore?: number; qualityLabel?: string }, i: number) => (
+                {output.searchInfo.sources.map((source: { title: string; url: string; verified: boolean; sourceType?: string; qualityScore?: number; qualityLabel?: string }, i: number) => {
+                  const safeUrl = getFirstUrl(source.url);
+                  return (
                   <li key={`${source.url}-${i}`} className="rounded-md border border-border/60 bg-muted/20 p-2 text-xs">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {source.qualityLabel && (
@@ -197,11 +199,16 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                         {source.verified ? t('askChat.verified') : t('askChat.unverified')}
                       </span>
                     </div>
-                    <a className="mt-1 block text-primary hover:underline break-words [overflow-wrap:anywhere]" href={source.url} target="_blank" rel="noreferrer">
-                      {source.title || source.url}
-                    </a>
+                    {safeUrl ? (
+                      <a className="mt-1 block text-primary hover:underline break-words [overflow-wrap:anywhere]" href={safeUrl} target="_blank" rel="noreferrer">
+                        {source.title || source.url}
+                      </a>
+                    ) : (
+                      <span className="mt-1 block break-words text-muted-foreground [overflow-wrap:anywhere]">{source.title || source.url}</span>
+                    )}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>

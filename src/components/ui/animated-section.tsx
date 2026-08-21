@@ -19,7 +19,7 @@ export function AnimatedSection({ delay = 0, children, className }: AnimatedSect
     <div
       className={cn(
         'transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none',
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 motion-reduce:opacity-100',
         className
       )}
     >

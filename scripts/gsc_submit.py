@@ -40,14 +40,7 @@ URLS = [
 
 def load_creds():
     data=json.loads(TOKEN.read_text())
-    creds=Credentials(
-        token=data.get('token'),
-        refresh_token=data.get('refresh_token'),
-        token_uri=data.get('token_uri'),
-        client_id=data.get('client_id'),
-        client_secret=data.get('client_secret'),
-        scopes=data.get('scopes'),
-    )
+    creds=Credentials.from_authorized_user_info(data)
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         data['token']=creds.token

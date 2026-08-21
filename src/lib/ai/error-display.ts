@@ -1,4 +1,5 @@
 import { AIProviderError } from './client';
+import { captureException } from '@/lib/observability';
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: 'OpenAI',
@@ -58,7 +59,8 @@ export function getUserFacingAIError(error: unknown): string {
       return `${provider} blocked this request for safety reasons. Try rephrasing your input.`;
     }
 
-    return raw;
+    captureException(error, { provider: (error as AIProviderError).provider, category: 'unmapped_provider_error' });
+    return 'The AI provider returned an unexpected error. Please try again later.';
   }
 
   return error instanceof Error ? error.message : 'An unexpected error occurred';

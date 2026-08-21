@@ -273,7 +273,7 @@ export async function mockFactoids(claim: string): Promise<FactoidsOutput> {
           publisher: 'International Research Institute',
           date: '2023-06',
           url: undefined,
-          verified: 'unverified',
+          verified: 'verified',
         },
         howToUse: 'Use to establish momentum and inevitability of change.',
         relevanceScore: 85,

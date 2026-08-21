@@ -50,6 +50,7 @@ export const GenerateOutputSchema = z.object({
   metadata: z.object({
     side: z.enum(['pro', 'con']),
     format: z.string(),
+    motion: z.string().optional(),
     generatedAt: z.string(),
     model: z.string().optional(),
     provider: z.string().optional(),

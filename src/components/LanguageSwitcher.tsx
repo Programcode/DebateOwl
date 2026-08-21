@@ -19,7 +19,7 @@ export function LanguageSwitcher() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label')}>
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label', 'Language settings')}>
           <Globe className="h-5 w-5" />
         </Button>
       </DialogTrigger>

@@ -1,9 +1,12 @@
 import { Moon, Sun, Laptop } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSettingsStore } from "@/lib/stores/settings-store";
+import { useTranslation } from 'react-i18next';
 
 export function ThemeToggle() {
     const { theme, setTheme } = useSettingsStore();
+    const { t } = useTranslation();
+    const Icon = theme === 'system' ? Laptop : theme === 'dark' ? Moon : Sun;
 
     return (
         <Button
@@ -15,11 +18,10 @@ export function ThemeToggle() {
                 else if (theme === 'dark') setTheme('system');
                 else setTheme('light');
             }}
-            title={`Current theme: ${theme}. Click to cycle.`}
+            title={t('themeToggle.current', 'Current theme: {{theme}}. Click to cycle.', { theme: t(`settings.${theme}`, theme) })}
         >
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
+            <Icon className="h-[1.2rem] w-[1.2rem]" />
+            <span className="sr-only">{t('themeToggle.toggle', 'Toggle theme')}</span>
         </Button>
     );
 }

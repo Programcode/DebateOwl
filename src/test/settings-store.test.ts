@@ -14,19 +14,7 @@ describe("settings-store", () => {
   beforeEach(() => {
     resetMockState();
     localStorage.clear();
-    useSettingsStore.setState({
-      language: "en",
-      theme: "system",
-      customSystemPrompt: undefined,
-      wikiResearchEnabled: false,
-      featureConfigs: {
-        generate: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 },
-        attack: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 },
-        brainstorm: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.9 },
-        factoids: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.3 },
-        ask: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.7 },
-      },
-    });
+    useSettingsStore.getState().resetLocalData();
   });
 
   it("uses Gemini 3 Flash defaults for all features", () => {
@@ -102,10 +90,11 @@ describe("settings-store", () => {
     expect(config.model).toBe("gemini-3-flash-preview");
   });
 
-  it("does not upsert when user is not signed in", () => {
+  it("does not upsert when user is not signed in", async () => {
     setMockAuthUser(null);
     const store = useSettingsStore.getState();
     store.setTheme("dark");
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 });

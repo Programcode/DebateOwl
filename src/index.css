@@ -549,7 +549,7 @@ All colors MUST be HSL.
 
   /* Smooth focus ring with glow */
   :focus-visible {
-    outline: none;
+    outline: 2px solid transparent;
     box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5), 0 0 12px hsl(var(--primary) / 0.2);
     border-radius: var(--radius);
     transition: box-shadow var(--motion-duration-fast) var(--motion-ease-fluid);
@@ -919,22 +919,12 @@ button:active > svg.lucide-heart {
   100% { transform: scale(1.8); opacity: 0; }
 }
 
-/* Skeleton loading shimmer */
-.motion-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.motion-shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.04), transparent);
-  animation: shimmer 2s infinite;
-}
-
 /* Ripple effect on button click */
-button:not(:disabled)::after {
+.button-ripple:not(:disabled) {
+  position: relative;
+}
+
+.button-ripple:not(:disabled)::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -945,7 +935,7 @@ button:not(:disabled)::after {
   pointer-events: none;
 }
 
-button:not(:disabled):active::after {
+.button-ripple:not(:disabled):active::after {
   opacity: 1;
 }
 

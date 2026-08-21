@@ -382,8 +382,10 @@ export default function FlowchartPage() {
             link.download = 'debate-flowchart.png';
             link.href = dataUrl;
             link.click();
+        }).catch(() => {
+            toast.error(t('flowchart.exportFailedToast', 'Could not export flowchart.'));
         });
-    }, []);
+    }, [t]);
 
     const stats = useMemo(() => {
         const counts = nodes.reduce(
@@ -437,6 +439,14 @@ export default function FlowchartPage() {
                                                     key={item.id}
                                                     className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
                                                     onClick={() => handleLoadFlowchart(item.data)}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === 'Enter' || event.key === ' ') {
+                                                            event.preventDefault();
+                                                            handleLoadFlowchart(item.data);
+                                                        }
+                                                    }}
                                                 >
                                                     <div className="space-y-1">
                                                         <div className="font-medium">{item.title}</div>
@@ -449,7 +459,10 @@ export default function FlowchartPage() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8 text-destructive opacity-70 hover:opacity-100"
-                                                        onClick={(e) => handleDeleteFlowchart(item.id, e)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteFlowchart(item.id, e);
+                                                        }}
                                                         aria-label={t('common.delete', 'Delete')}
                                                     >
                                                         <Trash2 className="h-4 w-4" />

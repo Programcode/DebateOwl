@@ -124,12 +124,13 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">{t('factoidsForm.sourceCount', 'Sources')}</Label>
+                <Label htmlFor="factoid-source-count" className="text-sm font-medium">{t('factoidsForm.sourceCount', 'Sources')}</Label>
                 <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   {currentValues.sourceCount || 5}
                 </span>
               </div>
               <Slider
+                id="factoid-source-count"
                 value={[currentValues.sourceCount || 5]}
                 min={3}
                 max={15}

@@ -17,6 +17,7 @@ const APP_SHELL = [
   '/app/settings',
   '/index.html',
   '/config.js',
+  '/theme-init.js',
   '/manifest.webmanifest',
   '/favicon.ico',
   '/hero-visual.png',

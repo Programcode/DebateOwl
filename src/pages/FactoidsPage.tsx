@@ -56,9 +56,13 @@ export default function FactoidsPage() {
     void handleSubmit(nextInput);
   };
 
-  const handleSaveToLibrary = (title: string, content: string, url?: string) => {
-    addSource({ title, content, type: 'url', origin: url, folder: 'Factoids' });
-    toast({ title: t('factoids.savedToLibrary'), description: t('factoids.savedToLibraryDesc') });
+  const handleSaveToLibrary = async (title: string, content: string, url?: string) => {
+    try {
+      await addSource({ title, content, type: 'url', origin: url, folder: 'Factoids' });
+      toast({ title: t('factoids.savedToLibrary'), description: t('factoids.savedToLibraryDesc') });
+    } catch {
+      toast({ title: t('common.error', 'Error'), description: t('factoids.saveFailed', 'Could not save source.'), variant: 'destructive' });
+    }
   };
 
   const handleDiscuss = async () => {
@@ -90,7 +94,9 @@ export default function FactoidsPage() {
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
-      toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
+      if (!subError.handleSubscriptionError(error)) {
+        toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
+      }
     } finally {
       setAskLoading(false);
     }
