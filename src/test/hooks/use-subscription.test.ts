@@ -34,11 +34,11 @@ const {
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            single: vi.fn(async () => {
+            maybeSingle: vi.fn(async () => {
               if (mockResponses.throwOnUserSettings) {
                 throw new Error('user_settings failed');
               }
-              return { data: mockResponses.userSettings };
+              return { data: mockResponses.userSettings, error: null };
             }),
           })),
         })),
