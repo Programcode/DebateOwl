@@ -38,6 +38,19 @@ function normalizeCode(value: unknown) {
   return String(value || "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
+// Only hand generateLink a redirectTo that points at one of our own origins,
+// so a client-supplied value can't be used for an open redirect off the auth
+// handoff link.
+function sanitizeRedirectTo(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value) return undefined;
+  try {
+    const url = new URL(value);
+    return ALLOWED_ORIGINS.includes(`${url.protocol}//${url.host}`) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function sha256Hex(input: string) {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -201,6 +214,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Reserve the use atomically, and before touching the user's account, so a
+    // stale read plus an ordinary update can't let concurrent requests
+    // oversubscribe max_uses, and a declined/raced reservation never leaves
+    // behind a provisioned (pro-tier) account for a code that wasn't granted.
+    const { data: reservation, error: reservationError } = await supabase.rpc("consume_demo_access_code", {
+      p_code_id: demoCode.id,
+    });
+    if (reservationError) throw reservationError;
+    const reservationRow = Array.isArray(reservation) ? reservation[0] : reservation;
+    if (!reservationRow?.reserved) {
+      await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "max_uses" });
+      return new Response(JSON.stringify({ error: "This demo code has no uses left." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const existingUser = await findUserByEmail(demoCode.email);
     const userResult = existingUser
       ? { user: existingUser }
@@ -243,26 +273,11 @@ Deno.serve(async (req) => {
 
     if (settingsError) throw settingsError;
 
-    // Reserve the use atomically before issuing a credential. A stale read plus
-    // an ordinary update would let concurrent requests oversubscribe max_uses.
-    const { data: reservation, error: reservationError } = await supabase.rpc("consume_demo_access_code", {
-      p_code_id: demoCode.id,
-    });
-    if (reservationError) throw reservationError;
-    const reservationRow = Array.isArray(reservation) ? reservation[0] : reservation;
-    if (!reservationRow?.reserved) {
-      await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "max_uses" });
-      return new Response(JSON.stringify({ error: "This demo code has no uses left." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email: demoCode.email,
       options: {
-        redirectTo: body.redirectTo || undefined,
+        redirectTo: sanitizeRedirectTo(body.redirectTo),
       },
     });
 
