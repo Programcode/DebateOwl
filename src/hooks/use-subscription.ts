@@ -50,14 +50,22 @@ export function useSubscription(): SubscriptionState {
     }
 
     try {
-      // Fetch user settings for subscription info
-      const { data } = await supabase
+      // Fetch user settings for subscription info. `maybeSingle()` (not `single()`)
+      // because a missing row is an expected state (e.g. new-account race with the
+      // settings-creation trigger), not a query failure.
+      const { data, error: settingsError } = await supabase
         .from('user_settings')
         .select('subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (latestUserIdRef.current !== userId) return;
+
+      if (settingsError) {
+        // No explicit fallback here: leave the caller's fail-closed 'expired' default
+        // in place rather than granting trial access on an unreadable settings row.
+        console.warn('[useSubscription] Failed to load user settings:', settingsError.message);
+      }
 
       if (data) {
         const rawTier = (data.subscription_tier || 'trial') as SubscriptionTier;
@@ -69,7 +77,7 @@ export function useSubscription(): SubscriptionState {
           .from('subscriptions')
           .select('stripe_customer_id, status, current_period_end')
           .eq('user_id', userId)
-          .order('current_period_end', { ascending: false })
+          .order('current_period_end', { ascending: false, nullsFirst: false })
           .limit(5);
 
         if (latestUserIdRef.current !== userId) return;

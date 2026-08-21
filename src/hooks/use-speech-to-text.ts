@@ -50,6 +50,8 @@ export function useSpeechToText() {
   const [transcript, setTranscript] = useState('');
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Lazy initializer: reads `window` once at mount instead of on every render.
+  const [hasSupport] = useState(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition));
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -85,6 +87,13 @@ export function useSpeechToText() {
       };
 
       setRecognition(recognitionInstance);
+
+      return () => {
+        recognitionInstance.onresult = () => {};
+        recognitionInstance.onend = () => {};
+        recognitionInstance.onerror = () => {};
+        recognitionInstance.abort();
+      };
     }
   }, []);
 
@@ -126,6 +135,6 @@ export function useSpeechToText() {
     startListening,
     stopListening,
     resetTranscript,
-    hasSupport: !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+    hasSupport
   };
 }
