@@ -64,3 +64,4 @@ humanizer.md
 !**/README.md
 .vercel
 .env*
+.worktrees/
