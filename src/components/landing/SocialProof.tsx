@@ -22,7 +22,7 @@ const SocialProof = () => {
                     className="text-center"
                 >
                     <p className="mb-7 text-sm text-muted-foreground md:text-base">
-                        One platform for research, strategy, rebuttals, and speaking practice.
+                        {t('socialProof.description')}
                     </p>
 
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">

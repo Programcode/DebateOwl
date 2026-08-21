@@ -232,10 +232,19 @@ export default function AskPage() {
     }
   };
 
-  const handleSaveChat = () => {
+  const handleSaveChat = async () => {
     const title = askMessages[0]?.content?.slice(0, 60) || 'Chat';
-    void saveCurrentChat(title);
-    toast({ title: t('ask.chatSaved', 'Chat saved'), description: t('ask.chatSavedDesc', 'You can load it from History.') });
+    try {
+      await saveCurrentChat(title);
+      toast({ title: t('ask.chatSaved', 'Chat saved'), description: t('ask.chatSavedDesc', 'You can load it from History.') });
+    } catch (error) {
+      console.error('Failed to save chat:', error);
+      toast({
+        title: t('ask.saveFailed', 'Save failed'),
+        description: t('ask.saveFailedDesc', 'The chat could not be saved. Please try again.'),
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSaveToLibrary = (title: string, content: string) => {

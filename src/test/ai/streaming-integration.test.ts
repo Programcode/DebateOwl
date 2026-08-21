@@ -143,6 +143,116 @@ describe('streamAskChat (integration with mocked fetch)', () => {
     )).rejects.toThrow(/ended before a final response/);
   });
 
+  it('uses only the first final event', async () => {
+    const chunks = [
+      'event: final\ndata: {"output":{"response":"first","followUpQuestions":[],"uncertainties":[]}}\n\n',
+      'event: final\ndata: {"output":{"response":"second","followUpQuestions":[],"uncertainties":[]}}\n\n',
+    ];
+    mockFetchOnce(streamFromChunks(chunks));
+    const finals: string[] = [];
+
+    const result = await streamAskChat(
+      'hi',
+      [],
+      'general',
+      config,
+      options,
+      { onDelta: () => undefined, onFinal: (output) => finals.push(output.response) }
+    );
+
+    expect(result.response).toBe('first');
+    expect(finals).toEqual(['first']);
+  });
+
+  it('rejects malformed final output without invoking onFinal', async () => {
+    const chunks = [
+      'event: final\ndata: {"output":{"response":42,"followUpQuestions":[],"uncertainties":[]}}\n\n',
+    ];
+    mockFetchOnce(streamFromChunks(chunks));
+    const onFinal = vi.fn();
+
+    await expect(streamAskChat(
+      'hi',
+      [],
+      'general',
+      config,
+      options,
+      { onDelta: () => undefined, onFinal }
+    )).rejects.toMatchObject({ name: 'AIResponseError' });
+    expect(onFinal).not.toHaveBeenCalled();
+  });
+
+  it('maps non-OK streaming responses to AI error types', async () => {
+    mockFetchOnce(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+
+    await expect(streamAskChat(
+      'hi',
+      [],
+      'general',
+      config,
+      options,
+      { onDelta: () => undefined }
+    )).rejects.toMatchObject({ name: 'AIAuthError' });
+  });
+
+  it('times out a stalled stream without a caller signal', async () => {
+    vi.useFakeTimers();
+    globalThis.fetch = vi.fn((_url, init) => new Promise<Response>((_resolve, reject) => {
+      const signal = (init as RequestInit).signal;
+      signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    })) as typeof fetch;
+
+    try {
+      const request = streamAskChat('hi', [], 'general', config, options, { onDelta: () => undefined });
+      const expectation = expect(request).rejects.toMatchObject({ name: 'TimeoutError' });
+      await vi.advanceTimersByTimeAsync(200_000);
+      await expectation;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not start a request for a pre-aborted caller signal', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchMock = mockFetchOnce(streamFromChunks([]));
+
+    await expect(streamAskChat(
+      'hi',
+      [],
+      'general',
+      config,
+      options,
+      { onDelta: () => undefined, signal: controller.signal }
+    )).rejects.toMatchObject({ name: 'AbortError' });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not start a request when the caller aborts while session resolution is pending', async () => {
+    type SessionResult = { data: { session: { access_token: string } } };
+    let resolveSession!: (result: SessionResult) => void;
+    supabaseMock.auth.getSession.mockImplementationOnce(() => new Promise<SessionResult>((resolve) => {
+      resolveSession = resolve;
+    }));
+    const controller = new AbortController();
+    const fetchMock = mockFetchOnce(streamFromChunks([]));
+
+    const request = streamAskChat(
+      'hi',
+      [],
+      'general',
+      config,
+      options,
+      { onDelta: () => undefined, signal: controller.signal }
+    );
+    controller.abort();
+    resolveSession({ data: { session: { access_token: 'test-token' } } });
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('aborts the stream when the signal fires', async () => {
     // Build a stream that emits one delta, then never emits anything else
     // until the test aborts the reader.

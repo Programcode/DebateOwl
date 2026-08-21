@@ -24,6 +24,7 @@ const createQuery = (table: string) => {
   const selectBuilder = {
     order: vi.fn(async () => ({ data: responses.order ?? responses.select ?? [], error: null })),
     single: vi.fn(async () => ({ data: responses.single ?? null, error: null })),
+    eq: vi.fn(async () => ({ data: responses.select ?? [], error: null })),
     in: vi.fn(() => ({
       order: vi.fn(async () => ({ data: responses.in ?? [], error: null })),
     })),
@@ -42,6 +43,7 @@ const createQuery = (table: string) => {
     })),
     delete: vi.fn(() => ({
       eq: vi.fn(async () => ({ data: null, error: null })),
+      in: vi.fn(async () => ({ data: null, error: null })),
       neq: vi.fn(async () => ({ data: null, error: null })),
     })),
     eq: vi.fn(async () => ({ data: responses.select ?? null, error: null })),
@@ -61,6 +63,7 @@ export const supabaseMock = {
     })),
   },
   from: vi.fn((table: string) => createQuery(table)),
+  rpc: vi.fn(async () => ({ data: null, error: null })),
   functions: {
     invoke: vi.fn(async () => defaultInvokeResponse),
   },
@@ -87,6 +90,8 @@ export const resetMockState = () => {
   currentUser = { id: "user_1" };
   sessionToken = "test-token";
   supabaseMock.from.mockClear();
+  supabaseMock.rpc.mockClear();
+  supabaseMock.rpc.mockResolvedValue({ data: null, error: null });
   supabaseMock.auth.getUser.mockClear();
   supabaseMock.auth.getSession.mockClear();
   supabaseMock.functions.invoke.mockClear();

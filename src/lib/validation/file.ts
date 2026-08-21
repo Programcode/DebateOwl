@@ -76,15 +76,10 @@ export function validateSingleFile(file: File): FileValidationResult {
 
     // Check MIME type if available (some browsers don't provide it)
     if (file.type && !ALLOWED_MIME_TYPES.has(file.type) && !file.type.startsWith('text/')) {
-        // Be lenient with MIME types since browsers are inconsistent
-        // Still reject clearly dangerous types
-        const dangerousMimeTypes = ['application/x-executable', 'application/x-msdownload'];
-        if (dangerousMimeTypes.includes(file.type)) {
-            return {
-                valid: false,
-                error: `File "${file.name}" has a dangerous file type and cannot be uploaded.`,
-            };
-        }
+        return {
+            valid: false,
+            error: `File "${file.name}" has an unsupported file type. Only text and code files are allowed.`,
+        };
     }
 
     return { valid: true };

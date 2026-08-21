@@ -7,9 +7,9 @@ const Hero = () => {
     const { t } = useTranslation();
 
     const planHighlights = [
-        { label: t('hero.trialBadge'), value: "3 days" },
+        { label: t('hero.trialBadge'), value: t('hero.trialBadgeValue') },
         { label: t('hero.requestsBadge'), value: t('hero.requestsBadgeValue') },
-        { label: t('hero.proBadge'), value: "$5/month + tax" },
+        { label: t('hero.proBadge'), value: `${t('pricing.proPrice')}${t('pricing.proPeriod')}` },
     ];
 
     const trustBullets = [
@@ -37,7 +37,7 @@ const Hero = () => {
                         >
                             <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/80">
                                 <Sparkles className="h-4 w-4 text-primary" />
-                                New in 2026: faster sign-in, Drive exports, flowcharts, and smarter prep tools
+                                {t('hero.announcement')}
                             </span>
                         </motion.div>
 
@@ -128,12 +128,6 @@ const PHASE_TIMINGS: Record<Phase, number> = {
     impact: 1800,
 };
 
-const OUTPUT_CONTENT = {
-    thesis: "Your strongest opening argument, backed by evidence.",
-    contention: "A clear reasoning chain that judges can follow.",
-    impact: "Why this matters more than anything the opponent says.",
-};
-
 const TypewriterText = ({ text, durationMs }: { text: string; durationMs: number }) => {
     const [displayed, setDisplayed] = React.useState("");
     const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
@@ -154,6 +148,12 @@ const TypewriterText = ({ text, durationMs }: { text: string; durationMs: number
 };
 
 const HeroPreview = () => {
+    const { t } = useTranslation();
+    const outputContent = {
+        thesis: t('hero.preview.thesis'),
+        contention: t('hero.preview.contention'),
+        impact: t('hero.preview.outputImpact'),
+    };
     const [phase, setPhase] = React.useState<Phase>("idle");
 
     React.useEffect(() => {
@@ -199,25 +199,25 @@ const HeroPreview = () => {
                 <div className="grid gap-4 bg-background/95 p-5 lg:grid-cols-[1.1fr_0.9fr]">
                     {/* Left panel — static inputs */}
                     <div className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4">
-                        <h3 className="text-base font-semibold text-foreground">Your Topic</h3>
+                        <h3 className="text-base font-semibold text-foreground">{t('hero.preview.topicTitle')}</h3>
                         <div className="space-y-3">
                             <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Topic</p>
-                                <p className="mt-1 text-sm text-foreground">Should schools ban phones?</p>
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('hero.preview.topicLabel')}</p>
+                                <p className="mt-1 text-sm text-foreground">{t('hero.preview.topicValue')}</p>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Side</p>
-                                    <p className="mt-1 text-sm text-foreground">In favor</p>
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('hero.preview.sideLabel')}</p>
+                                    <p className="mt-1 text-sm text-foreground">{t('hero.preview.sideValue')}</p>
                                 </div>
                                 <div className="rounded-md border border-border/70 bg-background px-3 py-2">
-                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Role</p>
-                                    <p className="mt-1 text-sm text-foreground">Opening</p>
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('hero.preview.roleLabel')}</p>
+                                    <p className="mt-1 text-sm text-foreground">{t('hero.preview.roleValue')}</p>
                                 </div>
                             </div>
                             {/* Generate button with shimmer effect */}
                             <div className={`relative overflow-hidden rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-shadow ${isShimmer ? "shadow-[0_0_16px_4px_rgba(var(--primary-rgb,99,102,241),0.5)]" : ""}`}>
-                                Generate Case
+                                {t('hero.preview.generateCase')}
                                 {isShimmer && (
                                     <span className="absolute inset-0 animate-[shimmer_1s_ease-in-out] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                                 )}
@@ -227,7 +227,7 @@ const HeroPreview = () => {
 
                     {/* Right panel — animated output */}
                     <div className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Live Output</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('hero.preview.liveOutput')}</p>
 
                         {isGenerating && (
                             <motion.div
@@ -236,7 +236,7 @@ const HeroPreview = () => {
                                 className="flex items-center gap-2 rounded-md border border-border/70 bg-background p-3"
                             >
                                 <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                                <span className="text-xs text-muted-foreground animate-pulse">Generating...</span>
+                                <span className="text-xs text-muted-foreground animate-pulse">{t('hero.preview.generating')}</span>
                             </motion.div>
                         )}
 
@@ -247,9 +247,9 @@ const HeroPreview = () => {
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-emerald-200/80 bg-emerald-50/80 p-3 dark:border-emerald-900 dark:bg-emerald-950/60"
                             >
-                                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Main Argument</p>
+                                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">{t('hero.preview.mainArgument')}</p>
                                 <p className="mt-1 text-xs text-emerald-900/90 dark:text-emerald-100/90">
-                                    {phase === "thesis" ? <TypewriterText text={OUTPUT_CONTENT.thesis} durationMs={1500} /> : OUTPUT_CONTENT.thesis}
+                                    {phase === "thesis" ? <TypewriterText text={outputContent.thesis} durationMs={1500} /> : outputContent.thesis}
                                 </p>
                             </motion.div>
                         )}
@@ -261,9 +261,9 @@ const HeroPreview = () => {
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-sky-200/80 bg-sky-50/80 p-3 dark:border-sky-900 dark:bg-sky-950/60"
                             >
-                                <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Reasoning</p>
+                                <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">{t('hero.preview.reasoning')}</p>
                                 <p className="mt-1 text-xs text-sky-900/90 dark:text-sky-100/90">
-                                    {phase === "contention" ? <TypewriterText text={OUTPUT_CONTENT.contention} durationMs={1500} /> : OUTPUT_CONTENT.contention}
+                                    {phase === "contention" ? <TypewriterText text={outputContent.contention} durationMs={1500} /> : outputContent.contention}
                                 </p>
                             </motion.div>
                         )}
@@ -275,16 +275,16 @@ const HeroPreview = () => {
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-amber-200/80 bg-amber-50/80 p-3 dark:border-amber-900 dark:bg-amber-950/60"
                             >
-                                <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Impact</p>
+                                <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">{t('hero.preview.impact')}</p>
                                 <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
-                                    <TypewriterText text={OUTPUT_CONTENT.impact} durationMs={1500} />
+                                    <TypewriterText text={outputContent.impact} durationMs={1500} />
                                 </p>
                             </motion.div>
                         )}
 
                         {(phase === "idle" || phase === "shimmer") && (
                             <div className="flex h-24 items-center justify-center rounded-md border border-dashed border-border/70 bg-background/50">
-                                <p className="text-xs text-muted-foreground">Output will appear here...</p>
+                                <p className="text-xs text-muted-foreground">{t('hero.preview.emptyOutput')}</p>
                             </div>
                         )}
                     </div>

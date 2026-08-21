@@ -84,7 +84,7 @@ describe('stripe helpers', () => {
     });
   });
 
-  it('includes configured Stripe price ID when present', async () => {
+  it('does not send a client-configured Stripe price ID', async () => {
     vi.stubEnv('VITE_STRIPE_PRICE_ID', 'price_abc123');
     invokeMock.mockResolvedValueOnce({ data: { url: `${window.location.origin}/checkout-with-price` }, error: null });
     const { redirectToCheckout } = await loadStripeModule();
@@ -93,8 +93,8 @@ describe('stripe helpers', () => {
 
     expect(invokeMock).toHaveBeenCalledWith('create-checkout', {
       headers: { Authorization: 'Bearer token-123' },
-      body: expect.objectContaining({
-        priceId: 'price_abc123',
+      body: expect.not.objectContaining({
+        priceId: expect.anything(),
       }),
     });
   });

@@ -439,6 +439,9 @@ export interface GoogleDocsExportResult {
   requiresReauth?: boolean;
 }
 
+const GOOGLE_DOCS_EXPORT_TIMEOUT_MS = 30_000;
+const GOOGLE_DOCS_EXPORT_TIMEOUT_MESSAGE = 'Google Docs export timed out. Please try again.';
+
 async function callGoogleDocsEdgeFunction(
   mode: 'generate' | 'attack' | 'brainstorm' | 'factoids',
   data: GenerateOutput | AttackOutput | BrainstormOutput | FactoidsOutput
@@ -451,12 +454,12 @@ async function callGoogleDocsEdgeFunction(
       return { success: false, error: 'Not authenticated. Please sign in.', requiresReauth: true };
     }
 
-    // Try session.provider_token first, fallback to localStorage
-    // Supabase only provides provider_token immediately after OAuth, not on session refresh
+    // Supabase only provides provider_token immediately after OAuth. The fallback
+    // is scoped to this browser session so access tokens do not survive restarts.
     let providerToken = session.provider_token;
-    const tokenSource = providerToken ? 'session' : 'localStorage';
+    const tokenSource = providerToken ? 'session' : 'sessionStorage';
     if (!providerToken) {
-      providerToken = localStorage.getItem('google_provider_token');
+      providerToken = sessionStorage.getItem('google_provider_token');
     }
 
     console.debug('[GDocs Export] Token source:', tokenSource, 'Token present:', Boolean(providerToken));
@@ -469,9 +472,12 @@ async function callGoogleDocsEdgeFunction(
       };
     }
 
-    // Helper to make the actual request
-    const makeRequest = async (token: string) => {
-      return fetch(`${SUPABASE_URL}/functions/v1/export-gdoc`, {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GOOGLE_DOCS_EXPORT_TIMEOUT_MS);
+    let response: Response;
+    let respData: Record<string, unknown>;
+    try {
+      response = await fetch(`${SUPABASE_URL}/functions/v1/export-gdoc`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -480,13 +486,22 @@ async function callGoogleDocsEdgeFunction(
         body: JSON.stringify({
           mode,
           data,
-          accessToken: token,
+          accessToken: providerToken,
         }),
+        signal: controller.signal,
       });
-    };
-
-    const response = await makeRequest(providerToken);
-    const respData: Record<string, unknown> = await response.json().catch(() => ({}));
+      respData = await response.json().catch(() => ({}));
+      if (controller.signal.aborted) {
+        return { success: false, error: GOOGLE_DOCS_EXPORT_TIMEOUT_MESSAGE };
+      }
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return { success: false, error: GOOGLE_DOCS_EXPORT_TIMEOUT_MESSAGE };
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       console.error('[GDocs Export] Error response:', response.status, respData);
@@ -503,7 +518,7 @@ async function callGoogleDocsEdgeFunction(
     }
 
     if (typeof respData.newAccessToken === 'string') {
-      localStorage.setItem('google_provider_token', respData.newAccessToken);
+      sessionStorage.setItem('google_provider_token', respData.newAccessToken);
     }
 
     return { success: true, documentUrl: typeof respData.documentUrl === 'string' ? respData.documentUrl : undefined };

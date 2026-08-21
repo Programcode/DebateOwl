@@ -23,7 +23,7 @@ const FinalCTA = () => {
                 >
                     <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/85">
                         <Sparkles className="h-4 w-4 text-primary" />
-                        Free trial available
+                        {t('finalCta.freeTrialAvailable')}
                     </div>
 
                     <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">

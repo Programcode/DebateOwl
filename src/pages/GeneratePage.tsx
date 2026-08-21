@@ -119,12 +119,21 @@ export default function GeneratePage() {
     setSaveDialogOpen(true);
   };
 
-  const confirmSave = () => {
+  const confirmSave = async () => {
     const title = saveTitle.trim();
     if (!title) return;
-    void saveCurrentCase(title);
-    setSaveDialogOpen(false);
-    toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
+    try {
+      await saveCurrentCase(title);
+      setSaveDialogOpen(false);
+      toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
+    } catch (error) {
+      console.error('Failed to save case:', error);
+      toast({
+        title: t('ask.saveFailed', 'Save failed'),
+        description: t('ask.saveFailedDesc', 'The case could not be saved. Please try again.'),
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDiscuss = async () => {

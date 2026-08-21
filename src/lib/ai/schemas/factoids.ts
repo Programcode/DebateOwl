@@ -1,5 +1,6 @@
 // src/lib/ai/schemas/factoids.ts
 import { z } from 'zod';
+import { SafeWebUrlSchema } from './url';
 
 export const FactoidsInputSchema = z.object({
   claim: z.string().min(1, 'Claim is required'),
@@ -16,7 +17,7 @@ export const CitationSchema = z.object({
   title: z.string(),
   publisher: z.string(),
   date: z.string().optional(),
-  url: z.string().optional(), // Relaxed from .url()
+  url: SafeWebUrlSchema.optional(),
   verified: z.enum(['verified', 'unverified', 'pending']),
   verifiedAt: z.string().optional(),
 });

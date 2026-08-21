@@ -74,6 +74,18 @@ describe('source file import', () => {
     expect(pdfMocks.destroy).toHaveBeenCalledTimes(1);
   });
 
+  it('removes a dangling high surrogate when truncating extracted text', async () => {
+    const file = new File([
+      `${'a'.repeat(119_999)}😀 remaining text`,
+    ], 'long.txt', { type: 'text/plain' });
+
+    const imported = await importSourceFile(file);
+
+    expect(imported.content).toHaveLength(119_999);
+    expect(imported.content.charCodeAt(imported.content.length - 1)).not.toBeGreaterThanOrEqual(0xD800);
+    expect(imported.warnings).toContain('Large file truncated to the first readable section.');
+  });
+
   it('rejects unsupported files with a typed error', async () => {
     const file = new File(['not an image that should import'], 'image.png', { type: 'image/png' });
 

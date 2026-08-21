@@ -16,11 +16,19 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_OPERATION_TIMEOUT_MS = 4000;
+const OAUTH_CODE_EXCHANGE_TIMEOUT_MS = 15_000;
 
-function withAuthTimeout<T>(operation: Promise<T>, message: string): Promise<T> {
+class AuthTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthTimeoutError';
+  }
+}
+
+function withAuthTimeout<T>(operation: Promise<T>, message: string, timeoutMs = AUTH_OPERATION_TIMEOUT_MS): Promise<T> {
   return Promise.race([
     operation,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), AUTH_OPERATION_TIMEOUT_MS)),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new AuthTimeoutError(message)), timeoutMs)),
   ]);
 }
 
@@ -35,9 +43,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let hydratedUserId: string | undefined;
+    const hydrateStores = (userId?: string) => {
+      if (!userId || hydratedUserId === userId) return;
+      hydratedUserId = userId;
+      Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
+      Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+    };
 
-    // Older clients persisted this long-lived credential. Purge it even when
-    // the existing Supabase session remains signed in.
+    // Older clients persisted these credentials across browser sessions.
+    localStorage.removeItem('google_provider_token');
     localStorage.removeItem('google_provider_refresh_token');
 
     const hydrateOAuthCallbackSession = async () => {
@@ -53,13 +68,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         let result: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
+        let preserveOAuthParams = false;
         try {
           result = await withAuthTimeout(
             supabase.auth.exchangeCodeForSession(code),
             'OAuth code exchange timeout',
+            OAUTH_CODE_EXCHANGE_TIMEOUT_MS,
           );
+        } catch (error) {
+          preserveOAuthParams = error instanceof AuthTimeoutError;
+          throw error;
         } finally {
-          cleanupOAuthParams();
+          if (!preserveOAuthParams) cleanupOAuthParams();
         }
 
         const { data, error } = result;
@@ -79,8 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(oauthSession);
           currentUserIdRef.current = oauthSession.user?.id;
           setLoading(false);
-          Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
-          Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+          hydrateStores(oauthSession.user?.id);
           return;
         }
 
@@ -99,8 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(data.session ?? null);
         currentUserIdRef.current = data.session?.user?.id;
         if (data.session) {
-          Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
-          Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+          hydrateStores(data.session.user?.id);
         }
       } catch (err) {
         console.warn('[Auth] init failed:', err);
@@ -122,17 +140,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession);
       setLoading(false);
 
-      // Persist Google provider tokens for later use (e.g., Google Docs export)
-      // These tokens are only available immediately after OAuth, not on session refresh
-      // Supabase does NOT auto-refresh provider tokens - we must do it manually
+      // Provider access tokens are short-lived. Keep them only for this browser
+      // session; a later export must reauthorize if no fresh token is available.
       if (newSession?.provider_token) {
         console.log('[Auth] Storing new provider_token');
-        localStorage.setItem('google_provider_token', newSession.provider_token);
+        sessionStorage.setItem('google_provider_token', newSession.provider_token);
       }
 
       if (!nextUserId) {
+        hydratedUserId = undefined;
         resetSessionStore();
         resetSettingsStore();
+        sessionStorage.removeItem('google_provider_token');
         localStorage.removeItem('google_provider_token');
         // Remove refresh tokens written by older clients as well; this client
         // never persists them because they are long-lived credentials.
@@ -141,12 +160,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (prevUserId && prevUserId !== nextUserId) {
+        hydratedUserId = undefined;
         resetSessionStore();
         resetSettingsStore();
       }
 
-      Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
-      Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+      hydrateStores(nextUserId);
     });
 
     return () => {
@@ -171,12 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           redirectTo: getOAuthRedirectUrl(),
           skipBrowserRedirect: true,
           ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
-          queryParams: driveAccess
-            ? {
-              access_type: 'offline',
-              prompt: 'consent',
-            }
-            : undefined,
+          queryParams: undefined,
         },
       });
 

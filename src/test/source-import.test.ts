@@ -79,4 +79,11 @@ describe('source import helper', () => {
 
     await expect(importSourceFromUrl('https://example.com/bad')).rejects.toThrow('Imported source response was invalid');
   });
+
+  it('rejects imported source URLs outside HTTP(S)', async () => {
+    invokeMock.mockResolvedValueOnce({ data: { ...validImport, url: 'mailto:editor@example.com' }, error: null });
+    const { importSourceFromUrl } = await import('@/lib/source-import');
+
+    await expect(importSourceFromUrl('https://example.com/article')).rejects.toThrow('Imported source response was invalid');
+  });
 });

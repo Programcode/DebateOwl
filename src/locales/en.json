@@ -35,7 +35,8 @@
     "export": "Export",
     "pdf": "PDF",
     "docx": "DOCX",
-    "googleDocs": "Google Docs"
+    "googleDocs": "Google Docs",
+    "regenerate": "Regenerate {{title}}"
   },
   "voice": {
     "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
@@ -194,7 +195,7 @@
     "tagline": "DebateLab • Built for debaters who demand excellence",
     "terms": "Terms",
     "privacy": "Privacy",
-    "copyright": "© 2026 DebateLab."
+    "copyright": "© 2026 DebateLab. All rights reserved."
   },
   "hero": {
     "headline": "Prep Faster. Argue Smarter. Win More Rounds.",
@@ -207,7 +208,28 @@
     "ctaSecondary": "View Pricing",
     "trustBullet1": "No credit card required",
     "trustBullet2": "Cancel anytime",
-    "trustBullet3": "Works with any format"
+    "trustBullet3": "Works with any format",
+    "announcement": "New in 2026: faster sign-in, Drive exports, flowcharts, and smarter prep tools",
+    "trialBadgeValue": "3 days",
+    "preview": {
+      "topicTitle": "Your Topic",
+      "topicLabel": "Topic",
+      "topicValue": "Should schools ban phones?",
+      "sideLabel": "Side",
+      "sideValue": "In favor",
+      "roleLabel": "Role",
+      "roleValue": "Opening",
+      "generateCase": "Generate Case",
+      "liveOutput": "Live Output",
+      "generating": "Generating...",
+      "mainArgument": "Main Argument",
+      "reasoning": "Reasoning",
+      "impact": "Impact",
+      "emptyOutput": "Output will appear here...",
+      "thesis": "Your strongest opening argument, backed by evidence.",
+      "contention": "A clear reasoning chain that judges can follow.",
+      "outputImpact": "Why this matters more than anything the opponent says."
+    }
   },
   "features": {
     "title": "Everything You Need to Win",
@@ -257,7 +279,10 @@
     "judge1": "Explore both sides of complex motions",
     "judge2": "Understand argument structures quickly",
     "judge3": "Find evidence to verify claims",
-    "judge4": "Map argument flows visually"
+    "judge4": "Map argument flows visually",
+    "debaterSubtitle": "Cut Prep Time in Half",
+    "coachSubtitle": "Scale Your Feedback",
+    "judgeSubtitle": "Deepen Your Analysis"
   },
   "pricing": {
     "title": "Simple, Transparent Pricing",
@@ -280,7 +305,11 @@
     "proFeature5": "Active Grounding™ research",
     "startTrial": "Start Free Trial",
     "subscribe": "Subscribe Now",
-    "noFreePlan": "There is no permanent free plan. After your trial ends, a subscription is required to continue using DebateLab."
+    "noFreePlan": "There is no permanent free plan. After your trial ends, a subscription is required to continue using DebateLab.",
+    "trialBadge": "New Users",
+    "trialDesc": "Use the full workflow before deciding on Pro.",
+    "proBadge": "Power Users",
+    "proDesc": "For heavy prep weeks, tougher topics, and advanced model access."
   },
   "faq": {
     "title": "Frequently Asked Questions",
@@ -293,18 +322,21 @@
     "q4": "Does the AI make things up?",
     "a4": "We use Active Grounding™ technology to verify claims against real sources. Any unverified information is clearly marked as such.",
     "q5": "Can I save and export my work?",
-    "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs."
+    "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs.",
+    "subtitle": "Pricing, workflow, and product details at a glance."
   },
   "finalCta": {
     "title": "Ready to Build Your Next Winning Case?",
     "subtitle": "Join debaters who prep smarter with AI.",
-    "cta": "Launch DebateLab"
+    "cta": "Launch DebateLab",
+    "freeTrialAvailable": "Free trial available"
   },
   "socialProof": {
     "modes": "Prep Modes",
     "plans": "Plans",
     "upgrades": "Major 2026 Upgrades",
-    "workspace": "Unified Workspace"
+    "workspace": "Unified Workspace",
+    "description": "One platform for research, strategy, rebuttals, and speaking practice."
   },
   "whatsNew": {
     "title": "What's New",
@@ -316,7 +348,11 @@
     "sub3Title": "Upgraded Timer",
     "sub3Desc": "Tournament-accurate timing with custom formats.",
     "sub4Title": "Saved Prep History",
-    "sub4Desc": "Access all your previous cases and sessions."
+    "sub4Desc": "Access all your previous cases and sessions.",
+    "sub1Badge": "Billing",
+    "sub2Badge": "New Tool",
+    "sub3Badge": "Improved",
+    "sub4Badge": "Productivity"
   },
   "deepDive": {
     "title": "Active Grounding™ Technology",
@@ -328,7 +364,17 @@
     "step3": "Context Injection",
     "step3Desc": "Verified facts are injected into the AI prompt.",
     "step4": "Grounded Output",
-    "step4Desc": "Responses cite real sources, not hallucinations."
+    "step4Desc": "Responses cite real sources, not hallucinations.",
+    "preview": {
+      "processHeading": "// Real-time Context Process",
+      "scanning": "Scanning https://news.example.com...",
+      "extracted": "Extracted 1,402 tokens of clean text",
+      "vectorizing": "Vectorizing content into Knowledge Base...",
+      "query": "User Query: \"Impact on economy?\"",
+      "retrieved": "Retrieved 3 relevant evidence chunks",
+      "generating": "Generating grounded response...",
+      "response": "\"Based on the provided article, the economic impact is estimated at...\""
+    }
   },
   "rateLimit": {
     "title": "Rate Limit Exceeded"
@@ -461,7 +507,7 @@
     "overall": "Overall Assessment",
     "caseStrength": "Case Strength",
     "weaknesses": "Identified Weaknesses",
-    "weaknessesCount": "issues found, sorted by severity",
+    "weaknessesCount": "{{count}} issues found, sorted by severity",
     "fallacies": "Fallacies Detected",
     "fallaciesDesc": "Logical errors in your argument",
     "crossEx": "Cross-Examination Questions",
@@ -484,7 +530,9 @@
     "discuss": "Discuss",
     "exportedDocx": "Attack analysis exported to DOCX!",
     "exportedGdocs": "Attack analysis exported to Google Docs!",
+    "exportedPdf": "Attack analysis exported to PDF!",
     "exportFailedDocx": "Failed to export to DOCX",
+    "exportFailedPdf": "Failed to export to PDF",
     "open": "Open",
     "authRequired": "Authentication required",
     "authRequiredDesc": "Please sign out and sign back in to grant Google Drive access.",
@@ -635,7 +683,8 @@
     "noSavedChats": "No saved chats yet",
     "noSavedChatsDesc": "Saved coaching chats will appear here.",
     "messageCount": "{{count}} messages",
-    "saved": "saved",
+    "savedCount": "{{count}} saved",
+    "removeFile": "Remove {{name}}",
     "clear": "Clear",
     "attachFiles": "Attach files",
     "stopListening": "Stop listening",
@@ -957,7 +1006,11 @@
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",
     "removedTitle": "Auto-saved sources removed",
-    "removedDesc": "{{count}} auto-saved source removed from your library."
+    "removedDesc": "{{count}} auto-saved source removed from your library.",
+    "removedPartialTitle": "Some sources removed",
+    "removedPartialDesc": "{{succeeded}} removed, {{failed}} failed to remove.",
+    "removeFailed": "Could not remove auto-saved sources.",
+    "removeFailedDesc": "{{succeeded}} sources were removed. {{failed}} sources could not be removed."
   },
   "sharedPage": {
     "title": "Shared Content",

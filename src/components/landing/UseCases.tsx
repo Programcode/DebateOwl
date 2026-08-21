@@ -9,19 +9,19 @@ const UseCases = () => {
         {
             icon: GraduationCap,
             title: t('useCases.forDebaters'),
-            subtitle: "Cut Prep Time in Half",
+            subtitle: t('useCases.debaterSubtitle'),
             points: [t('useCases.debater1'), t('useCases.debater2'), t('useCases.debater3'), t('useCases.debater4')]
         },
         {
             icon: Users,
             title: t('useCases.forCoaches'),
-            subtitle: "Scale Your Feedback",
+            subtitle: t('useCases.coachSubtitle'),
             points: [t('useCases.coach1'), t('useCases.coach2'), t('useCases.coach3'), t('useCases.coach4')]
         },
         {
             icon: Gavel,
             title: t('useCases.forJudges'),
-            subtitle: "Deepen Your Analysis",
+            subtitle: t('useCases.judgeSubtitle'),
             points: [t('useCases.judge1'), t('useCases.judge2'), t('useCases.judge3'), t('useCases.judge4')]
         }
     ];

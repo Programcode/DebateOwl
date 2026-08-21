@@ -2,11 +2,6 @@ import { supabase } from '@/lib/supabase/client';
 import { getEdgeFunctionErrorMessage } from '@/lib/supabase/edge-function-error';
 import { getWebAppRedirectUrl, openExternalUrl } from '@/lib/native';
 
-const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID || '';
-if (!STRIPE_PRICE_ID) {
-  console.warn('[Stripe] VITE_STRIPE_PRICE_ID is not set — create-checkout will resolve server-side price');
-}
-
 /**
  * Redirect user to Stripe Checkout for Pro subscription.
  */
@@ -15,19 +10,11 @@ export async function redirectToCheckout(promoCode?: string): Promise<void> {
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error('Please sign in to upgrade');
 
-  const checkoutBody: {
-    successUrl: string;
-    cancelUrl: string;
-    promoCode?: string;
-    priceId?: string;
-  } = {
+  const checkoutBody = {
     successUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=canceled`,
     promoCode,
   };
-  if (STRIPE_PRICE_ID) {
-    checkoutBody.priceId = STRIPE_PRICE_ID;
-  }
 
   const { data, error } = await supabase.functions.invoke('create-checkout', {
     headers: { Authorization: `Bearer ${accessToken}` },

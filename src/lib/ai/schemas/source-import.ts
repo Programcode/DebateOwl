@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SafeWebUrlSchema } from './url';
 
 export const SourceImportOutputSchema = z.object({
   title: z.string().min(1),
@@ -8,7 +9,7 @@ export const SourceImportOutputSchema = z.object({
   publishedDate: z.string().optional(),
   domain: z.string().min(1),
   excerpt: z.string(),
-  url: z.string().url(),
+  url: SafeWebUrlSchema,
 });
 
 export type SourceImportOutput = z.infer<typeof SourceImportOutputSchema>;

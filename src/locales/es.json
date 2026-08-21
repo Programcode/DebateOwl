@@ -35,7 +35,8 @@
     "export": "Exportar",
     "pdf": "PDF",
     "docx": "DOCX",
-    "googleDocs": "Google Docs"
+    "googleDocs": "Google Docs",
+    "regenerate": "Regenerar {{title}}"
   },
   "voice": {
     "permissionDenied": "El acceso al micrófono está bloqueado. Permite el acceso al micrófono en el navegador e inténtalo de nuevo.",
@@ -194,7 +195,7 @@
     "tagline": "DebateLab • Hecho para debatientes que exigen excelencia",
     "terms": "Términos",
     "privacy": "Privacidad",
-    "copyright": "© 2026 DebateLab."
+    "copyright": "© 2026 DebateLab. Todos los derechos reservados."
   },
   "hero": {
     "headline": "Prepárate Más Rápido. Argumenta Mejor. Gana Más Rondas.",
@@ -207,7 +208,28 @@
     "ctaSecondary": "Ver Precios",
     "trustBullet1": "Sin tarjeta de crédito",
     "trustBullet2": "Cancela cuando quieras",
-    "trustBullet3": "Funciona con cualquier formato"
+    "trustBullet3": "Funciona con cualquier formato",
+    "announcement": "Nuevo en 2026: inicio de sesión más rápido, exportaciones a Drive, diagramas de flujo y herramientas de preparación más inteligentes",
+    "trialBadgeValue": "3 días",
+    "preview": {
+      "topicTitle": "Tu tema",
+      "topicLabel": "Tema",
+      "topicValue": "¿Deberían las escuelas prohibir los teléfonos?",
+      "sideLabel": "Postura",
+      "sideValue": "A favor",
+      "roleLabel": "Rol",
+      "roleValue": "Apertura",
+      "generateCase": "Generar caso",
+      "liveOutput": "Resultado en directo",
+      "generating": "Generando...",
+      "mainArgument": "Argumento principal",
+      "reasoning": "Razonamiento",
+      "impact": "Impacto",
+      "emptyOutput": "El resultado aparecerá aquí...",
+      "thesis": "Tu argumento inicial más sólido, respaldado por evidencia.",
+      "contention": "Una cadena de razonamiento clara que los jueces pueden seguir.",
+      "outputImpact": "Por qué esto importa más que cualquier cosa que diga el oponente."
+    }
   },
   "features": {
     "title": "Todo Lo Que Necesitas Para Ganar",
@@ -257,7 +279,10 @@
     "judge1": "Explora ambos lados de mociones complejas",
     "judge2": "Comprende estructuras argumentativas rápidamente",
     "judge3": "Encuentra evidencia para verificar afirmaciones",
-    "judge4": "Mapea flujos de argumentos visualmente"
+    "judge4": "Mapea flujos de argumentos visualmente",
+    "debaterSubtitle": "Reduce el tiempo de preparación a la mitad",
+    "coachSubtitle": "Amplía tus comentarios",
+    "judgeSubtitle": "Profundiza tu análisis"
   },
   "pricing": {
     "title": "Precios Simples y Transparentes",
@@ -280,7 +305,11 @@
     "proFeature5": "Investigación Active Grounding™",
     "startTrial": "Comenzar Prueba Gratis",
     "subscribe": "Suscribirse Ahora",
-    "noFreePlan": "No hay plan gratuito permanente. Después de tu prueba, se requiere una suscripción para seguir usando DebateLab."
+    "noFreePlan": "No hay plan gratuito permanente. Después de tu prueba, se requiere una suscripción para seguir usando DebateLab.",
+    "trialBadge": "Usuarios nuevos",
+    "trialDesc": "Usa el flujo de trabajo completo antes de decidirte por Pro.",
+    "proBadge": "Usuarios avanzados",
+    "proDesc": "Para semanas de preparación intensiva, temas difíciles y acceso a modelos avanzados."
   },
   "faq": {
     "title": "Preguntas Frecuentes",
@@ -293,18 +322,21 @@
     "q4": "¿La IA inventa cosas?",
     "a4": "Usamos tecnología Active Grounding™ para verificar afirmaciones contra fuentes reales. Cualquier información no verificada se marca claramente como tal.",
     "q5": "¿Puedo guardar y exportar mi trabajo?",
-    "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs."
+    "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs.",
+    "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo."
   },
   "finalCta": {
     "title": "¿Listo Para Construir Tu Próximo Caso Ganador?",
     "subtitle": "Únete a debatientes que se preparan mejor con IA.",
-    "cta": "Lanzar DebateLab"
+    "cta": "Lanzar DebateLab",
+    "freeTrialAvailable": "Prueba gratuita disponible"
   },
   "socialProof": {
     "modes": "Modos de Preparación",
     "plans": "Planes",
     "upgrades": "Mejoras Importantes 2026",
-    "workspace": "Espacio de Trabajo Unificado"
+    "workspace": "Espacio de Trabajo Unificado",
+    "description": "Una plataforma para investigación, estrategia, refutaciones y práctica de oratoria."
   },
   "whatsNew": {
     "title": "Novedades",
@@ -316,7 +348,11 @@
     "sub3Title": "Cronómetro Mejorado",
     "sub3Desc": "Tiempos precisos de torneo con formatos personalizados.",
     "sub4Title": "Historial de Preparación",
-    "sub4Desc": "Accede a todos tus casos y sesiones anteriores."
+    "sub4Desc": "Accede a todos tus casos y sesiones anteriores.",
+    "sub1Badge": "Facturación",
+    "sub2Badge": "Nueva herramienta",
+    "sub3Badge": "Mejorado",
+    "sub4Badge": "Productividad"
   },
   "deepDive": {
     "title": "Tecnología Active Grounding™",
@@ -328,7 +364,17 @@
     "step3": "Inyección de Contexto",
     "step3Desc": "Los hechos verificados se inyectan en el prompt de IA.",
     "step4": "Salida Fundamentada",
-    "step4Desc": "Las respuestas citan fuentes reales, no alucinaciones."
+    "step4Desc": "Las respuestas citan fuentes reales, no alucinaciones.",
+    "preview": {
+      "processHeading": "// Proceso de contexto en tiempo real",
+      "scanning": "Escaneando https://news.example.com...",
+      "extracted": "Se extrajeron 1.402 tokens de texto limpio",
+      "vectorizing": "Vectorizando contenido en la base de conocimiento...",
+      "query": "Consulta del usuario: \"¿Impacto en la economía?\"",
+      "retrieved": "Se recuperaron 3 fragmentos de evidencia relevantes",
+      "generating": "Generando una respuesta fundamentada...",
+      "response": "\"Según el artículo proporcionado, se estima que el impacto económico es...\""
+    }
   },
   "rateLimit": {
     "title": "Límite de Solicitudes Excedido"
@@ -461,7 +507,7 @@
     "overall": "Evaluación General",
     "caseStrength": "Fortaleza del Caso",
     "weaknesses": "Debilidades Identificadas",
-    "weaknessesCount": "problemas encontrados, ordenados por gravedad",
+    "weaknessesCount": "{{count}} problemas encontrados, ordenados por gravedad",
     "fallacies": "Falacias Detectadas",
     "fallaciesDesc": "Errores lógicos en tu argumento",
     "crossEx": "Preguntas de Interrogatorio Cruzado",
@@ -484,7 +530,9 @@
     "discuss": "Discutir",
     "exportedDocx": "¡Análisis de ataque exportado a DOCX!",
     "exportedGdocs": "¡Análisis de ataque exportado a Google Docs!",
+    "exportedPdf": "¡Análisis de ataque exportado a PDF!",
     "exportFailedDocx": "Error al exportar a DOCX",
+    "exportFailedPdf": "Error al exportar a PDF",
     "open": "Abrir",
     "authRequired": "Autenticación requerida",
     "authRequiredDesc": "Cierra sesión y vuelve a iniciar para otorgar acceso a Google Drive.",
@@ -648,7 +696,8 @@
     "noSavedChats": "No saved chats yet",
     "noSavedChatsDesc": "Saved coaching chats will appear here.",
     "messageCount": "{{count}} messages",
-    "saved": "saved"
+    "savedCount": "{{count}} guardados",
+    "removeFile": "Eliminar {{name}}"
   },
   "limitModal": {
     "trialEnded": "Prueba Gratuita Finalizada",
@@ -957,7 +1006,11 @@
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
     "removedTitle": "Fuentes autoguardadas eliminadas",
-    "removedDesc": "{{count}} fuente autoguardada eliminada de tu biblioteca."
+    "removedDesc": "{{count}} fuente autoguardada eliminada de tu biblioteca.",
+    "removedPartialTitle": "Algunas fuentes eliminadas",
+    "removedPartialDesc": "{{succeeded}} eliminadas, {{failed}} no se pudieron eliminar.",
+    "removeFailed": "No se pudieron eliminar las fuentes autoguardadas.",
+    "removeFailedDesc": "Se eliminaron {{succeeded}} fuentes. No se pudieron eliminar {{failed}} fuentes."
   },
   "sharedPage": {
     "title": "Contenido Compartido",

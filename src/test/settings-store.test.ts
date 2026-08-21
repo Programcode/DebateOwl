@@ -48,7 +48,7 @@ describe("settings-store", () => {
         theme: "dark",
         custom_system_prompt: "Server prompt",
         feature_configs: {
-          generate: { provider: "google", model: "gemini-3-flash-preview", temperature: 0.4 },
+          generate: { temperature: 0.4 },
         },
       },
     });
@@ -60,6 +60,8 @@ describe("settings-store", () => {
     expect(state.theme).toBe("dark");
     expect(state.customSystemPrompt).toBe("Server prompt");
     expect(state.featureConfigs.generate.temperature).toBe(0.4);
+    expect(state.featureConfigs.generate.provider).toBe("google");
+    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
     expect(state.featureConfigs.attack.model).toBe("gemini-3-flash-preview");
   });
 
@@ -77,10 +79,35 @@ describe("settings-store", () => {
     expect(state.wikiResearchEnabled).toBe(false);
   });
 
-  it("setWikiResearchEnabled updates local state only", () => {
+  it("keeps wiki research local and omits it from server writes", async () => {
     const store = useSettingsStore.getState();
     store.setWikiResearchEnabled(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
     expect(useSettingsStore.getState().wikiResearchEnabled).toBe(true);
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+
+    store.setTheme("dark");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const settingsQuery = supabaseMock.from.mock.results.find(({ value }) => value.upsert)?.value;
+    expect(settingsQuery.upsert).toHaveBeenCalledWith(
+      expect.any(Object),
+      { onConflict: "user_id" },
+    );
+    expect(settingsQuery.upsert.mock.calls[0][0]).not.toHaveProperty("wiki_research_enabled");
+  });
+
+  it("reports settings persistence failures", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const upsert = vi.fn(async () => ({ data: null, error: { message: "database unavailable" } }));
+    supabaseMock.from.mockImplementationOnce((() => ({ upsert })) as never);
+
+    useSettingsStore.getState().setTheme("dark");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(warnSpy).toHaveBeenCalledWith("[SettingsStore] Failed to persist settings:", "database unavailable");
+    warnSpy.mockRestore();
   });
 
   it("getFeatureConfig returns defaults when missing", () => {

@@ -3,15 +3,15 @@ import type { ProviderConfig } from './providers/types';
 import type { GenerateInput, GenerateOutput } from './schemas/generate';
 import type { AttackOutput, AttackInput } from './schemas/attack';
 import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
-import type { FactoidsOutput, FactoidsInput } from './schemas/factoids';
-import type { AskOutput } from './schemas/ask';
+import { FactoidsOutputSchema, type FactoidsOutput, type FactoidsInput } from './schemas/factoids';
+import { AskOutputSchema, type AskOutput } from './schemas/ask';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 // Request timeout in milliseconds (200 seconds)
-const REQUEST_TIMEOUT_MS = 200 * 1000;
+export const REQUEST_TIMEOUT_MS = 200 * 1000;
 
 // Enable debug logging in development
 const DEBUG = import.meta.env.DEV;
@@ -233,7 +233,7 @@ async function callSupabaseAI(
     // Handle Supabase function invoke errors
     if (error) {
       const errorPayload = await extractSupabaseErrorPayload(error);
-      const errorDetails = parseSupabaseError(error, requestId, provider, config.model, errorPayload);
+      const errorDetails = mapAIError(error, requestId, provider, config.model, errorPayload);
       throw errorDetails;
     }
 
@@ -359,7 +359,7 @@ async function extractSupabaseErrorPayload(error: { context?: unknown }): Promis
   }
 }
 
-function parseSupabaseError(
+export function mapAIError(
   error: { message: string; context?: unknown },
   requestId: string,
   provider: string,
@@ -751,13 +751,20 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     language,
   } as Record<string, unknown>;
   const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
-  const output = data.output as FactoidsOutput;
-  const allFactoids = Array.isArray(output.factoids) ? output.factoids : [];
-  const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation?.verified === 'verified');
+  const parsed = FactoidsOutputSchema.safeParse(data.output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected factoids schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+
+  const allFactoids = parsed.data.factoids;
+  const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
+  const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
   return {
-    ...output,
-    factoids: verifiedFactoids.slice(0, input.sourceCount || 5),
-    filteredOutCount: Math.max(0, allFactoids.length - verifiedFactoids.length),
+    ...parsed.data,
+    factoids: returnedFactoids,
+    filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
   };
 }
 
@@ -775,15 +782,22 @@ export async function askChat(
   config: ProviderConfig,
   options: AskChatOptions = {}
 ): Promise<AskOutput> {
-  if (config.provider === 'mock') return mockAsk(message, mode);
-  const data = await callSupabaseAI('ask', {
-    message,
-    history,
-    mode,
-    citationMode: Boolean(options.citationMode),
-    webSearch: Boolean(options.webSearch),
-    prosConsMode: Boolean(options.prosConsMode),
-    argumentMapMode: Boolean(options.argumentMapMode),
-  }, config) as { output: unknown };
-  return data.output as AskOutput;
+  const output = config.provider === 'mock'
+    ? await mockAsk(message, mode)
+    : (await callSupabaseAI('ask', {
+      message,
+      history,
+      mode,
+      citationMode: Boolean(options.citationMode),
+      webSearch: Boolean(options.webSearch),
+      prosConsMode: Boolean(options.prosConsMode),
+      argumentMapMode: Boolean(options.argumentMapMode),
+    }, config) as { output: unknown }).output;
+  const parsed = AskOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected ask schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+  return parsed.data;
 }

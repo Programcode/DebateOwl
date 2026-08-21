@@ -35,7 +35,8 @@
     "export": "Exportálás",
     "pdf": "PDF",
     "docx": "DOCX",
-    "googleDocs": "Google Docs"
+    "googleDocs": "Google Docs",
+    "regenerate": "{{title}} újragenerálása"
   },
   "voice": {
     "permissionDenied": "A mikrofonhozzáférés blokkolva van. Engedélyezd a mikrofont a böngésző beállításaiban, majd próbáld újra.",
@@ -194,7 +195,7 @@
     "tagline": "DebateLab • Kiválóságot követelő vitázóknak készült",
     "terms": "Feltételek",
     "privacy": "Adatvédelem",
-    "copyright": "© 2026 DebateLab."
+    "copyright": "© 2026 DebateLab. Minden jog fenntartva."
   },
   "hero": {
     "headline": "Készülj Gyorsabban. Érvelj Okosabban. Nyerj Több Fordulót.",
@@ -207,7 +208,28 @@
     "ctaSecondary": "Árak Megtekintése",
     "trustBullet1": "Bankkártya nem szükséges",
     "trustBullet2": "Bármikor lemondható",
-    "trustBullet3": "Bármely formátummal működik"
+    "trustBullet3": "Bármely formátummal működik",
+    "announcement": "Új 2026-ban: gyorsabb bejelentkezés, Drive-exportálás, folyamatábrák és okosabb felkészülési eszközök",
+    "trialBadgeValue": "3 nap",
+    "preview": {
+      "topicTitle": "A témád",
+      "topicLabel": "Téma",
+      "topicValue": "Tiltsák be az iskolák a telefonokat?",
+      "sideLabel": "Oldal",
+      "sideValue": "Mellette",
+      "roleLabel": "Szerep",
+      "roleValue": "Nyitóbeszéd",
+      "generateCase": "Eset generálása",
+      "liveOutput": "Élő kimenet",
+      "generating": "Generálás...",
+      "mainArgument": "Fő érv",
+      "reasoning": "Érvelés",
+      "impact": "Hatás",
+      "emptyOutput": "A kimenet itt fog megjelenni...",
+      "thesis": "A legerősebb nyitó érved, bizonyítékokkal alátámasztva.",
+      "contention": "Világos érvelési lánc, amelyet a bírók követhetnek.",
+      "outputImpact": "Miért számít ez többet, mint bármi, amit az ellenfél mond."
+    }
   },
   "features": {
     "title": "Minden, Ami a Győzelemhez Kell",
@@ -257,7 +279,10 @@
     "judge1": "Fedezd fel komplex indítványok mindkét oldalát",
     "judge2": "Értsd meg gyorsan az érvstruktúrákat",
     "judge3": "Találj bizonyítékokat állítások ellenőrzéséhez",
-    "judge4": "Térképezd vizuálisan az érvfolyamatokat"
+    "judge4": "Térképezd vizuálisan az érvfolyamatokat",
+    "debaterSubtitle": "Felezd meg a felkészülési időt",
+    "coachSubtitle": "Bővítsd a visszajelzéseidet",
+    "judgeSubtitle": "Mélyítsd el az elemzésedet"
   },
   "pricing": {
     "title": "Egyszerű, Átlátható Árazás",
@@ -280,7 +305,11 @@
     "proFeature5": "Active Grounding™ kutatás",
     "startTrial": "Ingyenes Próba Indítása",
     "subscribe": "Feliratkozás Most",
-    "noFreePlan": "Nincs állandó ingyenes csomag. A próbaidőszak lejárta után előfizetés szükséges a DebateLab további használatához."
+    "noFreePlan": "Nincs állandó ingyenes csomag. A próbaidőszak lejárta után előfizetés szükséges a DebateLab további használatához.",
+    "trialBadge": "Új felhasználóknak",
+    "trialDesc": "Próbáld ki a teljes munkafolyamatot, mielőtt a Pro mellett döntesz.",
+    "proBadge": "Haladó felhasználóknak",
+    "proDesc": "Intenzív felkészülési hetekhez, nehezebb témákhoz és fejlett modellekhez való hozzáféréshez."
   },
   "faq": {
     "title": "Gyakran Ismételt Kérdések",
@@ -293,18 +322,21 @@
     "q4": "Az MI kitalál dolgokat?",
     "a4": "Active Grounding™ technológiát használunk az állítások valós forrásokkal való ellenőrzésére. Minden nem ellenőrzött információ egyértelműen meg van jelölve.",
     "q5": "Menthetem és exportálhatom a munkámat?",
-    "a5": "Igen! Ments eseteket, ötleteket és chateket az Előzményekbe. Exportálj Word, PDF vagy Google Docs formátumba."
+    "a5": "Igen! Ments eseteket, ötleteket és chateket az Előzményekbe. Exportálj Word, PDF vagy Google Docs formátumba.",
+    "subtitle": "Árazás, munkafolyamat és termékrészletek röviden."
   },
   "finalCta": {
     "title": "Készen Állsz a Következő Győztes Eseted Felépítésére?",
     "subtitle": "Csatlakozz a vitázókhoz, akik MI-vel készülnek okosabban.",
-    "cta": "DebateLab Indítása"
+    "cta": "DebateLab Indítása",
+    "freeTrialAvailable": "Ingyenes próba elérhető"
   },
   "socialProof": {
     "modes": "Felkészülési Mód",
     "plans": "Csomag",
     "upgrades": "Jelentős 2026-os Frissítés",
-    "workspace": "Egységes Munkaterület"
+    "workspace": "Egységes Munkaterület",
+    "description": "Egy platform kutatáshoz, stratégiához, cáfolatokhoz és beszédgyakorláshoz."
   },
   "whatsNew": {
     "title": "Újdonságok",
@@ -316,7 +348,11 @@
     "sub3Title": "Fejlesztett Időmérő",
     "sub3Desc": "Versenypontos időzítés egyéni formátumokkal.",
     "sub4Title": "Mentett Felkészülési Előzmények",
-    "sub4Desc": "Érd el az összes korábbi esetedet és munkamenetedet."
+    "sub4Desc": "Érd el az összes korábbi esetedet és munkamenetedet.",
+    "sub1Badge": "Számlázás",
+    "sub2Badge": "Új eszköz",
+    "sub3Badge": "Fejlesztve",
+    "sub4Badge": "Produktivitás"
   },
   "deepDive": {
     "title": "Active Grounding™ Technológia",
@@ -328,7 +364,17 @@
     "step3": "Kontextus Injektálás",
     "step3Desc": "Az ellenőrzött tények bekerülnek az MI promptba.",
     "step4": "Megalapozott Kimenet",
-    "step4Desc": "A válaszok valós forrásokat idéznek, nem hallucinációkat."
+    "step4Desc": "A válaszok valós forrásokat idéznek, nem hallucinációkat.",
+    "preview": {
+      "processHeading": "// Valós idejű kontextusfolyamat",
+      "scanning": "A https://news.example.com vizsgálata...",
+      "extracted": "1 402 tokennyi tiszta szöveg kinyerve",
+      "vectorizing": "Tartalom vektorizálása a tudásbázisba...",
+      "query": "Felhasználói kérdés: \"Gazdasági hatás?\"",
+      "retrieved": "3 releváns bizonyítékrészlet lekérve",
+      "generating": "Megalapozott válasz generálása...",
+      "response": "\"A megadott cikk alapján a gazdasági hatás várhatóan...\""
+    }
   },
   "rateLimit": {
     "title": "Kéréslimit Túllépve"
@@ -461,7 +507,7 @@
     "overall": "Összesített Értékelés",
     "caseStrength": "Eset Erőssége",
     "weaknesses": "Azonosított Gyengeségek",
-    "weaknessesCount": "probléma találva, súlyosság szerint rendezve",
+    "weaknessesCount": "{{count}} probléma találva, súlyosság szerint rendezve",
     "fallacies": "Észlelt Téves Következtetések",
     "fallaciesDesc": "Logikai hibák az érvedben",
     "crossEx": "Keresztkérdezési Kérdések",
@@ -484,7 +530,9 @@
     "discuss": "Megvitatás",
     "exportedDocx": "Támadás elemzés exportálva DOCX-ba!",
     "exportedGdocs": "Támadás elemzés exportálva Google Docs-ba!",
+    "exportedPdf": "Támadás elemzés exportálva PDF-be!",
     "exportFailedDocx": "Nem sikerült exportálni DOCX-ba",
+    "exportFailedPdf": "Nem sikerült exportálni PDF-be",
     "open": "Megnyitás",
     "authRequired": "Hitelesítés szükséges",
     "authRequiredDesc": "Jelentkezz ki és vissza a Google Drive hozzáférés megadásához.",
@@ -648,7 +696,8 @@
     "noSavedChats": "No saved chats yet",
     "noSavedChatsDesc": "Saved coaching chats will appear here.",
     "messageCount": "{{count}} messages",
-    "saved": "saved"
+    "savedCount": "{{count}} mentve",
+    "removeFile": "{{name}} eltávolítása"
   },
   "limitModal": {
     "trialEnded": "Ingyenes Próba Lejárt",
@@ -957,7 +1006,11 @@
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",
     "removedTitle": "Automatikus források eltávolítva",
-    "removedDesc": "{{count}} automatikusan mentett forrás eltávolítva a könyvtáradból."
+    "removedDesc": "{{count}} automatikusan mentett forrás eltávolítva a könyvtáradból.",
+    "removedPartialTitle": "Néhány forrás eltávolítva",
+    "removedPartialDesc": "{{succeeded}} eltávolítva, {{failed}} eltávolítása sikertelen.",
+    "removeFailed": "Nem sikerült eltávolítani az automatikusan mentett forrásokat.",
+    "removeFailedDesc": "{{succeeded}} forrás eltávolítva. {{failed}} forrás eltávolítása sikertelen."
   },
   "sharedPage": {
     "title": "Megosztott Tartalom",

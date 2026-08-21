@@ -6,10 +6,10 @@ const WhatsNew = () => {
     const { t } = useTranslation();
 
     const updates = [
-        { icon: Crown, title: t('whatsNew.sub1Title'), description: t('whatsNew.sub1Desc'), badge: "Billing" },
-        { icon: GitBranch, title: t('whatsNew.sub2Title'), description: t('whatsNew.sub2Desc'), badge: "New Tool" },
-        { icon: Timer, title: t('whatsNew.sub3Title'), description: t('whatsNew.sub3Desc'), badge: "Improved" },
-        { icon: History, title: t('whatsNew.sub4Title'), description: t('whatsNew.sub4Desc'), badge: "Productivity" },
+        { icon: Crown, title: t('whatsNew.sub1Title'), description: t('whatsNew.sub1Desc'), badge: t('whatsNew.sub1Badge') },
+        { icon: GitBranch, title: t('whatsNew.sub2Title'), description: t('whatsNew.sub2Desc'), badge: t('whatsNew.sub2Badge') },
+        { icon: Timer, title: t('whatsNew.sub3Title'), description: t('whatsNew.sub3Desc'), badge: t('whatsNew.sub3Badge') },
+        { icon: History, title: t('whatsNew.sub4Title'), description: t('whatsNew.sub4Desc'), badge: t('whatsNew.sub4Badge') },
     ];
 
     return (

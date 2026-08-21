@@ -1,6 +1,7 @@
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
+import { AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, mapAIError } from './client';
 import type { ProviderConfig } from './providers/types';
-import type { AskOutput } from './schemas/ask';
+import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
 export interface AskStreamOptions {
   citationMode?: boolean;
@@ -74,50 +75,110 @@ export async function streamAskChat(
   options: AskStreamOptions,
   handlers: AskStreamHandlers
 ): Promise<AskOutput> {
+  if (handlers.signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError');
+  }
+
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error('Please sign in to use AI features');
-
-  const provider = config.provider === 'lovable' ? 'openai' : config.provider;
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-stream`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      feature: 'ask',
-      input: {
-        message,
-        history,
-        mode,
-        citationMode: Boolean(options.citationMode),
-        webSearch: Boolean(options.webSearch),
-        prosConsMode: Boolean(options.prosConsMode),
-        argumentMapMode: Boolean(options.argumentMapMode),
-      },
-      provider,
-      model: config.model,
-      temperature: config.temperature,
-    }),
-    signal: handlers.signal,
-  });
-
-  if (!response.ok || !response.body) {
-    throw new Error(`Streaming request failed (${response.status})`);
+  if (handlers.signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError');
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let finalOutput: AskOutput | null = null;
+  const provider = config.provider === 'lovable' ? 'openai' : config.provider;
+  const requestId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const abortForCaller = () => controller.abort();
+  handlers.signal?.addEventListener('abort', abortForCaller);
 
-  const abortHandler = (): void => {
-    reader.cancel().catch((): undefined => undefined);
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  const cancelReader = (): void => {
+    reader?.cancel().catch((): undefined => undefined);
   };
-  handlers.signal?.addEventListener('abort', abortHandler);
+  controller.signal.addEventListener('abort', cancelReader);
+
+  const parseFinalOutput = (output: unknown): AskOutput => {
+    const parsed = AskOutputSchema.safeParse(output);
+    if (!parsed.success) {
+      throw new AIResponseError('Streaming response did not match the expected ask schema.', {
+        requestId,
+        details: { issues: parsed.error.issues },
+      });
+    }
+    return parsed.data;
+  };
+
+  const acceptFinal = (output: unknown, current: AskOutput | null): AskOutput | null => {
+    if (current) return current;
+    const parsed = parseFinalOutput(output);
+    handlers.onFinal?.(parsed);
+    return parsed;
+  };
+
+  const mapStreamingError = (message: string, payload?: Record<string, unknown>, status?: number): ReturnType<typeof mapAIError> =>
+    mapAIError({ message, context: { status } }, requestId, provider, config.model, payload);
 
   try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-stream`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        feature: 'ask',
+        input: {
+          message,
+          history,
+          mode,
+          citationMode: Boolean(options.citationMode),
+          webSearch: Boolean(options.webSearch),
+          prosConsMode: Boolean(options.prosConsMode),
+          argumentMapMode: Boolean(options.argumentMapMode),
+        },
+        provider,
+        model: config.model,
+        temperature: config.temperature,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok || !response.body) {
+      const payload = await response.clone().json().catch((): null => null);
+      throw mapStreamingError(
+        `Streaming request failed (${response.status})`,
+        payload && typeof payload === 'object' ? payload as Record<string, unknown> : undefined,
+        response.status,
+      );
+    }
+
+    reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalOutput: AskOutput | null = null;
+
+    const consumeEvents = (events: ParsedSSEEvent[]): void => {
+      for (const event of events) {
+        if (event.event === 'delta' && typeof event.data === 'object' && event.data !== null && 'text' in event.data) {
+          const text = String((event.data as { text?: unknown }).text ?? '');
+          if (text) handlers.onDelta(text);
+        }
+
+        if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
+          finalOutput = acceptFinal((event.data as { output: unknown }).output, finalOutput);
+        }
+
+        if (event.event === 'error') {
+          const payload = event.data && typeof event.data === 'object' ? event.data as Record<string, unknown> : undefined;
+          const message = typeof payload?.message === 'string' ? payload.message : 'Streaming request failed';
+          const status = typeof payload?.status === 'number' ? payload.status : undefined;
+          throw mapStreamingError(message, payload, status);
+        }
+      }
+    };
+
     while (true) {
       if (handlers.signal?.aborted) {
         throw new DOMException('Aborted', 'AbortError');
@@ -127,42 +188,25 @@ export async function streamAskChat(
 
       const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
       buffer = parsed.buffer;
-
-      for (const event of parsed.events) {
-        if (event.event === 'delta' && typeof event.data === 'object' && event.data !== null && 'text' in event.data) {
-          const text = String((event.data as { text?: unknown }).text ?? '');
-          if (text) handlers.onDelta(text);
-        }
-
-        if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
-          finalOutput = (event.data as { output: AskOutput }).output;
-          handlers.onFinal?.(finalOutput);
-        }
-
-        if (event.event === 'error') {
-          const errMsg = typeof event.data === 'object' && event.data !== null && 'message' in event.data
-            ? String((event.data as { message?: unknown }).message)
-            : 'Streaming request failed';
-          throw new Error(errMsg);
-        }
-      }
+      consumeEvents(parsed.events);
     }
 
     const finalParsed = consumeSSEChunk('', `${buffer}\n\n`);
-    for (const event of finalParsed.events) {
-      if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
-        finalOutput = (event.data as { output: AskOutput }).output;
-        handlers.onFinal?.(finalOutput);
-      }
-    }
+    consumeEvents(finalParsed.events);
 
     if (!finalOutput) {
-      throw new Error('Streaming request ended before a final response was received');
+      throw new AIResponseError('Streaming request ended before a final response was received', { requestId });
     }
 
     return finalOutput;
+  } catch (error) {
+    if (handlers.signal?.aborted) throw error;
+    if (controller.signal.aborted) throw new TimeoutError();
+    throw error;
   } finally {
-    handlers.signal?.removeEventListener('abort', abortHandler);
-    reader.cancel().catch((): void => undefined);
+    clearTimeout(timeoutId);
+    handlers.signal?.removeEventListener('abort', abortForCaller);
+    controller.signal.removeEventListener('abort', cancelReader);
+    cancelReader();
   }
 }

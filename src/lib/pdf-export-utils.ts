@@ -29,7 +29,10 @@ interface PDFHelpers {
     addSectionTitle: (title: string, color?: [number, number, number]) => void;
     addParagraph: (text: string, indent?: number) => void;
     addBulletList: (items: string[], indent?: number) => void;
-    addTable: (headers: string[], rows: string[][], options?: { headerColor?: [number, number, number] }) => void;
+    addTable: (headers: string[], rows: string[][], options?: {
+        headerColor?: [number, number, number];
+        columnStyles?: Record<number, { cellWidth: number }>;
+    }) => void;
     addFooter: () => void;
 }
 
@@ -132,7 +135,10 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         state.y += 3;
     };
 
-    const addTable = (headers: string[], rows: string[][], options?: { headerColor?: [number, number, number] }) => {
+    const addTable = (headers: string[], rows: string[][], options?: {
+        headerColor?: [number, number, number];
+        columnStyles?: Record<number, { cellWidth: number }>;
+    }) => {
         const headerColor = options?.headerColor || COLORS.primary;
         checkPageBreak(30);
 
@@ -162,9 +168,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             },
             rowPageBreak: 'avoid',
             pageBreak: 'auto',
-            columnStyles: {
-                0: { cellWidth: 22 },
-            },
+            ...(options?.columnStyles ? { columnStyles: options.columnStyles } : {}),
         });
 
         const finalY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY;
@@ -203,7 +207,16 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
         const pdf = await createPDFDocument();
         const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addFooter } = pdf;
 
-        const side = result.metadata?.side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
+        const sideValue = result.metadata?.side === 'pro'
+            ? 'pro'
+            : result.metadata?.side === 'con'
+                ? 'con'
+                : 'unknown';
+        const side = sideValue === 'pro'
+            ? i18n.t('export.proposition')
+            : sideValue === 'con'
+                ? i18n.t('export.opposition')
+                : 'Unknown';
         const format = result.metadata?.format?.toUpperCase() || 'Standard';
         const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
         const margin = pdf.margin;
@@ -246,7 +259,19 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             const estimatedHeight = 12 + details.length * 14;
             pdf.checkPageBreak(estimatedHeight);
 
-            const blockStartY = pdf.y;
+            let segmentStartY = pdf.y;
+            const flushAccentBar = () => {
+                const height = pdf.y - segmentStartY + 3;
+                if (height <= 0) return;
+                doc.setFillColor(...accentColor);
+                doc.roundedRect(margin, segmentStartY - 3, 3, height, 1, 1, 'F');
+            };
+            const checkBlockPageBreak = (neededHeight: number) => {
+                if (pdf.y + neededHeight <= pdf.pageHeight - pdf.margin - 15) return;
+                flushAccentBar();
+                pdf.checkPageBreak(neededHeight);
+                segmentStartY = pdf.y;
+            };
 
             // Contention title
             doc.setFontSize(12);
@@ -268,22 +293,19 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(...COLORS.secondary);
-                pdf.checkPageBreak(10);
+                checkBlockPageBreak(10);
                 doc.text(label, margin + textIndent, pdf.y);
                 pdf.y += 4.5;
 
                 doc.setFont('helvetica', 'normal');
                 doc.setTextColor(...COLORS.dark);
                 const lines = doc.splitTextToSize(text, contentWidth - textIndent - 2);
-                pdf.checkPageBreak(lines.length * 4.8);
+                checkBlockPageBreak(lines.length * 4.8);
                 doc.text(lines, margin + textIndent, pdf.y);
                 pdf.y += lines.length * 4.8 + 3;
             });
 
-            // Draw the accent bar on the left side spanning the full block
-            const blockEndY = pdf.y;
-            doc.setFillColor(...accentColor);
-            doc.roundedRect(margin, blockStartY - 3, 3, blockEndY - blockStartY + 3, 1, 1, 'F');
+            flushAccentBar();
 
             pdf.y += 6;
         };
@@ -357,7 +379,7 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
         }
 
         addFooter();
-        doc.save(`DebateCase_${side}.pdf`);
+        doc.save(`DebateCase_${sideValue}.pdf`);
         return true;
     } catch (error) {
         console.error('Failed to export case to PDF:', error);
@@ -394,7 +416,10 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
                 w.description || '',
                 w.howOpponentAttacks || '',
             ]);
-            addTable(['Severity', 'Type', 'Description', 'Attack Vector'], rows, { headerColor: COLORS.danger });
+            addTable(['Severity', 'Type', 'Description', 'Attack Vector'], rows, {
+                headerColor: COLORS.danger,
+                columnStyles: { 0: { cellWidth: 22 } },
+            });
         }
 
         // Fallacies

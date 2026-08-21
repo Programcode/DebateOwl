@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AnimatedSectionProps {
@@ -35,16 +35,20 @@ interface StaggeredContainerProps {
 }
 
 export function StaggeredContainer({ children, staggerMs = 200, className }: StaggeredContainerProps) {
+  // Unique per-instance class so the generated nth-child animation-delay
+  // rules below don't leak across multiple StaggeredContainers on one page.
+  const instanceClass = `staggered-container-${useId().replace(/:/g, '')}`;
+
   return (
-    <div className={cn('staggered-container', className)} style={{ '--stagger-ms': `${staggerMs}ms` } as React.CSSProperties}>
+    <div className={cn('staggered-container', instanceClass, className)} style={{ '--stagger-ms': `${staggerMs}ms` } as React.CSSProperties}>
       {children}
       <style>{`
-        .staggered-container > * {
+        .${instanceClass} > * {
           opacity: 0;
           transform: translateY(8px);
           animation: stagger-in 0.3s ease-out forwards;
         }
-        ${Array.from({ length: 10 }, (_, i) => `.staggered-container > *:nth-child(${i + 1}) { animation-delay: ${i * staggerMs}ms; }`).join('\n')}
+        ${Array.from({ length: 10 }, (_, i) => `.${instanceClass} > *:nth-child(${i + 1}) { animation-delay: ${i * staggerMs}ms; }`).join('\n')}
         @keyframes stagger-in {
           to {
             opacity: 1;
@@ -52,7 +56,7 @@ export function StaggeredContainer({ children, staggerMs = 200, className }: Sta
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .staggered-container > * {
+          .${instanceClass} > * {
             opacity: 1;
             transform: none;
             animation: none;

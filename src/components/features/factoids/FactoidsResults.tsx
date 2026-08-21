@@ -26,9 +26,9 @@ interface FactoidsResultsProps {
 }
 
 const verificationConfig = {
-  verified: { icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/10', label: 'Verified' },
-  unverified: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', label: 'Unverified' },
-  pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Pending' },
+  verified: { icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/10', labelKey: 'factoidsResults.verified' },
+  unverified: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', labelKey: 'factoidsResults.unverified' },
+  pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', labelKey: 'factoidsResults.pending' },
 };
 
 function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
@@ -63,7 +63,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
           <div className="flex items-center gap-2 mt-1">
             <Badge className={cn('text-xs', config.bg, config.color)}>
               <VerifyIcon className="mr-1 h-3 w-3" />
-              {config.label}
+              {t(config.labelKey)}
             </Badge>
             <span className="text-xs text-muted-foreground">
               {t('factoidsResults.relevance')} {factoid.relevanceScore}%

@@ -29,7 +29,7 @@ const FAQ = () => {
                     className="mb-12 text-center"
                 >
                     <h2 className="mb-4 text-3xl font-bold tracking-tight">{t('faq.title')}</h2>
-                    <p className="text-muted-foreground">Pricing, workflow, and product details at a glance.</p>
+                    <p className="text-muted-foreground">{t('faq.subtitle')}</p>
                 </motion.div>
 
                 <motion.div

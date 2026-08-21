@@ -17,9 +17,21 @@ export function AutoSavedSourcesUndo() {
   const handleUndo = async () => {
     setRemoving(true);
     try {
-      const count = autoSavedSources.length;
-      await Promise.all(autoSavedSources.map((source) => removeSource(source.id)));
-      toast.success(t('autoSavedSources.removedTitle'), { description: t('autoSavedSources.removedDesc', { count }) });
+      const results = await Promise.allSettled(autoSavedSources.map((source) => removeSource(source.id)));
+      const succeeded = results.filter((result) => result.status === 'fulfilled').length;
+      const failed = results.length - succeeded;
+
+      if (failed === 0) {
+        toast.success(t('autoSavedSources.removedTitle'), { description: t('autoSavedSources.removedDesc', { count: succeeded }) });
+      } else if (succeeded === 0) {
+        toast.error(t('autoSavedSources.removeFailed', 'Could not remove auto-saved sources.'), {
+          description: t('autoSavedSources.removeFailedDesc', { succeeded, failed }),
+        });
+      } else {
+        toast.warning(t('autoSavedSources.removedPartialTitle'), {
+          description: t('autoSavedSources.removedPartialDesc', { succeeded, failed }),
+        });
+      }
     } catch {
       toast.error(t('autoSavedSources.removeFailed', 'Could not remove auto-saved sources.'));
     } finally {

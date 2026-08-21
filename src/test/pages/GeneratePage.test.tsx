@@ -5,6 +5,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GeneratePage from '@/pages/GeneratePage';
 import { BrowserRouter } from 'react-router-dom';
 
+Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { value: vi.fn(), writable: true });
+
 // Mock dependencies
 vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
@@ -76,10 +78,11 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
 }));
 
 vi.mock('@/components/features/generate/GenerateResults', () => ({
-    GenerateResults: ({ result, onRegenerateSection, onDiscuss }: { result: { caseStructure: { thesis: string } }, onRegenerateSection: unknown, onDiscuss: () => void }) => (
+    GenerateResults: ({ result, onDiscuss, onSave }: { result: { caseStructure: { thesis: string } }, onDiscuss: () => void, onSave: () => void }) => (
         <div data-testid="generate-results">
             <h1>Results for {result.caseStructure.thesis}</h1>
             <button onClick={onDiscuss}>Discuss</button>
+            <button onClick={onSave} data-testid="save-case">Save case</button>
         </div>
     ),
 }));
@@ -135,6 +138,31 @@ describe('GeneratePage Integration', () => {
         // Verify result setting
         expect(mockSetGenerateResult).toHaveBeenCalledWith(mockResult);
         expect(mockSetGenerateLoading).toHaveBeenCalledWith(false);
+    });
+
+    it('reports a rejected case save instead of confirming success', async () => {
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Existing Thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: {},
+        };
+        mockSaveCurrentCase.mockRejectedValueOnce(new Error('save failed'));
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+
+        fireEvent.click(screen.getByTestId('save-case'));
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+        });
+        expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Case Saved' }));
     });
 
     it('displays results when store has data', () => {

@@ -458,7 +458,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
           <PanelLeftOpen className="mr-2 h-4 w-4" />
           {t('askChat.savedChats', 'Saved chats')}
         </Button>
-        <span className="text-xs text-muted-foreground">{savedChats.length} {t('askChat.saved', 'saved')}</span>
+        <span className="text-xs text-muted-foreground">{t('askChat.savedCount', '{{count}} saved', { count: savedChats.length })}</span>
       </div>
 
       <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
@@ -634,14 +634,14 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
 
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {files.map((file) => (
-              <div key={file.name} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs motion-list-item">
+            {files.map((file, index) => (
+              <div key={`${file.name}-${index}`} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-xs motion-list-item">
                 <Paperclip className="h-3 w-3" />
                 <span className="max-w-[100px] truncate">{file.name}</span>
                 <button
-                  onClick={() => removeFile(files.indexOf(file))}
+                  onClick={() => removeFile(index)}
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label={`Remove ${file.name}`}
+                  aria-label={t('askChat.removeFile', 'Remove {{name}}', { name: file.name })}
                 >
                   <X className="h-3 w-3" />
                 </button>

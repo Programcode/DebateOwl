@@ -52,13 +52,13 @@ const Pricing = () => {
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
                             <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                New Users
+                                {t('pricing.trialBadge')}
                             </span>
                         </div>
                         <p className="text-4xl font-bold text-foreground">
                             {t('pricing.trialPrice')}<span className="text-base font-medium text-muted-foreground"> {t('pricing.trialPeriod')}</span>
                         </p>
-                        <p className="mt-2 text-sm text-muted-foreground">Use the full workflow before deciding on Pro.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">{t('pricing.trialDesc')}</p>
 
                         <ul className="mt-6 space-y-3">
                             {TRIAL_FEATURES.map((feature) => (
@@ -90,13 +90,13 @@ const Pricing = () => {
                         <div className="mb-4 mt-2 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.pro')}</h3>
                             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
-                                Power Users
+                                {t('pricing.proBadge')}
                             </span>
                         </div>
                         <p className="text-4xl font-bold text-foreground">
                             {t('pricing.proPrice')}<span className="text-base font-medium text-muted-foreground">{t('pricing.proPeriod')}</span>
                         </p>
-                        <p className="mt-2 text-sm text-muted-foreground">For heavy prep weeks, tougher topics, and advanced model access.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">{t('pricing.proDesc')}</p>
 
                         <ul className="mt-6 space-y-3">
                             {PRO_FEATURES.map((feature) => (

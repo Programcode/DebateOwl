@@ -31,7 +31,7 @@ const Footer = () => {
                     </div>
 
                     <p className="text-sm text-muted-foreground">
-                        {t('footer.copyright')} All rights reserved.
+                        {t('footer.copyright')}
                     </p>
                 </div>
             </div>

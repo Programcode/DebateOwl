@@ -86,7 +86,10 @@ function finalizeImport(file: File, fileType: SourceFileImportResult['fileType']
     throw new SourceFileImportError('No readable text was found in this file.', 'empty');
   }
   if (content.length > MAX_EXTRACTED_CHARS) {
-    content = content.slice(0, MAX_EXTRACTED_CHARS).trim();
+    let cut = MAX_EXTRACTED_CHARS;
+    const finalCodeUnit = content.charCodeAt(cut - 1);
+    if (finalCodeUnit >= 0xD800 && finalCodeUnit <= 0xDBFF) cut -= 1;
+    content = content.slice(0, cut).trim();
     warnings.push('Large file truncated to the first readable section.');
   }
 

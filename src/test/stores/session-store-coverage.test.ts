@@ -45,6 +45,10 @@ describe('session-store coverage paths', () => {
       savedFactoids: [],
       savedChats: [],
       savedFlowcharts: [],
+      autosavedCases: [],
+      autosavedAttacks: [],
+      autosavedBrainstorms: [],
+      autosavedFactoids: [],
       sourceFolders: ['General'],
       sourceLibrary: [],
       pendingFlowchartData: null,
@@ -55,7 +59,7 @@ describe('session-store coverage paths', () => {
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
   });
 
-  it('persists source content but excludes transient loading and streaming state', () => {
+  it('persists local collections but excludes transient loading and streaming state', () => {
     const source = {
       id: 'local-source',
       title: 'Local source',
@@ -67,7 +71,10 @@ describe('session-store coverage paths', () => {
     const state = {
       ...useSessionStore.getState(),
       generateLoading: true,
+      sourceFolders: ['General', 'Offline folder'],
       sourceLibrary: [source],
+      savedCases: [{ id: 'offline-case', title: 'Offline case', createdAt: Date.now(), data: { offline: true } as any }],
+      autosavedCases: [{ id: 'autosave', title: 'Draft', createdAt: Date.now(), data: { draft: true } as any }],
       askStreamingAssistant: {
         id: 'streaming',
         role: 'assistant' as const,
@@ -82,6 +89,9 @@ describe('session-store coverage paths', () => {
     const persisted = partialize!(state) as Partial<typeof state>;
 
     expect(persisted.sourceLibrary).toEqual([source]);
+    expect(persisted.sourceFolders).toEqual(['General', 'Offline folder']);
+    expect(persisted.savedCases).toEqual(state.savedCases);
+    expect(persisted.autosavedCases).toEqual(state.autosavedCases);
     expect(persisted).not.toHaveProperty('generateLoading');
     expect(persisted).not.toHaveProperty('askStreamingAssistant');
   });
@@ -178,7 +188,7 @@ describe('session-store coverage paths', () => {
     expect(useSessionStore.getState().askMessages).toHaveLength(2);
   });
 
-  it('retains local ids when server insert returns no data', async () => {
+  it('rejects server saves that return no record without adding local items', async () => {
     setMockTableResponse('brainstorms', { insert: null });
     setMockTableResponse('factoids', { insert: null });
     setMockTableResponse('chats', { insert: null });
@@ -188,16 +198,16 @@ describe('session-store coverage paths', () => {
     useSessionStore.getState().setFactoidsResult(factoidsOutput as any);
     useSessionStore.getState().addAskMessage({ role: 'user', content: 'Needs local id' });
 
-    await useSessionStore.getState().saveCurrentBrainstorm('Brain no server');
-    await useSessionStore.getState().saveCurrentFactoids('Fact no server');
-    await useSessionStore.getState().saveCurrentChat('Chat no server');
-    await useSessionStore.getState().saveFlowchart('Flow no server', { nodes: [], edges: [] });
+    await expect(useSessionStore.getState().saveCurrentBrainstorm('Brain no server')).rejects.toThrow('No record returned');
+    await expect(useSessionStore.getState().saveCurrentFactoids('Fact no server')).rejects.toThrow('No record returned');
+    await expect(useSessionStore.getState().saveCurrentChat('Chat no server')).rejects.toThrow('No record returned');
+    await expect(useSessionStore.getState().saveFlowchart('Flow no server', { nodes: [], edges: [] })).rejects.toThrow('No record returned');
 
     const state = useSessionStore.getState();
-    expect(state.savedBrainstorms[0].id).not.toBe('brain_1');
-    expect(state.savedFactoids[0].id).not.toBe('fact_1');
-    expect(state.savedChats[0].id).not.toBe('chat_1');
-    expect(state.savedFlowcharts[0].id).not.toBe('flow_1');
+    expect(state.savedBrainstorms).toHaveLength(0);
+    expect(state.savedFactoids).toHaveLength(0);
+    expect(state.savedChats).toHaveLength(0);
+    expect(state.savedFlowcharts).toHaveLength(0);
   });
 
   it('saves and deletes flowcharts', async () => {
@@ -342,7 +352,7 @@ describe('session-store coverage paths', () => {
     }
   });
 
-  it('clearAllData deletes by user and clears local state', async () => {
+  it('clearAllData clears local state after successful atomic server erasure', async () => {
     useSessionStore.setState({
       savedCases: [{ id: 'case', title: 'c', createdAt: Date.now(), data: {} as any }],
       savedAttacks: [{ id: 'attack', title: 'a', createdAt: Date.now(), data: {} as any }],
@@ -350,6 +360,10 @@ describe('session-store coverage paths', () => {
       savedFactoids: [{ id: 'fact', title: 'f', createdAt: Date.now(), data: factoidsOutput as any }],
       savedChats: [{ id: 'chat', title: 'chat', createdAt: Date.now(), data: [] as any }],
       savedFlowcharts: [{ id: 'flow', title: 'flow', createdAt: Date.now(), data: { nodes: [], edges: [] } as any }],
+      autosavedCases: [{ id: 'autosave-case', title: 'draft', createdAt: Date.now(), data: {} as any }],
+      autosavedAttacks: [{ id: 'autosave-attack', title: 'draft', createdAt: Date.now(), data: {} as any }],
+      autosavedBrainstorms: [{ id: 'autosave-brainstorm', title: 'draft', createdAt: Date.now(), data: {} as any }],
+      autosavedFactoids: [{ id: 'autosave-factoid', title: 'draft', createdAt: Date.now(), data: {} as any }],
       sourceLibrary: [{ id: 'src', title: 's', content: 'x', type: 'text', createdAt: Date.now(), isActive: true }],
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
 
@@ -362,11 +376,14 @@ describe('session-store coverage paths', () => {
     expect(state.savedFactoids).toHaveLength(0);
     expect(state.savedChats).toHaveLength(0);
     expect(state.savedFlowcharts).toHaveLength(0);
+    expect(state.autosavedCases).toHaveLength(0);
+    expect(state.autosavedAttacks).toHaveLength(0);
+    expect(state.autosavedBrainstorms).toHaveLength(0);
+    expect(state.autosavedFactoids).toHaveLength(0);
     expect(state.sourceLibrary).toHaveLength(0);
 
-    expect(supabaseMock.from).toHaveBeenCalledWith('messages');
-    expect(supabaseMock.from).toHaveBeenCalledWith('api_keys');
-    expect(supabaseMock.from).toHaveBeenCalledWith('user_settings');
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('clear_current_user_data');
+    expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 
   it('throws clearAllData safety error when user is missing', async () => {

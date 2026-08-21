@@ -7,10 +7,14 @@ interface StreamingIndicatorProps {
   className?: string;
 }
 
+// Guard against 0/negative/NaN intervals causing a runaway timer.
+const MIN_INTERVAL_MS = 200;
+
 export function StreamingIndicator({ messages, intervalMs = 3000, className }: StreamingIndicatorProps) {
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [fading, setFading] = useState(false);
+  const safeIntervalMs = Number.isFinite(intervalMs) ? Math.max(intervalMs, MIN_INTERVAL_MS) : MIN_INTERVAL_MS;
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -24,21 +28,21 @@ export function StreamingIndicator({ messages, intervalMs = 3000, className }: S
         timeouts.delete(timeout);
       }, 200);
       timeouts.add(timeout);
-    }, intervalMs);
+    }, safeIntervalMs);
     return () => {
       clearInterval(interval);
       timeouts.forEach(clearTimeout);
     };
-  }, [messages.length, intervalMs]);
+  }, [messages.length, safeIntervalMs]);
 
   useEffect(() => {
     setProgress(0);
-    const step = 100 / (intervalMs / 50);
+    const step = 100 / (safeIntervalMs / 50);
     const timer = setInterval(() => {
       setProgress((prev) => Math.min(prev + step, 100));
     }, 50);
     return () => clearInterval(timer);
-  }, [index, intervalMs]);
+  }, [index, safeIntervalMs]);
 
   return (
     <div className={cn('motion-swap flex flex-col items-center justify-center gap-5 py-12', className)} role="status" aria-label="Loading">

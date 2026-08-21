@@ -170,15 +170,64 @@ describe("session-store", () => {
     expect(state.askMessages).toHaveLength(0);
   });
 
-  it("clearAllData clears saved items locally", async () => {
+  it("keeps a source locally and rejects when its server deletion fails", async () => {
+    useSessionStore.setState({
+      sourceLibrary: [{
+        id: "source_1",
+        title: "Source",
+        content: "Content",
+        type: "text",
+        createdAt: Date.now(),
+        isActive: true,
+      }],
+    } as Partial<ReturnType<typeof useSessionStore.getState>>);
+    supabaseMock.from.mockImplementationOnce((() => ({
+      delete: () => ({ eq: async () => ({ data: null as null, error: { message: "delete failed" } }) }),
+    })) as never);
+
+    await expect(useSessionStore.getState().removeSource("source_1")).rejects.toThrow("delete failed");
+    expect(useSessionStore.getState().sourceLibrary).toHaveLength(1);
+  });
+
+  it("persists local collections but excludes pending session state", () => {
+    const partialize = useSessionStore.persist.getOptions().partialize!;
+    const savedCases = [{ id: "case_1", title: "Case", createdAt: Date.now(), data: sampleGenerate }];
+    const sourceLibrary = [{
+      id: "source_1",
+      title: "Source",
+      content: "Content",
+      type: "text" as const,
+      createdAt: Date.now(),
+      isActive: true,
+    }];
+    const persisted = partialize({
+      ...useSessionStore.getState(),
+      savedCases,
+      sourceLibrary,
+      pendingFlowchartData: { nodes: [], edges: [] },
+    }) as Partial<ReturnType<typeof useSessionStore.getState>>;
+
+    expect(persisted.savedCases).toEqual(savedCases);
+    expect(persisted.sourceLibrary).toEqual(sourceLibrary);
+    expect(persisted).not.toHaveProperty("pendingFlowchartData");
+  });
+
+  it("keeps local data when atomic server erasure is rejected", async () => {
     useSessionStore.setState({
       savedCases: [{ id: "1", title: "Case", createdAt: Date.now(), data: sampleGenerate }],
       savedAttacks: [{ id: "2", title: "Attack", createdAt: Date.now(), data: sampleAttack }],
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
+    supabaseMock.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: "erase failed" },
+    });
 
-    await useSessionStore.getState().clearAllData();
+    await expect(useSessionStore.getState().clearAllData()).rejects.toThrow("erase failed");
+
     const state = useSessionStore.getState();
-    expect(state.savedCases).toHaveLength(0);
-    expect(state.savedAttacks).toHaveLength(0);
+    expect(state.savedCases).toHaveLength(1);
+    expect(state.savedAttacks).toHaveLength(1);
+    expect(supabaseMock.rpc).toHaveBeenCalledWith("clear_current_user_data");
+    expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 });

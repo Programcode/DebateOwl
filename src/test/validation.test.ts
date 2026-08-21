@@ -86,6 +86,21 @@ describe('File Validation', () => {
             expect(result.valid).toBe(false);
             expect(result.error).toContain('unsupported file type');
         });
+
+        it('rejects an allowed extension with an unsupported declared MIME type', () => {
+            const file = createMockFile('notes.txt', 1000, 'application/pdf');
+
+            expect(validateSingleFile(file)).toMatchObject({
+                valid: false,
+                error: expect.stringContaining('unsupported file type'),
+            });
+        });
+
+        it('accepts an allowed extension when the browser omits its MIME type', () => {
+            const file = createMockFile('notes.txt', 1000, '');
+
+            expect(validateSingleFile(file)).toEqual({ valid: true });
+        });
     });
 
     describe('validateFileUpload', () => {

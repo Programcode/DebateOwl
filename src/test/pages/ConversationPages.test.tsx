@@ -97,9 +97,10 @@ vi.mock('@/components/features/subscription', () => ({
 }));
 
 vi.mock('@/components/features/ask/AskChat', () => ({
-  AskChat: ({ onSend, onSaveSource }: { onSend: (...args: any[]) => Promise<void>, onSaveSource: (t: string, c: string) => void }) => (
+  AskChat: ({ onSend, onSaveChat, onSaveSource }: { onSend: (...args: any[]) => Promise<void>, onSaveChat: () => void, onSaveSource: (t: string, c: string) => void }) => (
     <div>
       <button type="button" onClick={() => void onSend('How do I frame this?', 'general', true, true, true, true)} data-testid="ask-send">send</button>
+      <button type="button" onClick={onSaveChat} data-testid="ask-save-chat">save-chat</button>
       <button type="button" onClick={() => onSaveSource('Saved Title', 'Saved Content')} data-testid="ask-save">save-source</button>
     </div>
   ),
@@ -280,6 +281,24 @@ describe('Conversation Pages', () => {
     });
 
     expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalledWith('stale response');
+  });
+
+  it('AskPage reports a rejected chat save instead of confirming success', async () => {
+    sessionState.askMessages = [{ content: 'Chat to save' }];
+    sessionState.saveCurrentChat.mockRejectedValueOnce(new Error('save failed'));
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-save-chat'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+    });
+    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Chat Saved' }));
   });
 
   it('AskPage saves source to library', () => {

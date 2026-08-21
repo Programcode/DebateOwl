@@ -1,4 +1,5 @@
 // src/components/ui/section-card.tsx
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ export function SectionCard({
   isLoading,
   icon,
 }: SectionCardProps) {
+  const { t } = useTranslation();
   return (
     <Card className={cn('motion-reveal card-hover-glow hover-lift relative overflow-hidden', className)}>
       {isLoading && <LoadingOverlay message={`Generating ${title.toLowerCase()}...`} />}
@@ -43,6 +45,7 @@ export function SectionCard({
               onClick={onRegenerate}
               disabled={isLoading}
               className="h-8 w-8 shrink-0 hover-icon-spin"
+              aria-label={t('common.regenerate', 'Regenerate {{title}}', { title })}
             >
               <RefreshCw className="h-4 w-4" />
             </Button>

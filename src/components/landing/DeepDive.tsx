@@ -61,32 +61,32 @@ const DeepDive = () => {
                         <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 blur-3xl rounded-full opacity-40" />
                         <div className="glass-card p-8 rounded-2xl border border-border/50 relative overflow-hidden">
                             <div className="space-y-4 font-mono text-sm max-h-[400px] overflow-hidden opacity-90">
-                                <div className="text-muted-foreground">// Real-time Context Process</div>
+                                <div className="text-muted-foreground">{t('deepDive.preview.processHeading')}</div>
                                 <div className="flex gap-2">
                                     <span className="text-green-500">➜</span>
-                                    <span>Scanning https://news.example.com...</span>
+                                    <span>{t('deepDive.preview.scanning')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-green-500">➜</span>
-                                    <span>Extracted 1,402 tokens of clean text</span>
+                                    <span>{t('deepDive.preview.extracted')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-blue-500">➜</span>
-                                    <span>Vectorizing content into Knowledge Base...</span>
+                                    <span>{t('deepDive.preview.vectorizing')}</span>
                                 </div>
                                 <div className="p-3 bg-secondary/50 rounded border border-border/50 my-2">
-                                    <span className="text-accent">User Query: "Impact on economy?"</span>
+                                    <span className="text-accent">{t('deepDive.preview.query')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-cyan-500">➜</span>
-                                    <span>Retrieved 3 relevant evidence chunks</span>
+                                    <span>{t('deepDive.preview.retrieved')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-cyan-500">➜</span>
-                                    <span>Generating grounded response...</span>
+                                    <span>{t('deepDive.preview.generating')}</span>
                                 </div>
                                 <div className="p-3 bg-primary/10 rounded border border-primary/20 text-foreground">
-                                    "Based on the provided article, the economic impact is estimated at..."
+                                    {t('deepDive.preview.response')}
                                 </div>
                             </div>
                         </div>

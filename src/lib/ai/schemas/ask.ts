@@ -1,13 +1,6 @@
 // src/lib/ai/schemas/ask.ts
 import { z } from 'zod';
-
-const SafeWebUrlSchema = z.string().url().refine(
-  (value) => {
-    const protocol = new URL(value).protocol;
-    return protocol === 'http:' || protocol === 'https:';
-  },
-  'Source URLs must use http or https',
-);
+import { SafeWebUrlSchema } from './url';
 
 export const AskInputSchema = z.object({
   message: z.string().min(1, 'Message is required'),

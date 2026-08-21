@@ -476,6 +476,10 @@ describe('Factoids Schema', () => {
             expect(CitationSchema.safeParse({ ...validCitation, verified: 'unknown' }).success).toBe(false);
         });
 
+        it.each(['javascript:alert(1)', 'mailto:editor@example.com', 'ftp://example.com/report'])('rejects non-HTTP(S) citation URLs', (url) => {
+            expect(CitationSchema.safeParse({ ...validCitation, url }).success).toBe(false);
+        });
+
         it('accepts all verified statuses', () => {
             expect(CitationSchema.safeParse({ ...validCitation, verified: 'verified' }).success).toBe(true);
             expect(CitationSchema.safeParse({ ...validCitation, verified: 'unverified' }).success).toBe(true);
@@ -640,6 +644,17 @@ describe('Ask Schema', () => {
                 followUpQuestions: [],
                 uncertainties: [],
             }).success).toBe(true);
+        });
+
+        it.each(['javascript:alert(1)', 'mailto:editor@example.com', 'ftp://example.com/report'])('rejects non-HTTP(S) search source URLs', (url) => {
+            expect(AskOutputSchema.safeParse({
+                ...validOutput,
+                searchInfo: {
+                    webSearchUsed: true,
+                    queries: ['debate evidence'],
+                    sources: [{ title: 'Source', url, verified: true }],
+                },
+            }).success).toBe(false);
         });
     });
 });

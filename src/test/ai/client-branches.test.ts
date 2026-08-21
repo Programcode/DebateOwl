@@ -349,6 +349,50 @@ describe('AI client branch coverage', () => {
     }));
   });
 
+  it('validates Ask responses before returning them', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: {
+          response: 42,
+          followUpQuestions: [],
+          uncertainties: [],
+        },
+      },
+      error: null,
+    });
+
+    await expect(askChat('How do I weigh impacts?', [], 'general', config)).rejects.toBeInstanceOf(AIResponseError);
+  });
+
+  it('counts factoids removed by the source limit', async () => {
+    const factoid = (id: string) => ({
+      id,
+      shortClaim: `Claim ${id}`,
+      keyFigure: '50%',
+      context: 'Context',
+      limitations: 'Limitations',
+      citation: { title: 'Source', publisher: 'Publisher', verified: 'verified' },
+      howToUse: 'Use it',
+      relevanceScore: 80,
+    });
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: {
+          factoids: [factoid('1'), factoid('2'), factoid('3'), factoid('4')],
+          searchSuggestions: [],
+          warnings: [],
+          verificationStatus: 'complete',
+        },
+      },
+      error: null,
+    });
+
+    const result = await factoids({ claim: 'Claim', direction: 'for', sourceType: 'any', sourceCount: 3 }, config);
+
+    expect(result.factoids).toHaveLength(3);
+    expect(result.filteredOutCount).toBe(1);
+  });
+
   it('maps invoke errors with 401 status to AIAuthError', async () => {
     invokeMock.mockResolvedValueOnce({
       data: null,

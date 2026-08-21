@@ -31,7 +31,8 @@ const severityConfig = {
 
 function WeaknessCard({ weakness }: { weakness: Weakness }) {
   const { t } = useTranslation();
-  const config = severityConfig[weakness.severity];
+  // Defensive fallback for unrecognized/legacy severity values.
+  const config = severityConfig[weakness.severity] ?? severityConfig.minor;
   const Icon = config.icon;
 
   return (
@@ -97,12 +98,29 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
   const majorCount = weaknesses.filter(w => w.severity === 'major').length;
   const minorCount = weaknesses.filter(w => w.severity === 'minor').length;
 
+  const handlePdfExport = async () => {
+    try {
+      const success = await exportAttackToPdf(result);
+      if (success) {
+        toast.success(t('attackResults.exportedPdf'));
+      } else {
+        toast.error(t('attackResults.exportFailedPdf'));
+      }
+    } catch {
+      toast.error(t('attackResults.exportError'));
+    }
+  };
+
   const handleDocxExport = async () => {
-    const success = await exportAttackToDocx(result);
-    if (success) {
-      toast.success(t('attackResults.exportedDocx'));
-    } else {
-      toast.error(t('attackResults.exportFailedDocx'));
+    try {
+      const success = await exportAttackToDocx(result);
+      if (success) {
+        toast.success(t('attackResults.exportedDocx'));
+      } else {
+        toast.error(t('attackResults.exportFailedDocx'));
+      }
+    } catch {
+      toast.error(t('attackResults.exportError'));
     }
   };
 
@@ -158,7 +176,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
             />
             <div className="mt-3">
               <ExportToolbar
-                onPdf={() => exportAttackToPdf(result)}
+                onPdf={handlePdfExport}
                 onDocx={handleDocxExport}
                 onGoogleDocs={handleGoogleDocsExport}
                 isExportingGDocs={isExportingGDocs}
@@ -200,8 +218,7 @@ export function AttackResults({ result, onDiscuss }: AttackResultsProps) {
       {/* Weaknesses */}
       < SectionCard
         title={t('attackResults.weaknesses')}
-        description={`${weaknesses.length} ${t('attackResults.weaknessesCount')}`
-        }
+        description={t('attackResults.weaknessesCount', { count: weaknesses.length })}
         icon={< AlertCircle className="h-5 w-5" />}
       >
         <div className="space-y-4">

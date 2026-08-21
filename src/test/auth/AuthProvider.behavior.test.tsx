@@ -97,6 +97,7 @@ function AuthConsumer() {
       <div data-testid="loading">{String(loading)}</div>
       <div data-testid="user">{user?.id ?? 'none'}</div>
       <button onClick={() => void signInWithGoogle()} type="button">sign-in</button>
+      <button onClick={() => void signInWithGoogle({ driveAccess: true })} type="button">sign-in-with-drive</button>
       <button onClick={() => void signOut()} type="button">sign-out</button>
     </div>
   );
@@ -152,6 +153,29 @@ describe('AuthProvider behavior', () => {
     expect(onAuthStateChangeMock).toHaveBeenCalled();
   });
 
+  it('does not rehydrate stores for an auth event with the same user', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'user_1' }, access_token: 'token' } },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    });
+    await act(async () => {
+      callbackRef.current?.('INITIAL_SESSION', { user: { id: 'user_1' }, access_token: 'token' });
+    });
+
+    expect(hydrateSessionStoreMock).toHaveBeenCalledTimes(1);
+    expect(hydrateSettingsStoreMock).toHaveBeenCalledTimes(1);
+  });
+
   it('removes refresh tokens persisted by older clients during startup', async () => {
     localStorage.setItem('google_provider_refresh_token', 'legacy-refresh-token');
     getSessionMock.mockResolvedValue({
@@ -194,7 +218,7 @@ describe('AuthProvider behavior', () => {
     warnSpy.mockRestore();
   });
 
-  it('handles auth state changes without persisting provider refresh tokens', async () => {
+  it('keeps provider access tokens only for the browser session', async () => {
     getSessionMock.mockResolvedValue({
       data: { session: { user: { id: 'existing-user' } } },
       error: null,
@@ -218,14 +242,15 @@ describe('AuthProvider behavior', () => {
       });
     });
 
-    expect(localStorage.getItem('google_provider_token')).toBe('provider-token');
+    expect(sessionStorage.getItem('google_provider_token')).toBe('provider-token');
+    expect(localStorage.getItem('google_provider_token')).toBeNull();
     expect(localStorage.getItem('google_provider_refresh_token')).toBeNull();
     expect(hydrateSessionStoreMock).toHaveBeenCalled();
     expect(hydrateSettingsStoreMock).toHaveBeenCalled();
   });
 
   it('resets stores and clears provider tokens when signed out', async () => {
-    localStorage.setItem('google_provider_token', 't');
+    sessionStorage.setItem('google_provider_token', 't');
     localStorage.setItem('google_provider_refresh_token', 'r');
 
     getSessionMock.mockResolvedValue({
@@ -249,6 +274,7 @@ describe('AuthProvider behavior', () => {
 
     expect(resetSessionStoreMock).toHaveBeenCalled();
     expect(resetSettingsStoreMock).toHaveBeenCalled();
+    expect(sessionStorage.getItem('google_provider_token')).toBeNull();
     expect(localStorage.getItem('google_provider_token')).toBeNull();
     expect(localStorage.getItem('google_provider_refresh_token')).toBeNull();
   });
@@ -303,6 +329,33 @@ describe('AuthProvider behavior', () => {
     });
   });
 
+  it('does not request an offline token grant for Drive access', async () => {
+    signInWithOAuthMock.mockResolvedValue({
+      data: { url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=test' },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'sign-in-with-drive' }));
+
+    await waitFor(() => {
+      expect(signInWithOAuthMock).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/app`,
+          skipBrowserRedirect: true,
+          scopes: 'https://www.googleapis.com/auth/drive.file',
+          queryParams: undefined,
+        },
+      });
+    });
+  });
+
   it('exchanges PKCE codes from the callback URL and clears the query string', async () => {
     window.history.replaceState({}, '', '/app?code=pkce-code');
     exchangeCodeForSessionMock.mockResolvedValue({
@@ -337,14 +390,14 @@ describe('AuthProvider behavior', () => {
     );
 
     await act(async () => {
-      // Keep this in sync with AUTH_OPERATION_TIMEOUT_MS in AuthProvider.
-      await vi.advanceTimersByTimeAsync(4000);
+      // Keep this in sync with the OAuth code-exchange timeout in AuthProvider.
+      await vi.advanceTimersByTimeAsync(15_000);
     });
 
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
     expect(warnSpy).toHaveBeenCalledWith('[Auth] init failed:', expect.any(Error));
-    expect(window.location.search).toBe('');
+    expect(window.location.search).toBe('?code=stalled-code');
 
     warnSpy.mockRestore();
     vi.useRealTimers();

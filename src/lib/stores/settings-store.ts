@@ -39,6 +39,28 @@ const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
   ask: { ...defaultConfig },
 });
 
+function normalizeFeatureConfigs(configs: unknown): Record<FeatureTab, ProviderConfig> {
+  const defaults = getDefaultFeatureConfigs();
+  if (!configs || typeof configs !== 'object' || Array.isArray(configs)) return defaults;
+
+  const saved = configs as Record<string, unknown>;
+  return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
+    const value = saved[feature];
+    const candidate = value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Partial<ProviderConfig>
+      : {};
+    const fallback = defaults[feature];
+    return [feature, {
+      ...fallback,
+      ...(typeof candidate.provider === 'string' ? { provider: candidate.provider } : {}),
+      ...(typeof candidate.model === 'string' ? { model: candidate.model } : {}),
+      ...(typeof candidate.temperature === 'number' ? { temperature: candidate.temperature } : {}),
+      ...(typeof candidate.apiKey === 'string' ? { apiKey: candidate.apiKey } : {}),
+      ...(typeof candidate.baseUrl === 'string' ? { baseUrl: candidate.baseUrl } : {}),
+    }];
+  })) as Record<FeatureTab, ProviderConfig>;
+}
+
 async function getUserId() {
   const { data } = await supabase.auth.getUser();
   return data.user?.id || null;
@@ -53,11 +75,14 @@ async function upsertSettings(payload: {
 }) {
   const userId = await getUserId();
   if (!userId) return;
-  await supabase.from('user_settings').upsert({
+  const { error } = await supabase.from('user_settings').upsert({
     user_id: userId,
     ...payload,
     updated_at: new Date().toISOString(),
-  });
+  }, { onConflict: 'user_id' });
+  if (error) {
+    console.warn('[SettingsStore] Failed to persist settings:', error.message);
+  }
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -145,9 +170,7 @@ export const useSettingsStore = create<SettingsState>()(
           .single();
         if (error || !data) return;
 
-        const defaults = getDefaultFeatureConfigs();
-        const serverConfigs = (data.feature_configs as Record<FeatureTab, ProviderConfig>) || {};
-        const mergedConfigs = { ...defaults, ...serverConfigs };
+        const mergedConfigs = normalizeFeatureConfigs(data.feature_configs);
 
         const language = (data.language as 'en' | 'es' | 'hu') || 'en';
         await i18n.changeLanguage(language);
@@ -175,9 +198,7 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'debate-trainer-settings',
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        const defaults = getDefaultFeatureConfigs();
-        const merged = { ...defaults, ...(state.featureConfigs || {}) };
-        state.featureConfigs = merged;
+        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs);
         if (!state.language) state.language = 'en';
         if (!state.outputLanguage) state.outputLanguage = 'en';
         if (!state.theme) state.theme = 'system';
