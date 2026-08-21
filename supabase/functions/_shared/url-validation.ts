@@ -3,7 +3,18 @@
 // RFC1918, and IPv4-mapped-IPv6 private targets by literal hostname.
 
 export function isPrivateIpv4(hostname: string) {
-  const parts = hostname.split(".").map((part) => Number(part));
+  // Canonicalize numeric/octal/hex/short IPv4 forms (e.g. "127.1", "0x7f000001",
+  // "2130706433") to dotted-decimal via the same WHATWG host parser `new URL()`
+  // uses, so an obfuscated loopback/private address can't slip past the range
+  // checks below just because it wasn't written as four decimal octets.
+  let canonical = hostname;
+  try {
+    canonical = new URL(`http://${hostname}`).hostname;
+  } catch {
+    // Not parseable as a host on its own; fall through and let the range
+    // checks below reject it via the length/range guard.
+  }
+  const parts = canonical.split(".").map((part) => Number(part));
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
   const [a, b] = parts;
   return (
