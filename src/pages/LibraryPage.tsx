@@ -366,6 +366,7 @@ export default function LibraryPage() {
     if (selectedFolder === 'all' || selectedFolder === 'General') return;
     const nextName = folderRenameValue.trim();
     if (!nextName || nextName === selectedFolder) return;
+    if (folders.includes(nextName) && !window.confirm(t('libraryPage.folderMergeConfirm', 'A folder with this name already exists. Merge sources into it?'))) return;
     await renameSourceFolder(selectedFolder, nextName);
     setSelectedFolder(nextName);
     toast({ title: t('libraryPage.folderRenamed', 'Folder renamed'), description: t('libraryPage.folderRenamedDesc', 'Sources in this folder were moved to the new name.') });
@@ -403,8 +404,16 @@ export default function LibraryPage() {
   };
   const handleCopySource = async () => {
     if (!selectedSource) return;
-    await navigator.clipboard?.writeText(`${selectedSource.title}\n\n${selectedSource.content}`);
-    toast({ title: t('common.copied', 'Copied'), description: t('libraryPage.sourceCopied', 'Source copied to clipboard.') });
+    if (!navigator.clipboard?.writeText) {
+      toast({ title: t('common.error', 'Error'), description: t('libraryPage.copyFailed', 'Unable to copy source.'), variant: 'destructive' });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${selectedSource.title}\n\n${selectedSource.content}`);
+      toast({ title: t('common.copied', 'Copied'), description: t('libraryPage.sourceCopied', 'Source copied to clipboard.') });
+    } catch {
+      toast({ title: t('common.error', 'Error'), description: t('libraryPage.copyFailed', 'Unable to copy source.'), variant: 'destructive' });
+    }
   };
 
   return (
@@ -791,6 +800,14 @@ export default function LibraryPage() {
                   <h3 className="text-lg font-medium">{t('libraryPage.emptyTitle')}</h3>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
                     {t('libraryPage.emptyDesc')}
+                  </p>
+                </div>
+              ) : visibleSources.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                  <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">{t('libraryPage.noMatchingSources', 'No matching sources')}</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+                    {t('libraryPage.noMatchingSourcesDesc', 'Try a different search or folder.')}
                   </p>
                 </div>
               ) : (

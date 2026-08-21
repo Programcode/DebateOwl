@@ -119,6 +119,7 @@ function SignInErrorConsumer() {
 describe('AuthProvider behavior', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
+    localStorage.clear();
     vi.clearAllMocks();
     callbackRef.current = null;
     hydrateSessionStoreMock.mockResolvedValue(undefined);
@@ -151,6 +152,26 @@ describe('AuthProvider behavior', () => {
     expect(onAuthStateChangeMock).toHaveBeenCalled();
   });
 
+  it('removes refresh tokens persisted by older clients during startup', async () => {
+    localStorage.setItem('google_provider_refresh_token', 'legacy-refresh-token');
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'user_1' }, access_token: 'token' } },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    });
+
+    expect(localStorage.getItem('google_provider_refresh_token')).toBeNull();
+  });
+
   it('logs getSession errors and keeps provider usable', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -173,7 +194,7 @@ describe('AuthProvider behavior', () => {
     warnSpy.mockRestore();
   });
 
-  it('handles auth state change events and persists provider tokens', async () => {
+  it('handles auth state changes without persisting provider refresh tokens', async () => {
     getSessionMock.mockResolvedValue({
       data: { session: { user: { id: 'existing-user' } } },
       error: null,
@@ -198,7 +219,7 @@ describe('AuthProvider behavior', () => {
     });
 
     expect(localStorage.getItem('google_provider_token')).toBe('provider-token');
-    expect(localStorage.getItem('google_provider_refresh_token')).toBe('provider-refresh-token');
+    expect(localStorage.getItem('google_provider_refresh_token')).toBeNull();
     expect(hydrateSessionStoreMock).toHaveBeenCalled();
     expect(hydrateSettingsStoreMock).toHaveBeenCalled();
   });

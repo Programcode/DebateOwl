@@ -259,7 +259,8 @@ async function callSupabaseAI(
       }
 
       // Rate limit error from edge function
-      if (data.limit !== undefined || errorMessage.includes('rate limit') || errorMessage.includes('limit exceeded')) {
+      const normalizedErrorMessage = errorMessage.toLowerCase();
+      if (data.limit !== undefined || normalizedErrorMessage.includes('rate limit') || normalizedErrorMessage.includes('limit exceeded')) {
         throw new AIRateLimitError(errorMessage, {
           requestId,
           limit: data.limit as number | undefined,
@@ -751,11 +752,12 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
   } as Record<string, unknown>;
   const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
   const output = data.output as FactoidsOutput;
+  const allFactoids = Array.isArray(output.factoids) ? output.factoids : [];
+  const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation?.verified === 'verified');
   return {
     ...output,
-    factoids: (output.factoids || [])
-      .filter((factoid) => factoid.citation?.verified === 'verified')
-      .slice(0, input.sourceCount || 5),
+    factoids: verifiedFactoids.slice(0, input.sourceCount || 5),
+    filteredOutCount: Math.max(0, allFactoids.length - verifiedFactoids.length),
   };
 }
 

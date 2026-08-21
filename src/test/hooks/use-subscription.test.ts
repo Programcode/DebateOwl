@@ -302,6 +302,41 @@ describe('useSubscription', () => {
     expect(result.current.dailyLimit).toBe(13);
   });
 
+  it('fails closed when switching to an account with no settings row', async () => {
+    mockAuthState.user = { id: 'user-a' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 80,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_a',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const { result, rerender } = renderHook(() => useSubscription());
+
+    await waitFor(() => {
+      expect(result.current.tier).toBe('pro');
+      expect(result.current.loading).toBe(false);
+    });
+
+    mockAuthState.user = { id: 'user-b' };
+    mockResponses.userSettings = null;
+    mockResponses.billingData = null;
+    mockResponses.usageCount = 0;
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.tier).toBe('expired');
+    });
+
+    expect(result.current.dailyLimit).toBe(0);
+    expect(result.current.dailyUsed).toBe(0);
+    expect(result.current.hasStripeBilling).toBe(false);
+  });
+
   it('expires pro when billing lookup fails and no promo access is active', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -341,7 +376,8 @@ describe('useSubscription', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.tier).toBe('trial');
+    expect(result.current.tier).toBe('expired');
+    expect(result.current.dailyLimit).toBe(0);
     expect(result.current.hasStripeBilling).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       '[useSubscription] Failed to load:',

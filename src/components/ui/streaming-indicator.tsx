@@ -13,14 +13,22 @@ export function StreamingIndicator({ messages, intervalMs = 3000, className }: S
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
+    if (messages.length === 0) return;
+    setIndex((current) => Math.min(current, messages.length - 1));
+    const timeouts = new Set<ReturnType<typeof setTimeout>>();
     const interval = setInterval(() => {
       setFading(true);
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         setIndex((prev) => (prev + 1) % messages.length);
         setFading(false);
+        timeouts.delete(timeout);
       }, 200);
+      timeouts.add(timeout);
     }, intervalMs);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      timeouts.forEach(clearTimeout);
+    };
   }, [messages.length, intervalMs]);
 
   useEffect(() => {
@@ -40,7 +48,7 @@ export function StreamingIndicator({ messages, intervalMs = 3000, className }: S
         <span className="h-4 w-4 rounded-full bg-primary shadow-[0_0_24px_hsl(var(--primary)/0.55)]" />
       </div>
       <div key={index} className={cn('text-sm font-medium text-muted-foreground transition-opacity duration-200', fading ? 'opacity-0' : 'opacity-100')} aria-live="polite">
-        {messages[index]}
+        {messages[index] ?? ''}
       </div>
       <div className="motion-shimmer h-1.5 w-56 overflow-hidden rounded-full bg-muted" aria-hidden="true">
         <div

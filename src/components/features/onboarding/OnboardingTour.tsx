@@ -1,5 +1,5 @@
 // src/components/features/onboarding/OnboardingTour.tsx
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
@@ -109,7 +109,7 @@ export function OnboardingTour() {
         },
     ], [t]);
 
-    const tourSteps = useMemo(() => {
+    const resolveTourSteps = useCallback(() => {
         if (typeof document === 'undefined') return allTourSteps;
         return allTourSteps.map((step) => {
             if (step.target === 'body') return step;
@@ -119,15 +119,23 @@ export function OnboardingTour() {
                 : { ...step, target: 'body', placement: 'center' as const };
         });
     }, [allTourSteps]);
+    const [tourSteps, setTourSteps] = useState(allTourSteps);
 
     // Start tour automatically for new users
     useEffect(() => {
         if (hasCompletedOnboarding || location.pathname !== '/app') return;
 
         // Small delay to ensure DOM is ready on the mode overview.
-        const timer = setTimeout(() => startTour(), 500);
+        const timer = setTimeout(() => {
+            setTourSteps(resolveTourSteps());
+            startTour();
+        }, 500);
         return () => clearTimeout(timer);
-    }, [hasCompletedOnboarding, location.pathname, startTour]);
+    }, [hasCompletedOnboarding, location.pathname, resolveTourSteps, startTour]);
+
+    useEffect(() => {
+        if (isTourRunning) setTourSteps(resolveTourSteps());
+    }, [isTourRunning, location.pathname, resolveTourSteps]);
 
     // Prevent broken tooltips if user navigates away from the app mid-tour
     useEffect(() => {

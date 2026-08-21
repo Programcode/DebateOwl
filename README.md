@@ -401,7 +401,7 @@ Specialized stopwatch for tournament speech intervals.
 
 ### Prerequisites
 
-- **Node.js** 20.x or higher
+- **Node.js** 22.x
 - **npm** 9.x or higher (or `bun`)
 - **Docker** (for production builds)
 - **Supabase account** (for backend)
@@ -1199,7 +1199,7 @@ location ~ /\. {
 ```dockerfile
 # Dockerfile
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -1460,12 +1460,11 @@ Content-Type: application/json
 | `AI_DEFAULT_PROVIDER` | Default AI provider | Supabase secrets |
 | `AI_DEFAULT_MODEL` | Default AI model | Supabase secrets |
 
-### Admin Mode
+### Administrator access
 
-Enter code `debate2026` in Settings to unlock:
-- Global custom system prompt
-- Database reset functionality
-- Advanced configuration options
+Administrator capabilities are authorized server-side through the authenticated
+admin endpoint. Do not rely on client-side flags or shared codes for access
+control.
 
 ---
 
@@ -1489,7 +1488,7 @@ Enter code `debate2026` in Settings to unlock:
 - Ensure `npm run dev` is running
 
 **Docker build fails:**
-- Ensure Node.js 20+ is used
+- Ensure Node.js 22.x is used
 - Clear node_modules and package-lock.json
 - Check Dockerfile syntax
 

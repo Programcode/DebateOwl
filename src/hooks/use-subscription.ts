@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 
@@ -26,6 +26,7 @@ interface BillingRow {
 
 export function useSubscription(): SubscriptionState {
   const { user } = useAuth();
+  const userId = user?.id;
   const [tier, setTier] = useState<SubscriptionTier>('trial');
   const [dailyLimit, setDailyLimit] = useState(5);
   const [dailyUsed, setDailyUsed] = useState(0);
@@ -33,9 +34,16 @@ export function useSubscription(): SubscriptionState {
   const [gracePeriodEndsAt, setGracePeriodEndsAt] = useState<string | null>(null);
   const [hasStripeBilling, setHasStripeBilling] = useState(false);
   const [loading, setLoading] = useState(true);
+  const latestUserIdRef = useRef<string | undefined>(userId);
+  latestUserIdRef.current = userId;
 
   const load = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
+      setTier('trial');
+      setDailyLimit(5);
+      setDailyUsed(0);
+      setTrialEndsAt(null);
+      setGracePeriodEndsAt(null);
       setHasStripeBilling(false);
       setLoading(false);
       return;
@@ -46,8 +54,10 @@ export function useSubscription(): SubscriptionState {
       const { data } = await supabase
         .from('user_settings')
         .select('subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single();
+
+      if (latestUserIdRef.current !== userId) return;
 
       if (data) {
         const rawTier = (data.subscription_tier || 'trial') as SubscriptionTier;
@@ -58,9 +68,11 @@ export function useSubscription(): SubscriptionState {
         const { data: billingData, error: billingError } = await supabase
           .from('subscriptions')
           .select('stripe_customer_id, status, current_period_end')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .order('current_period_end', { ascending: false })
           .limit(5);
+
+        if (latestUserIdRef.current !== userId) return;
 
         if (billingError) {
           console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
@@ -122,22 +134,32 @@ export function useSubscription(): SubscriptionState {
       const { count } = await supabase
         .from('ai_requests')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('created_at', todayStart.toISOString());
 
+      if (latestUserIdRef.current !== userId) return;
       setDailyUsed(count || 0);
 
       if (!data) setHasStripeBilling(false);
     } catch (err) {
       console.warn('[useSubscription] Failed to load:', err);
     } finally {
-      setLoading(false);
+      if (latestUserIdRef.current === userId) setLoading(false);
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
+    if (userId) {
+      setTier('expired');
+      setDailyLimit(0);
+      setDailyUsed(0);
+      setTrialEndsAt(null);
+      setGracePeriodEndsAt(null);
+      setHasStripeBilling(false);
+      setLoading(true);
+    }
     void load();
-  }, [load]);
+  }, [load, userId]);
 
   const isPro = tier === 'pro' || tier === 'legacy_free';
   const isTrialActive = tier === 'trial';

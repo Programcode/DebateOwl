@@ -37,7 +37,10 @@ describe('security hardening regressions', () => {
     expect(migration).toContain('FUNCTION public.get_shared_item(p_share_code text)');
     expect(share).toContain('if (!userId)');
     expect(share).toContain('crypto.getRandomValues');
-    expect(read('src/pages/SharedPage.tsx')).toContain("rpc('get_shared_item'");
+    const sharedPage = read('src/pages/SharedPage.tsx');
+    expect(sharedPage).toContain("rpc('get_shared_item'");
+    expect(migration).toContain('SET view_count = public.shared_items.view_count + 1');
+    expect(sharedPage).not.toContain("rpc('increment_share_view'");
   });
 
   it('requires admin authorization for sensitive analytics RPCs', () => {

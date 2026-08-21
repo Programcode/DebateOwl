@@ -32,6 +32,10 @@ function loadMainSource(): string {
   return readFileSync(resolve(process.cwd(), "src/main.tsx"), "utf8");
 }
 
+function readProjectFile(path: string): string {
+  return readFileSync(resolve(process.cwd(), path), "utf8");
+}
+
 function headersFor(config: VercelConfig, source: string) {
   return Object.fromEntries(
     (config.headers?.find((rule) => rule.source === source)?.headers ?? []).map(({ key, value }) => [key, value]),
@@ -67,6 +71,26 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains; preload");
   });
 
+  it("loads the theme bootstrap from a CSP-compatible external script", () => {
+    const config = loadConfig();
+    const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
+    const indexHtml = readProjectFile("index.html");
+    const nginxConfig = readProjectFile("nginx.conf");
+    const themeBootstrap = readProjectFile("public/theme-init.js");
+
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(indexHtml).toContain('<script src="/theme-init.js"></script>');
+    expect(indexHtml).not.toContain('// Prevent flash of wrong theme');
+    expect(nginxConfig).toMatch(/location = \/theme-init\.js \{[\s\S]*?Cache-Control/);
+    expect(themeBootstrap).toContain("debate-trainer-settings");
+  });
+
+  it("refreshes the offline app shell after successful navigation", () => {
+    const serviceWorker = readProjectFile("public/sw.js");
+    expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
+  });
+
   it.each(["/app", "/app/(.*)", "/login", "/share/(.*)"])(
     "keeps private route %s out of search indexes",
     (source) => {
@@ -75,7 +99,7 @@ describe("Vercel frontend deployment configuration", () => {
     },
   );
 
-  it.each(["/index.html", "/config.js", "/sw.js"])(
+  it.each(["/index.html", "/config.js", "/theme-init.js", "/sw.js"])(
     "prevents stale caching for %s",
     (source) => {
       const config = loadConfig();

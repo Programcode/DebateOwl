@@ -141,9 +141,12 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
-  const displayFactoids = result.factoids.filter(f => f.citation?.verified === 'verified');
+  const factoids = Array.isArray(result.factoids) ? result.factoids : [];
+  const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+  const searchSuggestions = Array.isArray(result.searchSuggestions) ? result.searchSuggestions : [];
+  const displayFactoids = factoids.filter(f => f.citation?.verified === 'verified');
   const verifiedCount = displayFactoids.length;
-  const totalCount = Math.max(displayFactoids.length, 1);
+  const totalCount = Math.max(factoids.length, 1);
 
   const handleDocxExport = async () => {
     const success = await exportFactoidsToDocx(result);
@@ -210,14 +213,14 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
       </SectionCard>
 
       {/* Warnings */}
-      {result.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <span className="font-medium text-amber-600">{t('factoidsResults.importantNotes')}</span>
           </div>
           <ul className="space-y-1 text-sm">
-            {result.warnings.map((warning, i) => (
+            {warnings.map((warning, i) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-amber-500">•</span>
                 <span className="text-foreground">{warning}</span>
@@ -251,7 +254,7 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         icon={<Search className="h-5 w-5" />}
       >
         <div className="space-y-2">
-          {result.searchSuggestions.map((query, i) => (
+          {searchSuggestions.map((query, i) => (
             <div key={i} className="flex items-center gap-2">
               <code className="flex-1 rounded bg-muted px-3 py-2 text-sm text-foreground">
                 {query}

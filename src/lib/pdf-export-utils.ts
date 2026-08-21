@@ -167,7 +167,8 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             },
         });
 
-        state.y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+        const finalY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY;
+        state.y = typeof finalY === 'number' ? finalY + 10 : state.y + 10;
     };
 
     const addFooter = () => {

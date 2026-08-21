@@ -2,7 +2,7 @@ node_modules
 build
 .git
 .gitignore
-.env
+.env*
 .DS_Store
 npm-debug.log
 bun.lockb

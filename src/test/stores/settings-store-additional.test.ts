@@ -11,19 +11,7 @@ describe('settings-store additional branches', () => {
   beforeEach(() => {
     resetMockState();
     localStorage.clear();
-    useSettingsStore.setState({
-      language: 'en',
-      theme: 'system',
-      customSystemPrompt: undefined,
-      wikiResearchEnabled: false,
-      featureConfigs: {
-        generate: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 },
-        attack: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 },
-        brainstorm: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.9 },
-        factoids: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.3 },
-        ask: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 },
-      },
-    });
+    useSettingsStore.getState().resetLocalData();
   });
 
   it('setLanguage updates state to es', () => {

@@ -56,9 +56,13 @@ export default function HistoryPage() {
 
   const confirmDeleteCase = () => {
     if (!caseToDelete) return;
-    void store.deleteSavedCase(caseToDelete.id).then(() => {
-      toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.caseDeleted', 'Saved case deleted.') });
-    });
+    void store.deleteSavedCase(caseToDelete.id)
+      .then(() => {
+        toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.caseDeleted', 'Saved case deleted.') });
+      })
+      .catch(() => {
+        toast({ title: t('common.error', 'Error'), description: t('historyPage.deleteFailed', 'Could not delete saved case.'), variant: 'destructive' });
+      });
     setCaseToDelete(null);
   };
 

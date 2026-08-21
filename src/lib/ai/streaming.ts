@@ -163,5 +163,6 @@ export async function streamAskChat(
     return finalOutput;
   } finally {
     handlers.signal?.removeEventListener('abort', abortHandler);
+    reader.cancel().catch((): void => undefined);
   }
 }

@@ -6,6 +6,7 @@ import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSubscription } from '@/hooks/use-subscription';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface ModelSelectorProps {
   feature: FeatureTab;
@@ -18,6 +19,7 @@ const allModels = DEFAULT_PROVIDERS
   .flatMap(p => p.models.map(m => ({ ...m, provider: p.id, providerName: p.name })));
 
 export function ModelSelector({ feature, className, showLabel = false }: ModelSelectorProps) {
+  const { t } = useTranslation();
   const { featureConfigs, setFeatureConfig } = useSettingsStore();
   const { isPro } = useSubscription();
   const config = featureConfigs?.[feature];
@@ -28,7 +30,7 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
       {showLabel && (
         <Label className="flex items-center gap-2 text-sm font-medium">
           <Cpu className="h-4 w-4 text-muted-foreground" />
-          AI model
+          {t('modelSelector.label', 'AI model')}
         </Label>
       )}
       <Select
@@ -41,7 +43,7 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
           }
         }}
       >
-        <SelectTrigger className="h-10 w-full text-sm" aria-label={`Select AI model for ${feature}`}>
+        <SelectTrigger className="h-10 w-full text-sm" aria-label={t('modelSelector.selectFor', 'Select AI model for {{feature}}', { feature })}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

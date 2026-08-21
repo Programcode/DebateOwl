@@ -459,8 +459,7 @@ async function callGoogleDocsEdgeFunction(
       providerToken = localStorage.getItem('google_provider_token');
     }
 
-    console.log('[GDocs Export] Token source:', tokenSource, 'Token present:', !!providerToken,
-      'Token preview:', providerToken ? `${providerToken.substring(0, 10)}...` : 'none');
+    console.debug('[GDocs Export] Token source:', tokenSource, 'Token present:', Boolean(providerToken));
 
     if (!providerToken) {
       return {
@@ -469,9 +468,6 @@ async function callGoogleDocsEdgeFunction(
         requiresReauth: true,
       };
     }
-
-    // Also get the refresh token for server-side refresh if access token expires
-    const refreshToken = localStorage.getItem('google_provider_refresh_token');
 
     // Helper to make the actual request
     const makeRequest = async (token: string) => {
@@ -485,19 +481,12 @@ async function callGoogleDocsEdgeFunction(
           mode,
           data,
           accessToken: token,
-          refreshToken: refreshToken  // Pass for server-side refresh
         }),
       });
     };
 
     const response = await makeRequest(providerToken);
-    const respData = await response.json();
-
-    // If the Edge Function refreshed the token, store the new one for future requests
-    if (respData.newAccessToken) {
-      console.log('[GDocs Export] Storing refreshed access token from server');
-      localStorage.setItem('google_provider_token', respData.newAccessToken);
-    }
+    const respData: Record<string, unknown> = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       console.error('[GDocs Export] Error response:', response.status, respData);
@@ -508,12 +497,16 @@ async function callGoogleDocsEdgeFunction(
         response.status === 401 ||
         response.status === 403
       ) {
-        return { success: false, error: respData.error || 'Authorization expired.', requiresReauth: true };
+        return { success: false, error: typeof respData.error === 'string' ? respData.error : 'Authorization expired.', requiresReauth: true };
       }
-      return { success: false, error: respData.error || 'Failed to export to Google Docs' };
+      return { success: false, error: typeof respData.error === 'string' ? respData.error : 'Failed to export to Google Docs' };
     }
 
-    return { success: true, documentUrl: respData.documentUrl };
+    if (typeof respData.newAccessToken === 'string') {
+      localStorage.setItem('google_provider_token', respData.newAccessToken);
+    }
+
+    return { success: true, documentUrl: typeof respData.documentUrl === 'string' ? respData.documentUrl : undefined };
   } catch (error) {
     console.error('Failed to export to Google Docs:', error);
     return { success: false, error: 'An unexpected error occurred' };

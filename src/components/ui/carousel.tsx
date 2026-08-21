@@ -69,15 +69,18 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "ArrowLeft") {
+        if (event.target !== event.currentTarget) return;
+        const previousKey = orientation === 'vertical' ? 'ArrowUp' : 'ArrowLeft';
+        const nextKey = orientation === 'vertical' ? 'ArrowDown' : 'ArrowRight';
+        if (event.key === previousKey) {
           event.preventDefault();
           scrollPrev();
-        } else if (event.key === "ArrowRight") {
+        } else if (event.key === nextKey) {
           event.preventDefault();
           scrollNext();
         }
       },
-      [scrollPrev, scrollNext],
+      [orientation, scrollPrev, scrollNext],
     );
 
     React.useEffect(() => {
@@ -98,7 +101,8 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
       api.on("select", onSelect);
 
       return () => {
-        api?.off("select", onSelect);
+        api.off("select", onSelect);
+        api.off("reInit", onSelect);
       };
     }, [api, onSelect]);
 
@@ -120,6 +124,7 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
           onKeyDownCapture={handleKeyDown}
           className={cn("relative", className)}
           role="region"
+          tabIndex={0}
           aria-roledescription="carousel"
           {...props}
         >

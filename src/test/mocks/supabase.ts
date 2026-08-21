@@ -13,6 +13,10 @@ type TableResponse = {
 const tableResponses: Record<string, TableResponse> = {};
 let currentUser: { id: string } | null = { id: "user_1" };
 let sessionToken = "test-token";
+const defaultInvokeResponse: { data: any; error: unknown } = {
+  data: { output: { ok: true } },
+  error: null,
+};
 
 const createQuery = (table: string) => {
   const responses = tableResponses[table] || {};
@@ -58,7 +62,7 @@ export const supabaseMock = {
   },
   from: vi.fn((table: string) => createQuery(table)),
   functions: {
-    invoke: vi.fn(async () => ({ data: { output: { ok: true } }, error: null })),
+    invoke: vi.fn(async () => defaultInvokeResponse),
   },
 };
 
@@ -86,4 +90,5 @@ export const resetMockState = () => {
   supabaseMock.auth.getUser.mockClear();
   supabaseMock.auth.getSession.mockClear();
   supabaseMock.functions.invoke.mockClear();
+  supabaseMock.functions.invoke.mockResolvedValue(defaultInvokeResponse);
 };

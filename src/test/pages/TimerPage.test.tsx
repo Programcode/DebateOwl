@@ -16,6 +16,8 @@ const mockAudioContext = {
     }),
     currentTime: 0,
     destination: {},
+    state: 'running',
+    resume: vi.fn(),
 };
 
 // Mock UI components
@@ -40,7 +42,9 @@ vi.mock('@/components/ui/select', () => ({
 describe('TimerPage', () => {
     beforeEach(() => {
         // Do NOT set fake timers globaly. Only for specific tests.
-        window.AudioContext = vi.fn().mockImplementation(() => mockAudioContext);
+        window.AudioContext = vi.fn(function MockAudioContext() {
+            return mockAudioContext;
+        }) as unknown as typeof AudioContext;
         global.ResizeObserver = vi.fn().mockImplementation(() => ({
             observe: vi.fn(),
             unobserve: vi.fn(),
@@ -98,7 +102,21 @@ describe('TimerPage', () => {
         expect(screen.getByText('PAUSED')).toBeInTheDocument();
     });
 
-    it('plays sound at 1 minute remaining', () => {
+    it('catches up to elapsed wall-clock time after a delayed tick', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+        render(<TimerPage />);
+        fireEvent.click(screen.getByText('Start'));
+
+        vi.setSystemTime(4_000);
+        act(() => {
+            vi.advanceTimersByTime(1000);
+        });
+
+        expect(screen.getByText('3:55')).toBeInTheDocument();
+    });
+
+    it('reuses one audio context across countdown signals', () => {
         vi.useFakeTimers();
         render(<TimerPage />);
         fireEvent.click(screen.getByText('Start'));
@@ -109,10 +127,18 @@ describe('TimerPage', () => {
         });
 
         act(() => {
-            vi.advanceTimersByTime(1000);
+            vi.advanceTimersByTime(2000);
         });
 
-        expect(window.AudioContext).toHaveBeenCalled();
+        expect(screen.getByText('0:59')).toBeInTheDocument();
+        expect(window.AudioContext).toHaveBeenCalledTimes(1);
+
+        act(() => {
+            vi.advanceTimersByTime(59 * 1000);
+        });
+
+        expect(screen.getByText('TIME UP')).toBeInTheDocument();
+        expect(window.AudioContext).toHaveBeenCalledTimes(1);
     });
 
     it('handles keyboard shortcuts', async () => {

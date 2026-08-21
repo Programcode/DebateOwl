@@ -78,7 +78,7 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
 
-  const handleCopyToClipboard = () => {
+  const handleCopyToClipboard = async () => {
     const lines: string[] = [];
     lines.push(`THESIS: ${result.caseStructure?.thesis || ''}`);
     lines.push(`FRAMEWORK: ${result.caseStructure?.framework || ''}`);
@@ -96,8 +96,16 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
         lines.push(`  vs "${c.targetArgument}": ${c.counterpoint}`);
       });
     }
-    void navigator.clipboard.writeText(lines.join('\n'));
-    toast.success(t('generateResults.copiedToClipboard', 'Copied to clipboard'));
+    if (!navigator.clipboard?.writeText) {
+      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      toast.success(t('generateResults.copiedToClipboard', 'Copied to clipboard'));
+    } catch {
+      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
+    }
   };
 
   const handleGoogleDocsExport = async () => {

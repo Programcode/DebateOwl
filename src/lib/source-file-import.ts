@@ -128,6 +128,7 @@ async function readDocxFile(file: File) {
       .slice(0, 3) || [];
     return finalizeImport(file, 'docx', result.value, warnings);
   } catch (error) {
+    if (error instanceof SourceFileImportError) throw error;
     throw new SourceFileImportError(
       error instanceof Error ? `Could not parse DOCX: ${error.message}` : 'Could not parse DOCX.',
       'parse-failed',
@@ -136,35 +137,40 @@ async function readDocxFile(file: File) {
 }
 
 async function readPdfFile(file: File) {
+  let pdfDocument: Awaited<ReturnType<(typeof import('pdfjs-dist/legacy/build/pdf.mjs'))['getDocument']>['promise']> | undefined;
   try {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-    const document = await pdfjs.getDocument({
+    pdfDocument = await pdfjs.getDocument({
       data: new Uint8Array(await readFileAsArrayBuffer(file)),
       useWorkerFetch: false,
     }).promise;
 
     const pages: string[] = [];
-    const maxPages = Math.min(document.numPages, 80);
+    const maxPages = Math.min(pdfDocument.numPages, 80);
     for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
+      const page = await pdfDocument.getPage(pageNumber);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
         .map((item) => ('str' in item ? item.str : ''))
         .join(' ');
       pages.push(pageText);
+      page.cleanup();
     }
 
-    const warnings = document.numPages > maxPages
-      ? [`PDF has ${document.numPages} pages. Imported the first ${maxPages}.`]
+    const warnings = pdfDocument.numPages > maxPages
+      ? [`PDF has ${pdfDocument.numPages} pages. Imported the first ${maxPages}.`]
       : [];
     return finalizeImport(file, 'pdf', pages.join('\n\n'), warnings);
   } catch (error) {
+    if (error instanceof SourceFileImportError) throw error;
     throw new SourceFileImportError(
       error instanceof Error ? `Could not parse PDF: ${error.message}` : 'Could not parse PDF.',
       'parse-failed',
     );
+  } finally {
+    await pdfDocument?.destroy();
   }
 }
 

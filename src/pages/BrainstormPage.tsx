@@ -80,7 +80,9 @@ export default function BrainstormPage() {
       });
     } catch (error) {
       console.error('Failed to discuss result:', error);
-      toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
+      if (!subError.handleSubscriptionError(error)) {
+        toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
+      }
     } finally {
       setAskLoading(false);
     }

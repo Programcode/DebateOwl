@@ -980,6 +980,15 @@ export const useSessionStore = create<SessionState>()(
     {
       name: 'debate-trainer-storage',
       storage: createJSONStorage(() => localStorage),
+      partialize: ({
+        generateLoading,
+        attackLoading,
+        brainstormLoading,
+        factoidsLoading,
+        askLoading,
+        askStreamingAssistant,
+        ...persisted
+      }) => persisted,
     }
   )
 );

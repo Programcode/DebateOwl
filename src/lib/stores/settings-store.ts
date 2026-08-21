@@ -149,8 +149,10 @@ export const useSettingsStore = create<SettingsState>()(
         const serverConfigs = (data.feature_configs as Record<FeatureTab, ProviderConfig>) || {};
         const mergedConfigs = { ...defaults, ...serverConfigs };
 
+        const language = (data.language as 'en' | 'es' | 'hu') || 'en';
+        await i18n.changeLanguage(language);
         set({
-          language: (data.language as 'en' | 'es' | 'hu') || 'en',
+          language,
           outputLanguage: (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en',
           theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
           featureConfigs: mergedConfigs,
