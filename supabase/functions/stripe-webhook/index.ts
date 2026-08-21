@@ -141,6 +141,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw new Error("checkout.session.completed missing user_id in metadata");
   }
 
+  if (!session.subscription) {
+    // A checkout.session.completed event without a subscription means the
+    // session wasn't our subscription checkout (e.g. mode "payment"/"setup").
+    // Nothing for this handler to do; don't retrieve/upsert on a missing id.
+    console.log(`[WEBHOOK] checkout.session.completed for user ${userId} has no subscription (mode=${session.mode}); skipping`);
+    return;
+  }
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
 
@@ -171,12 +178,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw new Error(`Failed to upsert subscription: ${subError.message}`);
   }
 
-  // Update user tier to pro
-  const { error: userError } = await supabase.from("user_settings").update({
+  // Update user tier to pro. Upsert (not update) so a missing user_settings
+  // row doesn't silently no-op and leave a paying user without entitlements.
+  const { error: userError } = await supabase.from("user_settings").upsert({
+    user_id: userId,
     subscription_tier: "pro",
     grace_period_ends_at: null,
     updated_at: new Date().toISOString(),
-  }).eq("user_id", userId);
+  }, { onConflict: "user_id" });
 
   if (userError) {
     console.error("[WEBHOOK] Failed to update user tier:", userError);
@@ -227,12 +236,14 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     throw new Error(`Failed to update subscription on payment failure: ${subError.message}`);
   }
 
-  // Downgrade user immediately per spec
+  // Downgrade user immediately per spec. Upsert so a missing settings row
+  // doesn't silently no-op.
   if (sub?.user_id) {
-    const { error: userError } = await supabase.from("user_settings").update({
+    const { error: userError } = await supabase.from("user_settings").upsert({
+      user_id: sub.user_id,
       subscription_tier: "expired",
       updated_at: new Date().toISOString(),
-    }).eq("user_id", sub.user_id);
+    }, { onConflict: "user_id" });
 
     if (userError) {
       console.error("[WEBHOOK] Failed to downgrade user on payment failure:", userError);
@@ -263,12 +274,13 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     throw new Error(`Failed to update subscription on deletion: ${subError.message}`);
   }
 
-  // Downgrade user
+  // Downgrade user. Upsert so a missing settings row doesn't silently no-op.
   if (sub?.user_id) {
-    const { error: userError } = await supabase.from("user_settings").update({
+    const { error: userError } = await supabase.from("user_settings").upsert({
+      user_id: sub.user_id,
       subscription_tier: "expired",
       updated_at: new Date().toISOString(),
-    }).eq("user_id", sub.user_id);
+    }, { onConflict: "user_id" });
 
     if (userError) {
       console.error("[WEBHOOK] Failed to downgrade user on cancellation:", userError);
@@ -304,11 +316,13 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       .maybeSingle();
 
     if (sub?.user_id) {
-      const { error: userError } = await supabase.from("user_settings").update({
+      // Upsert so a missing settings row doesn't silently no-op.
+      const { error: userError } = await supabase.from("user_settings").upsert({
+        user_id: sub.user_id,
         subscription_tier: "pro",
         grace_period_ends_at: null,
         updated_at: new Date().toISOString(),
-      }).eq("user_id", sub.user_id);
+      }, { onConflict: "user_id" });
 
       if (userError) {
         throw new Error(`Failed to upgrade user after subscription update: ${userError.message}`);

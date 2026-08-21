@@ -77,19 +77,18 @@ async function resolvePriceByLookupKey(lookupKey: string): Promise<string | null
   return recurring?.id || null;
 }
 
-async function resolveCheckoutPriceId(inputPriceId: string, inputLookupKey: string): Promise<{ id: string; source: string }> {
-  const candidatePriceIds = [STRIPE_PRICE_ID, inputPriceId]
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  for (const candidate of candidatePriceIds) {
-    if (!isStripePriceId(candidate)) {
-      continue;
-    }
+// Price selection is server-authoritative only: the checkout price must come
+// from STRIPE_PRICE_ID / STRIPE_PRICE_LOOKUP_KEY (or the auto-single-price
+// fallback below), never from client-supplied priceId/lookupKey fields. A
+// client-chosen Stripe price ID would let a caller check out at any active
+// recurring price in the account, not just the intended subscription price.
+async function resolveCheckoutPriceId(): Promise<{ id: string; source: string }> {
+  const configuredPriceId = STRIPE_PRICE_ID.trim();
+  if (configuredPriceId && isStripePriceId(configuredPriceId)) {
     try {
-      const price = await stripe.prices.retrieve(candidate);
+      const price = await stripe.prices.retrieve(configuredPriceId);
       if (isActiveRecurringPrice(price)) {
-        return { id: price.id, source: `price_id:${candidate === STRIPE_PRICE_ID ? "env" : "request"}` };
+        return { id: price.id, source: "price_id:env" };
       }
     } catch (err) {
       const stripeErr = err as { code?: string; statusCode?: number };
@@ -99,14 +98,11 @@ async function resolveCheckoutPriceId(inputPriceId: string, inputLookupKey: stri
     }
   }
 
-  const candidateLookupKeys = [STRIPE_PRICE_LOOKUP_KEY, inputLookupKey]
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  for (const lookupKey of candidateLookupKeys) {
-    const resolved = await resolvePriceByLookupKey(lookupKey);
+  const configuredLookupKey = STRIPE_PRICE_LOOKUP_KEY.trim();
+  if (configuredLookupKey) {
+    const resolved = await resolvePriceByLookupKey(configuredLookupKey);
     if (resolved) {
-      return { id: resolved, source: `lookup_key:${lookupKey === STRIPE_PRICE_LOOKUP_KEY ? "env" : "request"}` };
+      return { id: resolved, source: "lookup_key:env" };
     }
   }
 
@@ -130,7 +126,7 @@ async function resolveCheckoutPriceId(inputPriceId: string, inputLookupKey: stri
 
   throw new AppError(
     400,
-    "Unable to choose a Stripe price. Provide VITE_STRIPE_PRICE_ID, STRIPE_PRICE_ID, or STRIPE_PRICE_LOOKUP_KEY.",
+    "Unable to choose a Stripe price. Configure STRIPE_PRICE_ID or STRIPE_PRICE_LOOKUP_KEY, or leave exactly one active recurring price in Stripe.",
     {
       recurringPriceCount: recurringPrices.data.length,
       recurringPriceIds: recurringPrices.data.map((price: Stripe.Price) => price.id),
@@ -252,8 +248,9 @@ Deno.serve(async (req) => {
     }
 
     const rawBody = (body && typeof body === "object") ? body as Record<string, unknown> : {};
-    const requestedPriceId = typeof rawBody.priceId === "string" ? rawBody.priceId.trim() : "";
-    const requestedLookupKey = typeof rawBody.lookupKey === "string" ? rawBody.lookupKey.trim() : "";
+    // Note: any client-supplied priceId/lookupKey fields are intentionally
+    // ignored — the checkout price is resolved exclusively from server config
+    // (see resolveCheckoutPriceId) so a caller can't select an arbitrary price.
     const successUrl = typeof rawBody.successUrl === "string" ? rawBody.successUrl.trim() : "";
     const cancelUrl = typeof rawBody.cancelUrl === "string" ? rawBody.cancelUrl.trim() : "";
     const promoCode = typeof rawBody.promoCode === "string" ? rawBody.promoCode.trim() : undefined;
@@ -272,7 +269,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const resolvedPrice = await resolveCheckoutPriceId(requestedPriceId, requestedLookupKey);
+    const resolvedPrice = await resolveCheckoutPriceId();
 
     // Get or create Stripe customer
     let customerId = await findCustomerIdByUser({ id: user.id, email: user.email });

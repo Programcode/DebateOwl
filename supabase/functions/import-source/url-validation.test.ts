@@ -5,14 +5,18 @@ function assert(condition: boolean, message: string) {
 }
 
 function assertThrows(fn: () => unknown, expectedMessageFragment: string) {
+  let threw = false;
   try {
     fn();
-    throw new Error(`Expected throw containing "${expectedMessageFragment}"`);
   } catch (err) {
+    threw = true;
     const message = err instanceof Error ? err.message : String(err);
     if (!message.includes(expectedMessageFragment)) {
       throw new Error(`Expected error containing "${expectedMessageFragment}", got "${message}"`);
     }
+  }
+  if (!threw) {
+    throw new Error(`Expected throw containing "${expectedMessageFragment}"`);
   }
 }
 
@@ -30,6 +34,15 @@ Deno.test("isPrivateIpv4 catches RFC1918 + loopback + link-local", () => {
   assert(!isPrivateIpv4("1.1.1.1"), "public DNS should NOT be private");
   assert(!isPrivateIpv4("172.32.0.1"), "172.32 is not in 172.16/12");
   assert(!isPrivateIpv4("not-an-ip"), "non-IPv4 hostname should not match");
+});
+
+Deno.test("isPrivateIpv4 normalizes obfuscated numeric/octal/short loopback forms", () => {
+  assert(isPrivateIpv4("127.1"), "short-form 127.1 should normalize to 127.0.0.1");
+  assert(isPrivateIpv4("2130706433"), "decimal-integer loopback should be private");
+  assert(isPrivateIpv4("0x7f000001"), "hex loopback should be private");
+  assert(isPrivateIpv4("017700000001"), "octal loopback should be private");
+  assert(isPrivateIpv4("0177.0.0.1"), "octal first-octet loopback should be private");
+  assert(!isPrivateIpv4("8.8.8.8"), "public DNS should still not be private after normalization");
 });
 
 Deno.test("isPrivateIpv6 catches loopback, ULA, link-local, IPv4-mapped private", () => {
