@@ -39,15 +39,28 @@ const ALLOWED_ORIGINS = [
     "capacitor://localhost"
 ];
 
+function isDevOrigin(origin: string): boolean {
+    // Match the exact hostname (and require http:), not a string prefix —
+    // `startsWith('http://localhost')` also matches an attacker-controlled
+    // origin like "http://localhost.evil.com" or "http://localhostevil.com".
+    let url: URL;
+    try {
+        url = new URL(origin);
+    } catch {
+        return false;
+    }
+    if (url.protocol !== 'http:') return false;
+    return (
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1' ||
+        /^192\.168\.\d{1,3}\.\d{1,3}$/.test(url.hostname)
+    );
+}
+
 function getCorsHeaders(origin: string | null) {
     // Allow any localhost/127.0.0.1 origin for development
     // Also allow local network IPs (192.168.x.x) for mobile/device testing
-    const isDevOrigin = origin && (
-        origin.startsWith('http://localhost') ||
-        origin.startsWith('http://127.0.0.1') ||
-        origin.startsWith('http://192.168.')
-    );
-    const allowedOrigin = isDevOrigin || (origin && ALLOWED_ORIGINS.includes(origin))
+    const allowedOrigin = (origin && (isDevOrigin(origin) || ALLOWED_ORIGINS.includes(origin)))
         ? origin
         : ALLOWED_ORIGINS[0];
     return {
