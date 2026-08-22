@@ -39,3 +39,23 @@ Every visible mode, switch, and selector should clearly change the request, retr
 ## Rollout
 
 Ship backend enforcement first, then adjust labels only if a control remains intentionally soft.
+
+## Status after Quality & Truth Release (branch t3code/quality-truth-release)
+
+Implemented:
+
+1. Control inventory + regression matrix on both sides:
+   - `supabase/functions/ai/control-matrix.test.ts` asserts, per visible control: the prompt marker it produces and its deterministic post-processing effect.
+   - `src/test/ai/control-payload-matrix.test.ts` asserts every control reaches the request payload verbatim.
+2. Enforcement centralized in `_shared/control-enforcement.ts` (Ask/Attack/Brainstorm/Generate), imported by the edge function.
+3. Ask Clarify is now deterministic at the edges: if clarify mode returns no follow-up questions, a visible uncertainty note is added (`enforceAskControls`).
+4. Attack outputs are validated against `AttackOutputSchema` client-side (previously cast unvalidated).
+5. Generate length stays deterministically capped (2/3/4 contentions); role guidance no longer contradicts the Length Instruction (see prompt plan). Audience/tone labeled in GenerateForm as "Guides writing style; it does not change research."
+
+Invalidated:
+
+- The old claim that Ask's full control block was untestable; `buildAskBasePrompt` extracts it for exact assertions.
+
+Deferred:
+
+- Deterministic vocabulary-level enforcement for audience/tone (not feasible post-hoc; honest labeling chosen instead).

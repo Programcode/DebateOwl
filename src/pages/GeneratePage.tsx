@@ -6,7 +6,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { GenerateForm } from '@/components/features/generate/GenerateForm';
 import { GenerateResults } from '@/components/features/generate/GenerateResults';
-import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError } from '@/lib/ai/client';
+import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError, type DiscoveredSource } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
@@ -33,11 +33,15 @@ export default function GeneratePage() {
   const { t } = useTranslation();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
+  const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
   const handleUndo = () => {
     const prev = (autosavedCases || []).find(item => item.data !== generateResult);
     if (prev) {
       setGenerateResult(prev.data);
+      // Autosaved snapshots do not carry researched sources; drop the panel
+      // rather than showing provenance that belongs to a different case.
+      setDiscoveredSources([]);
       toast({ title: t('generate.undone', 'Reverted'), description: t('generate.undoneDesc', 'Loaded previous generation.') });
     } else {
       toast({ title: t('generate.noUndo', 'Nothing to undo'), variant: 'destructive' });
@@ -47,12 +51,13 @@ export default function GeneratePage() {
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
     try {
-      const result = await generateCase(data, config);
+      const { result, discoveredSources: sources } = await generateCase(data, config);
       // Always stamp with real local time and motion
       if (result.metadata) {
         result.metadata.generatedAt = new Date().toISOString();
         (result.metadata as Record<string, unknown>).motion = data.motion;
       }
+      setDiscoveredSources(sources);
       setGenerateResult(result);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
       setTimeout(() => document.getElementById('generate-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -94,7 +99,7 @@ export default function GeneratePage() {
 
     setGenerateLoading(true);
     void generateCase(data, config)
-      .then((next) => {
+      .then(({ result: next }) => {
         setGenerateResult({
           ...generateResult,
           ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
@@ -326,6 +331,7 @@ export default function GeneratePage() {
               <div key="generate-results" id="generate-results" className="motion-swap space-y-4">
                 <GenerateResults
                   result={generateResult}
+                  discoveredSources={discoveredSources}
                   onRegenerateSection={handleRegenerateSection}
                   onDiscuss={handleDiscuss}
                   onSave={handleSave}

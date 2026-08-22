@@ -14,10 +14,13 @@ import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
+import type { DiscoveredSource } from '@/lib/ai/client';
 import { openExternalUrl } from '@/lib/native';
 
 interface GenerateResultsProps {
   result: GenerateOutput;
+  discoveredSources?: DiscoveredSource[];
   onRegenerateSection?: (section: string) => void;
   onDiscuss?: () => void;
   onSave?: () => void;
@@ -73,7 +76,7 @@ function formatDuration(ms: number | undefined, t: (key: string, options?: Recor
   return t('generateResults.durationS', { value });
 }
 
-export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart }: GenerateResultsProps) {
+export function GenerateResults({ result, discoveredSources, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -153,13 +156,22 @@ export function GenerateResults({ result, onRegenerateSection, onDiscuss, onSave
   return (
     <StaggeredContainer className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
+      {/* Researched sources with quality provenance */}
+      {discoveredSources && discoveredSources.length > 0 && (
+        <div className="rounded-lg border bg-card/50 p-4">
+          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
+          <SourceQualityList sources={discoveredSources} />
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t('sourceQuality.fallbackNote')}
+          </p>
+        </div>
+      )}
       {/* Metadata */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
-          </Badge>
-          <span>•</span>
+          </Badge>          <span>•</span>
           <span>{result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : ''}</span>
           {modelText && <><span>•</span><span>{modelText}</span></>}
           {durationText && <><span>•</span><span>{durationText}</span></>}

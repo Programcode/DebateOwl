@@ -1,11 +1,12 @@
 // src/pages/BrainstormPage.tsx
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { BrainstormForm } from '@/components/features/brainstorm/BrainstormForm';
 import { BrainstormResults } from '@/components/features/brainstorm/BrainstormResults';
-import { brainstorm, askChat } from '@/lib/ai/client';
+import { brainstorm, askChat, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
@@ -22,12 +23,14 @@ export default function BrainstormPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
+  const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   const { t } = useTranslation();
 
   const handleSubmit = async (data: BrainstormInput) => {
     setBrainstormLoading(true);
     try {
-      const result = await brainstorm(data, config);
+      const { result, discoveredSources } = await brainstorm(data, config);
+      setDiscoveredSources(discoveredSources);
       setBrainstormResult(result);
       toast({ title: t('brainstorm.complete', 'Brainstorm complete'), description: t('brainstorm.completeDesc', 'Your argument angles are ready.'), variant: 'success' });
     } catch (error) {
@@ -114,7 +117,7 @@ export default function BrainstormPage() {
               </div>
             ) : brainstormResult ? (
               <div key="brainstorm-results" className="motion-swap">
-                <BrainstormResults result={brainstormResult} onDiscuss={handleDiscuss} />
+                <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
               </div>
             ) : (
               <div key="brainstorm-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">

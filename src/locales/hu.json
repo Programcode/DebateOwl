@@ -423,7 +423,8 @@
     "loadingMsg2": "Érvelési láncok építése...",
     "loadingMsg3": "Beszédre kész hatások írása...",
     "loadingMsg4": "Ellenérvek előkészítése...",
-    "loadingMsg5": "Eset véglegesítése..."
+    "loadingMsg5": "Eset véglegesítése...",
+    "styleNote": "A írásstílust befolyásolja; a kutatást nem változtatja meg."
   },
   "generateResults": {
     "incomplete": "Generálás Befejezetlen",
@@ -1133,5 +1134,10 @@
     "en": "English",
     "es": "Español",
     "hu": "Magyar"
+  },
+  "sourceQuality": {
+    "researchedSources": "Kutatási források",
+    "fallbackOnly": "csak háttérkontextus",
+    "fallbackNote": "A gyenge források csak háttérkontextusok, soha nem támasztanak alá idézeteket."
   }
 }

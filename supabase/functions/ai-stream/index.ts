@@ -21,6 +21,14 @@ function getCorsHeaders(origin: string | null) {
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
+import {
+  calculateRequestCost,
+  type CostResult,
+  normalizeAnthropicUsage,
+  normalizeGoogleUsage,
+  normalizeOpenAIUsage,
+  type NormalizedUsage,
+} from "../_shared/cost.ts";
 
 type ChatRole = "user" | "assistant";
 
@@ -252,24 +260,50 @@ async function logUsage(
   userId: string,
   provider: string,
   model: string,
-  inputTokens?: number,
-  outputTokens?: number,
+  usage?: NormalizedUsage,
   latencyMs?: number,
   status = "success",
   errorCode?: string,
 ) {
   try {
-    await supabase.from("ai_requests").insert({
+    const cost: CostResult = usage
+      ? calculateRequestCost({ provider, model, usage })
+      : calculateRequestCost({ provider, model });
+
+    const row: Record<string, unknown> = {
       user_id: userId,
       feature: "ask",
       provider,
       model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
+      input_tokens: cost.inputTokens,
+      output_tokens: cost.outputTokens,
       latency_ms: latencyMs,
       status,
       error_code: errorCode,
-    });
+      cost_usd: cost.costUsd,
+    };
+
+    // Audit columns added by migration 20260822000000_ai_request_cost_audit.sql.
+    const auditFields: Record<string, unknown> = {
+      cached_input_tokens: cost.cachedInputTokens,
+      cache_write_tokens: cost.cacheWriteTokens,
+      reasoning_output_tokens: cost.reasoningOutputTokens,
+      pricing_snapshot_id: cost.pricingSnapshotId,
+      pricing_source_url: cost.pricingSourceUrl,
+      cost_calculation_version: cost.costCalculationVersion,
+      raw_usage: cost.rawUsage ?? null,
+    };
+
+    let { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
+    // Retry only when the audit columns do not exist yet (Postgres 42703 or
+    // PostgREST PGRST204). Any other error must not retry: the first insert
+    // may have committed, and a second would double-log the request.
+    const isMissingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    if (error && isMissingColumn) {
+      console.warn("[AI STREAM] Audit columns missing; logging base row only:", error.message);
+      ({ error } = await supabase.from("ai_requests").insert(row));
+    }
+    if (error) throw error;
   } catch (err) {
     console.warn("[AI STREAM] Failed to log usage:", err);
   }
@@ -355,8 +389,24 @@ Deno.serve(async (req) => {
     async start(controller) {
       const encoder = new TextEncoder();
       let accumulated = "";
-      let inputTokens: number | undefined;
-      let outputTokens: number | undefined;
+      const streamUsageParts: Record<string, Record<string, unknown>> = { openai: {}, anthropic: {}, google: {} };
+
+      // Merge streamed usage fragments per provider, then normalize once at the end.
+      const mergeUsage = (part: "openai" | "anthropic" | "google", patch: Record<string, unknown>) => {
+        streamUsageParts[part] = { ...streamUsageParts[part], ...patch };
+      };
+      const collectUsage = (): NormalizedUsage | undefined => {
+        if (resolvedProvider === "openai") {
+          return Object.keys(streamUsageParts.openai).length ? normalizeOpenAIUsage(streamUsageParts.openai) : undefined;
+        }
+        if (resolvedProvider === "anthropic") {
+          return Object.keys(streamUsageParts.anthropic).length ? normalizeAnthropicUsage(streamUsageParts.anthropic) : undefined;
+        }
+        if (resolvedProvider === "google") {
+          return Object.keys(streamUsageParts.google).length ? normalizeGoogleUsage(streamUsageParts.google) : undefined;
+        }
+        return undefined;
+      };
 
       const emit = (event: string, payload: Record<string, unknown>) => {
         controller.enqueue(encoder.encode(sse(event, payload)));
@@ -397,8 +447,8 @@ Deno.serve(async (req) => {
               try { parsed = JSON.parse(data); } catch { continue; }
               const delta = (parsed.choices as Array<{ delta?: { content?: string } }>)?.[0]?.delta?.content;
               if (typeof delta === "string" && delta) { accumulated += delta; emit("delta", { text: delta }); }
-              const usage = parsed.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined;
-              if (usage) { inputTokens = usage.prompt_tokens ?? inputTokens; outputTokens = usage.completion_tokens ?? outputTokens; }
+              const usage = parsed.usage as Record<string, unknown> | undefined;
+              if (usage) mergeUsage("openai", usage);
             }
           }
 
@@ -443,8 +493,8 @@ Deno.serve(async (req) => {
               const candidates = parsed.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
               const text = candidates?.[0]?.content?.parts?.[0]?.text;
               if (typeof text === "string" && text) { accumulated += text; emit("delta", { text }); }
-              const usageMeta = parsed.usageMetadata as { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
-              if (usageMeta) { inputTokens = usageMeta.promptTokenCount ?? inputTokens; outputTokens = usageMeta.candidatesTokenCount ?? outputTokens; }
+              const usageMeta = parsed.usageMetadata as Record<string, unknown> | undefined;
+              if (usageMeta) mergeUsage("google", usageMeta);
             }
           }
 
@@ -486,12 +536,12 @@ Deno.serve(async (req) => {
                 if (typeof delta === "string" && delta) { accumulated += delta; emit("delta", { text: delta }); }
               }
               if (parsed.type === "message_start") {
-                const usage = (parsed.message as { usage?: { input_tokens?: number } })?.usage;
-                if (usage) inputTokens = usage.input_tokens;
+                const usage = (parsed.message as { usage?: Record<string, unknown> } | undefined)?.usage;
+                if (usage) mergeUsage("anthropic", usage);
               }
               if (parsed.type === "message_delta") {
-                const usage = (parsed as { usage?: { output_tokens?: number } }).usage;
-                if (usage) outputTokens = usage.output_tokens;
+                const usage = parsed.usage as Record<string, unknown> | undefined;
+                if (usage) mergeUsage("anthropic", usage);
               }
             }
           }
@@ -510,7 +560,7 @@ Deno.serve(async (req) => {
         if (!req.signal.aborted) {
           emit("final", { output });
         }
-        await logUsage(user.id, resolvedProvider, model, inputTokens, outputTokens, Date.now() - startedAt);
+        await logUsage(user.id, resolvedProvider, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Streaming failed";
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
@@ -521,8 +571,7 @@ Deno.serve(async (req) => {
           user.id,
           resolvedProvider,
           model,
-          inputTokens,
-          outputTokens,
+          collectUsage(),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
           isAbort ? "client_abort" : "stream_error",

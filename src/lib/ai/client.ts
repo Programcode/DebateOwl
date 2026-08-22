@@ -1,7 +1,7 @@
 import { mockGenerateCase, mockAttackCase, mockBrainstorm, mockFactoids, mockAsk } from './providers/mock-provider';
 import type { ProviderConfig } from './providers/types';
 import type { GenerateInput, GenerateOutput } from './schemas/generate';
-import type { AttackOutput, AttackInput } from './schemas/attack';
+import { AttackOutputSchema, type AttackOutput, type AttackInput } from './schemas/attack';
 import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
 import { FactoidsOutputSchema, type FactoidsOutput, type FactoidsInput } from './schemas/factoids';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
@@ -12,6 +12,38 @@ import { toast } from '@/hooks/use-toast';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
+
+/** A web source discovered during research, with auditable ranking metadata from the edge function. */
+export interface DiscoveredSource {
+  title: string;
+  url: string;
+  content?: string;
+  sourceType?: string;
+  qualityScore?: number;
+  qualityLabel?: 'strong' | 'moderate' | 'weak';
+  /** The research query that surfaced this source. */
+  query?: string;
+}
+
+/** Feature result plus the researched sources that informed it. */
+export interface ResultWithSources<T> {
+  result: T;
+  discoveredSources: DiscoveredSource[];
+}
+
+/**
+ * Parses the discovered-sources payload at the trust boundary: only
+ * well-formed entries with a title and URL survive; anything else is dropped.
+ */
+function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is DiscoveredSource => {
+    if (!item || typeof item !== 'object') return false;
+    const candidate = item as Partial<DiscoveredSource>;
+    return typeof candidate.title === 'string' && candidate.title.length > 0 &&
+      typeof candidate.url === 'string' && candidate.url.length > 0;
+  });
+}
 
 // Enable debug logging in development
 const DEBUG = import.meta.env.DEV;
@@ -671,24 +703,48 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
   return cleanGeneratedOutput(result);
 }
 
-export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<GenerateOutput> {
-  if (config.provider === 'mock') return mockGenerateCase(input.motion, input.side);
+/**
+ * Validates the attack response at the trust boundary. Attack outputs were
+ * previously cast without validation; now malformed provider responses fail
+ * loudly instead of rendering unverified shapes.
+ */
+function validateAttackOutput(output: unknown): AttackOutput {
+  const parsed = AttackOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected attack schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+  return parsed.data;
+}
+
+export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<ResultWithSources<GenerateOutput>> {
+  if (config.provider === 'mock') return { result: await mockGenerateCase(input.motion, input.side), discoveredSources: [] };
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
-  const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
+  const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
+  const discovered = parseDiscoveredSources(data.discoveredSources);
 
-  // Auto-save discovered sources to library
-  if (data.discoveredSources && data.discoveredSources.length > 0) {
+  // Auto-save discovered sources to library (keeping provenance metadata)
+  if (discovered.length > 0) {
     const session = useSessionStore.getState();
-    for (const source of data.discoveredSources) {
+    for (const source of discovered) {
       try {
         await session.addSource({
           title: source.title,
-          content: source.content,
+          content: source.content ?? '',
           type: 'url',
           origin: source.url,
           folder: 'Auto-saved',
+          metadata: {
+            url: source.url,
+            sourceType: source.sourceType,
+            qualityScore: source.qualityScore,
+            qualityLabel: source.qualityLabel,
+            query: source.query,
+            capturedVia: 'generate',
+          },
         });
       } catch {
         toast({
@@ -698,33 +754,39 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
         });
       }
     }
-    console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
+    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
   }
 
-  return transformGenerateResponse(data.output as Record<string, unknown>);
+  return {
+    result: transformGenerateResponse(data.output as Record<string, unknown>),
+    discoveredSources: discovered,
+  };
 }
 
-export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<AttackOutput> {
-  if (config.provider === 'mock') return mockAttackCase(input.caseText);
-  const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown };
-  return data.output as AttackOutput;
-}
+export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
+  if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
+  const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
+  const discovered = parseDiscoveredSources(data.discoveredSources);
 
-export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<BrainstormOutput> {
-  if (config.provider === 'mock') return mockBrainstorm(input.motion, input.outputMode);
-  const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: { title: string; url: string; content: string }[] };
-
-  // Auto-save discovered sources to library
-  if (data.discoveredSources && data.discoveredSources.length > 0) {
+  // Auto-save discovered sources to library (keeping provenance metadata)
+  if (discovered.length > 0) {
     const session = useSessionStore.getState();
-    for (const source of data.discoveredSources) {
+    for (const source of discovered) {
       try {
         await session.addSource({
           title: source.title,
-          content: source.content,
+          content: source.content ?? '',
           type: 'url',
           origin: source.url,
           folder: 'Auto-saved',
+          metadata: {
+            url: source.url,
+            sourceType: source.sourceType,
+            qualityScore: source.qualityScore,
+            qualityLabel: source.qualityLabel,
+            query: source.query,
+            capturedVia: 'attack',
+          },
         });
       } catch {
         toast({
@@ -734,10 +796,55 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
         });
       }
     }
-    console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
+    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
   }
 
-  return transformBrainstormResponse(data.output as Record<string, unknown>);
+  return {
+    result: validateAttackOutput(data.output),
+    discoveredSources: discovered,
+  };
+}
+
+export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
+  if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
+  const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
+  const discovered = parseDiscoveredSources(data.discoveredSources);
+
+  // Auto-save discovered sources to library (keeping provenance metadata)
+  if (discovered.length > 0) {
+    const session = useSessionStore.getState();
+    for (const source of discovered) {
+      try {
+        await session.addSource({
+          title: source.title,
+          content: source.content ?? '',
+          type: 'url',
+          origin: source.url,
+          folder: 'Auto-saved',
+          metadata: {
+            url: source.url,
+            sourceType: source.sourceType,
+            qualityScore: source.qualityScore,
+            qualityLabel: source.qualityLabel,
+            query: source.query,
+            capturedVia: 'brainstorm',
+          },
+        });
+      } catch {
+        toast({
+          title: 'Source save failed',
+          description: `Could not save "${source.title}" to your library.`,
+          variant: 'destructive',
+        });
+      }
+    }
+    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
+  }
+
+  return {
+    result: transformBrainstormResponse(data.output as Record<string, unknown>),
+    discoveredSources: discovered,
+  };
 }
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {

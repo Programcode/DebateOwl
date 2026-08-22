@@ -1,4 +1,4 @@
-import { buildSearchQueries, rankSearchResults } from "./source-quality.ts";
+import { buildSearchQueries, rankSearchResults } from "../_shared/source-quality.ts";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);

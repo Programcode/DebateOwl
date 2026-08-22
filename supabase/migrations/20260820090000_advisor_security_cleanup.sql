@@ -6,7 +6,18 @@ ALTER FUNCTION public.set_updated_at() SET search_path = public;
 
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.increment_share_view(text) FROM PUBLIC, anon, authenticated;
+
+-- increment_share_view's creating migration was removed from this chain in
+-- commit aa3e592, so fresh databases never have the function, while databases
+-- migrated before that commit still do. Guard the revoke so both histories
+-- apply cleanly.
+do $$
+begin
+  if to_regprocedure('public.increment_share_view(text)') is not null then
+    REVOKE ALL ON FUNCTION public.increment_share_view(text) FROM PUBLIC, anon, authenticated;
+  end if;
+end $$;
+
 REVOKE ALL ON FUNCTION public.require_admin() FROM PUBLIC, anon, authenticated;
 
 -- Promo redemption is an authenticated user capability. Explicitly revoke

@@ -59,3 +59,17 @@ Make prompts produce more controlled, useful debate coaching while preserving th
 - Ask responses state uncertainty instead of inventing sources.
 - Generate consistently respects side, role, length, audience, and tone.
 - Prompt text is easier to update without changing unrelated feature behavior.
+
+## Status after Quality & Truth Release (branch t3code/quality-truth-release)
+
+Implemented:
+
+1. Layered prompts in `supabase/functions/_shared/prompts.ts`: product identity (includes humanizer rules), per-feature task prompts, single-sourced JSON-only output rules, admin/custom overrides, knowledge base, and research citation honesty rules included only when research accompanies the request.
+2. Deduplication: humanizer text, citation-honesty rules, and JSON instructions each exist once; Ask's duplicated honesty lines were folded into shared layers. The Generate role-vs-length contradiction was removed with an explicit CONTROL PRECEDENCE rule.
+3. Fixtures/regression tests: `_shared/prompts.test.ts` (layer presence, order, no duplication, date replacement), existing `prompt-builder.test.ts` for controls/language, and `control-matrix.test.ts` for exact propagation.
+4. Manual evaluation sheet created at `plans/prompt-eval-sheet.md`: 3 motions x 3 complexity levels, scoring quality/control obedience/hallucination risk/JSON validity, explicitly marked as subjective evidence rather than automated proof.
+
+Deferred:
+
+- Feature-by-feature rollout ordering from this plan (Ask first) collapses into one release branch because prompt layers are shared infrastructure; per-feature diffs remain reviewable in `_shared/prompts.ts`.
+- Per-provider prompt tuning experiments.

@@ -1,10 +1,11 @@
 // src/pages/AttackPage.tsx
+import { useState } from 'react';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useTranslation } from 'react-i18next';
 import { AttackForm } from '@/components/features/attack/AttackForm';
 import { AttackResults } from '@/components/features/attack/AttackResults';
-import { attackCase, askChat } from '@/lib/ai/client';
+import { attackCase, askChat, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
@@ -23,11 +24,13 @@ export default function AttackPage() {
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
+  const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
   const handleSubmit = async (data: AttackInput) => {
     setAttackLoading(true);
     try {
-      const result = await attackCase(data, config);
+      const { result, discoveredSources } = await attackCase(data, config);
+      setDiscoveredSources(discoveredSources);
       setAttackResult(result);
       toast({ title: t('attack.complete', 'Attack analysis complete'), description: t('attack.completeDesc', 'The critique is ready.'), variant: 'success' });
     } catch (error) {
@@ -115,7 +118,7 @@ export default function AttackPage() {
               </div>
             ) : attackResult ? (
               <div key="attack-results" className="motion-swap">
-                <AttackResults result={attackResult} onDiscuss={handleDiscuss} />
+                <AttackResults result={attackResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
               </div>
             ) : (
               <div key="attack-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">

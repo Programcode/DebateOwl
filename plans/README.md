@@ -9,6 +9,8 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 - [Control honesty and deterministic toggles](./control-honesty.md)
 - [Debate sparring and streaming](./sparring-and-streaming.md)
 - [Model cost accounting](./model-cost-accounting.md)
+- [Prompt evaluation sheet (manual)](./prompt-eval-sheet.md)
+- [Quality & Truth release checklist](./release-checklist.md)
 - [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
 - [Source auto-import](./source-auto-import.md)
 - [Streaming AI](./streaming-ai.md)

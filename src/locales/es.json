@@ -423,7 +423,8 @@
     "loadingMsg2": "Construyendo cadenas de razonamiento...",
     "loadingMsg3": "Escribiendo impactos para el discurso...",
     "loadingMsg4": "Preparando contraargumentos...",
-    "loadingMsg5": "Finalizando el caso..."
+    "loadingMsg5": "Finalizando el caso...",
+    "styleNote": "Guía el estilo de escritura; no cambia la investigación."
   },
   "generateResults": {
     "incomplete": "Generación Incompleta",
@@ -1133,5 +1134,10 @@
     "en": "English",
     "es": "Español",
     "hu": "Magyar"
+  },
+  "sourceQuality": {
+    "researchedSources": "Fuentes investigadas",
+    "fallbackOnly": "solo contexto de respaldo",
+    "fallbackNote": "Las fuentes débiles son solo contexto de respaldo y nunca sostienen citas."
   }
 }

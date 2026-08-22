@@ -65,7 +65,8 @@ describe('security hardening regressions', () => {
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
     expect(ai).toContain('function providerForModel');
     expect(ai).toContain('Unsupported model or provider combination');
-    expect(ai).toContain('Do not fetch model-provided citation URLs');
+    // SSRF-safe verification now lives in the shared research module.
+    expect(read('supabase/functions/_shared/research.ts')).toContain('Do not fetch model-provided citation URLs');
     expect(ai).not.toContain('fetchWithTimeout(currentUrl.toString(), { method: "HEAD"');
   });
 

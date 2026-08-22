@@ -149,3 +149,29 @@ Notes from current docs:
 - Unknown-priced models are visible as unknown cost, not zero cost.
 - Admin total cost and top-user cost reflect the stored request costs.
 - Pricing data can be refreshed intentionally with one script and has auditable source URLs.
+
+## Status after Quality & Truth Release (branch t3code/quality-truth-release)
+
+Implemented:
+
+1. `_shared/cost.ts`: normalizers for OpenAI/Anthropic/Google usage plus `calculateRequestCost`. Reasoning/thinking tokens are never double-counted (OpenAI reasoning is inside completion tokens; Google billable output = candidates + thoughts). Unknown pricing fails closed to `cost_usd = null`; raw provider usage is preserved verbatim.
+2. Versioned snapshot: `docs/pricing-snapshots/` holds official-page captures (`openai.md`, `anthropic.md`, `google-gemini.html`) with sha256 + retrieval metadata in `metadata.json`, and per-model findings. Snapshot id: `official-docs-2026-08-22` (stable per day); `metadata.json` additionally records `snapshotContentHash`, a sha256 over all three captures, so exact fetched bytes can always be resolved.
+3. `scripts/update-model-pricing.ts` refreshes snapshots, hashes them, and verifies every tracked model id against the fresh pages (ignoring docs-navigation links). It reports changes instead of silently rewriting `_shared/model-pricing.ts`, because mis-parsed prices would fabricate costs.
+4. Both `ai` and `ai-stream` capture usage including cached/reasoning/cache-write dimensions and store token counts, `pricing_snapshot_id`, `pricing_source_url`, `cost_calculation_version`, and `raw_usage`.
+5. Hardcoded pricing tables removed from `logUsage`; rate-limited/error rows log status without fake cost.
+6. Migration `20260822000000_ai_request_cost_audit.sql` adds the audit columns (prepared but NOT applied; it MUST be applied before deploying the `ai`/`ai-stream` functions. Both functions fall back to a base insert when the columns are missing, but that fallback is a deploy-safety net to be removed once the migration has been applied everywhere, not a permanent mode).
+7. Admin: `stats` now returns a `byModel` breakdown; AdminPage renders Cost by Model and shows "Unknown" instead of `$0.0000` whenever unknown-cost requests exist. Pre-load placeholder no longer claims `$0.0000`.
+
+Unit coverage: standard, cached input, cache read/write, reasoning, thinking, long-context thresholds (OpenAI 272k, Gemini Pro 200k), unknown model, missing usage — all in `_shared/cost.test.ts` (9 cases).
+
+Deviations from this plan, deliberate:
+
+- Snapshots are stored as markdown/html actually retrievable from official endpoints rather than forced `.html`.
+- `gemini-3.1-flash-lite-preview` has no exact entry on the official page at retrieval time, so it stays unknown-priced by design; the refresh script lists it as MISSING on every run so it cannot be forgotten.
+- `gemini-3.5-flash` was added to the server allowlist (it was already served by ai-stream) instead of being removed from the UI; it has official pricing.
+- Extra audit columns beyond the plan's list: `cache_write_tokens` and `raw_usage jsonb` for complete billing audit.
+- Admin RPC SQL unchanged; known/unknown aggregation stays in the admin function, which already computed it correctly.
+
+Not done (per plan): no backfill of historical rows; nothing invents past costs.
+
+Follow-up after the audit migration has been applied everywhere: remove the temporary base-insert fallback from `logUsage` in both `ai` and `ai-stream` (tracked here so it is not forgotten).

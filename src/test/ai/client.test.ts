@@ -2,10 +2,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { supabaseMock, setMockInvokeResponse, resetMockState, setMockSessionToken } from '../mocks/supabase';
-import { generateCase, attackCase, brainstorm, factoids, askChat, AIError } from '@/lib/ai/client';
+import { generateCase, attackCase, brainstorm, factoids, askChat, AIError, AIResponseError } from '@/lib/ai/client';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
-import type { AttackInput } from '@/lib/ai/schemas/attack';
+import type { AttackInput, AttackOutput } from '@/lib/ai/schemas/attack';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 
 // Mock Supabase client - Importing the mock object directly
@@ -129,7 +129,7 @@ describe('AI Client Integration', () => {
         it('should use local mock provider logic when provider is "mock"', async () => {
             const mockProviderConfig: ProviderConfig = { ...mockConfig, provider: 'mock' };
 
-            const result = await generateCase({ motion: 'Test Motion', side: 'pro' } as GenerateInput, mockProviderConfig);
+            const { result } = await generateCase({ motion: 'Test Motion', side: 'pro' } as GenerateInput, mockProviderConfig);
 
             // Should NOT call Supabase
             expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
@@ -173,8 +173,16 @@ describe('AI Client Integration', () => {
     });
 
     describe('attackCase', () => {
+        const validAttackOutput: AttackOutput = {
+            overallAssessment: { score: 80, summary: 'Solid case', strengthAreas: ['evidence'] },
+            weaknesses: [],
+            fallaciesDetected: [],
+            crossExQuestions: [],
+            weighingAnalysis: { currentWeighing: 'none', missingComparisons: [], improvementSuggestions: [] },
+        };
+
         it('should pass correct params for attackCase', async () => {
-            const mockResponse = { output: { overallAssessment: { score: 80 } } };
+            const mockResponse = { output: validAttackOutput };
             setMockInvokeResponse(mockResponse);
 
             const input = {
@@ -195,6 +203,32 @@ describe('AI Client Integration', () => {
                     input: expect.objectContaining(input),
                 })
             }));
+        });
+
+        it('returns discovered sources alongside the validated attack result', async () => {
+            const discoveredSources = [{
+                title: 'Study',
+                url: 'https://edu.example/study',
+                content: 'x',
+                sourceType: 'academic',
+                qualityLabel: 'strong' as const,
+                qualityScore: 85,
+                query: 'study query',
+            }];
+            setMockInvokeResponse({ output: validAttackOutput, discoveredSources });
+
+            const outcome = await attackCase({ caseText: 'c' } as AttackInput, mockConfig);
+
+            expect(outcome.result.overallAssessment.score).toBe(80);
+            expect(outcome.discoveredSources).toEqual(discoveredSources);
+        });
+
+        it('throws AIResponseError when attack output does not match the schema', async () => {
+            setMockInvokeResponse({ output: { overallAssessment: { score: 80 } } });
+
+            await expect(attackCase({ caseText: 'c' } as AttackInput, mockConfig))
+                .rejects
+                .toThrow(AIResponseError);
         });
     });
 

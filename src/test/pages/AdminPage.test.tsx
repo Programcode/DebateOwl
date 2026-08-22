@@ -254,4 +254,80 @@ describe('AdminPage Integration', () => {
         expect(grantBody.userId).toBe(targetUserId);
         expect(grantBody.days).toBe(30);
     });
+
+    it('renders cost by model with unknown-cost rows never shown as $0.0000', async () => {
+        const mockStats: Record<string, unknown> = {
+            totals: { requests: 12, cost: 0.0123, successRate: 100, unknownCostRequests: 3 },
+            daily: [] as unknown[],
+            byFeature: { ask: 12 },
+            byUser: [
+                { user_id: 'user-1', email: 'top@example.com', requests: 12, cost: 0.0123, unknownCostRequests: 3 },
+            ],
+            byModel: [
+                { provider: 'openai', model: 'gpt-5.4-mini', requests: 9, cost: 0.0123, unknownCostRequests: 1 },
+                { provider: 'google', model: 'gemini-3.1-flash-lite-preview', requests: 3, cost: 0, unknownCostRequests: 2 },
+            ],
+        };
+
+        globalFetch.mockImplementation(async (url: string) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(mockStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+        });
+
+        expect(screen.getByText('gpt-5.4-mini')).toBeInTheDocument();
+        expect(screen.getByText('$0.0123 + 1 unknown')).toBeInTheDocument();
+        expect(screen.getByText('gemini-3.1-flash-lite-preview')).toBeInTheDocument();
+        // Unknown-priced model row must not render a fake zero.
+        expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
+    });
+
+    it('labels totals as unknown when cost is unknown instead of rendering $0.0000', async () => {
+        const mockStats: Record<string, unknown> = {
+            totals: { requests: 7, cost: 0, successRate: 100, unknownCostRequests: 7 },
+            daily: [] as unknown[],
+            byFeature: { ask: 7 },
+            byUser: [
+                { user_id: 'user-1', email: 'a@example.com', requests: 7, cost: 0, unknownCostRequests: 7 },
+            ],
+        };
+
+        globalFetch.mockImplementation(async (url: string) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(mockStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+        });
+
+        expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
+        expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
+        expect(screen.getByText('7 requests missing token data')).toBeInTheDocument();
+    });
 });

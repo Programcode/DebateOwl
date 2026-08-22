@@ -35,3 +35,21 @@ Make web research trustworthy across Generate, Attack, Brainstorm, Factoids, and
 ## Deployment
 
 Deploy `supabase functions deploy ai --project-ref uziwdtkzofptihahfooo` after Deno checks, frontend tests, and a local authenticated Ask test pass.
+
+## Status after Quality & Truth Release (branch t3code/quality-truth-release)
+
+Implemented:
+
+1. Research pipeline extracted to `supabase/functions/_shared/research.ts` (Exa search, follow-ups, ranking context, citation sources) with an injected model caller so it is testable; ranking/query builders moved to `_shared/source-quality.ts`.
+2. Topic-specific query builders (tournament, policy/statistics, legal/current events) were already present and are now covered by tests in the shared module.
+3. All discovered-source returns carry quality metadata; Factoids now also returns `discoveredSources`.
+4. Source display: shared `SourceQualityList` renders strong/moderate/weak labels plus "fallback context only" for weak sources in Generate, Attack, and Brainstorm results. Factoids shows only verified citations (quality-labeled consulted-list display deferred).
+5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, prepared but NOT applied) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
+6. Source-quality floor completed: factoid citations verify only against fetched non-weak research content (`applyFactoidsVerification`); weak or unknown URLs are downgraded and filtered. Ask fallback already excluded weak sources.
+
+Tests: `_shared/research.test.ts`, extended `source-quality.test.ts`, frontend `SourceQualityList.test.tsx`, session-store provenance round-trip, client discoveredSources tests.
+
+Deferred:
+
+- Handler-level integration test that mocks Exa end-to-end through `Deno.serve`; current coverage is at the extracted-function level plus frontend mocks.
+- Factoids UI panel listing all consulted sources with quality chips.

@@ -25,6 +25,7 @@ interface UsageStats {
     totals: { requests: number; cost: number; successRate: number; unknownCostRequests?: number };
     daily: Array<{ date: string; requests: number; cost: number; errors: number }>;
     byFeature: Record<string, number>;
+    byModel?: Array<{ provider: string; model: string; requests: number; cost: number; unknownCostRequests: number }>;
     byUser: Array<{ user_id: string; email?: string | null; requests: number; cost: number; unknownCostRequests?: number }>;
 }
 
@@ -348,7 +349,7 @@ export default function AdminPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {stats ? formatKnownCost(stats.totals.cost, stats.totals.unknownCostRequests) : '$0.0000'}
+                                {stats ? formatKnownCost(stats.totals.cost, stats.totals.unknownCostRequests) : '\u2014'}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 {stats?.totals.unknownCostRequests
@@ -456,6 +457,34 @@ export default function AdminPage() {
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Cost by Model */}
+                        {stats?.byModel && stats.byModel.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Cost by Model</CardTitle>
+                                    <CardDescription>Known cost per model over the last 7 days; unknown-priced models never render as zero</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3">
+                                        {stats.byModel.map((m) => (
+                                            <div key={`${m.provider}/${m.model}`} className="flex items-center justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-medium truncate" title={m.model}>{m.model}</div>
+                                                    <div className="text-xs text-muted-foreground">{m.provider}</div>
+                                                </div>
+                                                <div className="flex items-center gap-3 shrink-0">
+                                                    <Badge variant="secondary">{m.requests} requests</Badge>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {formatKnownCost(m.cost, m.unknownCostRequests)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Top Users */}
                         <Card>

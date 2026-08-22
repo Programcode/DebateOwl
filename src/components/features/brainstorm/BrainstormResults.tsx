@@ -13,10 +13,13 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
+import type { DiscoveredSource } from '@/lib/ai/client';
 import { openExternalUrl } from '@/lib/native';
 
 interface BrainstormResultsProps {
   result: BrainstormOutput;
+  discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
 }
 
@@ -63,7 +66,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps) {
+export function BrainstormResults({ result, discoveredSources, onDiscuss }: BrainstormResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -128,6 +131,16 @@ export function BrainstormResults({ result, onDiscuss }: BrainstormResultsProps)
   return (
     <StaggeredContainer className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
+      {/* Researched sources with quality provenance */}
+      {discoveredSources && discoveredSources.length > 0 && (
+        <div className="rounded-lg border bg-card/50 p-4">
+          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
+          <SourceQualityList sources={discoveredSources} />
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t('sourceQuality.fallbackNote')}
+          </p>
+        </div>
+      )}
       <ExportToolbar
         onPdf={() => exportBrainstormToPdf(result)}
         onDocx={handleDocxExport}
