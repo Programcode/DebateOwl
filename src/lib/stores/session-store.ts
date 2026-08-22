@@ -24,6 +24,17 @@ interface StreamingAskMessage {
   isStreaming: true;
 }
 
+/** Auditable provenance for sources captured from AI research or imports. */
+export interface SourceProvenance {
+  url?: string;
+  sourceType?: string;
+  qualityScore?: number;
+  qualityLabel?: 'strong' | 'moderate' | 'weak';
+  query?: string;
+  /** Which flow captured this source, e.g. 'generate' | 'brainstorm' | 'ask' | 'factoids'. */
+  capturedVia?: string;
+}
+
 export interface Source {
   id: string;
   title: string;
@@ -31,6 +42,7 @@ export interface Source {
   type: 'url' | 'file' | 'text';
   origin?: string;
   folder?: string;
+  metadata?: SourceProvenance;
   createdAt: number;
   isActive: boolean;
 }
@@ -357,6 +369,7 @@ export const useSessionStore = create<SessionState>()(
             origin: source.origin || null,
             folder,
             is_active: true,
+            metadata: source.metadata ?? null,
           })
           .select('*')
           .single();
@@ -370,6 +383,7 @@ export const useSessionStore = create<SessionState>()(
           type: data.type,
           origin: data.origin || undefined,
           folder: normalizeFolder(data.folder || localItem.folder),
+          metadata: (data.metadata as SourceProvenance | null) ?? undefined,
           isActive: data.is_active,
           createdAt: toTimestamp(data.created_at),
         };

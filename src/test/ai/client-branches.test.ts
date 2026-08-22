@@ -222,7 +222,7 @@ describe('AI client branch coverage', () => {
       error: null,
     });
 
-    const result = await generateCase(validGenerateInput, config);
+    const { result } = await generateCase(validGenerateInput, config);
 
     expect(result.caseStructure.thesis).toBe('Fallback Thesis');
     expect(result.metadata.side).toBe('con');
@@ -253,6 +253,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://a.com',
       folder: 'Auto-saved',
+      metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com' }),
     });
   });
 
@@ -290,7 +291,7 @@ describe('AI client branch coverage', () => {
       error: null,
     });
 
-    const result = await brainstorm(
+    const { result } = await brainstorm(
       { motion: 'UBI', side: 'both', outputMode: 'topfive' },
       config,
     );
@@ -319,6 +320,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://c.com',
       folder: 'Auto-saved',
+      metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com' }),
     });
   });
 
@@ -673,7 +675,7 @@ describe('AI client branch coverage', () => {
       error: null,
     });
 
-    const result = await generateCase(validGenerateInput, config);
+    const { result } = await generateCase(validGenerateInput, config);
 
     expect(result.contentions[0].claim).toBe('Main argument');
     expect(result.counters[0].targetArgument).toBe('Opponent argument');
@@ -693,7 +695,7 @@ describe('AI client branch coverage', () => {
       error: null,
     });
 
-    const result = await generateCase(validGenerateInput, config);
+    const { result } = await generateCase(validGenerateInput, config);
 
     expect(result.contentions[0].claim).toBe('Argument');
     expect(result.contentions[0].reasoning).toContain('p1 p2');
@@ -716,7 +718,7 @@ describe('AI client branch coverage', () => {
       error: null,
     });
 
-    const result = await brainstorm({ motion: 'M', side: 'both', outputMode: 'mindmap' }, config);
+    const { result } = await brainstorm({ motion: 'M', side: 'both', outputMode: 'mindmap' }, config);
 
     expect(result.topFive?.[0].idea.side).toBe('neutral');
     expect(result.topFive?.[0].idea.strength).toBe('moderate');
@@ -727,8 +729,8 @@ describe('AI client branch coverage', () => {
   it('returns local mock-provider outputs for all public feature helpers', async () => {
     const mockConfig = { ...config, provider: 'mock' as const };
 
-    const attack = await attackCase({ caseText: 'Case text' } as any, mockConfig);
-    const ideas = await brainstorm({ motion: 'Motion', side: 'both', outputMode: 'topfive' } as any, mockConfig);
+    const { result: attack } = await attackCase({ caseText: 'Case text' } as any, mockConfig);
+    const { result: ideas } = await brainstorm({ motion: 'Motion', side: 'both', outputMode: 'topfive' } as any, mockConfig);
     const facts = await factoids({ claim: 'Claim' } as any, mockConfig);
     const chat = await askChat('hello', [], 'general', mockConfig);
 

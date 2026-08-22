@@ -189,6 +189,76 @@ describe("session-store", () => {
     expect(useSessionStore.getState().sourceLibrary).toHaveLength(1);
   });
 
+  it("sends provenance metadata when saving a discovered source", async () => {
+    setMockAuthUser({ id: "user_1" });
+    setMockTableResponse("sources", {
+      insert: { id: "source_9", title: "Gov report", content: "c", type: "url", origin: "https://gov.example/data", folder: "Auto-saved", is_active: true, created_at: new Date().toISOString(), metadata: { qualityLabel: "strong" } },
+    });
+    const insertCalls: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    const originalFrom = supabaseMock.from.getMockImplementation() as unknown as (table: string) => ReturnType<typeof supabaseMock.from>;
+    supabaseMock.from.mockImplementation(((table: string) => {
+      const builder = originalFrom(table);
+      if (table === "sources") {
+        const originalInsert = builder.insert;
+        builder.insert = ((payload: Record<string, unknown>) => {
+          insertCalls.push({ table, payload });
+          return (originalInsert as unknown as (p: Record<string, unknown>) => ReturnType<typeof builder.insert>)(payload);
+        }) as typeof builder.insert;
+      }
+      return builder;
+    }) as never);
+
+    try {
+      await useSessionStore.getState().addSource({
+        title: "Gov report",
+        content: "c",
+        type: "url",
+        origin: "https://gov.example/data",
+        folder: "Auto-saved",
+        metadata: {
+          url: "https://gov.example/data",
+          sourceType: "government",
+          qualityScore: 82,
+          qualityLabel: "strong",
+          query: "policy statistics 2026",
+          capturedVia: "generate",
+        },
+      });
+    } finally {
+      supabaseMock.from.mockImplementation(originalFrom as never);
+    }
+
+    expect(insertCalls).toHaveLength(1);
+    expect(insertCalls[0].payload.metadata).toEqual({
+      url: "https://gov.example/data",
+      sourceType: "government",
+      qualityScore: 82,
+      qualityLabel: "strong",
+      query: "policy statistics 2026",
+      capturedVia: "generate",
+    });
+  });
+
+  it("round-trips provenance metadata from the database into state", async () => {
+    setMockAuthUser({ id: "user_1" });
+    const metadata = { url: "https://gov.example/data", qualityLabel: "moderate" as const, capturedVia: "brainstorm" };
+    setMockTableResponse("sources", {
+      insert: { id: "source_10", title: "News", content: "c", type: "url", origin: "https://news.example/a", folder: "Auto-saved", is_active: true, created_at: new Date().toISOString(), metadata },
+    });
+
+    await useSessionStore.getState().addSource({
+      title: "News",
+      content: "c",
+      type: "url",
+      origin: "https://news.example/a",
+      folder: "Auto-saved",
+      metadata,
+    });
+
+    const saved = useSessionStore.getState().sourceLibrary[0];
+    expect(saved.metadata).toEqual(metadata);
+  });
+
   it("persists local collections but excludes pending session state", () => {
     const partialize = useSessionStore.persist.getOptions().partialize!;
     const savedCases = [{ id: "case_1", title: "Case", createdAt: Date.now(), data: sampleGenerate }];

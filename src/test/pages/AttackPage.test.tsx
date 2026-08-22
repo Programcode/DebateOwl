@@ -123,7 +123,7 @@ describe('AttackPage Integration', () => {
             fallacyScore: 0,
             recommendations: [] as any[]
         };
-        (attackCase as Mock).mockResolvedValue(mockResult);
+        (attackCase as Mock).mockResolvedValue({ result: mockResult, discoveredSources: [] });
 
         render(
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

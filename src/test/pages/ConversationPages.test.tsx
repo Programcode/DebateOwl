@@ -315,7 +315,7 @@ describe('Conversation Pages', () => {
   });
 
   it('BrainstormPage submits and stores brainstorm results', async () => {
-    mockBrainstorm.mockResolvedValueOnce({ needsMoreInfo: false, nextSteps: ['A'], warningsAndTradeoffs: [] });
+    mockBrainstorm.mockResolvedValueOnce({ result: { needsMoreInfo: false, nextSteps: ['A'], warningsAndTradeoffs: [] }, discoveredSources: [] });
 
     render(
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

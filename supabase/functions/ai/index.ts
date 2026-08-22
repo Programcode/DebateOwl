@@ -23,8 +23,6 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-type Provider = "openai" | "anthropic" | "google";
-
 type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask";
 
 type Source = {
@@ -32,36 +30,6 @@ type Source = {
   content: string;
   origin?: string;
   type: string;
-};
-
-interface ResearchContext {
-  searches: Array<{ query: string; results: string }>;
-  rankedResults: RankedSearchResult[];
-  readContent: Array<{ url: string; title: string; content: string; result?: RankedSearchResult }>;
-  verifiedUrls: Set<string>;
-}
-
-interface ResearchOptions {
-  maxFollowUpQueries: number; // 0 = skip AI follow-up entirely
-  maxUrlsToRead: number;      // How many pages to read in full
-  maxSeedQueries: number;     // How many deterministic searches before AI follow-up
-  overallTimeoutMs: number;   // Hard timeout for entire research
-  preferredSourceType?: string;
-  timeframe?: string;
-}
-
-const DEEP_RESEARCH: ResearchOptions = {
-  maxFollowUpQueries: 2,
-  maxUrlsToRead: 5,
-  maxSeedQueries: 4,
-  overallTimeoutMs: 35000,
-};
-
-const ASK_RESEARCH: ResearchOptions = {
-  maxFollowUpQueries: 2,
-  maxUrlsToRead: 4,
-  maxSeedQueries: 4,
-  overallTimeoutMs: 30000,
 };
 
 // Generate unique request ID for tracing
@@ -94,14 +62,23 @@ import {
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
-  buildSearchQueries,
-  formatRankedSearchResults,
-  rankSearchResults,
-  sourceTitleFromUrl,
-  type ExaResult,
-  type RankedSearchResult,
+  ASK_RESEARCH,
+  applyFactoidsVerification,
+  buildDiscoveredSources,
+  buildResearchContext,
+  DEEP_RESEARCH,
+  deepResearch,
+  decideAskSearch,
+  exaGetContents,
+  fetchWithTimeout,
+  getResearchSources,
+  verifyUrl,
+  withResearchPreferences,
+  type Provider,
+  type ResearchContext,
+  type ResearchDeps,
   type ResearchSource,
-} from "./source-quality.ts";
+} from "../_shared/research.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -522,16 +499,6 @@ function truncateTextToBudget(text: string, budget: number): { text: string; tru
   return { text: text.slice(0, budget) + "\n[Context truncated to fit request limits.]", truncated: true };
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 class InvalidJsonResponseError extends Error {
   readonly providerName: string;
   readonly rawText: string;
@@ -559,334 +526,6 @@ function parseJsonFromText(text: string, providerName: string) {
     }
   }
   throw new InvalidJsonResponseError(providerName, text);
-}
-
-// ============== EXA FUNCTIONS ==============
-
-// exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
-async function exaSearch(query: string): Promise<ExaResult[]> {
-  const apiKey = Deno.env.get("EXA_API_KEY");
-  if (!apiKey) {
-    console.warn("[EXA] EXA_API_KEY not configured");
-    return [];
-  }
-  try {
-    const response = await fetchWithTimeout("https://api.exa.ai/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({
-        query,
-        type: "auto",
-        num_results: 10,
-        contents: { text: { max_characters: 10000 } },
-      }),
-    }, 30000);
-    if (!response.ok) {
-      console.warn(`[EXA] Search failed (${response.status}) for: ${query}`);
-      return [];
-    }
-    const data = await response.json();
-    if (!data?.results || !Array.isArray(data.results)) return [];
-    return data.results.map((r: { title?: string; url?: string; text?: string; publishedDate?: string }) => ({
-      title: r.title,
-      url: r.url,
-      content: r.text,
-      publishedDate: r.publishedDate,
-    }));
-  } catch {
-    console.warn(`[EXA] Search failed for: ${query}`);
-    return [];
-  }
-}
-
-// exaGetContents: extract full text from a specific URL using Exa's /contents endpoint
-async function exaGetContents(url: string): Promise<string> {
-  const apiKey = Deno.env.get("EXA_API_KEY");
-  if (!apiKey) {
-    console.warn("[EXA] EXA_API_KEY not configured");
-    return "";
-  }
-  try {
-    const response = await fetchWithTimeout("https://api.exa.ai/contents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ urls: [url], text: { max_characters: 8000 } }),
-    }, 30000);
-    if (!response.ok) {
-      console.warn(`[EXA] Contents fetch failed (${response.status}) for: ${url}`);
-      return "";
-    }
-    const data = await response.json();
-    if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
-    return (data.results[0]?.text || "").slice(0, 8000);
-  } catch {
-    console.warn(`[EXA] Contents fetch failed for: ${url}`);
-    return "";
-  }
-}
-
-async function verifyUrl(url: string): Promise<boolean> {
-  // Do not fetch model-provided citation URLs from the Edge Function. A URL
-  // that is syntactically public can still resolve to a private service after
-  // validation, and the deployed runtime cannot safely pin DNS resolution.
-  // Citations remain visible but are explicitly marked unverified.
-  void url;
-  return false;
-}
-
-// ============== DEEP RESEARCH ==============
-
-const QUERY_GENERATION_PROMPT = `You are a research assistant. Based on the initial claim and search results so far, generate 2-3 follow-up search queries to find more specific evidence.
-
-Return JSON: { "queries": ["query1", "query2", "query3"] }
-
-Keep queries specific, factual, and focused on statistics, studies, or official sources.`;
-
-const ASK_SEARCH_DECISION_PROMPT = `You decide whether a debate coaching answer needs live web research.
-
-Return strict JSON:
-{
-  "shouldSearch": boolean,
-  "query": "string"
-}
-
-Set shouldSearch=true when the user asks for current events, recent stats, real-world examples, laws/policies, or anything time-sensitive.
-Set shouldSearch=false for timeless coaching (strategy, structure, delivery, framing).
-When shouldSearch=true, provide one concise search query.
-Do not add any fields.`;
-
-function likelyNeedsFreshWebData(text: string): boolean {
-  return /\b(latest|today|current|recent|new|newest|update|updated|news|202[0-9]|law|policy|gdp|inflation|ceo|president|prime minister|market|stock|price|war|conflict)\b/i.test(text);
-}
-
-async function decideAskSearch(
-  message: string,
-  history: Array<{ role: string; content: string }>,
-  provider: Provider,
-  model: string
-): Promise<{ shouldSearch: boolean; query: string }> {
-  const context = history.slice(-4).map((m) => `${m.role}: ${m.content}`).join("\n");
-  const prompt = `${context ? `Recent conversation:\n${context}\n\n` : ""}User message:\n${message}`;
-
-  try {
-    const decisionResult = await callAI(provider, model, ASK_SEARCH_DECISION_PROMPT, [{ role: "user", content: prompt }], 0);
-    const decision = decisionResult.output;
-    if (decision && typeof decision === "object") {
-      const parsed = decision as { shouldSearch?: unknown; query?: unknown };
-      const shouldSearch = Boolean(parsed.shouldSearch);
-      const query = typeof parsed.query === "string" ? parsed.query.trim().slice(0, 240) : "";
-      if (shouldSearch) {
-        return { shouldSearch: true, query: query || message.slice(0, 240) };
-      }
-      return { shouldSearch: false, query: "" };
-    }
-  } catch (err) {
-    console.warn("[ASK] Search decision failed:", err);
-  }
-
-  const fallbackShouldSearch = likelyNeedsFreshWebData(message);
-  return {
-    shouldSearch: fallbackShouldSearch,
-    query: fallbackShouldSearch ? message.slice(0, 240) : "",
-  };
-}
-
-async function generateFollowUpQueries(
-  claim: string,
-  currentResults: string,
-  provider: Provider,
-  model: string
-): Promise<string[]> {
-  const prompt = `Claim: "${claim}"\n\nCurrent search results:\n${currentResults.slice(0, 3000)}\n\nGenerate 2-3 specific follow-up queries to find more evidence.`;
-  try {
-    const result = await callAI(provider, model, QUERY_GENERATION_PROMPT, [{ role: "user", content: prompt }], 0.3);
-    const parsed = typeof result.output === "object" && result.output !== null ? result.output : {};
-    if (Array.isArray((parsed as { queries?: string[] }).queries)) {
-      return (parsed as { queries: string[] }).queries.slice(0, 3);
-    }
-    return [];
-  } catch (err) {
-    console.warn("[DEEP RESEARCH] Failed to generate follow-up queries:", err);
-    return [];
-  }
-}
-
-async function deepResearchInner(
-  claim: string,
-  region: string,
-  provider: Provider,
-  model: string,
-  options: ResearchOptions
-): Promise<ResearchContext> {
-  const context: ResearchContext = {
-    searches: [],
-    rankedResults: [],
-    readContent: [],
-    verifiedUrls: new Set(),
-  };
-
-  console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
-
-  const preferredSourceType = options.preferredSourceType || "any";
-  const seedQueries = buildSearchQueries(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
-  const allResults: Array<ExaResult & { query: string }> = [];
-  const matchesPreferredSourceType = (result: RankedSearchResult) => (
-    preferredSourceType === "any" ||
-    result.sourceType === preferredSourceType
-  );
-
-  const seedResults = await Promise.all(seedQueries.map(async (query) => {
-    const results = await exaSearch(query);
-    const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
-    const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-    context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
-    console.log(`[RESEARCH] Seed query "${query}": ${results.length} results`);
-    return results.map((result) => ({ ...result, query }));
-  }));
-  seedResults.forEach((results) => allResults.push(...results));
-
-  const initialRanked = rankSearchResults(allResults, claim, preferredSourceType);
-  const initialText = formatRankedSearchResults(initialRanked.slice(0, 12));
-
-  // Round 2: AI generates follow-up queries (skipped in light mode)
-  if (options.maxFollowUpQueries > 0) {
-    const followUpQueries = await generateFollowUpQueries(claim, initialText, provider, model);
-    console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
-
-    const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
-      const results = await exaSearch(query);
-      const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
-      const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-      context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
-      allResults.push(...results.map((result) => ({ ...result, query })));
-      return results.length;
-    });
-    await Promise.all(followUpPromises);
-    console.log(`[RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
-  }
-
-  context.rankedResults = rankSearchResults(allResults, claim, preferredSourceType);
-  const readCandidates = preferredSourceType === "any"
-    ? context.rankedResults
-    : context.rankedResults.filter(matchesPreferredSourceType);
-  const urlsToRead = readCandidates
-    .filter((result) => result.qualityLabel !== "weak" || context.rankedResults.filter((r) => r.qualityLabel !== "weak").length < 2)
-    .slice(0, options.maxUrlsToRead);
-
-  const readPromises = urlsToRead.map(async (result) => {
-    const url = result.url || "";
-    const content = await exaGetContents(url);
-    if (content) {
-      context.readContent.push({ url, title: result.title || sourceTitleFromUrl(url), content, result });
-      context.verifiedUrls.add(url);
-    }
-    return content.length > 0;
-  });
-  await Promise.all(readPromises);
-  console.log(`[RESEARCH] Read ${context.readContent.length} pages`);
-
-  return context;
-}
-
-// Wrapper with overall timeout - returns partial results if research exceeds time limit
-async function deepResearch(
-  claim: string,
-  region: string,
-  provider: Provider,
-  model: string,
-  options: ResearchOptions = DEEP_RESEARCH
-): Promise<ResearchContext> {
-  try {
-    const result = await Promise.race([
-      deepResearchInner(claim, region, provider, model, options),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Research timeout")), options.overallTimeoutMs)
-      ),
-    ]);
-    return result;
-  } catch (err) {
-    console.warn(`[RESEARCH] Timed out or failed after ${options.overallTimeoutMs}ms:`, err);
-    // Return empty context so the AI call still proceeds without research
-    return { searches: [], rankedResults: [], readContent: [], verifiedUrls: new Set() };
-  }
-}
-
-function buildResearchContext(research: ResearchContext): string {
-  let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
-  ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only, do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
-
-  // Add search results
-  for (const search of research.searches) {
-    ctx += `--- Search: "${search.query}" ---\n${search.results}\n\n`;
-  }
-
-  // Add full page content
-  if (research.readContent.length > 0) {
-    ctx += "\n=== FULL PAGE CONTENT (verified sources) ===\n\n";
-    for (const page of research.readContent) {
-      const quality = page.result ? `${page.result.sourceType}, ${page.result.qualityLabel}, ${page.result.qualityScore}/100` : "verified";
-      const warning = page.result?.qualityLabel === "weak" ? " [WEAK, do not cite as evidence]" : "";
-      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, 4000)}\n\n`;
-    }
-  }
-
-  return ctx;
-}
-
-function getResearchSources(research: ResearchContext): ResearchSource[] {
-  const seen = new Set<string>();
-  const sources: ResearchSource[] = [];
-
-  for (const page of research.readContent) {
-    if (!page.url || seen.has(page.url)) continue;
-    if (page.result?.qualityLabel === "weak") continue; // Quality floor: weak sources can't be cited
-    seen.add(page.url);
-    const result = page.result;
-    sources.push({
-      title: page.title || result?.title || sourceTitleFromUrl(page.url),
-      url: page.url,
-      verified: research.verifiedUrls.has(page.url),
-      sourceType: result?.sourceType || "generic",
-      qualityScore: result?.qualityScore || 50,
-      qualityLabel: result?.qualityLabel || "moderate",
-    });
-  }
-
-  if (sources.length > 0) return sources.slice(0, 5);
-
-  // Fallback: if no strong/moderate read content, use ranked results (excluding weak)
-  for (const result of research.rankedResults) {
-    const url = result.url || "";
-    if (!url || seen.has(url)) continue;
-    if (result.qualityLabel === "weak") continue;
-    seen.add(url);
-    sources.push({
-      title: result.title || sourceTitleFromUrl(url),
-      url,
-      verified: false,
-      sourceType: result.sourceType,
-      qualityScore: result.qualityScore,
-      qualityLabel: result.qualityLabel,
-    });
-    if (sources.length >= 5) return sources;
-  }
-
-  return sources;
-}
-
-function withResearchPreferences(base: ResearchOptions, preferences: Partial<ResearchOptions>): ResearchOptions {
-  return { ...base, ...preferences };
-}
-
-function buildDiscoveredSources(research: ResearchContext) {
-  return research.readContent.map((item) => ({
-    title: item.title || sourceTitleFromUrl(item.url),
-    url: item.url,
-    content: item.content.slice(0, 1000),
-    qualityScore: item.result?.qualityScore,
-    sourceType: item.result?.sourceType,
-    qualityLabel: item.result?.qualityLabel,
-  }));
 }
 
 function enforceAttackControls(output: unknown, detectFallacies: boolean, analyzeWeighing: boolean) {
@@ -1520,6 +1159,11 @@ Deno.serve(async (req) => {
   }
 
   const startTime = Date.now();
+  const researchDeps: ResearchDeps = {
+    provider,
+    model,
+    callModel: (args) => callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature),
+  };
   try {
     const systemPrompt = await buildSystemPrompt(feature, customSystemPrompt, sources);
 
@@ -1532,7 +1176,7 @@ Deno.serve(async (req) => {
       const sourceCount = Math.min(15, Math.max(3, Number(sanitizedInput.sourceCount || 5)));
 
       // Perform deep research with multiple search rounds
-      const research = await deepResearch(claim, region, provider, model, withResearchPreferences(DEEP_RESEARCH, {
+      const research = await deepResearch(claim, region, researchDeps, withResearchPreferences(DEEP_RESEARCH, {
         preferredSourceType,
         timeframe,
       }));
@@ -1544,23 +1188,19 @@ Deno.serve(async (req) => {
       const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
       const output = cleanGeneratedText(aiResult.output);
 
-      // Post-process: verify URLs in the response
+      // Post-process: quality floor. Only citations whose URL matches fetched,
+      // non-weak research content may stay "verified"; everything else is
+      // downgraded and filtered out below. Weak sources can appear only as
+      // fallback context via discoveredSources, never as verified evidence.
       if (output && typeof output === "object" && "factoids" in output) {
-        const factoids = (output as { factoids: Array<{ citation: { url: string; verified: string } }> }).factoids;
-        const verifyPromises = factoids.map(async (f) => {
-          if (f.citation?.url && research.verifiedUrls.has(f.citation.url)) {
-            f.citation.verified = "verified";
-          } else if (f.citation?.url) {
-            const isValid = await verifyUrl(f.citation.url);
-            f.citation.verified = isValid ? "verified" : "unverified";
-          }
-        });
-        await Promise.all(verifyPromises);
-        (output as { factoids: Array<{ citation: { verified: string } }>; verificationStatus?: string }).factoids = factoids
+        applyFactoidsVerification(output, research);
+        (output as { factoids: Array<{ citation: { verified: string } }>; verificationStatus?: string }).factoids = (output as { factoids: Array<{ citation: { verified: string } }> }).factoids
           .filter((f) => f.citation?.verified === "verified")
           .slice(0, sourceCount);
         (output as { verificationStatus?: string }).verificationStatus = "complete";
       }
+
+      const discoveredSources = buildDiscoveredSources(research);
 
       const latencyMs = Date.now() - startTime;
       if (output && typeof output === "object") {
@@ -1578,7 +1218,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return
       await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-      return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ASK: Optionally run web search and include URL context from chat
@@ -1612,10 +1252,10 @@ Deno.serve(async (req) => {
       // web search or citations, perform research instead of leaving it to the model.
       let webSearchContext = "";
       if (shouldUseResearch) {
-        const searchDecision = await decideAskSearch(message, history, provider, model);
+        const searchDecision = await decideAskSearch(message, history, researchDeps);
         askSearchQuery = searchDecision.query || message.slice(0, 240);
         if (askSearchQuery) {
-          askResearch = await deepResearch(askSearchQuery, "", provider, model, ASK_RESEARCH);
+          askResearch = await deepResearch(askSearchQuery, "", researchDeps, ASK_RESEARCH);
           if (askResearch.searches.length > 0 || askResearch.readContent.length > 0) {
             webSearchContext = `\n\n${buildResearchContext(askResearch)}`;
           }
@@ -1719,7 +1359,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Perform deep research to find supporting evidence
       console.log("[GENERATE] Starting deep research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model, withResearchPreferences(DEEP_RESEARCH, {
+      const research = await deepResearch(motion, "", researchDeps, withResearchPreferences(DEEP_RESEARCH, {
         preferredSourceType: "any",
       }));
       const searchContext = buildResearchContext(research);
@@ -1774,7 +1414,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Perform deep research to find relevant context
       console.log("[BRAINSTORM] Starting deep research for motion:", motion);
-      const research = await deepResearch(motion, "", provider, model, DEEP_RESEARCH);
+      const research = await deepResearch(motion, "", researchDeps, DEEP_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
@@ -1802,7 +1442,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Research the topic to find counter-evidence
       console.log("[ATTACK] Starting deep research for case analysis");
-      const research = await deepResearch(caseText.slice(0, 500), "", provider, model, DEEP_RESEARCH);
+      const research = await deepResearch(caseText.slice(0, 500), "", researchDeps, DEEP_RESEARCH);
       const searchContext = buildResearchContext(research);
 
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);

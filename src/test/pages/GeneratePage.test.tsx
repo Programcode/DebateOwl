@@ -116,7 +116,7 @@ describe('GeneratePage Integration', () => {
             predictedOpponentCase: {},
             counters: [] as any[]
         };
-        (generateCase as Mock).mockResolvedValue(mockResult);
+        (generateCase as Mock).mockResolvedValue({ result: mockResult, discoveredSources: [] });
 
         render(
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
