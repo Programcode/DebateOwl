@@ -51,5 +51,6 @@ Tests: `_shared/research.test.ts`, extended `source-quality.test.ts`, frontend `
 
 Deferred:
 
+- Replace inline `site:gov` query text with Exa's dedicated domain-filter request field (needs a live Exa parameter-verification pass).
 - Handler-level integration test that mocks Exa end-to-end through `Deno.serve`; current coverage is at the extracted-function level plus frontend mocks.
 - Factoids UI panel listing all consulted sources with quality chips.
