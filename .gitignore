@@ -63,6 +63,7 @@ humanizer.md
 !README.md
 !**/README.md
 !docs/pricing-snapshots/*.md
+!plans/**/*.md
 .vercel
 .env*
 .worktrees/
