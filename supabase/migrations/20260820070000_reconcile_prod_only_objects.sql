@@ -35,11 +35,15 @@ CREATE INDEX IF NOT EXISTS "idx_curated_sources_active" ON "public"."curated_sou
 CREATE INDEX IF NOT EXISTS "idx_curated_sources_source_type" ON "public"."curated_sources" USING btree (source_type) WHERE (is_active = true);
 CREATE INDEX IF NOT EXISTS "idx_curated_sources_topic_tags" ON "public"."curated_sources" USING gin (topic_tags);
 ALTER TABLE "public"."curated_sources" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Authenticated users can read active curated sources" ON "public"."curated_sources";
 CREATE POLICY "Authenticated users can read active curated sources" ON "public"."curated_sources" FOR SELECT TO authenticated USING (is_active = true);
+DROP POLICY IF EXISTS "Admins can insert curated sources" ON "public"."curated_sources";
 CREATE POLICY "Admins can insert curated sources" ON "public"."curated_sources" FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = (SELECT auth.uid()) AND user_roles.role = 'admin'::text));
+DROP POLICY IF EXISTS "Admins can update curated sources" ON "public"."curated_sources";
 CREATE POLICY "Admins can update curated sources" ON "public"."curated_sources" FOR UPDATE TO authenticated
   USING (EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = (SELECT auth.uid()) AND user_roles.role = 'admin'::text));
+DROP POLICY IF EXISTS "Admins can delete curated sources" ON "public"."curated_sources";
 CREATE POLICY "Admins can delete curated sources" ON "public"."curated_sources" FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = (SELECT auth.uid()) AND user_roles.role = 'admin'::text));
 GRANT ALL ON TABLE "public"."curated_sources" TO anon, authenticated, service_role;
@@ -105,6 +109,7 @@ CREATE INDEX IF NOT EXISTS "idx_evidence_cards_tags" ON "public"."evidence_cards
 CREATE INDEX IF NOT EXISTS "idx_evidence_cards_user_id" ON "public"."evidence_cards" USING btree (user_id);
 CREATE OR REPLACE TRIGGER "evidence_cards_set_updated_at" BEFORE UPDATE ON "public"."evidence_cards" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
 ALTER TABLE "public"."evidence_cards" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "evidence_cards_own" ON "public"."evidence_cards";
 CREATE POLICY "evidence_cards_own" ON "public"."evidence_cards" TO authenticated
   USING (user_id = (SELECT auth.uid())) WITH CHECK (user_id = (SELECT auth.uid()));
 GRANT ALL ON TABLE "public"."evidence_cards" TO anon, authenticated, service_role;
@@ -127,6 +132,7 @@ CREATE TABLE IF NOT EXISTS "public"."sparring_sessions" (
     CONSTRAINT "sparring_sessions_user_side_check" CHECK (user_side = ANY (ARRAY['pro'::text, 'con'::text]))
 );
 ALTER TABLE "public"."sparring_sessions" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users own sessions" ON "public"."sparring_sessions";
 CREATE POLICY "Users own sessions" ON "public"."sparring_sessions" USING ((SELECT auth.uid()) = user_id);
 GRANT ALL ON TABLE "public"."sparring_sessions" TO anon, authenticated, service_role;
 
@@ -141,7 +147,9 @@ CREATE TABLE IF NOT EXISTS "public"."keepalive_events" (
 );
 ALTER SEQUENCE "public"."keepalive_events_id_seq" OWNED BY "public"."keepalive_events"."id";
 ALTER TABLE "public"."keepalive_events" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "keepalive_events_anon_insert" ON "public"."keepalive_events";
 CREATE POLICY "keepalive_events_anon_insert" ON "public"."keepalive_events" FOR INSERT TO anon WITH CHECK (source = 'external-keepalive-monitor'::text);
+DROP POLICY IF EXISTS "keepalive_events_anon_select" ON "public"."keepalive_events";
 CREATE POLICY "keepalive_events_anon_select" ON "public"."keepalive_events" FOR SELECT TO anon USING (source = 'external-keepalive-monitor'::text);
 GRANT ALL ON TABLE "public"."keepalive_events" TO anon, authenticated, service_role;
 
@@ -152,8 +160,11 @@ CREATE TABLE IF NOT EXISTS "public"."keepalive_heartbeat" (
     "details" jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 ALTER TABLE "public"."keepalive_heartbeat" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "keepalive_heartbeat_anon_insert" ON "public"."keepalive_heartbeat";
 CREATE POLICY "keepalive_heartbeat_anon_insert" ON "public"."keepalive_heartbeat" FOR INSERT TO anon WITH CHECK (id = ANY (ARRAY['external-keepalive'::text, 'rpc-keepalive'::text]));
+DROP POLICY IF EXISTS "keepalive_heartbeat_anon_select" ON "public"."keepalive_heartbeat";
 CREATE POLICY "keepalive_heartbeat_anon_select" ON "public"."keepalive_heartbeat" FOR SELECT TO anon USING (id = ANY (ARRAY['external-keepalive'::text, 'rpc-keepalive'::text]));
+DROP POLICY IF EXISTS "keepalive_heartbeat_anon_update" ON "public"."keepalive_heartbeat";
 CREATE POLICY "keepalive_heartbeat_anon_update" ON "public"."keepalive_heartbeat" FOR UPDATE TO anon
   USING (id = ANY (ARRAY['external-keepalive'::text, 'rpc-keepalive'::text])) WITH CHECK (id = ANY (ARRAY['external-keepalive'::text, 'rpc-keepalive'::text]));
 GRANT ALL ON TABLE "public"."keepalive_heartbeat" TO anon, authenticated, service_role;
