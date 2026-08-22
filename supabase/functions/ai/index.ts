@@ -86,6 +86,14 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
 import {
+  calculateRequestCost,
+  type CostResult,
+  normalizeAnthropicUsage,
+  normalizeGoogleUsage,
+  normalizeOpenAIUsage,
+  type NormalizedUsage,
+} from "../_shared/cost.ts";
+import {
   buildSearchQueries,
   formatRankedSearchResults,
   rankSearchResults,
@@ -125,6 +133,9 @@ const MODEL_PROVIDERS: Record<string, Provider> = {
   "gemini-3.1-pro-preview": "google",
   "gemini-3-flash-preview": "google",
   "gemini-3.1-flash-lite-preview": "google",
+  // Also served by ai-stream's allowlist; without this entry the model works
+  // while streaming but fails on every non-streaming (advanced) Ask request.
+  "gemini-3.5-flash": "google",
 };
 
 function providerForModel(model: string): Provider {
@@ -380,43 +391,49 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
 async function logUsage(
   userId: string | null,
   feature: string,
-  provider: string,
+  provider: Provider,
   model: string,
-  inputTokens?: number,
-  outputTokens?: number,
+  usage?: NormalizedUsage,
   latencyMs?: number,
   status: string = "success",
   errorCode?: string
 ) {
   try {
-    // Estimate cost (rough estimates per 1M tokens)
-    const costPer1MInput: Record<string, number> = {
-      "gpt-5.5": 5, "gpt-5.4": 2.5, "gpt-5.4-mini": 0.3,
-      "gemini-3.1-pro-preview": 1.25, "gemini-3-flash-preview": 0.075, "gemini-3.1-flash-lite-preview": 0.04,
-      "claude-opus-4-7": 15, "claude-sonnet-4-6": 3, "claude-haiku-4-5-20251001": 0.25
-    };
-    const costPer1MOutput: Record<string, number> = {
-      "gpt-5.5": 15, "gpt-5.4": 10, "gpt-5.4-mini": 1.2,
-      "gemini-3.1-pro-preview": 5, "gemini-3-flash-preview": 0.3, "gemini-3.1-flash-lite-preview": 0.15,
-      "claude-opus-4-7": 75, "claude-sonnet-4-6": 15, "claude-haiku-4-5-20251001": 1.25
-    };
+    const cost: CostResult = usage
+      ? calculateRequestCost({ provider, model, usage })
+      : calculateRequestCost({ provider, model });
 
-    const inputCost = ((inputTokens || 0) / 1_000_000) * (costPer1MInput[model] || 1);
-    const outputCost = ((outputTokens || 0) / 1_000_000) * (costPer1MOutput[model] || 4);
-    const totalCost = inputCost + outputCost;
-
-    await supabase.from("ai_requests").insert({
+    const row: Record<string, unknown> = {
       user_id: userId,
       feature,
       provider,
       model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
+      input_tokens: cost.inputTokens,
+      output_tokens: cost.outputTokens,
       latency_ms: latencyMs,
       status,
       error_code: errorCode,
-      cost_usd: totalCost > 0 ? totalCost : null
-    });
+      cost_usd: cost.costUsd,
+    };
+
+    // Audit columns added by migration 20260822000000_ai_request_cost_audit.sql.
+    const auditFields: Record<string, unknown> = {
+      cached_input_tokens: cost.cachedInputTokens,
+      cache_write_tokens: cost.cacheWriteTokens,
+      reasoning_output_tokens: cost.reasoningOutputTokens,
+      pricing_snapshot_id: cost.pricingSnapshotId,
+      pricing_source_url: cost.pricingSourceUrl,
+      cost_calculation_version: cost.costCalculationVersion,
+      raw_usage: cost.rawUsage ?? null,
+    };
+
+    let { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
+    if (error) {
+      // If the audit columns are not applied yet, still persist the base row.
+      console.warn("[USAGE LOG] Retrying without audit fields:", error.message);
+      ({ error } = await supabase.from("ai_requests").insert(row));
+    }
+    if (error) throw error;
   } catch (err) {
     console.warn("[USAGE LOG] Failed to log:", err);
   }
@@ -652,7 +669,8 @@ async function decideAskSearch(
   const prompt = `${context ? `Recent conversation:\n${context}\n\n` : ""}User message:\n${message}`;
 
   try {
-    const decision = await callAI(provider, model, ASK_SEARCH_DECISION_PROMPT, [{ role: "user", content: prompt }], 0);
+    const decisionResult = await callAI(provider, model, ASK_SEARCH_DECISION_PROMPT, [{ role: "user", content: prompt }], 0);
+    const decision = decisionResult.output;
     if (decision && typeof decision === "object") {
       const parsed = decision as { shouldSearch?: unknown; query?: unknown };
       const shouldSearch = Boolean(parsed.shouldSearch);
@@ -682,7 +700,7 @@ async function generateFollowUpQueries(
   const prompt = `Claim: "${claim}"\n\nCurrent search results:\n${currentResults.slice(0, 3000)}\n\nGenerate 2-3 specific follow-up queries to find more evidence.`;
   try {
     const result = await callAI(provider, model, QUERY_GENERATION_PROMPT, [{ role: "user", content: prompt }], 0.3);
-    const parsed = typeof result === "object" && result !== null ? result : {};
+    const parsed = typeof result.output === "object" && result.output !== null ? result.output : {};
     if (Array.isArray((parsed as { queries?: string[] }).queries)) {
       return (parsed as { queries: string[] }).queries.slice(0, 3);
     }
@@ -958,13 +976,26 @@ function cleanGeneratedText(value: unknown): unknown {
   return value;
 }
 
+interface AIResult {
+  output: unknown;
+  usage?: NormalizedUsage;
+}
+
+function normalizeProviderUsage(provider: Provider, usage: unknown): NormalizedUsage | undefined {
+  if (!usage || typeof usage !== "object") return undefined;
+  const raw = usage as Record<string, unknown>;
+  if (provider === "openai") return normalizeOpenAIUsage(raw);
+  if (provider === "anthropic") return normalizeAnthropicUsage(raw);
+  return normalizeGoogleUsage(raw);
+}
+
 async function callAI(
   provider: Provider,
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   temperature: number
-): Promise<unknown> {
+): Promise<AIResult> {
   try {
     return await callAIOnce(provider, model, systemPrompt, messages, temperature);
   } catch (err) {
@@ -1002,7 +1033,7 @@ async function callAIOnce(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   temperature: number
-): Promise<unknown> {
+): Promise<AIResult> {
   const effectiveSystemPrompt = systemPrompt;
   if (provider === "openai") {
     return await callOpenAI([{ role: "system", content: effectiveSystemPrompt }, ...messages], model, temperature);
@@ -1014,7 +1045,7 @@ async function callAIOnce(
   throw new Error(`Unsupported provider: ${provider}`);
 }
 
-async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number) {
+async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY missing");
   const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
@@ -1025,10 +1056,13 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>, mo
   if (!response.ok) { const text = await response.text(); throw new Error(`OpenAI error: ${text}`); }
   const data = await response.json();
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
-  return parseJsonFromText(data.choices[0]?.message?.content, "OpenAI");
+  return {
+    output: parseJsonFromText(data.choices[0]?.message?.content, "OpenAI"),
+    usage: normalizeProviderUsage("openai", data.usage),
+  };
 }
 
-async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string) {
+async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string): Promise<AIResult> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
   const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
@@ -1039,10 +1073,13 @@ async function callAnthropic(messages: Array<{ role: string; content: string }>,
   if (!response.ok) { const text = await response.text(); throw new Error(`Anthropic error: ${text}`); }
   const data = await response.json();
   if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
-  return parseJsonFromText(data.content[0]?.text || "", "Anthropic");
+  return {
+    output: parseJsonFromText(data.content[0]?.text || "", "Anthropic"),
+    usage: normalizeProviderUsage("anthropic", data.usage),
+  };
 }
 
-async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string) {
+async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string): Promise<AIResult> {
   const apiKey = Deno.env.get("GOOGLE_API_KEY");
   if (!apiKey) throw new Error("GOOGLE_API_KEY missing");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -1052,7 +1089,10 @@ async function callGoogle(messages: Array<{ role: string; content: string }>, mo
   if (!response.ok) { const text = await response.text(); throw new Error(`Google error: ${text}`); }
   const data = await response.json();
   if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
-  return parseJsonFromText(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google");
+  return {
+    output: parseJsonFromText(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google"),
+    usage: normalizeProviderUsage("google", data.usageMetadata),
+  };
 }
 
 function extractUrls(text: string) {
@@ -1467,7 +1507,7 @@ Deno.serve(async (req) => {
   // Check rate limits (includes subscription gating and model access)
   const rateLimit = await checkRateLimit(userId, model);
   if (!rateLimit.allowed) {
-    await logUsage(userId, feature, provider, model, undefined, undefined, undefined, "rate_limited", rateLimit.code);
+    await logUsage(userId, feature, provider, model, undefined, undefined, "rate_limited", rateLimit.code);
     return new Response(JSON.stringify({
       error: rateLimit.reason,
       code: rateLimit.code,
@@ -1501,8 +1541,8 @@ Deno.serve(async (req) => {
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
 
-      let output = await callAI(provider, model, systemPrompt, messages, temperature);
-      output = cleanGeneratedText(output);
+      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const output = cleanGeneratedText(aiResult.output);
 
       // Post-process: verify URLs in the response
       if (output && typeof output === "object" && "factoids" in output) {
@@ -1537,7 +1577,7 @@ Deno.serve(async (req) => {
       }
 
       // Log usage and return
-      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
       return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1604,8 +1644,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
-      let output = await callAI(provider, model, systemPrompt, messages, temperature);
-      output = cleanGeneratedText(output);
+      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const output = cleanGeneratedText(aiResult.output);
 
       if (output && typeof output === "object") {
         const typedOutput = output as {
@@ -1665,7 +1705,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Log usage and return
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
       return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1687,8 +1727,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
       // Build prompt with research context
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      let output = await callAI(provider, model, systemPrompt, messages, temperature);
-      output = cleanGeneratedText(output);
+      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const output = cleanGeneratedText(aiResult.output);
 
       // Post-process: force needsSource to false since we provided research
       if (output && typeof output === "object" && "contentions" in output) {
@@ -1722,7 +1762,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
         const metadata = (output as { metadata: { durationMs?: number } }).metadata;
         metadata.durationMs = latencyMs;
       }
-      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1740,8 +1780,8 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
       // Build prompt with research context
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      let output = await callAI(provider, model, systemPrompt, messages, temperature);
-      output = cleanGeneratedText(output);
+      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const output = cleanGeneratedText(aiResult.output);
       enforceBrainstormControls(output, side, outputMode);
 
       // Build discovered sources from research
@@ -1750,7 +1790,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1767,26 +1807,26 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      let output = await callAI(provider, model, systemPrompt, messages, temperature);
-      output = cleanGeneratedText(output);
+      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const output = cleanGeneratedText(aiResult.output);
       enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
       const discoveredSources = buildDiscoveredSources(research);
       console.log(`[ATTACK] Found ${discoveredSources.length} sources`);
 
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fallback for any other feature
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    let output = await callAI(provider, model, systemPrompt, messages, temperature);
-    output = cleanGeneratedText(output);
+    const fallbackResult = await callAI(provider, model, systemPrompt, messages, temperature);
+    const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs);
+    await logUsage(userId, feature, provider, model, fallbackResult.usage, latencyMs);
     return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -1794,7 +1834,7 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
 
     // Log error
     const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, undefined, undefined, latencyMs, "error", message.slice(0, 100));
+    await logUsage(userId, feature, provider, model, undefined, latencyMs, "error", message.slice(0, 100));
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
             // Total requests and cost
             const { data: totals } = await supabase
                 .from("ai_requests")
-                .select("id, cost_usd, input_tokens, output_tokens, status")
+                .select("id, provider, model, cost_usd, input_tokens, output_tokens, status")
                 .gte("created_at", since.toISOString());
 
             const totalRequests = totals?.length || 0;
@@ -168,6 +168,18 @@ Deno.serve(async (req) => {
             const successRate = totals?.length
                 ? (totals.filter(r => r.status === "success").length / totals.length) * 100
                 : 100;
+
+            // By model: known cost summed per model plus unknown-cost request counts.
+            const modelAggregates = new Map<string, { provider: string; model: string; requests: number; cost: number; unknownCostRequests: number }>();
+            totals?.forEach((r) => {
+                const key = `${r.provider}/${r.model}`;
+                const entry = modelAggregates.get(key) || { provider: r.provider, model: r.model, requests: 0, cost: 0, unknownCostRequests: 0 };
+                entry.requests += 1;
+                if (r.cost_usd != null) entry.cost += Number(r.cost_usd);
+                if (hasUnknownCost(r)) entry.unknownCostRequests += 1;
+                modelAggregates.set(key, entry);
+            });
+            const byModel = Array.from(modelAggregates.values()).sort((a, b) => b.requests - a.requests);
 
             // Daily breakdown
             const { data: daily } = await supabase.rpc("get_daily_usage", { days_back: days });
@@ -217,6 +229,7 @@ Deno.serve(async (req) => {
                 totals: { requests: totalRequests, cost: totalCost, successRate, unknownCostRequests },
                 daily: daily || [],
                 byFeature: featureCounts,
+                byModel,
                 byUser: byUserWithEmail,
                 emailLookupFailures: userEmails.failed.length,
             }), {
