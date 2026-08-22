@@ -159,10 +159,10 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       {/* Researched sources with quality provenance */}
       {discoveredSources && discoveredSources.length > 0 && (
         <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">Researched sources</h4>
+          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
           <SourceQualityList sources={discoveredSources} />
           <p className="mt-2 text-xs text-muted-foreground">
-            Weak sources are fallback context only and never support citations.
+            {t('sourceQuality.fallbackNote')}
           </p>
         </div>
       )}

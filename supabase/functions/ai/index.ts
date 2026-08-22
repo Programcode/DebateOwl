@@ -513,12 +513,31 @@ function truncateTextToBudget(text: string, budget: number): { text: string; tru
 class InvalidJsonResponseError extends Error {
   readonly providerName: string;
   readonly rawText: string;
+  /** Token usage of the failed attempt so repair retries can bill it. */
+  usage?: NormalizedUsage;
 
   constructor(providerName: string, rawText: string) {
     super(`${providerName} returned invalid JSON`);
     this.name = "InvalidJsonResponseError";
     this.providerName = providerName;
     this.rawText = rawText;
+  }
+}
+
+/**
+ * Parses provider content, attaching the attempt's token usage to a parse
+ * failure so callAI's repair retry can fold it into the final accounting.
+ */
+function parseProviderContent(
+  text: string,
+  providerName: string,
+  usage: NormalizedUsage | undefined
+): { output: unknown; usage?: NormalizedUsage } {
+  try {
+    return { output: parseJsonFromText(text, providerName), usage };
+  } catch (err) {
+    if (err instanceof InvalidJsonResponseError && usage) err.usage = usage;
+    throw err;
   }
 }
 
@@ -586,13 +605,18 @@ async function callAI(
     if (!(err instanceof InvalidJsonResponseError)) throw err;
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
-    return await callAIOnce(
+    const retry = await callAIOnce(
       provider,
       model,
       `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
       withJsonRepairPrompt(messages),
       0
     );
+    // The failed attempt still consumed tokens; bill both.
+    return {
+      output: retry.output,
+      usage: mergeNormalizedUsage([err.usage, retry.usage]),
+    };
   }
 }
 
@@ -640,10 +664,7 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>, mo
   if (!response.ok) { const text = await response.text(); throw new Error(`OpenAI error: ${text}`); }
   const data = await response.json();
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
-  return {
-    output: parseJsonFromText(data.choices[0]?.message?.content, "OpenAI"),
-    usage: normalizeProviderUsage("openai", data.usage),
-  };
+  return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenAI", normalizeProviderUsage("openai", data.usage));
 }
 
 async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string): Promise<AIResult> {
@@ -657,10 +678,7 @@ async function callAnthropic(messages: Array<{ role: string; content: string }>,
   if (!response.ok) { const text = await response.text(); throw new Error(`Anthropic error: ${text}`); }
   const data = await response.json();
   if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
-  return {
-    output: parseJsonFromText(data.content[0]?.text || "", "Anthropic"),
-    usage: normalizeProviderUsage("anthropic", data.usage),
-  };
+  return parseProviderContent(data.content[0]?.text || "", "Anthropic", normalizeProviderUsage("anthropic", data.usage));
 }
 
 async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string): Promise<AIResult> {
@@ -673,10 +691,7 @@ async function callGoogle(messages: Array<{ role: string; content: string }>, mo
   if (!response.ok) { const text = await response.text(); throw new Error(`Google error: ${text}`); }
   const data = await response.json();
   if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
-  return {
-    output: parseJsonFromText(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google"),
-    usage: normalizeProviderUsage("google", data.usageMetadata),
-  };
+  return parseProviderContent(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google", normalizeProviderUsage("google", data.usageMetadata));
 }
 
 function extractUrls(text: string) {
@@ -803,8 +818,9 @@ Deno.serve(async (req) => {
   // Layered system prompt: identity + task + JSON rules (+ admin/custom/knowledge).
   // Citation-honesty rules are added only when a feature actually obtained web
   // research, never on the promise of it.
+  // Research counts only when it actually returned something to cite.
   const hasResearch = (research?: ResearchContext | null): research is ResearchContext =>
-    Boolean(research && (research.searches.length > 0 || research.readContent.length > 0));
+    Boolean(research && (research.rankedResults.length > 0 || research.readContent.length > 0));
   const buildSystemPromptFor = async (feature: Feature, research?: ResearchContext | null) =>
     buildSystemPrompt({
       feature,
@@ -869,7 +885,7 @@ Deno.serve(async (req) => {
       }
 
       // Log usage and return
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -992,7 +1008,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
       return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1050,7 +1066,7 @@ Deno.serve(async (req) => {
         const metadata = (output as { metadata: { durationMs?: number } }).metadata;
         metadata.durationMs = latencyMs;
       }
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1079,7 +1095,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1105,7 +1121,7 @@ Deno.serve(async (req) => {
       console.log(`[ATTACK] Found ${discoveredSources.length} sources`);
 
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1117,7 +1133,7 @@ Deno.serve(async (req) => {
     const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsage]), latencyMs);
+    await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsage.splice(0)]), latencyMs);
     return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

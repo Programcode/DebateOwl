@@ -766,9 +766,42 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
   if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
   const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
+  const discovered = parseDiscoveredSources(data.discoveredSources);
+
+  // Auto-save discovered sources to library (keeping provenance metadata)
+  if (discovered.length > 0) {
+    const session = useSessionStore.getState();
+    for (const source of discovered) {
+      try {
+        await session.addSource({
+          title: source.title,
+          content: source.content ?? '',
+          type: 'url',
+          origin: source.url,
+          folder: 'Auto-saved',
+          metadata: {
+            url: source.url,
+            sourceType: source.sourceType,
+            qualityScore: source.qualityScore,
+            qualityLabel: source.qualityLabel,
+            query: source.query,
+            capturedVia: 'attack',
+          },
+        });
+      } catch {
+        toast({
+          title: 'Source save failed',
+          description: `Could not save "${source.title}" to your library.`,
+          variant: 'destructive',
+        });
+      }
+    }
+    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
+  }
+
   return {
     result: validateAttackOutput(data.output),
-    discoveredSources: parseDiscoveredSources(data.discoveredSources),
+    discoveredSources: discovered,
   };
 }
 

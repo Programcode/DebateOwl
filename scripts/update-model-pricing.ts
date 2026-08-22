@@ -75,7 +75,8 @@ async function main() {
   mkdirSync(SNAPSHOT_DIR, { recursive: true });
   const retrievedAt = new Date().toISOString();
   const findings: Record<string, string> = {};
-  const sources = [];
+  const sources: Array<{ provider: string; url: string; file: string; format: string; sha256: string }> = [];
+  const buffered: Array<{ file: string; body: string }> = [];
 
   for (const source of SOURCES) {
     // Pin the English/US page: Google in particular localizes currency and
@@ -84,8 +85,8 @@ async function main() {
     const response = await fetch(url, { headers: { "Accept-Language": "en-US,en;q=0.9" } });
     if (!response.ok) throw new Error(`${source.provider}: HTTP ${response.status} from ${source.url}`);
     const body = await response.text();
-    const file = join(SNAPSHOT_DIR, source.file);
-    writeFileSync(file, body);
+    buffered.push({ file: source.file, body });
+
     const sha256 = createHash("sha256").update(body).digest("hex");
     sources.push({ ...source, url: source.url.replace(/\.md$/, ""), format: source.url.endsWith(".md") ? "markdown (official .md endpoint)" : "html", sha256 });
 
@@ -102,11 +103,18 @@ async function main() {
     }
   }
 
-  // Content discriminator: same-day refreshes of changed pages get distinct ids.
-  const combinedHash = createHash("sha256")
+  // Only touch disk once every source fetched cleanly, so a mid-run failure
+  // cannot leave a mixed snapshot behind.
+  for (const item of buffered) {
+    writeFileSync(join(SNAPSHOT_DIR, item.file), item.body);
+  }
+
+  // Byte-level fingerprint of all captures. Provider pages embed dynamic
+  // scripts, so this changes on refreshes even when prices do not; it lives in
+  // metadata for byte-resolution while snapshotId stays stable per day.
+  const contentHash = createHash("sha256")
     .update(sources.map((s) => s.sha256).join("|"))
-    .digest("hex")
-    .slice(0, 8);
+    .digest("hex");
 
   const metadataPath = join(SNAPSHOT_DIR, "metadata.json");
   let previousModelFindings: Record<string, string> = {};
@@ -115,7 +123,8 @@ async function main() {
   } catch { /* first run */ }
 
   const metadata = {
-    snapshotId: `official-docs-${retrievedAt.slice(0, 10)}-${combinedHash}`,
+    snapshotId: `official-docs-${retrievedAt.slice(0, 10)}`,
+    snapshotContentHash: contentHash,
     retrievedAt,
     currency: "USD",
     sources,

@@ -423,7 +423,8 @@
     "loadingMsg2": "Building warrant chains...",
     "loadingMsg3": "Writing speech-ready impacts...",
     "loadingMsg4": "Preparing counters...",
-    "loadingMsg5": "Finalizing the case..."
+    "loadingMsg5": "Finalizing the case...",
+    "styleNote": "Guides writing style; it does not change research."
   },
   "generateResults": {
     "incomplete": "Generation Incomplete",
@@ -1133,5 +1134,10 @@
     "en": "English",
     "es": "Español",
     "hu": "Magyar"
+  },
+  "sourceQuality": {
+    "researchedSources": "Researched sources",
+    "fallbackOnly": "fallback context only",
+    "fallbackNote": "Weak sources are fallback context only and never support citations."
   }
 }

@@ -125,7 +125,18 @@ Deno.test("ask toggles and modes appear verbatim in the request prompt", () => {
   assertIncludes(allOff, "Argument Map: OFF", "ask.argumentMap off state");
   assertIncludes(allOff, "Research Context: NONE", "ask.research off state");
 
-  const out: Record<string, unknown> = { response: "r", followUpQuestions: [], uncertainties: [] };
-  enforceAskControls(out, { mode: "clarify" });
-  assert((out.uncertainties as string[]).length > 0, "ask.clarify post-processing");
+  const out: Record<string, unknown> = {
+    response: "r",
+    followUpQuestions: ["q"],
+    uncertainties: [] as string[],
+    prosConsAnalysis: { pros: ["p"], cons: ["c"] },
+    argumentMap: { mainClaim: "m", supportingPoints: [], counterpoints: [], assumptions: [] },
+  };
+  enforceAskControls(out, { mode: "clarify", citationMode: true, prosConsMode: true, argumentMapMode: true });
+  assert((out.uncertainties as string[]).length === 0, "ask.clarify quiet when follow-ups exist");
+  assert("prosConsAnalysis" in out && "argumentMap" in out, "ask toggles on keep sections");
+
+  const stripped: Record<string, unknown> = { response: "r", followUpQuestions: [], uncertainties: [], citations: [{}] };
+  enforceAskControls(stripped, { mode: "general" });
+  assert(Array.isArray(stripped.citations) && stripped.citations.length === 0, "ask citations off clears list");
 });

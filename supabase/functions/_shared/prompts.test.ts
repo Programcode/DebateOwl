@@ -9,7 +9,7 @@ import {
   RESEARCH_RULES,
   buildSystemPrompt,
   type Feature,
-} from "../_shared/prompts.ts";
+} from "./prompts.ts";
 
 const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask"];
 

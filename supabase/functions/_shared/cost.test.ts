@@ -1,5 +1,6 @@
 import {
   calculateRequestCost,
+  mergeNormalizedUsage,
   normalizeAnthropicUsage,
   normalizeGoogleUsage,
   normalizeOpenAIUsage,
@@ -18,7 +19,7 @@ Deno.test("openai standard usage costs input and output at short-context rates",
   if (result.inputTokens !== 1000 || result.outputTokens !== 500) throw new Error("token passthrough failed");
   // 1000/1M * $0.75 + 500/1M * $4.50
   if (!approxEqual(result.costUsd, 0.00075 + 0.00225)) throw new Error(`unexpected cost ${result.costUsd}`);
-  if (result.pricingSnapshotId !== "official-docs-2026-08-22-f8aee4c7") throw new Error("snapshot id missing");
+  if (result.pricingSnapshotId !== "official-docs-2026-08-22") throw new Error("snapshot id missing");
 });
 
 Deno.test("openai cached and reasoning tokens are not double counted", () => {
@@ -134,7 +135,6 @@ Deno.test("anthropic ttl-split cache writes bill at 5m and 1h rates", () => {
 });
 
 Deno.test("research sub-calls merge into one auditable usage record", async () => {
-  const { mergeNormalizedUsage } = await import("./cost.ts");
   const merged = mergeNormalizedUsage([
     normalizeOpenAIUsage({ prompt_tokens: 1000, completion_tokens: 500 }),
     normalizeOpenAIUsage({ prompt_tokens: 300, completion_tokens: 100 }),

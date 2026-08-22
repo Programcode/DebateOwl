@@ -54,7 +54,7 @@ describe('control-to-payload regression matrix', () => {
 
   it('generate sends side, role, length, audience, and tone verbatim', async () => {
     await generateCase(
-      { motion: 'M', side: 'con', role: 'r2', length: 'comprehensive', audience: 'beginner', tone: 'conversational' } as never,
+      { motion: 'M', side: 'con', role: 'r2', length: 'comprehensive', audience: 'beginner', tone: 'conversational', format: 'custom' } as never,
       config,
     );
     const body = await lastInvokeBody();
@@ -65,6 +65,7 @@ describe('control-to-payload regression matrix', () => {
       length: 'comprehensive',
       audience: 'beginner',
       tone: 'conversational',
+      format: 'custom',
     });
   });
 

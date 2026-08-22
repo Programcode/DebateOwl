@@ -292,8 +292,9 @@ async function deepResearchInner(
   const readCandidates = preferredSourceType === "any"
     ? context.rankedResults
     : context.rankedResults.filter(matchesPreferredSourceType);
+  const nonWeakCount = context.rankedResults.filter((r) => r.qualityLabel !== "weak").length;
   const urlsToRead = readCandidates
-    .filter((result) => result.qualityLabel !== "weak" || context.rankedResults.filter((r) => r.qualityLabel !== "weak").length < 2)
+    .filter((result) => result.qualityLabel !== "weak" || nonWeakCount < 2)
     .slice(0, options.maxUrlsToRead);
 
   const readPromises = urlsToRead.map(async (result) => {
@@ -331,7 +332,14 @@ export async function deepResearch(
     return result;
   } catch (err) {
     console.warn(`[RESEARCH] Timed out or failed after ${options.overallTimeoutMs}ms:`, err);
-    return partial;
+    // Detach from the still-running inner context so late mutations
+    // cannot change what the caller already received.
+    return {
+      searches: [...partial.searches],
+      rankedResults: [...partial.rankedResults],
+      readContent: [...partial.readContent],
+      verifiedUrls: new Set(partial.verifiedUrls),
+    };
   } finally {
     if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
@@ -366,6 +374,7 @@ export function getResearchSources(research: ResearchContext): ResearchSource[] 
   for (const page of research.readContent) {
     if (!page.url || seen.has(page.url)) continue;
     if (page.result?.qualityLabel === "weak") continue; // Quality floor: weak sources can't be cited
+    if (!page.result) continue; // Fail closed: unranked pages stay fallback context
     seen.add(page.url);
     const result = page.result;
     sources.push({
@@ -420,8 +429,9 @@ export function buildDiscoveredSources(research: ResearchContext) {
 /**
  * Source-quality floor for factoids: a citation may only be marked "verified"
  * when its URL matches research content that was actually fetched AND that
- * content is not a weak source. Weak sources may appear as fallback context,
- * never as verified evidence. Unknown URLs stay unverified.
+ * content carries an explicit strong or moderate label. Anything else,
+ * including fetched pages without ranking metadata, fails closed to
+ * unverified. Weak sources may appear as fallback context, never as evidence.
  */
 export function applyFactoidsVerification(
   output: unknown,
@@ -435,11 +445,10 @@ export function applyFactoidsVerification(
     const citation = factoid.citation;
     if (!citation) continue;
     const url = citation.url;
-    if (!url) {
-      citation.verified = "unverified";
-      continue;
-    }
-    const fetched = research.readContent.find((page) => page.url === url);
-    citation.verified = fetched && fetched.result?.qualityLabel !== "weak" ? "verified" : "unverified";
+    const fetched = url && research.verifiedUrls.has(url)
+      ? research.readContent.find((page) => page.url === url)
+      : undefined;
+    const quality = fetched?.result?.qualityLabel;
+    citation.verified = quality === "strong" || quality === "moderate" ? "verified" : "unverified";
   }
 }

@@ -39,6 +39,9 @@ export default function GeneratePage() {
     const prev = (autosavedCases || []).find(item => item.data !== generateResult);
     if (prev) {
       setGenerateResult(prev.data);
+      // Autosaved snapshots do not carry researched sources; drop the panel
+      // rather than showing provenance that belongs to a different case.
+      setDiscoveredSources([]);
       toast({ title: t('generate.undone', 'Reverted'), description: t('generate.undoneDesc', 'Loaded previous generation.') });
     } else {
       toast({ title: t('generate.noUndo', 'Nothing to undo'), variant: 'destructive' });

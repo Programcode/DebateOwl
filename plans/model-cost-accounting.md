@@ -155,7 +155,7 @@ Notes from current docs:
 Implemented:
 
 1. `_shared/cost.ts`: normalizers for OpenAI/Anthropic/Google usage plus `calculateRequestCost`. Reasoning/thinking tokens are never double-counted (OpenAI reasoning is inside completion tokens; Google billable output = candidates + thoughts). Unknown pricing fails closed to `cost_usd = null`; raw provider usage is preserved verbatim.
-2. Versioned snapshot: `docs/pricing-snapshots/` holds official-page captures (`openai.md`, `anthropic.md`, `google-gemini.html`) with sha256 + retrieval metadata in `metadata.json`, and per-model findings. Snapshot id: `official-docs-2026-08-22`, calculation version `cost-calc-v1`.
+2. Versioned snapshot: `docs/pricing-snapshots/` holds official-page captures (`openai.md`, `anthropic.md`, `google-gemini.html`) with sha256 + retrieval metadata in `metadata.json`, and per-model findings. Snapshot id: `official-docs-2026-08-22` (stable per day); `metadata.json` additionally records `snapshotContentHash`, a sha256 over all three captures, so exact fetched bytes can always be resolved.
 3. `scripts/update-model-pricing.ts` refreshes snapshots, hashes them, and verifies every tracked model id against the fresh pages (ignoring docs-navigation links). It reports changes instead of silently rewriting `_shared/model-pricing.ts`, because mis-parsed prices would fabricate costs.
 4. Both `ai` and `ai-stream` capture usage including cached/reasoning/cache-write dimensions and store token counts, `pricing_snapshot_id`, `pricing_source_url`, `cost_calculation_version`, and `raw_usage`.
 5. Hardcoded pricing tables removed from `logUsage`; rate-limited/error rows log status without fake cost.
@@ -173,3 +173,5 @@ Deviations from this plan, deliberate:
 - Admin RPC SQL unchanged; known/unknown aggregation stays in the admin function, which already computed it correctly.
 
 Not done (per plan): no backfill of historical rows; nothing invents past costs.
+
+Follow-up after the audit migration has been applied everywhere: remove the temporary base-insert fallback from `logUsage` in both `ai` and `ai-stream` (tracked here so it is not forgotten).

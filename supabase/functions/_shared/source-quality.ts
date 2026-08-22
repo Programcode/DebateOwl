@@ -69,6 +69,10 @@ const LEGAL_CURRENT_PATTERNS = [
   /\b(law|legal|court|supreme court|regulation|agency|statute|ruling|judgment|jurisprudence|legislation)\b/i,
 ];
 
+function hostMatchesDomain(host: string, domain: string): boolean {
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
 function hostFromUrl(url?: string): string {
   if (!url) return "";
   try {
@@ -143,7 +147,7 @@ function domainBonus(result: ExaResult, claim: string): number {
   const haystack = `${result.title || ""} ${url} ${result.content || ""}`;
   let score = 0;
 
-  if (WEAK_DOMAINS.some((domain) => host.endsWith(domain))) score -= 30;
+  if (WEAK_DOMAINS.some((domain) => hostMatchesDomain(host, domain))) score -= 30;
   if (/\b(tabbycat|calicotab|tabroom|debatekeeper)\b/i.test(haystack)) score += 18;
   if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(`${claim} ${haystack}`)) && /(org|edu|ac\.)/i.test(host)) score += 10;
   if (/\/(results?|tabs?|standings?|rankings?|tournament|participants|draw)\b/i.test(url)) score += 10;
@@ -166,17 +170,19 @@ export function rankSearchResults(
     .map((result) => {
       const sourceType = inferSourceType(result);
       const qualityReasons: string[] = [];
+      const specificity = specificityScore(result, claim);
+      const recency = recencyScore(result, claim);
       const score =
         35 +
         typeScore(sourceType, preferredSourceType) +
-        specificityScore(result, claim) +
-        recencyScore(result, claim) +
+        specificity +
+        recency +
         domainBonus(result, claim);
 
       if (["official", "results", "government", "academic"].includes(sourceType)) qualityReasons.push(`${sourceType} source`);
       if (["encyclopedia", "video", "social"].includes(sourceType)) qualityReasons.push(`${sourceType} fallback`);
-      if (recencyScore(result, claim) > 0) qualityReasons.push("recent or year-matched");
-      if (specificityScore(result, claim) >= 12) qualityReasons.push("specific to query");
+      if (recency > 0) qualityReasons.push("recent or year-matched");
+      if (specificity >= 12) qualityReasons.push("specific to query");
 
       const qualityScore = Math.max(0, Math.min(100, score));
       const qualityLabel: RankedSearchResult["qualityLabel"] = qualityScore >= 70 ? "strong" : qualityScore >= 45 ? "moderate" : "weak";
@@ -229,7 +235,7 @@ export function buildSearchQueries(claim: string, region = "", preferredSourceTy
   queries.push(`${base} official data evidence ${years}`.trim());
   queries.push(`${base} statistics report study ${years}`.trim());
 
-  // Deduplicate by checking token overlap (>80% overlap = skip)
+  // Deduplicate by token overlap: skip when more than 85% of the smaller query's tokens already appear in an accepted query
   const deduplicated: string[] = [];
   for (const q of queries) {
     const qTokens = new Set(q.toLowerCase().split(/\s+/));

@@ -255,7 +255,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
                     <SelectItem value="aggressive">{t('generateForm.toneAggressive')}</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">Guides writing style; it does not change research.</p>
+                <p className="text-[11px] text-muted-foreground">{t('generateForm.styleNote')}</p>
               </div>
             </div>
           </div>

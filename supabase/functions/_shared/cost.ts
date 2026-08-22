@@ -43,7 +43,8 @@ export interface CostResult {
 }
 
 function intOrUndefined(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  // Negative token counts are provider anomalies; drop them rather than bill them.
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -110,10 +111,16 @@ export function calculateRequestCost(args: {
   model: string;
   usage?: NormalizedUsage;
 }): CostResult {  const { provider, model, usage } = args;
+  // Cache writes report the combined 5m + 1h total for storage; raw_usage
+  // keeps the exact TTL split for audit.
+  const combinedCacheWrite = usage?.cacheWriteTokens !== undefined || usage?.cacheWrite1hTokens !== undefined
+    ? (usage?.cacheWriteTokens ?? 0) + (usage?.cacheWrite1hTokens ?? 0)
+    : undefined;
+
   const base: CostResult = {
     inputTokens: usage?.inputTokens ?? null,
     cachedInputTokens: usage?.cachedInputTokens ?? null,
-    cacheWriteTokens: usage?.cacheWriteTokens ?? null,
+    cacheWriteTokens: combinedCacheWrite ?? null,
     outputTokens: usage?.outputTokens ?? null,
     reasoningOutputTokens: usage?.reasoningOutputTokens ?? null,
     costUsd: null,
@@ -149,8 +156,9 @@ export function calculateRequestCost(args: {
     // Anthropic reports cache reads/writes separately from base input.
     cost += perMillion(inputTokens, inputRate);
     cost += perMillion(nonNegative(usage.cachedInputTokens), effectiveCachedRate);
-    cost += perMillion(nonNegative(usage.cacheWriteTokens), nonNegative(pricing.cacheWritePer1m));
-    cost += perMillion(nonNegative(usage.cacheWrite1hTokens), nonNegative(pricing.cacheWrite1hPer1m));
+    // Unpublished write rates fall back to standard input, never $0.
+    cost += perMillion(nonNegative(usage.cacheWriteTokens), nonNegative(pricing.cacheWritePer1m ?? inputRate));
+    cost += perMillion(nonNegative(usage.cacheWrite1hTokens), nonNegative(pricing.cacheWrite1hPer1m ?? inputRate));
   } else {
     // OpenAI and Google include cached tokens inside the reported prompt count.
     const cached = Math.min(nonNegative(usage.cachedInputTokens), inputTokens);

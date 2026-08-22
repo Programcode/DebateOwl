@@ -164,7 +164,11 @@ Deno.serve(async (req) => {
 
             const totalRequests = totals?.length || 0;
             const totalCost = totals?.reduce((sum, r) => sum + (r.cost_usd || 0), 0) || 0;
-            const unknownCostRequests = totals?.filter(hasUnknownCost).length || 0;
+            // "Unknown cost" means a provider request we cannot price. Rows
+            // that never reached a provider (rate_limited) are not cost data
+            // gaps and must not inflate the unknown count.
+            const isCostableRow = (r: { status: string }) => r.status === "success";
+            const unknownCostRequests = totals?.filter((r) => isCostableRow(r) && hasUnknownCost(r)).length || 0;
             const successRate = totals?.length
                 ? (totals.filter(r => r.status === "success").length / totals.length) * 100
                 : 100;
@@ -174,9 +178,9 @@ Deno.serve(async (req) => {
             totals?.forEach((r) => {
                 const key = `${r.provider}/${r.model}`;
                 const entry = modelAggregates.get(key) || { provider: r.provider, model: r.model, requests: 0, cost: 0, unknownCostRequests: 0 };
-                entry.requests += 1;
-                if (r.cost_usd != null) entry.cost += Number(r.cost_usd);
-                if (hasUnknownCost(r)) entry.unknownCostRequests += 1;
+                entry.requests += 1; // request volume counts every row; only unknown-cost uses isCostableRow
+                if (r.cost_usd != null && Number.isFinite(Number(r.cost_usd))) entry.cost += Number(r.cost_usd);
+                if (isCostableRow(r) && hasUnknownCost(r)) entry.unknownCostRequests += 1;
                 modelAggregates.set(key, entry);
             });
             const byModel = Array.from(modelAggregates.values()).sort((a, b) => b.requests - a.requests);
@@ -208,9 +212,10 @@ Deno.serve(async (req) => {
             if (topUserIds.length > 0) {
                 const { data: unknownCostRows } = await supabase
                     .from("ai_requests")
-                    .select("user_id, cost_usd, input_tokens, output_tokens")
+                    .select("user_id, cost_usd, input_tokens, output_tokens, status")
                     .in("user_id", topUserIds)
-                    .gte("created_at", since.toISOString());
+                    .gte("created_at", since.toISOString())
+                    .eq("status", "success");
 
                 unknownCostRows?.forEach((row) => {
                     if (!hasUnknownCost(row)) return;

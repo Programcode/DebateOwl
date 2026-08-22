@@ -71,3 +71,15 @@ Deno.test("discovered sources keep ranking provenance including the originating 
   }
   if (item.query !== "policy statistics 2026") throw new Error("originating query missing from provenance");
 });
+
+Deno.test("fetched pages without ranking metadata fail closed to unverified", () => {
+  const research = ctxWith({
+    readContent: [{ url: "https://unknown.example/page", title: "Page", content: "x" }],
+    verifiedUrls: new Set(["https://unknown.example/page"]),
+  });
+  const output = { factoids: [{ citation: { url: "https://unknown.example/page", verified: "pending" } }] };
+  applyFactoidsVerification(output, research);
+  if (output.factoids[0].citation.verified !== "unverified") {
+    throw new Error("unranked fetched page must not verify");
+  }
+});

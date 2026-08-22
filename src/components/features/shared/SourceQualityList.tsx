@@ -1,4 +1,5 @@
 import { ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import type { DiscoveredSource } from '@/lib/ai/client';
 
@@ -28,6 +29,7 @@ function isSafeHref(url: string): boolean {
  * pass as supporting evidence.
  */
 export function SourceQualityList({ sources, className }: SourceQualityListProps) {
+  const { t } = useTranslation();
   if (!sources.length) return null;
 
   return (
@@ -60,7 +62,7 @@ export function SourceQualityList({ sources, className }: SourceQualityListProps
               </Badge>
             )}
             {source.qualityLabel === 'weak' && (
-              <span className="text-xs text-muted-foreground">fallback context only</span>
+              <span className="text-xs text-muted-foreground">{t('sourceQuality.fallbackOnly')}</span>
             )}
           </li>
         );
