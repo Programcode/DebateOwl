@@ -159,7 +159,7 @@ Implemented:
 3. `scripts/update-model-pricing.ts` refreshes snapshots, hashes them, and verifies every tracked model id against the fresh pages (ignoring docs-navigation links). It reports changes instead of silently rewriting `_shared/model-pricing.ts`, because mis-parsed prices would fabricate costs.
 4. Both `ai` and `ai-stream` capture usage including cached/reasoning/cache-write dimensions and store token counts, `pricing_snapshot_id`, `pricing_source_url`, `cost_calculation_version`, and `raw_usage`.
 5. Hardcoded pricing tables removed from `logUsage`; rate-limited/error rows log status without fake cost.
-6. Migration `20260822000000_ai_request_cost_audit.sql` adds the audit columns (prepared but NOT applied; both functions fall back to a base insert if it is missing).
+6. Migration `20260822000000_ai_request_cost_audit.sql` adds the audit columns (prepared but NOT applied; it MUST be applied before deploying the `ai`/`ai-stream` functions. Both functions fall back to a base insert when the columns are missing, but that fallback is a deploy-safety net to be removed once the migration has been applied everywhere, not a permanent mode).
 7. Admin: `stats` now returns a `byModel` breakdown; AdminPage renders Cost by Model and shows "Unknown" instead of `$0.0000` whenever unknown-cost requests exist. Pre-load placeholder no longer claims `$0.0000`.
 
 Unit coverage: standard, cached input, cache read/write, reasoning, thinking, long-context thresholds (OpenAI 272k, Gemini Pro 200k), unknown model, missing usage — all in `_shared/cost.test.ts` (9 cases).

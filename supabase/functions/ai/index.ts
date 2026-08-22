@@ -63,6 +63,7 @@ import { buildSystemPrompt } from "../_shared/prompts.ts";
 import {
   calculateRequestCost,
   type CostResult,
+  mergeNormalizedUsage,
   normalizeAnthropicUsage,
   normalizeGoogleUsage,
   normalizeOpenAIUsage,
@@ -412,9 +413,12 @@ async function logUsage(
     };
 
     let { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
-    if (error) {
-      // If the audit columns are not applied yet, still persist the base row.
-      console.warn("[USAGE LOG] Retrying without audit fields:", error.message);
+    // Retry only when the audit columns do not exist yet (Postgres 42703 or
+    // PostgREST PGRST204). Any other error must not retry: the first insert
+    // may have committed, and a second would double-log the request.
+    const isMissingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    if (error && isMissingColumn) {
+      console.warn("[USAGE LOG] Audit columns missing; logging base row only:", error.message);
       ({ error } = await supabase.from("ai_requests").insert(row));
     }
     if (error) throw error;
@@ -784,25 +788,35 @@ Deno.serve(async (req) => {
   }
 
   const startTime = Date.now();
+  // Usage from research sub-calls (search decision, follow-up queries) is
+  // collected here so the parent request's row accounts for every token.
+  const researchUsage: NormalizedUsage[] = [];
   const researchDeps: ResearchDeps = {
     provider,
     model,
-    callModel: (args) => callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature),
+    callModel: async (args) => {
+      const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature);
+      if (result.usage) researchUsage.push(result.usage);
+      return { output: result.output };
+    },
   };
-  try {
-    // Layered system prompt: identity + task + JSON rules (+ admin/custom/knowledge),
-    // with citation-honesty rules whenever web research accompanies the request.
-    const researchPlanned = feature !== "ask" || Boolean(sanitizedInput.webSearch || sanitizedInput.citationMode);
-    const globalPrompt = await getGlobalPrompt(feature);
-    const systemPrompt = buildSystemPrompt({
+  // Layered system prompt: identity + task + JSON rules (+ admin/custom/knowledge).
+  // Citation-honesty rules are added only when a feature actually obtained web
+  // research, never on the promise of it.
+  const hasResearch = (research?: ResearchContext | null): research is ResearchContext =>
+    Boolean(research && (research.searches.length > 0 || research.readContent.length > 0));
+  const buildSystemPromptFor = async (feature: Feature, research?: ResearchContext | null) =>
+    buildSystemPrompt({
       feature,
       dateContext: getCurrentDateContext(),
-      globalPrompt,
+      globalPrompt: await getGlobalPrompt(feature),
       customPrompt: customSystemPrompt ?? null,
       sources,
-      researchContext: researchPlanned ? "WEB RESEARCH RESULTS are attached to this request." : undefined,
+      researchContext: hasResearch(research)
+        ? "WEB RESEARCH RESULTS are attached to this request."
+        : undefined,
     });
-
+  try {
     // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
       const claim = String(sanitizedInput.claim || "");
@@ -818,6 +832,7 @@ Deno.serve(async (req) => {
       }));
       const searchContext = buildResearchContext(research);
 
+      const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
 
@@ -828,12 +843,13 @@ Deno.serve(async (req) => {
       // non-weak research content may stay "verified"; everything else is
       // downgraded and filtered out below. Weak sources can appear only as
       // fallback context via discoveredSources, never as verified evidence.
-      if (output && typeof output === "object" && "factoids" in output) {
+      const factoidsOutput = output as { factoids?: unknown; verificationStatus?: string } | null;
+      if (factoidsOutput && typeof factoidsOutput === "object" && Array.isArray(factoidsOutput.factoids)) {
         applyFactoidsVerification(output, research);
-        (output as { factoids: Array<{ citation: { verified: string } }>; verificationStatus?: string }).factoids = (output as { factoids: Array<{ citation: { verified: string } }> }).factoids
+        factoidsOutput.factoids = (factoidsOutput.factoids as Array<{ citation?: { verified?: string } }>)
           .filter((f) => f.citation?.verified === "verified")
           .slice(0, sourceCount);
-        (output as { verificationStatus?: string }).verificationStatus = "complete";
+        factoidsOutput.verificationStatus = "complete";
       }
 
       const discoveredSources = buildDiscoveredSources(research);
@@ -853,7 +869,7 @@ Deno.serve(async (req) => {
       }
 
       // Log usage and return
-      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -898,6 +914,7 @@ Deno.serve(async (req) => {
         }
       }
 
+      const systemPrompt = await buildSystemPromptFor(feature, askResearch);
       const basePrompt = buildAskBasePrompt({
         message,
         mode,
@@ -975,7 +992,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
       return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -995,6 +1012,7 @@ Deno.serve(async (req) => {
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
+      const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
       const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
@@ -1032,7 +1050,7 @@ Deno.serve(async (req) => {
         const metadata = (output as { metadata: { durationMs?: number } }).metadata;
         metadata.durationMs = latencyMs;
       }
-      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1048,6 +1066,7 @@ Deno.serve(async (req) => {
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
+      const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
       const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
@@ -1060,7 +1079,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1075,6 +1094,7 @@ Deno.serve(async (req) => {
       const research = await deepResearch(caseText.slice(0, 500), "", researchDeps, DEEP_RESEARCH);
       const searchContext = buildResearchContext(research);
 
+      const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
       const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
@@ -1085,18 +1105,19 @@ Deno.serve(async (req) => {
       console.log(`[ATTACK] Found ${discoveredSources.length} sources`);
 
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fallback for any other feature
+    const systemPrompt = await buildSystemPromptFor(feature);
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
     const fallbackResult = await callAI(provider, model, systemPrompt, messages, temperature);
     const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, fallbackResult.usage, latencyMs);
+    await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsage]), latencyMs);
     return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

@@ -245,10 +245,9 @@ async function deepResearchInner(
   claim: string,
   region: string,
   deps: ResearchDeps,
-  options: ResearchOptions
+  options: ResearchOptions,
+  context: ResearchContext = emptyResearchContext()
 ): Promise<ResearchContext> {
-  const context: ResearchContext = emptyResearchContext();
-
   console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
 
   const preferredSourceType = options.preferredSourceType || "any";
@@ -312,25 +311,29 @@ async function deepResearchInner(
   return context;
 }
 
-// Wrapper with overall timeout - returns partial results if research exceeds time limit
+// Wrapper with overall timeout - returns whatever completed if the limit hits,
+// so a slow search round does not throw away finished rounds.
 export async function deepResearch(
   claim: string,
   region: string,
   deps: ResearchDeps,
   options: ResearchOptions = DEEP_RESEARCH
 ): Promise<ResearchContext> {
+  const partial = emptyResearchContext();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     const result = await Promise.race([
-      deepResearchInner(claim, region, deps, options),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Research timeout")), options.overallTimeoutMs)
-      ),
+      deepResearchInner(claim, region, deps, options, partial),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("Research timeout")), options.overallTimeoutMs);
+      }),
     ]);
     return result;
   } catch (err) {
     console.warn(`[RESEARCH] Timed out or failed after ${options.overallTimeoutMs}ms:`, err);
-    // Return empty context so the AI call still proceeds without research
-    return emptyResearchContext();
+    return partial;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
 }
 
@@ -369,9 +372,9 @@ export function getResearchSources(research: ResearchContext): ResearchSource[] 
       title: page.title || result?.title || sourceTitleFromUrl(page.url),
       url: page.url,
       verified: research.verifiedUrls.has(page.url),
-      sourceType: result?.sourceType || "generic",
-      qualityScore: result?.qualityScore || 50,
-      qualityLabel: result?.qualityLabel || "moderate",
+      sourceType: result?.sourceType ?? "generic",
+      qualityScore: result?.qualityScore ?? 50,
+      qualityLabel: result?.qualityLabel ?? "moderate",
     });
   }
 

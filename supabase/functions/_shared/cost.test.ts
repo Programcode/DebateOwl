@@ -18,7 +18,7 @@ Deno.test("openai standard usage costs input and output at short-context rates",
   if (result.inputTokens !== 1000 || result.outputTokens !== 500) throw new Error("token passthrough failed");
   // 1000/1M * $0.75 + 500/1M * $4.50
   if (!approxEqual(result.costUsd, 0.00075 + 0.00225)) throw new Error(`unexpected cost ${result.costUsd}`);
-  if (result.pricingSnapshotId !== "official-docs-2026-08-22") throw new Error("snapshot id missing");
+  if (result.pricingSnapshotId !== "official-docs-2026-08-22-f8aee4c7") throw new Error("snapshot id missing");
 });
 
 Deno.test("openai cached and reasoning tokens are not double counted", () => {
@@ -114,4 +114,33 @@ Deno.test("raw provider usage is preserved for audit", () => {
   const raw = { prompt_tokens: 10, completion_tokens: 5, system_fingerprint: "fp_x" };
   const result = calculateRequestCost({ provider: "openai", model: "gpt-5.4-mini", usage: normalizeOpenAIUsage(raw) });
   if (!result.rawUsage || result.rawUsage.system_fingerprint !== "fp_x") throw new Error("raw usage dropped");
+});
+
+Deno.test("anthropic ttl-split cache writes bill at 5m and 1h rates", () => {
+  const result = calculateRequestCost({
+    provider: "anthropic",
+    model: "claude-opus-4-7",
+    usage: normalizeAnthropicUsage({
+      input_tokens: 1000,
+      output_tokens: 100,
+      cache_creation_input_tokens: {
+        ephemeral_5m_input_tokens: 400,
+        ephemeral_1h_input_tokens: 600,
+      },
+    }),
+  });
+  const expected = (1000 * 5 + 400 * 6.25 + 600 * 10 + 100 * 25) / 1_000_000;
+  if (!approxEqual(result.costUsd, expected)) throw new Error(`ttl split cost wrong: ${result.costUsd} vs ${expected}`);
+});
+
+Deno.test("research sub-calls merge into one auditable usage record", async () => {
+  const { mergeNormalizedUsage } = await import("./cost.ts");
+  const merged = mergeNormalizedUsage([
+    normalizeOpenAIUsage({ prompt_tokens: 1000, completion_tokens: 500 }),
+    normalizeOpenAIUsage({ prompt_tokens: 300, completion_tokens: 100 }),
+  ]);
+  if (!merged) throw new Error("merge dropped all usage");
+  if (merged.inputTokens !== 1300 || merged.outputTokens !== 600) throw new Error("sums wrong");
+  const rawCalls = (merged.raw as { calls: unknown[] }).calls;
+  if (!Array.isArray(rawCalls) || rawCalls.length !== 2) throw new Error("raw calls not preserved");
 });

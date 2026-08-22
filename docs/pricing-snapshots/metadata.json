@@ -1,6 +1,6 @@
 {
-  "snapshotId": "official-docs-2026-08-22",
-  "retrievedAt": "2026-08-22T08:16:07.847Z",
+  "snapshotId": "official-docs-2026-08-22-f8aee4c7",
+  "retrievedAt": "2026-08-22T09:51:01.203Z",
   "currency": "USD",
   "sources": [
     {
@@ -22,7 +22,7 @@
       "url": "https://ai.google.dev/gemini-api/docs/pricing",
       "file": "google-gemini.html",
       "format": "html",
-      "sha256": "eedf2919a7501f054765fb742dd1dd4ac421e74bf23ba14cff3b30947ed887ab"
+      "sha256": "df977abadefa981f7bb257c1662fca95b82f8bc88223fbcdf73c4266d2d42e7d"
     }
   ],
   "modelFindings": {

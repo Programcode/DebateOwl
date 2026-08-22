@@ -245,6 +245,10 @@ export function buildSearchQueries(claim: string, region = "", preferredSourceTy
   return deduplicated.slice(0, 6);
 }
 
+// Bounded per-result snippet: Exa may return up to 10k characters per result,
+// which would bloat prompts when several results are included.
+const MAX_RESULT_SNIPPET_CHARS = 1200;
+
 export function formatRankedSearchResults(results: RankedSearchResult[]): string {
   return results.map((r) => [
     `Title: ${r.title || "Untitled"}`,
@@ -252,7 +256,7 @@ export function formatRankedSearchResults(results: RankedSearchResult[]): string
     `Source type: ${r.sourceType}`,
     `Quality: ${r.qualityLabel} (${r.qualityScore})`,
     `Why selected: ${r.qualityReasons.join(", ") || "general relevance"}`,
-    `Content: ${r.content || r.description || ""}`,
+    `Content: ${(r.content || r.description || "").slice(0, MAX_RESULT_SNIPPET_CHARS)}`,
     "---",
   ].join("\n")).join("\n");
 }

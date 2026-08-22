@@ -50,7 +50,7 @@ Deno.test("research and citation honesty rules are present when research is prov
 
 Deno.test("research rules are absent when no research was provided", () => {
   const prompt = buildSystemPrompt({ feature: "brainstorm" });
-  if (prompt.includes("Only cite sources marked")) {
+  if (prompt.includes("RESEARCH CITATION RULES:") || prompt.includes(RESEARCH_RULES.slice(0, 60))) {
     throw new Error("citation rules leaked into a prompt without research");
   }
 });

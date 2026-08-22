@@ -38,6 +38,19 @@ const TRACKED_MODELS: Record<string, string[]> = {
   google: ["gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite-preview"],
 };
 
+// A model id must not be followed by an id character; otherwise "gpt-5.4"
+// would match the "gpt-5.4-mini" row and hide a removed model.
+function mentions(body: string, needle: string): boolean {
+  let from = 0;
+  for (;;) {
+    const at = body.indexOf(needle, from);
+    if (at === -1) return false;
+    const next = body.charAt(at + needle.length);
+    if (!/[a-z0-9.-]/i.test(next)) return true;
+    from = at + 1;
+  }
+}
+
 // "claude-opus-4-7" -> "Claude Opus 4.7", "gemini-3.1-pro-preview" -> "Gemini 3.1 Pro Preview".
 function displayLabel(model: string): string {
   const base = model.replace(/-\d{8}$/, ""); // drop date suffixes like -20251001
@@ -65,7 +78,10 @@ async function main() {
   const sources = [];
 
   for (const source of SOURCES) {
-    const response = await fetch(source.url);
+    // Pin the English/US page: Google in particular localizes currency and
+    // chrome by request geography, which would poison the snapshot.
+    const url = source.provider === "google" ? `${source.url}?hl=en` : source.url;
+    const response = await fetch(url, { headers: { "Accept-Language": "en-US,en;q=0.9" } });
     if (!response.ok) throw new Error(`${source.provider}: HTTP ${response.status} from ${source.url}`);
     const body = await response.text();
     const file = join(SNAPSHOT_DIR, source.file);
@@ -78,12 +94,19 @@ async function main() {
     const pricingBody = body.replace(/\/gemini-api\/docs\/models\/[a-z0-9.-]+/g, "");
 
     for (const model of TRACKED_MODELS[source.provider] ?? []) {
-      // Match either the raw id or its human label (e.g. "Claude Opus 4.7").
-      findings[model] = pricingBody.includes(model) || pricingBody.includes(displayLabel(model))
+      // Match either the raw id or its human label (e.g. "Claude Opus 4.7"),
+      // requiring a token boundary so "gpt-5.4" cannot match "gpt-5.4-mini".
+      findings[model] = mentions(pricingBody, model) || mentions(pricingBody, displayLabel(model))
         ? "found in current page"
         : "NOT FOUND in current page; treat as unknown-priced until verified";
     }
   }
+
+  // Content discriminator: same-day refreshes of changed pages get distinct ids.
+  const combinedHash = createHash("sha256")
+    .update(sources.map((s) => s.sha256).join("|"))
+    .digest("hex")
+    .slice(0, 8);
 
   const metadataPath = join(SNAPSHOT_DIR, "metadata.json");
   let previousModelFindings: Record<string, string> = {};
@@ -92,7 +115,7 @@ async function main() {
   } catch { /* first run */ }
 
   const metadata = {
-    snapshotId: `official-docs-${retrievedAt.slice(0, 10)}`,
+    snapshotId: `official-docs-${retrievedAt.slice(0, 10)}-${combinedHash}`,
     retrievedAt,
     currency: "USD",
     sources,

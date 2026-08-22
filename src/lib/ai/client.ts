@@ -31,6 +31,20 @@ export interface ResultWithSources<T> {
   discoveredSources: DiscoveredSource[];
 }
 
+/**
+ * Parses the discovered-sources payload at the trust boundary: only
+ * well-formed entries with a title and URL survive; anything else is dropped.
+ */
+function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is DiscoveredSource => {
+    if (!item || typeof item !== 'object') return false;
+    const candidate = item as Partial<DiscoveredSource>;
+    return typeof candidate.title === 'string' && candidate.title.length > 0 &&
+      typeof candidate.url === 'string' && candidate.url.length > 0;
+  });
+}
+
 // Enable debug logging in development
 const DEBUG = import.meta.env.DEV;
 
@@ -709,12 +723,13 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
-  const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: DiscoveredSource[] };
+  const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
+  const discovered = parseDiscoveredSources(data.discoveredSources);
 
   // Auto-save discovered sources to library (keeping provenance metadata)
-  if (data.discoveredSources && data.discoveredSources.length > 0) {
+  if (discovered.length > 0) {
     const session = useSessionStore.getState();
-    for (const source of data.discoveredSources) {
+    for (const source of discovered) {
       try {
         await session.addSource({
           title: source.title,
@@ -739,32 +754,33 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
         });
       }
     }
-    console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
+    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
   }
 
   return {
     result: transformGenerateResponse(data.output as Record<string, unknown>),
-    discoveredSources: data.discoveredSources ?? [],
+    discoveredSources: discovered,
   };
 }
 
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
   if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
-  const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: DiscoveredSource[] };
+  const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
   return {
     result: validateAttackOutput(data.output),
-    discoveredSources: data.discoveredSources ?? [],
+    discoveredSources: parseDiscoveredSources(data.discoveredSources),
   };
 }
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
   if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
-  const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: DiscoveredSource[] };
+  const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
+  const discovered = parseDiscoveredSources(data.discoveredSources);
 
   // Auto-save discovered sources to library (keeping provenance metadata)
-  if (data.discoveredSources && data.discoveredSources.length > 0) {
+  if (discovered.length > 0) {
     const session = useSessionStore.getState();
-    for (const source of data.discoveredSources) {
+    for (const source of discovered) {
       try {
         await session.addSource({
           title: source.title,
@@ -789,12 +805,12 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
         });
       }
     }
-    console.log(`[AI Client] Saved ${data.discoveredSources.length} sources to library`);
+    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
   }
 
   return {
     result: transformBrainstormResponse(data.output as Record<string, unknown>),
-    discoveredSources: data.discoveredSources ?? [],
+    discoveredSources: discovered,
   };
 }
 

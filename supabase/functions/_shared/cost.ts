@@ -109,8 +109,7 @@ export function calculateRequestCost(args: {
   provider: PricingProvider | string;
   model: string;
   usage?: NormalizedUsage;
-}): CostResult {
-  const { provider, model, usage } = args;
+}): CostResult {  const { provider, model, usage } = args;
   const base: CostResult = {
     inputTokens: usage?.inputTokens ?? null,
     cachedInputTokens: usage?.cachedInputTokens ?? null,
@@ -140,6 +139,8 @@ export function calculateRequestCost(args: {
   const cachedRate = longContext
     ? pricing.longContextCachedInputPer1m ?? pricing.cachedInputPer1m
     : pricing.cachedInputPer1m;
+  // Unknown cached rate must not bill at $0; charge standard input instead.
+  const effectiveCachedRate = typeof cachedRate === "number" ? cachedRate : inputRate;
 
   let cost = 0;
   const inputTokens = nonNegative(usage.inputTokens);
@@ -147,7 +148,7 @@ export function calculateRequestCost(args: {
   if (provider === "anthropic") {
     // Anthropic reports cache reads/writes separately from base input.
     cost += perMillion(inputTokens, inputRate);
-    cost += perMillion(nonNegative(usage.cachedInputTokens), nonNegative(cachedRate));
+    cost += perMillion(nonNegative(usage.cachedInputTokens), effectiveCachedRate);
     cost += perMillion(nonNegative(usage.cacheWriteTokens), nonNegative(pricing.cacheWritePer1m));
     cost += perMillion(nonNegative(usage.cacheWrite1hTokens), nonNegative(pricing.cacheWrite1hPer1m));
   } else {
@@ -155,11 +156,38 @@ export function calculateRequestCost(args: {
     const cached = Math.min(nonNegative(usage.cachedInputTokens), inputTokens);
     const uncachedInput = inputTokens - cached;
     cost += perMillion(uncachedInput, inputRate);
-    cost += perMillion(cached, nonNegative(cachedRate));
+    cost += perMillion(cached, effectiveCachedRate);
   }
 
   cost += perMillion(nonNegative(usage.outputTokens), outputRate);
 
   base.costUsd = Number.isFinite(cost) ? cost : null;
   return base;
+}
+
+/**
+ * Merges usage from several provider calls (main answer + research sub-calls)
+ * into one normalized record for a single ai_requests row. Raw payloads are
+ * kept per call so the audit trail still shows how totals were produced.
+ */
+export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>): NormalizedUsage | undefined {
+  const defined = usages.filter((u): u is NormalizedUsage => Boolean(u));
+  if (defined.length === 0) return undefined;
+  if (defined.length === 1) return defined[0];
+
+  const sum = (values: Array<number | undefined>): number | undefined => {
+    const nums = values.filter((v): v is number => typeof v === "number");
+    return nums.length ? nums.reduce((a, b) => a + b, 0) : undefined;
+  };
+
+  const merged: NormalizedUsage = {
+    inputTokens: sum(defined.map((u) => u.inputTokens)),
+    cachedInputTokens: sum(defined.map((u) => u.cachedInputTokens)),
+    cacheWriteTokens: sum(defined.map((u) => u.cacheWriteTokens)),
+    cacheWrite1hTokens: sum(defined.map((u) => u.cacheWrite1hTokens)),
+    outputTokens: sum(defined.map((u) => u.outputTokens)),
+    reasoningOutputTokens: sum(defined.map((u) => u.reasoningOutputTokens)),
+    raw: { calls: defined.map((u) => u.raw ?? null) },
+  };
+  return merged;
 }
