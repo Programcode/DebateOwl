@@ -353,7 +353,7 @@ export function buildSystemPrompt(options: SystemPromptOptions): string {
   const taskTemplate = FEATURE_PROMPTS[options.feature];
   if (!taskTemplate) throw new Error(`Unsupported feature: ${options.feature}`);
   // Always resolve the placeholder so it never reaches the model verbatim.
-  let task = taskTemplate.replace("[DATE_CONTEXT]", options.dateContext ?? "").replace(/\n{3,}/g, "\n\n");
+  const task = taskTemplate.replace("[DATE_CONTEXT]", options.dateContext ?? "").replace(/\n{3,}/g, "\n\n");
 
   const sections: string[] = [PRODUCT_IDENTITY, task, JSON_RULES];
 
