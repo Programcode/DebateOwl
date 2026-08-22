@@ -30,6 +30,29 @@ export function getAskModeGuidance(mode: string): string {
   return ASK_MODE_GUIDANCE[mode] || ASK_MODE_GUIDANCE.general;
 }
 
+export interface AskBasePromptInput {
+  message: string;
+  mode: string;
+  citationMode: boolean;
+  webSearchEnabled: boolean;
+  prosConsMode: boolean;
+  argumentMapMode: boolean;
+  researchAvailable: boolean;
+}
+
+/** The per-request control block for Ask. Every visible toggle appears here verbatim. */
+export function buildAskBasePrompt(input: AskBasePromptInput): string {
+  const modeGuidance = getAskModeGuidance(input.mode);
+  return `Message: ${input.message}
+Mode: ${input.mode}
+Mode Guidance: ${modeGuidance}
+Citation Mode: ${input.citationMode ? "ON - cite sourced factual claims using the research or page context below" : "OFF"}
+Web Search: ${input.webSearchEnabled ? "ENABLED" : "DISABLED"}
+Pros/Cons: ${input.prosConsMode ? "ON - include prosConsAnalysis" : "OFF - omit prosConsAnalysis"}
+Argument Map: ${input.argumentMapMode ? "ON - include argumentMap" : "OFF - omit argumentMap"}
+Research Context: ${input.researchAvailable ? "AVAILABLE" : "NONE"}`;
+}
+
 export function buildUserPrompt(feature: Feature, input: Record<string, unknown>, searchContext: string): string {
   if (feature === "generate") {
     const language = asString(input.language, "en");

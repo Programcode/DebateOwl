@@ -52,7 +52,14 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 // ============== SUPABASE CLIENT ==============
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
+import { buildAskBasePrompt, buildUserPrompt } from "./prompt-builder.ts";
+import {
+  enforceAskControls,
+  enforceAttackControls,
+  enforceBrainstormControls,
+  enforceGenerateControls,
+} from "../_shared/control-enforcement.ts";
+import { buildSystemPrompt } from "../_shared/prompts.ts";
 import {
   calculateRequestCost,
   type CostResult,
@@ -528,73 +535,7 @@ function parseJsonFromText(text: string, providerName: string) {
   throw new InvalidJsonResponseError(providerName, text);
 }
 
-function enforceAttackControls(output: unknown, detectFallacies: boolean, analyzeWeighing: boolean) {
-  if (!output || typeof output !== "object") return;
-  const attackOutput = output as {
-    fallaciesDetected?: unknown[];
-    weighingAnalysis?: { currentWeighing?: string; missingComparisons?: string[]; improvementSuggestions?: string[] };
-  };
-
-  if (!detectFallacies) {
-    attackOutput.fallaciesDetected = [];
-  }
-  if (!analyzeWeighing) {
-    attackOutput.weighingAnalysis = {
-      currentWeighing: "Weighing analysis was not requested.",
-      missingComparisons: [],
-      improvementSuggestions: [],
-    };
-  }
-}
-
-function enforceBrainstormControls(output: unknown, _side: string, outputMode: string) {
-  if (!output || typeof output !== "object") return;
-  const brainstormOutput = output as {
-    topFive?: Array<{ idea?: { side?: string } }>;
-    mindmap?: Array<{ items?: Array<{ side?: string }> }>;
-    buckets?: Array<{ ideas?: Array<{ side?: string }> }>;
-  };
-  // The prompt already controls side. Post-filtering by side can erase useful
-  // neutral or comparative ideas, so only enforce the requested output mode.
-
-  if (outputMode !== "topfive") delete brainstormOutput.topFive;
-  if (outputMode !== "mindmap") delete brainstormOutput.mindmap;
-  if (outputMode !== "buckets") delete brainstormOutput.buckets;
-}
-
-function enforceGenerateControls(output: unknown, side: string, format: string, length: string, role: string) {
-  if (!output || typeof output !== "object" || !("metadata" in output)) return;
-  const generateOutput = output as {
-    exordio?: unknown;
-    contentions?: unknown[];
-    metadata?: { side?: string; format?: string; generatedAt?: string };
-  };
-  if (!generateOutput.metadata) return;
-  generateOutput.metadata.side = side === "con" ? "con" : "pro";
-  generateOutput.metadata.format = format || "custom";
-  if (role !== "intro" && "exordio" in generateOutput) {
-    delete generateOutput.exordio;
-  }
-  if (Array.isArray(generateOutput.contentions)) {
-    const target = length === "brief" ? 2 : length === "comprehensive" ? 4 : 3;
-    generateOutput.contentions = generateOutput.contentions.slice(0, target);
-  }
-}
-
 // ============== AI PROVIDER CALLS ==============
-
-const HUMANIZER_INSTRUCTIONS = `HUMANIZER STYLE INSTRUCTIONS:
-- Follow the local humanizer.md rules: remove obvious AI-writing patterns and make the prose sound human, specific, and natural.
-- Write like a strong human debate coach, not a generic AI assistant. Be direct and concrete.
-- Avoid inflated significance claims, promotional language, vague expert attributions, superficial "-ing" analysis, forced rule-of-three phrasing, synonym cycling, chatbot filler, and generic upbeat conclusions.
-- Vary sentence rhythm where prose is requested, but keep structured JSON fields concise.
-- Do not use em dashes at all. Use commas, colons, parentheses, or separate sentences instead.
-- Do not write parameter labels inside argument prose, for example "Magnitude:", "Probability:", or "Timeframe:".
-- When the user needs debate material, write lines that can be spoken in round, not table notes or rubric fragments.`;
-
-function withHumanizerInstructions(systemPrompt: string): string {
-  return `${systemPrompt}\n\n${HUMANIZER_INSTRUCTIONS}`;
-}
 
 function cleanGeneratedText(value: unknown): unknown {
   if (typeof value === "string") {
@@ -739,327 +680,11 @@ function extractUrls(text: string) {
   return (text.match(urlRegex) || []).map((url) => url.replace(/[),.;!?]+$/g, ""));
 }
 
-// ============== PROMPTS ==============
-
 // Dynamic date context for prompts - ensures AI knows the current year
 function getCurrentDateContext(): string {
   const now = new Date();
   const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
   return `CURRENT DATE: ${now.toLocaleDateString('en-US', options)} (${now.getFullYear()})`;
-}
-
-const GENERATE_PROMPT = `You are an experienced competitive debater and coach with years of tournament experience. Generate a tournament-ready debate case in JSON format.
-
-[DATE_CONTEXT]
-
-CRITICAL CONTEXT: You have been provided with WEB RESEARCH RESULTS containing current real-world data, statistics, and sources. This research reflects the CURRENT state of affairs. USE THIS DATA as your primary source of truth - do not rely on outdated training data. Prioritize evidence from 2025-2026.
-
-=== DEBATE FORMAT (4-6-6-3) ===
-
-This is a 4-speaker team debate format. Each speaker has a distinct job:
-
---- INTRODUCTOR (4 minutes) ---
-The Introductor sets the entire narrative. Their job:
-1. EXORDIO: Open with a compelling hook, a real-world anecdote, startling statistic, powerful rhetorical question, or vivid scenario. This is NOT optional. Every good Introductor opens with an exordio that grabs the judge's attention. Then bridge smoothly into the topic.
-2. DEFINITIONS: Define key terms strategically (not dictionary definitions, frame them to favor your side).
-3. FRAMEWORK: Establish the evaluative lens (utilitarian, rights-based, pragmatic, etc.).
-4. THESIS: State your team's central claim clearly and memorably.
-5. ARGUMENT ROADMAP: Preview the structure, "Our team will show three things..."
-The Introductor does NOT present full arguments, they set up the battlefield.
-
---- R1 - First Speaker (6 minutes) ---
-R1 is the workhorse. Their job:
-- 4 minutes CONSTRUCTIVE: Build 2-3 core arguments with full warrant chains. Each argument needs: claim → reasoning → evidence → impact. Go DEEP, not wide. Every link in the chain must be airtight.
-- 2 minutes REBUTTAL: Anticipate and preemptively address the strongest opponent arguments. Use turns, mitigations, and no-link responses.
-R1 provides the substance. They make the team's case undeniable with concrete evidence and tight logic.
-
---- R2 - Second Speaker (6 minutes) ---
-R2 is the strategist. Their job:
-- EXTEND R1's arguments: Don't just repeat, deepen. Add new evidence, new warranting, responses to likely attacks on R1's case.
-- CLASH: Directly engage with opponent arguments. Identify the central disagreements and explain why your side wins each clash.
-- WEIGHING: Compare impacts. Use magnitude, probability, and timeframe to show why your harms/benefits matter more.
-R2 wins the debate by controlling the narrative and winning the key clashes.
-
---- CONCLUSOR (3 minutes) ---
-The Conclusor crystallizes. Their job:
-- NO NEW ARGUMENTS: Only synthesize and weigh what's already been said.
-- KEY CLASHES: Identify the 2-3 most important disagreements in the round and explain why your side wins each one.
-- WEIGHING: Even if the opponent is partially right, explain why your side still wins on balance.
-- STRONG CLOSE: End with a powerful, memorable statement that ties back to the exordio or thesis.
-The Conclusor is the last voice the judge hears. Make it count.
-
-=== WRITING STYLE, Sound like a REAL debater ===
-
-DO:
-- Use debate terminology naturally: "weighing", "impacts", "links", "warrants", "brightlines", "uniqueness", "magnitude", "probability", "timeframe", "turns", "mitigations"
-- Write arguments as you would speak them in round, confident, persuasive, conversational
-- Vary sentence length. Mix short punchy sentences with longer analytical ones.
-- Use rhetorical questions: "What happens when we ignore this?"
-- Use transitions that sound human: "Look, here's the thing...", "What does this mean in practice?", "And this is where it gets interesting..."
-- Be assertive: "This matters because..." not "One might argue that..."
-- Use analogies and vivid examples that make abstract points concrete
-
-DO NOT:
-- Say "It is important to note" or "It should be noted"
-- Say "Furthermore" or "Moreover" or "Additionally" as paragraph starters
-- Say "In conclusion" or "To summarize"
-- Say "This demonstrates that" or "This clearly shows"
-- Say "One could argue" or "It could be said"
-- Say "It is worth mentioning" or "It is crucial to understand"
-- Use any robotic AI filler phrases. If it sounds like a Wikipedia article, rewrite it.
-- Start every sentence with "The", vary your sentence openings
-
-=== JSON SCHEMA ===
-
-The output MUST include the "exordio" field when the role is "intro". For other roles, omit "exordio".
-
-{
-  "exordio": {
-    "hook": "A compelling opening, anecdote, startling statistic, rhetorical question, or vivid scenario that grabs attention. Should be 2-4 sentences. Make it vivid and specific, not generic.",
-    "transition": "A smooth 1-2 sentence bridge from the hook into the topic and your team's position."
-  },
-  "caseStructure": {
-    "thesis": "A punchy, memorable thesis statement",
-    "framework": "The lens/value through which to evaluate this debate",
-    "keyDefinitions": ["definition1", "definition2"],
-    "burdenOfProof": "Our burden - what we must prove to win the ballot"
-  },
-  "contentions": [
-    {
-      "id": "1",
-      "claim": "Clear, tagline-style claim",
-      "reasoning": "The warrant - WHY this claim is true. Provide 2-3 logical links with clear causation chains.",
-      "evidence": "Specific stats, studies, expert quotes FROM THE PROVIDED RESEARCH. Cite sources with dates.",
-      "needsSource": false,
-      "sourceQuery": "",
-      "impact": "A cohesive, speech-ready impact paragraph. Explain why the judge should care using magnitude, probability, and timeframe naturally, but never label them as separate parameters."
-    }
-  ],
-  "predictedOpponentCase": {
-    "likelyArguments": ["5-8 arguments they will run"],
-    "strategicWeaknesses": ["Honest assessment of our vulnerabilities"],
-    "keyClashes": ["Where the debate will be won or lost"]
-  },
-  "counters": [
-    {
-      "targetArgument": "Their argument",
-      "counterpoint": "Our response - turn, mitigate, or take out",
-      "rebuttal": "How to phrase this in round"
-    }
-  ],
-  "metadata": {
-    "side": "pro",
-    "format": "custom",
-    "generatedAt": "CURRENT_ISO_TIMESTAMP"
-  }
-}
-
-ROLE-SPECIFIC OUTPUT GUIDELINES:
-- "intro": MUST include "exordio" with hook and transition. Contentions should be high-level roadmap points (lighter on evidence, heavier on framing). Include 2-3 contentions as previews.
-- "r1": Omit "exordio". Provide 2-3 DEEP contentions with extensive evidence and warrants. Counters should be preemptive rebuttals.
-- "r2": Omit "exordio". Contentions should be extensions + clash responses. Focus predictedOpponentCase and counters heavily on weighing analysis.
-- "conc": Omit "exordio". Provide 2-3 contentions framed as crystallization points ("Even if they prove X, we still win because Y"). Counters should be final-round weighing responses.
-
-REQUIREMENTS:
-1. Side must be exactly "pro" or "con".
-2. Generate contentions appropriate to the role (see above).
-3. Include 5-8 predicted opponent arguments with pre-written counters.
-4. USE THE WEB RESEARCH - cite real 2025-2026 statistics and sources.
-5. ALWAYS set needsSource to false.
-6. Write the ENTIRE output in the language specified by the user. All arguments, evidence, descriptions, and analysis must be in that language.
-7. Every contention should read like something a debater can actually say in a speech. Do not output table-like notes or field labels inside prose.`;
-
-const ATTACK_PROMPT = `You are a ruthless, experienced competitive debater tasked with tearing apart an opponent's case. Analyze this case like you're prepping to destroy it in finals.
-
-[DATE_CONTEXT]
-
-CRITICAL: You have WEB RESEARCH with current 2025-2026 data. Use this to:
-- Fact-check their claims against current reality
-- Find counter-evidence and turns
-- Identify where their evidence is outdated or misrepresented
-
-DEBATE FORMAT:
-- Introductor (4 min): Intro + argument roadmap
-- R1 (6 min): 4 min constructive, 2 min rebuttal
-- R2 (6 min): Extensions + clash
-- Conclusor (3 min): Weighing + crystallization
-
-ATTACK VOCABULARY - Think like a debater:
-- "Turn" = their argument actually helps our side
-- "Mitigate" = reduce the impact/probability of their claim
-- "No link" = their causation chain is broken
-- "Non-unique" = the harm exists regardless of the motion
-- "Timeframe/Probability/Magnitude" = weighing metrics
-- "Assertion without warrant" = they said it but didn't prove it
-
-Be BRUTAL but substantive. Don't just say "this is weak" - explain exactly how to exploit it.
-
-Return JSON:
-{
-  "overallAssessment": { "score": 0-100, "summary": "Honest assessment", "strengthAreas": ["What they did right"] },
-  "weaknesses": [{ "id": "string", "severity": "critical|major|minor", "type": "evidential|logical|structural", "description": "The flaw", "whyWeak": "Why this matters", "howOpponentAttacks": "Exact words to say in round", "improvedVersion": "How to fix it", "affectedQuote": "The problematic text" }],
-  "fallaciesDetected": [{ "name": "Fallacy name", "location": "Where in case", "explanation": "How to call it out" }],
-  "crossExQuestions": [{ "question": "The trap question", "purpose": "What you're setting up", "expectedTrap": "How their answer hurts them" }],
-  "weighingAnalysis": { "currentWeighing": "Their weighing", "missingComparisons": ["What they didn't compare"], "improvementSuggestions": ["How to out-weigh them"] }
-}`;
-
-const BRAINSTORM_PROMPT = `You're in the prep room with your team before a tournament round. Brainstorm arguments like experienced competitive debaters.
-
-[DATE_CONTEXT]
-
-CRITICAL: You have WEB RESEARCH with current 2025-2026 data. Use this to:
-- Ground your ideas in current events and recent developments
-- Find unexpected angles backed by real-world evidence
-- Identify what arguments are "hot" in current discourse
-
-DEBATE FORMAT:
-- Introductor (4 min) → R1 (6 min) → R2 (6 min) → Conclusor (3 min)
-
-BRAINSTORM LIKE A DEBATER:
-- Think about "what's the narrative?" and "what's the mechanism?"
-- Consider stakeholder analysis: who wins, who loses, who decides?
-- Look for "intuition pumps" - examples that make the argument click
-- Identify potential "turns" - where an argument could backfire
-- Think about strategic positioning: what arguments force good clashes?
-
-Idea object structure:
-{
-  "id": "unique-string-id",
-  "title": "Punchy argument tagline",
-  "description": "The argument angle with warrant and potential evidence",
-  "side": "pro" | "con" | "neutral",
-  "strength": "strong" | "moderate" | "weak",
-  "tradeoffs": ["potential downside", "how opponent might flip this"],
-  "relatedTo": ["id-of-related-idea"]
-}
-
-For outputMode "topfive":
-{
-  "needsMoreInfo": false,
-  "clarifyingQuestions": [],
-  "topFive": [
-    { "rank": 1, "idea": { /* Idea */ }, "whyTop": "Why this wins rounds" }
-  ],
-  "nextSteps": ["Research to do", "Arguments to prep"],
-  "warningsAndTradeoffs": ["Watch out for..."]
-}
-
-For outputMode "mindmap":
-{
-  "needsMoreInfo": false,
-  "clarifyingQuestions": [],
-  "mindmap": [
-    { "category": "Economic/Social/Political/Practical/Principled", "items": [/* Idea objects */] }
-  ],
-  "nextSteps": [...],
-  "warningsAndTradeoffs": [...]
-}
-
-For outputMode "buckets":
-{
-  "needsMoreInfo": false,
-  "clarifyingQuestions": [],
-  "buckets": [
-    { "name": "Slam Dunks/High Risk High Reward/Defensive/Creative", "ideas": [...], "keyInsight": "Strategic note" }
-  ],
-  "nextSteps": [...],
-  "warningsAndTradeoffs": [...]
-}
-
-If motion is unclear: { "needsMoreInfo": true, "clarifyingQuestions": [...], "nextSteps": [], "warningsAndTradeoffs": [] }
-
-Generate 3-5 debate-ready ideas with real strategic value.`;
-
-const FACTOIDS_PROMPT = `You are a debate research specialist helping a team find cuttable evidence for tournament prep.
-
-[DATE_CONTEXT]
-
-CRITICAL: You have DEEP RESEARCH with 2025-2026 web search results and verified source content. PRIORITIZE RECENT DATA:
-- 2026 data is gold - use it
-- 2025 data is great
-- Pre-2024 data should only be used for historical context or if it's the definitive study
-
-EVIDENCE QUALITY STANDARDS:
-- Quantify whenever possible: percentages, dollar amounts, dates, sample sizes
-- Note source credibility: peer-reviewed > government > news > think tank > blog
-- Flag potential bias in sources
-- Explain methodology limitations
-- Respect the requested source type exactly. If academic is requested, use scholarly or peer-reviewed sources only. If government is requested, use official government or intergovernmental sources only. If news is requested, use established news sources only.
-- Return only verified sources with exact URLs from the research context. Do not include pending or unverified citations.
-- Return the requested number of sources unless fewer verified matching sources exist.
-
-For each factoid, think about:
-- How would a debater card this? (short claim + key stat)
-- When in a round would you use this? (constructive vs rebuttal)
-- What's the strongest way to frame this stat?
-
-Output JSON:
-{
-  "factoids": [{ 
-    "id": "string", 
-    "shortClaim": "One-sentence claim suitable for a card tagline", 
-    "keyFigure": "The stat/number that makes this evidence powerful", 
-    "context": "Methodology, sample size, conditions - what makes this credible", 
-    "limitations": "Honest limitations debaters should know", 
-    "citation": { 
-      "title": "Article/study title", 
-      "publisher": "Organization/journal", 
-      "date": "Publication date (PRIORITIZE 2025-2026)", 
-      "url": "EXACT URL from research context", 
-      "verified": "verified|unverified" 
-    }, 
-    "howToUse": "When and how to deploy this in a round", 
-    "relevanceScore": 0-100 
-  }],
-  "searchSuggestions": ["Follow-up research queries"], 
-  "warnings": ["Red flags or limitations to note"], 
-  "researchSummary": "What the research found overall",
-  "verificationStatus": "complete"
-}`;
-
-const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
-
-[DATE_CONTEXT]
-
-Output JSON matching:
-{
-  "response": "string (markdown supported)",
-  "citations": [{ "claim": "string", "source": "string", "verified": boolean, "note": "string" }],
-  "searchInfo": { "webSearchUsed": boolean, "queries": ["string"], "sources": [{ "title": "string", "url": "string", "verified": boolean }] },
-  "followUpQuestions": ["string"],
-  "uncertainties": ["string"],
-  "prosConsAnalysis": { "pros": ["string"], "cons": ["string"] },
-  "argumentMap": { "mainClaim": "string", "supportingPoints": ["string"], "counterpoints": ["string"], "assumptions": ["string"] }
-}
-
-Rules:
-- Always return valid JSON with response, followUpQuestions, and uncertainties.
-- If Pros/Cons is ON, include prosConsAnalysis with useful entries. If it is OFF, omit prosConsAnalysis.
-- If Argument Map is ON, include argumentMap with useful entries. If it is OFF, omit argumentMap.
-- If Mode is clarify, make the response explain the unclear parts and include follow-up questions that would resolve ambiguity.
-- If Citation Mode is ON, include citations for factual claims when WEB RESEARCH RESULTS or WEB PAGE CONTEXT provide sources. Use exact URLs when available.
-- Do not invent citations. If no source is available, set citations to [] and add that limitation to uncertainties.
-- If Citation Mode is OFF, set citations to [] unless the user explicitly asks for sources.
-- The server fills searchInfo after your response.`;
-
-async function buildSystemPrompt(feature: Feature, customSystemPrompt?: string | null, sources?: Source[]): Promise<string> {
-  let base = feature === "generate" ? GENERATE_PROMPT : feature === "attack" ? ATTACK_PROMPT : feature === "brainstorm" ? BRAINSTORM_PROMPT : feature === "factoids" ? FACTOIDS_PROMPT : ASK_PROMPT;
-
-  // Inject current date context for features with web research
-  const webResearchFeatures: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask"];
-  if (webResearchFeatures.includes(feature)) {
-    base = base.replace("[DATE_CONTEXT]", getCurrentDateContext());
-  }
-
-  // Fetch global prompt from database (admin-configured)
-  const globalPrompt = await getGlobalPrompt(feature);
-  const globalSection = globalPrompt ? `\n\nADMIN-CONFIGURED INSTRUCTIONS:\n${globalPrompt}` : "";
-
-  // User's custom prompt (from their settings)
-  const custom = customSystemPrompt ? `\n\nCUSTOM SYSTEM PROMPT:\n${customSystemPrompt}` : "";
-
-  const sourceText = sources && sources.length ? `\n\nLOCAL KNOWLEDGE BASE (use as primary factual source):\n${sources.map((s) => `--- ${s.title} (${s.origin || s.type}) ---\n${s.content}\n`).join("\n")}` : "";
-  return withHumanizerInstructions(`${base}${globalSection}${custom}${sourceText}`);
 }
 
 // ============== MAIN HANDLER ==============
@@ -1165,7 +790,18 @@ Deno.serve(async (req) => {
     callModel: (args) => callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature),
   };
   try {
-    const systemPrompt = await buildSystemPrompt(feature, customSystemPrompt, sources);
+    // Layered system prompt: identity + task + JSON rules (+ admin/custom/knowledge),
+    // with citation-honesty rules whenever web research accompanies the request.
+    const researchPlanned = feature !== "ask" || Boolean(sanitizedInput.webSearch || sanitizedInput.citationMode);
+    const globalPrompt = await getGlobalPrompt(feature);
+    const systemPrompt = buildSystemPrompt({
+      feature,
+      dateContext: getCurrentDateContext(),
+      globalPrompt,
+      customPrompt: customSystemPrompt ?? null,
+      sources,
+      researchContext: researchPlanned ? "WEB RESEARCH RESULTS are attached to this request." : undefined,
+    });
 
     // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
@@ -1262,15 +898,15 @@ Deno.serve(async (req) => {
         }
       }
 
-      const modeGuidance = getAskModeGuidance(mode);
-      const basePrompt = `Message: ${message}
-Mode: ${mode}
-Mode Guidance: ${modeGuidance}
-Citation Mode: ${citationMode ? "ON - cite sourced factual claims using the research or page context below" : "OFF"}
-Web Search: ${webSearchEnabled ? "ENABLED" : "DISABLED"}
-Pros/Cons: ${prosConsMode ? "ON - include prosConsAnalysis" : "OFF - omit prosConsAnalysis"}
-Argument Map: ${argumentMapMode ? "ON - include argumentMap" : "OFF - omit argumentMap"}
-Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
+      const basePrompt = buildAskBasePrompt({
+        message,
+        mode,
+        citationMode,
+        webSearchEnabled,
+        prosConsMode,
+        argumentMapMode,
+        researchAvailable: Boolean(webSearchContext || urlContext),
+      });
       const contextBudget = Math.max(0, MAX_ASK_CONTEXT_LENGTH - basePrompt.length);
       const webSearchBudget = Math.max(0, contextBudget - urlContext.length);
       const trimmedWebSearch = truncateTextToBudget(webSearchContext, webSearchBudget);
@@ -1332,15 +968,9 @@ Research Context: ${webSearchContext || urlContext ? "AVAILABLE" : "NONE"}`;
             "Search ran, but the available sources were too weak for citation fallback.",
           ];
         }
-        if (!citationMode) {
-          typedOutput.citations = [];
-        }
-        if (!prosConsMode) {
-          delete (typedOutput as { prosConsAnalysis?: unknown }).prosConsAnalysis;
-        }
-        if (!argumentMapMode) {
-          delete (typedOutput as { argumentMap?: unknown }).argumentMap;
-        }
+        // Deterministic control enforcement runs last so fallback citations
+        // respect the toggles too, and clarify mode always surfaces its note.
+        enforceAskControls(typedOutput, { mode, citationMode, prosConsMode, argumentMapMode });
       }
 
       // Log usage and return
