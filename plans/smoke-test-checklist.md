@@ -2,6 +2,11 @@
 
 Run these before merging. Each row is one minute or less.
 
+Note: this list was written for the source-import/streaming branch. It remains
+the right script for staging runs of those flows. The Quality & Truth Release
+has its own checklist at `plans/release-checklist.md`; run both when both
+change sets are on a staging deploy.
+
 ## Setup
 
 - [ ] Deploy the two new edge functions: `npx supabase functions deploy ai-stream import-source`
