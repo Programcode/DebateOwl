@@ -15,7 +15,8 @@ import {
   Clock,
   Timer,
   Database,
-  GitBranch
+  GitBranch,
+  Dumbbell,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/app/brainstorm', key: 'brainstorm', icon: Lightbulb },
   { path: '/app/factoids', key: 'factoids', icon: BookOpen },
   { path: '/app/ask', key: 'ask', icon: MessageCircle },
+  { path: '/app/sparring', key: 'sparring', icon: Dumbbell },
   { path: '/app/library', key: 'library', icon: Database },
   { path: '/app/timer', key: 'timer', icon: Timer },
   { path: '/app/flowchart', key: 'flowchart', icon: GitBranch },
