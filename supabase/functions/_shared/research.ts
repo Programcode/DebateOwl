@@ -4,13 +4,16 @@
 // and free of provider-specific code.
 
 import {
-  buildSearchQueries,
+  buildSearchRequests,
   formatRankedSearchResults,
+  GOVERNMENT_SEARCH_DOMAINS,
   rankSearchResults,
   sourceTitleFromUrl,
   type ExaResult,
+  type ExaSearchCategory,
   type RankedSearchResult,
   type ResearchSource,
+  type SearchRequest,
 } from "./source-quality.ts";
 
 export type { ExaResult, RankedSearchResult, ResearchSource };
@@ -145,8 +148,18 @@ export async function fetchJsonWithTimeout<T = unknown>(
 
 // ============== EXA FUNCTIONS ==============
 
-// exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
-export async function exaSearch(query: string, signal?: AbortSignal): Promise<ExaResult[]> {
+type ExaSearchOptions = {
+  includeDomains?: string[];
+  category?: ExaSearchCategory;
+};
+
+// Exa's current API exposes includeDomains/category as first-class fields.
+// Keep query text about the topic itself instead of embedding site: operators.
+export async function exaSearch(
+  query: string,
+  signal?: AbortSignal,
+  options: ExaSearchOptions = {},
+): Promise<ExaResult[]> {
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
@@ -160,8 +173,10 @@ export async function exaSearch(query: string, signal?: AbortSignal): Promise<Ex
       body: JSON.stringify({
         query,
         type: "auto",
-        num_results: 10,
-        contents: { text: { max_characters: 10000 } },
+        numResults: 10,
+        ...(options.includeDomains?.length ? { includeDomains: options.includeDomains } : {}),
+        ...(options.category ? { category: options.category } : {}),
+        contents: { text: { maxCharacters: 10000 } },
       }),
     }, 30000, signal);
     throwIfAborted(signal);
@@ -183,6 +198,27 @@ export async function exaSearch(query: string, signal?: AbortSignal): Promise<Ex
   }
 }
 
+async function exaSearchWithFallback(request: SearchRequest, signal?: AbortSignal): Promise<ExaResult[]> {
+  const hasFilter = Boolean(request.category || request.includeDomains?.length);
+  const filtered = await exaSearch(request.query, signal, {
+    includeDomains: request.includeDomains,
+    category: request.category,
+  });
+  if (filtered.length > 0 || !hasFilter) return filtered;
+
+  console.warn(`[EXA] Filtered search returned no results; retrying without filters: ${request.query}`);
+  return exaSearch(request.query, signal);
+}
+
+function preferredFollowUpRequest(query: string, preferredSourceType: string): SearchRequest {
+  if (preferredSourceType === "government") {
+    return { query, includeDomains: GOVERNMENT_SEARCH_DOMAINS };
+  }
+  if (preferredSourceType === "academic") return { query, category: "research paper" };
+  if (preferredSourceType === "news") return { query, category: "news" };
+  return { query };
+}
+
 // exaGetContents: extract full text from a specific URL using Exa's /contents endpoint
 export async function exaGetContents(url: string, signal?: AbortSignal): Promise<string> {
   const apiKey = Deno.env.get("EXA_API_KEY");
@@ -195,7 +231,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ urls: [url], text: { max_characters: 8000 } }),
+      body: JSON.stringify({ urls: [url], text: { maxCharacters: 8000 } }),
     }, 30000, signal);
     throwIfAborted(signal);
     if (!response.ok) {
@@ -325,21 +361,21 @@ async function deepResearchInner(
   console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
 
   const preferredSourceType = options.preferredSourceType || "any";
-  const seedQueries = buildSearchQueries(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
+  const seedRequests = buildSearchRequests(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
   const allResults: Array<ExaResult & { query: string }> = [];
   const matchesPreferredSourceType = (result: RankedSearchResult) => (
     preferredSourceType === "any" ||
     result.sourceType === preferredSourceType
   );
 
-  const seedResults = await Promise.all(seedQueries.map(async (query) => {
-    const results = await exaSearch(query, signal);
+  const seedResults = await Promise.all(seedRequests.map(async (request) => {
+    const results = await exaSearchWithFallback(request, signal);
     throwIfAborted(signal);
-    const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
+    const ranked = rankSearchResults(results.map((result) => ({ ...result, query: request.query })), claim, preferredSourceType);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-    context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
-    console.log(`[RESEARCH] Seed query "${query}": ${results.length} results`);
-    return results.map((result) => ({ ...result, query }));
+    context.searches.push({ query: request.query, results: formatRankedSearchResults(visibleRanked) });
+    console.log(`[RESEARCH] Seed query "${request.query}": ${results.length} results`);
+    return results.map((result) => ({ ...result, query: request.query }));
   }));
   seedResults.forEach((results) => allResults.push(...results));
 
@@ -353,7 +389,8 @@ async function deepResearchInner(
     console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
-      const results = await exaSearch(query, signal);
+      const request = preferredFollowUpRequest(query, preferredSourceType);
+      const results = await exaSearchWithFallback(request, signal);
       throwIfAborted(signal);
       const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
       const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
