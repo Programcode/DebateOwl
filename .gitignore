@@ -58,14 +58,16 @@ deno.lock
 tasks.txt
 humanizer.md
 
-# Local notes/docs, except the project README
+# Local notes/docs, except project-maintained records
 *.md
 *.txt
 *.info
 !README.md
+!AGENTS.md
 !**/README.md
 !docs/pricing-snapshots/*.md
 !plans/**/*.md
+!security/reviews/*.md
 .vercel
 .env*
 .worktrees/
