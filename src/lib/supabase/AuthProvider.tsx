@@ -5,6 +5,7 @@ import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
+import { setJamUserId } from '@/lib/jam-metadata';
 
 interface AuthContextValue {
   session: Session | null;
@@ -98,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (oauthSession) {
           setSession(oauthSession);
           currentUserIdRef.current = oauthSession.user?.id;
+          setJamUserId(oauthSession.user?.id);
           setLoading(false);
           hydrateStores(oauthSession.user?.id);
           return;
@@ -117,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) console.warn('[Auth] getSession error:', error.message);
         setSession(data.session ?? null);
         currentUserIdRef.current = data.session?.user?.id;
+        setJamUserId(data.session?.user?.id);
         if (data.session) {
           hydrateStores(data.session.user?.id);
         }
@@ -137,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const prevUserId = currentUserIdRef.current;
       const nextUserId = newSession?.user?.id;
       currentUserIdRef.current = nextUserId;
+      setJamUserId(nextUserId);
       setSession(newSession);
       setLoading(false);
 
