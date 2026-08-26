@@ -109,7 +109,7 @@ Staging project `brifeyypjauyusmkptkx` exists. Everything below targets it, neve
 
 ### Task 2.5: Seed script
 
-- Create `scripts/seed-staging.ts`: uses service-role key from `STAGING_SERVICE_ROLE_KEY` env var (read at runtime, never committed). Creates one test user, mints a demo access code row with `sha256(pepper:code)` matching the staged `DEMO_CODE_PEPPER`, prints the plaintext code to stdout once.
+- Create `scripts/seed-staging.ts`: uses service-role key from `STAGING_SERVICE_ROLE_KEY` env var (read at runtime, never committed). Creates one test user, mints a demo access code row with `sha256(pepper:code)` matching the staged `DEMO_CODE_PEPPER`, and writes the plaintext code only to `.env.e2e` (gitignored, mode 600) for local e2e use. The script never prints secrets; automated CI runs consume masked GitHub secret values instead of minting codes.
 - Document in AGENTS.md. Rollback: staging is disposable; wipe and re-run.
 
 ## Phase 3: Real authenticated e2e, the actual bug catcher
