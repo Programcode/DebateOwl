@@ -7,8 +7,11 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    setupFiles: ["./src/test/setup.ts", "./src/test/deno-compat.ts"],
+    include: [
+      "src/**/*.{test,spec}.{ts,tsx}",
+      "supabase/functions/**/*.{test,spec}.{ts,tsx}",
+    ],
     coverage: {
       provider: "v8",
       // Omit `all` intentionally: this is a selected-scope gate for the audited
@@ -35,6 +38,13 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      // Run Deno-flavored function tests under vitest without rewriting them.
+      "https://deno.land/std@0.224.0/assert/mod.ts": path.resolve(
+        __dirname,
+        "./src/test/deno-assert-shim.ts",
+      ),
+    },
   },
 });
