@@ -35,3 +35,36 @@ test('does not expose source verification while no verification behavior exists'
 
   expect(screen.queryByRole('button', { name: /verify all sources/i })).not.toBeInTheDocument();
 });
+
+test('shows every consulted source with quality labels and weak-source warning', () => {
+  render(
+    <FactoidsResults
+      result={result}
+      consultedSources={[
+        {
+          title: 'Official statistics',
+          url: 'https://www.census.gov/example',
+          sourceType: 'government',
+          qualityLabel: 'strong',
+          qualityScore: 92,
+          query: 'official statistics',
+        },
+        {
+          title: 'Broad fallback discussion',
+          url: 'https://www.reddit.com/r/example',
+          sourceType: 'social',
+          qualityLabel: 'weak',
+          qualityScore: 18,
+          query: 'broad discussion',
+        },
+      ]}
+    />,
+  );
+
+  expect(screen.getByText('Sources consulted')).toBeInTheDocument();
+  expect(screen.getByText('Official statistics')).toBeInTheDocument();
+  expect(screen.getByText('Broad fallback discussion')).toBeInTheDocument();
+  expect(screen.getByText('strong')).toBeInTheDocument();
+  expect(screen.getByText('weak')).toBeInTheDocument();
+  expect(screen.getByText(/fallback context only/i)).toBeInTheDocument();
+});
