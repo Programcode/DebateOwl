@@ -35,8 +35,10 @@ test.beforeEach(async ({ page }) => {
   await stubSupabaseSession(page);
 });
 
-test('sparring completes a deterministic training loop and hands the round to Attack', async ({ page }) => {
+test('sparring completes the training loop and hands the round into existing tools', async ({ page }) => {
   let aiCall = 0;
+  let discussInput: { message?: string; history?: Array<{ role?: string; content?: string }> } | undefined;
+
   await page.route('**/functions/v1/ai', async (route) => {
     if (route.request().method() === 'OPTIONS') {
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
@@ -44,6 +46,17 @@ test('sparring completes a deterministic training loop and hands the round to At
     }
 
     aiCall += 1;
+    if (aiCall === 4) {
+      const requestBody = route.request().postDataJSON() as { input?: typeof discussInput };
+      discussInput = requestBody.input;
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        body: askEnvelope('Focus the next drill on comparing universal access against targeted alternatives.'),
+      });
+      return;
+    }
+
     const response = aiCall === 1
       ? JSON.stringify({
           speech: 'A universal free-transit policy is expensive. Targeted discounts can improve access while preserving funding for service quality.',
@@ -83,8 +96,16 @@ test('sparring completes a deterministic training loop and hands the round to At
 
   await page.getByRole('button', { name: 'Attack my round' }).click();
   await expect(page).toHaveURL(/\/app\/attack$/);
-  await expect(page.locator('#caseText')).toContainText('');
   await expect(page.locator('#caseText')).toHaveValue(new RegExp(opening.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+
+  await page.goto('/app/sparring');
+  await page.getByRole('button', { name: 'Discuss with Ask' }).click();
+  await expect(page).toHaveURL(/\/app\/ask$/);
+  await expect(page.getByText(/Focus the next drill on comparing universal access/i)).toBeVisible();
+
+  expect(discussInput?.message).toContain('I just finished a DebateLab sparring round');
+  expect(discussInput?.history?.some((entry) => entry.content === discussInput?.message)).toBe(false);
+  expect(aiCall).toBe(4);
 });
 
 test('sparring can retry a failed opponent response without losing the user speech', async ({ page }) => {
