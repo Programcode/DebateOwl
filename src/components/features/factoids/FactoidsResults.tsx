@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
+import type { DiscoveredSource } from '@/lib/ai/client';
 import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
@@ -15,11 +16,12 @@ import { exportFactoidsToDocx, exportFactoidsToGoogleDocs } from '@/lib/export-u
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
+import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import { openExternalUrl } from '@/lib/native';
-
 
 interface FactoidsResultsProps {
   result: FactoidsOutput;
+  consultedSources?: DiscoveredSource[];
   onDiscuss?: () => void;
   onSaveSource?: (title: string, content: string, url?: string) => void;
   onUseSuggestion?: (query: string) => void;
@@ -33,16 +35,13 @@ const verificationConfig = {
 
 function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsResultsProps['onSaveSource'] }) {
   const { t } = useTranslation();
-  // Defensive check for old data format in localStorage
   const verified = factoid.citation?.verified ?? 'pending';
   const config = verificationConfig[verified] ?? verificationConfig.pending;
   const VerifyIcon = config.icon;
-  // Use secure URL validation instead of simple string checks
   const safeUrl = validateUrl(factoid.citation?.url);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4 motion-list-item card-hover-glow">
-      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           {safeUrl ? (
@@ -86,13 +85,11 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
         </div>
       </div>
 
-      {/* Key Figure */}
       <div className="rounded-md bg-primary/5 border border-primary/20 p-3 text-left">
         <span className="text-sm font-medium text-primary">{t('factoidsResults.keyFigure')} </span>
         <span className="text-lg font-bold text-foreground">{factoid.keyFigure}</span>
       </div>
 
-      {/* Context & Limitations */}
       <div className="space-y-2 text-sm text-left">
         <div>
           <span className="font-medium text-muted-foreground">{t('factoidsResults.context')} </span>
@@ -104,7 +101,6 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
         </div>
       </div>
 
-      {/* Citation Block */}
       <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm text-left">
         <div className="font-medium text-foreground">{factoid.citation?.title || t('factoidsResults.unknownSource')}</div>
         <div className="text-muted-foreground">
@@ -125,7 +121,6 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
         )}
       </div>
 
-      {/* How to Use */}
       <div className="flex items-start gap-2 text-sm">
         <Lightbulb className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
         <div>
@@ -137,7 +132,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   );
 }
 
-export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
+export function FactoidsResults({ result, consultedSources = [], onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -150,11 +145,8 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
 
   const handleDocxExport = async () => {
     const success = await exportFactoidsToDocx(result);
-    if (success) {
-      toast.success(t('factoidsResults.exportedDocx'));
-    } else {
-      toast.error(t('factoidsResults.exportFailedDocx'));
-    }
+    if (success) toast.success(t('factoidsResults.exportedDocx'));
+    else toast.error(t('factoidsResults.exportFailedDocx'));
   };
 
   const handleGoogleDocsExport = async () => {
@@ -165,10 +157,7 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
           .catch(() => toast.error(t('factoidsResults.exportError')));
         toast.success(t('factoidsResults.exportedGdocs'), {
-          action: {
-            label: t('factoidsResults.open'),
-            onClick: openDocument,
-          },
+          action: { label: t('factoidsResults.open'), onClick: openDocument },
         });
         openDocument();
       } else if (exportResult.requiresReauth) {
@@ -195,7 +184,6 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         discussLabel={t('factoidsResults.discuss')}
       />
 
-      {/* Verification Status */}
       <SectionCard
         title={t('factoidsResults.verificationStatus')}
         description={`${verifiedCount} ${t('factoidsResults.verified')}`}
@@ -212,7 +200,6 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         </div>
       </SectionCard>
 
-      {/* Warnings */}
       {warnings.length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -230,7 +217,19 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         </div>
       )}
 
-      {/* Factoids */}
+      {consultedSources.length > 0 && (
+        <SectionCard
+          title={t('factoidsResults.consultedSources', 'Sources consulted')}
+          description={t(
+            'factoidsResults.consultedSourcesDesc',
+            'These pages informed the research pass. Quality chips show why a source was trusted or kept as fallback context; only verified evidence appears as a factoid above.',
+          )}
+          icon={<Search className="h-5 w-5" />}
+        >
+          <SourceQualityList sources={consultedSources} />
+        </SectionCard>
+      )}
+
       <SectionCard
         title={`${t('factoidsResults.found')} ${displayFactoids.length} ${t('factoidsResults.factoids')}`}
         description={t('factoidsResults.factoidsDesc')}
@@ -247,7 +246,6 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         </div>
       </SectionCard>
 
-      {/* Search Suggestions */}
       <SectionCard
         title={t('factoidsResults.findMore')}
         description={t('factoidsResults.findMoreDesc')}
