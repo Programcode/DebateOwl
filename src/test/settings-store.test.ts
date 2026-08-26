@@ -23,17 +23,27 @@ describe("settings-store", () => {
     expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
     expect(state.featureConfigs.brainstorm.temperature).toBe(0.9);
     expect(state.featureConfigs.factoids.temperature).toBe(0.3);
+    expect(state.featureConfigs.sparring.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.sparring.temperature).toBe(0.75);
   });
 
-  it("setFeatureConfig merges updates and persists", async () => {
+  it("setFeatureConfig merges updates and persists with UPDATE, not UPSERT", async () => {
     const store = useSettingsStore.getState();
-    store.setFeatureConfig("generate", { temperature: 0.2 });
+    store.setFeatureConfig("sparring", { temperature: 0.2 });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(useSettingsStore.getState().featureConfigs.generate.temperature).toBe(0.2);
+
+    expect(useSettingsStore.getState().featureConfigs.sparring.temperature).toBe(0.2);
     expect(supabaseMock.from).toHaveBeenCalledWith("user_settings");
+    const settingsQuery = supabaseMock.from.mock.results.find(({ value }) => value.update)?.value;
+    expect(settingsQuery.update).toHaveBeenCalledWith(expect.objectContaining({
+      feature_configs: expect.objectContaining({
+        sparring: expect.objectContaining({ temperature: 0.2 }),
+      }),
+    }));
+    expect(settingsQuery.upsert).not.toHaveBeenCalled();
   });
 
-  it("setSystemPrompt updates local state and upserts settings", async () => {
+  it("setSystemPrompt updates local state and updates settings", async () => {
     const store = useSettingsStore.getState();
     store.setSystemPrompt("Custom system");
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -63,6 +73,7 @@ describe("settings-store", () => {
     expect(state.featureConfigs.generate.provider).toBe("google");
     expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
     expect(state.featureConfigs.attack.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.sparring.model).toBe("gemini-3-flash-preview");
   });
 
   it("resetLocalData restores defaults", () => {
@@ -76,6 +87,7 @@ describe("settings-store", () => {
     expect(state.theme).toBe("system");
     expect(state.customSystemPrompt).toBeUndefined();
     expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.sparring.model).toBe("gemini-3-flash-preview");
     expect(state.wikiResearchEnabled).toBe(false);
   });
 
@@ -90,18 +102,17 @@ describe("settings-store", () => {
     store.setTheme("dark");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const settingsQuery = supabaseMock.from.mock.results.find(({ value }) => value.upsert)?.value;
-    expect(settingsQuery.upsert).toHaveBeenCalledWith(
-      expect.any(Object),
-      { onConflict: "user_id" },
-    );
-    expect(settingsQuery.upsert.mock.calls[0][0]).not.toHaveProperty("wiki_research_enabled");
+    const settingsQuery = supabaseMock.from.mock.results.find(({ value }) => value.update)?.value;
+    expect(settingsQuery.update).toHaveBeenCalledWith(expect.any(Object));
+    expect(settingsQuery.update.mock.calls[0][0]).not.toHaveProperty("wiki_research_enabled");
+    expect(settingsQuery.upsert).not.toHaveBeenCalled();
   });
 
   it("reports settings persistence failures", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const upsert = vi.fn(async () => ({ data: null, error: { message: "database unavailable" } }));
-    supabaseMock.from.mockImplementationOnce((() => ({ upsert })) as never);
+    const eq = vi.fn(async () => ({ data: null, error: { message: "database unavailable" } }));
+    const update = vi.fn(() => ({ eq }));
+    supabaseMock.from.mockImplementationOnce((() => ({ update })) as never);
 
     useSettingsStore.getState().setTheme("dark");
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -112,12 +123,15 @@ describe("settings-store", () => {
 
   it("getFeatureConfig returns defaults when missing", () => {
     useSettingsStore.setState({ featureConfigs: {} } as Partial<ReturnType<typeof useSettingsStore.getState>>);
-    const config = useSettingsStore.getState().getFeatureConfig("ask");
-    expect(config.provider).toBe("google");
-    expect(config.model).toBe("gemini-3-flash-preview");
+    const askConfig = useSettingsStore.getState().getFeatureConfig("ask");
+    const sparringConfig = useSettingsStore.getState().getFeatureConfig("sparring");
+    expect(askConfig.provider).toBe("google");
+    expect(askConfig.model).toBe("gemini-3-flash-preview");
+    expect(sparringConfig.provider).toBe("google");
+    expect(sparringConfig.temperature).toBe(0.75);
   });
 
-  it("does not upsert when user is not signed in", async () => {
+  it("does not update settings when user is not signed in", async () => {
     setMockAuthUser(null);
     const store = useSettingsStore.getState();
     store.setTheme("dark");
