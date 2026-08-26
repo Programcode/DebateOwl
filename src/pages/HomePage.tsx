@@ -57,8 +57,14 @@ export default function HomePage() {
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
-                  <CardTitle className="text-lg">{t(`home.${mode.key}`)}</CardTitle>
-                  <CardDescription>{t(`home.${mode.key}Desc`)}</CardDescription>
+                  <CardTitle className="text-lg">
+                    {mode.key === 'sparring' ? t('home.sparring', 'Sparring') : t(`home.${mode.key}`)}
+                  </CardTitle>
+                  <CardDescription>
+                    {mode.key === 'sparring'
+                      ? t('home.sparringDesc', 'Practice live clash against an AI opponent and get transcript-grounded feedback.')
+                      : t(`home.${mode.key}Desc`)}
+                  </CardDescription>
                 </CardHeader>
               </Card>
             </Link>
