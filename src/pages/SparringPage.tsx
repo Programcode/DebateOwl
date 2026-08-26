@@ -12,16 +12,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { askChat } from '@/lib/ai/client';
 import { requestSparringOpponent, requestSparringScorecard } from '@/lib/ai/sparring-client';
-import type { SparringSetup as SparringSetupType, SparringTurnPhase } from '@/lib/ai/schemas/sparring';
+import type { SparringSetup as SparringSetupType, SparringTurn, SparringTurnPhase } from '@/lib/ai/schemas/sparring';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { captureProductEvent } from '@/lib/observability';
+import { exportSparringToDocx, exportSparringToPdf } from '@/lib/sparring-export';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { getSparringSession, useSparringStore } from '@/lib/stores/sparring-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { useToast } from '@/hooks/use-toast';
 
-function transcriptText(turns: ReturnType<typeof getSparringSession> extends infer _T ? Array<{ role: 'user' | 'ai'; phase: string; content: string }> : never) {
+function transcriptText(turns: SparringTurn[]) {
   return turns.map((turn, index) => `${index + 1}. ${turn.role === 'user' ? 'You' : 'AI opponent'} (${turn.phase}): ${turn.content}`).join('\n\n');
 }
 
@@ -71,6 +72,7 @@ export default function SparringPage() {
     addTurn(session.id, { role: 'user', phase, content });
     captureProductEvent(phase === 'opening' ? 'sparring_opening_submitted' : 'sparring_turn_completed', {
       phase,
+      speaker: 'user',
       speech_length: content.length,
       difficulty: session.setup.difficulty,
     });
@@ -151,6 +153,28 @@ export default function SparringPage() {
     }
   };
 
+  const handleExportDocx = async () => {
+    if (!session) return;
+    const ok = await exportSparringToDocx(session);
+    captureProductEvent('sparring_feedback_action_used', { action: 'export_docx', success: ok });
+    toast({
+      title: ok ? 'Word export ready' : 'Word export failed',
+      description: ok ? 'The round transcript and scorecard were exported.' : 'Could not create the Word document.',
+      variant: ok ? 'success' : 'destructive',
+    });
+  };
+
+  const handleExportPdf = async () => {
+    if (!session) return;
+    const ok = await exportSparringToPdf(session);
+    captureProductEvent('sparring_feedback_action_used', { action: 'export_pdf', success: ok });
+    toast({
+      title: ok ? 'PDF export ready' : 'PDF export failed',
+      description: ok ? 'The round transcript and scorecard were exported.' : 'Could not create the PDF.',
+      variant: ok ? 'success' : 'destructive',
+    });
+  };
+
   const handleNewRound = () => {
     setPressurePoints([]);
     setActiveSession(null);
@@ -192,6 +216,8 @@ export default function SparringPage() {
               onRematch={handleRematch}
               onDiscuss={handleDiscuss}
               onNewRound={handleNewRound}
+              onExportDocx={handleExportDocx}
+              onExportPdf={handleExportPdf}
             />
           </AnimatedSection>
         ) : session ? (
