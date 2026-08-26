@@ -71,9 +71,7 @@ function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
 // Enable debug logging in development
 const DEBUG = import.meta.env.DEV;
 
-/**
- * Base class for AI-related errors with structured information.
- */
+/** Base class for AI-related errors with structured information. */
 export class AIError extends Error {
   readonly statusCode?: number;
   readonly requestId?: string;
@@ -91,10 +89,6 @@ export class AIError extends Error {
   }
 }
 
-/**
- * Error for authentication failures (401/403).
- * User should re-authenticate.
- */
 export class AIAuthError extends AIError {
   constructor(message: string = 'Authentication required. Please sign in again.', options?: { statusCode?: number; requestId?: string }) {
     super(message, options);
@@ -102,9 +96,6 @@ export class AIAuthError extends AIError {
   }
 }
 
-/**
- * Error for rate limit exceeded (429).
- */
 export class AIRateLimitError extends AIError {
   readonly limit?: number;
   readonly current?: number;
@@ -122,9 +113,6 @@ export class AIRateLimitError extends AIError {
   }
 }
 
-/**
- * Error for subscription limit reached (402) or trial expired.
- */
 export class AISubscriptionError extends AIError {
   readonly code?: string;
   readonly limit?: number;
@@ -142,9 +130,6 @@ export class AISubscriptionError extends AIError {
   }
 }
 
-/**
- * Error for model access restriction (403 upgrade_required).
- */
 export class AIModelRestrictionError extends AIError {
   constructor(
     message: string = 'This model requires a Pro subscription.',
@@ -155,9 +140,6 @@ export class AIModelRestrictionError extends AIError {
   }
 }
 
-/**
- * Error for AI provider failures (OpenAI, Google, Anthropic API errors).
- */
 export class AIProviderError extends AIError {
   readonly provider?: string;
 
@@ -171,9 +153,6 @@ export class AIProviderError extends AIError {
   }
 }
 
-/**
- * Error for invalid/malformed AI responses.
- */
 export class AIResponseError extends AIError {
   constructor(message: string = 'Invalid response from AI service.', options?: { requestId?: string; details?: Record<string, unknown> }) {
     super(message, options);
@@ -181,9 +160,6 @@ export class AIResponseError extends AIError {
   }
 }
 
-/**
- * Custom error for request timeouts.
- */
 export class TimeoutError extends AIError {
   constructor(message: string = 'Request timed out. Please try again.') {
     super(message, { statusCode: 408 });
@@ -191,9 +167,6 @@ export class TimeoutError extends AIError {
   }
 }
 
-/**
- * Type guards for error checking.
- */
 export function isAIAuthError(error: unknown): error is AIAuthError {
   return error instanceof AIAuthError || (error instanceof Error && error.name === 'AIAuthError');
 }
@@ -237,7 +210,6 @@ async function callSupabaseAI(
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
 
-  // Log request details in development
   if (DEBUG) {
     console.log(`[AI Request ${requestId}]`, {
       feature,
@@ -248,7 +220,6 @@ async function callSupabaseAI(
     });
   }
 
-  // Require authentication for AI features
   if (!accessToken) {
     throw new AIAuthError('Please sign in to use AI features', { requestId });
   }
@@ -275,7 +246,6 @@ async function callSupabaseAI(
 
     const elapsed = Math.round(performance.now() - startTime);
 
-    // Log response in development
     if (DEBUG) {
       console.log(`[AI Response ${requestId}] ${elapsed}ms`, {
         hasData: !!data,
@@ -285,19 +255,16 @@ async function callSupabaseAI(
       });
     }
 
-    // Handle Supabase function invoke errors
     if (error) {
       const errorPayload = await extractSupabaseErrorPayload(error);
       const errorDetails = mapAIError(error, requestId, provider, config.model, errorPayload);
       throw errorDetails;
     }
 
-    // Handle response with error field (from edge function)
     if (data?.error) {
       const errorMessage = data.error as string;
       const errorCode = data.code as string | undefined;
 
-      // Subscription errors (402 / trial expired / limit reached)
       if (errorCode === 'trial_expired' || errorCode === 'limit_reached') {
         throw new AISubscriptionError(errorMessage, {
           statusCode: 402,
@@ -308,12 +275,10 @@ async function callSupabaseAI(
         });
       }
 
-      // Model restriction (403 / upgrade_required)
       if (errorCode === 'upgrade_required') {
         throw new AIModelRestrictionError(errorMessage, { requestId });
       }
 
-      // Rate limit error from edge function
       const normalizedErrorMessage = errorMessage.toLowerCase();
       if (data.limit !== undefined || normalizedErrorMessage.includes('rate limit') || normalizedErrorMessage.includes('limit exceeded')) {
         throw new AIRateLimitError(errorMessage, {
@@ -323,7 +288,6 @@ async function callSupabaseAI(
         });
       }
 
-      // Provider error (OpenAI, Google, etc.)
       if (isProviderErrorMessage(errorMessage) || isProviderErrorCode(errorCode)) {
         throw new AIProviderError(errorMessage, {
           requestId,
@@ -332,11 +296,9 @@ async function callSupabaseAI(
         });
       }
 
-      // Generic error from edge function
       throw new AIError(errorMessage, { statusCode: 500, requestId });
     }
 
-    // Validate response has expected output
     if (!data?.output) {
       throw new AIResponseError('AI response missing output field', { requestId, details: { data } });
     }
@@ -350,38 +312,18 @@ async function callSupabaseAI(
 
     return data;
   } catch (err) {
-    // Re-throw our custom errors
-    if (err instanceof AIError) {
-      throw err;
-    }
+    if (err instanceof AIError) throw err;
+    if (err instanceof TimeoutError) throw err;
+    if (err instanceof DOMException && err.name === 'AbortError') throw new TimeoutError();
 
-    // Handle timeout
-    if (err instanceof TimeoutError) {
-      throw err;
-    }
-
-    // Handle abort (our timeout triggered)
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new TimeoutError();
-    }
-
-    // Wrap unknown errors
     const message = err instanceof Error ? err.message : 'Unknown error occurred';
-
-    // Check if the error message indicates an abort/timeout
-    if (message.includes('abort') || message.includes('signal')) {
-      throw new TimeoutError();
-    }
-
+    if (message.includes('abort') || message.includes('signal')) throw new TimeoutError();
     throw new AIError(message, { requestId });
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
-/**
- * Parse Supabase FunctionsHttpError into appropriate AIError subclass.
- */
 function getSupabaseErrorStatus(error: { context?: unknown }): number | undefined {
   const context = error.context;
   if (context && typeof context === 'object' && 'status' in context) {
@@ -425,32 +367,20 @@ export function mapAIError(
   const message = payloadMessage || error.message || 'Unknown error';
   const errorCode = typeof payload?.code === 'string' ? payload.code : undefined;
 
-  // Detect abort/signal errors and treat as timeout
   if (message.includes('abort') || message.includes('signal')) {
     return new TimeoutError();
   }
 
-  // Try to extract status code from error context or message
   let statusCode: number | undefined = getSupabaseErrorStatus(error);
 
-  // Parse status from message patterns if status is missing
   if (message.includes('non-2xx') || message.includes('status code')) {
-    // Common message: "Edge Function returned a non-2xx status code"
-    // Check for hints in message
-    if (message.includes('401') || message.includes('Unauthorized')) {
-      statusCode = 401;
-    } else if (message.includes('402')) {
-      statusCode = 402;
-    } else if (message.includes('403') || message.includes('Forbidden')) {
-      statusCode = 403;
-    } else if (message.includes('429') || message.includes('rate limit')) {
-      statusCode = 429;
-    } else if (message.includes('500') || message.includes('Internal')) {
-      statusCode = 500;
-    }
+    if (message.includes('401') || message.includes('Unauthorized')) statusCode = 401;
+    else if (message.includes('402')) statusCode = 402;
+    else if (message.includes('403') || message.includes('Forbidden')) statusCode = 403;
+    else if (message.includes('429') || message.includes('rate limit')) statusCode = 429;
+    else if (message.includes('500') || message.includes('Internal')) statusCode = 500;
   }
 
-  // Return appropriate error type based on status code
   if (statusCode === 401) {
     return new AIAuthError(
       'Authentication failed. Your session may have expired. Please sign in again.',
@@ -471,7 +401,6 @@ export function mapAIError(
 
   if (statusCode === 403) {
     const code = typeof payload?.code === 'string' ? payload.code : undefined;
-    // Could be auth failure or model restriction
     if (code === 'upgrade_required' || message.includes('model') || message.includes('upgrade')) {
       return new AIModelRestrictionError(message, { requestId });
     }
@@ -499,7 +428,6 @@ export function mapAIError(
     });
   }
 
-  // Default: return generic error with helpful message
   return new AIError(
     `AI service error: ${message}. Please try again.`,
     { statusCode: statusCode || 500, requestId }
@@ -533,14 +461,8 @@ function cleanGeneratedOutput<T>(value: T): T {
   return value;
 }
 
-/**
- * Transforms AI generate response from various formats to the expected GenerateOutput schema.
- * This handles cases where the AI returns a different structure than requested.
- */
 function transformGenerateResponse(response: Record<string, unknown>): GenerateOutput {
-  // If already in correct format, return as-is (with exordio preserved)
   if (response.caseStructure && response.contentions && response.predictedOpponentCase && response.counters && response.metadata) {
-    // Ensure exordio is properly structured if present
     const result = response as unknown as GenerateOutput;
     if (response.exordio && typeof response.exordio === 'object') {
       const ex = response.exordio as Record<string, unknown>;
@@ -552,7 +474,6 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
     return cleanGeneratedOutput(result);
   }
 
-  // Transform from wrong format to correct format
   const wrongFormatContentions = response.contentions as Array<{
     title?: string;
     claim?: string;
@@ -573,7 +494,6 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
     impact: c.impact || c.analysis || '',
   }));
 
-  // Transform rebuttals to counters
   const rebuttals = (response.rebuttals as Array<{ attack?: string; response?: string }>) || [];
   const counters = rebuttals.map(r => ({
     targetArgument: r.attack || '',
@@ -581,7 +501,6 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
     rebuttal: r.response || '',
   }));
 
-  // Transform potentialWeaknesses to predictedOpponentCase
   const weaknesses = (response.potentialWeaknesses as string[]) || [];
 
   const result: GenerateOutput = {
@@ -617,7 +536,6 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
     },
   };
 
-  // Preserve exordio if present in the original response
   if (response.exordio && typeof response.exordio === 'object') {
     const ex = response.exordio as Record<string, unknown>;
     result.exordio = {
@@ -629,12 +547,7 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
   return cleanGeneratedOutput(result);
 }
 
-/**
- * Transforms AI brainstorm response to ensure all required fields exist.
- * This handles cases where the AI returns incomplete structures.
- */
 function transformBrainstormResponse(response: Record<string, unknown>): BrainstormOutput {
-  // Ensure required base fields exist
   const result: BrainstormOutput = {
     needsMoreInfo: Boolean(response.needsMoreInfo),
     clarifyingQuestions: Array.isArray(response.clarifyingQuestions) ? response.clarifyingQuestions : [],
@@ -642,7 +555,6 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
     warningsAndTradeoffs: Array.isArray(response.warningsAndTradeoffs) ? response.warningsAndTradeoffs : [],
   };
 
-  // Helper to normalize an Idea object
   const normalizeIdea = (idea: unknown): { id: string; title: string; description: string; side: 'pro' | 'con' | 'neutral'; strength: 'strong' | 'moderate' | 'weak'; tradeoffs: string[]; relatedTo: string[] } | null => {
     if (!idea || typeof idea !== 'object') return null;
     const i = idea as Record<string, unknown>;
@@ -675,12 +587,10 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  // Transform topFive if present
   if (response.topFive && Array.isArray(response.topFive)) {
     result.topFive = normalizeTopFiveItems(response.topFive);
   }
 
-  // Transform mindmap if present
   if (response.mindmap && Array.isArray(response.mindmap)) {
     result.mindmap = response.mindmap
       .map((category: unknown) => {
@@ -697,7 +607,6 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
       .filter((cat): cat is NonNullable<typeof cat> => cat !== null && cat.items.length > 0);
   }
 
-  // Transform buckets if present
   if (response.buckets && Array.isArray(response.buckets)) {
     result.buckets = response.buckets
       .map((bucket: unknown) => {
@@ -726,11 +635,6 @@ function transformBrainstormResponse(response: Record<string, unknown>): Brainst
   return cleanGeneratedOutput(result);
 }
 
-/**
- * Validates the attack response at the trust boundary. Attack outputs were
- * previously cast without validation; now malformed provider responses fail
- * loudly instead of rendering unverified shapes.
- */
 function validateAttackOutput(output: unknown): AttackOutput {
   const parsed = AttackOutputSchema.safeParse(output);
   if (!parsed.success) {
@@ -741,7 +645,6 @@ function validateAttackOutput(output: unknown): AttackOutput {
   return parsed.data;
 }
 
-/** Validates the transformed generate response before it can be rendered or persisted alongside sources. */
 function validateGenerateOutput(output: unknown): GenerateOutput {
   const parsed = GenerateOutputSchema.safeParse(output);
   if (!parsed.success) {
@@ -789,13 +692,10 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
 
 function expectedContentionCount(length: GenerateInput['length']): number {
   switch (length) {
-    case 'standard':
-      return 3;
-    case 'comprehensive':
-      return 4;
+    case 'standard': return 3;
+    case 'comprehensive': return 4;
     case 'brief':
-    default:
-      return 2;
+    default: return 2;
   }
 }
 
@@ -803,7 +703,6 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   if (config.provider === 'mock') {
     return { result: await mockGenerateCase(input.motion, input.side, input.length), discoveredSources: [] };
   }
-  // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
   const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
@@ -818,10 +717,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   const discovered = parseDiscoveredSources(data.discoveredSources);
   await autosaveDiscoveredSources(discovered, 'generate');
 
-  return {
-    result,
-    discoveredSources: discovered,
-  };
+  return { result, discoveredSources: discovered };
 }
 
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
@@ -830,11 +726,7 @@ export async function attackCase(input: AttackInput, config: ProviderConfig): Pr
   const result = validateAttackOutput(data.output);
   const discovered = parseDiscoveredSources(data.discoveredSources);
   await autosaveDiscoveredSources(discovered, 'attack');
-
-  return {
-    result,
-    discoveredSources: discovered,
-  };
+  return { result, discoveredSources: discovered };
 }
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
@@ -842,16 +734,17 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
   const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
   const discovered = parseDiscoveredSources(data.discoveredSources);
   await autosaveDiscoveredSources(discovered, 'brainstorm');
-
   return {
     result: transformBrainstormResponse(data.output as Record<string, unknown>),
     discoveredSources: discovered,
   };
 }
 
-export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
-  if (config.provider === 'mock') return mockFactoids(input.claim);
-  // Inject global language into input for the edge function
+export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<ResultWithSources<FactoidsOutput>> {
+  if (config.provider === 'mock') {
+    return { result: await mockFactoids(input.claim), discoveredSources: [] };
+  }
+
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = {
     ...input,
@@ -859,7 +752,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     sourceCount: input.sourceCount || 5,
     language,
   } as Record<string, unknown>;
-  const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
+  const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
   const parsed = FactoidsOutputSchema.safeParse(data.output);
   if (!parsed.success) {
     throw new AIResponseError('AI response did not match the expected factoids schema.', {
@@ -870,10 +763,15 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
   const allFactoids = parsed.data.factoids;
   const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
   const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
-  return {
+  const result: FactoidsOutput = {
     ...parsed.data,
     factoids: returnedFactoids,
     filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
+  };
+
+  return {
+    result,
+    discoveredSources: parseDiscoveredSources(data.discoveredSources),
   };
 }
 
