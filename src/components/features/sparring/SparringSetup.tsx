@@ -3,7 +3,6 @@ import { BookOpenCheck, Shield, Sparkles, Swords, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { ModelSelector } from '@/components/ModelSelector';
 import { cn } from '@/lib/utils';
@@ -46,10 +45,15 @@ export function SparringSetup({ onStart, isStarting = false, defaultMotion = '' 
   const [motion, setMotion] = useState(defaultMotion);
   const [side, setSide] = useState<'pro' | 'con'>('pro');
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('competitive');
-  const [useActiveSources, setUseActiveSources] = useState(true);
   const activeSourceCount = useSessionStore((state) => state.sourceLibrary.filter((source) => source.isActive).length);
 
-  const validation = useMemo(() => SparringSetupSchema.safeParse({ motion, side, difficulty, useActiveSources }), [motion, side, difficulty, useActiveSources]);
+  // The existing authenticated Ask transport always sends active library
+  // sources. Keep the setup honest instead of exposing a switch we cannot
+  // enforce without changing the deployed backend.
+  const validation = useMemo(
+    () => SparringSetupSchema.safeParse({ motion, side, difficulty, useActiveSources: true }),
+    [motion, side, difficulty],
+  );
 
   const handleStart = () => {
     if (!validation.success) return;
@@ -142,19 +146,16 @@ export function SparringSetup({ onStart, isStarting = false, defaultMotion = '' 
         </Card>
 
         <Card className="border-border/70 bg-card/70">
-          <CardContent className="flex items-start justify-between gap-4 pt-6">
-            <div>
-              <div className="flex items-center gap-2 font-medium">
-                <BookOpenCheck className="h-4 w-4 text-primary" />
-                Use active sources
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {activeSourceCount > 0
-                  ? `${activeSourceCount} active ${activeSourceCount === 1 ? 'source is' : 'sources are'} available as grounding context.`
-                  : 'No active sources are currently selected. The opponent will avoid inventing evidence.'}
-              </p>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 font-medium">
+              <BookOpenCheck className="h-4 w-4 text-primary" />
+              Active Source Library grounding
             </div>
-            <Switch checked={useActiveSources} onCheckedChange={setUseActiveSources} aria-label="Use active sources for sparring" />
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {activeSourceCount > 0
+                ? `${activeSourceCount} active ${activeSourceCount === 1 ? 'source will' : 'sources will'} be sent as grounding context through the existing AI transport.`
+                : 'No active sources are selected. The opponent is instructed to challenge unsupported claims instead of inventing evidence.'}
+            </p>
           </CardContent>
         </Card>
 
