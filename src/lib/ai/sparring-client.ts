@@ -8,6 +8,7 @@ import {
   type SparringSession,
   type SparringTurn,
 } from '@/lib/ai/schemas/sparring';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 
 function opposingSide(side: 'pro' | 'con') {
   return side === 'pro' ? 'con' : 'pro';
@@ -23,6 +24,12 @@ function difficultyInstruction(difficulty: SparringSession['setup']['difficulty'
     default:
       return 'Argue like a competent tournament opponent. Directly engage the user, develop warrants, and create clear clash without manufacturing facts.';
   }
+}
+
+function outputLanguageInstruction() {
+  const language = useSettingsStore.getState().outputLanguage;
+  const label = language === 'es' ? 'Spanish' : language === 'hu' ? 'Hungarian' : 'English';
+  return `${label} (${language})`;
 }
 
 function transcript(turns: SparringTurn[]) {
@@ -60,6 +67,7 @@ User side: ${session.setup.side}
 Your side: ${aiSide}
 Difficulty: ${session.setup.difficulty}
 Difficulty instruction: ${difficultyInstruction(session.setup.difficulty)}
+Response language: ${outputLanguageInstruction()}. Write the speech and pressure points in this language.
 
 Round transcript so far:
 ${transcript(session.turns)}
@@ -83,6 +91,7 @@ Motion: ${session.setup.motion}
 User side: ${session.setup.side}
 AI opponent side: ${opposingSide(session.setup.side)}
 Difficulty: ${session.setup.difficulty}
+Response language: ${outputLanguageInstruction()}. Write every user-facing field in this language.
 Active Source Library grounding was ${session.setup.useActiveSources ? 'enabled' : 'not requested'} for the round.
 
 FULL TRANSCRIPT:
