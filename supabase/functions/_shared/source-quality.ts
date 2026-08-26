@@ -25,6 +25,14 @@ export type ResearchSource = {
   qualityLabel: "strong" | "moderate" | "weak";
 };
 
+export type ExaSearchCategory = "research paper" | "news";
+
+export type SearchRequest = {
+  query: string;
+  includeDomains?: string[];
+  category?: ExaSearchCategory;
+};
+
 const WEAK_DOMAINS = [
   "youtube.com",
   "youtu.be",
@@ -37,6 +45,37 @@ const WEAK_DOMAINS = [
   "x.com",
   "twitter.com",
   "medium.com",
+];
+
+// Exa includeDomains accepts concrete domains rather than TLD wildcards. This
+// list intentionally covers high-value public-sector and intergovernmental
+// sources while search falls back to an unfiltered request if it returns no
+// results, preserving recall for agencies not represented here.
+export const GOVERNMENT_SEARCH_DOMAINS = [
+  "usa.gov",
+  "congress.gov",
+  "census.gov",
+  "bls.gov",
+  "bea.gov",
+  "energy.gov",
+  "epa.gov",
+  "cdc.gov",
+  "nih.gov",
+  "justice.gov",
+  "federalregister.gov",
+  "gov.uk",
+  "canada.ca",
+  "gc.ca",
+  "gov.au",
+  "abs.gov.au",
+  "europa.eu",
+  "ec.europa.eu",
+  "eurostat.ec.europa.eu",
+  "oecd.org",
+  "worldbank.org",
+  "imf.org",
+  "un.org",
+  "who.int",
 ];
 
 const RESULTS_PATTERNS = [
@@ -205,54 +244,72 @@ export function rankSearchResults(
     });
 }
 
-export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
+function dedupeSearchRequests(requests: SearchRequest[]): SearchRequest[] {
+  const accepted: SearchRequest[] = [];
+  for (const request of requests) {
+    const qTokens = new Set(request.query.toLowerCase().split(/\s+/));
+    const isDuplicate = accepted.some((existing) => {
+      const existingTokens = new Set(existing.query.toLowerCase().split(/\s+/));
+      const intersection = [...qTokens].filter((token) => existingTokens.has(token)).length;
+      const smaller = Math.min(qTokens.size, existingTokens.size);
+      const sameFilter = JSON.stringify(existing.includeDomains || []) === JSON.stringify(request.includeDomains || []) && existing.category === request.category;
+      return sameFilter && smaller > 0 && intersection / smaller > 0.85;
+    });
+    if (!isDuplicate) accepted.push(request);
+  }
+  return accepted.slice(0, 6);
+}
+
+/**
+ * Builds Exa search requests with filters represented as request fields rather
+ * than query-operator text. This matches Exa's current API contract:
+ * includeDomains for domain restrictions and category for news/research-paper
+ * verticals. Callers may retry an unfiltered request if a filter returns zero.
+ */
+export function buildSearchRequests(claim: string, region = "", preferredSourceType = "any", timeframe = ""): SearchRequest[] {
   const base = `${claim} ${region}`.trim().replace(/\s+/g, " ");
   const years = timeframe || (/\b202[0-9]\b/.test(base) ? "" : "2025 2026");
-  const queries: string[] = [];
+  const requests: SearchRequest[] = [];
 
-  // Topic-specific queries first (highest priority)
   if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(base)) || /\bdebate|debating\b/i.test(base)) {
-    queries.push(`${base} tab results official`.trim());
-    queries.push(`${base} Tabbycat Calicotab results`.trim());
+    requests.push({ query: `${base} tab results official`.trim() });
+    requests.push({ query: `${base} Tabbycat Calicotab results`.trim() });
   }
 
   if (POLICY_STAT_PATTERNS.some((pattern) => pattern.test(base))) {
-    queries.push(`${base} World Bank OECD IMF UN data ${years}`.trim());
-    queries.push(`${base} government statistics report ${years}`.trim());
+    requests.push({ query: `${base} World Bank OECD IMF UN data ${years}`.trim() });
+    requests.push({ query: `${base} government statistics report ${years}`.trim() });
   }
 
   if (LEGAL_CURRENT_PATTERNS.some((pattern) => pattern.test(base))) {
-    queries.push(`${base} official law court ruling ${years}`.trim());
-    queries.push(`${base} primary source legislation regulation ${years}`.trim());
+    requests.push({ query: `${base} official law court ruling ${years}`.trim() });
+    requests.push({ query: `${base} primary source legislation regulation ${years}`.trim() });
   }
 
-  // Preferred source type queries
-  if (preferredSourceType === "government") queries.push(`${base} site:gov ${years}`.trim());
-  if (preferredSourceType === "academic") queries.push(`${base} study journal university ${years}`.trim());
-  if (preferredSourceType === "news") queries.push(`${base} Reuters AP BBC report ${years}`.trim());
-
-  // General fallback queries
-  queries.push(`${base} official data evidence ${years}`.trim());
-  queries.push(`${base} statistics report study ${years}`.trim());
-
-  // Deduplicate by token overlap: skip when more than 85% of the smaller query's tokens already appear in an accepted query
-  const deduplicated: string[] = [];
-  for (const q of queries) {
-    const qTokens = new Set(q.toLowerCase().split(/\s+/));
-    const isDuplicate = deduplicated.some((existing) => {
-      const existingTokens = new Set(existing.toLowerCase().split(/\s+/));
-      const intersection = [...qTokens].filter((t) => existingTokens.has(t)).length;
-      const smaller = Math.min(qTokens.size, existingTokens.size);
-      return smaller > 0 && intersection / smaller > 0.85;
+  if (preferredSourceType === "government") {
+    requests.push({
+      query: `${base} official government data ${years}`.trim(),
+      includeDomains: GOVERNMENT_SEARCH_DOMAINS,
     });
-    if (!isDuplicate) deduplicated.push(q);
+  }
+  if (preferredSourceType === "academic") {
+    requests.push({ query: `${base} study evidence ${years}`.trim(), category: "research paper" });
+  }
+  if (preferredSourceType === "news") {
+    requests.push({ query: `${base} report ${years}`.trim(), category: "news" });
   }
 
-  return deduplicated.slice(0, 6);
+  requests.push({ query: `${base} official data evidence ${years}`.trim() });
+  requests.push({ query: `${base} statistics report study ${years}`.trim() });
+
+  return dedupeSearchRequests(requests);
 }
 
-// Bounded per-result snippet: Exa may return up to 10k characters per result,
-// which would bloat prompts when several results are included.
+/** Backward-compatible helper for callers/tests that need query text only. */
+export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
+  return buildSearchRequests(claim, region, preferredSourceType, timeframe).map((request) => request.query);
+}
+
 const MAX_RESULT_SNIPPET_CHARS = 1200;
 
 export function formatRankedSearchResults(results: RankedSearchResult[]): string {
