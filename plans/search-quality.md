@@ -1,56 +1,52 @@
-# Ask and Sitewide Search Quality Plan
+# Ask and Sitewide Search Quality — Completed Implementation Record
 
 ## Goal
 
 Make web research trustworthy across Generate, Attack, Brainstorm, Factoids, and Ask. Search should prefer specific, primary, current sources and visibly downgrade broad fallback sources.
 
-## Current Baseline
+## Completed source work
 
-- The shared Supabase `ai` function uses Exa for search and content extraction.
-- Search now runs multiple deterministic queries, AI follow-up queries, source ranking, and reads the strongest URLs first.
-- Ask displays source quality metadata in `searchInfo.sources`.
+1. Research is isolated in `supabase/functions/_shared/research.ts`, with model calls injected through `ResearchDeps` so the research layer remains testable.
+2. Topic-aware request planning covers:
+   - debate tournaments: official/tab/results searches, Tabbycat/Calicotab/WSDC/WUDC terminology;
+   - policy/statistics: government and intergovernmental data, academic evidence, current reporting;
+   - legal/current events: official laws, courts, agencies, primary sources.
+3. Preferred Exa source types are represented as first-class request fields rather than query-operator hacks:
+   - government/public-sector searches use `includeDomains` with a curated domain set;
+   - academic searches use Exa's `research paper` category;
+   - news searches use Exa's `news` category;
+   - a zero-result filtered request retries the same query without the filter to preserve recall.
+4. Search results are ranked with source type, quality score, quality label, reasons, query provenance, recency, specificity, and fallback penalties.
+5. Strong/moderate sources may support citations. Weak sources remain fallback context only.
+6. Generate, Attack, and Brainstorm expose researched source quality through the shared `SourceQualityList`.
+7. Factoids now returns `discoveredSources` separately from verified factoids and renders all consulted pages with quality chips. Weak consulted sources remain visible as fallback context but cannot become verified evidence.
+8. Ask keeps search metadata and citation fallback quality-gated.
+9. Saved source provenance can store source type, quality score/label, originating query, and capture path where the database migration is available.
 
-## Next Implementation Steps
+## Verification in source
 
-1. Move research code from `supabase/functions/ai/index.ts` into `supabase/functions/_shared/research.ts`.
-2. Add topic-specific query builders:
-   - debate tournament: official pages, Tabbycat, Calicotab, WSDC, WUDC, tab/results pages.
-   - policy/statistics: government, intergovernmental orgs, academic papers, high-quality news.
-   - legal/current events: official laws, court pages, agencies, primary reporting.
-3. Add source quality metadata to all discovered source returns, not only Ask.
-4. Add source display components for Generate, Attack, Brainstorm, and Factoids where useful.
-5. Store source ranking metadata in saved source records so users can review why a source was selected.
-6. Add a "source quality floor":
-   - strong/moderate sources can support citations.
-   - weak sources can only appear as fallback context with an uncertainty.
-7. Add integration tests with mocked Exa responses for each feature.
+Coverage now includes:
 
-## Tests
+- ranking and topic-specific request planning;
+- raw Exa request body assertions for `includeDomains`, category, `numResults`, and text-size fields;
+- filtered-search zero-recall fallback;
+- quality-floor enforcement for Factoids;
+- frontend consulted-source labels and weak-source warnings;
+- Factoids client provenance parsing;
+- a handler-boundary Factoids test that imports the actual `supabase/functions/ai/index.ts` entrypoint through the Vitest `Deno.serve` loopback shim while mocking Supabase, Exa, and model-provider network boundaries.
 
-- Deno tests for ranking and query building.
-- Mocked edge function tests for Ask citation fallback.
-- Frontend tests for displaying source quality labels.
-- Manual browser test with current tournament queries and policy-stat queries.
+Relevant tests include:
 
-## Deployment
+- `supabase/functions/_shared/research.test.ts`
+- `supabase/functions/_shared/research-exa-filters.test.ts`
+- `supabase/functions/ai/source-quality.test.ts`
+- `supabase/functions/ai/handler-research.test.ts`
+- `src/test/components/SourceQualityList.test.tsx`
+- `src/test/components/FactoidsResults.test.tsx`
+- `src/test/ai/factoids-provenance.test.ts`
 
-Deploy `supabase functions deploy ai --project-ref uziwdtkzofptihahfooo` after Deno checks, frontend tests, and a local authenticated Ask test pass.
+## Deployment status
 
-## Status after Quality & Truth Release (branch t3code/quality-truth-release)
+This record describes repository source. On `feature/sparring-verification-retention-loop`, **no Supabase migration or Edge Function has been applied or deployed**. Any backend behavior changed on this branch remains pending explicit deployment authorization.
 
-Implemented:
-
-1. Research pipeline extracted to `supabase/functions/_shared/research.ts` (Exa search, follow-ups, ranking context, citation sources) with an injected model caller so it is testable; ranking/query builders moved to `_shared/source-quality.ts`.
-2. Topic-specific query builders (tournament, policy/statistics, legal/current events) were already present and are now covered by tests in the shared module.
-3. All discovered-source returns carry quality metadata; Factoids now also returns `discoveredSources`.
-4. Source display: shared `SourceQualityList` renders strong/moderate/weak labels plus "fallback context only" for weak sources in Generate, Attack, and Brainstorm results. Factoids shows only verified citations (quality-labeled consulted-list display deferred).
-5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, prepared but NOT applied) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
-6. Source-quality floor completed: factoid citations verify only against fetched non-weak research content (`applyFactoidsVerification`); weak or unknown URLs are downgraded and filtered. Ask fallback already excluded weak sources.
-
-Tests: `_shared/research.test.ts`, extended `source-quality.test.ts`, frontend `SourceQualityList.test.tsx`, session-store provenance round-trip, client discoveredSources tests.
-
-Deferred:
-
-- Replace inline `site:gov` query text with Exa's dedicated domain-filter request field (needs a live Exa parameter-verification pass).
-- Handler-level integration test that mocks Exa end-to-end through `Deno.serve`; current coverage is at the extracted-function level plus frontend mocks.
-- Factoids UI panel listing all consulted sources with quality chips.
+`supabase/migrations/20260822000001_source_provenance_metadata.sql` and any later branch migrations are source artifacts until separately applied.
