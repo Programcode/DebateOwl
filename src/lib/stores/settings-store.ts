@@ -4,7 +4,7 @@ import i18n from '@/i18n';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
 
-export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask';
+export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
 
 interface SettingsState {
   language: 'en' | 'es' | 'hu';
@@ -37,6 +37,7 @@ const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
   brainstorm: { ...defaultConfig, temperature: 0.9 },
   factoids: { ...defaultConfig, temperature: 0.3 },
   ask: { ...defaultConfig },
+  sparring: { ...defaultConfig, temperature: 0.75 },
 });
 
 function normalizeFeatureConfigs(configs: unknown): Record<FeatureTab, ProviderConfig> {
