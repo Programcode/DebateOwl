@@ -127,6 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('[Auth] init failed:', err);
         if (!mounted) return;
         setSession(null);
+        currentUserIdRef.current = undefined;
+        setJamUserId(undefined);
       } finally {
         if (mounted) setLoading(false);
       }
