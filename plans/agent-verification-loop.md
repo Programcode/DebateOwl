@@ -136,7 +136,7 @@ This is the phase that catches Peter's-truncated-text-class bugs: things invisib
 
 - Add `webkit` project to `playwright.config.ts` (Safari parity, the checklist's known risk). Install deps once: `npx playwright install --with-deps webkit`.
 - Config: `video: 'on'`, `trace: 'retain-on-failure'`, screenshot on failure.
-- CI: upload `playwright-artifacts` on failure; add `test:e2e` to the PR workflow (public smoke at minimum; authed flows require the staging secrets as GitHub secrets).
+- CI: upload `playwright-artifacts` on failure. Add `test:e2e` public smoke (credential-free) to every pull request. Authenticated staging specs run only on trusted refs (`push` to main, `workflow_dispatch`) inside a protected GitHub environment holding the staging secrets; pull-request jobs stay credential-free because they execute PR-controlled test code that must never see credentials.
 - Extend `npm run verify` with e2e once green locally.
 
 ## Phase 4: Prove it, observe it
