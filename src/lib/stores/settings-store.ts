@@ -67,7 +67,7 @@ async function getUserId() {
   return data.user?.id || null;
 }
 
-async function upsertSettings(payload: {
+async function persistSettings(payload: {
   language: string;
   output_language: string;
   theme: string;
@@ -76,11 +76,18 @@ async function upsertSettings(payload: {
 }) {
   const userId = await getUserId();
   if (!userId) return;
-  const { error } = await supabase.from('user_settings').upsert({
-    user_id: userId,
-    ...payload,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' });
+
+  // user_settings is provisioned by the auth trigger. Security hardening
+  // intentionally revoked authenticated INSERT/DELETE and permits only selected
+  // preference columns to be updated, so browser persistence must use UPDATE
+  // rather than UPSERT (which requires INSERT privilege even on conflict).
+  const { error } = await supabase
+    .from('user_settings')
+    .update({
+      ...payload,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
   if (error) {
     console.warn('[SettingsStore] Failed to persist settings:', error.message);
   }
@@ -99,7 +106,7 @@ export const useSettingsStore = create<SettingsState>()(
       setLanguage: (language) => {
         set({ language });
         void i18n.changeLanguage(language);
-        void upsertSettings({
+        void persistSettings({
           language,
           output_language: get().outputLanguage,
           theme: get().theme,
@@ -109,7 +116,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setOutputLanguage: (outputLanguage) => {
         set({ outputLanguage });
-        void upsertSettings({
+        void persistSettings({
           language: get().language,
           output_language: outputLanguage,
           theme: get().theme,
@@ -119,7 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setTheme: (theme) => {
         set({ theme });
-        void upsertSettings({
+        void persistSettings({
           language: get().language,
           output_language: get().outputLanguage,
           theme,
@@ -129,7 +136,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setSystemPrompt: (prompt) => {
         set({ customSystemPrompt: prompt });
-        void upsertSettings({
+        void persistSettings({
           language: get().language,
           output_language: get().outputLanguage,
           theme: get().theme,
@@ -148,7 +155,7 @@ export const useSettingsStore = create<SettingsState>()(
             [feature]: { ...state.featureConfigs[feature], ...config },
           },
         }));
-        void upsertSettings({
+        void persistSettings({
           language: get().language,
           output_language: get().outputLanguage,
           theme: get().theme,
