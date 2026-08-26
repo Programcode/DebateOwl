@@ -34,7 +34,9 @@ coverage/
 
 # Playwright artifacts
 test-results/
+test-results-staging/
 playwright-report/
+playwright-report-staging/
 playwright/.cache/
 
 # Deploy tool state
