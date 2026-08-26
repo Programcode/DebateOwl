@@ -597,21 +597,44 @@ async function callAI(
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
-  temperature: number
+  temperature: number,
+  signal?: AbortSignal
 ): Promise<AIResult> {
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, temperature);
+    return await callAIOnce(provider, model, systemPrompt, messages, temperature, signal);
   } catch (err) {
     if (!(err instanceof InvalidJsonResponseError)) throw err;
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
-    const retry = await callAIOnce(
-      provider,
-      model,
-      `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
-      withJsonRepairPrompt(messages),
-      0
-    );
+    let retry: AIResult;
+    try {
+      retry = await callAIOnce(
+        provider,
+        model,
+        `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
+        withJsonRepairPrompt(messages),
+        0,
+        signal,
+      );
+    } catch (retryError) {
+      // Preserve the completed first attempt if cancellation or another
+      // failure prevents the repair attempt from returning a result.
+      const retryUsage = retryError && typeof retryError === "object" && "usage" in retryError
+        ? (retryError as { usage?: NormalizedUsage }).usage
+        : undefined;
+      const usage = mergeNormalizedUsage([err.usage, retryUsage]);
+      if (usage && retryError && typeof retryError === "object") {
+        const errorWithUsage = retryError as {
+          usage?: NormalizedUsage;
+          completedUsage?: NormalizedUsage;
+        };
+        errorWithUsage.usage = usage;
+        // The first response was parsed before the retry began, so retain it
+        // even if the retry is the operation cancelled by the caller.
+        errorWithUsage.completedUsage = err.usage;
+      }
+      throw retryError;
+    }
     // The failed attempt still consumed tokens; bill both.
     return {
       output: retry.output,
@@ -640,54 +663,55 @@ async function callAIOnce(
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
-  temperature: number
+  temperature: number,
+  signal?: AbortSignal
 ): Promise<AIResult> {
   const effectiveSystemPrompt = systemPrompt;
   if (provider === "openai") {
-    return await callOpenAI([{ role: "system", content: effectiveSystemPrompt }, ...messages], model, temperature);
+    return await callOpenAI([{ role: "system", content: effectiveSystemPrompt }, ...messages], model, temperature, signal);
   } else if (provider === "anthropic") {
-    return await callAnthropic(messages, model, temperature, effectiveSystemPrompt);
+    return await callAnthropic(messages, model, temperature, effectiveSystemPrompt, signal);
   } else if (provider === "google") {
-    return await callGoogle(messages, model, temperature, effectiveSystemPrompt);
+    return await callGoogle(messages, model, temperature, effectiveSystemPrompt, signal);
   }
   throw new Error(`Unsupported provider: ${provider}`);
 }
 
-async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number): Promise<AIResult> {
+async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number, signal?: AbortSignal): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY missing");
   const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({ model, messages, temperature, response_format: { type: "json_object" } }),
-  }, 60000);
+  }, 60000, signal);
   if (!response.ok) { const text = await response.text(); throw new Error(`OpenAI error: ${text}`); }
   const data = await response.json();
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenAI", normalizeProviderUsage("openai", data.usage));
 }
 
-async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string): Promise<AIResult> {
+async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string, signal?: AbortSignal): Promise<AIResult> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
   const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({ model, system, messages, max_tokens: 4096, temperature }),
-  }, 60000);
+  }, 60000, signal);
   if (!response.ok) { const text = await response.text(); throw new Error(`Anthropic error: ${text}`); }
   const data = await response.json();
   if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
   return parseProviderContent(data.content[0]?.text || "", "Anthropic", normalizeProviderUsage("anthropic", data.usage));
 }
 
-async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string): Promise<AIResult> {
+async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string, signal?: AbortSignal): Promise<AIResult> {
   const apiKey = Deno.env.get("GOOGLE_API_KEY");
   if (!apiKey) throw new Error("GOOGLE_API_KEY missing");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const contents = messages.map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] }));
   const payload = { contents, systemInstruction: system ? { parts: [{ text: system }] } : undefined, generationConfig: { temperature, responseMimeType: "application/json" } };
-  const response = await fetchWithTimeout(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000);
+  const response = await fetchWithTimeout(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000, signal);
   if (!response.ok) { const text = await response.text(); throw new Error(`Google error: ${text}`); }
   const data = await response.json();
   if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
@@ -806,14 +830,41 @@ Deno.serve(async (req) => {
   // Usage from research sub-calls (search decision, follow-up queries) is
   // collected here so the parent request's row accounts for every token.
   const researchUsage: NormalizedUsage[] = [];
+  let researchAccountingIncomplete = false;
   const researchDeps: ResearchDeps = {
     provider,
     model,
-    callModel: async (args) => {
-      const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature);
-      if (result.usage) researchUsage.push(result.usage);
-      return { output: result.output };
+    signal: req.signal,
+    onTimeout: () => {
+      researchAccountingIncomplete = true;
     },
+    callModel: async (args) => {
+      try {
+        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature, args.signal);
+        // A provider that ignores cancellation must not append usage after the
+        // research timeout has already been finalized by the parent request.
+        if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
+        return { output: result.output };
+      } catch (err) {
+        const usageError = err && typeof err === "object"
+          ? err as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }
+          : undefined;
+        if (usageError?.completedUsage) researchUsage.push(usageError.completedUsage);
+        else if (usageError?.usage && !args.signal?.aborted) researchUsage.push(usageError.usage);
+        throw err;
+      }
+    },
+  };
+  const researchUsageForLog = (): NormalizedUsage[] => [
+    ...researchUsage.splice(0),
+    ...(researchAccountingIncomplete ? [{ incomplete: true }] : []),
+  ];
+  // Keep the completed main provider call available if post-processing fails
+  // before the normal success-path usage log runs.
+  let completedMainUsage: NormalizedUsage | undefined;
+  const recordMainResult = (result: AIResult): AIResult => {
+    completedMainUsage = result.usage;
+    return result;
   };
   // Layered system prompt: identity + task + JSON rules (+ admin/custom/knowledge).
   // Citation-honesty rules are added only when a feature actually obtained web
@@ -852,7 +903,7 @@ Deno.serve(async (req) => {
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
 
-      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
       // Post-process: quality floor. Only citations whose URL matches fetched,
@@ -863,7 +914,7 @@ Deno.serve(async (req) => {
       if (factoidsOutput && typeof factoidsOutput === "object" && Array.isArray(factoidsOutput.factoids)) {
         applyFactoidsVerification(output, research);
         factoidsOutput.factoids = (factoidsOutput.factoids as Array<{ citation?: { verified?: string } }>)
-          .filter((f) => f.citation?.verified === "verified")
+          .filter((f) => f && typeof f === "object" && !Array.isArray(f) && f.citation?.verified === "verified")
           .slice(0, sourceCount);
         factoidsOutput.verificationStatus = "complete";
       }
@@ -885,7 +936,7 @@ Deno.serve(async (req) => {
       }
 
       // Log usage and return
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -910,7 +961,7 @@ Deno.serve(async (req) => {
       let urlContext = "";
       if (urls.size > 0) {
         const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
-          const content = await exaGetContents(u);
+          const content = await exaGetContents(u, req.signal);
           return `--- Content from ${u} ---\n${content.slice(0, 8000)}\n--- End of ${u} ---`;
         }));
         urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join("\n");
@@ -953,7 +1004,7 @@ Deno.serve(async (req) => {
 
       const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
-      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
       if (output && typeof output === "object") {
@@ -1008,7 +1059,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
       return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1031,7 +1082,7 @@ Deno.serve(async (req) => {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
       // Post-process: force needsSource to false since we provided research
@@ -1066,7 +1117,7 @@ Deno.serve(async (req) => {
         const metadata = (output as { metadata: { durationMs?: number } }).metadata;
         metadata.durationMs = latencyMs;
       }
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1085,7 +1136,7 @@ Deno.serve(async (req) => {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
       enforceBrainstormControls(output, side, outputMode);
 
@@ -1095,7 +1146,7 @@ Deno.serve(async (req) => {
 
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1113,7 +1164,7 @@ Deno.serve(async (req) => {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = await callAI(provider, model, systemPrompt, messages, temperature);
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
       enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
@@ -1121,7 +1172,7 @@ Deno.serve(async (req) => {
       console.log(`[ATTACK] Found ${discoveredSources.length} sources`);
 
       const latencyMs = Date.now() - startTime;
-      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsage.splice(0)]), latencyMs);
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
       return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1129,11 +1180,11 @@ Deno.serve(async (req) => {
     const systemPrompt = await buildSystemPromptFor(feature);
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    const fallbackResult = await callAI(provider, model, systemPrompt, messages, temperature);
+    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
     const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsage.splice(0)]), latencyMs);
+    await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsageForLog()]), latencyMs);
     return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -1141,7 +1192,29 @@ Deno.serve(async (req) => {
 
     // Log error
     const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, undefined, latencyMs, "error", message.slice(0, 100));
+    const usageError = err && typeof err === "object"
+      ? err as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }
+      : undefined;
+    // A successful main call takes precedence over usage attached to a later
+    // post-processing error. This avoids counting its repair attempts twice.
+    const mainErrorUsage = completedMainUsage ?? (
+      req.signal?.aborted
+        ? usageError?.completedUsage ?? usageError?.usage
+        : usageError?.usage ?? usageError?.completedUsage
+    );
+    await logUsage(
+      userId,
+      feature,
+      provider,
+      model,
+      mergeNormalizedUsage([
+        mainErrorUsage,
+        ...researchUsageForLog(),
+      ]),
+      latencyMs,
+      "error",
+      message.slice(0, 100),
+    );
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -9,6 +9,7 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
+  isAskStreamingModeAllowed,
 } from "../_shared/control-enforcement.ts";
 import { buildSearchQueries } from "../_shared/source-quality.ts";
 
@@ -27,6 +28,16 @@ Deno.test("generate controls propagate to prompt and post-processing", () => {
   const out: Record<string, unknown> = { contentions: [{}, {}, {}], metadata: {} };
   enforceGenerateControls(out, "pro", "custom", "brief", "intro");
   assert((out.contentions as unknown[]).length === 2, "generate.length post-processing");
+
+  const underlength: Record<string, unknown> = { contentions: [{}], metadata: {} };
+  let rejected = false;
+  try {
+    enforceGenerateControls(underlength, "pro", "custom", "comprehensive", "r1");
+  } catch (error) {
+    rejected = error instanceof Error && error.message.includes("requires exactly 4");
+  }
+  assert(rejected, "generate.length underlength responses fail closed");
+  assert((underlength.contentions as unknown[]).length === 1, "generate.length never fabricates contentions");
 
   assertIncludes(
     buildUserPrompt("generate", { motion: "M", side: "pro", audience: "advanced", role: "r1" }, ""),
@@ -139,4 +150,9 @@ Deno.test("ask toggles and modes appear verbatim in the request prompt", () => {
   const stripped: Record<string, unknown> = { response: "r", followUpQuestions: [], uncertainties: [], citations: [{}] };
   enforceAskControls(stripped, { mode: "general" });
   assert(Array.isArray(stripped.citations) && stripped.citations.length === 0, "ask citations off clears list");
+});
+
+Deno.test("ask clarify mode is not eligible for streaming", () => {
+  assert(!isAskStreamingModeAllowed("clarify"), "ask.clarify streaming bypass");
+  assert(isAskStreamingModeAllowed("general"), "ask.general streaming eligibility");
 });

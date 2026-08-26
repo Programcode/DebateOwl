@@ -57,6 +57,10 @@ export const ASK_RESEARCH: ResearchOptions = {
 export interface ResearchDeps {
   provider: Provider;
   model: string;
+  /** Request-scoped cancellation signal, if the caller has one. */
+  signal?: AbortSignal;
+  /** Called synchronously when the overall research timeout fires. */
+  onTimeout?: () => void;
   /** Injected model caller; returns the parsed JSON output of a provider call. */
   callModel: (args: {
     provider: Provider;
@@ -64,6 +68,7 @@ export interface ResearchDeps {
     systemPrompt: string;
     messages: Array<{ role: string; content: string }>;
     temperature: number;
+    signal?: AbortSignal;
   }) => Promise<{ output: unknown }>;
 }
 
@@ -71,26 +76,69 @@ export function emptyResearchContext(): ResearchContext {
   return { searches: [], rankedResults: [], readContent: [], verifiedUrls: new Set() };
 }
 
-export async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
+  }
+}
+
+function linkAbortSignals(signals: Array<AbortSignal | null | undefined>) {
   const controller = new AbortController();
+  const cleanup: Array<() => void> = [];
+  const abort = (reason?: unknown) => {
+    if (!controller.signal.aborted) controller.abort(reason);
+  };
+
+  for (const signal of signals) {
+    if (!signal) continue;
+    if (signal.aborted) {
+      abort(signal.reason);
+      break;
+    }
+    const onAbort = () => abort(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    cleanup.push(() => signal.removeEventListener("abort", onAbort));
+  }
+
+  return {
+    signal: controller.signal,
+    abort,
+    cleanup: () => cleanup.forEach((remove) => remove()),
+  };
+}
+
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+  signal?: AbortSignal
+) {
+  const controller = new AbortController();
+  const linked = linkAbortSignals([options.signal, signal]);
+  const onLinkedAbort = () => controller.abort(linked.signal.reason);
+  if (linked.signal.aborted) onLinkedAbort();
+  else linked.signal.addEventListener("abort", onLinkedAbort, { once: true });
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } finally {
     clearTimeout(timeoutId);
+    linked.signal.removeEventListener("abort", onLinkedAbort);
+    linked.cleanup();
   }
 }
 
 // ============== EXA FUNCTIONS ==============
 
 // exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
-export async function exaSearch(query: string): Promise<ExaResult[]> {
+export async function exaSearch(query: string, signal?: AbortSignal): Promise<ExaResult[]> {
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
     return [];
   }
   try {
+    throwIfAborted(signal);
     const response = await fetchWithTimeout("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
@@ -100,7 +148,8 @@ export async function exaSearch(query: string): Promise<ExaResult[]> {
         num_results: 10,
         contents: { text: { max_characters: 10000 } },
       }),
-    }, 30000);
+    }, 30000, signal);
+    throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Search failed (${response.status}) for: ${query}`);
       return [];
@@ -113,25 +162,28 @@ export async function exaSearch(query: string): Promise<ExaResult[]> {
       content: r.text,
       publishedDate: r.publishedDate,
     }));
-  } catch {
+  } catch (err) {
+    if (signal?.aborted) throw err;
     console.warn(`[EXA] Search failed for: ${query}`);
     return [];
   }
 }
 
 // exaGetContents: extract full text from a specific URL using Exa's /contents endpoint
-export async function exaGetContents(url: string): Promise<string> {
+export async function exaGetContents(url: string, signal?: AbortSignal): Promise<string> {
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
     return "";
   }
   try {
+    throwIfAborted(signal);
     const response = await fetchWithTimeout("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
       body: JSON.stringify({ urls: [url], text: { max_characters: 8000 } }),
-    }, 30000);
+    }, 30000, signal);
+    throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Contents fetch failed (${response.status}) for: ${url}`);
       return "";
@@ -139,7 +191,8 @@ export async function exaGetContents(url: string): Promise<string> {
     const data = await response.json();
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
     return (data.results[0]?.text || "").slice(0, 8000);
-  } catch {
+  } catch (err) {
+    if (signal?.aborted) throw err;
     console.warn(`[EXA] Contents fetch failed for: ${url}`);
     return "";
   }
@@ -184,6 +237,7 @@ export async function decideAskSearch(
   history: Array<{ role: string; content: string }>,
   deps: ResearchDeps
 ): Promise<{ shouldSearch: boolean; query: string }> {
+  throwIfAborted(deps.signal);
   const context = history.slice(-4).map((m) => `${m.role}: ${m.content}`).join("\n");
   const prompt = `${context ? `Recent conversation:\n${context}\n\n` : ""}User message:\n${message}`;
 
@@ -194,6 +248,7 @@ export async function decideAskSearch(
       systemPrompt: ASK_SEARCH_DECISION_PROMPT,
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
+      signal: deps.signal,
     });
     const decision = decisionResult.output;
     if (decision && typeof decision === "object") {
@@ -206,6 +261,7 @@ export async function decideAskSearch(
       return { shouldSearch: false, query: "" };
     }
   } catch (err) {
+    if (deps.signal?.aborted) throw err;
     console.warn("[ASK] Search decision failed:", err);
   }
 
@@ -221,6 +277,7 @@ async function generateFollowUpQueries(
   currentResults: string,
   deps: ResearchDeps
 ): Promise<string[]> {
+  throwIfAborted(deps.signal);
   const prompt = `Claim: "${claim}"\n\nCurrent search results:\n${currentResults.slice(0, 3000)}\n\nGenerate 2-3 specific follow-up queries to find more evidence.`;
   try {
     const result = await deps.callModel({
@@ -229,6 +286,7 @@ async function generateFollowUpQueries(
       systemPrompt: QUERY_GENERATION_PROMPT,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
+      signal: deps.signal,
     });
     const parsed = typeof result.output === "object" && result.output !== null ? result.output : {};
     if (Array.isArray((parsed as { queries?: string[] }).queries)) {
@@ -236,6 +294,7 @@ async function generateFollowUpQueries(
     }
     return [];
   } catch (err) {
+    if (deps.signal?.aborted) throw err;
     console.warn("[DEEP RESEARCH] Failed to generate follow-up queries:", err);
     return [];
   }
@@ -246,8 +305,10 @@ async function deepResearchInner(
   region: string,
   deps: ResearchDeps,
   options: ResearchOptions,
-  context: ResearchContext = emptyResearchContext()
+  context: ResearchContext = emptyResearchContext(),
+  signal?: AbortSignal
 ): Promise<ResearchContext> {
+  throwIfAborted(signal);
   console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
 
   const preferredSourceType = options.preferredSourceType || "any";
@@ -259,7 +320,8 @@ async function deepResearchInner(
   );
 
   const seedResults = await Promise.all(seedQueries.map(async (query) => {
-    const results = await exaSearch(query);
+    const results = await exaSearch(query, signal);
+    throwIfAborted(signal);
     const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
     context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
@@ -274,10 +336,12 @@ async function deepResearchInner(
   // Round 2: AI generates follow-up queries (skipped in light mode)
   if (options.maxFollowUpQueries > 0) {
     const followUpQueries = await generateFollowUpQueries(claim, initialText, deps);
+    throwIfAborted(signal);
     console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
-      const results = await exaSearch(query);
+      const results = await exaSearch(query, signal);
+      throwIfAborted(signal);
       const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
       const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
       context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
@@ -299,7 +363,8 @@ async function deepResearchInner(
 
   const readPromises = urlsToRead.map(async (result) => {
     const url = result.url || "";
-    const content = await exaGetContents(url);
+    const content = await exaGetContents(url, signal);
+    throwIfAborted(signal);
     if (content) {
       context.readContent.push({ url, title: result.title || sourceTitleFromUrl(url), content, result });
       context.verifiedUrls.add(url);
@@ -321,19 +386,36 @@ export async function deepResearch(
   options: ResearchOptions = DEEP_RESEARCH
 ): Promise<ResearchContext> {
   const partial = emptyResearchContext();
+  const linked = linkAbortSignals([deps.signal]);
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const work = deepResearchInner(
+    claim,
+    region,
+    { ...deps, signal: linked.signal },
+    options,
+    partial,
+    linked.signal,
+  );
   try {
     const result = await Promise.race([
-      deepResearchInner(claim, region, deps, options, partial),
+      work,
       new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error("Research timeout")), options.overallTimeoutMs);
+        timeoutId = setTimeout(() => {
+          try {
+            deps.onTimeout?.();
+          } catch (callbackError) {
+            console.warn("[RESEARCH] Timeout accounting callback failed:", callbackError);
+          }
+          linked.abort(new Error("Research timeout"));
+          reject(new Error("Research timeout"));
+        }, options.overallTimeoutMs);
       }),
     ]);
     return result;
   } catch (err) {
     console.warn(`[RESEARCH] Timed out or failed after ${options.overallTimeoutMs}ms:`, err);
-    // Detach from the still-running inner context so late mutations
-    // cannot change what the caller already received.
+    // Return promptly after aborting. Production providers honor the signal;
+    // any non-cooperative late work is detached and must not affect usage.
     return {
       searches: [...partial.searches],
       rankedResults: [...partial.rankedResults],
@@ -342,6 +424,7 @@ export async function deepResearch(
     };
   } finally {
     if (timeoutId !== undefined) clearTimeout(timeoutId);
+    linked.cleanup();
   }
 }
 
@@ -442,13 +525,15 @@ export function applyFactoidsVerification(
   if (!Array.isArray(factoids)) return;
 
   for (const factoid of factoids) {
-    const citation = factoid.citation;
-    if (!citation) continue;
-    const url = citation.url;
+    if (!factoid || typeof factoid !== "object" || Array.isArray(factoid)) continue;
+    const citation = (factoid as { citation?: unknown }).citation;
+    if (!citation || typeof citation !== "object" || Array.isArray(citation)) continue;
+    const typedCitation = citation as { url?: unknown; verified?: string };
+    const url = typeof typedCitation.url === "string" ? typedCitation.url : "";
     const fetched = url && research.verifiedUrls.has(url)
       ? research.readContent.find((page) => page.url === url)
       : undefined;
     const quality = fetched?.result?.qualityLabel;
-    citation.verified = quality === "strong" || quality === "moderate" ? "verified" : "unverified";
+    typedCitation.verified = quality === "strong" || quality === "moderate" ? "verified" : "unverified";
   }
 }

@@ -10,7 +10,9 @@ vi.mock('@/hooks/use-subscription', () => ({
 const mockNavigate = vi.fn();
 const mockToast = vi.fn();
 const mockAskChat = vi.fn();
-const mockIsAskStreamingSupported = vi.fn(() => false);
+const mockIsAskStreamingSupported = vi.fn(
+  (_config: unknown, _options?: { mode?: string }) => false,
+);
 const mockStreamAskChat = vi.fn();
 const mockBrainstorm = vi.fn();
 const mockFactoids = vi.fn();
@@ -100,6 +102,7 @@ vi.mock('@/components/features/ask/AskChat', () => ({
   AskChat: ({ onSend, onSaveChat, onSaveSource }: { onSend: (...args: any[]) => Promise<void>, onSaveChat: () => void, onSaveSource: (t: string, c: string) => void }) => (
     <div>
       <button type="button" onClick={() => void onSend('How do I frame this?', 'general', true, true, true, true)} data-testid="ask-send">send</button>
+      <button type="button" onClick={() => void onSend('What should I clarify?', 'clarify', false, false, false, false)} data-testid="ask-clarify">clarify</button>
       <button type="button" onClick={onSaveChat} data-testid="ask-save-chat">save-chat</button>
       <button type="button" onClick={() => onSaveSource('Saved Title', 'Saved Content')} data-testid="ask-save">save-source</button>
     </div>
@@ -238,6 +241,36 @@ describe('Conversation Pages', () => {
       content: 'Try value framing.',
       output: expect.objectContaining({ response: 'Try value framing.', followUpQuestions: [], uncertainties: [] }),
     });
+  });
+
+  it('AskPage keeps clarify mode on the deterministic non-streaming path', async () => {
+    mockIsAskStreamingSupported.mockImplementation(
+      (_config: unknown, options?: { mode?: string }) => options?.mode !== 'clarify',
+    );
+    mockAskChat.mockResolvedValueOnce({
+      response: 'Please specify the governing ruleset.',
+      followUpQuestions: ['Which ruleset applies?'],
+      uncertainties: [],
+    });
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-clarify'));
+
+    await waitFor(() => {
+      expect(mockAskChat).toHaveBeenCalledWith(
+        'What should I clarify?',
+        [],
+        'clarify',
+        { provider: 'openai', model: 'gpt-4o', temperature: 0.7 },
+        { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false },
+      );
+    });
+    expect(mockStreamAskChat).not.toHaveBeenCalled();
   });
 
   it('drops buffered deltas from an aborted stream when a newer request starts', async () => {

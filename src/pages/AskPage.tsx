@@ -110,7 +110,7 @@ export default function AskPage() {
       let result: AskOutput;
       const askStartTime = Date.now();
 
-      if (isAskStreamingSupported(config, options)) {
+      if (isAskStreamingSupported(config, { ...options, mode })) {
         let receivedStreamText = false;
         let partialResponse = '';
         const streamingMessage = {

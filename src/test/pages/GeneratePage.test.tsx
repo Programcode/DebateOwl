@@ -41,11 +41,14 @@ const mockSaveCurrentCase = vi.fn();
 const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
 let mockGenerateResult: any = null;
+let mockGenerateForm: any = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
 
 vi.mock('@/lib/stores/session-store', () => ({
     useSessionStore: () => ({
         generateResult: mockGenerateResult,
         generateLoading: false,
+        generateForm: mockGenerateForm,
+        autosavedCases: [] as any[],
         setGenerateResult: mockSetGenerateResult,
         setGenerateLoading: mockSetGenerateLoading,
         saveCurrentCase: mockSaveCurrentCase,
@@ -78,9 +81,11 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
 }));
 
 vi.mock('@/components/features/generate/GenerateResults', () => ({
-    GenerateResults: ({ result, onDiscuss, onSave }: { result: { caseStructure: { thesis: string } }, onDiscuss: () => void, onSave: () => void }) => (
+    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void }) => (
         <div data-testid="generate-results">
             <h1>Results for {result.caseStructure.thesis}</h1>
+            <div data-testid="discovered-sources">{discoveredSources.map((source) => source.title).join(',')}</div>
+            <button onClick={() => onRegenerateSection?.('contentions')} data-testid="regenerate-section">Regenerate section</button>
             <button onClick={onDiscuss}>Discuss</button>
             <button onClick={onSave} data-testid="save-case">Save case</button>
         </div>
@@ -93,6 +98,7 @@ describe('GeneratePage Integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockGenerateResult = null;
+        mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
     });
 
     it('renders the empty state initially', () => {
@@ -134,6 +140,8 @@ describe('GeneratePage Integration', () => {
         await waitFor(() => {
             expect(generateCase).toHaveBeenCalled();
         });
+
+        await new Promise((resolve) => setTimeout(resolve, 120));
 
         // Verify result setting
         expect(mockSetGenerateResult).toHaveBeenCalledWith(mockResult);
@@ -191,5 +199,45 @@ describe('GeneratePage Integration', () => {
         expect(screen.getByTestId('generate-results')).toBeInTheDocument();
         expect(screen.getByText('Results for Existing Thesis')).toBeInTheDocument();
         expect(screen.queryByText('Ready to Generate')).not.toBeInTheDocument();
+    });
+
+    it('replaces displayed provenance after section regeneration', async () => {
+        const initialResult = {
+            caseStructure: { thesis: 'Existing Thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: {},
+        };
+        (generateCase as Mock).mockResolvedValueOnce({ result: initialResult, discoveredSources: [{ title: 'Old source', url: 'https://old.example' }] })
+          .mockResolvedValueOnce({
+            result: { ...initialResult, contentions: [{ claim: 'Updated' }] },
+            discoveredSources: [{ title: 'Fresh source', url: 'https://fresh.example' }],
+          });
+
+        const view = render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+
+        fireEvent.click(screen.getByTestId('submit-button'));
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(1));
+
+        mockGenerateResult = initialResult;
+        view.rerender(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+        expect(screen.getByTestId('discovered-sources')).toHaveTextContent('Old source');
+
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        await waitFor(() => {
+            expect(screen.getByTestId('discovered-sources')).toHaveTextContent('Fresh source');
+        });
+        expect(screen.getByTestId('discovered-sources')).not.toHaveTextContent('Old source');
+        await new Promise((resolve) => setTimeout(resolve, 120));
     });
 });

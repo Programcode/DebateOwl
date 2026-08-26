@@ -62,7 +62,7 @@ describe('AI Client Integration', () => {
             const mockResponse = {
                 output: {
                     caseStructure: { thesis: 'Test Thesis' },
-                    contentions: [] as any[],
+                    contentions: [{ id: '1' }, { id: '2' }] as any[],
                     predictedOpponentCase: {},
                     counters: [] as any[],
                     metadata: { side: 'pro' },
@@ -109,7 +109,7 @@ describe('AI Client Integration', () => {
             const mockResponse = {
                 output: {
                     caseStructure: {},
-                    contentions: [] as any[],
+                    contentions: [{ id: '1' }, { id: '2' }] as any[],
                     predictedOpponentCase: {},
                     counters: [] as any[],
                     metadata: { side: 'pro' },

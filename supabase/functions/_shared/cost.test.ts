@@ -144,3 +144,24 @@ Deno.test("research sub-calls merge into one auditable usage record", async () =
   const rawCalls = (merged.raw as { calls: unknown[] }).calls;
   if (!Array.isArray(rawCalls) || rawCalls.length !== 2) throw new Error("raw calls not preserved");
 });
+
+Deno.test("incomplete merged usage keeps observed tokens but fails closed on cost", () => {
+  const merged = mergeNormalizedUsage([
+    normalizeOpenAIUsage({ prompt_tokens: 1000, completion_tokens: 500 }),
+    { incomplete: true },
+  ]);
+  if (!merged?.incomplete) throw new Error("incomplete marker was dropped");
+  if (merged.inputTokens !== 1000 || merged.outputTokens !== 500) {
+    throw new Error("observed token counts were dropped");
+  }
+
+  const result = calculateRequestCost({
+    provider: "openai",
+    model: "gpt-5.4-mini",
+    usage: merged,
+  });
+  if (result.costUsd !== null) throw new Error("incomplete usage must not produce a known cost");
+  if (result.inputTokens !== 1000 || result.outputTokens !== 500) {
+    throw new Error("cost audit lost observed token counts");
+  }
+});

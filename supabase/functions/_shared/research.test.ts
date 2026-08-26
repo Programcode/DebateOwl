@@ -1,6 +1,7 @@
 import {
   applyFactoidsVerification,
   buildDiscoveredSources,
+  deepResearch,
   emptyResearchContext,
   getResearchSources,
   type ResearchContext,
@@ -81,5 +82,59 @@ Deno.test("fetched pages without ranking metadata fail closed to unverified", ()
   applyFactoidsVerification(output, research);
   if (output.factoids[0].citation.verified !== "unverified") {
     throw new Error("unranked fetched page must not verify");
+  }
+});
+
+Deno.test("malformed factoid entries fail closed without throwing", () => {
+  const output = {
+    factoids: [
+      null,
+      "not an object",
+      42,
+      [],
+      { citation: null },
+      { citation: { url: "https://example.com/untrusted", verified: "verified" } },
+    ],
+  };
+
+  applyFactoidsVerification(output, emptyResearchContext());
+
+  const citation = (output.factoids[5] as { citation: { verified?: string } }).citation;
+  if (citation.verified !== "unverified") throw new Error("malformed citation must not remain verified");
+});
+
+Deno.test("research timeout stays bounded and marks accounting incomplete", async () => {
+  let providerCompletedAt: number | undefined;
+  let timeoutMarked = false;
+  const deps = {
+    provider: "openai" as const,
+    model: "test-model",
+    onTimeout: () => {
+      timeoutMarked = true;
+    },
+    callModel: () => new Promise<{ output: unknown }>((resolve) => {
+      // Simulate a dependency that ignores AbortSignal. The caller must not
+      // wait for this work, and its late result must stay detached.
+      setTimeout(() => {
+        providerCompletedAt = Date.now();
+        resolve({ output: { queries: [] } });
+      }, 100);
+    }),
+  };
+
+  const startedAt = performance.now();
+  await deepResearch("test claim", "", deps, {
+    maxFollowUpQueries: 1,
+    maxUrlsToRead: 0,
+    maxSeedQueries: 0,
+    overallTimeoutMs: 5,
+  });
+  const researchReturnedAt = Date.now();
+  if (performance.now() - startedAt > 80) throw new Error("non-cooperative work delayed timeout return");
+  if (!timeoutMarked) throw new Error("timeout accounting was not marked incomplete");
+
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  if (providerCompletedAt === undefined || providerCompletedAt <= researchReturnedAt) {
+    throw new Error("late non-cooperative work did not remain detached");
   }
 });
