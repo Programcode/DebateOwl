@@ -1,6 +1,9 @@
-// SSRF-safe URL validation helpers for the import-source edge function.
-// Exported separately from index.ts so they can be unit-tested without
-// invoking Deno.serve at module load.
+// URL syntax/literal-address validation helpers for import-source.
+//
+// The importer sends validated URLs as data to a fixed Exa contents endpoint;
+// it does not connect directly to the user-controlled hostname. Literal private
+// addresses are still rejected here as a product/security policy and to avoid
+// asking the extraction provider to process obviously local destinations.
 //
 // isPrivateIpv4/isPrivateIpv6 live in ../_shared/url-validation.ts and are
 // re-exported here so this file and the shared copy can't drift apart.
@@ -36,27 +39,4 @@ export function validatePublicHttpUrl(rawUrl: string): URL {
 
   parsed.hash = "";
   return parsed;
-}
-
-// Re-checks the hostname's *resolved* addresses, not just its literal text, so a
-// public-looking domain that resolves to a private/link-local IP (DNS rebinding)
-// is still rejected. Call this immediately before every fetch, including redirect hops.
-export async function validateResolvedPublicHost(url: URL): Promise<void> {
-  const hostname = url.hostname.toLowerCase();
-  if (isPrivateIpv4(hostname) || isPrivateIpv6(hostname)) {
-    throw new Error("Private and local network URLs cannot be imported.");
-  }
-
-  const results = await Promise.allSettled([
-    Deno.resolveDns(hostname, "A"),
-    Deno.resolveDns(hostname, "AAAA"),
-  ]);
-  const addresses = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-
-  if (addresses.length === 0) {
-    throw new Error("Could not resolve host.");
-  }
-  if (addresses.some((address) => isPrivateIpv4(address) || isPrivateIpv6(address))) {
-    throw new Error("Private and local network URLs cannot be imported.");
-  }
 }
