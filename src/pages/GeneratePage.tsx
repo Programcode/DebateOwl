@@ -60,7 +60,11 @@ export default function GeneratePage() {
       setDiscoveredSources(sources);
       setGenerateResult(result);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
-      setTimeout(() => document.getElementById('generate-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      // Capture the node now; the delayed callback must not touch the global
+      // document after this async flow may have been torn down (test and
+      // unmount safety).
+      const resultsAnchor = document.getElementById('generate-results');
+      setTimeout(() => resultsAnchor?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch (error) {
       console.error('Failed to generate case:', error);
 
