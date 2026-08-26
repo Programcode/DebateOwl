@@ -20,19 +20,26 @@ const scorecard = {
   nextDrill: 'Give a 60-second opening that preempts one narrower counter-policy before the opponent raises it.',
 };
 
-test('sparring completes a full deterministic training loop', async ({ page }) => {
+function askEnvelope(response: string) {
+  return JSON.stringify({ output: { response, followUpQuestions: [], uncertainties: [] } });
+}
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'content-type': 'application/json',
+};
+
+test.beforeEach(async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
+});
 
+test('sparring completes a deterministic training loop and hands the round to Attack', async ({ page }) => {
   let aiCall = 0;
   await page.route('**/functions/v1/ai', async (route) => {
-    const headers = {
-      'access-control-allow-origin': '*',
-      'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
-      'content-type': 'application/json',
-    };
     if (route.request().method() === 'OPTIONS') {
-      await route.fulfill({ status: 200, headers, body: 'ok' });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
 
@@ -49,11 +56,7 @@ test('sparring completes a full deterministic training loop', async ({ page }) =
           })
         : JSON.stringify(scorecard);
 
-    await route.fulfill({
-      status: 200,
-      headers,
-      body: JSON.stringify({ output: { response, followUpQuestions: [], uncertainties: [] } }),
-    });
+    await route.fulfill({ status: 200, headers: corsHeaders, body: askEnvelope(response) });
   });
 
   await page.goto('/app/sparring');
@@ -61,7 +64,8 @@ test('sparring completes a full deterministic training loop', async ({ page }) =
   await page.getByRole('button', { name: 'Start sparring' }).click();
 
   const speechBox = page.locator('textarea').first();
-  await speechBox.fill('Free public transport removes a direct price barrier and lets more people participate in work, education, and public life.');
+  const opening = 'Free public transport removes a direct price barrier and lets more people participate in work, education, and public life.';
+  await speechBox.fill(opening);
   await page.getByRole('button', { name: 'Send opening' }).click();
   await expect(page.getByText(/universal free-transit policy is expensive/i)).toBeVisible();
   await expect(page.getByText(/targeted support/i)).toBeVisible();
@@ -76,4 +80,44 @@ test('sparring completes a full deterministic training loop', async ({ page }) =
   await expect(page.getByText('Weighing')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Rematch this motion' })).toBeVisible();
   expect(aiCall).toBe(3);
+
+  await page.getByRole('button', { name: 'Attack my round' }).click();
+  await expect(page).toHaveURL(/\/app\/attack$/);
+  await expect(page.locator('#caseText')).toContainText('');
+  await expect(page.locator('#caseText')).toHaveValue(new RegExp(opening.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('sparring can retry a failed opponent response without losing the user speech', async ({ page }) => {
+  let aiCall = 0;
+  await page.route('**/functions/v1/ai', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
+      return;
+    }
+
+    aiCall += 1;
+    const response = aiCall === 1
+      ? ''
+      : JSON.stringify({
+          speech: 'A narrower subsidy still leaves eligibility friction, but you need to show why that friction is large enough to justify universality.',
+          pressurePoints: ['Quantify or comparatively explain the eligibility-friction harm.'],
+        });
+    await route.fulfill({ status: 200, headers: corsHeaders, body: askEnvelope(response) });
+  });
+
+  await page.goto('/app/sparring');
+  await page.getByLabel('Motion').fill('This House would make public transport free at the point of use.');
+  await page.getByRole('button', { name: 'Start sparring' }).click();
+
+  const opening = 'Universal access removes price and eligibility friction at the same time, increasing participation across marginal trips.';
+  await page.locator('textarea').first().fill(opening);
+  await page.getByRole('button', { name: 'Send opening' }).click();
+
+  await expect(page.getByText(opening)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry opponent' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retry opponent' }).click();
+
+  await expect(page.getByText(/narrower subsidy still leaves eligibility friction/i)).toBeVisible();
+  await expect(page.getByText(opening)).toHaveCount(1);
+  expect(aiCall).toBe(2);
 });
