@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
 vi.mock('@/hooks/use-subscription', () => ({
@@ -17,6 +17,12 @@ const mockStreamAskChat = vi.fn();
 const mockBrainstorm = vi.fn();
 const mockFactoids = vi.fn();
 const mockIsTimeoutError = vi.fn(() => false);
+
+const drainAsyncWork = async () => {
+  await act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  });
+};
 
 const sessionState = {
   askMessages: [] as any[],
@@ -357,8 +363,7 @@ describe('Conversation Pages', () => {
     sessionState.setAskLoading.mockClear();
     sessionState.setAskStreamingAssistant.mockClear();
     resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
-    await mockStreamAskChat.mock.results[0].value;
-    await Promise.resolve();
+    await drainAsyncWork();
 
     expect(sessionState.addAskMessage).not.toHaveBeenCalledWith(expect.objectContaining({
       role: 'assistant',
@@ -405,8 +410,7 @@ describe('Conversation Pages', () => {
     sessionState.setAskStreamingAssistant.mockClear();
     sessionState.setAskLoading.mockClear();
     resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
-    await mockStreamAskChat.mock.results[0].value;
-    await Promise.resolve();
+    await drainAsyncWork();
 
     expect(sessionState.addAskMessage).not.toHaveBeenCalledWith(expect.objectContaining({
       role: 'assistant',
@@ -447,8 +451,7 @@ describe('Conversation Pages', () => {
     sessionState.setAskStreamingAssistant.mockClear();
     sessionState.setAskLoading.mockClear();
     resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
-    await mockStreamAskChat.mock.results[0].value;
-    await Promise.resolve();
+    await drainAsyncWork();
 
     expect(sessionState.addAskMessage).not.toHaveBeenCalledWith(expect.objectContaining({
       role: 'assistant',
@@ -457,6 +460,44 @@ describe('Conversation Pages', () => {
     expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalled();
     expect(sessionState.setAskStreamingAssistant).not.toHaveBeenCalledWith(null);
     expect(sessionState.setAskLoading).not.toHaveBeenCalledWith(false);
+  });
+
+  it('does not write stale stream results after AskPage unmounts', async () => {
+    mockIsAskStreamingSupported.mockReturnValue(true);
+    let resolveOldStream!: (value: unknown) => void;
+    let firstHandlers: any;
+    mockStreamAskChat.mockImplementationOnce((...args: any[]) => {
+      firstHandlers = args[5];
+      return new Promise((resolve) => {
+        resolveOldStream = resolve;
+      });
+    });
+
+    const { unmount } = render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+    await waitFor(() => expect(firstHandlers).toBeDefined());
+
+    sessionState.addAskMessage.mockClear();
+    sessionState.appendAskStreamingDelta.mockClear();
+    sessionState.setAskStreamingAssistant.mockClear();
+    sessionState.setAskLoading.mockClear();
+    unmount();
+
+    expect(sessionState.setAskStreamingAssistant).not.toHaveBeenCalled();
+    expect(sessionState.setAskLoading).not.toHaveBeenCalled();
+
+    resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
+    await drainAsyncWork();
+
+    expect(sessionState.addAskMessage).not.toHaveBeenCalled();
+    expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalled();
+    expect(sessionState.setAskStreamingAssistant).not.toHaveBeenCalled();
+    expect(sessionState.setAskLoading).not.toHaveBeenCalled();
   });
 
   it('AskPage reports a rejected chat save instead of confirming success', async () => {

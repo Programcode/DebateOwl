@@ -67,6 +67,7 @@ import {
   normalizeAnthropicUsage,
   normalizeGoogleUsage,
   normalizeOpenAIUsage,
+  selectObservedUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
@@ -861,9 +862,7 @@ Deno.serve(async (req) => {
         const usageError = err && typeof err === "object"
           ? err as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }
           : undefined;
-        const researchErrorUsage = args.signal?.aborted
-          ? usageError?.completedUsage ?? usageError?.usage
-          : usageError?.usage ?? usageError?.completedUsage;
+        const researchErrorUsage = selectObservedUsage(usageError, args.signal?.aborted === true);
         if (researchErrorUsage) researchUsage.push(researchErrorUsage);
         throw err;
       }
@@ -1211,11 +1210,7 @@ Deno.serve(async (req) => {
       : undefined;
     // A successful main call takes precedence over usage attached to a later
     // post-processing error. This avoids counting its repair attempts twice.
-    const mainErrorUsage = completedMainUsage ?? (
-      req.signal?.aborted
-        ? usageError?.completedUsage ?? usageError?.usage
-        : usageError?.usage ?? usageError?.completedUsage
-    );
+    const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, req.signal?.aborted === true);
     await logUsage(
       userId,
       feature,

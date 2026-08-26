@@ -206,3 +206,18 @@ export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>)
   };
   return merged;
 }
+
+/**
+ * Selects the one usage record that best represents observed provider work.
+ * A non-aborted error prefers the merged usage on `usage`; an aborted error
+ * prefers the completed work on `completedUsage` so a cancelled retry is not
+ * counted twice.
+ */
+export function selectObservedUsage(
+  usageError: { usage?: NormalizedUsage; completedUsage?: NormalizedUsage } | undefined,
+  aborted: boolean,
+): NormalizedUsage | undefined {
+  return aborted
+    ? usageError?.completedUsage ?? usageError?.usage
+    : usageError?.usage ?? usageError?.completedUsage;
+}

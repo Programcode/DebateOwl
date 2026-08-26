@@ -11,7 +11,7 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import { useToast } from '@/hooks/use-toast';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { ToastAction } from '@/components/ui/toast';
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 
 const MAX_AI_INPUT_LENGTH = 50000;
@@ -40,13 +40,21 @@ export default function AskPage() {
   const streamAbortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
 
-  const invalidateActiveRequest = () => {
+  const abortActiveRequest = useCallback(() => {
     requestIdRef.current += 1;
     streamAbortRef.current?.abort();
     streamAbortRef.current = null;
+  }, []);
+
+  const invalidateActiveRequest = () => {
+    abortActiveRequest();
     setAskStreamingAssistant(null);
     setAskLoading(false);
   };
+
+  useEffect(() => () => {
+    abortActiveRequest();
+  }, [abortActiveRequest]);
 
   const handleSend = async (
     message: string,

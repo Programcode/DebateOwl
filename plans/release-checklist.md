@@ -17,7 +17,7 @@ Run every step before merging this branch. Nothing here deploys anything; deploy
 - [ ] `npm test` — full vitest suite green
 - [ ] `npm run build` — production build succeeds
 - [ ] `deno check supabase/functions/ai/index.ts supabase/functions/ai-stream/index.ts supabase/functions/admin/index.ts`
-- [ ] `deno test --allow-read supabase/functions/` — includes cost calculator, research/quality-floor, prompt-layer, and control-matrix suites
+- [ ] `deno test --allow-read --allow-env=EXA_API_KEY --allow-net=127.0.0.1 supabase/functions/` — includes cost calculator, research/quality-floor, prompt-layer, and control-matrix suites
 
 ## 2. Migration review (before any deploy)
 

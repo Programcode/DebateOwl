@@ -222,6 +222,59 @@ Deno.test("JSON body timeout cancels a read that stalled after headers", async (
   }
 });
 
+Deno.test("JSON helper aborts a loopback response body read", async () => {
+  let bodyReadStartedResolve!: () => void;
+  let releaseStalledPull!: () => void;
+  let bodyReadStarted = false;
+  const bodyStarted = new Promise<void>((resolve) => bodyReadStartedResolve = resolve);
+  const stalledPull = new Promise<void>((resolve) => releaseStalledPull = resolve);
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (!bodyReadStarted) {
+        bodyReadStarted = true;
+        controller.enqueue(encoder.encode('{"partial":'));
+        bodyReadStartedResolve();
+      }
+      return stalledPull;
+    },
+    cancel() {
+      releaseStalledPull();
+    },
+  });
+  const server = Deno.serve(
+    { hostname: "127.0.0.1", port: 0 },
+    () => new Response(body, { headers: { "content-type": "application/json" } }),
+  );
+
+  try {
+    const address = server.addr;
+    if (address.transport !== "tcp") throw new Error("loopback test server did not use TCP");
+    const caller = new AbortController();
+    const pending = fetchJsonWithTimeout(
+      `http://${address.hostname}:${address.port}/stalled-json`,
+      {},
+      5000,
+      caller.signal,
+    );
+    await Promise.race([
+      bodyStarted,
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("response body was not read")), 500)),
+    ]);
+    caller.abort(new DOMException("Test cancellation", "AbortError"));
+
+    const settled = await Promise.race([
+      pending.then(() => "resolved", () => "rejected"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("still pending"), 500)),
+    ]);
+    if (settled !== "rejected") throw new Error(`loopback JSON read did not reject: ${settled}`);
+  } finally {
+    releaseStalledPull();
+    await server.shutdown();
+    await server.finished;
+  }
+});
+
 Deno.test("JSON helper consumes non-OK error bodies within the same timeout", async () => {
   const originalFetch = globalThis.fetch;
   let bodyStartedResolve!: () => void;

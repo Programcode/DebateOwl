@@ -4,6 +4,7 @@ import {
   normalizeAnthropicUsage,
   normalizeGoogleUsage,
   normalizeOpenAIUsage,
+  selectObservedUsage,
 } from "./cost.ts";
 
 function approxEqual(a: number | null, b: number, epsilon = 1e-9): boolean {
@@ -163,5 +164,39 @@ Deno.test("incomplete merged usage keeps observed tokens but fails closed on cos
   if (result.costUsd !== null) throw new Error("incomplete usage must not produce a known cost");
   if (result.inputTokens !== 1000 || result.outputTokens !== 500) {
     throw new Error("cost audit lost observed token counts");
+  }
+});
+
+Deno.test("observed usage selection prefers merged usage and selects each record once", () => {
+  const firstAttempt = normalizeOpenAIUsage({ prompt_tokens: 1000, completion_tokens: 500 });
+  const repairAttempt = normalizeOpenAIUsage({ prompt_tokens: 300, completion_tokens: 100 });
+  const merged = mergeNormalizedUsage([firstAttempt, repairAttempt]);
+  if (!merged) throw new Error("merge dropped usage");
+
+  const selected = selectObservedUsage({ usage: merged, completedUsage: firstAttempt }, false);
+  if (selected !== merged) throw new Error("non-aborted errors must select merged usage");
+  if (selected.inputTokens !== 1300 || selected.outputTokens !== 600) {
+    throw new Error("merged usage was not selected exactly once");
+  }
+});
+
+Deno.test("observed usage selection prefers completed usage after abort and supports fallbacks", () => {
+  const usage = normalizeOpenAIUsage({ prompt_tokens: 300, completion_tokens: 100 });
+  const completedUsage = normalizeOpenAIUsage({ prompt_tokens: 1000, completion_tokens: 500 });
+
+  const abortedSelection = selectObservedUsage({ usage, completedUsage }, true);
+  if (abortedSelection !== completedUsage) throw new Error("aborted errors must select completed usage");
+  if (abortedSelection.inputTokens !== 1000 || abortedSelection.outputTokens !== 500) {
+    throw new Error("completed usage selection changed token counts");
+  }
+
+  if (selectObservedUsage({ completedUsage }, false) !== completedUsage) {
+    throw new Error("non-aborted selection did not fall back to completed usage");
+  }
+  if (selectObservedUsage({ usage }, true) !== usage) {
+    throw new Error("aborted selection did not fall back to usage");
+  }
+  if (selectObservedUsage(undefined, true) !== undefined) {
+    throw new Error("missing usage should remain undefined");
   }
 });
