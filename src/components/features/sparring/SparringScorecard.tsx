@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, FileDown, FileText, MessageCircle, RefreshCcw, Target, Trophy } from 'lucide-react';
+import { ArrowRight, BookOpenCheck, CheckCircle2, FileDown, FileText, Lightbulb, MessageCircle, RefreshCcw, Swords, Target, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,9 @@ interface SparringScorecardProps {
   scorecard: SparringScorecardType;
   onRematch: () => void;
   onDiscuss: () => void;
+  onAttackRound: () => void;
+  onBrainstormMissed: () => void;
+  onVerifyOpening: () => void;
   onNewRound: () => void;
   onExportDocx: () => void;
   onExportPdf: () => void;
@@ -32,7 +35,18 @@ function ratingClass(rating: SparringScorecardType['categories'][number]['rating
   return 'border-primary/25 bg-primary/10 text-primary';
 }
 
-export function SparringScorecard({ session, scorecard, onRematch, onDiscuss, onNewRound, onExportDocx, onExportPdf }: SparringScorecardProps) {
+export function SparringScorecard({
+  session,
+  scorecard,
+  onRematch,
+  onDiscuss,
+  onAttackRound,
+  onBrainstormMissed,
+  onVerifyOpening,
+  onNewRound,
+  onExportDocx,
+  onExportPdf,
+}: SparringScorecardProps) {
   const verdictLabel = scorecard.verdict === 'user-edge'
     ? 'Your side had the edge'
     : scorecard.verdict === 'ai-edge'
@@ -120,14 +134,35 @@ export function SparringScorecard({ session, scorecard, onRematch, onDiscuss, on
         </Card>
       </div>
 
+      <Card className="border-border/70 bg-card/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Keep working from this round</CardTitle>
+          <CardDescription>Carry the actual transcript and motion into DebateLab's existing prep tools instead of starting from scratch.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button variant="outline" onClick={onDiscuss}>
+            <MessageCircle className="mr-2 h-4 w-4" />
+            Discuss with Ask
+          </Button>
+          <Button variant="outline" onClick={onAttackRound}>
+            <Swords className="mr-2 h-4 w-4" />
+            Attack my round
+          </Button>
+          <Button variant="outline" onClick={onBrainstormMissed}>
+            <Lightbulb className="mr-2 h-4 w-4" />
+            Find arguments I missed
+          </Button>
+          <Button variant="outline" onClick={onVerifyOpening}>
+            <BookOpenCheck className="mr-2 h-4 w-4" />
+            Verify my opening
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Button onClick={onRematch}>
           <RefreshCcw className="mr-2 h-4 w-4" />
           Rematch this motion
-        </Button>
-        <Button variant="outline" onClick={onDiscuss}>
-          <MessageCircle className="mr-2 h-4 w-4" />
-          Discuss with Ask
         </Button>
         <Button variant="outline" onClick={onExportDocx}>
           <FileText className="mr-2 h-4 w-4" />
