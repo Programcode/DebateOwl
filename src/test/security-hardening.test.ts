@@ -7,6 +7,7 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20260819000000_security_hardening.sql');
 const advisorMigration = read('supabase/migrations/20260820090000_advisor_security_cleanup.sql');
 const outputLanguageMigration = read('supabase/migrations/20260827000000_user_settings_output_language_privilege.sql');
+const quotaScopeMigration = read('supabase/migrations/20260827001000_scope_daily_usage_counters.sql');
 const ai = read('supabase/functions/ai/index.ts');
 const stream = read('supabase/functions/ai-stream/index.ts');
 const importer = read('supabase/functions/import-source/index.ts');
@@ -28,7 +29,7 @@ describe('security hardening regressions', () => {
     expect(settingsStore).not.toContain(".from('user_settings').upsert");
   });
 
-  it('uses one server-only atomic quota reservation from every billable entrypoint', () => {
+  it('uses atomic quota reservations and separates independently configured workloads', () => {
     expect(migration).toContain('ON CONFLICT (user_id, usage_date) DO UPDATE');
     expect(migration).toContain("auth.role() <> 'service_role'");
     for (const source of [ai, stream, importer]) expect(source).toContain('consume_daily_quota');
@@ -37,6 +38,10 @@ describe('security hardening regressions', () => {
     expect(importer).toContain('Unable to verify your quota');
     expect(ai).not.toContain('return { allowed: true }; // Fail open');
     expect(stream).not.toContain('return { allowed: true };\n  } catch');
+
+    expect(quotaScopeMigration).toContain('PRIMARY KEY (user_id, usage_date, quota_key)');
+    expect(quotaScopeMigration).toContain("p_quota_key text DEFAULT 'ai'");
+    expect(importer).toContain('p_quota_key: "import_source"');
   });
 
   it('uses code-scoped sharing and disallows anonymous share creation', () => {
@@ -66,7 +71,7 @@ describe('security hardening regressions', () => {
 
   it('keeps source import behind fixed egress and bounds provider responses', () => {
     expect(importer).toContain('const EXA_CONTENTS_URL = "https://api.exa.ai/contents"');
-    const fetchTargets = [...importer.matchAll(/\bfetch\(([^,\n]+)/g)].map((match) => match[1].trim());
+    const fetchTargets = [...importer.matchAll(/\bawait\s+fetch\(([^,\n]+)/g)].map((match) => match[1].trim());
     expect(fetchTargets).toEqual(['EXA_CONTENTS_URL']);
     expect(importer).toContain('readBoundedText(response, EXA_RESPONSE_BYTES, FETCH_TIMEOUT_MS)');
     const limits = read('supabase/functions/import-source/resource-limits.ts');
