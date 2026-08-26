@@ -130,6 +130,7 @@ function inferSourceType(result: ExaResult): SourceType {
   const host = hostFromUrl(url);
   const haystack = `${result.title || ""} ${url} ${result.content || result.description || ""}`;
 
+  if (GOVERNMENT_SEARCH_DOMAINS.some((domain) => hostMatchesDomain(host, domain))) return "government";
   if (/(^|\.)gov(\.|$)|\.gov\//i.test(host) || /\.europa\.eu$/i.test(host)) return "government";
   if (/\.edu$/i.test(host) || /\.ac\.[a-z]{2}$/i.test(host) || /\b(arxiv|jstor|ssrn|pubmed|springer|sciencedirect|nature|science\.org)\b/i.test(host)) return "academic";
   if (/\b(youtube\.com|youtu\.be)\b/i.test(host)) return "video";
@@ -260,12 +261,6 @@ function dedupeSearchRequests(requests: SearchRequest[]): SearchRequest[] {
   return accepted.slice(0, 6);
 }
 
-/**
- * Builds Exa search requests with filters represented as request fields rather
- * than query-operator text. This matches Exa's current API contract:
- * includeDomains for domain restrictions and category for news/research-paper
- * verticals. Callers may retry an unfiltered request if a filter returns zero.
- */
 export function buildSearchRequests(claim: string, region = "", preferredSourceType = "any", timeframe = ""): SearchRequest[] {
   const base = `${claim} ${region}`.trim().replace(/\s+/g, " ");
   const years = timeframe || (/\b202[0-9]\b/.test(base) ? "" : "2025 2026");
@@ -305,7 +300,6 @@ export function buildSearchRequests(claim: string, region = "", preferredSourceT
   return dedupeSearchRequests(requests);
 }
 
-/** Backward-compatible helper for callers/tests that need query text only. */
 export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
   return buildSearchRequests(claim, region, preferredSourceType, timeframe).map((request) => request.query);
 }
