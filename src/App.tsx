@@ -25,6 +25,7 @@ const AttackPage = lazy(() => import("./pages/AttackPage"));
 const BrainstormPage = lazy(() => import("./pages/BrainstormPage"));
 const FactoidsPage = lazy(() => import("./pages/FactoidsPage"));
 const AskPage = lazy(() => import("./pages/AskPage"));
+const SparringPage = lazy(() => import("./pages/SparringPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const LibraryPage = lazy(() => import("./pages/LibraryPage"));
@@ -118,6 +119,7 @@ function AnimatedRoutes() {
             <Route path="/app/brainstorm" element={<BrainstormPage />} />
             <Route path="/app/factoids" element={<FactoidsPage />} />
             <Route path="/app/ask" element={<AskPage />} />
+            <Route path="/app/sparring" element={<SparringPage />} />
             <Route path="/app/history" element={<HistoryPage />} />
             <Route path="/app/library" element={<LibraryPage />} />
             <Route path="/app/timer" element={<TimerPage />} />
