@@ -74,7 +74,8 @@ Deno.test("government preference uses Exa includeDomains instead of site query s
   const filtered = requests.find((request) => request.includeDomains?.length);
   assert(Boolean(filtered), `Expected a domain-filtered government request, got ${JSON.stringify(requests)}`);
   assert(filtered!.includeDomains!.includes("energy.gov"), "Expected energy.gov in government domain set");
-  assert(filtered!.includeDomains === GOVERNMENT_SEARCH_DOMAINS, "Expected canonical government domain list");
+  assert(filtered!.includeDomains!.length === GOVERNMENT_SEARCH_DOMAINS.length, "Expected canonical government domain list length");
+  assert(GOVERNMENT_SEARCH_DOMAINS.every((domain) => filtered!.includeDomains!.includes(domain)), "Expected canonical government domains");
   assert(requests.every((request) => !/\bsite:/i.test(request.query)), "site: operator must not leak into Exa query text");
 });
 
