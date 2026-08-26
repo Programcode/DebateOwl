@@ -3,6 +3,7 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
+  isAskStreamingModeAllowed,
 } from "./control-enforcement.ts";
 
 Deno.test("ask pros/cons and argument map toggles deterministically shape the output", () => {
@@ -47,6 +48,11 @@ Deno.test("clarify mode guarantees a visible uncertainty note when no follow-up 
   if ((good.uncertainties as string[]).length !== 0) throw new Error("clarify with follow-ups must not add noise");
 });
 
+Deno.test("clarify mode is excluded from streaming while general mode remains eligible", () => {
+  if (isAskStreamingModeAllowed("clarify")) throw new Error("clarify mode must not stream");
+  if (!isAskStreamingModeAllowed("general")) throw new Error("general mode should remain streamable");
+});
+
 Deno.test("attack toggles zero out unrequested sections", () => {
   const output: Record<string, unknown> = {
     fallaciesDetected: [{ name: "ad hominem" }],
@@ -83,7 +89,49 @@ Deno.test("generate controls pin metadata and trim contentions to the length tar
   if ((output.contentions as unknown[]).length !== 2) throw new Error("brief must cap at 2 contentions");
   if ("exordio" in output) throw new Error("exordio must be removed for non-intro roles");
 
-  const intro: Record<string, unknown> = { exordio: { hook: "h", transition: "t" }, contentions: [{}], metadata: {} };
+  const intro: Record<string, unknown> = {
+    exordio: { hook: "h", transition: "t" },
+    contentions: [{}, {}, {}],
+    metadata: {},
+  };
   enforceGenerateControls(intro, "pro", "custom", "standard", "intro");
   if (!("exordio" in intro)) throw new Error("intro role keeps a model-provided exordio");
+});
+
+Deno.test("generate controls fail closed when the model returns fewer contentions than requested", () => {
+  const output: Record<string, unknown> = {
+    contentions: [{}],
+    metadata: {},
+  };
+  let error: unknown;
+  try {
+    enforceGenerateControls(output, "pro", "custom", "comprehensive", "r1");
+  } catch (caught) {
+    error = caught;
+  }
+
+  if (!(error instanceof Error) || !error.message.includes("requires exactly 4")) {
+    throw new Error("underlength comprehensive output must be rejected");
+  }
+  if ((output.contentions as unknown[]).length !== 1) {
+    throw new Error("underlength output must not be padded or fabricated");
+  }
+});
+
+Deno.test("generate controls fail closed for missing or invalid exact-length fields", () => {
+  const cases: Record<string, unknown>[] = [
+    { contentions: [{}] },
+    { metadata: {} },
+    { metadata: {}, contentions: "one contention" },
+  ];
+
+  for (const output of cases) {
+    let rejected = false;
+    try {
+      enforceGenerateControls(output, "pro", "custom", "brief", "r1");
+    } catch {
+      rejected = true;
+    }
+    if (!rejected) throw new Error("malformed generate output must be rejected");
+  }
 });

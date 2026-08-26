@@ -95,7 +95,10 @@ const validGenerateOutput: GenerateOutput = {
     keyDefinitions: ['universal basic income'],
     burdenOfProof: 'Prove net societal benefits',
   },
-  contentions: [],
+  contentions: [
+    { id: '1', claim: 'First argument', reasoning: 'Reasoning', evidence: 'Evidence', needsSource: false, sourceQuery: '', impact: 'Impact' },
+    { id: '2', claim: 'Second argument', reasoning: 'Reasoning', evidence: 'Evidence', needsSource: false, sourceQuery: '', impact: 'Impact' },
+  ],
   predictedOpponentCase: {
     likelyArguments: [],
     strategicWeaknesses: [],
@@ -209,6 +212,11 @@ describe('AI client branch coverage', () => {
               analysis: 'Costs increase quickly',
               evidence: ['OECD report'],
             },
+            {
+              title: 'Implementation risk',
+              analysis: 'Implementation takes planning',
+              evidence: ['Pilot programs'],
+            },
           ],
           rebuttals: [
             {
@@ -237,7 +245,7 @@ describe('AI client branch coverage', () => {
       data: {
         output: validGenerateOutput,
         discoveredSources: [
-          { title: 'Source A', url: 'https://a.com', content: 'A content' },
+          { title: 'Source A', url: 'https://a.com', content: 'A content', qualityLabel: 'strong' },
           { title: 'Source B', url: 'https://b.com', content: 'B content' },
         ],
       },
@@ -253,8 +261,109 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://a.com',
       folder: 'Auto-saved',
+      isActive: true,
       metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com' }),
     });
+  });
+
+  it('rejects malformed nested direct-format generate output before saving sources', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: {
+          ...validGenerateOutput,
+          caseStructure: {
+            ...validGenerateOutput.caseStructure,
+            keyDefinitions: [123],
+          },
+        },
+        discoveredSources: [{ title: 'Untrusted source', url: 'https://example.com/untrusted' }],
+      },
+      error: null,
+    });
+
+    try {
+      await generateCase(validGenerateInput, config);
+      throw new Error('Expected generateCase to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AIResponseError);
+      expect(error).toMatchObject({
+        details: {
+          issues: expect.arrayContaining([
+            expect.objectContaining({ path: ['caseStructure', 'keyDefinitions', 0] }),
+          ]),
+        },
+      });
+    }
+    expect(addSourceMock).not.toHaveBeenCalled();
+  });
+
+  it('drops invalid optional source metadata at the response boundary', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: validGenerateOutput,
+        discoveredSources: [
+          {
+            title: 'Source with malformed metadata',
+            url: ' https://example.com/source ',
+            content: 123,
+            sourceType: { nested: true },
+            qualityScore: 'high',
+            qualityLabel: 'unknown',
+            query: 42,
+          },
+          { title: '', url: 'https://example.com/rejected' },
+        ],
+      },
+      error: null,
+    });
+
+    const outcome = await generateCase(validGenerateInput, config);
+
+    expect(outcome.discoveredSources).toEqual([
+      { title: 'Source with malformed metadata', url: 'https://example.com/source' },
+    ]);
+    expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Source with malformed metadata',
+      origin: 'https://example.com/source',
+      isActive: false,
+      metadata: { url: 'https://example.com/source', capturedVia: 'generate' },
+    }));
+  });
+
+  it('saves weak discovered sources as inactive', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: validGenerateOutput,
+        discoveredSources: [{
+          title: 'Weak fallback',
+          url: 'https://example.com/fallback',
+          qualityLabel: 'weak',
+          qualityScore: 20,
+        }],
+      },
+      error: null,
+    });
+
+    await generateCase(validGenerateInput, config);
+
+    expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Weak fallback',
+      isActive: false,
+      metadata: expect.objectContaining({ qualityLabel: 'weak', qualityScore: 20 }),
+    }));
+  });
+
+  it('validates attack output before saving discovered sources', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: { overallAssessment: { score: 80 } },
+        discoveredSources: [{ title: 'Untrusted source', url: 'https://example.com/untrusted' }],
+      },
+      error: null,
+    });
+
+    await expect(attackCase({ caseText: 'Case text' } as any, config)).rejects.toBeInstanceOf(AIResponseError);
+    expect(addSourceMock).not.toHaveBeenCalled();
   });
 
   it('normalizes brainstorm output for topFive, mindmap, and buckets', async () => {
@@ -307,7 +416,7 @@ describe('AI client branch coverage', () => {
     invokeMock.mockResolvedValueOnce({
       data: {
         output: { needsMoreInfo: false, clarifyingQuestions: [], nextSteps: [], warningsAndTradeoffs: [] },
-        discoveredSources: [{ title: 'Source C', url: 'https://c.com', content: 'C content' }],
+        discoveredSources: [{ title: 'Source C', url: 'https://c.com', content: 'C content', qualityLabel: 'strong' }],
       },
       error: null,
     });
@@ -320,6 +429,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://c.com',
       folder: 'Auto-saved',
+      isActive: true,
       metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com' }),
     });
   });
@@ -665,21 +775,18 @@ describe('AI client branch coverage', () => {
     await expect(generateCase(validGenerateInput, config)).rejects.toBeInstanceOf(AIError);
   });
 
-  it('uses fallback generated sections when transform input omits contentions and rebuttals', async () => {
+  it.each([
+    ['empty', { title: 'Fallback title only' }],
+    ['short', { title: 'Fallback title', contentions: [{ title: 'Only argument' }] }],
+  ])('rejects %s malformed generate output instead of fabricating contentions', async (_label, output) => {
     invokeMock.mockResolvedValueOnce({
       data: {
-        output: {
-          title: 'Fallback title only',
-        },
+        output,
       },
       error: null,
     });
 
-    const { result } = await generateCase(validGenerateInput, config);
-
-    expect(result.contentions[0].claim).toBe('Main argument');
-    expect(result.counters[0].targetArgument).toBe('Opponent argument');
-    expect(result.metadata.side).toBe('pro');
+    await expect(generateCase(validGenerateInput, config)).rejects.toBeInstanceOf(AIResponseError);
   });
 
   it('normalizes partially empty generate contentions and rebuttals', async () => {
@@ -687,7 +794,10 @@ describe('AI client branch coverage', () => {
       data: {
         output: {
           thesis: 'Partial thesis',
-          contentions: [{ points: ['p1', 'p2'], evidence: [], analysis: undefined }],
+          contentions: [
+            { points: ['p1', 'p2'], evidence: [], analysis: undefined },
+            { points: ['p3'], evidence: [], analysis: undefined },
+          ],
           rebuttals: [{}],
           potentialWeaknesses: [],
         },

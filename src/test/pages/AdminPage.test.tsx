@@ -296,6 +296,46 @@ describe('AdminPage Integration', () => {
         expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
     });
 
+    it('renders known, mixed, and unknown cost by feature rows honestly', async () => {
+        const mockStats: Record<string, unknown> = {
+            totals: { requests: 6, cost: 0.0073, successRate: 100, unknownCostRequests: 5 },
+            daily: [] as unknown[],
+            byFeature: { ask: 1, generate: 2, attack: 3 },
+            byFeatureCost: [
+                { feature: 'ask', requests: 1, cost: 0.0042, unknownCostRequests: 0 },
+                { feature: 'generate', requests: 2, cost: 0.0031, unknownCostRequests: 1 },
+                { feature: 'attack', requests: 3, cost: 0, unknownCostRequests: 3 },
+            ],
+            byUser: [],
+        };
+
+        globalFetch.mockImplementation(async (url: string) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(mockStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+        });
+
+        expect(screen.getByText('Cost by Feature')).toBeInTheDocument();
+        expect(screen.getByText('$0.0042')).toBeInTheDocument();
+        expect(screen.getByText('$0.0031 + 1 unknown')).toBeInTheDocument();
+        expect(screen.getByText('Unknown')).toBeInTheDocument();
+        expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
+    });
+
     it('labels totals as unknown when cost is unknown instead of rendering $0.0000', async () => {
         const mockStats: Record<string, unknown> = {
             totals: { requests: 7, cost: 0, successRate: 100, unknownCostRequests: 7 },

@@ -1,12 +1,13 @@
 import { mockGenerateCase, mockAttackCase, mockBrainstorm, mockFactoids, mockAsk } from './providers/mock-provider';
 import type { ProviderConfig } from './providers/types';
-import type { GenerateInput, GenerateOutput } from './schemas/generate';
+import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from './schemas/generate';
 import { AttackOutputSchema, type AttackOutput, type AttackInput } from './schemas/attack';
 import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
 import { FactoidsOutputSchema, type FactoidsOutput, type FactoidsInput } from './schemas/factoids';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
+import type { SourceProvenance } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -14,15 +15,10 @@ import { toast } from '@/hooks/use-toast';
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 
 /** A web source discovered during research, with auditable ranking metadata from the edge function. */
-export interface DiscoveredSource {
+export interface DiscoveredSource extends Omit<SourceProvenance, 'url'> {
   title: string;
   url: string;
   content?: string;
-  sourceType?: string;
-  qualityScore?: number;
-  qualityLabel?: 'strong' | 'moderate' | 'weak';
-  /** The research query that surfaced this source. */
-  query?: string;
 }
 
 /** Feature result plus the researched sources that informed it. */
@@ -37,11 +33,38 @@ export interface ResultWithSources<T> {
  */
 function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is DiscoveredSource => {
-    if (!item || typeof item !== 'object') return false;
-    const candidate = item as Partial<DiscoveredSource>;
-    return typeof candidate.title === 'string' && candidate.title.length > 0 &&
-      typeof candidate.url === 'string' && candidate.url.length > 0;
+
+  return value.flatMap((item): DiscoveredSource[] => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+
+    const candidate: Record<string, unknown> = {};
+    for (const [key, fieldValue] of Object.entries(item)) candidate[key] = fieldValue;
+
+    const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
+    const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
+    if (!title || !url) return [];
+
+    const source: DiscoveredSource = { title, url };
+    if (typeof candidate.content === 'string') source.content = candidate.content;
+
+    if (typeof candidate.sourceType === 'string' && candidate.sourceType.trim()) {
+      source.sourceType = candidate.sourceType.trim();
+    }
+
+    if (typeof candidate.qualityScore === 'number' && Number.isFinite(candidate.qualityScore) &&
+      candidate.qualityScore >= 0 && candidate.qualityScore <= 100) {
+      source.qualityScore = candidate.qualityScore;
+    }
+
+    if (candidate.qualityLabel === 'strong' || candidate.qualityLabel === 'moderate' || candidate.qualityLabel === 'weak') {
+      source.qualityLabel = candidate.qualityLabel;
+    }
+
+    if (typeof candidate.query === 'string' && candidate.query.trim()) {
+      source.query = candidate.query.trim();
+    }
+
+    return [source];
   });
 }
 
@@ -718,47 +741,85 @@ function validateAttackOutput(output: unknown): AttackOutput {
   return parsed.data;
 }
 
+/** Validates the transformed generate response before it can be rendered or persisted alongside sources. */
+function validateGenerateOutput(output: unknown): GenerateOutput {
+  const parsed = GenerateOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected generate schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+  return parsed.data;
+}
+
+type AutosaveFeature = 'generate' | 'attack' | 'brainstorm';
+
+async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
+  if (sources.length === 0) return;
+
+  const session = useSessionStore.getState();
+  for (const source of sources) {
+    try {
+      await session.addSource({
+        title: source.title,
+        content: source.content ?? '',
+        type: 'url',
+        origin: source.url,
+        folder: 'Auto-saved',
+        isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
+        metadata: {
+          url: source.url,
+          ...(source.sourceType !== undefined ? { sourceType: source.sourceType } : {}),
+          ...(source.qualityScore !== undefined ? { qualityScore: source.qualityScore } : {}),
+          ...(source.qualityLabel !== undefined ? { qualityLabel: source.qualityLabel } : {}),
+          ...(source.query !== undefined ? { query: source.query } : {}),
+          capturedVia,
+        },
+      });
+    } catch {
+      toast({
+        title: 'Source save failed',
+        description: `Could not save "${source.title}" to your library.`,
+        variant: 'destructive',
+      });
+    }
+  }
+  console.log(`[AI Client] Saved ${sources.length} sources to library`);
+}
+
+function expectedContentionCount(length: GenerateInput['length']): number {
+  switch (length) {
+    case 'standard':
+      return 3;
+    case 'comprehensive':
+      return 4;
+    case 'brief':
+    default:
+      return 2;
+  }
+}
+
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<ResultWithSources<GenerateOutput>> {
-  if (config.provider === 'mock') return { result: await mockGenerateCase(input.motion, input.side), discoveredSources: [] };
+  if (config.provider === 'mock') {
+    return { result: await mockGenerateCase(input.motion, input.side, input.length), discoveredSources: [] };
+  }
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
   const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
-  const discovered = parseDiscoveredSources(data.discoveredSources);
-
-  // Auto-save discovered sources to library (keeping provenance metadata)
-  if (discovered.length > 0) {
-    const session = useSessionStore.getState();
-    for (const source of discovered) {
-      try {
-        await session.addSource({
-          title: source.title,
-          content: source.content ?? '',
-          type: 'url',
-          origin: source.url,
-          folder: 'Auto-saved',
-          metadata: {
-            url: source.url,
-            sourceType: source.sourceType,
-            qualityScore: source.qualityScore,
-            qualityLabel: source.qualityLabel,
-            query: source.query,
-            capturedVia: 'generate',
-          },
-        });
-      } catch {
-        toast({
-          title: 'Source save failed',
-          description: `Could not save "${source.title}" to your library.`,
-          variant: 'destructive',
-        });
-      }
-    }
-    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
+  const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
+  const expectedCount = expectedContentionCount(input.length);
+  if (result.contentions.length !== expectedCount) {
+    throw new AIResponseError('AI response did not contain the expected number of contentions.', {
+      details: { expectedCount, actualCount: result.contentions.length },
+    });
   }
 
+  const discovered = parseDiscoveredSources(data.discoveredSources);
+  await autosaveDiscoveredSources(discovered, 'generate');
+
   return {
-    result: transformGenerateResponse(data.output as Record<string, unknown>),
+    result,
     discoveredSources: discovered,
   };
 }
@@ -766,41 +827,12 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
   if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
   const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
+  const result = validateAttackOutput(data.output);
   const discovered = parseDiscoveredSources(data.discoveredSources);
-
-  // Auto-save discovered sources to library (keeping provenance metadata)
-  if (discovered.length > 0) {
-    const session = useSessionStore.getState();
-    for (const source of discovered) {
-      try {
-        await session.addSource({
-          title: source.title,
-          content: source.content ?? '',
-          type: 'url',
-          origin: source.url,
-          folder: 'Auto-saved',
-          metadata: {
-            url: source.url,
-            sourceType: source.sourceType,
-            qualityScore: source.qualityScore,
-            qualityLabel: source.qualityLabel,
-            query: source.query,
-            capturedVia: 'attack',
-          },
-        });
-      } catch {
-        toast({
-          title: 'Source save failed',
-          description: `Could not save "${source.title}" to your library.`,
-          variant: 'destructive',
-        });
-      }
-    }
-    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
-  }
+  await autosaveDiscoveredSources(discovered, 'attack');
 
   return {
-    result: validateAttackOutput(data.output),
+    result,
     discoveredSources: discovered,
   };
 }
@@ -809,37 +841,7 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
   if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
   const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
   const discovered = parseDiscoveredSources(data.discoveredSources);
-
-  // Auto-save discovered sources to library (keeping provenance metadata)
-  if (discovered.length > 0) {
-    const session = useSessionStore.getState();
-    for (const source of discovered) {
-      try {
-        await session.addSource({
-          title: source.title,
-          content: source.content ?? '',
-          type: 'url',
-          origin: source.url,
-          folder: 'Auto-saved',
-          metadata: {
-            url: source.url,
-            sourceType: source.sourceType,
-            qualityScore: source.qualityScore,
-            qualityLabel: source.qualityLabel,
-            query: source.query,
-            capturedVia: 'brainstorm',
-          },
-        });
-      } catch {
-        toast({
-          title: 'Source save failed',
-          description: `Could not save "${source.title}" to your library.`,
-          variant: 'destructive',
-        });
-      }
-    }
-    console.log(`[AI Client] Saved ${discovered.length} sources to library`);
-  }
+  await autosaveDiscoveredSources(discovered, 'brainstorm');
 
   return {
     result: transformBrainstormResponse(data.output as Record<string, unknown>),

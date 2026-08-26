@@ -136,6 +136,47 @@ describe("session-store", () => {
     expect(sources[0].isActive).toBe(false);
   });
 
+  it("inserts an explicitly inactive source as inactive", async () => {
+    setMockTableResponse("sources", {
+      insert: {
+        id: "source_inactive",
+        title: "Inactive source",
+        content: "Test",
+        type: "text",
+        origin: null,
+        is_active: false,
+        created_at: new Date().toISOString(),
+      },
+    });
+    const insertCalls: Array<Record<string, unknown>> = [];
+    const originalFrom = supabaseMock.from.getMockImplementation() as unknown as (table: string) => ReturnType<typeof supabaseMock.from>;
+    supabaseMock.from.mockImplementation(((table: string) => {
+      const builder = originalFrom(table);
+      if (table === "sources") {
+        const originalInsert = builder.insert;
+        builder.insert = ((payload: Record<string, unknown>) => {
+          insertCalls.push(payload);
+          return (originalInsert as unknown as (p: Record<string, unknown>) => ReturnType<typeof builder.insert>)(payload);
+        }) as typeof builder.insert;
+      }
+      return builder;
+    }) as never);
+
+    try {
+      await useSessionStore.getState().addSource({
+        title: "Inactive source",
+        content: "Test",
+        type: "text",
+        isActive: false,
+      });
+    } finally {
+      supabaseMock.from.mockImplementation(originalFrom as never);
+    }
+
+    expect(insertCalls[0]).toEqual(expect.objectContaining({ is_active: false }));
+    expect(useSessionStore.getState().sourceLibrary[0].isActive).toBe(false);
+  });
+
   it("hydrates server data when available", async () => {
     setMockTableResponse("cases", {
       order: [{ id: "case_2", title: "Server Case", output: sampleGenerate, created_at: new Date().toISOString() }],
@@ -257,6 +298,69 @@ describe("session-store", () => {
 
     const saved = useSessionStore.getState().sourceLibrary[0];
     expect(saved.metadata).toEqual(metadata);
+  });
+
+  it("hydrates valid provenance metadata from the database", async () => {
+    setMockTableResponse("sources", {
+      order: [{
+        id: "source_11",
+        title: "Policy source",
+        content: "c",
+        type: "url",
+        origin: "https://example.com/policy",
+        folder: "Auto-saved",
+        is_active: true,
+        created_at: new Date().toISOString(),
+        metadata: {
+          url: "https://example.com/policy",
+          sourceType: "government",
+          qualityScore: 91,
+          qualityLabel: "strong",
+          query: "policy update",
+          capturedVia: "ask",
+        },
+      }],
+    });
+
+    await useSessionStore.getState().hydrateFromServer();
+
+    expect(useSessionStore.getState().sourceLibrary[0].metadata).toEqual({
+      url: "https://example.com/policy",
+      sourceType: "government",
+      qualityScore: 91,
+      qualityLabel: "strong",
+      query: "policy update",
+      capturedVia: "ask",
+    });
+  });
+
+  it("drops malformed provenance fields while hydrating valid fields", async () => {
+    setMockTableResponse("sources", {
+      order: [{
+        id: "source_12",
+        title: "Mixed source",
+        content: "c",
+        type: "url",
+        origin: "https://example.com/mixed",
+        is_active: true,
+        created_at: new Date().toISOString(),
+        metadata: {
+          url: "https://example.com/mixed",
+          sourceType: 42,
+          qualityScore: "91",
+          qualityLabel: "invalid",
+          query: "valid query",
+          capturedVia: null,
+        },
+      }],
+    });
+
+    await useSessionStore.getState().hydrateFromServer();
+
+    expect(useSessionStore.getState().sourceLibrary[0].metadata).toEqual({
+      url: "https://example.com/mixed",
+      query: "valid query",
+    });
   });
 
   it("persists local collections but excludes pending session state", () => {

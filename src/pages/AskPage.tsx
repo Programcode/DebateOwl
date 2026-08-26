@@ -11,7 +11,7 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import { useToast } from '@/hooks/use-toast';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { ToastAction } from '@/components/ui/toast';
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 
 const MAX_AI_INPUT_LENGTH = 50000;
@@ -38,6 +38,23 @@ export default function AskPage() {
   const subError = useSubscriptionError();
   const { t } = useTranslation();
   const streamAbortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+
+  const abortActiveRequest = useCallback(() => {
+    requestIdRef.current += 1;
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+  }, []);
+
+  const invalidateActiveRequest = () => {
+    abortActiveRequest();
+    setAskStreamingAssistant(null);
+    setAskLoading(false);
+  };
+
+  useEffect(() => () => {
+    abortActiveRequest();
+  }, [abortActiveRequest]);
 
   const handleSend = async (
     message: string,
@@ -48,6 +65,10 @@ export default function AskPage() {
     argumentMapMode: boolean,
     files?: File[]
   ) => {
+    invalidateActiveRequest();
+    const requestId = requestIdRef.current;
+    const isCurrentRequest = () => requestIdRef.current === requestId;
+
     let displayContent = message;
     if (files && files.length > 0) {
       displayContent += `\n\n[Attachments: ${files.map(f => f.name).join(', ')}]`;
@@ -96,6 +117,7 @@ export default function AskPage() {
         });
         return;
       }
+      if (!isCurrentRequest()) return;
 
       addAskMessage({ role: 'user', content: displayContent });
       setAskLoading(true);
@@ -110,17 +132,16 @@ export default function AskPage() {
       let result: AskOutput;
       const askStartTime = Date.now();
 
-      if (isAskStreamingSupported(config, options)) {
+      if (isAskStreamingSupported(config, { ...options, mode })) {
         let receivedStreamText = false;
         let partialResponse = '';
         const streamingMessage = {
-          id: `stream_${Date.now()}`,
+          id: `stream_${requestId}`,
           role: 'assistant' as const,
           content: '',
           timestamp: Date.now(),
           isStreaming: true as const,
         };
-        streamAbortRef.current?.abort();
         const controller = new AbortController();
         streamAbortRef.current = controller;
         setAskStreamingAssistant(streamingMessage);
@@ -130,6 +151,7 @@ export default function AskPage() {
         try {
           result = await streamAskChat(fullMessage, history, mode, config, options, {
             onDelta: (text) => {
+              if (!isCurrentRequest()) return;
               receivedStreamText = true;
               partialResponse += text;
               pendingText += text;
@@ -138,7 +160,7 @@ export default function AskPage() {
                   const batch = pendingText;
                   pendingText = '';
                   flushTimer = null;
-                  if (streamAbortRef.current === controller) {
+                  if (isCurrentRequest() && streamAbortRef.current === controller) {
                     appendAskStreamingDelta(batch);
                   }
                 }, 30);
@@ -147,10 +169,10 @@ export default function AskPage() {
             signal: controller.signal,
           });
         } catch (streamError) {
-          const ownsStream = streamAbortRef.current === controller;
+          const ownsStream = isCurrentRequest() && streamAbortRef.current === controller;
           if (ownsStream) setAskStreamingAssistant(null);
           const aborted = streamError instanceof DOMException && streamError.name === 'AbortError';
-          if (aborted) {
+          if (aborted || !isCurrentRequest()) {
             // A newer request replaced this one. Drop the partial silently.
             return;
           }
@@ -169,7 +191,7 @@ export default function AskPage() {
             result = await askChat(fullMessage, history, mode, config, options);
           }
         } finally {
-          const ownsStream = streamAbortRef.current === controller;
+          const ownsStream = isCurrentRequest() && streamAbortRef.current === controller;
           if (flushTimer) {
             clearTimeout(flushTimer);
             flushTimer = null;
@@ -186,6 +208,7 @@ export default function AskPage() {
         result = await askChat(fullMessage, history, mode, config, options);
       }
 
+      if (!isCurrentRequest()) return;
       addAskMessage({
         role: 'assistant',
         content: result.response,
@@ -198,7 +221,8 @@ export default function AskPage() {
         }
       });
     } catch (error) {
-      if (!streamAbortRef.current) setAskStreamingAssistant(null);
+      if (!isCurrentRequest()) return;
+      setAskStreamingAssistant(null);
       console.error(error);
 
       if (subError.handleSubscriptionError(error)) {
@@ -225,11 +249,21 @@ export default function AskPage() {
         });
       }
     } finally {
-      if (!streamAbortRef.current) {
+      if (isCurrentRequest()) {
         setAskStreamingAssistant(null);
         setAskLoading(false);
       }
     }
+  };
+
+  const handleClear = () => {
+    invalidateActiveRequest();
+    clearAskMessages();
+  };
+
+  const handleLoadChat = (id: string) => {
+    invalidateActiveRequest();
+    loadSavedChat(id);
   };
 
   const handleSaveChat = async () => {
@@ -284,7 +318,7 @@ export default function AskPage() {
             messages={visibleMessages}
             isLoading={askLoading}
             onSend={handleSend}
-            onClear={clearAskMessages}
+            onClear={handleClear}
             onSaveChat={handleSaveChat}
             savedChats={savedChats.map((chat) => ({
               id: chat.id,
@@ -292,7 +326,7 @@ export default function AskPage() {
               createdAt: chat.createdAt,
               messageCount: chat.data.length,
             }))}
-            onLoadChat={loadSavedChat}
+            onLoadChat={handleLoadChat}
             onSaveSource={handleSaveToLibrary}
           />
         </AnimatedSection>

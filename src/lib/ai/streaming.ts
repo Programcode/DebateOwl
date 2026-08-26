@@ -4,6 +4,7 @@ import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
 export interface AskStreamOptions {
+  mode?: string;
   citationMode?: boolean;
   webSearch?: boolean;
   prosConsMode?: boolean;
@@ -24,6 +25,7 @@ export type ParsedSSEEvent = {
 export function isAskStreamingSupported(config: ProviderConfig, options: AskStreamOptions = {}) {
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
   const advancedStructuredMode = Boolean(
+    options.mode === 'clarify' ||
     options.citationMode ||
     options.webSearch ||
     options.prosConsMode ||

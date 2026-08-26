@@ -132,7 +132,7 @@ interface SessionState {
   saveFlowchart: (title: string, data: FlowchartData) => Promise<void>;
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
-  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'>) => Promise<void>;
+  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean }) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
   renameSourceFolder: (oldName: string, newName: string) => Promise<void>;
@@ -293,6 +293,7 @@ interface SupabaseSourceRow {
   origin: string | null;
   folder?: string | null;
   is_active: boolean;
+  metadata?: unknown | null;
   created_at: string;
 }
 
@@ -300,6 +301,28 @@ interface SupabaseSourceFolderRow {
   id: string;
   name: string;
   created_at: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseSourceProvenance(value: unknown): SourceProvenance | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const provenance: SourceProvenance = {};
+  if (typeof value.url === 'string') provenance.url = value.url;
+  if (typeof value.sourceType === 'string') provenance.sourceType = value.sourceType;
+  if (typeof value.qualityScore === 'number' && Number.isFinite(value.qualityScore)) {
+    provenance.qualityScore = value.qualityScore;
+  }
+  if (value.qualityLabel === 'strong' || value.qualityLabel === 'moderate' || value.qualityLabel === 'weak') {
+    provenance.qualityLabel = value.qualityLabel;
+  }
+  if (typeof value.query === 'string') provenance.query = value.query;
+  if (typeof value.capturedVia === 'string') provenance.capturedVia = value.capturedVia;
+
+  return Object.keys(provenance).length > 0 ? provenance : undefined;
 }
 
 export const useSessionStore = create<SessionState>()(
@@ -345,7 +368,8 @@ export const useSessionStore = create<SessionState>()(
 
       addSource: async (source) => {
         const folder = normalizeFolder(source.folder);
-        const localItem: Source = { ...source, folder, id: generateId(), createdAt: Date.now(), isActive: true };
+        const isActive = source.isActive ?? true;
+        const localItem: Source = { ...source, folder, id: generateId(), createdAt: Date.now(), isActive };
         const userId = await getUserId();
         if (!userId) {
           set((state) => ({
@@ -368,7 +392,7 @@ export const useSessionStore = create<SessionState>()(
             type: source.type,
             origin: source.origin || null,
             folder,
-            is_active: true,
+            is_active: isActive,
             metadata: source.metadata ?? null,
           })
           .select('*')
@@ -383,7 +407,7 @@ export const useSessionStore = create<SessionState>()(
           type: data.type,
           origin: data.origin || undefined,
           folder: normalizeFolder(data.folder || localItem.folder),
-          metadata: (data.metadata as SourceProvenance | null) ?? undefined,
+          metadata: parseSourceProvenance(data.metadata),
           isActive: data.is_active,
           createdAt: toTimestamp(data.created_at),
         };
@@ -909,6 +933,7 @@ export const useSessionStore = create<SessionState>()(
           type: row.type,
           origin: row.origin || undefined,
           folder: normalizeFolder(row.folder),
+          metadata: parseSourceProvenance(row.metadata),
           isActive: row.is_active,
           createdAt: toTimestamp(row.created_at),
         }));
