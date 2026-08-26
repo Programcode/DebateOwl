@@ -65,6 +65,7 @@ async function consumeDailyImportQuota(userId: string): Promise<{ allowed: boole
   const { data, error } = await supabase.rpc("consume_daily_quota", {
     p_user_id: userId,
     p_limit: DAILY_IMPORT_LIMIT,
+    p_quota_key: "import_source",
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
