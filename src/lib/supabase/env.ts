@@ -15,7 +15,7 @@ const ENVS: Record<SupabaseEnv, { url: string; anonKey: string }> = {
   },
   staging: {
     url: 'https://brifeyypjauyusmkptkx.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXAiLCJyZWYiOiJicmlmZXl5cGphdXl1c21rcHRreCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzc5MjUyOTYxLCJleHAiOjIwOTQ4Mjg5NjF9.xKYcvponjw5b_ouPhJDnSBBB1CUSw1Jpz35zGiMmH6A',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyaWZleXlwamF1eXVzbWtwdGt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNTI5NjEsImV4cCI6MjA5NDgyODk2MX0.xKYcvponjw5b_ouPhJDnSBBB1CUSw1Jpz35zGiMmH6A',
   },
 };
 
