@@ -9,6 +9,7 @@ const AUTH_ROUTES = [
   { path: '/app/brainstorm', name: 'brainstorm' },
   { path: '/app/factoids', name: 'factoids' },
   { path: '/app/ask', name: 'ask' },
+  { path: '/app/sparring', name: 'sparring' },
   { path: '/app/library', name: 'library' },
   { path: '/app/history', name: 'history' },
   { path: '/app/timer', name: 'timer' },
