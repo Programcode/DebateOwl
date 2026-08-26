@@ -42,6 +42,11 @@ export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
 
+  const navLabel = (key: string) => key === 'sparring' ? t('nav.sparring', 'Sparring') : t(`nav.${key}`);
+  const navDescription = (key: string) => key === 'sparring'
+    ? t('navDesc.sparring', 'Practice live clash')
+    : t(`navDesc.${key}`);
+
   return (
     <div className="native-safe-screen flex flex-col bg-background">
       {/* Header */}
@@ -71,7 +76,7 @@ export function AppLayout() {
                 activeClassName="bg-primary/10 text-primary nav-active-pill"
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                <span className="hidden xl:inline">{t(`nav.${item.key}`)}</span>
+                <span className="hidden xl:inline">{navLabel(item.key)}</span>
               </NavLink>
             ))}
           </nav>
@@ -115,8 +120,8 @@ export function AppLayout() {
                 >
                   <item.icon className="h-5 w-5" />
                   <div>
-                    <div className="font-medium">{t(`nav.${item.key}`)}</div>
-                    <div className="text-xs opacity-70">{t(`navDesc.${item.key}`)}</div>
+                    <div className="font-medium">{navLabel(item.key)}</div>
+                    <div className="text-xs opacity-70">{navDescription(item.key)}</div>
                   </div>
                 </NavLink>
               ))}
