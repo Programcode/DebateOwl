@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, '../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20260819000000_security_hardening.sql');
 const advisorMigration = read('supabase/migrations/20260820090000_advisor_security_cleanup.sql');
+const outputLanguageMigration = read('supabase/migrations/20260827000000_user_settings_output_language_privilege.sql');
 const ai = read('supabase/functions/ai/index.ts');
 const stream = read('supabase/functions/ai-stream/index.ts');
 const importer = read('supabase/functions/import-source/index.ts');
@@ -17,9 +18,14 @@ describe('security hardening regressions', () => {
   it('makes entitlements and usage ledger service-controlled and fails closed for missing state', () => {
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.user_settings');
     expect(migration).toContain('GRANT UPDATE (language, theme, feature_configs, custom_system_prompt, updated_at)');
+    expect(outputLanguageMigration).toContain('GRANT UPDATE (output_language) ON public.user_settings TO authenticated');
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.ai_requests');
     expect(ai).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
     expect(stream).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
+
+    const settingsStore = read('src/lib/stores/settings-store.ts');
+    expect(settingsStore).toContain(".from('user_settings')\n    .update(");
+    expect(settingsStore).not.toContain(".from('user_settings').upsert");
   });
 
   it('uses one server-only atomic quota reservation from every billable entrypoint', () => {
@@ -28,12 +34,14 @@ describe('security hardening regressions', () => {
     for (const source of [ai, stream, importer]) expect(source).toContain('consume_daily_quota');
     expect(ai).toContain('Unable to verify your quota');
     expect(stream).toContain('Unable to verify your quota');
+    expect(importer).toContain('Unable to verify your quota');
     expect(ai).not.toContain('return { allowed: true }; // Fail open');
     expect(stream).not.toContain('return { allowed: true };\n  } catch');
   });
 
   it('uses code-scoped sharing and disallows anonymous share creation', () => {
     expect(migration).toContain('DROP POLICY IF EXISTS "shared_items_select_public"');
+    expect(migration).toContain('REVOKE ALL ON public.shared_items FROM anon, authenticated');
     expect(migration).toContain('FUNCTION public.get_shared_item(p_share_code text)');
     expect(share).toContain('if (!userId)');
     expect(share).toContain('crypto.getRandomValues');
@@ -56,17 +64,22 @@ describe('security hardening regressions', () => {
     expect(promo).toContain('userClient.rpc("redeem_promo_code_atomic", { p_code: code })');
   });
 
-  it('resolves DNS and bounds importer bodies before processing', () => {
-    expect(importer).toContain('validateResolvedPublicHost(currentUrl)');
-    expect(importer).toContain('readBoundedText(response)');
-    expect(read('supabase/functions/import-source/resource-limits.ts')).toContain('MAX_RESPONSE_BYTES');
+  it('keeps source import behind fixed egress and bounds provider responses', () => {
+    expect(importer).toContain('const EXA_CONTENTS_URL = "https://api.exa.ai/contents"');
+    const fetchTargets = [...importer.matchAll(/\bfetch\(([^,\n]+)/g)].map((match) => match[1].trim());
+    expect(fetchTargets).toEqual(['EXA_CONTENTS_URL']);
+    expect(importer).toContain('readBoundedText(response, EXA_RESPONSE_BYTES, FETCH_TIMEOUT_MS)');
+    const limits = read('supabase/functions/import-source/resource-limits.ts');
+    expect(limits).toContain('MAX_RESPONSE_BYTES');
+    expect(limits).toContain('MAX_RESPONSE_READ_MS');
   });
 
-  it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
+  it('uses allowlisted model/provider pairs and does not fetch model citation URLs', () => {
     expect(ai).toContain('function providerForModel');
     expect(ai).toContain('Unsupported model or provider combination');
-    // SSRF-safe verification now lives in the shared research module.
-    expect(read('supabase/functions/_shared/research.ts')).toContain('Do not fetch model-provided citation URLs');
+    const research = read('supabase/functions/_shared/research.ts');
+    expect(research).toContain('Do not fetch model-provided citation URLs');
+    expect(research).toContain('return false;');
     expect(ai).not.toContain('fetchWithTimeout(currentUrl.toString(), { method: "HEAD"');
   });
 
