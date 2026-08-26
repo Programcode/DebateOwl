@@ -125,7 +125,7 @@ async function extractViaExa(requestedUrl: URL) {
       },
       body: JSON.stringify({
         urls: [requestedUrl.toString()],
-        text: { max_characters: MAX_CONTENT_CHARS },
+        text: { maxCharacters: MAX_CONTENT_CHARS },
       }),
       signal: controller.signal,
     });
@@ -157,8 +157,6 @@ async function extractViaExa(requestedUrl: URL) {
       try {
         finalUrl = validatePublicHttpUrl(returnedUrl);
       } catch {
-        // A provider-returned redirect URL is metadata only. If it does not
-        // satisfy our public URL policy, retain the already-validated request URL.
         finalUrl = requestedUrl;
       }
     }
@@ -178,24 +176,15 @@ async function extractViaExa(requestedUrl: URL) {
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
 
   const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
-  }
+  if (!authHeader?.startsWith("Bearer ")) return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
 
   const token = authHeader.slice(7);
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return jsonResponse({ error: "Invalid token" }, 401, corsHeaders);
-  }
+  if (authError || !user) return jsonResponse({ error: "Invalid token" }, 401, corsHeaders);
 
   if (await isUserBanned(user.id)) {
     return jsonResponse({ error: "Your account has been suspended. Please contact support.", code: "banned" }, 403, corsHeaders);
