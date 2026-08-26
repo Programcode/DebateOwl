@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
-import { factoids, askChat } from '@/lib/ai/client';
+import { factoids, askChat, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
@@ -22,11 +23,14 @@ export default function FactoidsPage() {
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
+  const [consultedSources, setConsultedSources] = useState<DiscoveredSource[]>([]);
 
   const handleSubmit = async (data: FactoidsInput) => {
     setFactoidsLoading(true);
+    setConsultedSources([]);
     try {
-      const result = await factoids(data, config);
+      const { result, discoveredSources } = await factoids(data, config);
+      setConsultedSources(discoveredSources);
       setFactoidsResult(result);
       toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
     } catch (error) {
@@ -115,12 +119,10 @@ export default function FactoidsPage() {
         </AnimatedSection>
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
-          {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
             <FactoidsForm onSubmit={handleSubmit} isLoading={factoidsLoading} />
           </AnimatedSection>
 
-          {/* Results */}
           <AnimatedSection delay={150}>
             {factoidsLoading ? (
               <div key="factoids-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
@@ -130,6 +132,7 @@ export default function FactoidsPage() {
               <div key="factoids-results" className="motion-swap">
                 <FactoidsResults
                   result={factoidsResult}
+                  consultedSources={consultedSources}
                   onDiscuss={handleDiscuss}
                   onSaveSource={handleSaveToLibrary}
                   onUseSuggestion={handleUseSuggestion}
