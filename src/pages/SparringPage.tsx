@@ -23,7 +23,9 @@ import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { useToast } from '@/hooks/use-toast';
 
 function transcriptText(turns: SparringTurn[]) {
-  return turns.map((turn, index) => `${index + 1}. ${turn.role === 'user' ? 'You' : 'AI opponent'} (${turn.phase}): ${turn.content}`).join('\n\n');
+  return turns
+    .map((turn, index) => `${index + 1}. ${turn.role === 'user' ? 'You' : 'AI opponent'} (${turn.phase}): ${turn.content}`)
+    .join('\n\n');
 }
 
 function userAdvocacyText(turns: SparringTurn[]) {
@@ -39,12 +41,14 @@ export default function SparringPage() {
   const subError = useSubscriptionError();
   const config = useSettingsStore((state) => state.getFeatureConfig('sparring'));
   const askConfig = useSettingsStore((state) => state.getFeatureConfig('ask'));
+
   const sessions = useSparringStore((state) => state.sessions);
   const activeSessionId = useSparringStore((state) => state.activeSessionId);
   const startSession = useSparringStore((state) => state.startSession);
   const addTurn = useSparringStore((state) => state.addTurn);
   const completeSession = useSparringStore((state) => state.completeSession);
   const setActiveSession = useSparringStore((state) => state.setActiveSession);
+
   const activeSourceCount = useSessionStore((state) => state.sourceLibrary.filter((source) => source.isActive).length);
   const {
     addAskMessage,
@@ -54,6 +58,7 @@ export default function SparringPage() {
     setBrainstormForm,
     setFactoidsForm,
   } = useSessionStore();
+
   const [isThinking, setIsThinking] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
   const [pressurePoints, setPressurePoints] = useState<string[]>([]);
@@ -84,6 +89,7 @@ export default function SparringPage() {
 
   const handleSubmitSpeech = async (content: string, phase: SparringTurnPhase) => {
     if (!session || isThinking) return;
+
     addTurn(session.id, { role: 'user', phase, content });
     captureProductEvent(phase === 'opening' ? 'sparring_opening_submitted' : 'sparring_turn_completed', {
       phase,
@@ -116,9 +122,11 @@ export default function SparringPage() {
     if (!session || isThinking) return;
     const current = getSparringSession(session.id);
     if (!current) return;
+
     const userTurns = current.turns.filter((turn) => turn.role === 'user');
     const aiTurns = current.turns.filter((turn) => turn.role === 'ai');
     if (userTurns.length !== aiTurns.length + 1) return;
+
     const latestUserTurn = [...current.turns].reverse().find((turn) => turn.role === 'user');
     if (!latestUserTurn) return;
 
@@ -143,7 +151,11 @@ export default function SparringPage() {
   const handleFinish = async () => {
     if (!session || isScoring) return;
     const current = getSparringSession(session.id);
-    if (!current || current.turns.filter((turn) => turn.role === 'user').length < 2 || current.turns.filter((turn) => turn.role === 'ai').length < 2) return;
+    if (!current) return;
+
+    const userTurns = current.turns.filter((turn) => turn.role === 'user').length;
+    const aiTurns = current.turns.filter((turn) => turn.role === 'ai').length;
+    if (userTurns < 2 || aiTurns < 2) return;
 
     setIsScoring(true);
     try {
@@ -175,14 +187,18 @@ export default function SparringPage() {
 
   const handleDiscuss = async () => {
     if (!session?.scorecard) return;
+
     const prompt = `I just finished a DebateLab sparring round and want to improve it.\n\nMotion: ${session.setup.motion}\nMy side: ${session.setup.side}\nVerdict: ${session.scorecard.verdict}\nBiggest improvement: ${session.scorecard.biggestImprovement}\nNext drill: ${session.scorecard.nextDrill}\n\nTranscript:\n${transcriptText(session.turns)}\n\nHelp me turn this feedback into a concrete improvement plan. Focus on the actual transcript.`;
 
+    // Persist the visible handoff once, then pass only the pre-existing chat as
+    // history. askChat appends `prompt` as the current user message itself.
     addAskMessage({ role: 'user', content: prompt });
     navigate('/app/ask');
     captureProductEvent('sparring_feedback_action_used', { action: 'discuss_in_ask' });
     setAskLoading(true);
+
     try {
-      const history = [...askMessages, { role: 'user' as const, content: prompt }].map((message) => ({
+      const history = askMessages.map((message) => ({
         role: message.role as 'user' | 'assistant',
         content: message.content,
       }));
@@ -226,6 +242,7 @@ export default function SparringPage() {
     if (!session) return;
     const opening = session.turns.find((turn) => turn.role === 'user' && turn.phase === 'opening');
     if (!opening) return;
+
     setFactoidsForm({
       claim: opening.content,
       direction: 'for',
@@ -329,7 +346,10 @@ export default function SparringPage() {
               <AnimatedSection delay={100} className="mt-8">
                 <Card className="border-border/70 bg-card/60">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base"><History className="h-4 w-4 text-primary" />Recent sparring rounds</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <History className="h-4 w-4 text-primary" />
+                      Recent sparring rounds
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {recentCompleted.map((item) => (
@@ -343,10 +363,14 @@ export default function SparringPage() {
                           <div className="truncate text-sm font-medium">{item.setup.motion}</div>
                           <div className="mt-1 text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</div>
                         </div>
-                        <Badge variant="outline" className="shrink-0 capitalize">{item.scorecard?.verdict.replace('-', ' ')}</Badge>
+                        <Badge variant="outline" className="shrink-0 capitalize">
+                          {item.scorecard?.verdict.replace('-', ' ')}
+                        </Badge>
                       </button>
                     ))}
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/app/history')}>Open full history</Button>
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/app/history')}>
+                      Open full history
+                    </Button>
                   </CardContent>
                 </Card>
               </AnimatedSection>
@@ -361,12 +385,18 @@ export default function SparringPage() {
         variant={subError.limitModalVariant}
         limit={subError.limitModalLimit}
         current={subError.limitModalCurrent}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
+        onUpgrade={() => {
+          subError.setLimitModalOpen(false);
+          subError.setPricingModalOpen(true);
+        }}
       />
       <ModelRestrictedModal
         open={subError.modelModalOpen}
         onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => { subError.setModelModalOpen(false); subError.setPricingModalOpen(true); }}
+        onUpgrade={() => {
+          subError.setModelModalOpen(false);
+          subError.setPricingModalOpen(true);
+        }}
       />
       <PricingModal open={subError.pricingModalOpen} onOpenChange={subError.setPricingModalOpen} />
     </div>
