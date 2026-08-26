@@ -1,4 +1,4 @@
-import { buildSearchQueries, rankSearchResults } from "../_shared/source-quality.ts";
+import { buildSearchQueries, buildSearchRequests, GOVERNMENT_SEARCH_DOMAINS, rankSearchResults } from "../_shared/source-quality.ts";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -44,7 +44,7 @@ Deno.test("source ranking respects requested government source type", () => {
       title: "Energy cost data",
       url: "https://www.energy.gov/eere/solar/solar-energy-cost-data",
       content: "Official government data about solar energy costs and electricity generation",
-      query: "solar cheaper than coal site:gov",
+      query: "solar cheaper than coal official government data",
     },
   ], "solar cheaper than coal United States", "government");
 
@@ -67,4 +67,20 @@ Deno.test("search query builder adds legal primary-source queries", () => {
   const queries = buildSearchQueries("new court ruling on social media regulation", "European Union");
   assert(queries.some((query) => /official law court/i.test(query)), `Expected official legal source query, got ${queries.join("; ")}`);
   assert(queries.some((query) => /primary source/i.test(query)), `Expected primary source query, got ${queries.join("; ")}`);
+});
+
+Deno.test("government preference uses Exa includeDomains instead of site query syntax", () => {
+  const requests = buildSearchRequests("solar energy costs", "United States", "government", "2025 2026");
+  const filtered = requests.find((request) => request.includeDomains?.length);
+  assert(Boolean(filtered), `Expected a domain-filtered government request, got ${JSON.stringify(requests)}`);
+  assert(filtered!.includeDomains!.includes("energy.gov"), "Expected energy.gov in government domain set");
+  assert(filtered!.includeDomains === GOVERNMENT_SEARCH_DOMAINS, "Expected canonical government domain list");
+  assert(requests.every((request) => !/\bsite:/i.test(request.query)), "site: operator must not leak into Exa query text");
+});
+
+Deno.test("academic and news preferences use Exa category fields", () => {
+  const academic = buildSearchRequests("carbon pricing effectiveness", "", "academic");
+  const news = buildSearchRequests("current carbon pricing policy", "", "news");
+  assert(academic.some((request) => request.category === "research paper"), "Expected research paper category");
+  assert(news.some((request) => request.category === "news"), "Expected news category");
 });
