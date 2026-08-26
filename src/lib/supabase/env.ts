@@ -1,7 +1,7 @@
 /**
  * Runtime environment resolver for Supabase.
- * Reads localStorage to determine whether to use prod or staging credentials.
- * Only admin users should toggle this via the Settings → Developer panel.
+ * Reads localStorage first, then an optional Vite build/dev override.
+ * Only admin users should toggle the persisted environment via Settings → Developer.
  */
 
 export type SupabaseEnv = 'production' | 'staging';
@@ -15,16 +15,21 @@ const ENVS: Record<SupabaseEnv, { url: string; anonKey: string }> = {
   },
   staging: {
     url: 'https://brifeyypjauyusmkptkx.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyaWZleXlwamF1eXVzbWtwdGt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNTI5NjEsImV4cCI6MjA5NDgyODk2MX0.xKYcvponjw5b_ouPhJDnSBBB1CUSw1Jpz35zGiMmH6A',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXAiLCJyZWYiOiJicmlmZXl5cGphdXl1c21rcHRreCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzc5MjUyOTYxLCJleHAiOjIwOTQ4Mjg5NjF9.xKYcvponjw5b_ouPhJDnSBBB1CUSw1Jpz35zGiMmH6A',
   },
 };
+
+function forcedEnv(): SupabaseEnv | null {
+  const value = import.meta.env.VITE_FORCE_SUPABASE_ENV;
+  return value === 'staging' || value === 'production' ? value : null;
+}
 
 export function getActiveEnv(): SupabaseEnv {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'staging') return 'staging';
   } catch { /* SSR or restricted storage */ }
-  return 'production';
+  return forcedEnv() ?? 'production';
 }
 
 export function setActiveEnv(env: SupabaseEnv): void {
