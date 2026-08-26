@@ -65,6 +65,8 @@ export const SparringSessionSchema = z.object({
 
 export type SparringSide = z.infer<typeof SparringSideSchema>;
 export type SparringDifficulty = z.infer<typeof SparringDifficultySchema>;
+export type SparringTurnRole = z.infer<typeof SparringTurnRoleSchema>;
+export type SparringTurnPhase = z.infer<typeof SparringTurnPhaseSchema>;
 export type SparringTurn = z.infer<typeof SparringTurnSchema>;
 export type SparringSetup = z.infer<typeof SparringSetupSchema>;
 export type SparringOpponentOutput = z.infer<typeof SparringOpponentOutputSchema>;
