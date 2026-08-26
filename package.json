@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "verify": "npm run lint && npm run typecheck && npm test -- --coverage && npm run build"
+    "verify:core": "npm run lint && npm run typecheck && npm test -- --coverage && npm run build",
+    "verify": "npm run verify:core && npm run test:e2e"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
