@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BookOpenCheck, Shield, Sparkles, Swords, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,9 +48,9 @@ export function SparringSetup({ onStart, isStarting = false, defaultMotion = '' 
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('competitive');
   const activeSourceCount = useSessionStore((state) => state.sourceLibrary.filter((source) => source.isActive).length);
 
-  // The existing authenticated Ask transport always sends active library
-  // sources. Keep the setup honest instead of exposing a switch we cannot
-  // enforce without changing the deployed backend.
+  // Sparring uses the same active-source selection as the rest of DebateLab.
+  // This is intentionally not a per-round toggle: the shared AI client always
+  // includes active sources, so exposing an OFF switch here would be dishonest.
   const validation = useMemo(
     () => SparringSetupSchema.safeParse({ motion, side, difficulty, useActiveSources: true }),
     [motion, side, difficulty],
@@ -70,7 +71,7 @@ export function SparringSetup({ onStart, isStarting = false, defaultMotion = '' 
             </div>
             <div>
               <CardTitle>Set up a round</CardTitle>
-              <CardDescription>Start small: two speeches from you, two from the AI, then an evidence-backed scorecard.</CardDescription>
+              <CardDescription>Two speeches from you, two from the AI, then a transcript-grounded scorecard.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -147,15 +148,20 @@ export function SparringSetup({ onStart, isStarting = false, defaultMotion = '' 
 
         <Card className="border-border/70 bg-card/70">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 font-medium">
-              <BookOpenCheck className="h-4 w-4 text-primary" />
-              Active Source Library grounding
+            <div className="flex items-start gap-3">
+              <BookOpenCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div>
+                <div className="font-medium">Active Source Library grounding</div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {activeSourceCount > 0
+                    ? `${activeSourceCount} active ${activeSourceCount === 1 ? 'source is' : 'sources are'} available to the opponent as factual grounding.`
+                    : 'No active sources are selected, so the opponent is instructed not to manufacture evidence.'}
+                </p>
+                <Button asChild variant="link" size="sm" className="mt-1 h-auto px-0 text-xs">
+                  <Link to="/app/library">Manage active sources</Link>
+                </Button>
+              </div>
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {activeSourceCount > 0
-                ? `${activeSourceCount} active ${activeSourceCount === 1 ? 'source will' : 'sources will'} be sent as grounding context through the existing AI transport.`
-                : 'No active sources are selected. The opponent is instructed to challenge unsupported claims instead of inventing evidence.'}
-            </p>
           </CardContent>
         </Card>
 
