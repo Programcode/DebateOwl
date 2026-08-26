@@ -9,7 +9,7 @@ import { factoids, askChat, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
-import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
+import type { FactoidsInput, FactoidsOutput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
@@ -29,7 +29,14 @@ export default function FactoidsPage() {
     setFactoidsLoading(true);
     setConsultedSources([]);
     try {
-      const { result, discoveredSources } = await factoids(data, config);
+      const outcome = await factoids(data, config);
+      // Runtime compatibility for older saved/test callers that mocked the old
+      // direct FactoidsOutput return shape before provenance was exposed.
+      const hasEnvelope = outcome && typeof outcome === 'object' && 'result' in outcome;
+      const result = (hasEnvelope ? outcome.result : outcome) as FactoidsOutput;
+      const discoveredSources = hasEnvelope && Array.isArray(outcome.discoveredSources)
+        ? outcome.discoveredSources
+        : [];
       setConsultedSources(discoveredSources);
       setFactoidsResult(result);
       toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
