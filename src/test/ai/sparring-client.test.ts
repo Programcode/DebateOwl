@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { settingsState } = vi.hoisted(() => ({
+  settingsState: { outputLanguage: 'en' as 'en' | 'es' | 'hu' },
+}));
+
 vi.mock('@/lib/ai/client', () => ({
   AIResponseError: class AIResponseError extends Error {
     details?: Record<string, unknown>;
@@ -10,6 +14,12 @@ vi.mock('@/lib/ai/client', () => ({
     }
   },
   askChat: vi.fn(),
+}));
+
+vi.mock('@/lib/stores/settings-store', () => ({
+  useSettingsStore: {
+    getState: () => settingsState,
+  },
 }));
 
 import { askChat } from '@/lib/ai/client';
@@ -65,7 +75,10 @@ const scorecard = {
 };
 
 describe('sparring-client', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    settingsState.outputLanguage = 'en';
+  });
 
   it('parses a structured opponent response from Ask', async () => {
     vi.mocked(askChat).mockResolvedValueOnce(askOutput(JSON.stringify({
@@ -77,6 +90,19 @@ describe('sparring-client', () => {
     expect(result.speech).toContain('narrower privacy rule');
     expect(result.pressurePoints).toHaveLength(1);
     expect(vi.mocked(askChat).mock.calls[0][0]).toContain('Respond to the user\'s actual arguments');
+  });
+
+  it('propagates the configured output language into opponent and scorecard prompts', async () => {
+    settingsState.outputLanguage = 'es';
+    vi.mocked(askChat)
+      .mockResolvedValueOnce(askOutput(JSON.stringify({ speech: 'Respuesta del oponente.', pressurePoints: [] })) as never)
+      .mockResolvedValueOnce(askOutput(JSON.stringify(scorecard)) as never);
+
+    await requestSparringOpponent(session, session.turns[2].content, config);
+    await requestSparringScorecard(session, config);
+
+    expect(vi.mocked(askChat).mock.calls[0][0]).toContain('Response language: Spanish (es)');
+    expect(vi.mocked(askChat).mock.calls[1][0]).toContain('Response language: Spanish (es)');
   });
 
   it('keeps useful plain-text opponent output instead of discarding it', async () => {
