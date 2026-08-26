@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, MessageCircle, RefreshCcw, Target, Trophy } from 'lucide-react';
+import { ArrowRight, CheckCircle2, FileDown, FileText, MessageCircle, RefreshCcw, Target, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,8 @@ interface SparringScorecardProps {
   onRematch: () => void;
   onDiscuss: () => void;
   onNewRound: () => void;
+  onExportDocx: () => void;
+  onExportPdf: () => void;
 }
 
 const categoryLabels: Record<SparringScorecardType['categories'][number]['category'], string> = {
@@ -30,7 +32,7 @@ function ratingClass(rating: SparringScorecardType['categories'][number]['rating
   return 'border-primary/25 bg-primary/10 text-primary';
 }
 
-export function SparringScorecard({ session, scorecard, onRematch, onDiscuss, onNewRound }: SparringScorecardProps) {
+export function SparringScorecard({ session, scorecard, onRematch, onDiscuss, onNewRound, onExportDocx, onExportPdf }: SparringScorecardProps) {
   const verdictLabel = scorecard.verdict === 'user-edge'
     ? 'Your side had the edge'
     : scorecard.verdict === 'ai-edge'
@@ -126,6 +128,14 @@ export function SparringScorecard({ session, scorecard, onRematch, onDiscuss, on
         <Button variant="outline" onClick={onDiscuss}>
           <MessageCircle className="mr-2 h-4 w-4" />
           Discuss with Ask
+        </Button>
+        <Button variant="outline" onClick={onExportDocx}>
+          <FileText className="mr-2 h-4 w-4" />
+          Export Word
+        </Button>
+        <Button variant="outline" onClick={onExportPdf}>
+          <FileDown className="mr-2 h-4 w-4" />
+          Export PDF
         </Button>
         <Button variant="ghost" onClick={onNewRound}>
           New motion
