@@ -26,6 +26,13 @@ function transcriptText(turns: SparringTurn[]) {
   return turns.map((turn, index) => `${index + 1}. ${turn.role === 'user' ? 'You' : 'AI opponent'} (${turn.phase}): ${turn.content}`).join('\n\n');
 }
 
+function userAdvocacyText(turns: SparringTurn[]) {
+  return turns
+    .filter((turn) => turn.role === 'user')
+    .map((turn) => `${turn.phase.toUpperCase()}:\n${turn.content}`)
+    .join('\n\n');
+}
+
 export default function SparringPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -38,7 +45,15 @@ export default function SparringPage() {
   const addTurn = useSparringStore((state) => state.addTurn);
   const completeSession = useSparringStore((state) => state.completeSession);
   const setActiveSession = useSparringStore((state) => state.setActiveSession);
-  const { addAskMessage, setAskLoading, askMessages } = useSessionStore();
+  const activeSourceCount = useSessionStore((state) => state.sourceLibrary.filter((source) => source.isActive).length);
+  const {
+    addAskMessage,
+    setAskLoading,
+    askMessages,
+    setAttackForm,
+    setBrainstormForm,
+    setFactoidsForm,
+  } = useSessionStore();
   const [isThinking, setIsThinking] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
   const [pressurePoints, setPressurePoints] = useState<string[]>([]);
@@ -62,7 +77,7 @@ export default function SparringPage() {
     captureProductEvent('sparring_started', {
       difficulty: setup.difficulty,
       side: setup.side,
-      active_sources: setup.useActiveSources,
+      active_sources: activeSourceCount,
     });
     setActiveSession(created.id);
   };
@@ -97,19 +112,48 @@ export default function SparringPage() {
     }
   };
 
+  const handleRetryOpponent = async () => {
+    if (!session || isThinking) return;
+    const current = getSparringSession(session.id);
+    if (!current) return;
+    const userTurns = current.turns.filter((turn) => turn.role === 'user');
+    const aiTurns = current.turns.filter((turn) => turn.role === 'ai');
+    if (userTurns.length !== aiTurns.length + 1) return;
+    const latestUserTurn = [...current.turns].reverse().find((turn) => turn.role === 'user');
+    if (!latestUserTurn) return;
+
+    setIsThinking(true);
+    try {
+      const opponent = await requestSparringOpponent(current, latestUserTurn.content, config);
+      addTurn(current.id, { role: 'ai', phase: latestUserTurn.phase, content: opponent.speech });
+      setPressurePoints(opponent.pressurePoints);
+      captureProductEvent('sparring_turn_completed', {
+        phase: latestUserTurn.phase,
+        speaker: 'ai',
+        retry: true,
+        pressure_points: opponent.pressurePoints.length,
+      });
+    } catch (error) {
+      handleAIError(error, 'Opponent retry failed');
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
   const handleFinish = async () => {
     if (!session || isScoring) return;
     const current = getSparringSession(session.id);
     if (!current || current.turns.filter((turn) => turn.role === 'user').length < 2 || current.turns.filter((turn) => turn.role === 'ai').length < 2) return;
 
     setIsScoring(true);
-    captureProductEvent('sparring_completed', {
-      difficulty: current.setup.difficulty,
-      turns: current.turns.length,
-    });
     try {
       const scorecard = await requestSparringScorecard(current, config);
       completeSession(current.id, scorecard);
+      captureProductEvent('sparring_completed', {
+        difficulty: current.setup.difficulty,
+        turns: current.turns.length,
+        verdict: scorecard.verdict,
+      });
       captureProductEvent('sparring_scorecard_viewed', {
         verdict: scorecard.verdict,
         difficulty: current.setup.difficulty,
@@ -151,6 +195,47 @@ export default function SparringPage() {
     } finally {
       setAskLoading(false);
     }
+  };
+
+  const handleAttackRound = () => {
+    if (!session) return;
+    setAttackForm({
+      caseText: `Motion: ${session.setup.motion}\nSide: ${session.setup.side}\n\n${userAdvocacyText(session.turns)}`,
+      aggressiveness: 'ruthless',
+      judgeParadigm: 'logic',
+      detectFallacies: true,
+      analyzeWeighing: true,
+    });
+    captureProductEvent('sparring_feedback_action_used', { action: 'attack_round' });
+    navigate('/app/attack');
+  };
+
+  const handleBrainstormMissed = () => {
+    if (!session) return;
+    setBrainstormForm({
+      motion: session.setup.motion,
+      side: session.setup.side,
+      outputMode: 'topfive',
+      context: `Use this completed practice round to find better arguments, extensions, and responses for my side.\n\nTranscript:\n${transcriptText(session.turns)}\n\nScorecard missed opportunities:\n${session.scorecard?.missedArguments.join('\n') || 'None listed.'}`,
+    });
+    captureProductEvent('sparring_feedback_action_used', { action: 'brainstorm_missed' });
+    navigate('/app/brainstorm');
+  };
+
+  const handleVerifyOpening = () => {
+    if (!session) return;
+    const opening = session.turns.find((turn) => turn.role === 'user' && turn.phase === 'opening');
+    if (!opening) return;
+    setFactoidsForm({
+      claim: opening.content,
+      direction: 'for',
+      region: 'Global',
+      sourceType: 'any',
+      timeframe: 'Recent (last 5 years)',
+      sourceCount: 5,
+    });
+    captureProductEvent('sparring_feedback_action_used', { action: 'verify_opening' });
+    navigate('/app/factoids');
   };
 
   const handleExportDocx = async () => {
@@ -215,6 +300,9 @@ export default function SparringPage() {
               scorecard={session.scorecard}
               onRematch={handleRematch}
               onDiscuss={handleDiscuss}
+              onAttackRound={handleAttackRound}
+              onBrainstormMissed={handleBrainstormMissed}
+              onVerifyOpening={handleVerifyOpening}
               onNewRound={handleNewRound}
               onExportDocx={handleExportDocx}
               onExportPdf={handleExportPdf}
@@ -227,6 +315,7 @@ export default function SparringPage() {
               isThinking={isThinking}
               pressurePoints={pressurePoints}
               onSubmitSpeech={handleSubmitSpeech}
+              onRetryOpponent={handleRetryOpponent}
               onFinish={handleFinish}
             />
           </AnimatedSection>
