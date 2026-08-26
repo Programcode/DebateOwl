@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { useSparringStore } from '@/lib/stores/sparring-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen } from 'lucide-react';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,6 +27,9 @@ export default function HistoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useSessionStore();
+  const sparringSessions = useSparringStore((state) => state.sessions);
+  const setActiveSparringSession = useSparringStore((state) => state.setActiveSession);
+  const deleteSparringSession = useSparringStore((state) => state.deleteSession);
   const { toast } = useToast();
   const [caseToDelete, setCaseToDelete] = useState<{ id: string; title: string } | null>(null);
 
@@ -54,6 +58,11 @@ export default function HistoryPage() {
     navigate('/app/factoids');
   };
 
+  const handleLoadSparring = (id: string) => {
+    setActiveSparringSession(id);
+    navigate('/app/sparring');
+  };
+
   const confirmDeleteCase = () => {
     if (!caseToDelete) return;
     void store.deleteSavedCase(caseToDelete.id)
@@ -77,9 +86,10 @@ export default function HistoryPage() {
         </div>
 
         <Tabs defaultValue="cases" className="space-y-6">
-          <TabsList>
+          <TabsList className="h-auto flex-wrap justify-start">
             <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
             <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
+            <TabsTrigger value="sparring" className="gap-2"><Dumbbell className="h-4 w-4" /> {t('historyPage.tabSparring', 'Sparring')}</TabsTrigger>
             <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
             <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4" /> {t('historyPage.tabBrainstorms')}</TabsTrigger>
             <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4" /> {t('historyPage.tabFactoids')}</TabsTrigger>
@@ -169,6 +179,62 @@ export default function HistoryPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="sparring">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('historyPage.sparringTitle', 'Sparring rounds')}</CardTitle>
+                <CardDescription>{t('historyPage.sparringDesc', 'Completed and in-progress practice rounds are kept locally on this device.')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {sparringSessions.length === 0 ? (
+                  <EmptyState
+                    icon={Dumbbell}
+                    title={t('historyPage.emptySparring', 'No sparring rounds yet')}
+                    description={t('historyPage.emptySparringDesc', 'Practice against the AI opponent and your scorecards will appear here.')}
+                    actionLabel={t('historyPage.startSparring', 'Start sparring')}
+                    onAction={() => navigate('/app/sparring')}
+                  />
+                ) : (
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-4">
+                      {sparringSessions.map((item) => (
+                        <div key={item.id} className="flex flex-col gap-3 p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0 space-y-1">
+                            <h4 className="truncate font-semibold">{item.setup.motion}</h4>
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="uppercase">{item.setup.side}</Badge>
+                              <Badge variant="outline" className="capitalize">{item.setup.difficulty}</Badge>
+                              <Badge variant={item.status === 'complete' ? 'secondary' : 'outline'} className="capitalize">{item.status}</Badge>
+                              {item.scorecard && <Badge variant="outline" className="capitalize">{item.scorecard.verdict.replace('-', ' ')}</Badge>}
+                              <span>{formatEuropeanDateTime(item.createdAt)}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleLoadSparring(item.id)}>
+                              <Eye className="h-4 w-4 mr-2" /> {item.status === 'complete' ? t('historyPage.load') : t('historyPage.resume')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => {
+                                deleteSparringSession(item.id);
+                                toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.sparringDeleted', 'Sparring round deleted from this device.') });
+                              }}
+                              aria-label={`Delete sparring round: ${item.setup.motion}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="attacks">
             <Card>
               <CardHeader>
@@ -200,6 +266,7 @@ export default function HistoryPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="brainstorms">
             <Card>
               <CardHeader>
@@ -231,6 +298,7 @@ export default function HistoryPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="factoids">
             <Card>
               <CardHeader>
@@ -263,6 +331,7 @@ export default function HistoryPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
         <AlertDialog open={Boolean(caseToDelete)} onOpenChange={(open) => !open && setCaseToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
