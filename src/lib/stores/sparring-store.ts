@@ -1,16 +1,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type {
-  SparringScorecard,
-  SparringSession,
-  SparringSetup,
-  SparringTurn,
+import {
+  SparringSessionSchema,
+  type SparringScorecard,
+  type SparringSession,
+  type SparringSetup,
+  type SparringTurn,
 } from '@/lib/ai/schemas/sparring';
 
 const MAX_SAVED_SESSIONS = 30;
 
 function makeId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parsePersistedSessions(value: unknown): SparringSession[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .flatMap((candidate) => {
+      const parsed = SparringSessionSchema.safeParse(candidate);
+      return parsed.success ? [parsed.data] : [];
+    })
+    .slice(0, MAX_SAVED_SESSIONS);
 }
 
 interface SparringState {
@@ -26,7 +37,7 @@ interface SparringState {
 
 export const useSparringStore = create<SparringState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       sessions: [],
       activeSessionId: null,
 
@@ -83,11 +94,11 @@ export const useSparringStore = create<SparringState>()(
       partialize: (state) => ({ sessions: state.sessions, activeSessionId: state.activeSessionId }),
       merge: (persisted, current) => {
         const saved = persisted as Partial<SparringState> | undefined;
-        const sessions = Array.isArray(saved?.sessions) ? saved.sessions.slice(0, MAX_SAVED_SESSIONS) : [];
+        const sessions = parsePersistedSessions(saved?.sessions);
         const activeSessionId = typeof saved?.activeSessionId === 'string' && sessions.some((session) => session.id === saved.activeSessionId)
           ? saved.activeSessionId
           : null;
-        return { ...current, ...saved, sessions, activeSessionId } as SparringState;
+        return { ...current, sessions, activeSessionId };
       },
     },
   ),
