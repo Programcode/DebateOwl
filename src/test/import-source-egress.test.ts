@@ -18,4 +18,9 @@ describe('import-source egress boundary', () => {
   it('keeps provider response consumption byte- and time-bounded', () => {
     expect(source).toContain('readBoundedText(response, EXA_RESPONSE_BYTES, FETCH_TIMEOUT_MS)');
   });
+
+  it('uses the current Exa text limit field name', () => {
+    expect(source).toContain('text: { maxCharacters: MAX_CONTENT_CHARS }');
+    expect(source).not.toContain('max_characters');
+  });
 });
