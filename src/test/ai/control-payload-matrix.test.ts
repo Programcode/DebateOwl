@@ -53,6 +53,20 @@ describe('control-to-payload regression matrix', () => {
   });
 
   it('generate sends side, role, length, audience, and tone verbatim', async () => {
+    setMockInvokeResponse({
+      output: {
+        caseStructure: { thesis: 'T', framework: 'F', keyDefinitions: [], burdenOfProof: 'B' },
+        contentions: [
+          { id: '1', claim: 'A', reasoning: 'R', evidence: 'E', needsSource: false, impact: 'I' },
+          { id: '2', claim: 'B', reasoning: 'R', evidence: 'E', needsSource: false, impact: 'I' },
+          { id: '3', claim: 'C', reasoning: 'R', evidence: 'E', needsSource: false, impact: 'I' },
+          { id: '4', claim: 'D', reasoning: 'R', evidence: 'E', needsSource: false, impact: 'I' },
+        ],
+        predictedOpponentCase: { likelyArguments: [], strategicWeaknesses: [], keyClashes: [] },
+        counters: [],
+        metadata: { side: 'con', format: 'custom', generatedAt: '2026-01-01T00:00:00.000Z' },
+      },
+    });
     await generateCase(
       { motion: 'M', side: 'con', role: 'r2', length: 'comprehensive', audience: 'beginner', tone: 'conversational', format: 'custom' } as never,
       config,

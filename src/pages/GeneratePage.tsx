@@ -99,7 +99,7 @@ export default function GeneratePage() {
 
     setGenerateLoading(true);
     void generateCase(data, config)
-      .then(({ result: next }) => {
+      .then(({ result: next, discoveredSources: sources }) => {
         setGenerateResult({
           ...generateResult,
           ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
@@ -109,6 +109,7 @@ export default function GeneratePage() {
           ...(section === 'exordio' ? { exordio: next.exordio } : {}),
           metadata: next.metadata,
         });
+        setDiscoveredSources(sources);
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {

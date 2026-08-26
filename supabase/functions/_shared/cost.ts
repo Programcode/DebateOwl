@@ -12,6 +12,8 @@ import {
 export const COST_CALCULATION_VERSION = "cost-calc-v1";
 
 export interface NormalizedUsage {
+  /** True when part of the request's provider work was not observed to settle. */
+  incomplete?: boolean;
   /** Provider-reported input/prompt tokens (includes cached tokens for OpenAI and Google). */
   inputTokens?: number;
   /** Cached input reads: OpenAI cached subset, Anthropic cache hits, Google cached content. */
@@ -130,6 +132,10 @@ export function calculateRequestCost(args: {
   };
   if (usage?.raw) base.rawUsage = usage.raw;
 
+  // Preserve observed token fields and raw audit data, but never publish a
+  // lower-bound cost when cancelled work may have consumed unobserved tokens.
+  if (usage?.incomplete) return base;
+
   if (!usage || !usage.inputTokens && !usage.outputTokens) return base;
 
   const pricing = findModelPricing(provider, model);
@@ -189,6 +195,7 @@ export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>)
   };
 
   const merged: NormalizedUsage = {
+    incomplete: defined.some((u) => u.incomplete === true) || undefined,
     inputTokens: sum(defined.map((u) => u.inputTokens)),
     cachedInputTokens: sum(defined.map((u) => u.cachedInputTokens)),
     cacheWriteTokens: sum(defined.map((u) => u.cacheWriteTokens)),
@@ -198,4 +205,19 @@ export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>)
     raw: { calls: defined.map((u) => u.raw ?? null) },
   };
   return merged;
+}
+
+/**
+ * Selects the one usage record that best represents observed provider work.
+ * A non-aborted error prefers the merged usage on `usage`; an aborted error
+ * prefers the completed work on `completedUsage` so a cancelled retry is not
+ * counted twice.
+ */
+export function selectObservedUsage(
+  usageError: { usage?: NormalizedUsage; completedUsage?: NormalizedUsage } | undefined,
+  aborted: boolean,
+): NormalizedUsage | undefined {
+  return aborted
+    ? usageError?.completedUsage ?? usageError?.usage
+    : usageError?.usage ?? usageError?.completedUsage;
 }

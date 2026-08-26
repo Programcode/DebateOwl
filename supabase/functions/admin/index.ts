@@ -191,13 +191,20 @@ Deno.serve(async (req) => {
             // By feature
             const { data: byFeature } = await supabase
                 .from("ai_requests")
-                .select("feature")
+                .select("feature, cost_usd, input_tokens, output_tokens, status")
                 .gte("created_at", since.toISOString());
 
             const featureCounts: Record<string, number> = {};
+            const featureAggregates = new Map<string, { feature: string; requests: number; cost: number; unknownCostRequests: number }>();
             byFeature?.forEach(r => {
                 featureCounts[r.feature] = (featureCounts[r.feature] || 0) + 1;
+                const entry = featureAggregates.get(r.feature) || { feature: r.feature, requests: 0, cost: 0, unknownCostRequests: 0 };
+                entry.requests += 1; // request volume counts every row; only unknown-cost uses isCostableRow
+                if (r.cost_usd != null && Number.isFinite(Number(r.cost_usd))) entry.cost += Number(r.cost_usd);
+                if (isCostableRow(r) && hasUnknownCost(r)) entry.unknownCostRequests += 1;
+                featureAggregates.set(r.feature, entry);
             });
+            const byFeatureCost = Array.from(featureAggregates.values()).sort((a, b) => b.requests - a.requests);
 
             // By user (top 10)
             const { data: rawByUser } = await supabase.rpc("get_usage_by_user", { days_back: days, limit_count: 10 });
@@ -234,6 +241,7 @@ Deno.serve(async (req) => {
                 totals: { requests: totalRequests, cost: totalCost, successRate, unknownCostRequests },
                 daily: daily || [],
                 byFeature: featureCounts,
+                byFeatureCost,
                 byModel,
                 byUser: byUserWithEmail,
                 emailLookupFailures: userEmails.failed.length,

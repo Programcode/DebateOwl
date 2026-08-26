@@ -21,6 +21,7 @@ function getCorsHeaders(origin: string | null) {
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
+import { isAskStreamingModeAllowed } from "../_shared/control-enforcement.ts";
 import {
   calculateRequestCost,
   type CostResult,
@@ -340,9 +341,14 @@ Deno.serve(async (req) => {
 
   const model = sanitizeText(body.model, 80) || "gpt-5.4-mini";
   const input = body.input && typeof body.input === "object" ? body.input as Record<string, unknown> : {};
+  const mode = sanitizeText(input.mode, 40) || "general";
 
   if (body.feature !== "ask") {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
+  }
+
+  if (!isAskStreamingModeAllowed(mode)) {
+    return jsonResponse({ error: "Streaming is not available for clarify mode" }, 400, corsHeaders);
   }
 
   const advancedMode = Boolean(input.citationMode || input.webSearch || input.prosConsMode || input.argumentMapMode);
@@ -380,7 +386,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: `${resolvedProvider} is not configured` }, 500, corsHeaders);
   }
 
-  const mode = sanitizeText(input.mode, 40) || "general";
   const history = normalizeHistory(input.history);
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const startedAt = Date.now();

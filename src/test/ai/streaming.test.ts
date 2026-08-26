@@ -55,5 +55,13 @@ describe('AI streaming helpers', () => {
       { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
       { argumentMapMode: true }
     )).toBe(false);
+    expect(isAskStreamingSupported(
+      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { mode: 'clarify' }
+    )).toBe(false);
+    expect(isAskStreamingSupported(
+      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { mode: 'general' }
+    )).toBe(true);
   });
 });

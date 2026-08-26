@@ -10,6 +10,10 @@ export interface AskControls {
   argumentMapMode?: boolean;
 }
 
+export function isAskStreamingModeAllowed(mode: unknown): boolean {
+  return mode !== "clarify";
+}
+
 const CLARIFY_NOTE = "Clarify mode was requested, but no clarifying questions were returned.";
 
 export function enforceAskControls(output: unknown, controls: AskControls): void {
@@ -77,20 +81,31 @@ export function enforceBrainstormControls(output: unknown, _side: string, output
 }
 
 export function enforceGenerateControls(output: unknown, side: string, format: string, length: string, role: string) {
-  if (!output || typeof output !== "object" || !("metadata" in output)) return;
+  if (!output || typeof output !== "object" || !("metadata" in output)) {
+    throw new Error("Generate response is missing metadata and cannot satisfy the requested output shape.");
+  }
   const generateOutput = output as {
     exordio?: unknown;
     contentions?: unknown[];
     metadata?: { side?: string; format?: string; generatedAt?: string };
   };
-  if (!generateOutput.metadata) return;
+  if (!generateOutput.metadata || typeof generateOutput.metadata !== "object" || Array.isArray(generateOutput.metadata)) {
+    throw new Error("Generate response contains invalid metadata and cannot satisfy the requested output shape.");
+  }
+  if (!Array.isArray(generateOutput.contentions)) {
+    throw new Error("Generate response is missing a valid contentions array and cannot satisfy the requested output shape.");
+  }
+
   generateOutput.metadata.side = side === "con" ? "con" : "pro";
   generateOutput.metadata.format = format || "custom";
   if (role !== "intro" && "exordio" in generateOutput) {
     delete generateOutput.exordio;
   }
-  if (Array.isArray(generateOutput.contentions)) {
-    const target = length === "brief" ? 2 : length === "comprehensive" ? 4 : 3;
-    generateOutput.contentions = generateOutput.contentions.slice(0, target);
+  const target = length === "brief" ? 2 : length === "comprehensive" ? 4 : 3;
+  if (generateOutput.contentions.length < target) {
+    throw new Error(
+      `Generate response returned ${generateOutput.contentions.length} contentions, but length ${length || "standard"} requires exactly ${target}.`,
+    );
   }
+  generateOutput.contentions = generateOutput.contentions.slice(0, target);
 }

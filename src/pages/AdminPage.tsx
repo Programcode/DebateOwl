@@ -25,6 +25,7 @@ interface UsageStats {
     totals: { requests: number; cost: number; successRate: number; unknownCostRequests?: number };
     daily: Array<{ date: string; requests: number; cost: number; errors: number }>;
     byFeature: Record<string, number>;
+    byFeatureCost?: Array<{ feature: string; requests: number; cost: number; unknownCostRequests: number }>;
     byModel?: Array<{ provider: string; model: string; requests: number; cost: number; unknownCostRequests: number }>;
     byUser: Array<{ user_id: string; email?: string | null; requests: number; cost: number; unknownCostRequests?: number }>;
 }
@@ -457,6 +458,33 @@ export default function AdminPage() {
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Cost by Feature */}
+                        {stats?.byFeatureCost && stats.byFeatureCost.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Cost by Feature</CardTitle>
+                                    <CardDescription>Known cost per feature over the last 7 days; unknown costs never render as zero</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3">
+                                        {stats.byFeatureCost.map((feature) => (
+                                            <div key={feature.feature} className="flex items-center justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-medium truncate" title={feature.feature}>{getFeatureLabel(feature.feature)}</div>
+                                                </div>
+                                                <div className="flex items-center gap-3 shrink-0">
+                                                    <Badge variant="secondary">{feature.requests} requests</Badge>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {formatKnownCost(feature.cost, feature.unknownCostRequests)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Cost by Model */}
                         {stats?.byModel && stats.byModel.length > 0 && (
