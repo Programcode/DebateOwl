@@ -70,6 +70,20 @@ describe('sparring-store', () => {
     expect(useSparringStore.getState().activeSessionId).toBeNull();
   });
 
+  it('clears all local sparring history at an auth boundary', () => {
+    const store = useSparringStore.getState();
+    store.startSession({
+      motion: 'This House would require open primaries in national elections.',
+      side: 'con',
+      difficulty: 'competitive',
+      useActiveSources: true,
+    });
+
+    store.clearSparringHistory();
+    expect(useSparringStore.getState().sessions).toEqual([]);
+    expect(useSparringStore.getState().activeSessionId).toBeNull();
+  });
+
   it('caps persisted history to thirty sessions', () => {
     const store = useSparringStore.getState();
     for (let index = 0; index < 35; index += 1) {
@@ -82,5 +96,20 @@ describe('sparring-store', () => {
     }
 
     expect(useSparringStore.getState().sessions).toHaveLength(30);
+  });
+
+  it('drops malformed localStorage sessions instead of trusting persisted data', async () => {
+    localStorage.setItem('debatelab-sparring', JSON.stringify({
+      state: {
+        sessions: [{ id: 'broken', setup: { motion: 42 }, turns: 'not-an-array' }],
+        activeSessionId: 'broken',
+      },
+      version: 0,
+    }));
+
+    await useSparringStore.persist.rehydrate();
+
+    expect(useSparringStore.getState().sessions).toEqual([]);
+    expect(useSparringStore.getState().activeSessionId).toBeNull();
   });
 });
