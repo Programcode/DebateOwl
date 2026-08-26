@@ -38,7 +38,7 @@ if (!("Deno" in globalThis)) {
 
   // Loopback Deno.serve replacement: instead of binding a real socket, the
   // shim records the handler and routes matching fetch calls to it directly.
-  // Synchronous return with an addr object keeps Deno.serve call shapes valid.
+  // It supports both Deno.serve(handler) and Deno.serve(options, handler).
   type LoopbackHandler = (request: Request) => Response | Promise<Response>;
   let loopback: { matches: (url: URL) => boolean; handler: LoopbackHandler } | null = null;
   const LOOPBACK_DEFAULT_PORT = 43111;
@@ -50,12 +50,9 @@ if (!("Deno" in globalThis)) {
       const url = new URL(input instanceof Request ? input.url : String(input));
       if (loopback && loopback.matches(url)) {
         const response = await loopback.handler(new Request(url, init));
-        // Native fetch binds the caller's signal to the body stream so an
-        // aborted read rejects instead of stalling. Reproduce that here.
         const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
-        if (!signal || !response.body) {
-          return response;
-        }
+        if (!signal || !response.body) return response;
+
         const reader = response.body.getReader();
         const wired = new ReadableStream<Uint8Array>({
           start(controller) {
@@ -72,9 +69,7 @@ if (!("Deno" in globalThis)) {
             signal.addEventListener("abort", abort, { once: true });
             const pump = (): Promise<void> =>
               reader.read().then(({ done, value }) => {
-                if (signal.aborted) {
-                  return;
-                }
+                if (signal.aborted) return;
                 if (done) {
                   controller.close();
                   return;
@@ -93,15 +88,19 @@ if (!("Deno" in globalThis)) {
   }
 
   const serve = (
-    options: { hostname?: string; port?: number },
-    handler: LoopbackHandler,
+    optionsOrHandler: { hostname?: string; port?: number } | LoopbackHandler,
+    maybeHandler?: LoopbackHandler,
   ): {
     addr: { transport: string; hostname: string; port: number };
     shutdown: () => Promise<void>;
     finished: Promise<void>;
   } => {
-    const hostname = options?.hostname ?? "127.0.0.1";
-    const port = options?.port && options.port > 0 ? options.port : LOOPBACK_DEFAULT_PORT;
+    const options = typeof optionsOrHandler === "function" ? {} : optionsOrHandler;
+    const handler = typeof optionsOrHandler === "function" ? optionsOrHandler : maybeHandler;
+    if (!handler) throw new Error("Deno.serve shim requires a request handler");
+
+    const hostname = options.hostname ?? "127.0.0.1";
+    const port = options.port && options.port > 0 ? options.port : LOOPBACK_DEFAULT_PORT;
     loopback = {
       matches: (url) => url.hostname === hostname && url.port === String(port),
       handler,
@@ -128,9 +127,7 @@ if (!("Deno" in globalThis)) {
           : first && typeof first === "object" && "name" in first && typeof first.name === "string"
             ? first.name
             : "unnamed deno test";
-      it(name, () => {
-        return fn();
-      });
+      it(name, () => fn());
     },
     env: {
       get: (key: string): string | undefined => process.env[key],
