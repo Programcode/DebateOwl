@@ -10,7 +10,8 @@ import {
   Timer,
   GitBranch,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Dumbbell,
 } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ const modeKeys = [
   { key: 'brainstorm', icon: Lightbulb, href: '/app/brainstorm' },
   { key: 'factoids', icon: BookOpen, href: '/app/factoids' },
   { key: 'ask', icon: MessageCircle, href: '/app/ask' },
+  { key: 'sparring', icon: Dumbbell, href: '/app/sparring' },
   { key: 'library', icon: Database, href: '/app/library' },
   { key: 'timer', icon: Timer, href: '/app/timer' },
   { key: 'flowchart', icon: GitBranch, href: '/app/flowchart' },
