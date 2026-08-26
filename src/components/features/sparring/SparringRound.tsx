@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Bot, Flag, Send, UserRound } from 'lucide-react';
+import { Bot, Flag, RefreshCcw, Send, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,22 +13,24 @@ interface SparringRoundProps {
   isThinking: boolean;
   pressurePoints: string[];
   onSubmitSpeech: (content: string, phase: SparringTurnPhase) => Promise<void> | void;
+  onRetryOpponent: () => Promise<void> | void;
   onFinish: () => Promise<void> | void;
 }
 
-export function SparringRound({ session, isThinking, pressurePoints, onSubmitSpeech, onFinish }: SparringRoundProps) {
+export function SparringRound({ session, isThinking, pressurePoints, onSubmitSpeech, onRetryOpponent, onFinish }: SparringRoundProps) {
   const [draft, setDraft] = useState('');
   const userTurns = session.turns.filter((turn) => turn.role === 'user').length;
   const aiTurns = session.turns.filter((turn) => turn.role === 'ai').length;
   const phase: SparringTurnPhase = userTurns === 0 ? 'opening' : 'rebuttal';
   const canSubmit = draft.trim().length >= 20 && !isThinking && userTurns < 2 && userTurns === aiTurns;
+  const canRetryOpponent = !isThinking && userTurns === aiTurns + 1;
   const canFinish = userTurns >= 2 && aiTurns >= 2 && !isThinking;
 
   const roundLabel = useMemo(() => {
     if (userTurns === 0) return 'Your opening';
     if (userTurns === 1 && aiTurns === 1) return 'Your rebuttal';
     if (userTurns >= 2 && aiTurns >= 2) return 'Round complete';
-    return 'Opponent responding';
+    return 'Opponent response pending';
   }, [userTurns, aiTurns]);
 
   const submit = async () => {
@@ -79,6 +81,18 @@ export function SparringRound({ session, isThinking, pressurePoints, onSubmitSpe
                   'Testing your warrants...',
                   'Building the opponent response...',
                 ]} />
+              </CardContent>
+            </Card>
+          )}
+
+          {canRetryOpponent && (
+            <Card className="mr-auto max-w-[92%] border-amber-500/30 bg-amber-500/5">
+              <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">Your speech is saved, but the opponent response did not complete. Retry without retyping your argument.</p>
+                <Button variant="outline" onClick={onRetryOpponent}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Retry opponent
+                </Button>
               </CardContent>
             </Card>
           )}
