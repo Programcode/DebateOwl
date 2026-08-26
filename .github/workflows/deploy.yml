@@ -3,13 +3,14 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ "main" ]
+  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      DOCKER_PUSH: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
+      DOCKER_PUSH: ${{ github.event_name == 'push' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,15 +30,17 @@ jobs:
         run: npm run typecheck
 
       - name: Test
-        run: npm test
+        run: npm test -- --coverage
 
       - name: Build
         run: npm run build
 
       - name: Set up QEMU
+        if: env.DOCKER_PUSH == 'true'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
+        if: env.DOCKER_PUSH == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
@@ -49,6 +52,7 @@ jobs:
 
       # Create a minimal Dockerfile for multi-arch that just uses pre-built assets
       - name: Create production Dockerfile
+        if: env.DOCKER_PUSH == 'true'
         run: |
           cat > Dockerfile.prod << 'EOF'
           FROM nginx:alpine
