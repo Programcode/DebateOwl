@@ -45,6 +45,10 @@ export default defineConfig({
         __dirname,
         "./src/test/deno-assert-shim.ts",
       ),
+      "https://esm.sh/@supabase/supabase-js@2": path.resolve(
+        __dirname,
+        "./src/test/supabase-esm-shim.ts",
+      ),
     },
   },
 });
