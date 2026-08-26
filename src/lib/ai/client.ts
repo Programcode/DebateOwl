@@ -1,6 +1,6 @@
 import { mockGenerateCase, mockAttackCase, mockBrainstorm, mockFactoids, mockAsk } from './providers/mock-provider';
 import type { ProviderConfig } from './providers/types';
-import type { GenerateInput, GenerateOutput } from './schemas/generate';
+import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from './schemas/generate';
 import { AttackOutputSchema, type AttackOutput, type AttackInput } from './schemas/attack';
 import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
 import { FactoidsOutputSchema, type FactoidsOutput, type FactoidsInput } from './schemas/factoids';
@@ -741,6 +741,17 @@ function validateAttackOutput(output: unknown): AttackOutput {
   return parsed.data;
 }
 
+/** Validates the transformed generate response before it can be rendered or persisted alongside sources. */
+function validateGenerateOutput(output: unknown): GenerateOutput {
+  const parsed = GenerateOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected generate schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+  return parsed.data;
+}
+
 type AutosaveFeature = 'generate' | 'attack' | 'brainstorm';
 
 async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
@@ -789,12 +800,14 @@ function expectedContentionCount(length: GenerateInput['length']): number {
 }
 
 export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<ResultWithSources<GenerateOutput>> {
-  if (config.provider === 'mock') return { result: await mockGenerateCase(input.motion, input.side), discoveredSources: [] };
+  if (config.provider === 'mock') {
+    return { result: await mockGenerateCase(input.motion, input.side, input.length), discoveredSources: [] };
+  }
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
   const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
-  const result = transformGenerateResponse(data.output as Record<string, unknown>);
+  const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
   const expectedCount = expectedContentionCount(input.length);
   if (result.contentions.length !== expectedCount) {
     throw new AIResponseError('AI response did not contain the expected number of contentions.', {

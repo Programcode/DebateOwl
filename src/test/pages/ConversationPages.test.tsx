@@ -99,10 +99,12 @@ vi.mock('@/components/features/subscription', () => ({
 }));
 
 vi.mock('@/components/features/ask/AskChat', () => ({
-  AskChat: ({ onSend, onSaveChat, onSaveSource }: { onSend: (...args: any[]) => Promise<void>, onSaveChat: () => void, onSaveSource: (t: string, c: string) => void }) => (
+  AskChat: ({ onSend, onClear, onLoadChat, onSaveChat, onSaveSource }: { onSend: (...args: any[]) => Promise<void>, onClear: () => void, onLoadChat?: (id: string) => void, onSaveChat: () => void, onSaveSource: (t: string, c: string) => void }) => (
     <div>
       <button type="button" onClick={() => void onSend('How do I frame this?', 'general', true, true, true, true)} data-testid="ask-send">send</button>
       <button type="button" onClick={() => void onSend('What should I clarify?', 'clarify', false, false, false, false)} data-testid="ask-clarify">clarify</button>
+      <button type="button" onClick={onClear} data-testid="ask-clear">clear</button>
+      <button type="button" onClick={() => onLoadChat?.('saved-chat')} data-testid="ask-load-chat">load-chat</button>
       <button type="button" onClick={onSaveChat} data-testid="ask-save-chat">save-chat</button>
       <button type="button" onClick={() => onSaveSource('Saved Title', 'Saved Content')} data-testid="ask-save">save-source</button>
     </div>
@@ -314,6 +316,147 @@ describe('Conversation Pages', () => {
     });
 
     expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalledWith('stale response');
+  });
+
+  it('ignores a stream that resolves after a clarify request replaces it', async () => {
+    mockIsAskStreamingSupported.mockImplementation(
+      (_config: unknown, options?: { mode?: string }) => options?.mode !== 'clarify',
+    );
+    let resolveOldStream!: (value: unknown) => void;
+    let resolveClarify!: (value: unknown) => void;
+    let firstHandlers: any;
+    mockStreamAskChat.mockImplementationOnce((...args: any[]) => {
+      firstHandlers = args[5];
+      return new Promise((resolve) => {
+        resolveOldStream = resolve;
+      });
+    });
+    mockAskChat.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveClarify = resolve;
+    }));
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+    await waitFor(() => expect(firstHandlers).toBeDefined());
+
+    sessionState.setAskLoading.mockClear();
+    fireEvent.click(screen.getByTestId('ask-clarify'));
+    await waitFor(() => expect(mockAskChat).toHaveBeenCalledWith(
+      'What should I clarify?',
+      [],
+      'clarify',
+      { provider: 'openai', model: 'gpt-4o', temperature: 0.7 },
+      { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false },
+    ));
+
+    sessionState.setAskLoading.mockClear();
+    sessionState.setAskStreamingAssistant.mockClear();
+    resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
+    await mockStreamAskChat.mock.results[0].value;
+    await Promise.resolve();
+
+    expect(sessionState.addAskMessage).not.toHaveBeenCalledWith(expect.objectContaining({
+      role: 'assistant',
+      content: 'stale response',
+    }));
+    expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalled();
+    expect(sessionState.setAskStreamingAssistant).not.toHaveBeenCalledWith(null);
+    expect(sessionState.setAskLoading).not.toHaveBeenCalledWith(false);
+
+    resolveClarify({ response: 'Please specify the governing ruleset.', followUpQuestions: [], uncertainties: [] });
+    await waitFor(() => expect(sessionState.addAskMessage).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'assistant',
+      content: 'Please specify the governing ruleset.',
+    })));
+  });
+
+  it('ignores a stream that resolves after the conversation is cleared', async () => {
+    mockIsAskStreamingSupported.mockReturnValue(true);
+    let resolveOldStream!: (value: unknown) => void;
+    let firstHandlers: any;
+    mockStreamAskChat.mockImplementationOnce((...args: any[]) => {
+      firstHandlers = args[5];
+      return new Promise((resolve) => {
+        resolveOldStream = resolve;
+      });
+    });
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+    await waitFor(() => expect(firstHandlers).toBeDefined());
+
+    sessionState.setAskStreamingAssistant.mockClear();
+    sessionState.setAskLoading.mockClear();
+    fireEvent.click(screen.getByTestId('ask-clear'));
+    expect(sessionState.clearAskMessages).toHaveBeenCalled();
+    expect(sessionState.setAskStreamingAssistant).toHaveBeenCalledWith(null);
+    expect(sessionState.setAskLoading).toHaveBeenCalledWith(false);
+
+    sessionState.setAskStreamingAssistant.mockClear();
+    sessionState.setAskLoading.mockClear();
+    resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
+    await mockStreamAskChat.mock.results[0].value;
+    await Promise.resolve();
+
+    expect(sessionState.addAskMessage).not.toHaveBeenCalledWith(expect.objectContaining({
+      role: 'assistant',
+      content: 'stale response',
+    }));
+    expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalled();
+    expect(sessionState.setAskStreamingAssistant).not.toHaveBeenCalledWith(null);
+    expect(sessionState.setAskLoading).not.toHaveBeenCalledWith(false);
+  });
+
+  it('ignores a stream that resolves after a saved chat is loaded', async () => {
+    mockIsAskStreamingSupported.mockReturnValue(true);
+    let resolveOldStream!: (value: unknown) => void;
+    let firstHandlers: any;
+    mockStreamAskChat.mockImplementationOnce((...args: any[]) => {
+      firstHandlers = args[5];
+      return new Promise((resolve) => {
+        resolveOldStream = resolve;
+      });
+    });
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-send'));
+    await waitFor(() => expect(firstHandlers).toBeDefined());
+
+    sessionState.setAskStreamingAssistant.mockClear();
+    sessionState.setAskLoading.mockClear();
+    fireEvent.click(screen.getByTestId('ask-load-chat'));
+    expect(sessionState.loadSavedChat).toHaveBeenCalledWith('saved-chat');
+    expect(sessionState.setAskStreamingAssistant).toHaveBeenCalledWith(null);
+    expect(sessionState.setAskLoading).toHaveBeenCalledWith(false);
+
+    sessionState.setAskStreamingAssistant.mockClear();
+    sessionState.setAskLoading.mockClear();
+    resolveOldStream({ response: 'stale response', followUpQuestions: [], uncertainties: [] });
+    await mockStreamAskChat.mock.results[0].value;
+    await Promise.resolve();
+
+    expect(sessionState.addAskMessage).not.toHaveBeenCalledWith(expect.objectContaining({
+      role: 'assistant',
+      content: 'stale response',
+    }));
+    expect(sessionState.appendAskStreamingDelta).not.toHaveBeenCalled();
+    expect(sessionState.setAskStreamingAssistant).not.toHaveBeenCalledWith(null);
+    expect(sessionState.setAskLoading).not.toHaveBeenCalledWith(false);
   });
 
   it('AskPage reports a rejected chat save instead of confirming success', async () => {

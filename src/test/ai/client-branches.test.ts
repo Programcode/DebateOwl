@@ -266,6 +266,37 @@ describe('AI client branch coverage', () => {
     });
   });
 
+  it('rejects malformed nested direct-format generate output before saving sources', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: {
+          ...validGenerateOutput,
+          caseStructure: {
+            ...validGenerateOutput.caseStructure,
+            keyDefinitions: [123],
+          },
+        },
+        discoveredSources: [{ title: 'Untrusted source', url: 'https://example.com/untrusted' }],
+      },
+      error: null,
+    });
+
+    try {
+      await generateCase(validGenerateInput, config);
+      throw new Error('Expected generateCase to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AIResponseError);
+      expect(error).toMatchObject({
+        details: {
+          issues: expect.arrayContaining([
+            expect.objectContaining({ path: ['caseStructure', 'keyDefinitions', 0] }),
+          ]),
+        },
+      });
+    }
+    expect(addSourceMock).not.toHaveBeenCalled();
+  });
+
   it('drops invalid optional source metadata at the response boundary', async () => {
     invokeMock.mockResolvedValueOnce({
       data: {

@@ -3,6 +3,9 @@ import {
   buildDiscoveredSources,
   deepResearch,
   emptyResearchContext,
+  exaGetContents,
+  exaSearch,
+  fetchJsonWithTimeout,
   getResearchSources,
   type ResearchContext,
 } from "./research.ts";
@@ -101,6 +104,155 @@ Deno.test("malformed factoid entries fail closed without throwing", () => {
 
   const citation = (output.factoids[5] as { citation: { verified?: string } }).citation;
   if (citation.verified !== "unverified") throw new Error("malformed citation must not remain verified");
+});
+
+async function assertStalledJsonReadCancels(
+  request: (signal: AbortSignal) => Promise<unknown>,
+): Promise<void> {
+  const originalFetch = globalThis.fetch;
+  let bodyStartedResolve!: () => void;
+  let bodyAbortedResolve!: () => void;
+  const bodyStarted = new Promise<void>((resolve) => bodyStartedResolve = resolve);
+  const bodyAborted = new Promise<void>((resolve) => bodyAbortedResolve = resolve);
+
+  globalThis.fetch = ((_input: Request | URL | string, init?: RequestInit) => Promise.resolve({
+    ok: true,
+    json: () => {
+      bodyStartedResolve();
+      return new Promise<never>((_resolve, reject) => {
+        const onAbort = () => {
+          bodyAbortedResolve();
+          reject(init?.signal?.reason ?? new DOMException("The operation was aborted", "AbortError"));
+        };
+        if (init?.signal?.aborted) onAbort();
+        else init?.signal?.addEventListener("abort", onAbort, { once: true });
+      });
+    },
+  } as unknown as Response)) as typeof fetch;
+
+  try {
+    const caller = new AbortController();
+    const pending = request(caller.signal);
+    await Promise.race([
+      bodyStarted,
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("response body was not read")), 100)),
+    ]);
+    caller.abort(new DOMException("Test cancellation", "AbortError"));
+
+    const bodyCancelled = await Promise.race([
+      bodyAborted.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 100)),
+    ]);
+    if (!bodyCancelled) throw new Error("stalled response body was not cancelled");
+
+    const settled = await Promise.race([
+      pending.then(() => "resolved", () => "rejected"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("still pending"), 100)),
+    ]);
+    if (settled !== "rejected") throw new Error(`request did not reject after cancellation: ${settled}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+Deno.test("Exa search keeps caller cancellation active during JSON body read", async () => {
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  Deno.env.set("EXA_API_KEY", "test-key");
+  try {
+    await assertStalledJsonReadCancels((signal) => exaSearch("stalled search body", signal));
+  } finally {
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
+Deno.test("Exa contents keeps caller cancellation active during JSON body read", async () => {
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  Deno.env.set("EXA_API_KEY", "test-key");
+  try {
+    await assertStalledJsonReadCancels((signal) => exaGetContents("https://example.com/stalled", signal));
+  } finally {
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
+Deno.test("JSON body timeout cancels a read that stalled after headers", async () => {
+  const originalFetch = globalThis.fetch;
+  let bodyStartedResolve!: () => void;
+  let bodyAbortedResolve!: () => void;
+  const bodyStarted = new Promise<void>((resolve) => bodyStartedResolve = resolve);
+  const bodyAborted = new Promise<void>((resolve) => bodyAbortedResolve = resolve);
+
+  globalThis.fetch = ((_input: Request | URL | string, init?: RequestInit) => Promise.resolve({
+    ok: true,
+    json: () => {
+      bodyStartedResolve();
+      return new Promise<never>((_resolve, reject) => {
+        const onAbort = () => {
+          bodyAbortedResolve();
+          reject(init?.signal?.reason ?? new DOMException("The operation was aborted", "AbortError"));
+        };
+        if (init?.signal?.aborted) onAbort();
+        else init?.signal?.addEventListener("abort", onAbort, { once: true });
+      });
+    },
+  } as unknown as Response)) as typeof fetch;
+
+  try {
+    const startedAt = performance.now();
+    const pending = fetchJsonWithTimeout("https://api.exa.ai/search", {}, 5);
+    await Promise.race([
+      bodyStarted,
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("response body was not read")), 100)),
+    ]);
+    const settled = await Promise.race([
+      pending.then(() => "resolved", () => "rejected"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("still pending"), 100)),
+    ]);
+    if (settled !== "rejected") throw new Error(`JSON body timeout did not settle: ${settled}`);
+    const bodyCancelled = await Promise.race([
+      bodyAborted.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 100)),
+    ]);
+    if (!bodyCancelled) throw new Error("timeout did not cancel the response body");
+    if (performance.now() - startedAt > 100) throw new Error("JSON body timeout exceeded bound");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("JSON helper consumes non-OK error bodies within the same timeout", async () => {
+  const originalFetch = globalThis.fetch;
+  let bodyStartedResolve!: () => void;
+  const bodyStarted = new Promise<void>((resolve) => bodyStartedResolve = resolve);
+
+  globalThis.fetch = ((_input: Request | URL | string) => Promise.resolve({
+    ok: false,
+    status: 429,
+    text: () => {
+      bodyStartedResolve();
+      return Promise.resolve("provider throttled");
+    },
+  } as unknown as Response)) as typeof fetch;
+
+  try {
+    const result = await fetchJsonWithTimeout(
+      "https://api.example.test/provider",
+      {},
+      50,
+      undefined,
+    );
+    await Promise.race([
+      bodyStarted,
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("non-OK body was not read")), 100)),
+    ]);
+    if (result.response.status !== 429 || result.errorBody !== "provider throttled") {
+      throw new Error(`non-OK body was not preserved: ${JSON.stringify(result)}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 Deno.test("research timeout stays bounded and marks accounting incomplete", async () => {

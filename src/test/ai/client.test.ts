@@ -4,7 +4,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { supabaseMock, setMockInvokeResponse, resetMockState, setMockSessionToken } from '../mocks/supabase';
 import { generateCase, attackCase, brainstorm, factoids, askChat, AIError, AIResponseError } from '@/lib/ai/client';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
-import type { GenerateInput } from '@/lib/ai/schemas/generate';
+import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 import type { AttackInput, AttackOutput } from '@/lib/ai/schemas/attack';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 
@@ -59,13 +59,25 @@ describe('AI Client Integration', () => {
     describe('generateCase', () => {
         it('should call supabase.functions.invoke with correct parameters', async () => {
             // Mock successful response
-            const mockResponse = {
+            const mockResponse: { output: GenerateOutput } = {
                 output: {
-                    caseStructure: { thesis: 'Test Thesis' },
-                    contentions: [{ id: '1' }, { id: '2' }] as any[],
-                    predictedOpponentCase: {},
-                    counters: [] as any[],
-                    metadata: { side: 'pro' },
+                    caseStructure: {
+                        thesis: 'Test Thesis',
+                        framework: 'Framework',
+                        keyDefinitions: [],
+                        burdenOfProof: 'Burden',
+                    },
+                    contentions: [
+                        { id: '1', claim: 'Claim 1', reasoning: 'Reasoning 1', evidence: 'Evidence 1', needsSource: false, impact: 'Impact 1' },
+                        { id: '2', claim: 'Claim 2', reasoning: 'Reasoning 2', evidence: 'Evidence 2', needsSource: false, impact: 'Impact 2' },
+                    ],
+                    predictedOpponentCase: {
+                        likelyArguments: [],
+                        strategicWeaknesses: [],
+                        keyClashes: [],
+                    },
+                    counters: [],
+                    metadata: { side: 'pro', format: 'bp', generatedAt: '2026-01-01T00:00:00.000Z' },
                 }
             };
             setMockInvokeResponse(mockResponse);
@@ -106,13 +118,25 @@ describe('AI Client Integration', () => {
         it('should use "openai" provider when "lovable" is selected (legacy mapping)', async () => {
             const lovableConfig: ProviderConfig = { ...mockConfig, provider: 'lovable' };
             // Mock response
-            const mockResponse = {
+            const mockResponse: { output: GenerateOutput } = {
                 output: {
-                    caseStructure: {},
-                    contentions: [{ id: '1' }, { id: '2' }] as any[],
-                    predictedOpponentCase: {},
-                    counters: [] as any[],
-                    metadata: { side: 'pro' },
+                    caseStructure: {
+                        thesis: 'Test Thesis',
+                        framework: 'Framework',
+                        keyDefinitions: [],
+                        burdenOfProof: 'Burden',
+                    },
+                    contentions: [
+                        { id: '1', claim: 'Claim 1', reasoning: 'Reasoning 1', evidence: 'Evidence 1', needsSource: false, impact: 'Impact 1' },
+                        { id: '2', claim: 'Claim 2', reasoning: 'Reasoning 2', evidence: 'Evidence 2', needsSource: false, impact: 'Impact 2' },
+                    ],
+                    predictedOpponentCase: {
+                        likelyArguments: [],
+                        strategicWeaknesses: [],
+                        keyClashes: [],
+                    },
+                    counters: [],
+                    metadata: { side: 'pro', format: 'bp', generatedAt: '2026-01-01T00:00:00.000Z' },
                 }
             };
             setMockInvokeResponse(mockResponse);
@@ -129,7 +153,15 @@ describe('AI Client Integration', () => {
         it('should use local mock provider logic when provider is "mock"', async () => {
             const mockProviderConfig: ProviderConfig = { ...mockConfig, provider: 'mock' };
 
-            const { result } = await generateCase({ motion: 'Test Motion', side: 'pro' } as GenerateInput, mockProviderConfig);
+            const { result } = await generateCase({
+                motion: 'Test Motion',
+                side: 'pro',
+                format: 'bp',
+                role: 'intro',
+                length: 'brief',
+                audience: 'beginner',
+                tone: 'formal',
+            }, mockProviderConfig);
 
             // Should NOT call Supabase
             expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
@@ -138,6 +170,27 @@ describe('AI Client Integration', () => {
             expect(result.caseStructure.thesis).toContain('Test Motion');
             expect(result.metadata.format).toBe('bp');
         });
+
+        it.each([
+            ['brief', 2],
+            ['standard', 3],
+            ['comprehensive', 4],
+        ] as const)('returns %s mock output with %d contentions', async (length, expectedCount) => {
+            const mockProviderConfig: ProviderConfig = { ...mockConfig, provider: 'mock' };
+            const input: GenerateInput = {
+                motion: 'Test Motion',
+                side: 'pro',
+                format: 'bp',
+                role: 'intro',
+                length,
+                audience: 'beginner',
+                tone: 'formal',
+            };
+
+            const { result } = await generateCase(input, mockProviderConfig);
+
+            expect(result.contentions).toHaveLength(expectedCount);
+        }, 15000);
     });
 
     describe('Error Handling', () => {

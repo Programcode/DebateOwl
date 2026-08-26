@@ -1,5 +1,5 @@
 // src/lib/ai/providers/mock-provider.ts
-import type { GenerateOutput } from '../schemas/generate';
+import type { GenerateInput, GenerateOutput } from '../schemas/generate';
 import type { AttackOutput } from '../schemas/attack';
 import type { BrainstormOutput } from '../schemas/brainstorm';
 import type { FactoidsOutput } from '../schemas/factoids';
@@ -7,9 +7,52 @@ import type { AskOutput } from '../schemas/ask';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function mockGenerateCase(motion: string, side: string): Promise<GenerateOutput> {
+export async function mockGenerateCase(
+  motion: string,
+  side: string,
+  length: GenerateInput['length'] = 'standard',
+): Promise<GenerateOutput> {
   await delay(1500);
   const actualSide = side === 'auto' ? (Math.random() > 0.5 ? 'pro' : 'con') : side as 'pro' | 'con';
+  const contentionCount = length === 'brief' ? 2 : length === 'comprehensive' ? 4 : 3;
+
+  const contentions: GenerateOutput['contentions'] = [
+    {
+      id: '1',
+      claim: 'Economic Impact Analysis',
+      reasoning: 'Historical precedent shows that similar policies have led to measurable economic outcomes.',
+      evidence: 'Studies from comparable jurisdictions demonstrate consistent patterns.',
+      needsSource: true,
+      sourceQuery: 'economic impact studies policy implementation',
+      impact: 'This directly affects the livelihoods of millions and determines policy viability.',
+    },
+    {
+      id: '2',
+      claim: 'Rights-Based Considerations',
+      reasoning: 'Fundamental rights must be balanced against collective interests.',
+      evidence: 'Constitutional frameworks in democratic nations provide guidance.',
+      needsSource: false,
+      impact: 'The legitimacy of government action depends on rights protection.',
+    },
+    {
+      id: '3',
+      claim: 'Practical Implementation',
+      reasoning: 'Policy effectiveness depends on realistic implementation pathways.',
+      evidence: 'Case studies from similar implementations inform feasibility.',
+      needsSource: true,
+      sourceQuery: 'policy implementation case studies success factors',
+      impact: 'Without practical viability, the best intentions fail.',
+    },
+    {
+      id: '4',
+      claim: 'Long-Term Social Effects',
+      reasoning: 'The policy should be assessed against its effects on social cohesion over time.',
+      evidence: 'Longitudinal comparisons reveal how similar policies affect communities.',
+      needsSource: true,
+      sourceQuery: 'long-term social effects policy outcomes',
+      impact: 'Durable social outcomes determine whether the policy succeeds beyond its first effects.',
+    },
+  ];
 
   return {
     caseStructure: {
@@ -21,34 +64,7 @@ export async function mockGenerateCase(motion: string, side: string): Promise<Ge
       ],
       burdenOfProof: `The ${actualSide === 'pro' ? 'proposition' : 'opposition'} must demonstrate that the ${actualSide === 'pro' ? 'benefits outweigh costs' : 'status quo is preferable'}.`,
     },
-    contentions: [
-      {
-        id: '1',
-        claim: 'Economic Impact Analysis',
-        reasoning: 'Historical precedent shows that similar policies have led to measurable economic outcomes.',
-        evidence: 'Studies from comparable jurisdictions demonstrate consistent patterns.',
-        needsSource: true,
-        sourceQuery: 'economic impact studies policy implementation',
-        impact: 'This directly affects the livelihoods of millions and determines policy viability.',
-      },
-      {
-        id: '2',
-        claim: 'Rights-Based Considerations',
-        reasoning: 'Fundamental rights must be balanced against collective interests.',
-        evidence: 'Constitutional frameworks in democratic nations provide guidance.',
-        needsSource: false,
-        impact: 'The legitimacy of government action depends on rights protection.',
-      },
-      {
-        id: '3',
-        claim: 'Practical Implementation',
-        reasoning: 'Policy effectiveness depends on realistic implementation pathways.',
-        evidence: 'Case studies from similar implementations inform feasibility.',
-        needsSource: true,
-        sourceQuery: 'policy implementation case studies success factors',
-        impact: 'Without practical viability, the best intentions fail.',
-      },
-    ],
+    contentions: contentions.slice(0, contentionCount),
     predictedOpponentCase: {
       likelyArguments: [
         'The opposing side will likely argue about unintended consequences',

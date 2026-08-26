@@ -107,12 +107,13 @@ function linkAbortSignals(signals: Array<AbortSignal | null | undefined>) {
   };
 }
 
-export async function fetchWithTimeout(
+async function fetchWithTimeoutAndConsume<T>(
   url: string,
   options: RequestInit,
   timeoutMs: number,
-  signal?: AbortSignal
-) {
+  signal: AbortSignal | undefined,
+  consume: (response: Response) => Promise<T>,
+): Promise<T> {
   const controller = new AbortController();
   const linked = linkAbortSignals([options.signal, signal]);
   const onLinkedAbort = () => controller.abort(linked.signal.reason);
@@ -120,12 +121,26 @@ export async function fetchWithTimeout(
   else linked.signal.addEventListener("abort", onLinkedAbort, { once: true });
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return await consume(response);
   } finally {
     clearTimeout(timeoutId);
     linked.signal.removeEventListener("abort", onLinkedAbort);
     linked.cleanup();
   }
+}
+
+export async function fetchJsonWithTimeout<T = unknown>(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<{ response: Response; data?: T; errorBody?: string }> {
+  return fetchWithTimeoutAndConsume(url, options, timeoutMs, signal, async (response) => ({
+    response,
+    data: response.ok ? await response.json() as T : undefined,
+    errorBody: !response.ok ? await response.text() : undefined,
+  }));
 }
 
 // ============== EXA FUNCTIONS ==============
@@ -139,7 +154,7 @@ export async function exaSearch(query: string, signal?: AbortSignal): Promise<Ex
   }
   try {
     throwIfAborted(signal);
-    const response = await fetchWithTimeout("https://api.exa.ai/search", {
+    const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
       body: JSON.stringify({
@@ -154,7 +169,6 @@ export async function exaSearch(query: string, signal?: AbortSignal): Promise<Ex
       console.warn(`[EXA] Search failed (${response.status}) for: ${query}`);
       return [];
     }
-    const data = await response.json();
     if (!data?.results || !Array.isArray(data.results)) return [];
     return data.results.map((r: { title?: string; url?: string; text?: string; publishedDate?: string }) => ({
       title: r.title,
@@ -178,7 +192,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
   }
   try {
     throwIfAborted(signal);
-    const response = await fetchWithTimeout("https://api.exa.ai/contents", {
+    const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
       body: JSON.stringify({ urls: [url], text: { max_characters: 8000 } }),
@@ -188,7 +202,6 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
       console.warn(`[EXA] Contents fetch failed (${response.status}) for: ${url}`);
       return "";
     }
-    const data = await response.json();
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
     return (data.results[0]?.text || "").slice(0, 8000);
   } catch (err) {

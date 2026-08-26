@@ -78,7 +78,7 @@ import {
   deepResearch,
   decideAskSearch,
   exaGetContents,
-  fetchWithTimeout,
+  fetchJsonWithTimeout,
   getResearchSources,
   verifyUrl,
   withResearchPreferences,
@@ -584,6 +584,21 @@ interface AIResult {
   usage?: NormalizedUsage;
 }
 
+type OpenAIResponse = {
+  choices?: Array<{ message?: { content?: string | null } }>;
+  usage?: unknown;
+};
+
+type AnthropicResponse = {
+  content?: Array<{ text?: string }>;
+  usage?: unknown;
+};
+
+type GoogleResponse = {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  usageMetadata?: unknown;
+};
+
 function normalizeProviderUsage(provider: Provider, usage: unknown): NormalizedUsage | undefined {
   if (!usage || typeof usage !== "object") return undefined;
   const raw = usage as Record<string, unknown>;
@@ -680,13 +695,12 @@ async function callAIOnce(
 async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number, signal?: AbortSignal): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY missing");
-  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+  const { response, data, errorBody } = await fetchJsonWithTimeout<OpenAIResponse>("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({ model, messages, temperature, response_format: { type: "json_object" } }),
   }, 60000, signal);
-  if (!response.ok) { const text = await response.text(); throw new Error(`OpenAI error: ${text}`); }
-  const data = await response.json();
+  if (!response.ok) { const text = errorBody ?? ""; throw new Error(`OpenAI error: ${text}`); }
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenAI", normalizeProviderUsage("openai", data.usage));
 }
@@ -694,13 +708,12 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>, mo
 async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string, signal?: AbortSignal): Promise<AIResult> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
-  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
+  const { response, data, errorBody } = await fetchJsonWithTimeout<AnthropicResponse>("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({ model, system, messages, max_tokens: 4096, temperature }),
   }, 60000, signal);
-  if (!response.ok) { const text = await response.text(); throw new Error(`Anthropic error: ${text}`); }
-  const data = await response.json();
+  if (!response.ok) { const text = errorBody ?? ""; throw new Error(`Anthropic error: ${text}`); }
   if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
   return parseProviderContent(data.content[0]?.text || "", "Anthropic", normalizeProviderUsage("anthropic", data.usage));
 }
@@ -711,9 +724,8 @@ async function callGoogle(messages: Array<{ role: string; content: string }>, mo
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const contents = messages.map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] }));
   const payload = { contents, systemInstruction: system ? { parts: [{ text: system }] } : undefined, generationConfig: { temperature, responseMimeType: "application/json" } };
-  const response = await fetchWithTimeout(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000, signal);
-  if (!response.ok) { const text = await response.text(); throw new Error(`Google error: ${text}`); }
-  const data = await response.json();
+  const { response, data, errorBody } = await fetchJsonWithTimeout<GoogleResponse>(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000, signal);
+  if (!response.ok) { const text = errorBody ?? ""; throw new Error(`Google error: ${text}`); }
   if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
   return parseProviderContent(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google", normalizeProviderUsage("google", data.usageMetadata));
 }
@@ -849,8 +861,10 @@ Deno.serve(async (req) => {
         const usageError = err && typeof err === "object"
           ? err as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }
           : undefined;
-        if (usageError?.completedUsage) researchUsage.push(usageError.completedUsage);
-        else if (usageError?.usage && !args.signal?.aborted) researchUsage.push(usageError.usage);
+        const researchErrorUsage = args.signal?.aborted
+          ? usageError?.completedUsage ?? usageError?.usage
+          : usageError?.usage ?? usageError?.completedUsage;
+        if (researchErrorUsage) researchUsage.push(researchErrorUsage);
         throw err;
       }
     },

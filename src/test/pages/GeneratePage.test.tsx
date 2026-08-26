@@ -141,11 +141,11 @@ describe('GeneratePage Integration', () => {
             expect(generateCase).toHaveBeenCalled();
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 120));
-
-        // Verify result setting
-        expect(mockSetGenerateResult).toHaveBeenCalledWith(mockResult);
-        expect(mockSetGenerateLoading).toHaveBeenCalledWith(false);
+        // Verify result setting and completion
+        await waitFor(() => {
+            expect(mockSetGenerateResult).toHaveBeenCalledWith(mockResult);
+            expect(mockSetGenerateLoading).toHaveBeenCalledWith(false);
+        });
     });
 
     it('reports a rejected case save instead of confirming success', async () => {
@@ -238,6 +238,5 @@ describe('GeneratePage Integration', () => {
             expect(screen.getByTestId('discovered-sources')).toHaveTextContent('Fresh source');
         });
         expect(screen.getByTestId('discovered-sources')).not.toHaveTextContent('Old source');
-        await new Promise((resolve) => setTimeout(resolve, 120));
     });
 });

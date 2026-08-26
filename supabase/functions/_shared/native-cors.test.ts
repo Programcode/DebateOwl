@@ -24,3 +24,11 @@ Deno.test("native share links use the public HTTPS origin", async () => {
   assertStringIncludes(source, 'const PUBLIC_WEB_APP_ORIGIN = "https://debate.pi-stack.org";');
   assertStringIncludes(source, "shareUrl: `${PUBLIC_WEB_APP_ORIGIN}/share/${data.share_code}`");
 });
+
+Deno.test("AI research errors preserve merged usage unless the call was aborted", async () => {
+  const source = await Deno.readTextFile(new URL("../ai/index.ts", import.meta.url));
+  assertStringIncludes(source, `const researchErrorUsage = args.signal?.aborted
+          ? usageError?.completedUsage ?? usageError?.usage
+          : usageError?.usage ?? usageError?.completedUsage;`);
+  assertStringIncludes(source, "if (researchErrorUsage) researchUsage.push(researchErrorUsage);");
+});
