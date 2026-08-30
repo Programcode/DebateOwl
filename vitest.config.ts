@@ -18,6 +18,10 @@ export default defineConfig({
       // runtime modules below, not a misleading sitewide coverage claim.
       include: [
         "src/lib/ai/client.ts",
+        "src/lib/crossfire/prefill.ts",
+        "src/lib/crossfire/reducer.ts",
+        "src/lib/crossfire/schemas.ts",
+        "src/lib/crossfire/storage.ts",
         "src/lib/stores/session-store.ts",
         "src/lib/stores/settings-store.ts",
         "src/lib/stripe.ts",

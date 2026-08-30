@@ -23,14 +23,7 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask";
-
-type Source = {
-  title: string;
-  content: string;
-  origin?: string;
-  type: string;
-};
+type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask" | "crossfire";
 
 // Generate unique request ID for tracing
 function generateRequestId(): string {
@@ -52,14 +45,30 @@ function log(requestId: string, level: "INFO" | "WARN" | "ERROR", message: strin
 // ============== SUPABASE CLIENT ==============
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildAskBasePrompt, buildUserPrompt } from "./prompt-builder.ts";
+import {
+  buildAskBasePrompt,
+  buildCrossfireDebriefPrompt,
+  buildCrossfireNextTurnPrompt,
+  buildUserPrompt,
+  type CrossfireDebriefPromptInput,
+  type CrossfireNextTurnPromptInput,
+  type CrossfirePromptConfig,
+  type CrossfirePromptTurn,
+} from "./prompt-builder.ts";
 import {
   enforceAskControls,
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
 } from "../_shared/control-enforcement.ts";
-import { buildSystemPrompt } from "../_shared/prompts.ts";
+import {
+  boundPromptSources,
+  buildSystemPrompt,
+  MAX_PROMPT_SOURCE_CHARS,
+  MAX_PROMPT_SOURCE_COUNT,
+  MAX_PROMPT_SOURCE_TOTAL_CHARS,
+  type PromptSource,
+} from "../_shared/prompts.ts";
 import {
   calculateRequestCost,
   type CostResult,
@@ -428,15 +437,26 @@ async function logUsage(
   }
 }
 
-function badRequest(message: string, corsHeaders: Record<string, string>) {
+function badRequest(message: string, corsHeaders: Record<string, string>, status = 400) {
   return new Response(JSON.stringify({ error: message }), {
-    status: 400,
+    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 const MAX_INPUT_LENGTH = 50000;
 const MAX_ASK_CONTEXT_LENGTH = 32000;
+export const MAX_REQUEST_BODY_BYTES = 200_000;
+export const MAX_CROSSFIRE_PROMPT_CHARS = 100_000;
+export const MAX_CROSSFIRE_TRANSCRIPT_TURNS = 40;
+export const MAX_CROSSFIRE_TRANSCRIPT_CHARS = 24_000;
+export const MAX_CROSSFIRE_TURN_CHARS = 2_000;
+export const MAX_CROSSFIRE_RESOLUTION_CHARS = 500;
+export const MAX_CROSSFIRE_ARGUMENT_CHARS = 16_000;
+export const MAX_CROSSFIRE_SEED_QUESTIONS = 10;
+export const MAX_CROSSFIRE_REPLY_CHARS = 2_500;
+export const MAX_CROSSFIRE_DEBRIEF_ITEMS = 8;
+export const MAX_CROSSFIRE_REFERENCE_IDS = 6;
 const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|text)/i,
   /disregard\s+(all\s+)?(previous|prior|above)/i,
@@ -503,6 +523,191 @@ function sanitizeInput(input: Record<string, unknown>): { sanitized: Record<stri
     }
   }
   return { sanitized: result, truncated };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const allowed = new Set(keys);
+  return Object.keys(value).every((key) => allowed.has(key));
+}
+
+function crossfireText(value: unknown, fieldName: string, maxLength: number): { value: string } | { error: string } {
+  if (typeof value !== "string") return { error: `${fieldName} must be a string` };
+  const sanitized = sanitizePromptInput(value, fieldName);
+  if ("rejected" in sanitized) return { error: sanitized.rejected };
+  if (!sanitized.sanitized.trim()) return { error: `${fieldName} must not be empty` };
+  if (sanitized.sanitized.length > maxLength) return { error: `${fieldName} exceeds ${maxLength} characters` };
+  return { value: sanitized.sanitized.trim() };
+}
+
+function crossfireSourceContent(value: unknown, fieldName: string): { value: string; truncated: boolean } | { error: string } {
+  if (typeof value !== "string") return { error: `${fieldName} must be a string` };
+  const sanitized = sanitizePromptInput(value, fieldName);
+  if ("rejected" in sanitized) return { error: sanitized.rejected };
+  const trimmed = sanitized.sanitized.trim();
+  if (!trimmed) return { error: `${fieldName} must not be empty` };
+  return {
+    value: trimmed.slice(0, MAX_PROMPT_SOURCE_CHARS),
+    truncated: trimmed.length > MAX_PROMPT_SOURCE_CHARS,
+  };
+}
+
+function crossfireConfig(value: unknown): { value: CrossfirePromptConfig } | { error: string } {
+  if (!isRecord(value)) return { error: "Crossfire config must be an object" };
+  if (!hasOnlyKeys(value, ["resolution", "argument", "mode", "style", "durationSeconds", "useSourceLibrary", "seedQuestions"])) {
+    return { error: "Crossfire config contains unsupported fields" };
+  }
+  const resolution = crossfireText(value.resolution, "config.resolution", MAX_CROSSFIRE_RESOLUTION_CHARS);
+  if ("error" in resolution) return resolution;
+  const argument = crossfireText(value.argument, "config.argument", MAX_CROSSFIRE_ARGUMENT_CHARS);
+  if ("error" in argument) return argument;
+  if (value.mode !== "question-ai" && value.mode !== "ai-questions-user") return { error: "config.mode is invalid" };
+  if (value.style !== "cooperative" && value.style !== "evasive" && value.style !== "aggressive") return { error: "config.style is invalid" };
+  if (value.durationSeconds !== 180 && value.durationSeconds !== 300 && value.durationSeconds !== 480) return { error: "config.durationSeconds is invalid" };
+  if (typeof value.useSourceLibrary !== "boolean") return { error: "config.useSourceLibrary must be a boolean" };
+  if (!Array.isArray(value.seedQuestions) || value.seedQuestions.length > MAX_CROSSFIRE_SEED_QUESTIONS) {
+    return { error: `config.seedQuestions must contain at most ${MAX_CROSSFIRE_SEED_QUESTIONS} items` };
+  }
+  const seedQuestions: string[] = [];
+  for (let index = 0; index < value.seedQuestions.length; index += 1) {
+    const question = crossfireText(value.seedQuestions[index], `config.seedQuestions[${index}]`, MAX_CROSSFIRE_TURN_CHARS);
+    if ("error" in question) return question;
+    seedQuestions.push(question.value);
+  }
+  return {
+    value: {
+      resolution: resolution.value,
+      argument: argument.value,
+      mode: value.mode,
+      style: value.style,
+      durationSeconds: value.durationSeconds,
+      useSourceLibrary: value.useSourceLibrary,
+      seedQuestions,
+    },
+  };
+}
+
+function crossfireTranscript(value: unknown, config: CrossfirePromptConfig): { value: CrossfirePromptTurn[] } | { error: string } {
+  if (!Array.isArray(value) || value.length > MAX_CROSSFIRE_TRANSCRIPT_TURNS) {
+    return { error: `transcript must contain at most ${MAX_CROSSFIRE_TRANSCRIPT_TURNS} turns` };
+  }
+  const transcript: CrossfirePromptTurn[] = [];
+  const ids = new Set<string>();
+  let totalCharacters = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const turn = value[index];
+    if (!isRecord(turn) || !hasOnlyKeys(turn, ["id", "sequence", "speaker", "kind", "text", "createdAt"])) {
+      return { error: `transcript[${index}] is invalid` };
+    }
+    const id = crossfireText(turn.id, `transcript[${index}].id`, 40);
+    if ("error" in id) return id;
+    if (ids.has(id.value)) return { error: `transcript contains duplicate turn id ${id.value}` };
+    ids.add(id.value);
+    if (typeof turn.sequence !== "number" || !Number.isInteger(turn.sequence) || turn.sequence !== index + 1) {
+      return { error: `transcript[${index}].sequence must be ${index + 1}` };
+    }
+    if (turn.speaker !== "user" && turn.speaker !== "ai") return { error: `transcript[${index}].speaker is invalid` };
+    if (turn.kind !== "question" && turn.kind !== "answer") return { error: `transcript[${index}].kind is invalid` };
+    const expectedSpeaker = config.mode === "question-ai"
+      ? (index % 2 === 0 ? "user" : "ai")
+      : (index % 2 === 0 ? "ai" : "user");
+    const expectedKind = expectedSpeaker === "user"
+      ? (config.mode === "question-ai" ? "question" : "answer")
+      : (config.mode === "question-ai" ? "answer" : "question");
+    if (turn.speaker !== expectedSpeaker || turn.kind !== expectedKind) {
+      return { error: `transcript[${index}] does not match the configured mode` };
+    }
+    const text = crossfireText(turn.text, `transcript[${index}].text`, MAX_CROSSFIRE_TURN_CHARS);
+    if ("error" in text) return text;
+    if (typeof turn.createdAt !== "number" || !Number.isInteger(turn.createdAt) || turn.createdAt < 0) {
+      return { error: `transcript[${index}].createdAt is invalid` };
+    }
+    totalCharacters += text.value.length;
+    if (totalCharacters > MAX_CROSSFIRE_TRANSCRIPT_CHARS) {
+      return { error: `transcript exceeds ${MAX_CROSSFIRE_TRANSCRIPT_CHARS} characters` };
+    }
+    transcript.push({
+      id: id.value,
+      sequence: index + 1,
+      speaker: turn.speaker,
+      kind: turn.kind,
+      text: text.value,
+      createdAt: turn.createdAt,
+    });
+  }
+  return { value: transcript };
+}
+
+type CrossfireNextTurnInput = CrossfireNextTurnPromptInput & { operation: "next-turn" };
+type CrossfireDebriefInput = CrossfireDebriefPromptInput & { operation: "debrief" };
+type CrossfireInput = CrossfireNextTurnInput | CrossfireDebriefInput;
+
+function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { error: string } {
+  if (!isRecord(value) || (value.operation !== "next-turn" && value.operation !== "debrief")) {
+    return { error: "Crossfire operation must be next-turn or debrief" };
+  }
+  const allowedKeys = value.operation === "next-turn"
+    ? ["operation", "config", "transcript", "expectedReply"]
+    : ["operation", "config", "transcript"];
+  if (!hasOnlyKeys(value, allowedKeys)) return { error: "Crossfire input contains unsupported fields" };
+  const config = crossfireConfig(value.config);
+  if ("error" in config) return config;
+  const transcript = crossfireTranscript(value.transcript, config.value);
+  if ("error" in transcript) return transcript;
+  if (value.operation === "debrief") {
+    if (transcript.value.length === 0) return { error: "Crossfire debrief transcript must not be empty" };
+    return { value: { operation: "debrief", config: config.value, transcript: transcript.value } };
+  }
+  if (value.expectedReply !== "question" && value.expectedReply !== "answer") return { error: "expectedReply is invalid" };
+  const lastTurn = transcript.value.at(-1);
+  if (!lastTurn) {
+    if (config.value.mode !== "ai-questions-user" || value.expectedReply !== "question") {
+      return { error: "expectedReply does not match the empty transcript context" };
+    }
+  } else {
+    if (lastTurn.speaker !== "user") return { error: "The next Crossfire turn must follow a user turn" };
+    const expectedReply = lastTurn.kind === "question" ? "answer" : "question";
+    if (value.expectedReply !== expectedReply) return { error: "expectedReply does not match the transcript context" };
+  }
+  return {
+    value: {
+      operation: "next-turn",
+      config: config.value,
+      transcript: transcript.value,
+      expectedReply: value.expectedReply,
+    },
+  };
+}
+
+function boundCrossfireSources(value: unknown, enabled: boolean): { value: PromptSource[]; truncated: boolean } | { error: string } {
+  if (!enabled || value === undefined || value === null) return { value: [], truncated: false };
+  if (!Array.isArray(value)) return { error: "sources must be an array when Source Library is enabled" };
+  const normalized: PromptSource[] = [];
+  let truncated = value.length > MAX_PROMPT_SOURCE_COUNT;
+  for (let index = 0; index < Math.min(value.length, MAX_PROMPT_SOURCE_COUNT); index += 1) {
+    const source = value[index];
+    if (!isRecord(source)) return { error: `sources[${index}] is invalid` };
+    const title = crossfireText(source.title, `sources[${index}].title`, 240);
+    if ("error" in title) return title;
+    const content = crossfireSourceContent(source.content, `sources[${index}].content`);
+    if ("error" in content) return content;
+    const type = crossfireText(source.type, `sources[${index}].type`, 64);
+    if ("error" in type) return type;
+    let origin: string | undefined;
+    if (source.origin !== undefined && source.origin !== null) {
+      const sourceOrigin = crossfireText(source.origin, `sources[${index}].origin`, 240);
+      if ("error" in sourceOrigin) return sourceOrigin;
+      origin = sourceOrigin.value;
+    }
+    truncated = truncated || content.truncated;
+    normalized.push({ title: title.value, content: content.value, type: type.value, ...(origin ? { origin } : {}) });
+  }
+  const bounded = boundPromptSources(normalized);
+  truncated = truncated || bounded.length < normalized.length || bounded.some((source, index) => source.content.length !== normalized[index].content.length);
+  return { value: bounded, truncated };
 }
 
 function truncateTextToBudget(text: string, budget: number): { text: string; truncated: boolean } {
@@ -743,6 +948,136 @@ function getCurrentDateContext(): string {
   return `CURRENT DATE: ${now.toLocaleDateString('en-US', options)} (${now.getFullYear()})`;
 }
 
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super(`Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes`);
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
+async function readBoundedJsonBody(request: Request): Promise<unknown> {
+  if (!request.body) return request.json();
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  const onAbort = () => {
+    void reader.cancel(request.signal.reason);
+  };
+  if (request.signal.aborted) onAbort();
+  else request.signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        await reader.cancel();
+        throw new RequestBodyTooLargeError();
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } finally {
+    request.signal.removeEventListener("abort", onAbort);
+    reader.releaseLock();
+  }
+}
+
+function crossfireReplyOutput(value: unknown, expectedReply: "question" | "answer"): { value: { type: "question" | "answer"; text: string } } | { error: string } {
+  if (!isRecord(value) || !hasOnlyKeys(value, ["type", "text"])) return { error: "Crossfire next-turn response must contain only type and text" };
+  if (value.type !== expectedReply) return { error: `Crossfire response type must be ${expectedReply}` };
+  const text = typeof value.text === "string" ? value.text.trim() : "";
+  if (!text || text.length > MAX_CROSSFIRE_REPLY_CHARS) return { error: "Crossfire response text is empty or too long" };
+  return { value: { type: expectedReply, text } };
+}
+
+type CrossfireDebriefItem = { turnIds: string[]; claim: string };
+type CrossfireBetterFollowUp = { turnIds: string[]; question: string; reason: string };
+type CrossfireDebriefOutput = {
+  concessionsSecured: CrossfireDebriefItem[];
+  controlledQuestions: CrossfireDebriefItem[];
+  weakOrRepetitiveQuestions: CrossfireDebriefItem[];
+  evasiveOrIncompleteAnswers: CrossfireDebriefItem[];
+  missedFollowUps: CrossfireDebriefItem[];
+  betterFollowUpQuestions: CrossfireBetterFollowUp[];
+  strongestExchange: CrossfireDebriefItem | null;
+};
+
+function crossfireReferenceIds(value: unknown, validIds: Set<string>, fieldName: string): { value: string[] } | { error: string } {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_CROSSFIRE_REFERENCE_IDS) {
+    return { error: `${fieldName}.turnIds must contain 1-${MAX_CROSSFIRE_REFERENCE_IDS} IDs` };
+  }
+  const ids: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string" || item.trim().length < 1 || item.trim().length > 40 || !validIds.has(item.trim())) {
+      return { error: `${fieldName}.turnIds contains an invalid transcript ID` };
+    }
+    if (ids.includes(item.trim())) return { error: `${fieldName}.turnIds contains a duplicate ID` };
+    ids.push(item.trim());
+  }
+  return { value: ids };
+}
+
+function crossfireDebriefItem(value: unknown, validIds: Set<string>, fieldName: string): { value: CrossfireDebriefItem } | { error: string } {
+  if (!isRecord(value) || !hasOnlyKeys(value, ["turnIds", "claim"])) return { error: `${fieldName} is invalid` };
+  const turnIds = crossfireReferenceIds(value.turnIds, validIds, fieldName);
+  if ("error" in turnIds) return turnIds;
+  if (typeof value.claim !== "string" || !value.claim.trim() || value.claim.trim().length > 800) return { error: `${fieldName}.claim is invalid` };
+  return { value: { turnIds: turnIds.value, claim: value.claim.trim() } };
+}
+
+function validateCrossfireDebrief(value: unknown, transcript: CrossfirePromptTurn[]): { value: CrossfireDebriefOutput } | { error: string } {
+  const fields = ["concessionsSecured", "controlledQuestions", "weakOrRepetitiveQuestions", "evasiveOrIncompleteAnswers", "missedFollowUps", "betterFollowUpQuestions", "strongestExchange"] as const;
+  if (!isRecord(value) || !hasOnlyKeys(value, fields)) return { error: "Crossfire debrief response has unsupported fields" };
+  const validIds = new Set(transcript.map((turn) => turn.id));
+  const items: Record<string, CrossfireDebriefItem[]> = {};
+  for (const field of fields.slice(0, 5)) {
+    if (!Array.isArray(value[field]) || value[field].length > MAX_CROSSFIRE_DEBRIEF_ITEMS) return { error: `${field} must be an array of at most ${MAX_CROSSFIRE_DEBRIEF_ITEMS} items` };
+    items[field] = [];
+    for (let index = 0; index < value[field].length; index += 1) {
+      const item = crossfireDebriefItem(value[field][index], validIds, `${field}[${index}]`);
+      if ("error" in item) return item;
+      items[field].push(item.value);
+    }
+  }
+  if (!Array.isArray(value.betterFollowUpQuestions) || value.betterFollowUpQuestions.length > MAX_CROSSFIRE_DEBRIEF_ITEMS) {
+    return { error: `betterFollowUpQuestions must be an array of at most ${MAX_CROSSFIRE_DEBRIEF_ITEMS} items` };
+  }
+  const betterFollowUpQuestions: CrossfireBetterFollowUp[] = [];
+  for (let index = 0; index < value.betterFollowUpQuestions.length; index += 1) {
+    const item = value.betterFollowUpQuestions[index];
+    if (!isRecord(item) || !hasOnlyKeys(item, ["turnIds", "question", "reason"])) return { error: `betterFollowUpQuestions[${index}] is invalid` };
+    const turnIds = crossfireReferenceIds(item.turnIds, validIds, `betterFollowUpQuestions[${index}]`);
+    if ("error" in turnIds) return turnIds;
+    if (typeof item.question !== "string" || !item.question.trim() || item.question.trim().length > MAX_CROSSFIRE_REPLY_CHARS) return { error: `betterFollowUpQuestions[${index}].question is invalid` };
+    if (typeof item.reason !== "string" || !item.reason.trim() || item.reason.trim().length > 800) return { error: `betterFollowUpQuestions[${index}].reason is invalid` };
+    betterFollowUpQuestions.push({ turnIds: turnIds.value, question: item.question.trim(), reason: item.reason.trim() });
+  }
+  let strongestExchange: CrossfireDebriefItem | null = null;
+  if (value.strongestExchange !== null) {
+    const item = crossfireDebriefItem(value.strongestExchange, validIds, "strongestExchange");
+    if ("error" in item) return item;
+    strongestExchange = item.value;
+  }
+  return {
+    value: {
+      concessionsSecured: items.concessionsSecured,
+      controlledQuestions: items.controlledQuestions,
+      weakOrRepetitiveQuestions: items.weakOrRepetitiveQuestions,
+      evasiveOrIncompleteAnswers: items.evasiveOrIncompleteAnswers,
+      missedFollowUps: items.missedFollowUps,
+      betterFollowUpQuestions,
+      strongestExchange,
+    },
+  };
+}
+
 // ============== MAIN HANDLER ==============
 
 Deno.serve(async (req) => {
@@ -757,13 +1092,19 @@ Deno.serve(async (req) => {
   }
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
-  } catch {
+    const parsedBody = await readBoundedJsonBody(req);
+    if (!isRecord(parsedBody)) throw new Error("JSON body must be an object");
+    body = parsedBody;
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      log(requestId, "WARN", "Request body exceeded byte limit");
+      return badRequest(error.message, corsHeaders, 413);
+    }
     log(requestId, "WARN", "Invalid JSON body received");
     return badRequest("Invalid JSON body", corsHeaders);
   }
-  const feature = body.feature as Feature | undefined;
-  const input = body.input as Record<string, unknown> | undefined;
+  const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
+  const rawInput = body.input;
   const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-3-flash-preview";
   let provider: Provider;
   try {
@@ -774,20 +1115,44 @@ Deno.serve(async (req) => {
   }
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
-  const sources = (body.sources as Source[] | undefined) || [];
+  const rawSources = body.sources;
 
   // Log incoming request
-  log(requestId, "INFO", "Request received", { feature, provider, model, sourcesCount: sources.length });
+  log(requestId, "INFO", "Request received", { feature, provider, model, sourcesCount: Array.isArray(rawSources) ? rawSources.length : 0 });
 
   if (!feature) return badRequest("Missing feature", corsHeaders);
-  if (!input) return badRequest("Missing input", corsHeaders);
+  if (!isRecord(rawInput)) return badRequest("Missing input", corsHeaders);
+
+  let input: Record<string, unknown> = rawInput;
+  let crossfireInput: CrossfireInput | undefined;
+  let crossfireSources: PromptSource[] = [];
+  let crossfireSourcesTruncated = false;
+  if (feature === "crossfire") {
+    const crossfireResult = validateCrossfireInput(rawInput);
+    if ("error" in crossfireResult) {
+      log(requestId, "WARN", "Crossfire input validation failed", { reason: crossfireResult.error });
+      return badRequest(crossfireResult.error, corsHeaders);
+    }
+    crossfireInput = crossfireResult.value;
+    input = crossfireInput as unknown as Record<string, unknown>;
+    const sourcesResult = boundCrossfireSources(rawSources, crossfireInput.config.useSourceLibrary);
+    if ("error" in sourcesResult) {
+      log(requestId, "WARN", "Crossfire source validation failed", { reason: sourcesResult.error });
+      return badRequest(sourcesResult.error, corsHeaders);
+    }
+    crossfireSources = sourcesResult.value;
+    crossfireSourcesTruncated = sourcesResult.truncated;
+  }
   const sanitizeResult = sanitizeInput(input);
   if ("rejected" in sanitizeResult) {
     log(requestId, "WARN", "Request rejected by sanitization", { reason: sanitizeResult.rejected });
     return badRequest(sanitizeResult.rejected, corsHeaders);
   }
   const sanitizedInput = sanitizeResult.sanitized;
-  let responseTruncated = sanitizeResult.truncated;
+  let responseTruncated = sanitizeResult.truncated || crossfireSourcesTruncated;
+  const sources: PromptSource[] = feature === "crossfire"
+    ? crossfireSources
+    : Array.isArray(rawSources) ? rawSources as PromptSource[] : [];
   if (customSystemPrompt) {
     const promptResult = sanitizePromptInput(customSystemPrompt, "customSystemPrompt");
     if ("rejected" in promptResult) {
@@ -885,18 +1250,53 @@ Deno.serve(async (req) => {
   // Research counts only when it actually returned something to cite.
   const hasResearch = (research?: ResearchContext | null): research is ResearchContext =>
     Boolean(research && (research.rankedResults.length > 0 || research.readContent.length > 0));
-  const buildSystemPromptFor = async (feature: Feature, research?: ResearchContext | null) =>
+  const buildSystemPromptFor = async (feature: Feature, research?: ResearchContext | null, promptSources = sources) =>
     buildSystemPrompt({
       feature,
       dateContext: getCurrentDateContext(),
       globalPrompt: await getGlobalPrompt(feature),
       customPrompt: customSystemPrompt ?? null,
-      sources,
+      sources: promptSources,
       researchContext: hasResearch(research)
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
     });
   try {
+    if (feature === "crossfire") {
+      if (!crossfireInput) throw new Error("Crossfire input was not validated");
+      const userPrompt = crossfireInput.operation === "next-turn"
+        ? buildCrossfireNextTurnPrompt(crossfireInput)
+        : buildCrossfireDebriefPrompt(crossfireInput);
+      if (userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
+        throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
+      }
+      const systemPrompt = buildSystemPrompt({
+        feature: "crossfire",
+        dateContext: getCurrentDateContext(),
+        sources: crossfireSources,
+      });
+      if (systemPrompt.length + userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
+        throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
+      }
+      const aiResult = recordMainResult(await callAI(
+        provider,
+        model,
+        systemPrompt,
+        [{ role: "user", content: userPrompt }],
+        temperature,
+        req.signal,
+      ));
+      const cleanedOutput = cleanGeneratedText(aiResult.output);
+      const output = crossfireInput.operation === "next-turn"
+        ? crossfireReplyOutput(cleanedOutput, crossfireInput.expectedReply)
+        : validateCrossfireDebrief(cleanedOutput, crossfireInput.transcript);
+      if ("error" in output) throw new Error(output.error);
+
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
+      return new Response(JSON.stringify(successBody({ output: output.value })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
       const claim = String(sanitizedInput.claim || "");
