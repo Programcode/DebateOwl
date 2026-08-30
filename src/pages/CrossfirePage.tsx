@@ -254,8 +254,8 @@ export default function CrossfirePage() {
   const [now, setNow] = useState(Date.now());
   const [formError, setFormError] = useState('');
   const [storageError, setStorageError] = useState(false);
+  const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
-  const ownerIdRef = useRef(user?.id);
   const shouldReduceMotion = useReducedMotion();
   const activeSourceCount = useSessionStore((session) => session.sourceLibrary.filter((source) => source.isActive).length);
   const { getFeatureConfig } = useSettingsStore();
@@ -264,19 +264,19 @@ export default function CrossfirePage() {
   useEffect(() => () => requestRef.current?.abort(), []);
 
   useEffect(() => {
-    if (ownerIdRef.current === user?.id) return;
+    if (stateOwnerId === user?.id) return;
     requestRef.current?.abort();
-    ownerIdRef.current = user?.id;
     dispatch({ type: 'session-reset' });
+    setStateOwnerId(user?.id);
     setDraftTurn('');
     setFormError('');
-  }, [user?.id]);
+  }, [stateOwnerId, user?.id]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || stateOwnerId !== user.id) return;
     const saved = saveCrossfireDraft(user.id, state);
     setStorageError(!saved && state.phase !== 'complete');
-  }, [state, user?.id]);
+  }, [state, stateOwnerId, user?.id]);
 
   useEffect(() => {
     if (state.phase !== 'active') return;
@@ -413,6 +413,15 @@ export default function CrossfirePage() {
     setDraftTurn('');
     setFormError('');
   };
+
+  if (stateOwnerId !== user?.id) {
+    return (
+      <div className="container flex min-h-[60vh] items-center justify-center px-4 py-8" role="status">
+        <Loader2 className="h-6 w-6 animate-spin text-primary motion-reduce:animate-none" />
+        <span className="sr-only">{t('crossfire.loading')}</span>
+      </div>
+    );
+  }
 
   if (state.phase === 'setup') {
     return (

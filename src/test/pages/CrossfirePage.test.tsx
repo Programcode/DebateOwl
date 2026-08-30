@@ -61,6 +61,7 @@ describe('CrossfirePage', () => {
   });
 
   it('resets a mounted transcript when the authenticated account changes', async () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem');
     const view = renderPage();
     fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
     fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
@@ -69,6 +70,7 @@ describe('CrossfirePage', () => {
     fireEvent.click(screen.getByTestId('submit-turn'));
     expect(screen.getByText('What is the mechanism?')).toBeInTheDocument();
 
+    setItemSpy.mockClear();
     mocks.userId = 'user-b';
     view.rerender(
       <MemoryRouter initialEntries={['/app/crossfire']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -79,5 +81,8 @@ describe('CrossfirePage', () => {
     await waitFor(() => expect(screen.getByTestId('crossfire-resolution')).toHaveValue(''));
     expect(screen.queryByText('What is the mechanism?')).not.toBeInTheDocument();
     expect(screen.getByTestId('crossfire-argument')).toHaveValue('');
+    const writesForUserB = setItemSpy.mock.calls.filter(([key]) => key === 'debatelab-crossfire-draft:user-b');
+    expect(writesForUserB.every(([, value]) => !value.includes('What is the mechanism?'))).toBe(true);
+    setItemSpy.mockRestore();
   });
 });

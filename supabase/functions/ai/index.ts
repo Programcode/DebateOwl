@@ -1114,7 +1114,11 @@ Deno.serve(async (req) => {
     return badRequest(err instanceof Error ? err.message : "Unsupported model or provider combination", corsHeaders);
   }
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
-  const customSystemPrompt = body.customSystemPrompt as string | null | undefined;
+  // Crossfire has non-overridable transcript-grounding and typed-session
+  // safety rules. Ignore both user and admin custom prompts for this feature.
+  const customSystemPrompt = feature === "crossfire"
+    ? null
+    : body.customSystemPrompt as string | null | undefined;
   const rawSources = body.sources;
 
   // Log incoming request
