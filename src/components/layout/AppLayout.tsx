@@ -14,6 +14,7 @@ import {
   X,
   Clock,
   Timer,
+  Dumbbell,
   Database,
   GitBranch
 } from 'lucide-react';
@@ -32,6 +33,7 @@ const navItems = [
   { path: '/app/ask', key: 'ask', icon: MessageCircle },
   { path: '/app/library', key: 'library', icon: Database },
   { path: '/app/timer', key: 'timer', icon: Timer },
+  { path: '/app/sparring', key: 'sparring', icon: Dumbbell },
   { path: '/app/flowchart', key: 'flowchart', icon: GitBranch },
   { path: '/app/history', key: 'history', icon: Clock },
 ];

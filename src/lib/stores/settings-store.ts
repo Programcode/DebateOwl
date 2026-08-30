@@ -4,14 +4,16 @@ import i18n from '@/i18n';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
 
-export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask';
+export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
+type CoreFeatureTab = Exclude<FeatureTab, 'sparring'>;
+type FeatureConfigs = Record<CoreFeatureTab, ProviderConfig> & Partial<Record<'sparring', ProviderConfig>>;
 
 interface SettingsState {
   language: 'en' | 'es' | 'hu';
   outputLanguage: 'en' | 'es' | 'hu';
   theme: 'light' | 'dark' | 'system';
   customSystemPrompt?: string;
-  featureConfigs: Record<FeatureTab, ProviderConfig>;
+  featureConfigs: FeatureConfigs;
   wikiResearchEnabled: boolean;
 
   setLanguage: (lang: 'en' | 'es' | 'hu') => void;
@@ -37,6 +39,7 @@ const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
   brainstorm: { ...defaultConfig, temperature: 0.9 },
   factoids: { ...defaultConfig, temperature: 0.3 },
   ask: { ...defaultConfig },
+  sparring: { ...defaultConfig },
 });
 
 function normalizeFeatureConfigs(configs: unknown): Record<FeatureTab, ProviderConfig> {

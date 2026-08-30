@@ -1,0 +1,106 @@
+import { expect, test } from '@playwright/test';
+import { setLocale, stubSupabaseSession } from './helpers/auth';
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'content-type': 'application/json',
+};
+
+const opponentSpeech = (index: number) => ({
+  action: 'respond',
+  speech: {
+    content: `Opponent response ${index}: the policy needs a stronger comparative case against narrower alternatives.`,
+    strategy: 'Test the warrant, then weigh the alternative.',
+    targetedPoints: ['The comparative mechanism is still underdeveloped.'],
+  },
+});
+
+const scorecard = {
+  action: 'score',
+  scorecard: {
+    userScore: 78,
+    aiScore: 74,
+    categories: [
+      { name: 'Logic', userScore: 20, aiScore: 18, feedback: 'The causal chain was clear.' },
+      { name: 'Evidence', userScore: 18, aiScore: 18, feedback: 'The factual warrant needed more support.' },
+      { name: 'Delivery', userScore: 19, aiScore: 19, feedback: 'Judged from organization, not vocal performance.' },
+      { name: 'Strategy', userScore: 21, aiScore: 19, feedback: 'The user prioritized the central clash.' },
+    ],
+    overallFeedback: 'The user won a narrow edge by weighing the main mechanism.',
+    keyMoments: ['The rebuttal answered the opponent’s strongest objection.'],
+    improvementAreas: ['Compare the alternative policy explicitly.'],
+    winner: 'user',
+    verdict: 'The user had the edge.',
+  },
+};
+
+test.beforeEach(async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+});
+
+test('completes an LD sparring round through mocked opponent turns and judging', async ({ page }) => {
+  let responseNumber = 0;
+  const actions: string[] = [];
+
+  await page.route('**/functions/v1/ai**', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
+      return;
+    }
+
+    const body = route.request().postDataJSON() as { input?: { action?: string } };
+    const action = body.input?.action ?? 'unknown';
+    actions.push(action);
+    const output = action === 'score' ? scorecard : opponentSpeech(++responseNumber);
+    await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ output }) });
+  });
+
+  await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeVisible();
+
+  await page.getByLabel('Motion').fill('This House would make public transport free at the point of use.');
+  await page.getByRole('button', { name: /Lincoln-Douglas · 5 speeches/ }).click();
+  await page.getByRole('button', { name: 'Start round' }).click();
+
+  const userSpeeches = [
+    ['Affirmative constructive', 'Universal access removes the direct price barrier to participation.'],
+    ['First affirmative rebuttal', 'Targeted discounts preserve eligibility gaps and administrative friction.'],
+    ['Second affirmative rebuttal', 'The universal policy is more reliable because every marginal trip is covered.'],
+  ] as const;
+
+  for (const [turnLabel, content] of userSpeeches) {
+    const draft = page.getByRole('textbox', { name: `Draft for ${turnLabel}` });
+    await expect(draft).toBeVisible();
+    await draft.fill(content);
+    await page.getByRole('button', { name: 'Submit speech' }).click();
+    if (turnLabel !== 'Second affirmative rebuttal') {
+      await expect(page.getByText(`Opponent response ${responseNumber + 1}:`)).toBeVisible();
+    }
+  }
+
+  await expect(page.getByText('Judge is weighing the round')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Here is what happened in the room.' })).toBeVisible();
+  await expect(page.getByText('You won the ballot')).toBeVisible();
+  await expect(page.getByText('The user had the edge.')).toBeVisible();
+  expect(actions).toEqual(['respond', 'respond', 'score']);
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  expect(hasHorizontalOverflow).toBe(false);
+});
+
+test('keeps the setup usable on mobile with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeVisible();
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  expect(hasHorizontalOverflow).toBe(false);
+
+  const animationNames = await page.locator('[class*="animate-"]').evaluateAll((elements) => elements
+    .map((element) => getComputedStyle(element).animationName)
+    .filter((name) => name !== 'none'));
+  expect(animationNames).toEqual([]);
+});

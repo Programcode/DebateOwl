@@ -23,7 +23,7 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask";
+type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask" | "sparring";
 
 type Source = {
   title: string;
@@ -60,6 +60,18 @@ import {
   enforceGenerateControls,
 } from "../_shared/control-enforcement.ts";
 import { buildSystemPrompt } from "../_shared/prompts.ts";
+import {
+  claimSparringScoreSession,
+  completeClaimedSparringScoreSession,
+  createSparringSpeechIntegrityToken,
+  normalizeSparringOutput,
+  parseSparringProviderOutput,
+  parseSparringRequest,
+  releaseSparringScoreClaim,
+  verifySparringTranscriptIntegrity,
+  type SparringDatabase,
+  type SparringRequest,
+} from "./sparring-persistence.ts";
 import {
   calculateRequestCost,
   type CostResult,
@@ -747,6 +759,7 @@ function getCurrentDateContext(): string {
 
 Deno.serve(async (req) => {
   const requestId = generateRequestId();
+  const requestStartedAt = new Date().toISOString();
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   if (req.method === "OPTIONS") {
@@ -796,6 +809,15 @@ Deno.serve(async (req) => {
     }
     responseTruncated = responseTruncated || promptResult.truncated;
   }
+  let validatedSparringRequest: SparringRequest | undefined;
+  if (feature === "sparring") {
+    const sparringResult = parseSparringRequest(sanitizedInput);
+    if ("error" in sparringResult) {
+      log(requestId, "WARN", "Invalid sparring request", { reason: sparringResult.error });
+      return badRequest(sparringResult.error, corsHeaders);
+    }
+    validatedSparringRequest = sparringResult.request;
+  }
   const successBody = (payload: Record<string, unknown>) => responseTruncated
     ? { ...payload, meta: { truncated: true } }
     : payload;
@@ -824,9 +846,81 @@ Deno.serve(async (req) => {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
+  const sparringDatabase = supabase as unknown as SparringDatabase;
+  let sparringScoreClaimed = false;
+  let sparringScoreClaimToken: string | undefined;
+
+  if (validatedSparringRequest && !(await verifySparringTranscriptIntegrity(
+    validatedSparringRequest,
+    userId,
+    supabaseServiceKey,
+  ))) {
+    log(requestId, "WARN", "Rejected sparring transcript with invalid AI-turn integrity");
+    return badRequest("Sparring transcript integrity check failed", corsHeaders);
+  }
+
+  // Claim a score session before reserving quota or calling a provider. This
+  // makes concurrent retries converge and prevents cross-user UUID overwrite.
+  if (validatedSparringRequest?.action === "score") {
+    let claim: Awaited<ReturnType<typeof claimSparringScoreSession>>;
+    try {
+      claim = await claimSparringScoreSession(sparringDatabase, validatedSparringRequest, userId, requestStartedAt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Score claim failed";
+      log(requestId, "ERROR", "Unable to claim sparring score", { error: message });
+      return new Response(JSON.stringify({ error: "Unable to start sparring score" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (claim.status === "complete") {
+      return new Response(JSON.stringify(successBody({
+        output: { action: "score", scorecard: claim.scorecard },
+        sessionId: validatedSparringRequest.sessionId,
+      })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (claim.status === "conflict") {
+      return new Response(JSON.stringify({ error: "Sparring session ID is already in use" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (claim.status === "in_progress") {
+      return new Response(JSON.stringify({ error: "Sparring score is already in progress", code: "score_in_progress" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (claim.status === "cleared") {
+      return new Response(JSON.stringify({ error: "This score request began before your data was cleared", code: "data_cleared" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    sparringScoreClaimed = true;
+    sparringScoreClaimToken = claim.token;
+  }
+
   // Check rate limits (includes subscription gating and model access)
-  const rateLimit = await checkRateLimit(userId, model);
+  let rateLimit: RateLimitResult;
+  try {
+    rateLimit = await checkRateLimit(userId, model);
+  } catch (error) {
+    if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
+      await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
+    }
+    const message = error instanceof Error ? error.message : "Rate-limit check failed";
+    log(requestId, "ERROR", "Rate-limit check failed", { error: message });
+    return new Response(JSON.stringify({ error: "Unable to verify request limits" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
   if (!rateLimit.allowed) {
+    if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
+      await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
+      sparringScoreClaimed = false;
+    }
     await logUsage(userId, feature, provider, model, undefined, undefined, "rate_limited", rateLimit.code);
     return new Response(JSON.stringify({
       error: rateLimit.reason,
@@ -890,13 +984,69 @@ Deno.serve(async (req) => {
       feature,
       dateContext: getCurrentDateContext(),
       globalPrompt: await getGlobalPrompt(feature),
-      customPrompt: customSystemPrompt ?? null,
-      sources,
+      // User-authored system overrides must not influence a persisted judge.
+      customPrompt: feature === "sparring" ? null : customSystemPrompt ?? null,
+      // Sparring is transcript-only. Do not let unrelated saved evidence alter
+      // an opponent response or a judge's scorecard.
+      sources: feature === "sparring" ? [] : sources,
       researchContext: hasResearch(research)
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
     });
   try {
+    // SPARRING: transcript-only opponent replies and scorecards. No research
+    // branch runs here, and score persistence follows output validation.
+    if (feature === "sparring") {
+      const sparringRequest = validatedSparringRequest;
+      if (!sparringRequest) throw new Error("Invalid sparring request");
+
+      const systemPrompt = await buildSystemPromptFor(feature);
+      const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
+      const messages = [{ role: "user", content: userPrompt }];
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const output = cleanGeneratedText(aiResult.output);
+      const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
+      const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);
+      if (!parsedOutput) throw new Error("AI response did not match the expected sparring schema");
+
+      if (parsedOutput.action === "score") {
+        await completeClaimedSparringScoreSession(
+          sparringDatabase,
+          sparringRequest,
+          userId,
+          sparringScoreClaimToken!,
+          parsedOutput.scorecard,
+        );
+        sparringScoreClaimed = false;
+      }
+
+      const responseOutput = parsedOutput.action === "respond"
+        ? {
+          ...parsedOutput,
+          speech: {
+            ...parsedOutput.speech,
+            integrityToken: await createSparringSpeechIntegrityToken(
+              sparringRequest,
+              userId,
+              {
+                turnId: sparringRequest.currentTurn!.id,
+                side: sparringRequest.currentTurn!.side,
+                content: parsedOutput.speech.content,
+              },
+              supabaseServiceKey,
+            ),
+          },
+        }
+        : parsedOutput;
+
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
+      return new Response(JSON.stringify(successBody({
+        output: responseOutput,
+        sessionId: sparringRequest.sessionId,
+      })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // FACTOIDS: Use deep research with multiple searches
     if (feature === "factoids") {
       const claim = String(sanitizedInput.claim || "");
@@ -1202,6 +1352,11 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);
+
+    if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
+      await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
+      sparringScoreClaimed = false;
+    }
 
     // Log error
     const latencyMs = Date.now() - startTime;

@@ -18,6 +18,9 @@ export default defineConfig({
       // runtime modules below, not a misleading sitewide coverage claim.
       include: [
         "src/lib/ai/client.ts",
+        "src/lib/ai/schemas/sparring.ts",
+        "src/lib/sparring/formats.ts",
+        "src/lib/stores/sparring-store.ts",
         "src/lib/stores/session-store.ts",
         "src/lib/stores/settings-store.ts",
         "src/lib/stripe.ts",

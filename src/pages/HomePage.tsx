@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Database,
   Timer,
+  Dumbbell,
   GitBranch,
   Clock,
   ArrowRight
@@ -37,6 +38,27 @@ export default function HomePage() {
           <h1 className="text-4xl font-bold tracking-tight text-foreground">{t('home.title')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t('home.subtitle')}</p>
         </div>
+
+        <Link to="/app/sparring" className="group mb-4 block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Card
+            data-tour="mode-sparring"
+            className={cn(
+              'border-primary/30 bg-primary/[0.035] transition-colors hover:border-primary/50 hover:bg-primary/[0.06]',
+              'hover-lift'
+            )}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 space-y-0 sm:gap-5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+                <Dumbbell className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg">{t('home.sparring')}</CardTitle>
+                <CardDescription className="mt-1">{t('home.sparringDesc')}</CardDescription>
+              </div>
+              <ArrowRight className="h-5 w-5 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
+            </CardHeader>
+          </Card>
+        </Link>
 
         <div className="grid gap-4 md:grid-cols-3 stagger-enter">
           {modeKeys.map((mode) => (

@@ -4,6 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import { useSparringStore } from '@/lib/stores/sparring-store';
 import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 import { setJamUserId } from '@/lib/jam-metadata';
 
@@ -38,8 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const hydrateSessionStore = useSessionStore((state) => state.hydrateFromServer);
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
+  const hydrateSparringStore = useSparringStore((state) => state.hydrateSavedSessions);
   const resetSessionStore = useSessionStore((state) => state.resetLocalData);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
+  const resetSparringStore = useSparringStore((state) => state.resetLocalData);
   const currentUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       hydratedUserId = userId;
       Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
       Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
+      Promise.resolve(hydrateSparringStore()).catch((err) => console.warn('[Auth] hydrateSparringStore failed:', err));
     };
 
     // Older clients persisted these credentials across browser sessions.
@@ -157,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         hydratedUserId = undefined;
         resetSessionStore();
         resetSettingsStore();
+        resetSparringStore();
         sessionStorage.removeItem('google_provider_token');
         localStorage.removeItem('google_provider_token');
         // Remove refresh tokens written by older clients as well; this client
@@ -169,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         hydratedUserId = undefined;
         resetSessionStore();
         resetSettingsStore();
+        resetSparringStore();
       }
 
       hydrateStores(nextUserId);
@@ -178,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [hydrateSessionStore, hydrateSettingsStore, resetSessionStore, resetSettingsStore]);
+  }, [hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
@@ -209,8 +215,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       resetSessionStore();
       resetSettingsStore();
+      resetSparringStore();
     },
-  }), [session, loading, resetSessionStore, resetSettingsStore]);
+  }), [session, loading, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

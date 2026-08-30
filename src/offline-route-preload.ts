@@ -8,6 +8,7 @@ const preloaders = [
   () => import('./pages/HistoryPage'),
   () => import('./pages/LibraryPage'),
   () => import('./pages/TimerPage'),
+  () => import('./pages/SparringPage'),
   () => import('./pages/FlowchartPage'),
   () => import('./pages/SettingsPage'),
   () => import('./pages/AdminPage'),

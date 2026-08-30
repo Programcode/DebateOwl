@@ -5,6 +5,7 @@ import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
+import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate } from './date-format';
 
 // Color constants for consistent branding
@@ -17,6 +18,32 @@ const COLORS = {
     dark: [15, 23, 42] as [number, number, number], // Dark slate
     light: [248, 250, 252] as [number, number, number], // Light
 };
+
+function formatSparringDuration(seconds: number): string {
+    const totalSeconds = Math.max(0, Math.round(seconds));
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainder = String(totalSeconds % 60).padStart(2, '0');
+    return `${minutes}:${remainder}`;
+}
+
+function getSparringSideLabel(side: SparringSession['userSide']): string {
+    return side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
+}
+
+function getSparringWinnerLabel(session: SparringSession): string {
+    const winner = session.scorecard?.winner;
+    if (winner === 'user') return i18n.t('export.sparringUser');
+    if (winner === 'ai') return i18n.t('export.sparringOpponent');
+    return i18n.t('export.sparringTie');
+}
+
+function getSparringCategoryLabel(category: string): string {
+    return i18n.t(`sparring.category.${category}`, category);
+}
+
+function getSparringTurnLabel(speech: SparringSession['speeches'][number]): string {
+    return i18n.t(`sparring.turns.${speech.turnId}`, speech.role);
+}
 
 interface PDFHelpers {
     doc: import('jspdf').jsPDF;
@@ -197,6 +224,31 @@ async function createPDFDocument(): Promise<PDFHelpers> {
     };
 
     return { doc, get y() { return state.y; }, set y(v: number) { state.y = v; }, pageHeight, margin, contentWidth, checkPageBreak, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter };
+}
+
+function addSparringTranscriptParagraph(pdf: PDFHelpers, text: string) {
+    const { doc } = pdf;
+    const lineHeight = 4.8;
+    const lines = doc.splitTextToSize(text, pdf.contentWidth);
+    let remaining = lines;
+
+    while (remaining.length > 0) {
+        const availableHeight = pdf.pageHeight - pdf.margin - 15 - pdf.y;
+        const linesOnPage = Math.max(1, Math.floor(availableHeight / lineHeight));
+        const pageLines = remaining.slice(0, linesOnPage);
+        remaining = remaining.slice(linesOnPage);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...COLORS.dark);
+        doc.text(pageLines, pdf.margin, pdf.y);
+        pdf.y += pageLines.length * lineHeight;
+
+        if (remaining.length > 0) {
+            pdf.checkPageBreak(pdf.pageHeight);
+        }
+    }
+
+    pdf.y += 4;
 }
 
 // ============================================================
@@ -587,6 +639,103 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
         return true;
     } catch (error) {
         console.error('Failed to export factoids to PDF:', error);
+        return false;
+    }
+}
+
+// ============================================================
+// SPARRING TRANSCRIPT PDF EXPORT
+// ============================================================
+export async function exportSparringToPdf(session: SparringSession): Promise<boolean> {
+    try {
+        const pdf = await createPDFDocument();
+        const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter } = pdf;
+        const totalTimeUsedSeconds = session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0);
+        const totalTimeLimitSeconds = session.speeches.reduce((total, speech) => total + speech.timeLimitSeconds, 0);
+        const scorecard = session.scorecard;
+
+        addHeader(
+            i18n.t('export.sparringTranscript'),
+            `${getSparringSideLabel(session.userSide)} | ${session.format.toUpperCase()} | ${i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)}`,
+        );
+
+        addSectionTitle(i18n.t('export.sparringConfiguration'));
+        addParagraph(`${i18n.t('export.motion')}: ${session.motion}`);
+        addParagraph(`${i18n.t('export.sparringFormat')}: ${session.format.toUpperCase()}`);
+        addParagraph(`${i18n.t('export.side')}: ${getSparringSideLabel(session.userSide)}`);
+        addParagraph(`${i18n.t('export.sparringDifficulty')}: ${i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)}`);
+
+        addSectionTitle(i18n.t('export.sparringTotals'), COLORS.success);
+        const scoreRows = scorecard
+            ? [[
+                i18n.t('export.sparringUser'),
+                `${scorecard.userScore}/100`,
+                i18n.t('export.sparringOpponent'),
+                `${scorecard.aiScore}/100`,
+                `${i18n.t('export.sparringWinner')}: ${getSparringWinnerLabel(session)}`,
+            ]]
+            : [[i18n.t('export.sparringScorecardUnavailable'), '', '', '', '']];
+        addTable(
+            [
+                i18n.t('export.sparringUser'),
+                i18n.t('export.sparringScore'),
+                i18n.t('export.sparringOpponent'),
+                i18n.t('export.sparringScore'),
+                i18n.t('export.sparringResult'),
+            ],
+            scoreRows,
+            { headerColor: COLORS.success },
+        );
+        addParagraph(`${i18n.t('export.sparringSpeeches')}: ${session.speeches.length}`);
+        addParagraph(`${i18n.t('export.sparringTimeUsed')}: ${formatSparringDuration(totalTimeUsedSeconds)} / ${formatSparringDuration(totalTimeLimitSeconds)}`);
+
+        if (scorecard) {
+            addSectionTitle(i18n.t('export.sparringCategories'), COLORS.primary);
+            addTable(
+                [
+                    i18n.t('export.sparringCategory'),
+                    i18n.t('export.sparringUser'),
+                    i18n.t('export.sparringOpponent'),
+                    i18n.t('export.sparringFeedback'),
+                ],
+                scorecard.categories.map((category) => [
+                    getSparringCategoryLabel(category.name),
+                    `${category.userScore}/25`,
+                    `${category.aiScore}/25`,
+                    category.feedback,
+                ]),
+            );
+
+            addSectionTitle(i18n.t('export.sparringFeedback'), COLORS.warning);
+            addParagraph(scorecard.verdict);
+            addParagraph(scorecard.overallFeedback);
+            if (scorecard.keyMoments.length > 0) {
+                addSectionTitle(i18n.t('export.sparringKeyMoments'), COLORS.success);
+                addBulletList(scorecard.keyMoments);
+            }
+            if (scorecard.improvementAreas.length > 0) {
+                addSectionTitle(i18n.t('export.sparringImprovementAreas'), COLORS.warning);
+                addBulletList(scorecard.improvementAreas);
+            }
+        }
+
+        addSectionTitle(i18n.t('export.sparringTranscript'), COLORS.primary);
+        if (session.speeches.length === 0) {
+            addParagraph(i18n.t('export.sparringNoTranscript'));
+        } else {
+            session.speeches.forEach((speech, index) => {
+                addSectionTitle(`${index + 1}. ${getSparringTurnLabel(speech)}`, COLORS.secondary);
+                addParagraph(`${i18n.t('export.side')}: ${getSparringSideLabel(speech.side)}`);
+                addParagraph(`${i18n.t('export.sparringTimeUsed')}: ${formatSparringDuration(speech.timeUsedSeconds)} / ${formatSparringDuration(speech.timeLimitSeconds)}`);
+                addSparringTranscriptParagraph(pdf, speech.content);
+            });
+        }
+
+        addFooter();
+        doc.save(`SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.pdf`);
+        return true;
+    } catch (error) {
+        console.error('Failed to export sparring transcript to PDF:', error);
         return false;
     }
 }

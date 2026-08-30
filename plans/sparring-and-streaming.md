@@ -1,5 +1,7 @@
 # Debate Sparring Mode — Implementation Plan
 
+**Status:** Implemented locally on 2026-08-30. Production migration and deployment remain separate release operations.
+
 ## Overview
 A turn-based AI debate practice mode where the user argues one side and the AI argues the other, simulating a real debate round with timed speeches, rebuttals, and scoring.
 
@@ -82,7 +84,17 @@ interface SparringScorecard {
 - Save completed sessions to History (new `savedSparring` in session store)
 - Export sparring transcript to Word/PDF
 
-## Estimated Effort
+## Delivered
+
+- Standard, Lincoln-Douglas, and Public Forum turn plans with either user side
+- Deadline-based timers, pause/resume/reset, offline-safe tab persistence, retries, and keyboard submit
+- Transcript-aware opponent turns, signed AI-turn integrity, atomic/idempotent judging, and a four-category scorecard
+- History, settings, navigation, home, auth reset, delete-all, DOCX/PDF export, service-worker preload, and en/es/hu integration
+- Unit, integration, Deno, desktop/mobile browser, reduced-motion, overflow, and live provider-contract coverage
+
+Streaming remains tracked independently in `plans/streaming-ai.md`; it is not part of the turn-based sparring contract.
+
+## Original Estimated Effort
 - Setup + Round UI: 4 hours
 - AI integration (prompts, edge function): 3 hours
 - Scorecard + judging: 2 hours

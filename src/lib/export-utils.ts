@@ -3,7 +3,34 @@ import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
-import { formatEuropeanDate } from './date-format';
+import type { SparringSession } from './stores/sparring-store';
+import { formatEuropeanDate, formatEuropeanDateTime } from './date-format';
+
+function formatSparringDuration(seconds: number): string {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainder = String(totalSeconds % 60).padStart(2, '0');
+  return `${minutes}:${remainder}`;
+}
+
+function getSparringSideLabel(side: SparringSession['userSide']): string {
+  return side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
+}
+
+function getSparringWinnerLabel(session: SparringSession): string {
+  const winner = session.scorecard?.winner;
+  if (winner === 'user') return i18n.t('export.sparringUser');
+  if (winner === 'ai') return i18n.t('export.sparringOpponent');
+  return i18n.t('export.sparringTie');
+}
+
+function getSparringCategoryLabel(category: string): string {
+  return i18n.t(`sparring.category.${category}`, category);
+}
+
+function getSparringTurnLabel(speech: SparringSession['speeches'][number]): string {
+  return i18n.t(`sparring.turns.${speech.turnId}`, speech.role);
+}
 
 export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean> {
   try {
@@ -557,4 +584,116 @@ export async function exportFactoidsToGoogleDocs(result: FactoidsOutput): Promis
     return { success: false, error: 'Missing required factoids data for export.' };
   }
   return callGoogleDocsEdgeFunction('factoids', result);
+}
+
+// ============================================================
+// SPARRING TRANSCRIPT DOCX EXPORT
+// ============================================================
+export async function exportSparringToDocx(session: SparringSession): Promise<boolean> {
+  try {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
+    const { saveAs } = await import('file-saver');
+    const totalTimeUsedSeconds = session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0);
+    const totalTimeLimitSeconds = session.speeches.reduce((total, speech) => total + speech.timeLimitSeconds, 0);
+    const scorecard = session.scorecard;
+    const metadata = [
+      [i18n.t('export.motion'), session.motion],
+      [i18n.t('export.sparringFormat'), session.format.toUpperCase()],
+      [i18n.t('export.side'), getSparringSideLabel(session.userSide)],
+      [i18n.t('export.sparringDifficulty'), i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)],
+      [i18n.t('export.sparringCompleted'), formatEuropeanDateTime(session.updatedAt)],
+      [i18n.t('export.sparringTimeUsed'), `${formatSparringDuration(totalTimeUsedSeconds)} / ${formatSparringDuration(totalTimeLimitSeconds)}`],
+    ].map(([label, value]) => new Paragraph({
+      children: [new TextRun({ text: `${label}: `, bold: true }), new TextRun(value)],
+      spacing: { after: 100 },
+    }));
+
+    const scorecardContent = scorecard
+      ? [
+        new Paragraph({ text: i18n.t('export.sparringTotals').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 150 } }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${i18n.t('export.sparringUser')}: `, bold: true }),
+            new TextRun(`${scorecard.userScore}/100`),
+            new TextRun({ text: `   ${i18n.t('export.sparringOpponent')}: `, bold: true }),
+            new TextRun(`${scorecard.aiScore}/100`),
+          ],
+          spacing: { after: 100 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: `${i18n.t('export.sparringWinner')}: `, bold: true }), new TextRun(getSparringWinnerLabel(session))],
+          spacing: { after: 200 },
+        }),
+        new Paragraph({ text: i18n.t('export.sparringCategories').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 150 } }),
+        ...scorecard.categories.flatMap((category) => [
+          new Paragraph({
+            children: [new TextRun({ text: `${getSparringCategoryLabel(category.name)}: `, bold: true }), new TextRun(`${category.userScore}/25 ${i18n.t('export.sparringUser').toLowerCase()} | ${category.aiScore}/25 ${i18n.t('export.sparringOpponent').toLowerCase()}`)],
+            spacing: { after: 75 },
+          }),
+          new Paragraph({ text: category.feedback, spacing: { after: 150 } }),
+        ]),
+        new Paragraph({ text: i18n.t('export.sparringFeedback').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 150 } }),
+        new Paragraph({ text: scorecard.verdict, spacing: { after: 100 } }),
+        new Paragraph({ text: scorecard.overallFeedback, spacing: { after: 150 } }),
+        ...(scorecard.keyMoments.length > 0
+          ? [
+            new Paragraph({ text: i18n.t('export.sparringKeyMoments'), heading: HeadingLevel.HEADING_2, spacing: { before: 150, after: 75 } }),
+            ...scorecard.keyMoments.map((moment) => new Paragraph({ text: `• ${moment}`, spacing: { after: 75 } })),
+          ]
+          : []),
+        ...(scorecard.improvementAreas.length > 0
+          ? [
+            new Paragraph({ text: i18n.t('export.sparringImprovementAreas'), heading: HeadingLevel.HEADING_2, spacing: { before: 150, after: 75 } }),
+            ...scorecard.improvementAreas.map((area) => new Paragraph({ text: `• ${area}`, spacing: { after: 75 } })),
+          ]
+          : []),
+      ]
+      : [
+        new Paragraph({ text: i18n.t('export.sparringScorecardUnavailable'), spacing: { before: 300, after: 150 } }),
+      ];
+
+    const transcriptContent = session.speeches.length > 0
+      ? session.speeches.flatMap((speech, index) => [
+        new Paragraph({
+          children: [new TextRun({ text: `${index + 1}. ${getSparringTurnLabel(speech)}`, bold: true })],
+          spacing: { before: 200, after: 75 },
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${i18n.t('export.side')}: `, bold: true }),
+            new TextRun(getSparringSideLabel(speech.side)),
+            new TextRun({ text: `   ${i18n.t('export.sparringTimeUsed')}: `, bold: true }),
+            new TextRun(`${formatSparringDuration(speech.timeUsedSeconds)} / ${formatSparringDuration(speech.timeLimitSeconds)}`),
+          ],
+          spacing: { after: 75 },
+        }),
+        new Paragraph({ text: speech.content, spacing: { after: 150 } }),
+      ])
+      : [new Paragraph({ text: i18n.t('export.sparringNoTranscript'), spacing: { after: 150 } })];
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: i18n.t('export.sparringTranscript'),
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 250 },
+          }),
+          ...metadata,
+          ...scorecardContent,
+          new Paragraph({ text: i18n.t('export.sparringTranscript').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 150 } }),
+          ...transcriptContent,
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.docx`);
+    return true;
+  } catch (error) {
+    console.error('Failed to export sparring transcript to DOCX:', error);
+    return false;
+  }
 }

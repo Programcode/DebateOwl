@@ -7,7 +7,6 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 - [Admin announcements](./admin-announcements.md)
 - [Ask and sitewide search quality](./search-quality.md)
 - [Control honesty and deterministic toggles](./control-honesty.md)
-- [Debate sparring and streaming](./sparring-and-streaming.md)
 - [Model cost accounting](./model-cost-accounting.md)
 - [Prompt evaluation sheet (manual)](./prompt-eval-sheet.md)
 - [Quality & Truth release checklist](./release-checklist.md)
@@ -19,6 +18,7 @@ This folder holds implementation plans for remaining DebateLab product work. Kee
 
 ## Done
 
+- [Debate sparring](./sparring-and-streaming.md)
 - [Bug and polish cleanup](./done/bugs.txt)
 - [Admin trial gifts](./done/admin-trial-gifts.md)
 - [Top users email fallback](./done/top-users-email-fallback.md)

@@ -12,6 +12,7 @@ const APP_SHELL = [
   '/app/ask',
   '/app/library',
   '/app/timer',
+  '/app/sparring',
   '/app/flowchart',
   '/app/history',
   '/app/settings',

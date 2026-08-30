@@ -7,11 +7,12 @@ import {
   JSON_RULES,
   PRODUCT_IDENTITY,
   RESEARCH_RULES,
+  SPARRING_PROMPT,
   buildSystemPrompt,
   type Feature,
 } from "./prompts.ts";
 
-const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask"];
+const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask", "sparring"];
 
 const FEATURE_PROMPTS: Record<Feature, string> = {
   generate: GENERATE_PROMPT,
@@ -19,6 +20,7 @@ const FEATURE_PROMPTS: Record<Feature, string> = {
   brainstorm: BRAINSTORM_PROMPT,
   factoids: FACTOIDS_PROMPT,
   ask: ASK_PROMPT,
+  sparring: SPARRING_PROMPT,
 };
 
 Deno.test("every feature system prompt carries the product identity layer", () => {
@@ -78,4 +80,11 @@ Deno.test("date context replaces the placeholder in every feature task prompt", 
 
 Deno.test("product identity includes the humanizer style rules", () => {
   if (!PRODUCT_IDENTITY.includes("HUMANIZER STYLE INSTRUCTIONS")) throw new Error("humanizer missing from identity layer");
+});
+
+Deno.test("sparring system prompt defines difficulty and transcript-only scoring", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: Testdate" });
+  if (!prompt.includes("Difficulty is a real control")) throw new Error("difficulty guidance missing");
+  if (!prompt.includes("clarity, organization, and time discipline")) throw new Error("typed delivery guidance missing");
+  if (!prompt.includes("Never invent citations")) throw new Error("transcript-only guidance missing");
 });

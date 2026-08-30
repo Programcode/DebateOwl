@@ -1,0 +1,286 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { supabaseMock, resetMockState, setMockTableResponse } from '../mocks/supabase';
+import { useSparringStore, type SparringSession } from '@/lib/stores/sparring-store';
+import type { SparringScorecard, SparringSpeech } from '@/lib/ai/schemas/sparring';
+
+vi.mock('@/lib/supabase/client', () => ({
+  supabase: supabaseMock,
+}));
+
+const SCORECARD: SparringScorecard = {
+  userScore: 76,
+  aiScore: 72,
+  categories: [
+    { name: 'Logic', userScore: 20, aiScore: 18, feedback: 'The central causal chain was clear.' },
+    { name: 'Evidence', userScore: 18, aiScore: 17, feedback: 'The round needed one stronger factual warrant.' },
+    { name: 'Delivery', userScore: 19, aiScore: 18, feedback: 'Typed delivery was not inferred; organization was readable.' },
+    { name: 'Strategy', userScore: 19, aiScore: 19, feedback: 'Both sides engaged the main clash.' },
+  ],
+  overallFeedback: 'A close round with a small advantage to the user.',
+  keyMoments: ['The final rebuttal answered the strongest objection.'],
+  improvementAreas: ['Add comparative weighing before the conclusion.'],
+  winner: 'user',
+  verdict: 'The user had a narrow edge.',
+};
+
+function getSession(): SparringSession {
+  const session = useSparringStore.getState().currentSession;
+  if (!session) throw new Error('Expected an active sparring session.');
+  return session;
+}
+
+function speech(overrides: Partial<SparringSpeech> = {}): SparringSpeech {
+  return {
+    id: 'ai-speech-1',
+    turnId: 'standard-2',
+    speaker: 'ai',
+    side: 'con',
+    role: 'Con opening',
+    content: 'A narrower policy could address the same concern with fewer tradeoffs.',
+    createdAt: 2_000,
+    timeLimitSeconds: 240,
+    timeUsedSeconds: 120,
+    ...overrides,
+  };
+}
+
+function validSavedRow(id: string) {
+  return {
+    id,
+    motion: 'This House would make public transport free at the point of use.',
+    user_side: 'pro',
+    format: 'standard',
+    difficulty: 'medium',
+    turns: [
+      {
+        id: 'user-speech-1',
+        turnId: 'standard-1',
+        speaker: 'user',
+        side: 'pro',
+        role: 'Pro opening',
+        content: 'Universal access removes a direct barrier to participation.',
+        createdAt: 1_000,
+        timeLimitSeconds: 240,
+        timeUsedSeconds: 80,
+      },
+      speech(),
+    ],
+    final_evaluation: SCORECARD,
+    status: 'complete',
+    created_at: '2026-08-30T00:00:00.000Z',
+    updated_at: '2026-08-30T00:02:00.000Z',
+  };
+}
+
+describe('sparring-store', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    localStorage.clear();
+    sessionStorage.clear();
+    resetMockState();
+    useSparringStore.setState({ currentSession: null, savedSessions: [], hydrated: false });
+  });
+
+  it('starts a session with a live user timer and preserves the draft', () => {
+    vi.setSystemTime(1_000);
+    const session = useSparringStore.getState().startSession({
+      motion: '  This House would make public transport free.  ',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+
+    expect(session.motion).toBe('This House would make public transport free.');
+    expect(session.currentTurnIndex).toBe(0);
+    expect(session.turns[0].speaker).toBe('user');
+    expect(session.timerRemainingSeconds).toBe(240);
+    expect(session.timerRunning).toBe(true);
+    expect(session.timerDeadline).toBe(241_000);
+
+    useSparringStore.getState().setDraft('My opening claim and warrant.');
+    expect(getSession().draft).toBe('My opening claim and warrant.');
+
+    const persisted = JSON.parse(sessionStorage.getItem('debate-sparring-storage') ?? '{}') as {
+      state?: { currentSession?: { draft?: string } };
+    };
+    expect(persisted.state?.currentSession?.draft).toBe('My opening claim and warrant.');
+  });
+
+  it('pauses, resumes, and times out against a wall-clock deadline', () => {
+    vi.setSystemTime(1_000);
+    useSparringStore.getState().startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+
+    useSparringStore.getState().pauseTimer(61_000);
+    expect(getSession()).toMatchObject({
+      timerRemainingSeconds: 180,
+      timerRunning: false,
+      timerDeadline: null,
+    });
+
+    useSparringStore.getState().resumeTimer(70_000);
+    expect(getSession()).toMatchObject({
+      timerRemainingSeconds: 180,
+      timerRunning: true,
+      timerDeadline: 250_000,
+    });
+
+    useSparringStore.getState().tickTimer(250_001);
+    expect(getSession()).toMatchObject({
+      timerRemainingSeconds: 0,
+      timerRunning: false,
+      timerDeadline: null,
+    });
+  });
+
+  it('records each turn in order and rejects an out-of-order or duplicate AI speech', () => {
+    vi.setSystemTime(1_000);
+    const store = useSparringStore.getState();
+    store.startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+
+    const afterUser = store.submitUserSpeech('Universal access removes the price barrier.', 61_000);
+    expect(afterUser?.speeches).toHaveLength(1);
+    expect(afterUser?.speeches[0]).toMatchObject({
+      turnId: 'standard-1',
+      speaker: 'user',
+      side: 'pro',
+      content: 'Universal access removes the price barrier.',
+      timeUsedSeconds: 60,
+    });
+
+    expect(store.appendAiSpeech(speech({ turnId: 'standard-8' }), 62_000)).toBeNull();
+    expect(getSession().speeches).toHaveLength(1);
+
+    const opponentSpeech = speech();
+    const afterAi = store.appendAiSpeech(opponentSpeech, 62_000);
+    expect(afterAi?.speeches).toHaveLength(2);
+    expect(afterAi?.currentTurnIndex).toBe(2);
+    expect(afterAi?.turns[2].speaker).toBe('user');
+
+    // Simulate a stale in-flight response arriving while the same AI turn is
+    // still active. The store must not append it a second time.
+    const activeAiSession = {
+      ...getSession(),
+      currentTurnIndex: 1,
+      speeches: [afterAi?.speeches[0] ?? opponentSpeech, opponentSpeech],
+    };
+    useSparringStore.setState({ currentSession: activeAiSession });
+    expect(store.appendAiSpeech(opponentSpeech, 63_000)).toBeNull();
+    expect(getSession().speeches.filter((item) => item.id === opponentSpeech.id)).toHaveLength(1);
+  });
+
+  it('rejects a speech that exceeds the server content limit without advancing', () => {
+    const store = useSparringStore.getState();
+    store.startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+
+    expect(store.submitUserSpeech('x'.repeat(6_001))).toBeNull();
+    expect(getSession()).toMatchObject({ currentTurnIndex: 0, speeches: [] });
+  });
+
+  it('moves to judging and saves a completed scorecard', () => {
+    const store = useSparringStore.getState();
+    const session = store.startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'ld',
+      difficulty: 'hard',
+    });
+    useSparringStore.setState({
+      currentSession: {
+        ...session,
+        currentTurnIndex: session.turns.length,
+        phase: 'judging',
+        timerRemainingSeconds: 0,
+        timerRunning: false,
+        timerDeadline: null,
+      },
+    });
+
+    const completed = store.completeSession(SCORECARD, 10_000);
+    expect(completed?.phase).toBe('complete');
+    expect(completed?.scorecard).toEqual(SCORECARD);
+    expect(useSparringStore.getState().savedSessions).toEqual([completed]);
+  });
+
+  it('hydrates only complete rows that pass the nested speech and scorecard schemas', async () => {
+    setMockTableResponse('sparring_sessions', {
+      select: [
+        validSavedRow('valid-row'),
+        { ...validSavedRow('bad-speech'), turns: [{ ...speech(), content: 42 }] },
+        { ...validSavedRow('bad-scorecard'), final_evaluation: { ...SCORECARD, categories: [] } },
+        { ...validSavedRow('in-progress'), status: 'in_progress' },
+      ],
+    });
+
+    await useSparringStore.getState().hydrateSavedSessions();
+
+    expect(useSparringStore.getState().savedSessions).toHaveLength(1);
+    expect(useSparringStore.getState().savedSessions[0].id).toBe('valid-row');
+    expect(useSparringStore.getState().savedSessions[0].phase).toBe('complete');
+    expect(useSparringStore.getState().hydrated).toBe(true);
+  });
+
+  it('discards a hydration response after local auth data is reset', async () => {
+    let finishQuery!: (value: { data: unknown[]; error: null }) => void;
+    supabaseMock.from.mockImplementationOnce(() => ({
+      select: () => ({
+        order: () => new Promise((resolve) => {
+          finishQuery = resolve;
+        }),
+      }),
+    } as ReturnType<typeof supabaseMock.from>));
+
+    const hydration = useSparringStore.getState().hydrateSavedSessions();
+    await vi.waitFor(() => expect(supabaseMock.from).toHaveBeenCalledWith('sparring_sessions'));
+    useSparringStore.getState().resetLocalData();
+    finishQuery({ data: [validSavedRow('stale-user-row')], error: null });
+    await hydration;
+
+    expect(useSparringStore.getState()).toMatchObject({ savedSessions: [], hydrated: false });
+  });
+
+  it('rolls back the local deletion when the server delete fails', async () => {
+    const session = useSparringStore.getState().startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'easy',
+    });
+    useSparringStore.setState({
+      savedSessions: [{
+        ...session,
+        phase: 'complete',
+        currentTurnIndex: session.turns.length,
+        scorecard: SCORECARD,
+        timerRemainingSeconds: 0,
+        timerRunning: false,
+        timerDeadline: null,
+      }],
+    });
+
+    supabaseMock.from.mockImplementationOnce(() => ({
+      delete: () => ({
+        eq: async () => ({ data: null, error: { message: 'delete unavailable' } }),
+      }),
+    } as ReturnType<typeof supabaseMock.from>));
+
+    await expect(useSparringStore.getState().deleteSavedSession(session.id))
+      .rejects.toThrow('delete unavailable');
+    expect(useSparringStore.getState().savedSessions).toHaveLength(1);
+    expect(useSparringStore.getState().savedSessions[0].id).toBe(session.id);
+  });
+});

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen } from 'lucide-react';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,13 +21,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useSparringStore } from '@/lib/stores/sparring-store';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useSessionStore();
+  const sparringSessions = useSparringStore((state) => state.savedSessions);
+  const hydrateSparringSessions = useSparringStore((state) => state.hydrateSavedSessions);
+  const loadSparringSession = useSparringStore((state) => state.loadSavedSession);
+  const deleteSparringSession = useSparringStore((state) => state.deleteSavedSession);
   const { toast } = useToast();
   const [caseToDelete, setCaseToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [sparringSessionToDelete, setSparringSessionToDelete] = useState<{ id: string; motion: string } | null>(null);
+
+  useEffect(() => {
+    void hydrateSparringSessions();
+  }, [hydrateSparringSessions]);
 
   const handleLoadCase = (id: string) => {
     store.loadSavedCase(id);
@@ -66,6 +76,23 @@ export default function HistoryPage() {
     setCaseToDelete(null);
   };
 
+  const handleLoadSparringSession = (id: string) => {
+    loadSparringSession(id);
+    navigate('/app/sparring');
+  };
+
+  const confirmDeleteSparringSession = () => {
+    if (!sparringSessionToDelete) return;
+    void deleteSparringSession(sparringSessionToDelete.id)
+      .then(() => {
+        toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.sparringDeleted') });
+      })
+      .catch(() => {
+        toast({ title: t('common.error', 'Error'), description: t('historyPage.sparringDeleteFailed'), variant: 'destructive' });
+      });
+    setSparringSessionToDelete(null);
+  };
+
   return (
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -77,12 +104,13 @@ export default function HistoryPage() {
         </div>
 
         <Tabs defaultValue="cases" className="space-y-6">
-          <TabsList>
+          <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
             <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
             <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
             <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4" /> {t('historyPage.tabBrainstorms')}</TabsTrigger>
             <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4" /> {t('historyPage.tabFactoids')}</TabsTrigger>
+            <TabsTrigger value="sparring" className="gap-2"><Dumbbell className="h-4 w-4" /> {t('historyPage.tabSparring')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cases">
@@ -262,6 +290,57 @@ export default function HistoryPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="sparring">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('historyPage.sparringTitle')}</CardTitle>
+                <CardDescription>{t('historyPage.sparringDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {sparringSessions.length === 0 ? (
+                  <EmptyState
+                    icon={Dumbbell}
+                    title={t('historyPage.emptySparring')}
+                    description={t('historyPage.emptySparringDesc')}
+                    actionLabel={t('historyPage.startSparring')}
+                    onAction={() => navigate('/app/sparring')}
+                  />
+                ) : (
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-4">
+                      {sparringSessions.map((session) => (
+                        <div key={session.id} className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/5">
+                          <div className="min-w-0 space-y-1">
+                            <h4 className="truncate font-semibold">{session.motion}</h4>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline">{session.format.toUpperCase()}</Badge>
+                              <Badge variant="outline">{session.userSide === 'pro' ? t('export.proposition') : t('export.opposition')}</Badge>
+                              {session.scorecard && <span>{t('historyPage.score', { user: session.scorecard.userScore, ai: session.scorecard.aiScore })}</span>}
+                              <span>{formatEuropeanDateTime(session.updatedAt)}</span>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleLoadSparringSession(session.id)}>
+                              <Eye className="mr-2 h-4 w-4" /> {t('historyPage.load')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => setSparringSessionToDelete({ id: session.id, motion: session.motion })}
+                              aria-label={t('historyPage.deleteSparringAria', { motion: session.motion })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
         <AlertDialog open={Boolean(caseToDelete)} onOpenChange={(open) => !open && setCaseToDelete(null)}>
           <AlertDialogContent>
@@ -274,6 +353,20 @@ export default function HistoryPage() {
             <AlertDialogFooter>
               <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDeleteCase}>{t('common.delete', 'Delete')}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={Boolean(sparringSessionToDelete)} onOpenChange={(open) => !open && setSparringSessionToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('historyPage.deleteSparringTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('historyPage.deleteSparringDesc')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteSparringSession}>{t('common.delete', 'Delete')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
