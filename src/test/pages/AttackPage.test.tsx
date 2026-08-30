@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AttackPage from '@/pages/AttackPage';
 import { BrowserRouter } from 'react-router-dom';
+import type { AttackOutput } from '@/lib/ai/schemas/attack';
 
 // Mock dependencies
 vi.mock('@/hooks/use-subscription', () => ({
@@ -40,19 +41,21 @@ const mockSetAttackLoading = vi.fn();
 const mockSetAttackResult = vi.fn();
 const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
+let mockAttackResult: any = null;
 
 vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
 }));
 vi.mock('@/lib/stores/session-store', () => ({
     useSessionStore: () => ({
-        attackResult: null as any, // Default state
+        attackResult: mockAttackResult,
         attackLoading: false,
         setAttackResult: mockSetAttackResult,
         setAttackLoading: mockSetAttackLoading,
         addAskMessage: mockAddAskMessage,
         setAskLoading: mockSetAskLoading,
         askMessages: [] as any[],
+        attackForm: { caseText: 'Original attacked case' },
     }),
 }));
 
@@ -87,10 +90,11 @@ vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
 }));
 vi.mock('@/components/features/attack/AttackResults', () => ({
-    AttackResults: ({ result, onDiscuss }: { result: { overallAssessment: { score: number } }, onDiscuss: () => void }) => (
+    AttackResults: ({ result, onDiscuss, onPracticeCrossfire }: { result: { overallAssessment: { score: number } }, onDiscuss: () => void, onPracticeCrossfire?: () => void }) => (
         <div data-testid="attack-results">
             <h1>Score {result.overallAssessment.score}</h1>
             <button onClick={onDiscuss}>Discuss</button>
+            <button onClick={onPracticeCrossfire} data-testid="open-crossfire">Open Crossfire</button>
         </div>
     ),
 }));
@@ -100,6 +104,7 @@ import { attackCase } from '@/lib/ai/client';
 describe('AttackPage Integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockAttackResult = null;
     });
 
     it('renders the empty state initially', () => {
@@ -145,5 +150,31 @@ describe('AttackPage Integration', () => {
         // Verify result setting
         expect(mockSetAttackResult).toHaveBeenCalledWith(mockResult);
         expect(mockSetAttackLoading).toHaveBeenCalledWith(false);
+    });
+
+    it('opens Crossfire with the attacked case and cross-ex questions', () => {
+        const result: AttackOutput = {
+            overallAssessment: { score: 60, summary: 'Mixed', strengthAreas: [] },
+            weaknesses: [],
+            fallaciesDetected: [],
+            crossExQuestions: [{ question: 'What is the mechanism?', purpose: 'Test causation', expectedTrap: 'No warrant' }],
+            weighingAnalysis: { currentWeighing: '', missingComparisons: [], improvementSuggestions: [] },
+        };
+        mockAttackResult = result;
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AttackPage />
+            </BrowserRouter>
+        );
+
+        fireEvent.click(screen.getByTestId('open-crossfire'));
+        expect(mockNavigate).toHaveBeenCalledWith('/app/crossfire', {
+            state: expect.objectContaining({
+                source: 'attack',
+                argument: 'Original attacked case',
+                seedQuestions: ['What is the mechanism?'],
+            }),
+        });
     });
 });

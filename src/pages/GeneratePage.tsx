@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
+import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 
 export default function GeneratePage() {
   const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases } = useSessionStore();
@@ -185,6 +186,13 @@ export default function GeneratePage() {
     }
   };
 
+  const handlePracticeCrossfire = () => {
+    if (!generateResult) return;
+    navigate('/app/crossfire', {
+      state: prefillFromGenerate(generateForm?.motion ?? generateResult.caseStructure.thesis, generateResult),
+    });
+  };
+
   const handleImportFlowchart = () => {
     if (!generateResult?.caseStructure || !generateResult?.contentions) {
       toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartNoData'), variant: "destructive" });
@@ -342,6 +350,7 @@ export default function GeneratePage() {
                   onSave={handleSave}
                   onUndo={handleUndo}
                   onImportFlowchart={handleImportFlowchart}
+                  onPracticeCrossfire={handlePracticeCrossfire}
                 />
               </div>
             ) : (
