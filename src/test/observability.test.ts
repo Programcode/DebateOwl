@@ -209,6 +209,7 @@ describe("observability primitives", () => {
     expect(sentryInitMock).toHaveBeenCalledOnce();
     expect(sentryInitMock).toHaveBeenCalledWith(expect.objectContaining({
       dsn: "https://public-test@sentry.example/1",
+      ignoreErrors: [/^Synthetic observability verification$/],
       sendDefaultPii: false,
       beforeBreadcrumb: filterObservabilityBreadcrumb,
       dataCollection: {
