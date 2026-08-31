@@ -17,7 +17,8 @@ Run every step before merging this branch. Nothing here deploys anything; deploy
 - [ ] `npm test` — full vitest suite green
 - [ ] `npm run build` — production build succeeds
 - [ ] `deno check supabase/functions/ai/index.ts supabase/functions/ai-stream/index.ts supabase/functions/admin/index.ts`
-- [ ] `deno test --allow-read --allow-env=EXA_API_KEY --allow-net=127.0.0.1 supabase/functions/` — includes cost calculator, research/quality-floor, prompt-layer, and control-matrix suites
+- [ ] `npm run test:edge` — native Deno coverage including the exported handler boundary
+- [ ] `supabase db start && npm run test:db` — migration replay and pgTAP policy coverage with Supabase CLI 2.115 or newer
 
 ## 2. Migration review (before any deploy)
 

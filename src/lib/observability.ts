@@ -124,8 +124,8 @@ export function initializeObservability(): void {
       ],
       enableLogs: true,
       enableMetrics: true,
-      tracesSampleRate: 1.0,
-      replaysSessionSampleRate: 0.1,
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1.0,
     });
   }

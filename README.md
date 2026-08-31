@@ -1354,13 +1354,21 @@ Run the full credential-free verification ladder with one command:
 npm run verify
 ```
 
-It runs ESLint, TypeScript, the full selected-scope coverage suite, the production build, and desktop plus mobile Chromium against an isolated Vite server on `127.0.0.1:18080`. The browser runner never reuses an existing server. Failure traces, screenshots, videos, and the HTML report are written to ignored `test-results/` and `playwright-report/` directories.
+It runs ESLint, TypeScript, the full selected-scope coverage suite, native Deno Edge Function tests, the production build, and desktop plus mobile Chromium against an isolated Vite server on `127.0.0.1:18080`. The browser runner never reuses an existing server. Failure traces, screenshots, videos, and the HTML report are written to ignored `test-results/` and `playwright-report/` directories.
 
 Useful focused commands:
 
 ```bash
 # Unit and Supabase function tests with enforced coverage
 npm test -- --coverage
+
+# Native Deno Edge Function tests, including the exported handler boundary
+npm run test:edge
+
+# Database migration replay and pgTAP policy tests, with local Supabase running
+supabase db start
+npm run test:db
+supabase stop --no-backup
 
 # One focused unit test
 npx vitest run src/test/security/url-validation.test.ts
@@ -1383,7 +1391,7 @@ STAGING_DEMO_CODE=<dedicated-test-code> \
 npm run test:e2e:staging
 ```
 
-Temporary auth state lives under `test-results/.auth/`. Never upload it or staging traces. GitHub exposes staging secrets only to the protected `staging` environment on `main`, and only after `STAGING_E2E_ENABLED=true` is set. Pull requests remain credential-free.
+Temporary auth state lives under `test-results/.auth/`. Staging disables traces, screenshots, and video, and its workflow uploads no browser artifacts. GitHub exposes staging secrets only to the protected `staging` environment on `main`, and only after `STAGING_E2E_ENABLED=true` is set. Pull requests remain credential-free.
 
 A green local run does not mean the current GitHub head passed. Check the PR run itself. If GitHub Actions cannot start because of billing or spending limits, report that as an external exception. For bugs, add a failing reproduction first when the repository has a suitable test layer, and state plainly when browser or real-staging proof did not run.
 

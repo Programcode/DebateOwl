@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(14);
+SELECT plan(16);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -68,6 +68,25 @@ SELECT results_eq(
   $$SELECT count(*)::bigint FROM public.user_announcement_dismissals$$,
   ARRAY[1::bigint],
   'users read their own persisted dismissal'
+);
+
+RESET ROLE;
+UPDATE public.admin_announcements
+SET deactivated_at = now()
+WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001';
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+
+SELECT results_eq(
+  $$SELECT title FROM public.admin_announcements ORDER BY title$$,
+  ARRAY['For current user'],
+  'deactivated announcements stop appearing immediately'
+);
+SELECT results_eq(
+  $$SELECT count(*)::bigint FROM public.user_announcement_dismissals$$,
+  ARRAY[1::bigint],
+  'deactivation preserves existing dismissal history'
 );
 SELECT throws_ok(
   $$INSERT INTO public.user_announcement_dismissals (announcement_id, user_id)

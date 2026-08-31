@@ -15,11 +15,20 @@ Run the smallest relevant reproduction first, then the complete gate before a PR
 npm run lint
 npm run typecheck
 npm test -- --coverage
+npm run test:edge
 npm run build
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 ```
 
 `npm run verify` runs that full credential-free ladder. It starts an isolated Vite server and executes the desktop and mobile Chromium projects. Browser failures stay in ignored `test-results/` and `playwright-report/` directories. CI uploads those directories for seven days when the browser step fails.
+
+Database migrations and pgTAP policies have a separate Docker-backed gate. Supabase CLI 2.115 or newer is required so `CREATE INDEX CONCURRENTLY` runs outside the migration batch:
+
+```bash
+supabase db start
+npm run test:db
+supabase stop --no-backup
+```
 
 WebKit is an additional release smoke gate:
 
@@ -46,11 +55,11 @@ STAGING_DEMO_CODE=<dedicated-test-code> \
 npm run test:e2e:staging
 ```
 
-The suite rejects the production project, checks that the anon key belongs to the supplied staging URL, authenticates through `demo-code-login`, proves session reload, writes and reads back one unique source, makes one bounded AI request, and deletes only that source. It saves temporary auth state under `test-results/.auth/`. Never upload that directory or a staging trace because both can contain session tokens.
+The suite rejects the production project, checks that the anon key belongs to the supplied staging URL, authenticates through `demo-code-login`, proves session reload, writes and reads back one unique source, makes one bounded AI request, and deletes only that source. It saves temporary auth state under `test-results/.auth/`. Staging disables traces, screenshots, and video, and its workflow uploads no browser artifacts.
 
 GitHub runs staging only for `main` push or a main-branch manual dispatch, through the protected `staging` environment, after the credential-free build job passes. Set the repository variable `STAGING_E2E_ENABLED=true` only after the protected environment has the three secrets, current staging functions, schema, provider secret, dedicated unlimited-use test code, and a main-only deployment rule. A skipped staging job is not a pass.
 
-The staging origin `http://127.0.0.1:18080` must be deployed in the CORS allowlists for `demo-code-login`, `ai`, and `ai-stream` before enabling the gate. Do not deploy those functions or apply migrations to an unverified project.
+The staging origin `http://127.0.0.1:18080` must be deployed in the CORS allowlists for `demo-code-login`, `ai`, `ai-stream`, and `announcements` before enabling the gate. Do not deploy those functions or apply migrations to an unverified project.
 
 ## Working rules
 

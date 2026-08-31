@@ -11,6 +11,12 @@ const stagingValues = [
 const stagingEnabled = stagingValues.every((value) => Boolean(value?.trim()));
 const stagingPartiallyConfigured = stagingValues.some((value) => Boolean(value?.trim())) && !stagingEnabled;
 
+export const STAGING_CAPTURE_POLICY = {
+  trace: 'off',
+  screenshot: 'off',
+  video: 'off',
+} as const;
+
 if (stagingPartiallyConfigured) {
   throw new Error('Protected staging E2E requires STAGING_SUPABASE_URL, STAGING_SUPABASE_ANON_KEY, and STAGING_DEMO_CODE together.');
 }
@@ -48,7 +54,7 @@ export default defineConfig({
     ...(stagingEnabled ? [{
       name: 'staging-setup',
       testMatch: /staging\/auth\.setup\.ts/,
-      use: { trace: 'off' },
+      use: STAGING_CAPTURE_POLICY,
     },
     {
       name: 'staging',
@@ -57,9 +63,8 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         storageState: stagingStorageState,
-        // Traces contain request headers and localStorage. Do not retain a
-        // staging trace because it would archive the real session token.
-        trace: 'off',
+        // Browser captures can archive authenticated staging data.
+        ...STAGING_CAPTURE_POLICY,
       },
     }] : []),
   ],

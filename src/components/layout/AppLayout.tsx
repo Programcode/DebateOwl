@@ -87,7 +87,7 @@ export function AppLayout() {
     } catch (error) {
       setDismissError({
         announcementId,
-        message: error instanceof Error ? error.message : 'Could not dismiss this announcement.',
+        message: error instanceof Error ? error.message : t('announcements.dismissError'),
       });
     } finally {
       setDismissingId(null);

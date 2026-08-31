@@ -18,11 +18,13 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
+    "test:edge": "deno test --allow-read --allow-env=EXA_API_KEY,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,SPARRING_INTEGRITY_SECRET,OPENAI_API_KEY --allow-net=127.0.0.1 supabase/functions/",
+    "test:db": "supabase test db",
     "test:e2e": "playwright test --project=desktop-chromium --project=mobile-chromium",
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:e2e:staging": "playwright test --project=staging",
     "test:e2e:ui": "playwright test --ui",
-    "verify": "npm run lint && npm run typecheck && npm test -- --coverage && npm run build && CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e"
+    "verify": "npm run lint && npm run typecheck && npm test -- --coverage && npm run test:edge && npm run build && CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

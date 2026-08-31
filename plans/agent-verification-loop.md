@@ -181,8 +181,8 @@ npm run test:e2e:staging
 
 The CI staging job may run only from a protected environment on an authorized
 `main` push or explicitly authorized main-branch dispatch. It must not run on
-pull requests or arbitrary branch dispatches. The job should upload the same
-failure artifacts without exposing secret-bearing logs.
+pull requests or arbitrary branch dispatches. It disables traces, screenshots,
+and video and uploads no authenticated browser artifacts.
 
 ### 4. Add the verification playbook
 

@@ -15,6 +15,7 @@ export interface UserAnnouncement {
 export interface AdminAnnouncement extends UserAnnouncement {
   targetType: AnnouncementTargetType;
   targetUserIds: string[] | null;
+  deactivatedAt: string | null;
   createdBy: string;
 }
 
@@ -39,6 +40,7 @@ const AnnouncementRowSchema = z.object({
 const AdminAnnouncementRowSchema = AnnouncementRowSchema.extend({
   target_type: z.enum(['all', 'users']),
   target_user_ids: z.array(z.uuid()).nullable(),
+  deactivated_at: z.iso.datetime({ offset: true }).nullable(),
   created_by: z.uuid(),
 });
 
@@ -51,6 +53,10 @@ const AdminAnnouncementsResponseSchema = z.object({
 });
 
 const CreateAnnouncementResponseSchema = z.object({
+  announcement: AdminAnnouncementRowSchema,
+});
+
+const DeactivateAnnouncementResponseSchema = z.object({
   announcement: AdminAnnouncementRowSchema,
 });
 
@@ -119,6 +125,7 @@ function normalizeAdminAnnouncement(row: AdminAnnouncementRow): AdminAnnouncemen
     ...normalizeAnnouncement(row),
     targetType: row.target_type,
     targetUserIds: row.target_user_ids,
+    deactivatedAt: row.deactivated_at,
     createdBy: row.created_by,
   };
 }
@@ -170,6 +177,17 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
     },
   });
   const response = CreateAnnouncementResponseSchema.parse(payload);
+  return normalizeAdminAnnouncement(response.announcement);
+}
+
+export async function deactivateAnnouncement(announcementId: string): Promise<AdminAnnouncement> {
+  const payload = await requestFunction({
+    functionName: 'admin',
+    action: 'deactivate-announcement',
+    method: 'POST',
+    body: { announcementId },
+  });
+  const response = DeactivateAnnouncementResponseSchema.parse(payload);
   return normalizeAdminAnnouncement(response.announcement);
 }
 

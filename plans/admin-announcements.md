@@ -15,6 +15,7 @@ Create `admin_announcements`:
 - `target_user_ids uuid[] null`
 - `starts_at timestamptz default now()`
 - `expires_at timestamptz null`
+- `deactivated_at timestamptz null`
 - `created_by uuid not null`
 - `created_at timestamptz default now()`
 
@@ -30,7 +31,8 @@ Create `user_announcement_dismissals`:
 1. Add admin endpoints to existing `admin` edge function:
    - create announcement.
    - list announcements.
-   - deactivate/delete announcement.
+   - deactivate an announcement without deleting dismissal history.
+   - explicitly delete an announcement when permanent removal is intended.
 2. Add authenticated non-admin endpoint:
    - fetch active announcements for current user.
    - dismiss announcement.
@@ -45,8 +47,8 @@ Create `user_announcement_dismissals`:
 
 ## Tests
 
-- RLS/admin endpoint tests where practical.
-- Admin UI tests for create/list/delete.
+- RLS/admin endpoint tests, including deactivation and dismissal-history retention.
+- Admin UI tests for create/list/deactivate/delete.
 - Layout test for showing and dismissing an announcement.
 
 ## Deployment

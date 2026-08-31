@@ -54,5 +54,6 @@ Deferred:
 - None. The remaining search-quality scope was completed on `t3code/search-quality-completion`:
   - Exa search requests use the documented camelCase fields (`includeDomains`, `excludeDomains`, `category`, `startPublishedDate`, `endPublishedDate`, `numResults`, and `contents.text.maxCharacters`) instead of inline `site:` operators. Domain/category filters retry without the restrictive filter when they return no results.
   - The exported Edge handler has a Deno boundary test that mocks authentication, quota, Exa search/content, and the model response, then verifies citation quality and consulted-source provenance in the HTTP response.
+  - `npm run test:edge` executes that boundary under Deno, and the pull-request quality job runs the same command.
   - Factoids returns `discoveredSources`, autosaves their provenance, and renders the shared consulted-source quality list, including the weak-source fallback warning.
   - Authenticated Playwright coverage exercises the Factoids flow on isolated desktop and mobile Chromium projects.

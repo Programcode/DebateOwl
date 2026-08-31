@@ -1,7 +1,7 @@
 ts	phase	decision	why	evidence	result
 2026-08-31T15:27:00Z	isolation	created t3code/agent-verification-loop in its own T3 worktree	kept the dirty main checkout and other worktrees untouched	git worktree list	clean isolated branch
 2026-08-31T15:35:00Z	browser	made port 18080 loopback-only and disabled server reuse	prevented another checkout on port 8080 from producing false browser results	playwright.config.ts	isolated server configured
-2026-08-31T15:35:30Z	staging	kept real auth tokens out of traces and uploaded artifacts	Playwright traces and storage state can contain bearer and refresh tokens	playwright.config.ts, .github/workflows/deploy.yml	secret-bearing artifacts excluded
+2026-08-31T15:35:30Z	staging	disabled authenticated traces and excluded auth state	traces and storage state can contain bearer and refresh tokens	playwright.config.ts, .github/workflows/staging-e2e.yml	partial: inherited failure video was still uploaded
 2026-08-31T15:36:00Z	staging	used a unique user-owned source and exact UI deletion	proved persistence while limiting cleanup to the row created by the test	e2e/staging/authed-flows.spec.ts	bounded cleanup implemented
 2026-08-31T15:38:00Z	local gates	ran lint, typecheck, focused sparring tests, and Playwright discovery	caught compile and selector problems before the full browser matrix	local command output	14 focused tests and 168 browser cases listed
 2026-08-31T15:39:00Z	staging	proved partial and missing staging configuration fails closed	never substitute production or a skipped fake session for missing protected values	playwright.config.ts	both negative preflights exited 1
@@ -17,3 +17,4 @@ ts	phase	decision	why	evidence	result
 2026-08-31T16:56:00Z	CodeRabbit	fixed all four current-head review comments	restricted trusted staging triggers and loopback auth, updated plan state, and sequenced Jam before app startup	PR 21 review on 5f0f67a	all findings implemented or bounded with deterministic proof
 2026-08-31T16:59:00Z	local gates	reran CI-equivalent checks after CodeRabbit fixes	review changes affected workflow security and application bootstrap	npm run verify, Playwright 1.60 Noble container	89 files, 930 tests, coverage, build, 112 Chromium and 56 WebKit cases passed
 2026-08-31T17:06:00Z	CodeRabbit	added a bounded Jam CDN timeout	prevented a stalled recorder request from blocking application startup	src/jam-loader.ts, src/test/jam-loader.test.ts	20 focused tests, lint, typecheck, build, Chromium and WebKit startup passed
+2026-08-31T19:48:03Z	staging	disabled traces, screenshots, and video and removed staging artifact uploads	all browser captures can expose authenticated staging data	playwright.config.ts, .github/workflows/staging-e2e.yml	no authenticated browser artifacts retained or uploaded

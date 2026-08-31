@@ -1,4 +1,5 @@
 import { Loader2, Megaphone, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { UserAnnouncement } from '@/lib/announcements';
 
@@ -19,10 +20,12 @@ export function AnnouncementBanner({
   error,
   onDismiss,
 }: AnnouncementBannerProps) {
+  const { t } = useTranslation();
+
   return (
     <section
       aria-live="polite"
-      aria-label="Announcement"
+      aria-label={t('announcements.regionLabel')}
       className="border-b border-primary/20 bg-primary/[0.06]"
     >
       <div className="container flex items-start gap-3 px-4 py-3 sm:items-center">
@@ -32,7 +35,7 @@ export function AnnouncementBanner({
             <h2 className="font-semibold text-foreground">{announcement.title}</h2>
             {total > 1 && (
               <span className="text-xs text-muted-foreground">
-                {position} of {total}
+                {t('announcements.position', { position, total })}
               </span>
             )}
           </div>
@@ -48,7 +51,7 @@ export function AnnouncementBanner({
           className="h-11 w-11 shrink-0"
           onClick={onDismiss}
           disabled={dismissing}
-          aria-label={`Dismiss announcement: ${announcement.title}`}
+          aria-label={t('announcements.dismissLabel', { title: announcement.title })}
         >
           {dismissing ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
