@@ -1068,7 +1068,7 @@
     "s6": "Your Rights",
     "p6": "You may access, export, or delete your data at any time from your account settings. Account deletion removes all associated data.",
     "s7": "Cookies and Tracking",
-    "p7": "We use essential cookies for authentication and preferences. We use PostHog for product analytics and Sentry for error reporting. PostHog receives feature, format, status, and timing data, not debate content, chat messages, source titles, or email addresses; automatic interaction capture and session recording are disabled. Sentry is configured not to send default personal information.",
+    "p7": "We use essential cookies and browser storage for authentication and preferences. We use PostHog for product analytics and Sentry for error monitoring, structured logs, application metrics, performance tracing, and Session Replay. Sentry records 10% of ordinary sessions and 100% of sessions containing captured errors; all replay text and inputs are masked and media is blocked. Sentry receives technical metadata such as routes, browser details, request URLs, methods and status codes, stack traces, timings, and safe event classifications. Automatic collection of user identity, cookies, headers, HTTP bodies, query parameters, AI inputs and outputs, and stack-frame variables is disabled. PostHog autocapture, pageview capture, session recording, and persistent browser storage are disabled. We do not send debate content, chat messages, source titles, or email addresses in analytics events or structured logs.",
     "s8": "Children's Privacy",
     "p8": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
     "s9": "Changes to This Policy",
