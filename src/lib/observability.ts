@@ -136,6 +136,9 @@ export function initializeObservability(): void {
       autocapture: false,
       capture_pageview: false,
       disable_session_recording: true,
+      disable_surveys: true,
+      disable_external_dependency_loading: true,
+      advanced_disable_flags: true,
       persistence: "memory",
     });
   }
