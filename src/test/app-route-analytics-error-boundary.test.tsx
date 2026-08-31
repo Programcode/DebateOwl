@@ -158,6 +158,7 @@ describe("App route observability", () => {
       );
       expect(JSON.stringify(observability.captureException.mock.calls)).not.toContain(error.message);
       expect(observability.captureException.mock.calls[0][1]).not.toHaveProperty("componentStack");
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain(error.message);
     } finally {
       window.removeEventListener("error", suppressWindowError);
       consoleError.mockRestore();

@@ -90,6 +90,13 @@ describe('i18n locale files', () => {
     const empty = Object.entries(values).filter(([, v]) => v === '');
     expect(empty).toEqual([]);
   });
+
+  it('names both observability processors in every privacy policy translation', () => {
+    for (const locale of [en, es, hu]) {
+      expect(locale.privacyPage.p7).toContain('PostHog');
+      expect(locale.privacyPage.p7).toContain('Sentry');
+    }
+  });
 });
 
 describe('i18n runtime', () => {
