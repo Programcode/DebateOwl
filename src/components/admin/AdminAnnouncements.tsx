@@ -388,7 +388,12 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
         </CardContent>
       </Card>
 
-      <AlertDialog open={deactivateTarget !== null} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+      <AlertDialog
+        open={deactivateTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deactivating) setDeactivateTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Deactivate this announcement?</AlertDialogTitle>
@@ -398,7 +403,13 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deactivating}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeactivate} disabled={deactivating}>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeactivate();
+              }}
+              disabled={deactivating}
+            >
               {deactivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
               Deactivate announcement
             </AlertDialogAction>

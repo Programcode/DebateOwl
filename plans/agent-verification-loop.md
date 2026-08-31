@@ -120,6 +120,7 @@ must run all of these gates:
 npm run lint
 npm run typecheck
 npm test -- --coverage
+npm run test:edge
 npm run build
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 ```

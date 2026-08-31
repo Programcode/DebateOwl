@@ -18,11 +18,13 @@ Run every step before merging this branch. Nothing here deploys anything; deploy
 - [ ] `npm run build` — production build succeeds
 - [ ] `deno check supabase/functions/ai/index.ts supabase/functions/ai-stream/index.ts supabase/functions/admin/index.ts`
 - [ ] `npm run test:edge` — native Deno coverage including the exported handler boundary
-- [ ] `supabase db start && npm run test:db` — migration replay and pgTAP policy coverage with Supabase CLI 2.115 or newer
+- [ ] `supabase db start; trap 'supabase stop --no-backup' EXIT; npm run test:db` — migration replay and pgTAP policy coverage with Supabase CLI 2.115 or newer, with cleanup even on failure
 
 ## 2. Migration review (before any deploy)
 
-The two Quality & Truth migrations below are recorded in section 0 as applied:
+The two Quality & Truth migrations below are recorded in section 0 as applied
+to both staging and production. No deployment action remains for them in this
+follow-up; confirm each target's migration history again before a future deploy:
 
 - `20260822000000_ai_request_cost_audit.sql` — audit columns on `ai_requests`
 - `20260822000001_source_provenance_metadata.sql` — `metadata` jsonb on `sources`
