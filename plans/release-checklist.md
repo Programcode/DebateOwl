@@ -22,13 +22,18 @@ Run every step before merging this branch. Nothing here deploys anything; deploy
 
 ## 2. Migration review (before any deploy)
 
-Two prepared migrations ship on this branch; neither is applied by the branch:
+The two Quality & Truth migrations below are recorded in section 0 as applied:
 
 - `20260822000000_ai_request_cost_audit.sql` — audit columns on `ai_requests`
 - `20260822000001_source_provenance_metadata.sql` — `metadata` jsonb on `sources`
 
-- [ ] Confirm both files reviewed against current schema, migration order, and RLS (`ai_requests` stays service-role-write-only; `sources` keeps per-user policies)
-- [ ] Apply order: migrations first, then edge functions (`ai`, `ai-stream`, `admin`), then frontend
+The audit follow-up adds one migration that must run before the updated `admin`
+function or frontend is deployed:
+
+- `20260831191838_deactivate_announcements.sql` — adds `deactivated_at` and excludes deactivated announcements from authenticated reads without deleting dismissal history
+
+- [ ] Confirm all changed migration files are reviewed against current schema, migration order, and RLS (`ai_requests` stays service-role-write-only; `sources` keeps per-user policies; announcement deactivation preserves dismissal rows)
+- [ ] Apply order: pending migrations first, then edge functions (`ai`, `ai-stream`, `admin`, `announcements` as changed), then frontend
   - both edge functions fall back to a base insert if audit columns are missing, so a deploy-order mistake degrades logging instead of breaking requests
   - the frontend sends `metadata` on source saves; deploying it before the `sources` migration will fail those writes
 

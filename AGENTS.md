@@ -59,7 +59,7 @@ The suite rejects the production project, checks that the anon key belongs to th
 
 GitHub runs staging only for `main` push or a main-branch manual dispatch, through the protected `staging` environment, after the credential-free build job passes. Set the repository variable `STAGING_E2E_ENABLED=true` only after the protected environment has the three secrets, current staging functions, schema, provider secret, dedicated unlimited-use test code, and a main-only deployment rule. A skipped staging job is not a pass.
 
-The staging origin `http://127.0.0.1:18080` must be deployed in the CORS allowlists for `demo-code-login`, `ai`, `ai-stream`, and `announcements` before enabling the gate. Do not deploy those functions or apply migrations to an unverified project.
+The staging origin `http://127.0.0.1:18080` must be deployed in the CORS allowlists for `demo-code-login`, `ai`, `ai-stream`, `admin`, and `announcements` before enabling the gate. Do not deploy those functions or apply migrations to an unverified project.
 
 ## Working rules
 
