@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadJamRecorder } from '@/jam-loader';
 
 function jamScripts() {
@@ -6,6 +6,10 @@ function jamScripts() {
 }
 
 describe('Jam recorder loader', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('does not load recorder scripts when MediaRecorder is unavailable', async () => {
     jamScripts().forEach((element) => element.remove());
 
@@ -32,5 +36,17 @@ describe('Jam recorder loader', () => {
     await loading;
     await loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
     expect(jamScripts()).toHaveLength(2);
+  });
+
+  it('rejects a stalled Jam load so application bootstrap can continue', async () => {
+    jamScripts().forEach((element) => element.remove());
+    vi.useFakeTimers();
+
+    const loading = loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
+    const rejection = expect(loading).rejects.toThrow('Jam module load timed out');
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    await rejection;
+    expect(jamScripts()).toHaveLength(0);
   });
 });
