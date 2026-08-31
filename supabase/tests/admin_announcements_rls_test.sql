@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(13);
+SELECT plan(14);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -22,6 +22,14 @@ VALUES
   ('aaaaaaaa-0000-4000-8000-000000000003', 'For another user', 'Not visible to the current user.', 'users', ARRAY['22222222-2222-4222-8222-222222222222']::uuid[], now() - interval '1 hour', NULL, '99999999-9999-4999-8999-999999999999'),
   ('aaaaaaaa-0000-4000-8000-000000000004', 'Future', 'Not active yet.', 'all', NULL, now() + interval '1 day', NULL, '99999999-9999-4999-8999-999999999999'),
   ('aaaaaaaa-0000-4000-8000-000000000005', 'Expired', 'No longer active.', 'all', NULL, now() - interval '2 days', now() - interval '1 day', '99999999-9999-4999-8999-999999999999');
+
+SELECT throws_ok(
+  $$INSERT INTO public.admin_announcements (title, body, target_type, target_user_ids, created_by)
+    VALUES ('Missing recipients', 'This must fail.', 'users', NULL, '99999999-9999-4999-8999-999999999999')$$,
+  '23514',
+  NULL,
+  'targeted announcements require a non-null recipient array'
+);
 
 SELECT ok(
   has_column_privilege('authenticated', 'public.admin_announcements', 'title', 'SELECT'),

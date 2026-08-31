@@ -505,7 +505,7 @@ describe('AdminPage Integration', () => {
         await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
         fireEvent.mouseDown(screen.getByRole('tab', { name: 'Announcements' }), { button: 0 });
         await screen.findByText('Remove me');
-        fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Delete announcement: Remove me' }));
         fireEvent.click(await screen.findByRole('button', { name: 'Delete announcement' }));
 
         await waitFor(() => expect(deleteBody.announcementId).toBe(announcementId));

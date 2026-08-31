@@ -13,7 +13,7 @@ CREATE TABLE public.admin_announcements (
   CONSTRAINT admin_announcements_target_shape CHECK (
     (target_type = 'all' AND target_user_ids IS NULL)
     OR
-    (target_type = 'users' AND cardinality(target_user_ids) > 0)
+    (target_type = 'users' AND target_user_ids IS NOT NULL AND cardinality(target_user_ids) > 0)
   ),
   CONSTRAINT admin_announcements_valid_window CHECK (
     expires_at IS NULL OR expires_at > starts_at

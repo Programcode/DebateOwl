@@ -125,7 +125,7 @@ test('admin creates a targeted announcement and deletes it from history', async 
     targetUserIds: [TARGET_USER_ID],
   });
 
-  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Delete announcement: Targeted note' }).click();
   await page.getByRole('button', { name: 'Delete announcement' }).click();
 
   await expect(page.getByRole('heading', { name: 'Targeted note' })).toHaveCount(0);

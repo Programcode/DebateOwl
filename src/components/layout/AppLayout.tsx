@@ -50,7 +50,7 @@ export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<UserAnnouncement[]>([]);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
-  const [dismissError, setDismissError] = useState<string | null>(null);
+  const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
   const { t } = useTranslation();
   const location = useLocation();
 
@@ -79,7 +79,10 @@ export function AppLayout() {
       await dismissAnnouncement(announcementId);
       setAnnouncements((current) => current.filter((announcement) => announcement.id !== announcementId));
     } catch (error) {
-      setDismissError(error instanceof Error ? error.message : 'Could not dismiss this announcement.');
+      setDismissError({
+        announcementId,
+        message: error instanceof Error ? error.message : 'Could not dismiss this announcement.',
+      });
     } finally {
       setDismissingId(null);
     }
@@ -175,7 +178,7 @@ export function AppLayout() {
           position={1}
           total={announcements.length}
           dismissing={dismissingId === announcements[0].id}
-          error={dismissError}
+          error={dismissError?.announcementId === announcements[0].id ? dismissError.message : null}
           onDismiss={() => handleDismissAnnouncement(announcements[0].id)}
         />
       )}

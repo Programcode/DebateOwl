@@ -335,6 +335,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                       variant="ghost"
                       size="sm"
                       className="self-start text-destructive hover:text-destructive"
+                      aria-label={`Delete announcement: ${announcement.title}`}
                       onClick={() => setDeleteTarget(announcement)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />

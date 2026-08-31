@@ -124,7 +124,9 @@ function normalizeAdminAnnouncement(row: AdminAnnouncementRow): AdminAnnouncemen
 }
 
 function toIsoOrUndefined(value: string | undefined) {
-  return value ? new Date(value).toISOString() : undefined;
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
 export async function listActiveAnnouncements(signal?: AbortSignal): Promise<UserAnnouncement[]> {

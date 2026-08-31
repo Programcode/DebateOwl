@@ -67,6 +67,34 @@ describe('AppLayout announcements', () => {
     await waitFor(() => expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2));
   });
 
+  it('does not show a stale dismissal error under the next announcement', async () => {
+    const nextAnnouncement: UserAnnouncement = {
+      ...announcement,
+      id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+      title: 'New announcement',
+      body: 'This message replaced the previous one.',
+    };
+    let rejectDismissal: (reason: Error) => void = () => undefined;
+    const pendingDismissal = new Promise<void>((_resolve, reject) => {
+      rejectDismissal = reject;
+    });
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([announcement])
+      .mockResolvedValueOnce([nextAnnouncement]);
+    mockDismissAnnouncement.mockReturnValue(pendingDismissal);
+
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+    await screen.findByText('New announcement');
+
+    rejectDismissal(new Error('Could not dismiss the old announcement'));
+
+    await waitFor(() => expect(mockDismissAnnouncement).toHaveBeenCalledWith(announcement.id));
+    expect(screen.queryByText('Could not dismiss the old announcement')).not.toBeInTheDocument();
+  });
+
   it('keeps the app usable when announcements fail to load', async () => {
     mockListActiveAnnouncements.mockRejectedValue(new Error('Network unavailable'));
     renderLayout();
