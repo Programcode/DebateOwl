@@ -6,6 +6,7 @@ const AUTH_ROUTES = [
   { path: '/app', name: 'home' },
   { path: '/app/generate', name: 'generate' },
   { path: '/app/attack', name: 'attack' },
+  { path: '/app/crossfire', name: 'crossfire' },
   { path: '/app/brainstorm', name: 'brainstorm' },
   { path: '/app/factoids', name: 'factoids' },
   { path: '/app/ask', name: 'ask' },

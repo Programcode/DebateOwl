@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 import { setJamUserId } from '@/lib/jam-metadata';
+import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
 
 interface AuthContextValue {
   session: Session | null;
@@ -145,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const prevUserId = currentUserIdRef.current;
       const nextUserId = newSession?.user?.id;
+      clearCrossfireDraftOnAuthChange(prevUserId, nextUserId);
       currentUserIdRef.current = nextUserId;
       setJamUserId(nextUserId);
       setSession(newSession);
@@ -213,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     signOut: async () => {
       await supabase.auth.signOut();
+      clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
       resetSessionStore();
       resetSettingsStore();
       resetSparringStore();

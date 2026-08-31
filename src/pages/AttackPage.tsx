@@ -14,9 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
+import { prefillFromAttack } from '@/lib/crossfire/prefill';
 
 export default function AttackPage() {
-  const { attackResult, attackLoading, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
+  const { attackResult, attackLoading, attackForm, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('attack'); // Actually we should use 'ask' config for the chat part
   const askConfig = getFeatureConfig('ask');
@@ -92,6 +93,13 @@ export default function AttackPage() {
     }
   };
 
+  const handlePracticeCrossfire = () => {
+    if (!attackResult) return;
+    navigate('/app/crossfire', {
+      state: prefillFromAttack(attackForm?.caseText ?? '', attackResult),
+    });
+  };
+
   return (
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -118,7 +126,12 @@ export default function AttackPage() {
               </div>
             ) : attackResult ? (
               <div key="attack-results" className="motion-swap">
-                <AttackResults result={attackResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
+                <AttackResults
+                  result={attackResult}
+                  discoveredSources={discoveredSources}
+                  onDiscuss={handleDiscuss}
+                  onPracticeCrossfire={handlePracticeCrossfire}
+                />
               </div>
             ) : (
               <div key="attack-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">

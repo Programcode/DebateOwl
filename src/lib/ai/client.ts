@@ -27,9 +27,51 @@ import { useSessionStore } from '../stores/session-store';
 import type { SourceProvenance } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import {
+  CrossfireAIInputSchema,
+  CrossfireDebriefSchema,
+  CrossfireReplySchema,
+  collectDebriefTurnIds,
+  type CrossfireAIInput,
+  type CrossfireDebrief,
+  type CrossfireReply,
+} from '@/lib/crossfire/schemas';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
+export const CROSSFIRE_REQUEST_TIMEOUT_MS = 75 * 1000;
+const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
+const MAX_CROSSFIRE_SOURCE_COUNT = 10;
+const MAX_CROSSFIRE_SOURCE_CHARS = 8_000;
+const MAX_CROSSFIRE_SOURCE_TOTAL_CHARS = 24_000;
+
+interface AIRequestOptions {
+  includeActiveSources?: boolean;
+  includeCustomSystemPrompt?: boolean;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+interface AIRequestSource {
+  title: string;
+  content: string;
+  origin?: string;
+  type: string;
+}
+
+function boundCrossfireRequestSources(sources: AIRequestSource[]): AIRequestSource[] {
+  let remaining = MAX_CROSSFIRE_SOURCE_TOTAL_CHARS;
+  return sources.slice(0, MAX_CROSSFIRE_SOURCE_COUNT).flatMap((source) => {
+    if (remaining <= 0) return [];
+    const title = source.title.trim().slice(0, 240);
+    const content = source.content.trim().slice(0, Math.min(MAX_CROSSFIRE_SOURCE_CHARS, remaining));
+    const type = source.type.trim().slice(0, 64);
+    if (!title || !content || !type) return [];
+    remaining -= content.length;
+    const origin = source.origin?.trim().slice(0, 240);
+    return [{ title, content, type, ...(origin ? { origin } : {}) }];
+  });
+}
 
 /** A web source discovered during research, with auditable ranking metadata from the edge function. */
 export interface DiscoveredSource extends Omit<SourceProvenance, 'url'> {
@@ -236,9 +278,10 @@ export function isAIModelRestrictionError(error: unknown): error is AIModelRestr
 }
 
 async function callSupabaseAI(
-  feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring',
+  feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring' | 'crossfire',
   input: unknown,
-  config: ProviderConfig
+  config: ProviderConfig,
+  options: AIRequestOptions = {},
 ) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const startTime = performance.now();
@@ -246,11 +289,14 @@ async function callSupabaseAI(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const activeSources = feature === 'sparring'
+  const selectedSources = options.includeActiveSources === false || feature === 'sparring'
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
       .map((s) => ({ title: s.title, content: s.content, origin: s.origin, type: s.type }));
+  const activeSources = feature === 'crossfire'
+    ? boundCrossfireRequestSources(selectedSources)
+    : selectedSources;
 
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
   const { data: sessionData } = await supabase.auth.getSession();
@@ -278,12 +324,17 @@ async function callSupabaseAI(
     provider,
     model: config.model,
     temperature: config.temperature,
-    customSystemPrompt: settings.customSystemPrompt || null,
+    customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
     sources: activeSources,
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, options.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort(options.signal?.reason);
+  if (options.signal?.aborted) abortFromCaller();
+  else options.signal?.addEventListener('abort', abortFromCaller, { once: true });
 
   try {
     const { data, error } = await supabase.functions.invoke('ai', {
@@ -380,6 +431,12 @@ async function callSupabaseAI(
     }
 
     // Handle abort (our timeout triggered)
+    if (options.signal?.aborted) {
+      throw options.signal.reason instanceof Error
+        ? options.signal.reason
+        : new DOMException('The request was canceled.', 'AbortError');
+    }
+
     if (err instanceof DOMException && err.name === 'AbortError') {
       throw new TimeoutError();
     }
@@ -395,6 +452,7 @@ async function callSupabaseAI(
     throw new AIError(message, { requestId });
   } finally {
     clearTimeout(timeoutId);
+    options.signal?.removeEventListener('abort', abortFromCaller);
   }
 }
 
@@ -415,22 +473,110 @@ async function extractSupabaseErrorPayload(error: { context?: unknown }): Promis
   if (!context || typeof context !== 'object') return null;
 
   const responseLike = context as {
-    clone?: () => { json?: () => Promise<unknown> };
+    clone?: () => { body?: ReadableStream<Uint8Array> | null; json?: () => Promise<unknown> };
+    body?: ReadableStream<Uint8Array> | null;
     json?: () => Promise<unknown>;
   };
 
-  const parser = typeof responseLike.clone === 'function'
-    ? responseLike.clone()
-    : responseLike;
-
-  if (typeof parser.json !== 'function') return null;
+  const parser = responseLike.body
+    ? responseLike
+    : typeof responseLike.clone === 'function'
+      ? responseLike.clone()
+      : responseLike;
 
   try {
+    if (parser.body) {
+      const reader = parser.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let totalBytes = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const remaining = MAX_CLIENT_ERROR_BODY_BYTES - totalBytes;
+          if (remaining <= 0 || value.byteLength > remaining) {
+            await reader.cancel('Error body exceeded its byte limit');
+            return null;
+          }
+          chunks.push(value);
+          totalBytes += value.byteLength;
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      const bytes = new Uint8Array(totalBytes);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      const payload: unknown = JSON.parse(new TextDecoder().decode(bytes));
+      return payload && typeof payload === 'object' ? payload as Record<string, unknown> : null;
+    }
+    // Unit-test doubles may expose only json(). Real fetch Responses have a
+    // stream and always take the bounded branch above.
+    if (typeof parser.json !== 'function') return null;
     const payload = await parser.json();
     return payload && typeof payload === 'object' ? payload as Record<string, unknown> : null;
   } catch {
     return null;
   }
+}
+
+function validateCrossfireTurnReferences(input: CrossfireAIInput, debrief: CrossfireDebrief): void {
+  const validIds = new Set(input.transcript.map((turn) => turn.id));
+  const invalidIds = collectDebriefTurnIds(debrief).filter((id) => !validIds.has(id));
+  if (invalidIds.length > 0) {
+    throw new AIResponseError('AI debrief referenced transcript turns that do not exist.', {
+      details: { invalidTurnIds: Array.from(new Set(invalidIds)).slice(0, 12) },
+    });
+  }
+}
+
+export async function crossfire(
+  rawInput: CrossfireAIInput,
+  config: ProviderConfig,
+  options: Pick<AIRequestOptions, 'signal'> = {},
+): Promise<CrossfireReply | CrossfireDebrief> {
+  const input = CrossfireAIInputSchema.safeParse(rawInput);
+  if (!input.success) {
+    throw new AIResponseError('Crossfire request did not match the expected schema.', {
+      details: { issues: input.error.issues },
+    });
+  }
+
+  const data = await callSupabaseAI(
+    'crossfire',
+    input.data as unknown as Record<string, unknown>,
+    config,
+    {
+      includeActiveSources: input.data.config.useSourceLibrary,
+      includeCustomSystemPrompt: false,
+      timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
+      signal: options.signal,
+    },
+  ) as { output: unknown };
+
+  if (input.data.operation === 'next-turn') {
+    const reply = CrossfireReplySchema.safeParse(data.output);
+    if (!reply.success || reply.data.type !== input.data.expectedReply) {
+      throw new AIResponseError('AI response did not match the expected Crossfire turn.', {
+        details: reply.success
+          ? { expectedReply: input.data.expectedReply, actualReply: reply.data.type }
+          : { issues: reply.error.issues },
+      });
+    }
+    return reply.data;
+  }
+
+  const debrief = CrossfireDebriefSchema.safeParse(data.output);
+  if (!debrief.success) {
+    throw new AIResponseError('AI response did not match the expected Crossfire debrief.', {
+      details: { issues: debrief.error.issues },
+    });
+  }
+  validateCrossfireTurnReferences(input.data, debrief.data);
+  return debrief.data;
 }
 
 export function mapAIError(

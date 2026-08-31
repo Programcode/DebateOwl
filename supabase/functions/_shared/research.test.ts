@@ -7,6 +7,8 @@ import {
   exaSearch,
   fetchJsonWithTimeout,
   getResearchSources,
+  MAX_PROVIDER_ERROR_BODY_CHARS,
+  MAX_PROVIDER_RESPONSE_BYTES,
   type ResearchContext,
 } from "./research.ts";
 
@@ -303,6 +305,63 @@ Deno.test("JSON helper consumes non-OK error bodies within the same timeout", as
     if (result.response.status !== 429 || result.errorBody !== "provider throttled") {
       throw new Error(`non-OK body was not preserved: ${JSON.stringify(result)}`);
     }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("JSON helper rejects a successful provider body over the byte cap", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = ((_input: Request | URL | string) => Promise.resolve(
+    new Response(JSON.stringify({ payload: "x".repeat(MAX_PROVIDER_RESPONSE_BYTES) }), {
+      headers: { "content-type": "application/json" },
+    }),
+  )) as typeof fetch;
+
+  try {
+    const result = await fetchJsonWithTimeout("https://api.example.test/oversized", {}, 500);
+    throw new Error(`oversized provider response unexpectedly resolved: ${JSON.stringify(result)}`);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("exceeds")) {
+      throw new Error(`unexpected oversized response error: ${String(error)}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("JSON helper accepts a successful provider body exactly at the byte cap", async () => {
+  const originalFetch = globalThis.fetch;
+  const prefix = '{"payload":"';
+  const suffix = '"}';
+  const body = `${prefix}${"x".repeat(MAX_PROVIDER_RESPONSE_BYTES - prefix.length - suffix.length)}${suffix}`;
+  globalThis.fetch = ((_input: Request | URL | string) => Promise.resolve(
+    new Response(body, { headers: { "content-type": "application/json" } }),
+  )) as typeof fetch;
+
+  try {
+    const result = await fetchJsonWithTimeout<{ payload: string }>("https://api.example.test/exact", {}, 500);
+    if (result.data?.payload.length !== MAX_PROVIDER_RESPONSE_BYTES - prefix.length - suffix.length) {
+      throw new Error("exact-limit response body was not preserved");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("JSON helper truncates non-OK provider bodies to the error character cap", async () => {
+  const originalFetch = globalThis.fetch;
+  const errorText = "provider failure ".repeat(MAX_PROVIDER_ERROR_BODY_CHARS);
+  globalThis.fetch = ((_input: Request | URL | string) => Promise.resolve(
+    new Response(errorText, { status: 503 }),
+  )) as typeof fetch;
+
+  try {
+    const result = await fetchJsonWithTimeout("https://api.example.test/error", {}, 500);
+    if (result.errorBody?.length !== MAX_PROVIDER_ERROR_BODY_CHARS) {
+      throw new Error(`error body was not capped: ${result.errorBody?.length ?? 0}`);
+    }
+    if (!result.errorBody?.startsWith("provider failure")) throw new Error("error body prefix was lost");
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, Save, GitBranch, Sparkles, Clipboard, Undo2 } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, Save, GitBranch, Sparkles, Clipboard, Undo2, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -26,6 +26,7 @@ interface GenerateResultsProps {
   onSave?: () => void;
   onUndo?: () => void;
   onImportFlowchart?: () => void;
+  onPracticeCrossfire?: () => void;
 }
 
 function ArgumentCard({ contention, index }: { contention: Contention; index: number }) {
@@ -76,7 +77,7 @@ function formatDuration(ms: number | undefined, t: (key: string, options?: Recor
   return t('generateResults.durationS', { value });
 }
 
-export function GenerateResults({ result, discoveredSources, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart }: GenerateResultsProps) {
+export function GenerateResults({ result, discoveredSources, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -188,8 +189,14 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                 {t('generateResults.clipboard', 'Clipboard')}
               </Button>
             )}
-            secondaryActions={(onSave || onDiscuss || onImportFlowchart || onUndo) ? (
+            secondaryActions={(onSave || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
               <>
+                {onPracticeCrossfire && (
+                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
+                    <Flame className="mr-2 h-4 w-4" />
+                    {t('crossfire.openFromResult', 'Open in Crossfire')}
+                  </Button>
+                )}
                 {onSave && (
                   <Button variant="outline" size="sm" onClick={onSave}>
                     <Save className="mr-2 h-4 w-4" />

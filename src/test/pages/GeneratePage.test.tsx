@@ -81,13 +81,14 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
 }));
 
 vi.mock('@/components/features/generate/GenerateResults', () => ({
-    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void }) => (
+    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, onPracticeCrossfire }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, onPracticeCrossfire?: () => void }) => (
         <div data-testid="generate-results">
             <h1>Results for {result.caseStructure.thesis}</h1>
             <div data-testid="discovered-sources">{discoveredSources.map((source) => source.title).join(',')}</div>
             <button onClick={() => onRegenerateSection?.('contentions')} data-testid="regenerate-section">Regenerate section</button>
             <button onClick={onDiscuss}>Discuss</button>
             <button onClick={onSave} data-testid="save-case">Save case</button>
+            <button onClick={onPracticeCrossfire} data-testid="open-crossfire">Open Crossfire</button>
         </div>
     ),
 }));
@@ -199,6 +200,30 @@ describe('GeneratePage Integration', () => {
         expect(screen.getByTestId('generate-results')).toBeInTheDocument();
         expect(screen.getByText('Results for Existing Thesis')).toBeInTheDocument();
         expect(screen.queryByText('Ready to Generate')).not.toBeInTheDocument();
+    });
+
+    it('opens Crossfire with the generated resolution and argument', () => {
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Existing Thesis', framework: 'Framework', keyDefinitions: [], burdenOfProof: 'Burden' },
+            contentions: [{ id: '1', claim: 'Claim', reasoning: 'Reasoning', evidence: 'Evidence', needsSource: false, impact: 'Impact' }],
+            predictedOpponentCase: { likelyArguments: [], strategicWeaknesses: [], keyClashes: [] },
+            counters: [],
+            metadata: { side: 'pro', format: 'custom', generatedAt: '2026-01-01T00:00:00Z' },
+        };
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+        fireEvent.click(screen.getByTestId('open-crossfire'));
+        expect(mockNavigate).toHaveBeenCalledWith('/app/crossfire', {
+            state: expect.objectContaining({
+                source: 'generate',
+                resolution: 'Existing motion',
+                argument: expect.stringContaining('Thesis: Existing Thesis'),
+            }),
+        });
     });
 
     it('replaces displayed provenance after section regeneration', async () => {

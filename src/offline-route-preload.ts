@@ -5,6 +5,7 @@ const preloaders = [
   () => import('./pages/BrainstormPage'),
   () => import('./pages/FactoidsPage'),
   () => import('./pages/AskPage'),
+  () => import('./pages/CrossfirePage'),
   () => import('./pages/HistoryPage'),
   () => import('./pages/LibraryPage'),
   () => import('./pages/TimerPage'),

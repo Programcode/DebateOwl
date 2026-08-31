@@ -133,6 +133,19 @@ describe('i18n runtime', () => {
     expect(result).toContain('GPT-5');
   });
 
+  it('pluralizes the Crossfire character counter in every locale', async () => {
+    await i18n.changeLanguage('en');
+    expect(i18n.t('crossfire.charactersRemaining', { count: 1 })).toBe('1 character remaining');
+    expect(i18n.t('crossfire.charactersRemaining', { count: 2 })).toBe('2 characters remaining');
+    await i18n.changeLanguage('es');
+    expect(i18n.t('crossfire.charactersRemaining', { count: 1 })).toBe('Queda 1 carácter');
+    expect(i18n.t('crossfire.charactersRemaining', { count: 2 })).toBe('Quedan 2 caracteres');
+    await i18n.changeLanguage('hu');
+    expect(i18n.t('crossfire.charactersRemaining', { count: 1 })).toBe('1 karakter maradt');
+    expect(i18n.t('crossfire.charactersRemaining', { count: 2 })).toBe('2 karakter maradt');
+    await i18n.changeLanguage('en');
+  });
+
   it('fallback language is en', () => {
     expect(i18n.options.fallbackLng).toContain('en');
   });
