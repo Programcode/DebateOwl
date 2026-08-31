@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react";
 import posthog from "posthog-js";
+import { DEFAULT_PROVIDERS } from "@/lib/ai/providers/types";
 
 let initialized = false;
 
@@ -22,6 +23,75 @@ export function filterObservabilityBreadcrumb<T extends ConsoleBreadcrumb>(bread
   return isReactCaughtRenderError ? null : breadcrumb;
 }
 
+const PRODUCT_EVENT_NAMES = new Set([
+  "ai_request_failed",
+  "ai_request_started",
+  "ai_request_succeeded",
+  "content_exported",
+  "sparring_round_completed",
+  "sparring_session_judged",
+  "tool_opened",
+]);
+
+const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
+  errorName: new Set([
+    "AIAuthError",
+    "AIModelRestrictionError",
+    "AIProviderError",
+    "AIRateLimitError",
+    "AIResponseError",
+    "AISubscriptionError",
+    "Error",
+    "TimeoutError",
+    "TypeError",
+    "UnknownError",
+  ]),
+  feature: new Set(["ask", "attack", "brainstorm", "crossfire", "factoids", "generate", "sparring"]),
+  format: new Set(["docx", "google_docs", "ld", "pdf", "pf", "standard"]),
+  model: new Set(DEFAULT_PROVIDERS.flatMap((provider) => provider.models.map((model) => model.id))),
+  provider: new Set(DEFAULT_PROVIDERS.map((provider) => provider.id)),
+  tool: new Set([
+    "admin",
+    "ask",
+    "attack",
+    "brainstorm",
+    "crossfire",
+    "factoids",
+    "flowchart",
+    "generate",
+    "history",
+    "library",
+    "settings",
+    "sparring",
+    "timer",
+  ]),
+  winner: new Set(["ai", "tie", "user"]),
+};
+
+type TelemetryAttribute = string | number | boolean;
+
+/** Retains only bounded values from the product telemetry schema. */
+function safeProductProperties(properties?: Record<string, unknown>): Record<string, TelemetryAttribute> {
+  if (!properties) return {};
+
+  const safeProperties: Record<string, TelemetryAttribute> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    if (typeof value === "string" && STRING_PROPERTY_VALUES[key]?.has(value)) safeProperties[key] = value;
+    if (key === "streaming" && typeof value === "boolean") safeProperties[key] = value;
+    if (key === "durationMs" && typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 3_600_000) {
+      safeProperties[key] = value;
+    }
+    if ((key === "roundIndex" || key === "speechCount") && Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 100) {
+      safeProperties[key] = Number(value);
+    }
+    if (key === "statusCode" && Number.isInteger(value) && Number(value) >= 100 && Number(value) <= 599) {
+      safeProperties[key] = Number(value);
+    }
+  }
+  return safeProperties;
+}
+
+/** Initializes configured observability SDKs once with explicit privacy controls. */
 export function initializeObservability(): void {
   if (initialized) return;
   initialized = true;
@@ -32,8 +102,30 @@ export function initializeObservability(): void {
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
       sendDefaultPii: false,
-      tracesSampleRate: 0.1,
       beforeBreadcrumb: filterObservabilityBreadcrumb,
+      dataCollection: {
+        userInfo: false,
+        cookies: false,
+        httpHeaders: { request: false, response: false },
+        httpBodies: [],
+        queryParams: false,
+        genAI: { inputs: false, outputs: false },
+        stackFrameVariables: false,
+        frameContextLines: 5,
+      },
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
+          maskAllText: true,
+          maskAllInputs: true,
+          blockAllMedia: true,
+        }),
+      ],
+      enableLogs: true,
+      enableMetrics: true,
+      tracesSampleRate: 1.0,
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
     });
   }
 
@@ -49,16 +141,37 @@ export function initializeObservability(): void {
   }
 }
 
+/** Reports a named product event only when its name and properties match the closed schema. */
 export function captureProductEvent(name: string, properties?: Record<string, unknown>): void {
-  if (!import.meta.env.VITE_POSTHOG_KEY) return;
+  if (!PRODUCT_EVENT_NAMES.has(name)) return;
+  const safeProperties = safeProductProperties(properties);
 
-  try {
-    posthog.capture(name, properties);
-  } catch {
-    // Telemetry must not interrupt product behavior.
+  if (import.meta.env.VITE_POSTHOG_KEY) {
+    try {
+      posthog.capture(name, safeProperties);
+    } catch {
+      // Telemetry must not interrupt product behavior.
+    }
+  }
+
+  if (import.meta.env.VITE_SENTRY_DSN) {
+    const attributes = { event_name: name, ...safeProperties };
+    try {
+      Sentry.logger.info("Product event", attributes);
+      Sentry.metrics.count("debatelab.product_event", 1, { attributes });
+      if (typeof safeProperties.durationMs === "number") {
+        Sentry.metrics.distribution("debatelab.product_event.duration", safeProperties.durationMs, {
+          unit: "millisecond",
+          attributes,
+        });
+      }
+    } catch {
+      // Telemetry must not interrupt product behavior.
+    }
   }
 }
 
+/** Reports a safely constructed exception without allowing telemetry failures into product flows. */
 export function captureException(error: unknown, context?: Record<string, unknown>): void {
   if (!import.meta.env.VITE_SENTRY_DSN) return;
 

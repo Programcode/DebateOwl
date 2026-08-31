@@ -55,6 +55,9 @@ test('completes an LD sparring round through mocked opponent turns and judging',
     const action = body.input?.action ?? 'unknown';
     actions.push(action);
     const output = action === 'score' ? scorecard : opponentSpeech(++responseNumber);
+    if (action === 'score') {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
     await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ output }) });
   });
 
