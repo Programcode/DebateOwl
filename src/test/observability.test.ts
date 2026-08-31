@@ -198,7 +198,7 @@ describe("observability primitives", () => {
     expect(filterObservabilityBreadcrumb(ordinaryBreadcrumb)).toBe(ordinaryBreadcrumb);
   });
 
-  it("initializes all selected Sentry capabilities and privacy controls once", () => {
+  it("initializes selected observability capabilities and privacy controls once", () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://posthog.example");
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
@@ -239,6 +239,9 @@ describe("observability primitives", () => {
       autocapture: false,
       capture_pageview: false,
       disable_session_recording: true,
+      disable_surveys: true,
+      disable_external_dependency_loading: true,
+      advanced_disable_flags: true,
       persistence: "memory",
     }));
   });
