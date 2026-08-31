@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
+import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
 interface UsageStats {
     totals: { requests: number; cost: number; successRate: number; unknownCostRequests?: number };
@@ -389,9 +390,13 @@ export default function AdminPage() {
                 </div>
 
                 <Tabs defaultValue="usage" className="space-y-6">
-                    <TabsList className="flex-wrap">
+                    <TabsList className="h-auto flex-wrap justify-start">
                         <TabsTrigger value="usage">Usage Analytics</TabsTrigger>
                         <TabsTrigger value="users">User Management</TabsTrigger>
+                        <TabsTrigger value="announcements">
+                            <Megaphone className="h-4 w-4 mr-1" />
+                            Announcements
+                        </TabsTrigger>
                         <TabsTrigger value="promo-codes">
                             <Ticket className="h-4 w-4 mr-1" />
                             Promo Codes
@@ -629,6 +634,10 @@ export default function AdminPage() {
                                 </ScrollArea>
                             </CardContent>
                         </Card>
+                    </TabsContent>
+
+                    <TabsContent value="announcements" className="space-y-6">
+                        <AdminAnnouncements users={users} />
                     </TabsContent>
 
                     {/* Promo Codes Tab */}

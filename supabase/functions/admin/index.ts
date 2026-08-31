@@ -2,6 +2,10 @@
 // Provides usage statistics, rate limit management, and user management
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+    validateAnnouncementId,
+    validateCreateAnnouncement,
+} from "../_shared/announcements.ts";
 
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
@@ -150,6 +154,112 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get("action");
 
     try {
+        // GET /admin?action=announcements - List all announcements for admin review
+        if (action === "announcements" && req.method === "GET") {
+            const { data, error } = await supabase
+                .from("admin_announcements")
+                .select("id,title,body,target_type,target_user_ids,starts_at,expires_at,created_by,created_at")
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                console.error("[ADMIN] Failed to list announcements", error.code);
+                throw new Error("Failed to list announcements");
+            }
+
+            return new Response(JSON.stringify({ announcements: data ?? [] }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=create-announcement - Create an all-user or targeted announcement
+        if (action === "create-announcement" && req.method === "POST") {
+            let body: unknown;
+            try {
+                body = await req.json();
+            } catch {
+                return new Response(JSON.stringify({ error: "Request body must be valid JSON" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const validated = validateCreateAnnouncement(body);
+            if (!validated.ok) {
+                return new Response(JSON.stringify({ error: validated.error }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { value } = validated;
+            const { data, error } = await supabase
+                .from("admin_announcements")
+                .insert({
+                    title: value.title,
+                    body: value.body,
+                    target_type: value.targetType,
+                    target_user_ids: value.targetUserIds,
+                    starts_at: value.startsAt,
+                    expires_at: value.expiresAt,
+                    created_by: user.id,
+                })
+                .select("id,title,body,target_type,target_user_ids,starts_at,expires_at,created_by,created_at")
+                .single();
+
+            if (error) {
+                console.error("[ADMIN] Failed to create announcement", error.code);
+                throw new Error("Failed to create announcement");
+            }
+
+            return new Response(JSON.stringify({ announcement: data }), {
+                status: 201,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=delete-announcement - Remove an announcement and its dismissals
+        if (action === "delete-announcement" && req.method === "POST") {
+            let body: unknown;
+            try {
+                body = await req.json();
+            } catch {
+                return new Response(JSON.stringify({ error: "Request body must be valid JSON" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const announcementId = validateAnnouncementId(body);
+            if (!announcementId.ok) {
+                return new Response(JSON.stringify({ error: announcementId.error }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { data, error } = await supabase
+                .from("admin_announcements")
+                .delete()
+                .eq("id", announcementId.value)
+                .select("id")
+                .maybeSingle();
+
+            if (error) {
+                console.error("[ADMIN] Failed to delete announcement", error.code);
+                throw new Error("Failed to delete announcement");
+            }
+            if (!data) {
+                return new Response(JSON.stringify({ error: "Announcement not found" }), {
+                    status: 404,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
         // GET /admin?action=stats - Get usage statistics
         if (action === "stats") {
             const days = parseInt(url.searchParams.get("days") || "7");
