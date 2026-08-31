@@ -1292,6 +1292,8 @@
       "draftFor": "Draft for {{label}}",
       "toSubmit": "to submit",
       "submitSpeech": "Submit speech",
+      "timeExpired": "This speaking time has ended. Reset the turn to continue.",
+      "speechRejected": "This speech could not be submitted. Check the timer and length, then try again.",
       "offlineCannotSubmit": "Reconnect to submit this speech.",
       "opponentFailed": "The opponent could not answer",
       "retryOpponent": "Retry opponent turn",

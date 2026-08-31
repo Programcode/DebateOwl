@@ -64,12 +64,14 @@ import {
   claimSparringScoreSession,
   completeClaimedSparringScoreSession,
   createSparringSpeechIntegrityToken,
+  deriveSparringIntegritySecret,
   normalizeSparringOutput,
   parseSparringProviderOutput,
   parseSparringRequest,
   releaseSparringScoreClaim,
   verifySparringTranscriptIntegrity,
   type SparringDatabase,
+  type SparringDatabaseSchema,
   type SparringRequest,
 } from "./sparring-persistence.ts";
 import {
@@ -104,6 +106,13 @@ import {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const sparringSupabase = createClient<SparringDatabaseSchema>(supabaseUrl, supabaseServiceKey);
+const sparringIntegritySecret = Deno.env.get("SPARRING_INTEGRITY_SECRET")?.trim()
+  || await deriveSparringIntegritySecret(supabaseServiceKey);
+
+function narrowSparringDatabase(database: object): SparringDatabase {
+  return database as SparringDatabase;
+}
 
 // ============== RATE LIMITING & SUBSCRIPTION GATING ==============
 
@@ -759,7 +768,6 @@ function getCurrentDateContext(): string {
 
 Deno.serve(async (req) => {
   const requestId = generateRequestId();
-  const requestStartedAt = new Date().toISOString();
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   if (req.method === "OPTIONS") {
@@ -846,14 +854,14 @@ Deno.serve(async (req) => {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
-  const sparringDatabase = supabase as unknown as SparringDatabase;
+  const sparringDatabase = narrowSparringDatabase(sparringSupabase);
   let sparringScoreClaimed = false;
   let sparringScoreClaimToken: string | undefined;
 
   if (validatedSparringRequest && !(await verifySparringTranscriptIntegrity(
     validatedSparringRequest,
     userId,
-    supabaseServiceKey,
+    [sparringIntegritySecret, supabaseServiceKey],
   ))) {
     log(requestId, "WARN", "Rejected sparring transcript with invalid AI-turn integrity");
     return badRequest("Sparring transcript integrity check failed", corsHeaders);
@@ -864,7 +872,7 @@ Deno.serve(async (req) => {
   if (validatedSparringRequest?.action === "score") {
     let claim: Awaited<ReturnType<typeof claimSparringScoreSession>>;
     try {
-      claim = await claimSparringScoreSession(sparringDatabase, validatedSparringRequest, userId, requestStartedAt);
+      claim = await claimSparringScoreSession(sparringDatabase, validatedSparringRequest, userId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Score claim failed";
       log(requestId, "ERROR", "Unable to claim sparring score", { error: message });
@@ -1033,7 +1041,7 @@ Deno.serve(async (req) => {
                 side: sparringRequest.currentTurn!.side,
                 content: parsedOutput.speech.content,
               },
-              supabaseServiceKey,
+              sparringIntegritySecret,
             ),
           },
         }

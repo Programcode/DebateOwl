@@ -52,6 +52,52 @@ export type SparringScorecardRecord = {
   verdict: string;
 };
 
+type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+export type SparringDatabaseSchema = {
+  public: {
+    Tables: {
+      sparring_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          motion: string;
+          user_side: string;
+          format: string;
+          difficulty: string;
+          persona: string;
+          turns: Json;
+          judge_comments: Json;
+          final_evaluation: Json | null;
+          status: string;
+          claim_token: string | null;
+          schema_version: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Partial<{
+          turns: Json;
+          final_evaluation: Json | null;
+          status: string;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      sparring_request_started_at: { Args: Record<PropertyKey, never>; Returns: string };
+      claim_sparring_score_session: {
+        Args: { p_payload: Json; p_request_started_at: string };
+        Returns: Json;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+
 export type SparringProviderOutput =
   | { action: "respond"; speech: { content: string; strategy: string; targetedPoints: string[] } }
   | { action: "score"; scorecard: SparringScorecardRecord };
@@ -183,6 +229,17 @@ function encodeBase64Url(value: ArrayBuffer): string {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
 
+/** Derive a domain-separated signing key when no dedicated deployment secret exists. */
+export async function deriveSparringIntegritySecret(rootSecret: string): Promise<string> {
+  const key = await importIntegrityKey(rootSecret);
+  const derived = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode("DebateLab sparring integrity key v1"),
+  );
+  return encodeBase64Url(derived);
+}
+
 function decodeBase64Url(value: string): ArrayBuffer | null {
   try {
     const base64 = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
@@ -209,19 +266,16 @@ export async function createSparringSpeechIntegrityToken(
 export async function verifySparringTranscriptIntegrity(
   request: SparringRequest,
   userId: string,
-  secret: string,
+  secrets: string | readonly string[],
 ): Promise<boolean> {
-  const key = await importIntegrityKey(secret);
+  const keys = await Promise.all((typeof secrets === "string" ? [secrets] : secrets).map(importIntegrityKey));
+  if (keys.length === 0) return false;
   for (const speech of request.speeches) {
     if (speech.speaker !== "ai") continue;
     const signature = speech.integrityToken ? decodeBase64Url(speech.integrityToken) : null;
     if (!signature) return false;
-    const valid = await crypto.subtle.verify(
-      "HMAC",
-      key,
-      signature,
-      new TextEncoder().encode(integrityPayload(request, userId, speech)),
-    );
+    const payload = new TextEncoder().encode(integrityPayload(request, userId, speech));
+    const valid = (await Promise.all(keys.map((key) => crypto.subtle.verify("HMAC", key, signature, payload)))).some(Boolean);
     if (!valid) return false;
   }
   return true;
@@ -405,29 +459,6 @@ export function sparringPersona(difficulty: SparringRequest["difficulty"]): "coa
   return difficulty === "easy" ? "coach" : difficulty === "medium" ? "analytical" : "aggressive";
 }
 
-export function buildCompletedSparringSessionRow(
-  request: SparringRequest,
-  userId: string,
-  scorecard: SparringScorecardRecord,
-  now = new Date().toISOString(),
-): Record<string, unknown> {
-  return {
-    id: request.sessionId,
-    user_id: userId,
-    motion: request.motion,
-    user_side: request.userSide,
-    format: request.format,
-    difficulty: request.difficulty,
-    persona: sparringPersona(request.difficulty),
-    turns: request.speeches.slice(0, MAX_SPEECHES),
-    final_evaluation: scorecard,
-    judge_comments: [],
-    status: "complete",
-    created_at: now,
-    updated_at: now,
-  };
-}
-
 type SparringQuery = {
   select: (columns: string) => SparringQuery;
   eq: (column: string, value: string) => SparringQuery;
@@ -435,11 +466,11 @@ type SparringQuery = {
 };
 
 export type SparringDatabase = {
-  rpc: (
-    functionName: string,
-    args: Record<string, unknown>,
-  ) => PromiseLike<{ data?: unknown; error?: { code?: string; message?: string } | null }>;
-  from: (table: string) => {
+  rpc: {
+    (functionName: "sparring_request_started_at", args: Record<PropertyKey, never>): PromiseLike<{ data?: unknown; error?: { code?: string; message?: string } | null }>;
+    (functionName: "claim_sparring_score_session", args: { p_payload: Json; p_request_started_at: string }): PromiseLike<{ data?: unknown; error?: { code?: string; message?: string } | null }>;
+  };
+  from: (table: "sparring_sessions") => {
     select: (columns: string) => SparringQuery;
     insert: (row: Record<string, unknown>) => PromiseLike<{ error?: { code?: string; message?: string } | null }>;
     update: (row: Record<string, unknown>) => SparringQuery;
@@ -459,7 +490,7 @@ function buildStartedSparringSessionRow(
   userId: string,
   claimToken: string,
   now = new Date().toISOString(),
-): Record<string, unknown> {
+): { [key: string]: Json | undefined } {
   return {
     id: request.sessionId,
     user_id: userId,
@@ -478,36 +509,20 @@ function buildStartedSparringSessionRow(
   };
 }
 
-export async function findCompletedSparringScorecard(
-  database: SparringDatabase,
-  sessionId: string,
-  userId: string,
-): Promise<SparringScorecardRecord | null> {
-  try {
-    const result = await database.from("sparring_sessions")
-      .select("final_evaluation")
-      .eq("id", sessionId)
-      .eq("user_id", userId)
-      .eq("status", "complete")
-      .maybeSingle();
-    const scorecard = parseSparringScorecard(isRecord(result.data) ? result.data.final_evaluation : null);
-    return scorecard && scorecardMatchesDerivedValues(scorecard) ? scorecard : null;
-  } catch {
-    return null;
-  }
-}
-
 /** Atomically reserve the client UUID before quota or provider work begins. */
 export async function claimSparringScoreSession(
   database: SparringDatabase,
   request: SparringRequest,
   userId: string,
-  requestStartedAt = new Date().toISOString(),
 ): Promise<SparringScoreClaim> {
+  const requestStart = await database.rpc("sparring_request_started_at", {});
+  if (requestStart.error || typeof requestStart.data !== "string") {
+    throw new Error(requestStart.error?.message || "Failed to establish the sparring erase fence");
+  }
   const claimToken = crypto.randomUUID();
   const result = await database.rpc("claim_sparring_score_session", {
     p_payload: buildStartedSparringSessionRow(request, userId, claimToken),
-    p_request_started_at: requestStartedAt,
+    p_request_started_at: requestStart.data,
   });
   if (result.error) throw new Error(result.error.message || "Failed to reserve sparring session");
   if (!isRecord(result.data) || typeof result.data.status !== "string") {

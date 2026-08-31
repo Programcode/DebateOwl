@@ -81,7 +81,8 @@ describe('sparring-store', () => {
     useSparringStore.setState({ currentSession: null, savedSessions: [], hydrated: false });
   });
 
-  it('starts a session with a live user timer and preserves the draft', () => {
+  it('starts a session with a live user timer and preserves the draft without writing on every keystroke', () => {
+    vi.useFakeTimers();
     vi.setSystemTime(1_000);
     const session = useSparringStore.getState().startSession({
       motion: '  This House would make public transport free.  ',
@@ -100,6 +101,11 @@ describe('sparring-store', () => {
 
     useSparringStore.getState().setDraft('My opening claim and warrant.');
     expect(getSession().draft).toBe('My opening claim and warrant.');
+    const beforeDebounce = JSON.parse(sessionStorage.getItem('debate-sparring-storage') ?? '{}') as {
+      state?: { currentSession?: { draft?: string } };
+    };
+    expect(beforeDebounce.state?.currentSession?.draft).toBe('');
+    vi.advanceTimersByTime(250);
 
     const persisted = JSON.parse(sessionStorage.getItem('debate-sparring-storage') ?? '{}') as {
       state?: { currentSession?: { draft?: string } };
@@ -141,6 +147,20 @@ describe('sparring-store', () => {
       { label: 'Pro Conclusor', kind: 'conclusor' },
       { label: 'Con Conclusor', kind: 'conclusor' },
     ]);
+  });
+
+  it('rejects malformed persisted state even at the current storage version', async () => {
+    sessionStorage.setItem('debate-sparring-storage', JSON.stringify({
+      version: 3,
+      state: {
+        currentSession: { id: 'malformed', turns: 'not-an-array' },
+        savedSessions: [{ id: 'also-malformed' }],
+      },
+    }));
+
+    await useSparringStore.persist.rehydrate();
+
+    expect(useSparringStore.getState()).toMatchObject({ currentSession: null, savedSessions: [] });
   });
 
   it('pauses, resumes, and times out against a wall-clock deadline', () => {
@@ -228,6 +248,21 @@ describe('sparring-store', () => {
     expect(getSession()).toMatchObject({ currentTurnIndex: 0, speeches: [] });
   });
 
+  it('rejects a speech after its saved deadline without advancing', () => {
+    const store = useSparringStore.getState();
+    store.startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+
+    const deadline = getSession().timerDeadline;
+    if (deadline === null) throw new Error('Expected a running timer.');
+    expect(store.submitUserSpeech('A late speech.', deadline + 1)).toBeNull();
+    expect(getSession()).toMatchObject({ currentTurnIndex: 0, speeches: [] });
+  });
+
   it('moves to judging and saves a completed scorecard', () => {
     const store = useSparringStore.getState();
     const session = store.startSession({
@@ -269,6 +304,20 @@ describe('sparring-store', () => {
     expect(useSparringStore.getState().savedSessions[0].id).toBe('valid-row');
     expect(useSparringStore.getState().savedSessions[0].phase).toBe('complete');
     expect(useSparringStore.getState().hydrated).toBe(true);
+  });
+
+  it('caps hydrated sparring history to fifty sessions', async () => {
+    setMockTableResponse('sparring_sessions', {
+      select: Array.from({ length: 55 }, (_, index) => ({
+        ...validSavedRow(`saved-row-${index}`),
+        updated_at: new Date(Date.UTC(2026, 7, 30, 0, index)).toISOString(),
+      })),
+    });
+
+    await useSparringStore.getState().hydrateSavedSessions();
+
+    expect(useSparringStore.getState().savedSessions).toHaveLength(50);
+    expect(useSparringStore.getState().savedSessions[0].id).toBe('saved-row-54');
   });
 
   it('discards a hydration response after local auth data is reset', async () => {

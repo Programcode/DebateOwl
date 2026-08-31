@@ -1292,6 +1292,8 @@
       "draftFor": "Piszkozat: {{label}}",
       "toSubmit": "beküldéshez",
       "submitSpeech": "Beszéd beküldése",
+      "timeExpired": "A felszólalási idő lejárt. A folytatáshoz állítsd vissza a kört.",
+      "speechRejected": "A beszédet nem sikerült beküldeni. Ellenőrizd az időt és a hosszt, majd próbáld újra.",
       "offlineCannotSubmit": "Csatlakozz újra a beszéd beküldéséhez.",
       "opponentFailed": "Az ellenfél nem tudott válaszolni",
       "retryOpponent": "Az ellenfél körének újrapróbálása",

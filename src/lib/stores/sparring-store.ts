@@ -105,6 +105,58 @@ const PersistedSparringStateSchema = z.object({
 });
 
 type PersistedSparringState = Pick<SparringStoreState, 'currentSession' | 'savedSessions'>;
+const MAX_SAVED_SESSIONS = 50;
+const PERSIST_DELAY_MS = 250;
+let pendingStorageWrite: { name: string; value: string } | null = null;
+let storageWriteTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushPendingStorageWrite() {
+  if (!pendingStorageWrite || typeof sessionStorage === 'undefined') return;
+  sessionStorage.setItem(pendingStorageWrite.name, pendingStorageWrite.value);
+  pendingStorageWrite = null;
+  if (storageWriteTimer) clearTimeout(storageWriteTimer);
+  storageWriteTimer = null;
+}
+
+function withoutVolatileDraftFields(value: string): string | null {
+  try {
+    const parsed = JSON.parse(value) as { state?: { currentSession?: { draft?: string; updatedAt?: number } | null } };
+    if (parsed.state?.currentSession) {
+      parsed.state.currentSession.draft = '';
+      parsed.state.currentSession.updatedAt = 0;
+    }
+    return JSON.stringify(parsed);
+  } catch {
+    return null;
+  }
+}
+
+const debouncedSessionStorage = {
+  getItem: (name: string) => sessionStorage.getItem(name),
+  setItem: (name: string, value: string) => {
+    const persistedValue = sessionStorage.getItem(name);
+    const draftOnlyChange = persistedValue !== null
+      && withoutVolatileDraftFields(persistedValue) === withoutVolatileDraftFields(value);
+    if (!draftOnlyChange) {
+      if (storageWriteTimer) clearTimeout(storageWriteTimer);
+      storageWriteTimer = null;
+      pendingStorageWrite = null;
+      sessionStorage.setItem(name, value);
+      return;
+    }
+    pendingStorageWrite = { name, value };
+    if (storageWriteTimer) clearTimeout(storageWriteTimer);
+    storageWriteTimer = setTimeout(flushPendingStorageWrite, PERSIST_DELAY_MS);
+  },
+  removeItem: (name: string) => {
+    if (pendingStorageWrite?.name === name) pendingStorageWrite = null;
+    if (storageWriteTimer) clearTimeout(storageWriteTimer);
+    storageWriteTimer = null;
+    sessionStorage.removeItem(name);
+  },
+};
+
+if (typeof window !== 'undefined') window.addEventListener('pagehide', flushPendingStorageWrite);
 
 function migratePersistedSparringState(value: unknown): PersistedSparringState {
   const parsed = PersistedSparringStateSchema.safeParse(value);
@@ -173,7 +225,7 @@ function mergeSessions(local: SparringSession[], remote: SparringSession[]): Spa
     const current = byId.get(session.id);
     if (!current || current.updatedAt < session.updatedAt) byId.set(session.id, session);
   }
-  return [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+  return [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_SAVED_SESSIONS);
 }
 
 function parseSavedRows(value: unknown): SparringSession[] {
@@ -282,7 +334,10 @@ export const useSparringStore = create<SparringStoreState>()(
         const session = get().currentSession;
         const turn = session ? currentTurn(session) : undefined;
         const cleanContent = content.trim();
-        if (!session || session.phase !== 'round' || turn?.speaker !== 'user' || !cleanContent || cleanContent.length > 6_000) return null;
+        const deadlinePassed = session?.timerDeadline !== null
+          && session?.timerDeadline !== undefined
+          && session.timerDeadline <= now;
+        if (!session || session.phase !== 'round' || turn?.speaker !== 'user' || !cleanContent || cleanContent.length > 6_000 || session.timerRemainingSeconds <= 0 || deadlinePassed) return null;
         const remaining = session.timerRunning && session.timerDeadline !== null
           ? Math.max(0, Math.ceil((session.timerDeadline - now) / 1000))
           : session.timerRemainingSeconds;
@@ -378,12 +433,16 @@ export const useSparringStore = create<SparringStoreState>()(
     }),
     {
       name: 'debate-sparring-storage',
-      storage: createJSONStorage(() => sessionStorage),
-      version: 2,
+      storage: createJSONStorage(() => debouncedSessionStorage),
+      version: 3,
       migrate: (persistedState) => migratePersistedSparringState(persistedState),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...migratePersistedSparringState(persistedState),
+      }),
       partialize: (state) => ({
         currentSession: state.currentSession,
-        savedSessions: state.savedSessions,
+        savedSessions: state.savedSessions.slice(0, MAX_SAVED_SESSIONS),
       }),
     },
   ),

@@ -18,6 +18,7 @@ interface SparringRoundProps {
   aiError?: string | null;
   judging?: boolean;
   judgingError?: string | null;
+  submissionError?: string | null;
   onSubmit: (content: string) => void;
   onRetryAi?: () => void;
   onRetryJudging?: () => void;
@@ -41,6 +42,7 @@ export function SparringRound({
   aiError,
   judging = false,
   judgingError,
+  submissionError,
   onSubmit,
   onRetryAi,
   onRetryJudging,
@@ -61,6 +63,8 @@ export function SparringRound({
     : t('sparring.round.yourSpeechDescription', 'Make the case in the time you have. The opponent will respond to this text.');
   const timerProgress = currentTurn?.timeLimitSeconds ? Math.max(0, Math.min(100, (session.timerRemainingSeconds / currentTurn.timeLimitSeconds) * 100)) : 0;
   const isUrgent = session.timerRemainingSeconds <= 30 && session.timerRemainingSeconds > 0;
+  const timeExpired = session.timerRemainingSeconds <= 0
+    || (session.timerDeadline !== null && session.timerDeadline <= Date.now());
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -82,7 +86,7 @@ export function SparringRound({
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       event.preventDefault();
-      if (userTurn && session.draft.trim() && !judging && isOnline) onSubmit(session.draft);
+      if (userTurn && session.draft.trim() && !judging && isOnline && !timeExpired) onSubmit(session.draft);
     }
   };
 
@@ -185,10 +189,12 @@ export function SparringRound({
                     />
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-muted-foreground">{isOnline ? <><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">⌘</kbd> or <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Ctrl</kbd> + <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Enter</kbd> {t('sparring.round.toSubmit', 'to submit')}</> : t('sparring.round.offlineCannotSubmit', 'Reconnect to submit this speech.')}</p>
-                      <Button type="button" onClick={() => onSubmit(session.draft)} disabled={!session.draft.trim() || !isOnline} className="sm:min-w-36">
+                      <Button type="button" onClick={() => onSubmit(session.draft)} disabled={!session.draft.trim() || !isOnline || timeExpired} className="sm:min-w-36">
                         {t('sparring.round.submitSpeech', 'Submit speech')} <Send className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
+                    {timeExpired && <p className="text-sm text-destructive" role="alert">{t('sparring.round.timeExpired', 'This speaking time has ended. Reset the turn to continue.')}</p>}
+                    {!timeExpired && submissionError && <p className="text-sm text-destructive" role="alert">{submissionError}</p>}
                   </CardContent>
                 </Card>
               ) : (

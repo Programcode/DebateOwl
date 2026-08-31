@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, CircleHelp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -38,6 +38,7 @@ export default function SparringPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [judgingError, setJudgingError] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
   const [retryNonce, setRetryNonce] = useState(0);
   const aiRequestRef = useRef<string | null>(null);
@@ -68,7 +69,7 @@ export default function SparringPage() {
     };
   }, []);
 
-  const config = getFeatureConfig('sparring');
+  const config = useMemo(() => getFeatureConfig('sparring'), [getFeatureConfig]);
 
   const retryAi = useCallback(() => {
     aiRequestRef.current = null;
@@ -102,7 +103,6 @@ export default function SparringPage() {
     aiInFlightRef.current = true;
     setAiLoading(true);
     setAiError(null);
-    let active = true;
     const { speaker: _speaker, ...turnInput } = currentTurn;
     const input: SparringRespondInput = {
       action: 'respond',
@@ -136,17 +136,15 @@ export default function SparringPage() {
         appendAiSpeech(speech);
       })
       .catch((error: unknown) => {
-        if (!active || aiRequestRef.current !== requestKey) return;
+        if (aiRequestRef.current !== requestKey) return;
         setAiError(readableError(error, t('sparring.round.aiRequestFailed', 'The AI request failed. Check your connection and try again.')));
       })
       .finally(() => {
-        aiInFlightRef.current = false;
-        if (active && aiRequestRef.current === requestKey) setAiLoading(false);
+        if (aiRequestRef.current === requestKey) {
+          aiInFlightRef.current = false;
+          setAiLoading(false);
+        }
       });
-
-    return () => {
-      active = false;
-    };
   }, [appendAiSpeech, config, outputLanguage, retryNonce, session, t]);
 
   useEffect(() => {
@@ -160,7 +158,6 @@ export default function SparringPage() {
     judgeRequestRef.current = requestKey;
     judgeInFlightRef.current = true;
     setJudgingError(null);
-    let active = true;
     const input: SparringScoreInput = {
       action: 'score',
       sessionId: session.id,
@@ -178,15 +175,12 @@ export default function SparringPage() {
         completeSession(result.scorecard);
       })
       .catch((error: unknown) => {
-        if (!active || judgeRequestRef.current !== requestKey) return;
+        if (judgeRequestRef.current !== requestKey) return;
         setJudgingError(readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
       })
       .finally(() => {
-        judgeInFlightRef.current = false;
+        if (judgeRequestRef.current === requestKey) judgeInFlightRef.current = false;
       });
-    return () => {
-      active = false;
-    };
   }, [completeSession, config, outputLanguage, retryNonce, session, t]);
 
   const handleStart = (values: SparringSetupValues) => {
@@ -196,6 +190,7 @@ export default function SparringPage() {
     setRetryNonce(0);
     aiRequestRef.current = null;
     judgeRequestRef.current = null;
+    setSubmissionError(null);
   };
 
   const handleRestart = () => {
@@ -205,6 +200,12 @@ export default function SparringPage() {
     setRetryNonce(0);
     aiRequestRef.current = null;
     judgeRequestRef.current = null;
+    setSubmissionError(null);
+  };
+
+  const handleSubmit = (content: string) => {
+    const result = submitUserSpeech(content);
+    setSubmissionError(result ? null : t('sparring.round.speechRejected', 'This speech could not be submitted. Check the timer and length, then try again.'));
   };
 
   const handleExportDocx = () => {
@@ -243,7 +244,8 @@ export default function SparringPage() {
         aiError={aiError}
         judging={session.phase === 'judging'}
         judgingError={judgingError}
-        onSubmit={(content) => submitUserSpeech(content)}
+        submissionError={submissionError}
+        onSubmit={handleSubmit}
         onRetryAi={retryAi}
         onRetryJudging={retryJudging}
       />

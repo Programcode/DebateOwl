@@ -31,9 +31,6 @@ BEGIN
 END
 $$;
 
-CREATE INDEX IF NOT EXISTS idx_sparring_sessions_user_updated
-  ON public.sparring_sessions (user_id, updated_at DESC);
-
 -- Final scores are presented as AI-judged feedback. Keep completion writes on
 -- the authenticated Edge Function so clients cannot forge an evaluation.
 DROP POLICY IF EXISTS "Users own sessions" ON public.sparring_sessions;
@@ -58,6 +55,20 @@ CREATE TABLE IF NOT EXISTS public.user_data_clear_markers (
 ALTER TABLE public.user_data_clear_markers ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.user_data_clear_markers FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.user_data_clear_markers TO service_role;
+
+-- Capture the score-request fence on the database clock before the claim. The
+-- later comparison with cleared_at therefore never depends on edge-host time.
+CREATE OR REPLACE FUNCTION public.sparring_request_started_at()
+RETURNS timestamptz
+LANGUAGE sql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT clock_timestamp();
+$$;
+REVOKE ALL ON FUNCTION public.sparring_request_started_at() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sparring_request_started_at() TO service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_sparring_score_session(
   p_payload jsonb,

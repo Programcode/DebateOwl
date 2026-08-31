@@ -1,8 +1,8 @@
 import {
-  buildCompletedSparringSessionRow,
   claimSparringScoreSession,
   completeClaimedSparringScoreSession,
   createSparringSpeechIntegrityToken,
+  deriveSparringIntegritySecret,
   normalizeSparringOutput,
   parseSparringProviderOutput,
   parseSparringRequest,
@@ -43,6 +43,8 @@ const request: SparringRequest = {
   })),
 };
 
+const DATABASE_REQUEST_STARTED_AT = "2026-08-30T12:34:56.000Z";
+
 function scorecardFields() {
   return {
     keyMoments: ["The first clash"],
@@ -75,7 +77,9 @@ Deno.test("normalizes misplaced score fields and derives totals and winner", () 
     throw new Error("scorecard totals or winner were not derived from categories");
   }
   if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) throw new Error("normalized output was not an object");
-  if ("winner" in normalized && "verdict" in normalized) throw new Error("top-level score fields were not removed");
+  for (const field of ["keyMoments", "improvementAreas", "winner", "verdict"]) {
+    if (field in normalized) throw new Error(`top-level score field was not removed: ${field}`);
+  }
 });
 
 Deno.test("rejects invalid sparring request invariants", () => {
@@ -146,7 +150,8 @@ Deno.test("claims and completes a difficulty-mapped session row", async () => {
   let savedRow: Record<string, unknown> = {};
   let completedRow: Record<string, unknown> = {};
   const database = {
-    rpc: (_functionName: string, args: Record<string, unknown>) => {
+    rpc: (functionName: string, args: Record<string, unknown>) => {
+      if (functionName === "sparring_request_started_at") return Promise.resolve({ data: DATABASE_REQUEST_STARTED_AT, error: null });
       savedRow = args.p_payload as Record<string, unknown>;
       return Promise.resolve({ data: { status: "claimed", token: savedRow.claim_token }, error: null });
     },
@@ -191,8 +196,6 @@ Deno.test("claims and completes a difficulty-mapped session row", async () => {
   }
   await completeClaimedSparringScoreSession(database, request, userId, claim.token, scorecard);
   if (completedRow.status !== "complete" || completedRow.final_evaluation !== scorecard) throw new Error("claimed session was not completed");
-  const row = buildCompletedSparringSessionRow(request, "user", scorecard, "2026-08-30T00:00:00.000Z");
-  if (row.format !== "pf" || row.difficulty !== "hard" || row.updated_at !== "2026-08-30T00:00:00.000Z") throw new Error("row metadata mismatch");
 });
 
 Deno.test("signs AI turns and rejects changed provider-authored content", async () => {
@@ -210,6 +213,7 @@ Deno.test("signs AI turns and rejects changed provider-authored content", async 
     speeches: signedSpeeches,
   };
   if (!(await verifySparringTranscriptIntegrity(signedRequest, userId, secret))) throw new Error("valid signed turn was rejected");
+  if (!(await verifySparringTranscriptIntegrity(signedRequest, userId, ["new-secret", secret]))) throw new Error("legacy signed turn was rejected during key rotation");
   const tampered = {
     ...signedRequest,
     speeches: signedRequest.speeches.map((speech, index) => index === 1 ? { ...speech, content: `${speech.content} changed` } : speech),
@@ -217,10 +221,18 @@ Deno.test("signs AI turns and rejects changed provider-authored content", async 
   if (await verifySparringTranscriptIntegrity(tampered, userId, secret)) throw new Error("tampered AI turn was accepted");
 });
 
-Deno.test("passes the trusted request start to the atomic claim RPC", async () => {
+Deno.test("derives a stable domain-separated integrity secret", async () => {
+  const rootSecret = "test-only-service-role-secret";
+  const first = await deriveSparringIntegritySecret(rootSecret);
+  const second = await deriveSparringIntegritySecret(rootSecret);
+  if (first !== second || first === rootSecret) throw new Error("integrity key derivation was not stable and separated");
+});
+
+Deno.test("passes a database-clock request start to the atomic claim RPC", async () => {
   let rpcArgs: Record<string, unknown> = {};
   const database = {
-    rpc: (_functionName: string, args: Record<string, unknown>) => {
+    rpc: (functionName: string, args: Record<string, unknown>) => {
+      if (functionName === "sparring_request_started_at") return Promise.resolve({ data: DATABASE_REQUEST_STARTED_AT, error: null });
       rpcArgs = args;
       return Promise.resolve({ data: { status: "claimed", token: "00000000-0000-4000-8000-000000000009" }, error: null });
     },
@@ -236,9 +248,8 @@ Deno.test("passes the trusted request start to the atomic claim RPC", async () =
       return query;
     },
   };
-  const startedAt = "2026-08-30T12:34:56.000Z";
-  const claim = await claimSparringScoreSession(database, request, "00000000-0000-4000-8000-000000000002", startedAt);
-  if (claim.status !== "claimed" || rpcArgs.p_request_started_at !== startedAt) throw new Error("trusted request start was not fenced by the RPC");
+  const claim = await claimSparringScoreSession(database, request, "00000000-0000-4000-8000-000000000002");
+  if (claim.status !== "claimed" || rpcArgs.p_request_started_at !== DATABASE_REQUEST_STARTED_AT) throw new Error("database request start was not fenced by the RPC");
 });
 
 Deno.test("claim conflicts fail closed across users but return the same owner's score", async () => {
@@ -259,12 +270,14 @@ Deno.test("claim conflicts fail closed across users but return the same owner's 
   };
   const ownerId = "00000000-0000-4000-8000-000000000002";
   const makeDatabase = (requestingUserId: string) => ({
-    rpc: () => Promise.resolve({
-      data: requestingUserId === ownerId
-        ? { status: "complete", scorecard }
-        : { status: "conflict" },
-      error: null,
-    }),
+    rpc: (functionName: string) => functionName === "sparring_request_started_at"
+      ? Promise.resolve({ data: DATABASE_REQUEST_STARTED_AT, error: null })
+      : Promise.resolve({
+        data: requestingUserId === ownerId
+          ? { status: "complete", scorecard }
+          : { status: "conflict" },
+        error: null,
+      }),
     from: (_table: string) => {
       const query = {
         select: (_columns: string) => query,

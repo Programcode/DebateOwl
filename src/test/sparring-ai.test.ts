@@ -45,11 +45,20 @@ describe('Sparring AI contract', () => {
   });
 
   it('caps session context at twelve speeches and requires all score categories', () => {
-    const speech = {
-      id: 'speech-1', turnId: 'pf-1', speaker: 'user', side: 'pro', role: 'Pro constructive',
-      content: 'A complete argument.', createdAt: 1, timeLimitSeconds: 240, timeUsedSeconds: 20,
-    };
-    expect(SparringInputSchema.safeParse({ ...session, action: 'score', speeches: Array(13).fill(speech) }).success).toBe(false);
+    const speeches = Array.from({ length: 13 }, (_, index) => ({
+      id: `speech-${index + 1}`,
+      turnId: `turn-${index + 1}`,
+      speaker: index % 2 === 0 ? 'user' as const : 'ai' as const,
+      side: index % 2 === 0 ? 'pro' as const : 'con' as const,
+      role: `Speaker ${index + 1}`,
+      content: `Complete argument ${index + 1}.`,
+      createdAt: index + 1,
+      timeLimitSeconds: 240,
+      timeUsedSeconds: 20,
+      ...(index % 2 === 1 ? { integrityToken: `${'x'.repeat(40)}${index + 1}` } : {}),
+    }));
+    expect(SparringInputSchema.safeParse({ ...session, action: 'score', speeches: speeches.slice(0, 12) }).success).toBe(true);
+    expect(SparringInputSchema.safeParse({ ...session, action: 'score', speeches }).success).toBe(false);
     const category = (name: 'Logic' | 'Evidence' | 'Delivery' | 'Strategy') => ({ name, userScore: 20, aiScore: 18, feedback: 'Clear comparison.' });
     const scorecard = {
       userScore: 80, aiScore: 72,

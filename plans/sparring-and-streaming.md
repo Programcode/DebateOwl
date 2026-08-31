@@ -95,6 +95,7 @@ interface SparringScorecard {
 Streaming remains tracked independently in `plans/streaming-ai.md`; it is not part of the turn-based sparring contract.
 
 ## Original Estimated Effort
+
 - Setup + Round UI: 4 hours
 - AI integration (prompts, edge function): 3 hours
 - Scorecard + judging: 2 hours

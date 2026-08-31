@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
@@ -109,6 +109,10 @@ describe('SparringPage', () => {
     judgeMock.mockResolvedValue({ action: 'score', scorecard: SCORECARD });
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders setup, validates the motion, and starts a chosen round', async () => {
     renderPage();
 
@@ -179,6 +183,28 @@ describe('SparringPage', () => {
     expect(screen.getByText('Universal access removes the price barrier.')).toBeInTheDocument();
   });
 
+  it('blocks a speech after the turn deadline', () => {
+    const session = useSparringStore.getState().startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+    useSparringStore.setState({
+      currentSession: {
+        ...session,
+        draft: 'A speech submitted too late.',
+        timerRemainingSeconds: 0,
+        timerRunning: false,
+        timerDeadline: null,
+      },
+    });
+
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Submit speech' })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('This speaking time has ended');
+  });
+
   it('offers a retry after an opponent failure without duplicating the user speech', async () => {
     generateMock
       .mockRejectedValueOnce(new Error('Temporary provider failure'))
@@ -232,12 +258,12 @@ describe('SparringPage', () => {
   });
 
   it('renders safely at a narrow viewport with reduced motion enabled', () => {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
       addEventListener: (): void => undefined,
       removeEventListener: (): void => undefined,
-    }));
+    })));
 
     renderPage();
     expect(screen.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeInTheDocument();

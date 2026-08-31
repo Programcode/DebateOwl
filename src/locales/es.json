@@ -1292,6 +1292,8 @@
       "draftFor": "Borrador para {{label}}",
       "toSubmit": "para enviar",
       "submitSpeech": "Enviar intervención",
+      "timeExpired": "El tiempo de esta intervención ha terminado. Reinicia el turno para continuar.",
+      "speechRejected": "No se pudo enviar esta intervención. Comprueba el cronómetro y la longitud e inténtalo de nuevo.",
       "offlineCannotSubmit": "Vuelve a conectarte para enviar esta intervención.",
       "opponentFailed": "El oponente no pudo responder",
       "retryOpponent": "Reintentar turno del oponente",

@@ -71,13 +71,13 @@ test('completes an LD sparring round through mocked opponent turns and judging',
     ['Second affirmative rebuttal', 'The universal policy is more reliable because every marginal trip is covered.'],
   ] as const;
 
-  for (const [turnLabel, content] of userSpeeches) {
+  for (const [index, [turnLabel, content]] of userSpeeches.entries()) {
     const draft = page.getByRole('textbox', { name: `Draft for ${turnLabel}` });
     await expect(draft).toBeVisible();
     await draft.fill(content);
     await page.getByRole('button', { name: 'Submit speech' }).click();
     if (turnLabel !== 'Second affirmative rebuttal') {
-      await expect(page.getByText(`Opponent response ${responseNumber + 1}:`)).toBeVisible();
+      await expect(page.getByText(`Opponent response ${index + 1}:`)).toBeVisible();
     }
   }
 
