@@ -1,187 +1,256 @@
-# Agent Verification Loop
+# Agent verification loop
 
-Goal: make DebateLab verifiable by agents end to end, so bugs are caught inside the development loop instead of by users on production.
+## Goal
 
-Basis: Theo's thesis that coding is solved and the verification layer is not. This repo proves the point. Agents here can already write code well. What they cannot do today is prove their work: the e2e suite uses fake JWTs, coverage thresholds never fire, four backend test files never execute, PRs gate on nothing, and there is no way for an agent to hold a real authenticated session. This plan closes those gaps in five phases.
+Finish the missing verification path for DebateLab as of 2026-08-31. The
+repository already has unit, coverage, lint, typecheck, and build gates. The
+remaining work is to make the current browser suite green, run credential-free
+browser checks in CI, add a protected real-session staging suite, and document
+the exact verification ladder.
 
-## Current state, verified 2026-08-26
+This plan owns verification code, Playwright configuration, CI wiring, and
+verification documentation. Supabase schema/function synchronization belongs to
+`plans/supabase-staging.md`.
 
-What exists:
+## Verified current state
 
-- Commands: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:coverage`, `npm run test:e2e`, `npm run build`.
-- CI (`.github/workflows/deploy.yml`): on push to main only. Runs lint, typecheck, vitest, build, then pushes a multi-arch image to Docker Hub (`adamgaborjaniszabo/debate-trainer:latest`). VPS pickup happens off-repo.
-- Vitest: ~63 test files, ~630 cases under `src/test`. Coverage thresholds (90/80/89/90) configured over 8 audited modules, enforced only when `--coverage` is passed manually.
-- Playwright: two render-smoke specs, Chromium-only, auto-starts `npm run dev` on :8080. Auth is a stubbed localStorage session with a bogus token, good only for render checks.
-- Supabase: 12 edge functions, manual CLI deploys, currently linked to prod project `uziwdtkzofptihahfooo`. A staging project `brifeyypjauyusmkptkx` exists and its anon creds ship in `src/lib/supabase/env.ts`, but migrations, functions, secrets, and CORS were never applied or verified. The env switcher (`setActiveEnv`) has zero callers.
+- `package.json:15-23` already defines `lint`, `typecheck`, `test`,
+  `test:coverage`, `test:e2e`, and `verify`; it has no
+  `test:e2e:staging` script. `verify` currently stops after the production build
+  and must be extended after the browser command is reliable.
+- `vitest.config.ts:10-44` already includes both `src` and
+  `supabase/functions` tests and enforces the selected coverage scope. A local
+  run on this checkout passed 84 files and 872 tests with 90.13% statements,
+  82.23% branches, 91.18% functions, and 93.98% lines.
+- `.github/workflows/deploy.yml:3-45` already triggers on pull requests and
+  runs lint, typecheck, covered Vitest, and build. It does not install
+  Playwright or run `test:e2e`.
+- `playwright.config.ts:6-35` has desktop and mobile Chromium projects,
+  failure screenshots, and a local Vite server. It does not have a staging
+  setup project, WebKit coverage, or retained video. `e2e/helpers/auth.ts`
+  injects a deliberately bogus JWT, so the existing authenticated page tests
+  prove rendering only. `e2e/crossfire.spec.ts` and `e2e/sparring.spec.ts`
+  intercept backend requests instead of reaching Supabase.
+- `npm run test:e2e` discovers 112 tests. A run on the default `:8080` reused
+  an incompatible/stale local server and produced 92 passes and 20 failures,
+  including false 404s for `/app/crossfire` and `/app/sparring`. The same
+  checkout passed all 112 tests on an isolated `:18081` Vite server. The
+  remaining work is to make that isolation the documented and CI-safe default,
+  not to delete tests or weaken their assertions.
+- There is no `e2e/staging/` suite and no root `AGENTS.md`. The current
+  `README.md` testing section does not document `npm run verify` or the
+  protected staging suite.
+- GitHub run `33398731147` did not start because the account has a payment or
+  spending-limit problem. This is an external CI exception, not evidence that
+  the code passed.
+- Git history confirms the old Phase 0 work landed in `b3b1476`, while the
+  current Crossfire and sparring routes landed in `f1ce741` and `0b94c9e`.
 
-What is broken or missing, ranked by risk:
+The Phase 0 work described in older revisions, including the Deno compatibility
+shim, coverage CI, pull-request trigger, `verify` script, and removal of
+`bun.lockb`, is complete and must not be planned again.
 
-1. `vitest.config.ts:11` includes only `src/**`, so the 28 cases in `supabase/functions/**/*.test.ts` (prompt-builder, source-quality, url-validation, native-cors) never run anywhere.
-2. Coverage gates never run in CI; `deploy.yml` invokes bare `npm test`.
-3. No `pull_request` trigger, so PRs merge ungated.
-4. Edge function handlers (Stripe checkout, portal, webhook, redeem-promo, admin) have zero automated execution. Money paths ride on review alone.
-5. No real authenticated path in e2e. `demo-code-login` works server-side but nothing in `src/` calls it, no tooling mints codes, no seed users exist.
-6. Staging Supabase is created but almost certainly empty; every function's `ALLOWED_ORIGINS` lacks a staging origin.
-7. No WebKit/Firefox projects although `plans/smoke-test-checklist.md` names Safari streaming as the likeliest breakage.
-8. TypeScript `strict: false`; typecheck is a weak signal. ESLint has `no-unused-vars` off.
-9. Observability dead in the Docker path: Sentry DSN unset at build time and nginx CSP omits the Sentry/PostHog origins that `vercel.json` allows.
-10. README drift: wrong repo name, Pi/port-3001 hosting story, obsolete `VITE_SUPABASE_*` guidance. Dual lockfiles: `package-lock.json` canonical, stale `bun.lockb` tracked.
+## Preconditions and isolation
 
-## Target outcome
+The implementation agent must create its own feature branch in its own isolated
+T3 Code worktree. Before editing, it must run:
 
-One command an agent runs on any branch:
-
+```bash
+pwd
+git branch --show-current
+git worktree list --porcelain
+git status --short --branch
 ```
-npm run verify
+
+The worktree must not be the `main` checkout and must not overlap another plan
+worktree. An unexpected dirty file, branch, or worktree is a stop condition.
+Keep the browser artifacts under the existing ignored `test-results/` and
+`playwright-report/` paths.
+
+## Remaining work
+
+### 1. Make the current browser suite reproducible
+
+Files to inspect or change:
+
+- `playwright.config.ts`
+- the existing `e2e/*.spec.ts` files only if a future isolated run finds a
+  real test defect
+
+Run the suite on an unoccupied port with CI mode enabled so another local
+preview cannot be reused:
+
+```bash
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 \
+  npx playwright test e2e/crossfire.spec.ts e2e/sparring.spec.ts --project=desktop-chromium
 ```
 
-runs lint, typecheck, unit tests with enforced coverage, build, and e2e against a real staging environment with a real session, and produces pass/fail plus failure evidence (trace, screenshot, video). CI enforces the same on every PR. When an agent cannot verify something, the repo tells it why and what to build next, via AGENTS.md.
+Make local runs use an explicit, unoccupied port and do not silently reuse an
+existing server from another checkout. Set `reuseExistingServer` to `false` or
+provide an equally strict explicit opt-in for an already-verified server. Keep
+the stub session limited to render
+tests and keep deterministic request interception limited to the tests that
+explicitly need it. The acceptance result is all 112 current tests passing on
+the isolated server, with no removed routes, skipped flows, or assertion
+downgrades.
 
-## Phase 0: Make the checks that exist actually run
+### 2. Put credential-free browser proof in pull-request CI
 
-Small, high-leverage, no new infrastructure.
+Files:
 
-### Task 0.1: Include Supabase function tests in vitest
+- `.github/workflows/deploy.yml`
+- `playwright.config.ts`
+- `package.json` only if `verify` is extended after local browser proof is
+  green
 
-- Modify: `vitest.config.ts:11`
-- Change include to `["src/**/*.{test,spec}.{ts,tsx}", "supabase/functions/**/*.{test,spec}.{ts,tsx}"]`.
-- Risk: those tests may use Deno-flavored imports. Run `npx vitest run supabase/functions` first. If a test fails on Deno globals, either shim in `src/test/setup.ts` or move the tested pure logic into `_shared/` modules importable by both. Do not weaken assertions to make them pass.
-- Verify: `npx vitest run supabase/functions` exits 0 with 28+ passing cases.
+Install the Chromium dependency in the CI job, run the existing static/unit
+gates, and run `npm run test:e2e` against the job-local Vite server. Upload
+`test-results/` and `playwright-report/` on failure with a bounded retention
+period. Configure Playwright to retain a trace, screenshot, and video on
+failure. Keep PR jobs credential-free. They may execute PR-controlled tests and
+must never receive staging or production service-role, provider, OAuth, or
+demo-code secrets.
 
-### Task 0.2: Enforce coverage in CI
+After the standalone browser command is green locally, extend `npm run verify`
+to include it. The one-command contract must be documented in `AGENTS.md` and
+must run all of these gates:
 
-- Modify: `.github/workflows/deploy.yml`
-- Change the test step to `npm test -- --coverage`. Thresholds in `vitest.config.ts` then fail the job on regression. Keep the inline TODO comment accurate afterward.
-- Verify: push a branch with a deliberate assertion deletion, confirm the workflow goes red, revert.
+```bash
+npm run lint
+npm run typecheck
+npm test -- --coverage
+npm run build
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+```
 
-### Task 0.3: Gate pull requests
+Do not claim a GitHub check passed while the account-level billing blocker is
+present. If it remains, record the run URL and the exact external exception
+while retaining successful local evidence.
 
-- Modify: `.github/workflows/deploy.yml`
-- Add `pull_request:` trigger (any branch) running lint, typecheck, tests with coverage, and build. Docker push steps stay behind the existing secrets check so PR runs never publish.
-- Verify: open a draft PR with a failing test, confirm required checks fail, then fix.
+### 3. Add a protected real-session staging suite
 
-### Task 0.4: Lockfile hygiene
+Files:
 
-- Delete `bun.lockb` (stale, unused by CI/Docker/Vercel, all npm). Optionally gitignore it. One-line decision, removes drift bait.
+- `e2e/staging/auth.setup.ts`
+- `e2e/staging/authed-flows.spec.ts`
+- `playwright.config.ts`
+- `.github/workflows/deploy.yml`
+- `package.json` to add the dedicated `test:e2e:staging` script
 
-### Task 0.5: Umbrella verify script
+The setup must use only the staging URL and anon key. It should POST the
+protected test code to `demo-code-login`, pass the returned `tokenHash` and
+email to the staging anon client's `verifyOtp({ type: 'magiclink' })`, set the
+existing `localStorage['debate-supabase-env']='staging'` before app scripts run,
+and save the resulting storage state under `test-results/.auth/`. It must never
+use a service-role key in Playwright code, print a token, or fall back to
+production.
 
-- Modify: `package.json` scripts.
-- Add `"verify": "npm run lint && npm run typecheck && npm test -- --coverage && npm run build"`. E2E joins in Phase 3 once it needs no human.
+Keep staging tests in a separate Playwright project named `staging`, and add
+`"test:e2e:staging": "playwright test --project=staging"` to `package.json`.
+Ordinary
+`npm run test:e2e` runs the public and stubbed Chromium suite only. The staging
+project is enabled only when its explicit environment variables are present.
+Use names such as `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`,
+`STAGING_DEMO_CODE`, and `PLAYWRIGHT_BASE_URL`; values stay in a local ignored
+file or a protected GitHub environment. Do not assume this script or project
+exists before implementing the listed config and script changes.
 
-## Phase 1: Write down how to verify (AGENTS.md)
+The first real flow should be bounded and reversible:
 
-Agents need the playbook in the repo. Create `AGENTS.md` at root:
+1. Authenticate against staging and prove `/app` survives a reload with the
+   same user.
+2. Save one uniquely named source and verify it can be read back after a
+   reload.
+3. Make one short real AI request through the current staging function path,
+   then assert a non-empty response and no browser console error.
+4. Clean up only records created by the dedicated staging test identity, using
+   an operator-approved staging-only mechanism. Never run cleanup against the
+   production ref.
 
-- Canonical commands (the ones above), node 22, npm, ports 8080/54321.
-- Environment model: creds resolve in `src/lib/supabase/env.ts` from `localStorage['debate-supabase-env']`, prod vs staging refs, what IS_STAGING changes.
-- Verification ladder: static checks, unit, coverage, build, e2e smoke, e2e authed flows (once Phase 3 lands), then manual browser only for visual judgment.
-- Rule: if a change cannot be verified because tooling is missing, stop and propose the missing piece rather than merging blind. This encodes Theo's "agent notices it can't test, then builds the missing piece".
-- Evidence rule: attach trace/screenshot output or state plainly that verification did not happen. Never claim untested work passed.
-- Fix README.md drift in the same commit: repo name, Hetzner + port 8080 + cloudflared story, remove `VITE_SUPABASE_URL/ANON_KEY` guidance, correct workflow filename.
+Run it locally only after the staging plan has established the schema, current
+functions, required secrets, and test code:
 
-Verify: fresh-agent test, give a subagent only AGENTS.md and ask it to describe how to run and verify the app. It should answer correctly without reading other files.
+```bash
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 \
+STAGING_SUPABASE_URL=<staging-url> \
+STAGING_SUPABASE_ANON_KEY=<staging-anon-key> \
+STAGING_DEMO_CODE=<staging-test-code> \
+npm run test:e2e:staging
+```
 
-## Phase 2: Finish staging so agents have a safe sandbox
+The CI staging job may run only from a protected environment on an authorized
+`main` push or explicitly authorized main-branch dispatch. It must not run on
+pull requests or arbitrary branch dispatches. The job should upload the same
+failure artifacts without exposing secret-bearing logs.
 
-Staging project `brifeyypjauyusmkptkx` exists. Everything below targets it, never prod.
+### 4. Add the verification playbook
 
-### Task 2.1: Audit staging state
+Files:
 
-- `npx supabase link --project-ref brifeyypjauyusmkptkx`, then `npx supabase migration list` and a probe request to one function URL.
-- Record what exists. Expect: empty.
+- `AGENTS.md` at the repository root
+- the testing and verification section of `README.md`
 
-### Task 2.2: Apply schema and functions
+Document Node 22, npm, the static/unit/build commands, the credential-free
+browser command, the protected staging command, the localhost ports, and the
+failure-artifact locations. Explain that a green local run is not a green
+GitHub run while Actions billing is blocked. Require a failing reproduction for
+bugs and require the agent to state when real staging or browser proof did not
+run.
 
-- `npx supabase db push` (all 19 migrations).
-- `npx supabase functions deploy` each of the 12 functions.
-- Set non-provider secrets: `SUPABASE_SERVICE_ROLE_KEY` handled by platform; set `DEMO_CODE_PEPPER` to a staging-only random value.
-- Provider keys (`OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `EXA_API_KEY`): Adam supplies values via `supabase secrets set`; never through chat, never in files. Stripe keys deferred until payment flows get e2e coverage.
+## Full acceptance gates
 
-### Task 2.3: CORS for staging callers
+On the implementation branch, after all changes are complete:
 
-- Each function hardcodes an `ALLOWED_ORIGINS` array including `localhost:8080/5173/54321`. Localhost already covers the agent loop, so no change strictly required for Phase 3. If a hosted staging domain is wanted later (e.g. `debate-staging.pi-stack.org` via cloudflared), add it to every array in the same commit. Adam owns the tunnel route.
+```bash
+npm ci
+npx vitest run src/test/ai/sparring.test.ts supabase/functions/ai/sparring-persistence.test.ts
+npx playwright install --with-deps chromium
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run verify
+```
 
-### Task 2.4: Deterministic env for tests
+WebKit is conditional. If the implementation adds a `webkit` project to
+`playwright.config.ts`, install it and run
+`CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npx playwright test --project=webkit`
+as an additional local/release smoke gate. Until that project is configured,
+Chromium is the credential-free PR gate. The protected staging suite is also
+required for a release that changes authenticated data or AI flows.
+Capture the current-head CI result and artifact links. A billing-blocked CI run
+is reported as an exception, never as a pass.
 
-- Modify `src/lib/supabase/env.ts`: read `import.meta.env.VITE_FORCE_SUPABASE_ENV` as initial default for the active env (localStorage still wins). Build-time override, no runtime UI needed.
-- Verify: `VITE_FORCE_SUPABASE_ENV=staging npm run dev`, check network tab hits `brifeyypjauyusmkptkx.supabase.co`.
+## Stop conditions
 
-### Task 2.5: Seed script
+- The requested worktree is `main`, overlaps another T3 worktree, or has
+  unexpected dirty files.
+- A current browser test fails. Stop and fix or explicitly document the root
+  cause; do not skip it, weaken it, or replace it with a render-only check.
+- Staging variables, the dedicated test code, or the protected GitHub
+  environment are absent. Do not guess credentials or use production.
+- The staging suite would need provider billing, data deletion, OAuth changes,
+  secret changes, or a hosted staging domain that Adam has not authorized.
+- GitHub Actions remains unavailable for account billing reasons. Finish local
+  verification and record the exception, but do not report CI as passed.
 
-- Create `scripts/seed-staging.ts`: uses service-role key from `STAGING_SERVICE_ROLE_KEY` env var (read at runtime, never committed). Creates one test user, mints a demo access code row with `sha256(pepper:code)` matching the staged `DEMO_CODE_PEPPER`, and writes the plaintext code only to `.env.e2e` (gitignored, mode 600) for local e2e use. The script never prints secrets; automated CI runs consume masked GitHub secret values instead of minting codes.
-- Document in AGENTS.md. Rollback: staging is disposable; wipe and re-run.
+## Rollback
 
-## Phase 3: Real authenticated e2e, the actual bug catcher
+All repository changes are reversible. Revert the branch commit(s) that add the
+Playwright project, CI steps, staging suite, or docs. Removing the staging
+project configuration from CI does not alter Supabase. Keep failure artifacts
+ignored and local.
 
-This is the phase that catches Peter's-truncated-text-class bugs: things invisible in code review.
+If the staging suite has created test rows, remove only the dedicated staging
+identity's rows through an explicitly approved staging-only cleanup path. Do not
+run SQL, function deployment, secret changes, or cleanup against
+`uziwdtkzofptihahfooo` as part of this plan.
 
-### Task 3.1: Auth setup project
+## Authorization boundaries
 
-- Create `e2e/auth.setup.ts`: calls `demo-code-login` on staging with the seeded code, completes `verifyOtp({ type: 'magiclink' })` via the staging anon client, saves valid storageState to `test-results/.auth/staging.json`.
-- Modify `playwright.config.ts`: add a `setup` project depending on nothing, authed projects depend on it with `use: { storageState }`. Public specs stay storage-free.
-- Env needed in CI/local: `STAGING_URL`, seeded demo code. Values come from the seed step; store locally in `.env.e2e` (gitignored).
-
-### Task 3.2: First real flow specs
-
-- Create `e2e/authed-flows.spec.ts` covering, in order of value:
-  1. Login persists across reload; user menu shows the test identity.
-  2. Ask: submit a prompt, assert streamed tokens arrive (SSE works, error boundary silent).
-  3. History: conversation appears after the ask; reload keeps it.
-  4. Sources: import `https://example.com`, assert it lands in the library.
-  5. Share: share a session, open the public URL logged-out, assert content renders.
-- Cost control: pin these specs to the cheapest provider/model via the staging `AI_DEFAULT_MODEL` secret; three short conversations per run is cents.
-
-### Task 3.3: Browser breadth and failure evidence
-
-- Add `webkit` project to `playwright.config.ts` (Safari parity, the checklist's known risk). Install deps once: `npx playwright install --with-deps webkit`.
-- Config: `video: 'on'`, `trace: 'retain-on-failure'`, screenshot on failure.
-- CI: upload `playwright-artifacts` on failure. Add `test:e2e` public smoke (credential-free) to every pull request. Authenticated staging specs run only when `github.ref == 'refs/heads/main'`, further gated by a protected GitHub environment with a selected-branch rule of main only; pull-request jobs and non-main dispatch runs stay credential-free because they execute PR-controlled test code that must never see staging secrets. Add an acceptance case: dispatch from a non-main branch and confirm the authenticated job skips.
-- Extend `npm run verify` with e2e once green locally.
-
-## Phase 4: Prove it, observe it
-
-- Evidence convention in AGENTS.md: agents attach traces/screenshots via `gh pr comment` uploads or link CI artifacts. Never commit media to the repo.
-- Observability: pass `VITE_SENTRY_DSN` as a Docker build arg in `deploy.yml`; align `nginx.conf` CSP `connect-src` with `vercel.json` (add `*.ingest.sentry.io`, `eu.i.posthog.com`). Prod errors become visible to agents fixing incidents instead of invisible to everyone.
-- Commit the VPS pickup step: whatever pulls `debate-trainer:latest` on codex-remote (watchtower or systemd timer) gets a compose/unit file in-repo, making the last invisible hop observable and re-runnable. Adam confirms which mechanism runs today before we codify it.
-- Optional, decide explicitly: Vercel PR previews (project still linked) would give every PR a live URL humans and agents can poke. Conflicts with Docker-as-canonical unless kept preview-only.
-
-## Phase 5: The autonomous loop
-
-Only after Phases 0-3 are green:
-
-- Nightly full-suite cron on codex-remote (tmux or systemd timer): `npm run verify` + authed e2e against staging, failures reported with artifacts. Fits Adam's watchdog pattern: execute safe diagnosis automatically, alert with evidence.
-- Bug intake rule in AGENTS.md: every bug report becomes a failing repro test first, fix second. Mirrors Theo's claim that speced bugs plus minimal verification get solved by frontier agents.
-- Later candidates, not committed here: deno check/lint of `supabase/functions` in CI, incremental `strict: true` tsconfig ramp, CodeRabbit re-run against the new baseline.
-
-## Who does what
-
-Agent-executable: all of Phase 0, AGENTS.md, README fixes, seed script, e2e code, config changes, docs.
-
-Adam-only:
-
-- Provide staging provider secret values via `supabase secrets set` (never chat, never files).
-- Choose and disclose the VPS image-pickup mechanism.
-- Decide: delete `bun.lockb`, enable Vercel previews or not, staging tunnel domain or localhost-only.
-- Approve any GitHub settings change making PR checks required/branch protection.
-
-Secret handling rules: service-role and pepper values only via env vars or `supabase secrets set`; `.env*` stays gitignored; no secret ever printed in logs, commits, or PR comments; staging secrets distinct from prod.
-
-## Acceptance test for the whole plan
-
-On a fresh clone, an agent with only AGENTS.md and `.env.e2e`:
-
-1. Runs `npm ci && npm run verify`, all green including coverage gates.
-2. Makes a deliberate bug (break the share page render), runs verify, watches e2e fail with a saved trace naming the broken page.
-3. Opens a PR; CI independently reproduces the red gate.
-4. Reverts, everything green again.
-
-That loop, repeated hundreds of times, is the verification layer. Bugs die in the loop instead of on production.
-
-## Risks and rollback
-
-- Flaky authed e2e erodes trust fast. Mitigation: retries only in CI, tight selectors, staging pinned cheap model, quarantine-and-fix policy for flaky specs within 48h.
-- Staging drift (migrations applied out of order, secrets rotated silently). Mitigation: seed script is idempotent; AGENTS.md documents refresh procedure; staging is disposable by design.
-- Provider cost runaway from scheduled e2e. Mitigation: daily-limit override caps the demo user; nightly cron is the only scheduled consumer.
-- Phase 0 coverage enforcement may immediately redden CI if the 81.56% branches baseline dipped since the TODO was written. Mitigation: run `npm test -- --coverage` locally first; fix gaps before merging the workflow change, not by lowering thresholds.
-- Rollback: every phase is additive config plus docs. Reverting the workflow edit restores old CI; deleting the e2e auth setup restores smoke-only; staging can be wiped without touching prod. Nothing here writes to prod except the eventual nginx/Sentry header alignment, which ships through the normal gated pipeline.
+- CI and local PR checks may read only public app inputs and mocked backends.
+- Staging browser tests may use the staging anon key and dedicated test code;
+  they may write only dedicated staging test data.
+- Adam or an explicitly authorized operator supplies protected GitHub variables,
+  provider values, OAuth configuration, and any staging cleanup authority.
+- Applying migrations or deploying functions is not authorized by this plan;
+  follow `plans/supabase-staging.md` and obtain explicit staging authorization.
+- Production migrations, function deploys, secrets, data, billing, and deploys
+  are out of scope and remain forbidden.

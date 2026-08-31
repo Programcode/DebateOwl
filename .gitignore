@@ -61,6 +61,7 @@ humanizer.md
 *.txt
 *.info
 !README.md
+!AGENTS.md
 !**/README.md
 !docs/pricing-snapshots/*.md
 !plans/**/*.md
