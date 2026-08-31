@@ -25,6 +25,9 @@ describe('runtime integration contracts', () => {
     const workflow = readProjectFile('.github/workflows/staging-e2e.yml');
     expect(workflow).not.toContain('actions/upload-artifact');
     expect(workflow).not.toContain('test-results/**/*.webm');
+    expect(workflow).toContain('actions: read');
+    expect(workflow).toContain('Verify selected commit passed the quality workflow');
+    expect(workflow).toContain('head_sha=${GITHUB_SHA}&event=push&status=success');
   });
 
   it('keeps pull-request browser checks separate from Docker publication', () => {
