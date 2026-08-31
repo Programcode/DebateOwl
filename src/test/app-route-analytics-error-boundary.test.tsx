@@ -1,15 +1,28 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteErrorBoundary, ToolRouteAnalytics } from "@/App";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 
 const observability = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureProductEvent: vi.fn(),
 }));
 
+const authState = vi.hoisted(() => ({
+  loading: false,
+  user: null as object | null,
+}));
+
 vi.mock("@/lib/observability", () => observability);
+vi.mock("@/lib/supabase/AuthProvider", async () => {
+  const React = await import("react");
+  return {
+    AuthProvider: ({ children }: { children: ReactNode }) => React.createElement(React.Fragment, null, children),
+    useAuth: () => authState,
+  };
+});
 
 const toolRoutes = [
   ["/app/generate", "generate"],
@@ -24,12 +37,13 @@ const toolRoutes = [
   ["/app/sparring", "sparring"],
   ["/app/flowchart", "flowchart"],
   ["/app/settings", "settings"],
-  ["/app/admin", "admin"],
 ] as const;
 
 describe("App route observability", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authState.loading = false;
+    authState.user = null;
   });
 
   it.each(toolRoutes)("tracks %s as the safe tool enum", (pathname, tool) => {
@@ -63,6 +77,27 @@ describe("App route observability", () => {
     );
 
     expect(observability.captureProductEvent).toHaveBeenCalledWith("tool_opened", { tool: "generate" });
+  });
+
+  it("does not track a protected tool when authentication redirects to login", async () => {
+    render(
+      <MemoryRouter initialEntries={["/app/generate"]}>
+        <Routes>
+          <Route
+            path="/app/generate"
+            element={(
+              <RequireAuth>
+                <ToolRouteAnalytics />
+              </RequireAuth>
+            )}
+          />
+          <Route path="/login" element={<div>Login page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Login page")).toBeInTheDocument());
+    expect(observability.captureProductEvent).not.toHaveBeenCalled();
   });
 
   it("tracks tool openings from location changes without path data", () => {

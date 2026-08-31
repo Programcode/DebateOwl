@@ -53,8 +53,7 @@ type ToolName =
   | "timer"
   | "sparring"
   | "flowchart"
-  | "settings"
-  | "admin";
+  | "settings";
 
 const TOOL_BY_ROUTE = new Map<string, ToolName>([
   ["/app/generate", "generate"],
@@ -69,7 +68,6 @@ const TOOL_BY_ROUTE = new Map<string, ToolName>([
   ["/app/sparring", "sparring"],
   ["/app/flowchart", "flowchart"],
   ["/app/settings", "settings"],
-  ["/app/admin", "admin"],
 ]);
 
 function getToolForPathname(pathname: string): ToolName | undefined {
@@ -145,7 +143,6 @@ function AnimatedRoutes() {
         transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
         className="min-h-screen motion-reduce:transform-none"
       >
-        <ToolRouteAnalytics />
         <Routes location={location}>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
@@ -159,6 +156,7 @@ function AnimatedRoutes() {
           <Route
             element={
               <RequireAuth>
+                <ToolRouteAnalytics />
                 <OnboardingTour />
                 <AppLayout />
               </RequireAuth>
