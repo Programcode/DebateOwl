@@ -1,5 +1,5 @@
 // src/App.tsx
-import { Component, Suspense, lazy, type ErrorInfo, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { Loader2 } from "lucide-react";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { captureException, captureProductEvent } from "@/lib/observability";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -40,6 +41,41 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
+type ToolName =
+  | "generate"
+  | "attack"
+  | "brainstorm"
+  | "factoids"
+  | "ask"
+  | "crossfire"
+  | "history"
+  | "library"
+  | "timer"
+  | "sparring"
+  | "flowchart"
+  | "settings"
+  | "admin";
+
+const TOOL_BY_ROUTE = new Map<string, ToolName>([
+  ["/app/generate", "generate"],
+  ["/app/attack", "attack"],
+  ["/app/brainstorm", "brainstorm"],
+  ["/app/factoids", "factoids"],
+  ["/app/ask", "ask"],
+  ["/app/crossfire", "crossfire"],
+  ["/app/history", "history"],
+  ["/app/library", "library"],
+  ["/app/timer", "timer"],
+  ["/app/sparring", "sparring"],
+  ["/app/flowchart", "flowchart"],
+  ["/app/settings", "settings"],
+  ["/app/admin", "admin"],
+]);
+
+function getToolForPathname(pathname: string): ToolName | undefined {
+  return TOOL_BY_ROUTE.get(pathname);
+}
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="motion-loading-shell flex min-h-[60vh] items-center justify-center">
@@ -55,7 +91,7 @@ const PageLoader = () => (
   </div>
 );
 
-class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+export class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -64,6 +100,7 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Route rendering failed', error, info);
+    captureException(error, { boundary: "route" });
   }
 
   render() {
@@ -81,6 +118,17 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
   }
 }
 
+export function ToolRouteAnalytics(): null {
+  const location = useLocation();
+
+  useEffect(() => {
+    const tool = getToolForPathname(location.pathname);
+    if (tool) captureProductEvent("tool_opened", { tool });
+  }, [location.pathname]);
+
+  return null;
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
@@ -96,6 +144,7 @@ function AnimatedRoutes() {
         transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
         className="min-h-screen motion-reduce:transform-none"
       >
+        <ToolRouteAnalytics />
         <Routes location={location}>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />

@@ -14,6 +14,7 @@ import {
   type SparringSpeech,
 } from '@/lib/ai/schemas/sparring';
 import { buildSparringTurns, type SparringTurn } from '@/lib/sparring/formats';
+import { captureProductEvent } from '@/lib/observability';
 
 export type SparringPhase = 'round' | 'judging' | 'complete';
 
@@ -223,6 +224,14 @@ function advanceSession(session: SparringSession, now: number): SparringSession 
   };
 }
 
+function captureRoundCompletion(previous: SparringSession, next: SparringSession): void {
+  if (previous.phase !== 'round' || next.phase !== 'judging') return;
+  captureProductEvent('sparring_round_completed', {
+    format: previous.format,
+    roundIndex: previous.currentTurnIndex,
+  });
+}
+
 function mergeSessions(local: SparringSession[], remote: SparringSession[]): SparringSession[] {
   const byId = new Map<string, SparringSession>();
   for (const session of [...local, ...remote]) {
@@ -359,6 +368,7 @@ export const useSparringStore = create<SparringStoreState>()(
         };
         const next = advanceSession({ ...session, speeches: [...session.speeches, speech] }, now);
         set({ currentSession: next });
+        captureRoundCompletion(session, next);
         return next;
       },
 
@@ -369,6 +379,7 @@ export const useSparringStore = create<SparringStoreState>()(
         if (!session || session.phase !== 'round' || turn?.speaker !== 'ai' || speech.turnId !== turn.id || alreadyRecorded) return null;
         const next = advanceSession({ ...session, speeches: [...session.speeches, speech] }, now);
         set({ currentSession: next });
+        captureRoundCompletion(session, next);
         return next;
       },
 
@@ -388,6 +399,11 @@ export const useSparringStore = create<SparringStoreState>()(
           currentSession: completed,
           savedSessions: mergeSessions(state.savedSessions, [completed]),
         }));
+        captureProductEvent('sparring_session_judged', {
+          format: completed.format,
+          winner: completed.scorecard.winner,
+          speechCount: completed.speeches.length,
+        });
         return completed;
       },
 

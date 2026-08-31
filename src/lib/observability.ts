@@ -30,11 +30,21 @@ export function initializeObservability(): void {
 }
 
 export function captureProductEvent(name: string, properties?: Record<string, unknown>): void {
-  if (import.meta.env.VITE_POSTHOG_KEY) {
+  if (!import.meta.env.VITE_POSTHOG_KEY) return;
+
+  try {
     posthog.capture(name, properties);
+  } catch {
+    // Telemetry must not interrupt product behavior.
   }
 }
 
 export function captureException(error: unknown, context?: Record<string, unknown>): void {
-  if (import.meta.env.VITE_SENTRY_DSN) Sentry.captureException(error, { extra: context });
+  if (!import.meta.env.VITE_SENTRY_DSN) return;
+
+  try {
+    Sentry.captureException(error, { extra: context });
+  } catch {
+    // Telemetry must not interrupt product behavior.
+  }
 }
