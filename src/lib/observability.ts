@@ -22,6 +22,35 @@ export function filterObservabilityBreadcrumb<T extends ConsoleBreadcrumb>(bread
   return isReactCaughtRenderError ? null : breadcrumb;
 }
 
+const PRODUCT_PROPERTY_KEYS = new Set([
+  "durationMs",
+  "errorName",
+  "feature",
+  "format",
+  "model",
+  "provider",
+  "roundIndex",
+  "speechCount",
+  "statusCode",
+  "streaming",
+  "tool",
+  "winner",
+]);
+
+type TelemetryAttribute = string | number | boolean;
+
+function safeProductProperties(properties?: Record<string, unknown>): Record<string, TelemetryAttribute> {
+  if (!properties) return {};
+
+  const safeProperties: Record<string, TelemetryAttribute> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    if (!PRODUCT_PROPERTY_KEYS.has(key)) continue;
+    if (typeof value === "string" || typeof value === "boolean") safeProperties[key] = value;
+    if (typeof value === "number" && Number.isFinite(value)) safeProperties[key] = value;
+  }
+  return safeProperties;
+}
+
 export function initializeObservability(): void {
   if (initialized) return;
   initialized = true;
@@ -32,8 +61,30 @@ export function initializeObservability(): void {
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
       sendDefaultPii: false,
-      tracesSampleRate: 0.1,
       beforeBreadcrumb: filterObservabilityBreadcrumb,
+      dataCollection: {
+        userInfo: false,
+        cookies: false,
+        httpHeaders: { request: false, response: false },
+        httpBodies: [],
+        queryParams: false,
+        genAI: { inputs: false, outputs: false },
+        stackFrameVariables: false,
+        frameContextLines: 5,
+      },
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
+          maskAllText: true,
+          maskAllInputs: true,
+          blockAllMedia: true,
+        }),
+      ],
+      enableLogs: true,
+      enableMetrics: true,
+      tracesSampleRate: 1.0,
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
     });
   }
 
@@ -50,12 +101,30 @@ export function initializeObservability(): void {
 }
 
 export function captureProductEvent(name: string, properties?: Record<string, unknown>): void {
-  if (!import.meta.env.VITE_POSTHOG_KEY) return;
+  const safeProperties = safeProductProperties(properties);
 
-  try {
-    posthog.capture(name, properties);
-  } catch {
-    // Telemetry must not interrupt product behavior.
+  if (import.meta.env.VITE_POSTHOG_KEY) {
+    try {
+      posthog.capture(name, safeProperties);
+    } catch {
+      // Telemetry must not interrupt product behavior.
+    }
+  }
+
+  if (import.meta.env.VITE_SENTRY_DSN) {
+    const attributes = { event_name: name, ...safeProperties };
+    try {
+      Sentry.logger.info("Product event", attributes);
+      Sentry.metrics.count("debatelab.product_event", 1, { attributes });
+      if (typeof safeProperties.durationMs === "number") {
+        Sentry.metrics.distribution("debatelab.product_event.duration", safeProperties.durationMs, {
+          unit: "millisecond",
+          attributes,
+        });
+      }
+    } catch {
+      // Telemetry must not interrupt product behavior.
+    }
   }
 }
 
