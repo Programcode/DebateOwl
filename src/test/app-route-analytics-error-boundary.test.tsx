@@ -107,7 +107,11 @@ describe("App route observability", () => {
       );
 
       expect(screen.getByRole("heading", { name: "Unable to load this page" })).toBeInTheDocument();
-      expect(observability.captureException).toHaveBeenCalledWith(error, { boundary: "route" });
+      expect(observability.captureException).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Error", message: "Route rendering failed" }),
+        { boundary: "route" },
+      );
+      expect(JSON.stringify(observability.captureException.mock.calls)).not.toContain(error.message);
       expect(observability.captureException.mock.calls[0][1]).not.toHaveProperty("componentStack");
     } finally {
       window.removeEventListener("error", suppressWindowError);

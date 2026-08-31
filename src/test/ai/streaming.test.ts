@@ -232,10 +232,7 @@ describe('AI streaming helpers', () => {
     });
 
     it('records caller aborts without sending them to Sentry', async () => {
-      let resolveSession!: (result: { data: { session: { access_token: string } } }) => void;
-      supabaseMock.auth.getSession.mockImplementationOnce(() => new Promise((resolve) => {
-        resolveSession = resolve;
-      }));
+      supabaseMock.auth.getSession.mockImplementationOnce(() => new Promise(() => undefined));
       const controller = new AbortController();
       const request = streamAskChat(
         'private question',
@@ -246,7 +243,6 @@ describe('AI streaming helpers', () => {
         { onDelta: () => undefined, signal: controller.signal },
       );
       controller.abort();
-      resolveSession({ data: { session: { access_token: 'test-token' } } });
 
       await expect(request).rejects.toMatchObject({ name: 'AbortError' });
       expect(captureProductEventMock).toHaveBeenNthCalledWith(2, 'ai_request_failed', expect.objectContaining({
@@ -256,6 +252,39 @@ describe('AI streaming helpers', () => {
         model: 'gpt-5.4-mini',
         errorName: 'AbortError',
       }));
+      expect(captureExceptionMock).not.toHaveBeenCalled();
+    });
+
+    it('does not report success when cancellation settles a pending stream read', async () => {
+      const controller = new AbortController();
+      const encoder = new TextEncoder();
+      const body = new ReadableStream<Uint8Array>({
+        start(streamController) {
+          streamController.enqueue(encoder.encode(
+            'event: final\ndata: {"output":{"response":"answer","followUpQuestions":[],"uncertainties":[]}}\n\n',
+          ));
+          setTimeout(() => controller.abort(), 0);
+        },
+      });
+      mockFetchOnce(body);
+
+      await expect(streamAskChat(
+        'private question',
+        [],
+        'general',
+        streamConfig,
+        streamOptions,
+        { onDelta: () => undefined, signal: controller.signal },
+      )).rejects.toMatchObject({ name: 'AbortError' });
+
+      expect(captureProductEventMock).toHaveBeenLastCalledWith(
+        'ai_request_failed',
+        expect.objectContaining({ errorName: 'AbortError', streaming: true }),
+      );
+      expect(captureProductEventMock).not.toHaveBeenCalledWith(
+        'ai_request_succeeded',
+        expect.anything(),
+      );
       expect(captureExceptionMock).not.toHaveBeenCalled();
     });
   });

@@ -100,7 +100,7 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, { fai
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Route rendering failed', error, info);
-    captureException(error, { boundary: "route" });
+    captureException(new Error("Route rendering failed"), { boundary: "route" });
   }
 
   render() {

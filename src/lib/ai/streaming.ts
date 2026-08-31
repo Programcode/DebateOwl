@@ -70,6 +70,23 @@ export function consumeSSEChunk(buffer: string, chunk: string): { events: Parsed
   return { events, buffer: rest };
 }
 
+function abortError(): DOMException {
+  return new DOMException('Aborted', 'AbortError');
+}
+
+function waitForCaller<T>(operation: PromiseLike<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return Promise.resolve(operation);
+  if (signal.aborted) return Promise.reject(abortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    Promise.resolve(operation)
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
 function captureStreamFailure(
   error: unknown,
   provider: string,
@@ -115,14 +132,14 @@ export async function streamAskChat(
   });
 
   if (handlers.signal?.aborted) {
-    const error = new DOMException('Aborted', 'AbortError');
+    const error = abortError();
     captureStreamFailure(error, provider, config.model, startTime, true);
     throw error;
   }
 
   let sessionData: Awaited<ReturnType<typeof supabase.auth.getSession>>['data'];
   try {
-    ({ data: sessionData } = await supabase.auth.getSession());
+    ({ data: sessionData } = await waitForCaller(supabase.auth.getSession(), handlers.signal));
   } catch (error) {
     captureStreamFailure(error, provider, config.model, startTime, Boolean(handlers.signal?.aborted));
     throw error;
@@ -135,9 +152,9 @@ export async function streamAskChat(
     throw error;
   }
   if (handlers.signal?.aborted) {
-    const error = new DOMException('Aborted', 'AbortError');
+    const error = abortError();
     captureStreamFailure(error, provider, config.model, startTime, true);
-    throw new DOMException('Aborted', 'AbortError');
+    throw error;
   }
 
   const controller = new AbortController();
@@ -236,6 +253,7 @@ export async function streamAskChat(
         throw new DOMException('Aborted', 'AbortError');
       }
       const { done, value } = await reader.read();
+      if (handlers.signal?.aborted) throw abortError();
       if (done) break;
 
       const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
@@ -261,9 +279,13 @@ export async function streamAskChat(
     return finalOutput;
   } catch (error) {
     const callerAborted = Boolean(handlers.signal?.aborted);
-    const reportedError = !callerAborted && controller.signal.aborted ? new TimeoutError() : error;
+    const reportedError = callerAborted
+      ? abortError()
+      : controller.signal.aborted
+        ? new TimeoutError()
+        : error;
     captureStreamFailure(reportedError, provider, config.model, startTime, callerAborted);
-    if (handlers.signal?.aborted) throw error;
+    if (callerAborted) throw reportedError;
     if (controller.signal.aborted) throw reportedError;
     throw error;
   } finally {
