@@ -88,6 +88,7 @@ vi.mock('@/lib/stores/settings-store', () => ({
 }));
 
 import { AuthProvider, useAuth } from '@/lib/supabase/AuthProvider';
+import { crossfireStorageKey } from '@/lib/crossfire/storage';
 
 function AuthConsumer() {
   const { loading, user, signInWithGoogle, signOut } = useAuth();
@@ -252,6 +253,7 @@ describe('AuthProvider behavior', () => {
   it('resets stores and clears provider tokens when signed out', async () => {
     sessionStorage.setItem('google_provider_token', 't');
     localStorage.setItem('google_provider_refresh_token', 'r');
+    localStorage.setItem(crossfireStorageKey('user_2'), 'crossfire-draft');
 
     getSessionMock.mockResolvedValue({
       data: { session: { user: { id: 'user_2' } } },
@@ -277,9 +279,12 @@ describe('AuthProvider behavior', () => {
     expect(sessionStorage.getItem('google_provider_token')).toBeNull();
     expect(localStorage.getItem('google_provider_token')).toBeNull();
     expect(localStorage.getItem('google_provider_refresh_token')).toBeNull();
+    expect(localStorage.getItem(crossfireStorageKey('user_2'))).toBeNull();
   });
 
   it('resets stores when auth state changes to a different user', async () => {
+    localStorage.setItem(crossfireStorageKey('user_old'), 'old-draft');
+    localStorage.setItem(crossfireStorageKey('user_new'), 'new-draft');
     getSessionMock.mockResolvedValue({
       data: { session: { user: { id: 'user_old' } } },
       error: null,
@@ -301,6 +306,8 @@ describe('AuthProvider behavior', () => {
 
     expect(resetSessionStoreMock).toHaveBeenCalled();
     expect(resetSettingsStoreMock).toHaveBeenCalled();
+    expect(localStorage.getItem(crossfireStorageKey('user_old'))).toBeNull();
+    expect(localStorage.getItem(crossfireStorageKey('user_new'))).toBe('new-draft');
   });
 
   it('signInWithGoogle gets a Supabase OAuth URL and redirects', async () => {

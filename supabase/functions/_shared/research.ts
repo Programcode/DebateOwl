@@ -17,6 +17,10 @@ export type { ExaResult, RankedSearchResult, ResearchSource };
 
 export type Provider = "openai" | "anthropic" | "google";
 
+export const MAX_PROVIDER_RESPONSE_BYTES = 1_048_576;
+export const MAX_PROVIDER_ERROR_BODY_BYTES = 65_536;
+export const MAX_PROVIDER_ERROR_BODY_CHARS = 16_000;
+
 export type Source = {
   title: string;
   content: string;
@@ -112,7 +116,7 @@ async function fetchWithTimeoutAndConsume<T>(
   options: RequestInit,
   timeoutMs: number,
   signal: AbortSignal | undefined,
-  consume: (response: Response) => Promise<T>,
+  consume: (response: Response, signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   const controller = new AbortController();
   const linked = linkAbortSignals([options.signal, signal]);
@@ -122,12 +126,83 @@ async function fetchWithTimeoutAndConsume<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { ...options, signal: controller.signal });
-    return await consume(response);
+    return await consume(response, controller.signal);
   } finally {
     clearTimeout(timeoutId);
     linked.signal.removeEventListener("abort", onLinkedAbort);
     linked.cleanup();
   }
+}
+
+async function readResponseBytes(
+  response: Response,
+  maxBytes: number,
+  signal: AbortSignal,
+  truncate: boolean,
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  if (!response.body) {
+    throw new Error("Provider response has no body");
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      if (signal.aborted) throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
+      const { done, value } = await reader.read();
+      if (done) break;
+      const remaining = maxBytes - totalBytes;
+      if (value.byteLength > remaining) {
+        if (truncate && remaining > 0) chunks.push(value.slice(0, remaining));
+        await reader.cancel(new Error("Response body exceeded its byte limit"));
+        if (!truncate) throw new Error(`Provider response exceeds ${maxBytes} bytes`);
+        totalBytes = maxBytes;
+        return { bytes: joinBytes(chunks, totalBytes), truncated: true };
+      }
+      chunks.push(value);
+      totalBytes += value.byteLength;
+    }
+    return { bytes: joinBytes(chunks, totalBytes), truncated: false };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function joinBytes(chunks: Uint8Array[], totalBytes: number): Uint8Array {
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+async function readResponseText(
+  response: Response,
+  maxBytes: number,
+  maxChars: number,
+  signal: AbortSignal,
+  truncate: boolean,
+): Promise<{ text: string; truncated: boolean }> {
+  if (response.body) {
+    const result = await readResponseBytes(response, maxBytes, signal, truncate);
+    const text = new TextDecoder().decode(result.bytes);
+    if (text.length > maxChars) return { text: text.slice(0, maxChars), truncated: true };
+    return { text, truncated: result.truncated };
+  }
+
+  // A few injected test doubles expose json/text without a ReadableStream.
+  // Keep those calls signal-aware through the fetch wrapper and apply the same
+  // post-read bound before returning the parsed result.
+  if (typeof response.text === "function") {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes && !truncate) {
+      throw new Error(`Provider response exceeds ${maxBytes} bytes`);
+    }
+    return { text: text.slice(0, maxChars), truncated: text.length > maxChars || new TextEncoder().encode(text).byteLength > maxBytes };
+  }
+  throw new Error("Provider response body cannot be consumed");
 }
 
 export async function fetchJsonWithTimeout<T = unknown>(
@@ -136,11 +211,42 @@ export async function fetchJsonWithTimeout<T = unknown>(
   timeoutMs: number,
   signal?: AbortSignal,
 ): Promise<{ response: Response; data?: T; errorBody?: string }> {
-  return fetchWithTimeoutAndConsume(url, options, timeoutMs, signal, async (response) => ({
-    response,
-    data: response.ok ? await response.json() as T : undefined,
-    errorBody: !response.ok ? await response.text() : undefined,
-  }));
+  return fetchWithTimeoutAndConsume(url, options, timeoutMs, signal, async (response, bodySignal) => {
+    if (!response.ok) {
+      const body = await readResponseText(
+        response,
+        MAX_PROVIDER_ERROR_BODY_BYTES,
+        MAX_PROVIDER_ERROR_BODY_CHARS,
+        bodySignal,
+        true,
+      );
+      return { response, errorBody: body.text };
+    }
+
+    if (response.body) {
+      const body = await readResponseText(
+        response,
+        MAX_PROVIDER_RESPONSE_BYTES,
+        MAX_PROVIDER_RESPONSE_BYTES,
+        bodySignal,
+        false,
+      );
+      return { response, data: JSON.parse(body.text) as T };
+    }
+
+    if (typeof response.json !== "function") throw new Error("Provider response body cannot be parsed as JSON");
+    const data = await response.json() as T;
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(data);
+    } catch {
+      throw new Error("Provider response could not be serialized for size validation");
+    }
+    if (new TextEncoder().encode(serialized).byteLength > MAX_PROVIDER_RESPONSE_BYTES) {
+      throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
+    }
+    return { response, data };
+  });
 }
 
 // ============== EXA FUNCTIONS ==============

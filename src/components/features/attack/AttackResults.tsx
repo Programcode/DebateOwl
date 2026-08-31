@@ -1,7 +1,7 @@
 // src/components/features/attack/AttackResults.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb, MessageSquare } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb, MessageSquare, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
@@ -18,12 +18,14 @@ import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAu
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
 import { openExternalUrl } from '@/lib/native';
+import { Button } from '@/components/ui/button';
 
 
 interface AttackResultsProps {
   result: AttackOutput;
   discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
+  onPracticeCrossfire?: () => void;
 }
 
 const severityConfig = {
@@ -83,7 +85,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
   );
 }
 
-export function AttackResults({ result, discoveredSources, onDiscuss }: AttackResultsProps) {
+export function AttackResults({ result, discoveredSources, onDiscuss, onPracticeCrossfire }: AttackResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -195,6 +197,12 @@ export function AttackResults({ result, discoveredSources, onDiscuss }: AttackRe
                 isExportingGDocs={isExportingGDocs}
                 onDiscuss={onDiscuss}
                 discussLabel={t('attackResults.discuss')}
+                secondaryActions={onPracticeCrossfire ? (
+                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
+                    <Flame className="mr-2 h-4 w-4" />
+                    {t('crossfire.openFromResult', 'Open in Crossfire')}
+                  </Button>
+                ) : undefined}
               />
             </div>
           </div>

@@ -1,17 +1,22 @@
 import {
   ATTACK_PROMPT,
   ASK_PROMPT,
+  CROSSFIRE_PROMPT,
   BRAINSTORM_PROMPT,
   FACTOIDS_PROMPT,
   GENERATE_PROMPT,
   JSON_RULES,
   PRODUCT_IDENTITY,
   RESEARCH_RULES,
+  boundPromptSources,
   buildSystemPrompt,
+  MAX_PROMPT_SOURCE_CHARS,
+  MAX_PROMPT_SOURCE_COUNT,
+  MAX_PROMPT_SOURCE_TOTAL_CHARS,
   type Feature,
 } from "./prompts.ts";
 
-const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask"];
+const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask", "crossfire"];
 
 const FEATURE_PROMPTS: Record<Feature, string> = {
   generate: GENERATE_PROMPT,
@@ -19,6 +24,7 @@ const FEATURE_PROMPTS: Record<Feature, string> = {
   brainstorm: BRAINSTORM_PROMPT,
   factoids: FACTOIDS_PROMPT,
   ask: ASK_PROMPT,
+  crossfire: CROSSFIRE_PROMPT,
 };
 
 Deno.test("every feature system prompt carries the product identity layer", () => {
@@ -78,4 +84,44 @@ Deno.test("date context replaces the placeholder in every feature task prompt", 
 
 Deno.test("product identity includes the humanizer style rules", () => {
   if (!PRODUCT_IDENTITY.includes("HUMANIZER STYLE INSTRUCTIONS")) throw new Error("humanizer missing from identity layer");
+});
+
+Deno.test("crossfire system prompt carries strict turn and debrief safety rules", () => {
+  const prompt = buildSystemPrompt({ feature: "crossfire" });
+  if (!prompt.includes("Each non-empty debrief item must cite only actual turn IDs")) {
+    throw new Error("crossfire turn-reference rule missing");
+  }
+  if (!prompt.includes("without insults, threats, harassment")) {
+    throw new Error("crossfire style safety rule missing");
+  }
+  if (prompt.includes("RESEARCH CITATION RULES:")) {
+    throw new Error("crossfire unexpectedly carries live research rules");
+  }
+});
+
+Deno.test("prompt source library is capped by count, per-source text, and aggregate text", () => {
+  const sources = Array.from({ length: MAX_PROMPT_SOURCE_COUNT + 2 }, (_, index) => ({
+    title: `Source ${index}`,
+    content: "x".repeat(1_000),
+    type: "text",
+  }));
+  const bounded = boundPromptSources(sources);
+  if (bounded.length !== MAX_PROMPT_SOURCE_COUNT) throw new Error("source count cap was not applied");
+  const longSource = boundPromptSources([{ title: "Long", content: "x".repeat(MAX_PROMPT_SOURCE_CHARS + 1), type: "text" }]);
+  if (longSource.some((source) => source.content.length > MAX_PROMPT_SOURCE_CHARS)) {
+    throw new Error("per-source text cap was not applied");
+  }
+  const aggregate = bounded.reduce((sum, source) => sum + source.content.length, 0);
+  if (aggregate > MAX_PROMPT_SOURCE_TOTAL_CHARS) throw new Error("aggregate source cap was not applied");
+  const oversized = boundPromptSources(
+    Array.from({ length: MAX_PROMPT_SOURCE_COUNT }, (_, index) => ({
+      title: `Big ${index}`,
+      content: "x".repeat(MAX_PROMPT_SOURCE_CHARS),
+      type: "text",
+    })),
+  );
+  const oversizedTotal = oversized.reduce((sum, source) => sum + source.content.length, 0);
+  if (oversizedTotal !== MAX_PROMPT_SOURCE_TOTAL_CHARS) {
+    throw new Error(`aggregate cap was not enforced: ${oversizedTotal}`);
+  }
 });

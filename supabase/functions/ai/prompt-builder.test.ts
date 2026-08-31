@@ -1,4 +1,10 @@
-import { buildUserPrompt, getAskModeGuidance } from "./prompt-builder.ts";
+import {
+  buildCrossfireDebriefPrompt,
+  buildCrossfireNextTurnPrompt,
+  buildUserPrompt,
+  formatCrossfireTranscript,
+  getAskModeGuidance,
+} from "./prompt-builder.ts";
 
 function assertIncludes(text: string, expected: string) {
   if (!text.includes(expected)) {
@@ -95,4 +101,75 @@ Deno.test("ask mode guidance falls back to general", () => {
   if (!guidance.includes("direct coaching answer")) {
     throw new Error(`Expected fallback guidance, got "${guidance}"`);
   }
+});
+
+Deno.test("crossfire next-turn prompt carries the expected reply and real turn IDs", () => {
+  const prompt = buildCrossfireNextTurnPrompt({
+    config: {
+      resolution: "Cities should ban private cars downtown.",
+      argument: "Private cars create congestion and unsafe streets.",
+      mode: "question-ai",
+      style: "aggressive",
+      durationSeconds: 300,
+      useSourceLibrary: false,
+      seedQuestions: ["What is the mechanism?"],
+    },
+    transcript: [{
+      id: "T1",
+      sequence: 1,
+      speaker: "user",
+      kind: "question",
+      text: "What is the mechanism?",
+      createdAt: 1,
+    }],
+    expectedReply: "answer",
+  });
+
+  assertIncludes(prompt, "The next model reply must be type \"answer\"");
+  assertIncludes(prompt, "turn-id=T1");
+  assertIncludes(prompt, "aggressive");
+  assertIncludes(prompt, "Do not insult, threaten, harass");
+  assertIncludes(prompt, "same language as the user's resolution");
+});
+
+Deno.test("crossfire debrief prompt requires cited IDs and omits typed-session scoring", () => {
+  const prompt = buildCrossfireDebriefPrompt({
+    config: {
+      resolution: "Cities should ban private cars downtown.",
+      argument: "Private cars create congestion and unsafe streets.",
+      mode: "question-ai",
+      style: "cooperative",
+      durationSeconds: 180,
+      useSourceLibrary: false,
+      seedQuestions: [],
+    },
+    transcript: [
+      { id: "T1", sequence: 1, speaker: "user", kind: "question", text: "Why?", createdAt: 1 },
+      { id: "T2", sequence: 2, speaker: "ai", kind: "answer", text: "Because streets are crowded.", createdAt: 2 },
+    ],
+  });
+
+  assertIncludes(prompt, '"missedFollowUps"');
+  assertIncludes(prompt, '"strongestExchange"');
+  assertIncludes(prompt, "Every claim and suggestion must cite one or more real turn IDs");
+  assertIncludes(prompt, "Return null for strongestExchange");
+  assertIncludes(prompt, "Do not return a percentage, numeric performance score");
+  assertIncludes(prompt, "speaking-speed, vocal-quality");
+  if (prompt.includes("delivery score") || prompt.includes("confidence score")) {
+    throw new Error("typed-session scoring guidance leaked into debrief prompt");
+  }
+});
+
+Deno.test("crossfire transcript formatting keeps content inside explicit turn boundaries", () => {
+  const prompt = formatCrossfireTranscript([{
+    id: "answer-7",
+    sequence: 1,
+    speaker: "ai",
+    kind: "question",
+    text: "What evidence supports that claim?",
+    createdAt: 42,
+  }]);
+  assertIncludes(prompt, "[turn-id=answer-7 sequence=1 speaker=ai kind=question]");
+  assertIncludes(prompt, "<turn-text>");
+  assertIncludes(prompt, "</turn-text>");
 });
