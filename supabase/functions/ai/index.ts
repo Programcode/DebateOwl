@@ -1030,7 +1030,7 @@ function crossfireReplyOutput(value: unknown, expectedReply: "question" | "answe
 
 // ============== MAIN HANDLER ==============
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
   const requestId = generateRequestId();
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
@@ -1722,4 +1722,8 @@ Deno.serve(async (req) => {
     );
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

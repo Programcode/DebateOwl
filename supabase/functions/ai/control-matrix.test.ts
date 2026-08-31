@@ -11,7 +11,7 @@ import {
   enforceGenerateControls,
   isAskStreamingModeAllowed,
 } from "../_shared/control-enforcement.ts";
-import { buildSearchQueries } from "../_shared/source-quality.ts";
+import { buildSearchRequests } from "../_shared/source-quality.ts";
 
 function assertIncludes(text: string, expected: string, label: string) {
   if (!text.includes(expected)) throw new Error(`[${label}] prompt missing "${expected}"`);
@@ -99,8 +99,10 @@ Deno.test("factoids controls propagate to prompt and query construction", () => 
     "Timeframe: 2024-2026",
     "factoids.timeframe prompt",
   );
-  const govQueries = buildSearchQueries("C", "EU", "government", "2024-2026");
-  assert(govQueries.some((q) => q.includes("site:gov")), "factoids.sourceType retrieval");
+  const govRequests = buildSearchRequests("C", "EU", "government", "2024-2026");
+  assert(govRequests.some((request) => request.includeDomains?.includes("energy.gov")), "factoids.sourceType retrieval");
+  assert(govRequests.some((request) => request.startPublishedDate?.startsWith("2024")), "factoids.timeframe retrieval");
+  assert(govRequests.some((request) => request.endPublishedDate?.startsWith("2026")), "factoids.timeframe upper bound");
 });
 
 Deno.test("ask toggles and modes appear verbatim in the request prompt", () => {

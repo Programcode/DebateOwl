@@ -259,10 +259,10 @@ describe('AI client branch coverage', () => {
       title: 'Source A',
       content: 'A content',
       type: 'url',
-      origin: 'https://a.com',
+      origin: 'https://a.com/',
       folder: 'Auto-saved',
       isActive: true,
-      metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com' }),
+      metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com/' }),
     });
   });
 
@@ -311,7 +311,9 @@ describe('AI client branch coverage', () => {
             qualityLabel: 'unknown',
             query: 42,
           },
+          { title: 'Protocol-less source', url: 'example.com/source-two' },
           { title: '', url: 'https://example.com/rejected' },
+          { title: 'Unsafe protocol', url: 'httpx://example.com/rejected' },
         ],
       },
       error: null,
@@ -321,6 +323,7 @@ describe('AI client branch coverage', () => {
 
     expect(outcome.discoveredSources).toEqual([
       { title: 'Source with malformed metadata', url: 'https://example.com/source' },
+      { title: 'Protocol-less source', url: 'https://example.com/source-two' },
     ]);
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Source with malformed metadata',
@@ -427,10 +430,10 @@ describe('AI client branch coverage', () => {
       title: 'Source C',
       content: 'C content',
       type: 'url',
-      origin: 'https://c.com',
+      origin: 'https://c.com/',
       folder: 'Auto-saved',
       isActive: true,
-      metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com' }),
+      metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com/' }),
     });
   });
 
@@ -501,8 +504,49 @@ describe('AI client branch coverage', () => {
 
     const result = await factoids({ claim: 'Claim', direction: 'for', sourceType: 'any', sourceCount: 3 }, config);
 
-    expect(result.factoids).toHaveLength(3);
-    expect(result.filteredOutCount).toBe(1);
+    expect(result.result.factoids).toHaveLength(3);
+    expect(result.result.filteredOutCount).toBe(1);
+  });
+
+  it('returns and autosaves discovered sources for factoids responses', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: {
+          factoids: [],
+          searchSuggestions: [],
+          warnings: [],
+          verificationStatus: 'complete',
+        },
+        discoveredSources: [{
+          title: 'Factoids source',
+          url: 'https://example.com/factoids',
+          content: 'Evidence content',
+          sourceType: 'government',
+          qualityLabel: 'moderate',
+          qualityScore: 70,
+          query: 'factoids query',
+        }],
+      },
+      error: null,
+    });
+
+    const outcome = await factoids({ claim: 'Claim', direction: 'for', sourceType: 'any', sourceCount: 3 }, config);
+
+    expect(outcome.discoveredSources).toEqual([{
+      title: 'Factoids source',
+      url: 'https://example.com/factoids',
+      content: 'Evidence content',
+      sourceType: 'government',
+      qualityLabel: 'moderate',
+      qualityScore: 70,
+      query: 'factoids query',
+    }]);
+    expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Factoids source',
+      origin: 'https://example.com/factoids',
+      isActive: true,
+      metadata: expect.objectContaining({ capturedVia: 'factoids', qualityLabel: 'moderate' }),
+    }));
   });
 
   it('maps invoke errors with 401 status to AIAuthError', async () => {
@@ -846,7 +890,7 @@ describe('AI client branch coverage', () => {
 
     expect(attack.overallAssessment.score).toBeTypeOf('number');
     expect(ideas.nextSteps).toBeInstanceOf(Array);
-    expect(facts.factoids).toBeInstanceOf(Array);
+    expect(facts.result.factoids).toBeInstanceOf(Array);
     expect(chat.response).toContain('hello');
     expect(invokeMock).not.toHaveBeenCalled();
   }, 15000);

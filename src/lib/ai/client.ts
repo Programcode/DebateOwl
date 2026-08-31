@@ -28,6 +28,7 @@ import type { SourceProvenance } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
+import { validateUrl } from '@/lib/validation/url';
 import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
@@ -112,9 +113,10 @@ function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
 
     const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
     const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
-    if (!title || !url) return [];
+    const normalizedUrl = validateUrl(url);
+    if (!title || !normalizedUrl) return [];
 
-    const source: DiscoveredSource = { title, url };
+    const source: DiscoveredSource = { title, url: normalizedUrl };
     if (typeof candidate.content === 'string') source.content = candidate.content;
 
     if (typeof candidate.sourceType === 'string' && candidate.sourceType.trim()) {
@@ -1021,7 +1023,7 @@ function validateGenerateOutput(output: unknown): GenerateOutput {
   return parsed.data;
 }
 
-type AutosaveFeature = 'generate' | 'attack' | 'brainstorm';
+type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
 async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
   if (sources.length === 0) return;
@@ -1122,8 +1124,8 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
   return response;
 }
 
-export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
-  if (config.provider === 'mock') return mockFactoids(input.claim);
+export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<ResultWithSources<FactoidsOutput>> {
+  if (config.provider === 'mock') return { result: await mockFactoids(input.claim), discoveredSources: [] };
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = {
@@ -1132,9 +1134,9 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     sourceCount: input.sourceCount || 5,
     language,
   } as Record<string, unknown>;
-  return await callSupabaseAI<FactoidsOutput>('factoids', inputWithLanguage, config, {
+  const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
     transformResponse: (rawData) => {
-      const data = rawData as { output: unknown };
+      const data = rawData as { output: unknown; discoveredSources?: unknown };
       const parsed = FactoidsOutputSchema.safeParse(data.output);
       if (!parsed.success) {
         throw new AIResponseError('AI response did not match the expected factoids schema.', {
@@ -1146,12 +1148,17 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
       const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
       const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
       return {
-        ...parsed.data,
-        factoids: returnedFactoids,
-        filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
+        result: {
+          ...parsed.data,
+          factoids: returnedFactoids,
+          filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
+        },
+        discoveredSources: parseDiscoveredSources(data.discoveredSources),
       };
     },
   });
+  await autosaveDiscoveredSources(response.discoveredSources, 'factoids');
+  return response;
 }
 
 export interface AskChatOptions {

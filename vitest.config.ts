@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -12,6 +12,10 @@ export default defineConfig({
       "src/**/*.{test,spec}.{ts,tsx}",
       "supabase/functions/**/*.{test,spec}.{ts,tsx}",
     ],
+    // This boundary test imports the deployed Edge Function entrypoint and its
+    // remote Deno dependencies. Run it with `deno test`; Vite cannot resolve
+    // those URL imports in the browser-oriented Vitest suite.
+    exclude: [...configDefaults.exclude, "supabase/functions/ai/handler-research.test.ts"],
     coverage: {
       provider: "v8",
       // Omit `all` intentionally: this is a selected-scope gate for the audited

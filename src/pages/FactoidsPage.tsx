@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
-import { factoids, askChat } from '@/lib/ai/client';
+import { factoids, askChat, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
@@ -22,11 +23,14 @@ export default function FactoidsPage() {
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
+  const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
   const handleSubmit = async (data: FactoidsInput) => {
+    setDiscoveredSources([]);
     setFactoidsLoading(true);
     try {
-      const result = await factoids(data, config);
+      const { result, discoveredSources: sources } = await factoids(data, config);
+      setDiscoveredSources(sources);
       setFactoidsResult(result);
       toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
     } catch (error) {
@@ -130,6 +134,7 @@ export default function FactoidsPage() {
               <div key="factoids-results">
                 <FactoidsResults
                   result={factoidsResult}
+                  discoveredSources={discoveredSources}
                   onDiscuss={handleDiscuss}
                   onSaveSource={handleSaveToLibrary}
                   onUseSuggestion={handleUseSuggestion}

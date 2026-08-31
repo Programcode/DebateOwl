@@ -25,6 +25,17 @@ export type ResearchSource = {
   qualityLabel: "strong" | "moderate" | "weak";
 };
 
+export type ExaSearchCategory = "news" | "publication";
+
+export type ExaSearchRequest = {
+  query: string;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  startPublishedDate?: string;
+  endPublishedDate?: string;
+  category?: ExaSearchCategory;
+};
+
 const WEAK_DOMAINS = [
   "youtube.com",
   "youtu.be",
@@ -37,6 +48,49 @@ const WEAK_DOMAINS = [
   "x.com",
   "twitter.com",
   "medium.com",
+];
+
+const DEBATE_RESULT_DOMAINS = [
+  "tabbycat.com",
+  "*.tabbycat.com",
+  "calicotab.com",
+  "*.calicotab.com",
+  "tabroom.com",
+  "debatekeeper.com",
+];
+
+export const GOVERNMENT_SEARCH_DOMAINS = [
+  "usa.gov",
+  "congress.gov",
+  "census.gov",
+  "bls.gov",
+  "bea.gov",
+  "energy.gov",
+  "epa.gov",
+  "cdc.gov",
+  "nih.gov",
+  "justice.gov",
+  "federalregister.gov",
+  "supremecourt.gov",
+  "gov.uk",
+  "supremecourt.uk",
+  "canada.ca",
+  "gc.ca",
+  "gov.au",
+  "abs.gov.au",
+  "europa.eu",
+  "ec.europa.eu",
+  "eurostat.ec.europa.eu",
+  "worldbank.org",
+  "oecd.org",
+  "imf.org",
+  "un.org",
+  "who.int",
+];
+
+const LEGAL_PRIMARY_DOMAINS = [
+  ...GOVERNMENT_SEARCH_DOMAINS,
+  "curia.europa.eu",
 ];
 
 const RESULTS_PATTERNS = [
@@ -91,7 +145,10 @@ function inferSourceType(result: ExaResult): SourceType {
   const host = hostFromUrl(url);
   const haystack = `${result.title || ""} ${url} ${result.content || result.description || ""}`;
 
-  if (/(^|\.)gov(\.|$)|\.gov\//i.test(host) || /\.europa\.eu$/i.test(host)) return "government";
+  if (
+    /(^|\.)gov(\.|$)|\.gov\//i.test(host) || /\.europa\.eu$/i.test(host) ||
+    GOVERNMENT_SEARCH_DOMAINS.some((domain) => hostMatchesDomain(host, domain))
+  ) return "government";
   if (/\.edu$/i.test(host) || /\.ac\.[a-z]{2}$/i.test(host) || /\b(arxiv|jstor|ssrn|pubmed|springer|sciencedirect|nature|science\.org)\b/i.test(host)) return "academic";
   if (/\b(youtube\.com|youtu\.be)\b/i.test(host)) return "video";
   if (/\b(wikipedia\.org)\b/i.test(host)) return "encyclopedia";
@@ -205,50 +262,129 @@ export function rankSearchResults(
     });
 }
 
-export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
+function publishedDateRangeFromTimeframe(timeframe: string): Pick<ExaSearchRequest, "startPublishedDate" | "endPublishedDate"> {
+  const years = timeframe.match(/\b(?:19|20)\d{2}\b/g)?.map(Number) ?? [];
+  if (years.length === 0) return {};
+  return {
+    startPublishedDate: `${Math.min(...years)}-01-01T00:00:00.000Z`,
+    endPublishedDate: `${Math.max(...years)}-12-31T23:59:59.999Z`,
+  };
+}
+
+function filtersForSourceType(preferredSourceType: string, timeframe: string): Omit<ExaSearchRequest, "query"> {
+  const publishedDateRange = publishedDateRangeFromTimeframe(timeframe);
+  if (preferredSourceType === "government") {
+    return {
+      includeDomains: GOVERNMENT_SEARCH_DOMAINS,
+      excludeDomains: WEAK_DOMAINS,
+      ...publishedDateRange,
+    };
+  }
+  if (preferredSourceType === "academic") {
+    return {
+      category: "publication",
+      excludeDomains: WEAK_DOMAINS,
+      ...publishedDateRange,
+    };
+  }
+  if (preferredSourceType === "news") {
+    return {
+      category: "news",
+      excludeDomains: WEAK_DOMAINS,
+      ...publishedDateRange,
+    };
+  }
+  return {
+    excludeDomains: WEAK_DOMAINS,
+    ...publishedDateRange,
+  };
+}
+
+export function buildFollowUpSearchRequest(
+  query: string,
+  preferredSourceType = "any",
+  timeframe = "",
+): ExaSearchRequest {
+  return { query, ...filtersForSourceType(preferredSourceType, timeframe) };
+}
+
+export function buildSearchRequests(claim: string, region = "", preferredSourceType = "any", timeframe = ""): ExaSearchRequest[] {
   const base = `${claim} ${region}`.trim().replace(/\s+/g, " ");
   const years = timeframe || (/\b202[0-9]\b/.test(base) ? "" : "2025 2026");
-  const queries: string[] = [];
+  const requests: ExaSearchRequest[] = [];
+  const add = (query: string, filters: Omit<ExaSearchRequest, "query"> = {}) => {
+    requests.push({ query: query.trim(), excludeDomains: WEAK_DOMAINS, ...filters });
+  };
+  const publishedDateRange = publishedDateRangeFromTimeframe(timeframe);
 
   // Topic-specific queries first (highest priority)
   if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(base)) || /\bdebate|debating\b/i.test(base)) {
-    queries.push(`${base} tab results official`.trim());
-    queries.push(`${base} Tabbycat Calicotab results`.trim());
+    add(`${base} official tournament results`, { includeDomains: DEBATE_RESULT_DOMAINS });
+    add(`${base} Tabbycat Calicotab results`, { includeDomains: DEBATE_RESULT_DOMAINS });
   }
 
   if (POLICY_STAT_PATTERNS.some((pattern) => pattern.test(base))) {
-    queries.push(`${base} World Bank OECD IMF UN data ${years}`.trim());
-    queries.push(`${base} government statistics report ${years}`.trim());
+    add(`${base} World Bank OECD IMF UN data ${years}`, {
+      includeDomains: GOVERNMENT_SEARCH_DOMAINS,
+      ...publishedDateRange,
+    });
+    add(`${base} government statistics report ${years}`, {
+      includeDomains: GOVERNMENT_SEARCH_DOMAINS,
+      ...publishedDateRange,
+    });
   }
 
   if (LEGAL_CURRENT_PATTERNS.some((pattern) => pattern.test(base))) {
-    queries.push(`${base} official law court ruling ${years}`.trim());
-    queries.push(`${base} primary source legislation regulation ${years}`.trim());
+    add(`${base} official law court ruling ${years}`, {
+      includeDomains: LEGAL_PRIMARY_DOMAINS,
+      ...publishedDateRange,
+    });
+    add(`${base} primary source legislation regulation ${years}`, {
+      includeDomains: LEGAL_PRIMARY_DOMAINS,
+      ...publishedDateRange,
+    });
   }
 
   // Preferred source type queries
-  if (preferredSourceType === "government") queries.push(`${base} site:gov ${years}`.trim());
-  if (preferredSourceType === "academic") queries.push(`${base} study journal university ${years}`.trim());
-  if (preferredSourceType === "news") queries.push(`${base} Reuters AP BBC report ${years}`.trim());
+  if (preferredSourceType === "government") add(`${base} government evidence ${years}`, filtersForSourceType("government", timeframe));
+  if (preferredSourceType === "academic") add(`${base} study journal research ${years}`, filtersForSourceType("academic", timeframe));
+  if (preferredSourceType === "news") add(`${base} current reporting ${years}`, filtersForSourceType("news", timeframe));
 
   // General fallback queries
-  queries.push(`${base} official data evidence ${years}`.trim());
-  queries.push(`${base} statistics report study ${years}`.trim());
+  add(`${base} official data evidence ${years}`, filtersForSourceType(preferredSourceType, timeframe));
+  add(`${base} statistics report study ${years}`, filtersForSourceType(preferredSourceType, timeframe));
 
   // Deduplicate by token overlap: skip when more than 85% of the smaller query's tokens already appear in an accepted query
-  const deduplicated: string[] = [];
-  for (const q of queries) {
-    const qTokens = new Set(q.toLowerCase().split(/\s+/));
+  const deduplicated: ExaSearchRequest[] = [];
+  for (const request of requests) {
+    const qTokens = new Set(request.query.toLowerCase().split(/\s+/));
     const isDuplicate = deduplicated.some((existing) => {
-      const existingTokens = new Set(existing.toLowerCase().split(/\s+/));
+      const existingTokens = new Set(existing.query.toLowerCase().split(/\s+/));
       const intersection = [...qTokens].filter((t) => existingTokens.has(t)).length;
       const smaller = Math.min(qTokens.size, existingTokens.size);
-      return smaller > 0 && intersection / smaller > 0.85;
+      const sameFilters = JSON.stringify({
+        includeDomains: existing.includeDomains ?? [],
+        excludeDomains: existing.excludeDomains ?? [],
+        category: existing.category ?? null,
+        startPublishedDate: existing.startPublishedDate ?? null,
+        endPublishedDate: existing.endPublishedDate ?? null,
+      }) === JSON.stringify({
+        includeDomains: request.includeDomains ?? [],
+        excludeDomains: request.excludeDomains ?? [],
+        category: request.category ?? null,
+        startPublishedDate: request.startPublishedDate ?? null,
+        endPublishedDate: request.endPublishedDate ?? null,
+      });
+      return sameFilters && smaller > 0 && intersection / smaller > 0.85;
     });
-    if (!isDuplicate) deduplicated.push(q);
+    if (!isDuplicate) deduplicated.push(request);
   }
 
   return deduplicated.slice(0, 6);
+}
+
+export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
+  return buildSearchRequests(claim, region, preferredSourceType, timeframe).map((request) => request.query);
 }
 
 // Bounded per-result snippet: Exa may return up to 10k characters per result,

@@ -16,10 +16,13 @@ import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { openExternalUrl } from '@/lib/native';
+import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
+import type { DiscoveredSource } from '@/lib/ai/client';
 
 
 interface FactoidsResultsProps {
   result: FactoidsOutput;
+  discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
   onSaveSource?: (title: string, content: string, url?: string) => void;
   onUseSuggestion?: (query: string) => void;
@@ -137,7 +140,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   );
 }
 
-export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
+export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -194,6 +197,21 @@ export function FactoidsResults({ result, onDiscuss, onSaveSource, onUseSuggesti
         onDiscuss={onDiscuss}
         discussLabel={t('factoidsResults.discuss')}
       />
+
+      {discoveredSources && discoveredSources.length > 0 && (
+        <section
+          aria-labelledby="factoids-consulted-sources"
+          className="rounded-lg border bg-card/50 p-4 sm:p-5"
+        >
+          <h3 id="factoids-consulted-sources" className="mb-2 text-sm font-medium">
+            {t('sourceQuality.researchedSources')}
+          </h3>
+          <SourceQualityList sources={discoveredSources} className="[&_a]:break-words" />
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t('sourceQuality.fallbackNote')}
+          </p>
+        </section>
+      )}
 
       {/* Verification Status */}
       <SectionCard
