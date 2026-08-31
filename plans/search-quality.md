@@ -43,7 +43,7 @@ Implemented:
 1. Research pipeline extracted to `supabase/functions/_shared/research.ts` (Exa search, follow-ups, ranking context, citation sources) with an injected model caller so it is testable; ranking/query builders moved to `_shared/source-quality.ts`.
 2. Topic-specific query builders (tournament, policy/statistics, legal/current events) were already present and are now covered by tests in the shared module.
 3. All discovered-source returns carry quality metadata; Factoids now also returns `discoveredSources`.
-4. Source display: shared `SourceQualityList` renders strong/moderate/weak labels plus "fallback context only" for weak sources in Generate, Attack, and Brainstorm results. Factoids shows only verified citations (quality-labeled consulted-list display deferred).
+4. Source display: shared `SourceQualityList` renders strong/moderate/weak labels plus "fallback context only" for weak sources in Generate, Attack, Brainstorm, and Factoids results. Factoids still limits evidence cards to verified citations while listing every consulted source separately.
 5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, prepared but NOT applied) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
 6. Source-quality floor completed: factoid citations verify only against fetched non-weak research content (`applyFactoidsVerification`); weak or unknown URLs are downgraded and filtered. Ask fallback already excluded weak sources.
 
