@@ -224,8 +224,8 @@ describe("observability primitives", () => {
       },
       enableLogs: true,
       enableMetrics: true,
-      tracesSampleRate: 1,
-      replaysSessionSampleRate: 0.1,
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1,
     }));
     expect(browserTracingIntegrationMock).toHaveBeenCalledOnce();

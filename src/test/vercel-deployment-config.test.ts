@@ -110,9 +110,11 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).toContain('<meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />');
   });
 
-  it("refreshes the offline app shell after successful navigation", () => {
+  it("refreshes the offline app shell and includes both debate practice routes", () => {
     const serviceWorker = readProjectFile("public/sw.js");
     expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
+    expect(serviceWorker).toContain("'/app/crossfire'");
+    expect(serviceWorker).toContain("'/app/sparring'");
   });
 
   it.each(["/app", "/app/(.*)", "/login", "/share/(.*)"])(

@@ -17,17 +17,25 @@ Run every step before merging this branch. Nothing here deploys anything; deploy
 - [ ] `npm test` — full vitest suite green
 - [ ] `npm run build` — production build succeeds
 - [ ] `deno check supabase/functions/ai/index.ts supabase/functions/ai-stream/index.ts supabase/functions/admin/index.ts`
-- [ ] `deno test --allow-read --allow-env=EXA_API_KEY --allow-net=127.0.0.1 supabase/functions/` — includes cost calculator, research/quality-floor, prompt-layer, and control-matrix suites
+- [ ] `npm run test:edge` — native Deno coverage including the exported handler boundary
+- [ ] `supabase db start; trap 'supabase stop --no-backup' EXIT; npm run test:db` — migration replay and pgTAP policy coverage with Supabase CLI 2.115 or newer, with cleanup even on failure
 
 ## 2. Migration review (before any deploy)
 
-Two prepared migrations ship on this branch; neither is applied by the branch:
+The two Quality & Truth migrations below are recorded in section 0 as applied
+to both staging and production. No deployment action remains for them in this
+follow-up; confirm each target's migration history again before a future deploy:
 
 - `20260822000000_ai_request_cost_audit.sql` — audit columns on `ai_requests`
 - `20260822000001_source_provenance_metadata.sql` — `metadata` jsonb on `sources`
 
-- [ ] Confirm both files reviewed against current schema, migration order, and RLS (`ai_requests` stays service-role-write-only; `sources` keeps per-user policies)
-- [ ] Apply order: migrations first, then edge functions (`ai`, `ai-stream`, `admin`), then frontend
+The audit follow-up adds one migration that must run before the updated `admin`
+function or frontend is deployed:
+
+- `20260831191838_deactivate_announcements.sql` — adds `deactivated_at` and excludes deactivated announcements from authenticated reads without deleting dismissal history
+
+- [ ] Confirm all changed migration files are reviewed against current schema, migration order, and RLS (`ai_requests` stays service-role-write-only; `sources` keeps per-user policies; announcement deactivation preserves dismissal rows)
+- [ ] Apply order: pending migrations first, then edge functions (`ai`, `ai-stream`, `admin`, `announcements` as changed), then frontend
   - both edge functions fall back to a base insert if audit columns are missing, so a deploy-order mistake degrades logging instead of breaking requests
   - the frontend sends `metadata` on source saves; deploying it before the `sources` migration will fail those writes
 

@@ -120,6 +120,7 @@ must run all of these gates:
 npm run lint
 npm run typecheck
 npm test -- --coverage
+npm run test:edge
 npm run build
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 ```
@@ -181,8 +182,8 @@ npm run test:e2e:staging
 
 The CI staging job may run only from a protected environment on an authorized
 `main` push or explicitly authorized main-branch dispatch. It must not run on
-pull requests or arbitrary branch dispatches. The job should upload the same
-failure artifacts without exposing secret-bearing logs.
+pull requests or arbitrary branch dispatches. It disables traces, screenshots,
+and video and uploads no authenticated browser artifacts.
 
 ### 4. Add the verification playbook
 

@@ -48,8 +48,9 @@ test('user sees and permanently dismisses an active announcement', async ({ page
   expect(dismissBody).toEqual({ announcementId: ANNOUNCEMENT_ID });
 });
 
-test('admin creates a targeted announcement and deletes it from history', async ({ page }) => {
+test('admin can deactivate without losing history, then explicitly delete', async ({ page }) => {
   let createBody: Record<string, unknown> | null = null;
+  let deactivateBody: Record<string, unknown> | null = null;
   let deleteBody: Record<string, unknown> | null = null;
 
   await page.route('**/functions/v1/announcements*', (route) => route.fulfill({ json: { announcements: [] } }));
@@ -90,6 +91,27 @@ test('admin creates a targeted announcement and deletes it from history', async 
             target_user_ids: [TARGET_USER_ID],
             starts_at: '2026-08-31T12:00:00.000Z',
             expires_at: null,
+            deactivated_at: null,
+            created_by: '99999999-9999-4999-8999-999999999999',
+            created_at: '2026-08-31T12:00:00.000Z',
+          },
+        },
+      });
+      return;
+    }
+    if (action === 'deactivate-announcement') {
+      deactivateBody = request.postDataJSON();
+      await route.fulfill({
+        json: {
+          announcement: {
+            id: ANNOUNCEMENT_ID,
+            title: 'Targeted note',
+            body: 'This message is only for the selected user.',
+            target_type: 'users',
+            target_user_ids: [TARGET_USER_ID],
+            starts_at: '2026-08-31T12:00:00.000Z',
+            expires_at: null,
+            deactivated_at: '2026-08-31T19:30:00.000Z',
             created_by: '99999999-9999-4999-8999-999999999999',
             created_at: '2026-08-31T12:00:00.000Z',
           },
@@ -124,6 +146,13 @@ test('admin creates a targeted announcement and deletes it from history', async 
     targetType: 'users',
     targetUserIds: [TARGET_USER_ID],
   });
+
+  await page.getByRole('button', { name: 'Deactivate announcement: Targeted note' }).click();
+  await page.getByRole('button', { name: 'Deactivate announcement' }).click();
+
+  await expect.poll(() => deactivateBody).toEqual({ announcementId: ANNOUNCEMENT_ID });
+  await expect(page.getByRole('heading', { name: 'Targeted note' })).toBeVisible();
+  await expect(page.getByText('Deactivated', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Delete announcement: Targeted note' }).click();
   await page.getByRole('button', { name: 'Delete announcement' }).click();

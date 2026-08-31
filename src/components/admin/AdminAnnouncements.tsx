@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Megaphone, Search, Trash2 } from 'lucide-react';
+import { Ban, Loader2, Megaphone, Search, Trash2 } from 'lucide-react';
 import {
   createAnnouncement,
+  deactivateAnnouncement,
   deleteAnnouncement,
   listAdminAnnouncements,
   type AdminAnnouncement,
@@ -45,6 +46,7 @@ function isTargetType(value: string): value is AnnouncementTargetType {
 
 function getStatus(announcement: AdminAnnouncement) {
   const now = Date.now();
+  if (announcement.deactivatedAt) return 'Deactivated';
   if (new Date(announcement.startsAt).getTime() > now) return 'Scheduled';
   if (announcement.expiresAt && new Date(announcement.expiresAt).getTime() <= now) return 'Expired';
   return 'Active';
@@ -54,7 +56,9 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<AdminAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<AdminAnnouncement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminAnnouncement | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -156,6 +160,27 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return;
+    try {
+      setDeactivating(true);
+      const announcement = await deactivateAnnouncement(deactivateTarget.id);
+      setAnnouncements((current) => current.map((item) => (
+        item.id === announcement.id ? announcement : item
+      )));
+      setDeactivateTarget(null);
+      toast({ title: 'Announcement deactivated' });
+    } catch (error) {
+      toast({
+        title: 'Could not deactivate announcement',
+        description: error instanceof Error ? error.message : 'Try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeactivating(false);
     }
   };
 
@@ -330,17 +355,31 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                         {announcement.expiresAt && <span>Expires {formatEuropeanDateTime(announcement.expiresAt)}</span>}
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="self-start text-destructive hover:text-destructive"
-                      aria-label={`Delete announcement: ${announcement.title}`}
-                      onClick={() => setDeleteTarget(announcement)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Delete
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-1 self-start">
+                      {(getStatus(announcement) === 'Active' || getStatus(announcement) === 'Scheduled') && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Deactivate announcement: ${announcement.title}`}
+                          onClick={() => setDeactivateTarget(announcement)}
+                        >
+                          <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Deactivate
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        aria-label={`Delete announcement: ${announcement.title}`}
+                        onClick={() => setDeleteTarget(announcement)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -348,6 +387,35 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={deactivateTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deactivating) setDeactivateTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate this announcement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Users will stop seeing it. The announcement and its dismissal history will remain available.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deactivating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeactivate();
+              }}
+              disabled={deactivating}
+            >
+              {deactivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              Deactivate announcement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -68,16 +68,3 @@ jobs:
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
           STAGING_DEMO_CODE: ${{ secrets.STAGING_DEMO_CODE }}
         run: npm run test:e2e:staging
-
-      - name: Upload staging failure artifacts
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: staging-browser-failure-${{ github.run_id }}
-          path: |
-            test-results/**/*.png
-            test-results/**/*.webm
-            !test-results/.auth/
-            !test-results/**/*.zip
-          if-no-files-found: ignore
-          retention-days: 7

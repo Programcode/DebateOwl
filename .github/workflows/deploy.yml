@@ -14,10 +14,85 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_PUSH: ${{ github.event_name == 'push' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: 2.9.5
+          cache: true
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test -- --coverage
+
+      - name: Edge function tests
+        run: npm run test:edge
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload production assets
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-assets-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  database-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.115.0
+
+      - name: Start isolated database and apply migrations
+        run: supabase db start
+
+      - name: Database policy tests
+        run: npm run test:db
+
+      - name: Stop isolated database
+        if: always()
+        run: supabase stop --no-backup
+
+  browser-tests:
+    if: github.event_name == 'pull_request'
+    needs: quality
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -34,18 +109,6 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test -- --coverage
-
-      - name: Build
-        run: npm run build
 
       - name: Browser tests
         env:
@@ -64,6 +127,24 @@ jobs:
             playwright-report/
           if-no-files-found: ignore
           retention-days: 7
+
+  docker:
+    if: github.event_name != 'pull_request'
+    needs: quality
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_PUSH: ${{ github.event_name == 'push' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Download production assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-assets-${{ github.sha }}
+          path: dist/
 
       - name: Set up QEMU
         if: env.DOCKER_PUSH == 'true'

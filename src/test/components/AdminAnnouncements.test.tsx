@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
+import type { AdminAnnouncement } from '@/lib/announcements';
 
 const {
   mockCreateAnnouncement,
+  mockDeactivateAnnouncement,
   mockDeleteAnnouncement,
   mockListAdminAnnouncements,
   mockToast,
 } = vi.hoisted(() => ({
   mockCreateAnnouncement: vi.fn(),
+  mockDeactivateAnnouncement: vi.fn(),
   mockDeleteAnnouncement: vi.fn(),
   mockListAdminAnnouncements: vi.fn(),
   mockToast: vi.fn(),
@@ -19,6 +22,7 @@ vi.mock('@/lib/announcements', async (importOriginal) => {
   return {
     ...actual,
     createAnnouncement: mockCreateAnnouncement,
+    deactivateAnnouncement: mockDeactivateAnnouncement,
     deleteAnnouncement: mockDeleteAnnouncement,
     listAdminAnnouncements: mockListAdminAnnouncements,
   };
@@ -41,6 +45,7 @@ describe('AdminAnnouncements', () => {
       targetUserIds: ['11111111-2222-4333-8444-555555555555'],
       startsAt: '2026-08-31T12:00:00.000Z',
       expiresAt: null,
+      deactivatedAt: null,
       createdBy: 'admin-id',
       createdAt: '2026-08-31T12:00:00.000Z',
     });
@@ -73,5 +78,46 @@ describe('AdminAnnouncements', () => {
       startsAt: undefined,
       expiresAt: undefined,
     }));
+  });
+
+  it('deactivates an announcement without removing it from history', async () => {
+    const activeAnnouncement: AdminAnnouncement = {
+      id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+      title: 'Scheduled maintenance',
+      body: 'DebateLab will be unavailable briefly.',
+      targetType: 'all',
+      targetUserIds: null,
+      startsAt: '2026-08-31T12:00:00.000Z',
+      expiresAt: null,
+      deactivatedAt: null,
+      createdBy: 'admin-id',
+      createdAt: '2026-08-31T12:00:00.000Z',
+    };
+    mockListAdminAnnouncements.mockResolvedValue([activeAnnouncement]);
+    let resolveDeactivation: (announcement: AdminAnnouncement) => void = () => undefined;
+    mockDeactivateAnnouncement.mockImplementation(() => new Promise<AdminAnnouncement>((resolve) => {
+      resolveDeactivation = resolve;
+    }));
+
+    render(<AdminAnnouncements users={[]} />);
+
+    await screen.findByText('Scheduled maintenance');
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate announcement: Scheduled maintenance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate announcement' }));
+
+    await waitFor(() => expect(mockDeactivateAnnouncement).toHaveBeenCalledWith(activeAnnouncement.id));
+    expect(screen.getByRole('heading', { name: 'Deactivate this announcement?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deactivate announcement' })).toBeDisabled();
+
+    resolveDeactivation({
+      ...activeAnnouncement,
+      deactivatedAt: '2026-08-31T19:30:00.000Z',
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Deactivate this announcement?' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
+    expect(screen.getByText('Deactivated')).toBeInTheDocument();
   });
 });

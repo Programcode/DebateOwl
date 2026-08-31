@@ -10,6 +10,7 @@ const APP_SHELL = [
   '/app/brainstorm',
   '/app/factoids',
   '/app/ask',
+  '/app/crossfire',
   '/app/library',
   '/app/timer',
   '/app/sparring',

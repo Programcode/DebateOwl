@@ -44,7 +44,7 @@ Implemented:
 2. Topic-specific query builders (tournament, policy/statistics, legal/current events) were already present and are now covered by tests in the shared module.
 3. All discovered-source returns carry quality metadata; Factoids now also returns `discoveredSources`.
 4. Source display: shared `SourceQualityList` renders strong/moderate/weak labels plus "fallback context only" for weak sources in Generate, Attack, Brainstorm, and Factoids results. Factoids still limits evidence cards to verified citations while listing every consulted source separately.
-5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, prepared but NOT applied) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
+5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, applied to staging and production in the 2026-08-22 release) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
 6. Source-quality floor completed: factoid citations verify only against fetched non-weak research content (`applyFactoidsVerification`); weak or unknown URLs are downgraded and filtered. Ask fallback already excluded weak sources.
 
 Tests: `_shared/research.test.ts`, extended `source-quality.test.ts`, frontend `SourceQualityList.test.tsx`, session-store provenance round-trip, client discoveredSources tests.
@@ -54,5 +54,6 @@ Deferred:
 - None. The remaining search-quality scope was completed on `t3code/search-quality-completion`:
   - Exa search requests use the documented camelCase fields (`includeDomains`, `excludeDomains`, `category`, `startPublishedDate`, `endPublishedDate`, `numResults`, and `contents.text.maxCharacters`) instead of inline `site:` operators. Domain/category filters retry without the restrictive filter when they return no results.
   - The exported Edge handler has a Deno boundary test that mocks authentication, quota, Exa search/content, and the model response, then verifies citation quality and consulted-source provenance in the HTTP response.
+  - `npm run test:edge` executes that boundary under Deno, and the pull-request quality job runs the same command.
   - Factoids returns `discoveredSources`, autosaves their provenance, and renders the shared consulted-source quality list, including the weak-source fallback warning.
   - Authenticated Playwright coverage exercises the Factoids flow on isolated desktop and mobile Chromium projects.

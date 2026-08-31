@@ -206,6 +206,12 @@
     "privacy": "Privacidad",
     "copyright": "© 2026 DebateLab. Todos los derechos reservados."
   },
+  "announcements": {
+    "regionLabel": "Anuncio",
+    "position": "{{position}} de {{total}}",
+    "dismissLabel": "Descartar anuncio: {{title}}",
+    "dismissError": "No se pudo descartar este anuncio."
+  },
   "hero": {
     "headline": "Prepárate Más Rápido. Argumenta Mejor. Gana Más Rondas.",
     "subheadline": "Preparación de debate impulsada por IA que te da ventaja en cada ronda.",
@@ -1068,7 +1074,7 @@
     "s6": "Tus Derechos",
     "p6": "Puedes acceder, exportar o eliminar tus datos en cualquier momento desde la configuración de tu cuenta.",
     "s7": "Cookies y Seguimiento",
-    "p7": "Usamos cookies y almacenamiento del navegador esenciales para la autenticación y las preferencias. Usamos PostHog para analítica de producto y Sentry para monitorización de errores, registros estructurados, métricas de la aplicación, seguimiento del rendimiento y reproducción de sesiones. Sentry registra el 10% de las sesiones normales y el 100% de las sesiones que contienen errores capturados; todo el texto y los campos de entrada se ocultan en las reproducciones y el contenido multimedia se bloquea. Sentry recibe metadatos técnicos como rutas, datos del navegador, URL, métodos y códigos de estado de solicitudes, trazas de pila, tiempos y clasificaciones seguras de eventos. La recopilación automática de identidad del usuario, cookies, cabeceras, cuerpos HTTP, parámetros de consulta, entradas y salidas de IA y variables de marcos de pila está desactivada. La captura automática, el registro de páginas vistas, la grabación de sesiones y el almacenamiento persistente de PostHog están desactivados. No enviamos contenido de debates, mensajes de chat, títulos de fuentes ni direcciones de correo electrónico en eventos analíticos o registros estructurados.",
+    "p7": "Usamos cookies y almacenamiento del navegador esenciales para la autenticación y las preferencias. Usamos PostHog para analítica de producto y Sentry para monitorización de errores, registros estructurados, métricas de la aplicación, seguimiento del rendimiento y reproducción de sesiones solo cuando hay errores. Sentry no registra sesiones normales. Registra sesiones que contienen errores capturados; todo el texto y los campos de entrada se ocultan en las reproducciones y el contenido multimedia se bloquea. Sentry recibe metadatos técnicos como rutas, datos del navegador, URL, métodos y códigos de estado de solicitudes, trazas de pila, tiempos y clasificaciones seguras de eventos. La recopilación automática de identidad del usuario, cookies, cabeceras, cuerpos HTTP, parámetros de consulta, entradas y salidas de IA y variables de marcos de pila está desactivada. La captura automática, el registro de páginas vistas, la grabación de sesiones y el almacenamiento persistente de PostHog están desactivados. No enviamos contenido de debates, mensajes de chat, títulos de fuentes ni direcciones de correo electrónico en eventos analíticos o registros estructurados.",
     "s8": "Privacidad de Menores",
     "p8": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
     "s9": "Cambios a Esta Política",

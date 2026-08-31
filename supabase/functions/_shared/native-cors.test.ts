@@ -20,6 +20,13 @@ for (const functionName of browserCalledFunctions) {
   });
 }
 
+for (const functionName of ["admin", "announcements"]) {
+  Deno.test(`${functionName} allows the isolated staging browser origin`, async () => {
+    const source = await Deno.readTextFile(new URL(`../${functionName}/index.ts`, import.meta.url));
+    assertStringIncludes(source, '"http://127.0.0.1:18080"');
+  });
+}
+
 Deno.test("native share links use the public HTTPS origin", async () => {
   const source = await Deno.readTextFile(new URL("../share/index.ts", import.meta.url));
   assertStringIncludes(source, 'const PUBLIC_WEB_APP_ORIGIN = "https://debate.pi-stack.org";');

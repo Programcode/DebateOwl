@@ -12,6 +12,7 @@ const ALLOWED_ORIGINS = [
     "https://debate.pi-stack.org",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "http://127.0.0.1:18080",
     "http://localhost:5173",
     "http://127.0.0.1:54321",
     "capacitor://localhost"
@@ -29,6 +30,9 @@ function getCorsHeaders(origin: string | null) {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const ADMIN_ANNOUNCEMENT_COLUMNS =
+    "id,title,body,target_type,target_user_ids,starts_at,expires_at,deactivated_at,created_by,created_at";
 
 type UsageByUserRow = {
     user_id: string;
@@ -158,7 +162,7 @@ Deno.serve(async (req) => {
         if (action === "announcements" && req.method === "GET") {
             const { data, error } = await supabase
                 .from("admin_announcements")
-                .select("id,title,body,target_type,target_user_ids,starts_at,expires_at,created_by,created_at")
+                .select(ADMIN_ANNOUNCEMENT_COLUMNS)
                 .order("created_at", { ascending: false });
 
             if (error) {
@@ -203,7 +207,7 @@ Deno.serve(async (req) => {
                     expires_at: value.expiresAt,
                     created_by: user.id,
                 })
-                .select("id,title,body,target_type,target_user_ids,starts_at,expires_at,created_by,created_at")
+                .select(ADMIN_ANNOUNCEMENT_COLUMNS)
                 .single();
 
             if (error) {
@@ -213,6 +217,50 @@ Deno.serve(async (req) => {
 
             return new Response(JSON.stringify({ announcement: data }), {
                 status: 201,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=deactivate-announcement - Stop delivery without deleting dismissal history
+        if (action === "deactivate-announcement" && req.method === "POST") {
+            let body: unknown;
+            try {
+                body = await req.json();
+            } catch {
+                return new Response(JSON.stringify({ error: "Request body must be valid JSON" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const announcementId = validateAnnouncementId(body);
+            if (!announcementId.ok) {
+                return new Response(JSON.stringify({ error: announcementId.error }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { data, error } = await supabase
+                .from("admin_announcements")
+                .update({ deactivated_at: new Date().toISOString() })
+                .eq("id", announcementId.value)
+                .is("deactivated_at", null)
+                .select(ADMIN_ANNOUNCEMENT_COLUMNS)
+                .maybeSingle();
+
+            if (error) {
+                console.error("[ADMIN] Failed to deactivate announcement", error.code);
+                throw new Error("Failed to deactivate announcement");
+            }
+            if (!data) {
+                return new Response(JSON.stringify({ error: "Active announcement not found" }), {
+                    status: 404,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ announcement: data }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
