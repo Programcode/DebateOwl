@@ -91,14 +91,14 @@ describe("Vercel frontend deployment configuration", () => {
     const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
     const nginxConfig = readProjectFile("nginx.conf");
+    const nginxCsp = nginxConfig.match(/add_header Content-Security-Policy "([^"]+)"/)?.[1];
 
     expect(csp).toContain("script-src 'self' https://*.jam.dev");
     expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
-    expect(nginxConfig).toContain("script-src 'self' https://*.jam.dev");
-    expect(nginxConfig).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
-    expect(indexHtml).toContain('src="https://js.jam.dev/recorder.js"');
-    expect(indexHtml).toContain('src="https://js.jam.dev/capture.js"');
-    expect(indexHtml).toContain('meta name="jam:team"');
+    expect(nginxCsp).toBe(csp);
+    expect(indexHtml).toContain('<script src="https://js.jam.dev/recorder.js" type="module"></script>');
+    expect(indexHtml).toContain('<script src="https://js.jam.dev/capture.js" type="module"></script>');
+    expect(indexHtml).toContain('<meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />');
   });
 
   it("refreshes the offline app shell after successful navigation", () => {
