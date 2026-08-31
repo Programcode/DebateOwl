@@ -123,6 +123,9 @@ test('keeps the setup usable on mobile with reduced motion', async ({ page }) =>
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeVisible();
+  const logo = page.locator('header img[alt="DebateLab"]');
+  await expect(logo).toHaveAttribute('src', '/favicon.png');
+  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(page.getByRole('button', { name: /School 4-6-6-3 · 8 speeches/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('Pro Introductor')).toBeVisible();
   await expect(page.getByText('Pro Conclusor')).toBeVisible();

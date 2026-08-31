@@ -10,7 +10,7 @@ const Footer = () => {
                     <div className="flex items-center gap-6">
                         <a href="/" className="flex items-center gap-2">
                             <img
-                                src="/favicon.ico"
+                                src="/favicon.png"
                                 alt="DebateLab logo"
                                 className="h-8 w-8 rounded-lg border border-primary/20 object-cover"
                             />

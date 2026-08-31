@@ -21,6 +21,7 @@ const APP_SHELL = [
   '/theme-init.js',
   '/manifest.webmanifest',
   '/favicon.ico',
+  '/favicon.png',
   '/hero-visual.png',
 ];
 
