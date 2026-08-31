@@ -69,6 +69,10 @@ export default function SparringPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (session?.id) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [session?.id]);
+
   const config = useMemo(() => getFeatureConfig('sparring'), [getFeatureConfig]);
 
   const retryAi = useCallback(() => {

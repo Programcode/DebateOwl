@@ -106,6 +106,7 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await page.getByLabel('Motion').fill('This House would require community service for graduation.');
   await page.getByRole('button', { name: 'Start round' }).click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
   const introductor = page.getByRole('textbox', { name: 'Draft for Pro Introductor' });
   await expect(introductor).toBeVisible();

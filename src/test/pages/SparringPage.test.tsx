@@ -103,6 +103,7 @@ function renderPage() {
 describe('SparringPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('scrollTo', vi.fn());
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     useSparringStore.setState({ currentSession: null, savedSessions: [], hydrated: false });
     generateMock.mockResolvedValue(OPPONENT_RESPONSE);
@@ -138,6 +139,7 @@ describe('SparringPage', () => {
     });
     await waitFor(() => expect(screen.getByText('Round in progress')).toBeInTheDocument());
     expect(screen.getByText('Round in progress')).toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' });
   });
 
   it('handles an AI-first round and advances to the user speech', async () => {
