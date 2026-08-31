@@ -27,7 +27,10 @@ describe('runtime integration contracts', () => {
     expect(workflow).not.toContain('test-results/**/*.webm');
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('Verify selected commit passed the quality workflow');
+    expect(workflow).toContain("if: github.event_name == 'workflow_dispatch'");
     expect(workflow).toContain('head_sha=${GITHUB_SHA}&event=push&status=success');
+    expect(workflow).toContain('if [ "$successful_runs" -ne 1 ]');
+    expect(workflow).toContain('exit 1');
   });
 
   it('keeps pull-request browser checks separate from Docker publication', () => {

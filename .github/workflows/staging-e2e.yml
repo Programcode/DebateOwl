@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  # Manual dispatch queries workflow runs for the selected main commit.
   actions: read
   contents: read
 
