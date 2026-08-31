@@ -1068,7 +1068,7 @@
     "s6": "Jogaid",
     "p6": "Bármikor hozzáférhetsz, exportálhatod vagy törölheted adataidat a fiókbeállításokból. A fiók törlése eltávolítja az összes kapcsolódó adatot.",
     "s7": "Sütik és Nyomkövetés",
-    "p7": "Alapvető sütiket használunk hitelesítéshez és a beállítások megőrzéséhez. A PostHogot termékanalitikára, a Sentryt hibajelentésre használjuk. A PostHog funkció-, formátum-, állapot- és időzítési adatokat kap, vitatartalmat, csevegőüzeneteket, forráscímeket vagy e-mail-címeket nem; az automatikus interakciórögzítés és a munkamenet-felvétel ki van kapcsolva. A Sentry úgy van beállítva, hogy ne küldjön alapértelmezett személyes adatokat.",
+    "p7": "Alapvető sütiket és böngészőtárhelyet használunk a hitelesítéshez és a beállításokhoz. A PostHogot adatvédelmet tiszteletben tartó termékanalitikához, a Sentryt pedig hibajelentésekhez használjuk. Az analitikai események tulajdonságaiban nem küldünk vitatartalmat, chatüzeneteket, forráscímeket vagy e-mail-címeket. A PostHog automatikus eseménygyűjtése, oldalmegtekintés-követése, munkamenet-rögzítése és tartós böngészőtárhelye ki van kapcsolva, a Sentry alapértelmezett személyesadat-gyűjtése pedig le van tiltva.",
     "s8": "Gyermekek Adatvédelme",
     "p8": "A DebateLab 13 éves és idősebb felhasználóknak készült. Tudatosan nem gyűjtünk adatot 13 év alatti gyermekektől.",
     "s9": "Irányelvek Módosítása",
