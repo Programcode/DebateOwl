@@ -44,7 +44,7 @@ Implemented:
 2. Topic-specific query builders (tournament, policy/statistics, legal/current events) were already present and are now covered by tests in the shared module.
 3. All discovered-source returns carry quality metadata; Factoids now also returns `discoveredSources`.
 4. Source display: shared `SourceQualityList` renders strong/moderate/weak labels plus "fallback context only" for weak sources in Generate, Attack, Brainstorm, and Factoids results. Factoids still limits evidence cards to verified citations while listing every consulted source separately.
-5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, prepared but NOT applied) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
+5. Provenance persists to saved sources: `sources.metadata` jsonb (migration `20260822000001`, applied to staging and production in the 2026-08-22 release) stores url, sourceType, qualityScore, qualityLabel, originating query, capturedVia.
 6. Source-quality floor completed: factoid citations verify only against fetched non-weak research content (`applyFactoidsVerification`); weak or unknown URLs are downgraded and filtered. Ask fallback already excluded weak sources.
 
 Tests: `_shared/research.test.ts`, extended `source-quality.test.ts`, frontend `SourceQualityList.test.tsx`, session-store provenance round-trip, client discoveredSources tests.
