@@ -28,10 +28,12 @@ export default function SparringPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const session = useSparringStore((state) => state.currentSession);
-  const currentView = !session ? 'setup' : session.phase === 'complete' ? 'scorecard' : 'round';
+  const currentView = !session ? 'setup' : session.phase === 'complete' && session.scorecard ? 'scorecard' : 'round';
   const previousViewRef = useRef(currentView);
   const viewChanged = previousViewRef.current !== currentView;
-  previousViewRef.current = currentView;
+  useEffect(() => {
+    previousViewRef.current = currentView;
+  }, [currentView]);
   const stateMotionClass = viewChanged ? 'motion-swap' : undefined;
   const startSession = useSparringStore((state) => state.startSession);
   const submitUserSpeech = useSparringStore((state) => state.submitUserSpeech);

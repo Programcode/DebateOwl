@@ -35,15 +35,16 @@ export default function GeneratePage() {
   const { t } = useTranslation();
   const shouldReduceMotion = useReducedMotion();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [successfulGenerationSequence, setSuccessfulGenerationSequence] = useState(0);
   const resultsAnchorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!generateResult || generateLoading) return;
+    if (successfulGenerationSequence === 0) return;
     const timer = window.setTimeout(() => {
       resultsAnchorRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth', block: 'start' });
     }, 100);
     return () => window.clearTimeout(timer);
-  }, [generateLoading, generateResult, shouldReduceMotion]);
+  }, [shouldReduceMotion, successfulGenerationSequence]);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
@@ -71,6 +72,7 @@ export default function GeneratePage() {
       }
       setDiscoveredSources(sources);
       setGenerateResult(result);
+      setSuccessfulGenerationSequence((sequence) => sequence + 1);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to generate case:', error);

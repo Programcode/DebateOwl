@@ -63,6 +63,7 @@ test('keeps route and feature-state motion short and stable', async ({ page }, t
 
   await generateMockCase(page);
   await expect(page.locator('#generate-results')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await expect(page.locator('main.page-enter')).toHaveCount(0);
   await expect(page.getByText('Generate complete', { exact: true })).toBeHidden({ timeout: 10_000 });
   await page.screenshot({ path: testInfo.outputPath('normal-result.png'), fullPage: true });
@@ -80,6 +81,7 @@ test('removes non-essential route and state movement for reduced motion', async 
 
   await generateMockCase(page);
   await expect(page.locator('#generate-results')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => animation.playState === 'running').length)).toBe(0);
   await expect(page.getByText('Generate complete', { exact: true })).toBeHidden({ timeout: 10_000 });
   await page.screenshot({ path: testInfo.outputPath('reduced-result.png'), fullPage: true });

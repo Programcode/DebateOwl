@@ -251,7 +251,7 @@ const HeroPreview = () => {
 
                         {showThesis && (
                             <motion.div
-                                initial={{ opacity: 0, y: 8 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-emerald-200/80 bg-emerald-50/80 p-3 dark:border-emerald-900 dark:bg-emerald-950/60"
@@ -265,7 +265,7 @@ const HeroPreview = () => {
 
                         {showContention && (
                             <motion.div
-                                initial={{ opacity: 0, y: 8 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-sky-200/80 bg-sky-50/80 p-3 dark:border-sky-900 dark:bg-sky-950/60"
@@ -279,7 +279,7 @@ const HeroPreview = () => {
 
                         {showImpact && (
                             <motion.div
-                                initial={{ opacity: 0, y: 8 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
                                 className="rounded-md border border-amber-200/80 bg-amber-50/80 p-3 dark:border-amber-900 dark:bg-amber-950/60"

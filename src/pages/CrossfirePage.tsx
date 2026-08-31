@@ -252,7 +252,9 @@ export default function CrossfirePage() {
   );
   const previousPhaseRef = useRef(state.phase);
   const phaseChanged = previousPhaseRef.current !== state.phase;
-  previousPhaseRef.current = state.phase;
+  useEffect(() => {
+    previousPhaseRef.current = state.phase;
+  }, [state.phase]);
   const stateMotionClass = phaseChanged ? 'motion-swap' : undefined;
   const [draftTurn, setDraftTurn] = useState('');
   const [now, setNow] = useState(Date.now());
