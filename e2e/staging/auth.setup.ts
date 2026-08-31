@@ -67,8 +67,8 @@ function loadStagingConfig(): StagingConfig {
 
   const parsedBaseUrl = new URL(baseUrl);
   const isLoopback = parsedBaseUrl.hostname === '127.0.0.1' || parsedBaseUrl.hostname === 'localhost';
-  if (parsedBaseUrl.protocol !== 'https:' && !(parsedBaseUrl.protocol === 'http:' && isLoopback)) {
-    throw new Error('PLAYWRIGHT_BASE_URL must use HTTPS or an HTTP loopback address');
+  if (parsedBaseUrl.protocol !== 'http:' || !isLoopback) {
+    throw new Error('PLAYWRIGHT_BASE_URL must use an HTTP loopback address');
   }
 
   return { supabaseUrl, anonKey, demoCode, baseUrl };

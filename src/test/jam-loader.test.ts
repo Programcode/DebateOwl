@@ -1,26 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { loadJamRecorder } from '@/jam-loader';
 
+function jamScripts() {
+  return Array.from(document.head.querySelectorAll<HTMLScriptElement>('script[data-jam-recorder]'));
+}
+
 describe('Jam recorder loader', () => {
-  it('does not load recorder scripts when MediaRecorder is unavailable', () => {
-    document.head.querySelectorAll('[data-jam-recorder]').forEach((element) => element.remove());
+  it('does not load recorder scripts when MediaRecorder is unavailable', async () => {
+    jamScripts().forEach((element) => element.remove());
 
-    loadJamRecorder({ documentRef: document, mediaRecorderAvailable: false });
+    await loadJamRecorder({ documentRef: document, mediaRecorderAvailable: false });
 
-    expect(document.head.querySelectorAll('[data-jam-recorder]')).toHaveLength(0);
+    expect(jamScripts()).toHaveLength(0);
   });
 
-  it('loads each Jam module once when recording is supported', () => {
-    document.head.querySelectorAll('[data-jam-recorder]').forEach((element) => element.remove());
+  it('loads recorder then capture before resolving startup', async () => {
+    jamScripts().forEach((element) => element.remove());
 
-    loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
-    loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
+    const loading = loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
+    expect(jamScripts().map((script) => script.src)).toEqual(['https://js.jam.dev/recorder.js']);
 
-    const scripts = Array.from(document.head.querySelectorAll<HTMLScriptElement>('script[data-jam-recorder]'));
-    expect(scripts.map((script) => script.src)).toEqual([
+    jamScripts()[0].dispatchEvent(new Event('load'));
+    await Promise.resolve();
+    expect(jamScripts().map((script) => script.src)).toEqual([
       'https://js.jam.dev/recorder.js',
       'https://js.jam.dev/capture.js',
     ]);
-    expect(scripts.every((script) => script.type === 'module')).toBe(true);
+    expect(jamScripts().every((script) => script.type === 'module' && !script.async)).toBe(true);
+
+    jamScripts()[1].dispatchEvent(new Event('load'));
+    await loading;
+    await loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
+    expect(jamScripts()).toHaveLength(2);
   });
 });
