@@ -113,9 +113,10 @@ function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
 
     const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
     const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
-    if (!title || !validateUrl(url)) return [];
+    const normalizedUrl = validateUrl(url);
+    if (!title || !normalizedUrl) return [];
 
-    const source: DiscoveredSource = { title, url };
+    const source: DiscoveredSource = { title, url: normalizedUrl };
     if (typeof candidate.content === 'string') source.content = candidate.content;
 
     if (typeof candidate.sourceType === 'string' && candidate.sourceType.trim()) {

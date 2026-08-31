@@ -259,10 +259,10 @@ describe('AI client branch coverage', () => {
       title: 'Source A',
       content: 'A content',
       type: 'url',
-      origin: 'https://a.com',
+      origin: 'https://a.com/',
       folder: 'Auto-saved',
       isActive: true,
-      metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com' }),
+      metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com/' }),
     });
   });
 
@@ -311,6 +311,7 @@ describe('AI client branch coverage', () => {
             qualityLabel: 'unknown',
             query: 42,
           },
+          { title: 'Protocol-less source', url: 'example.com/source-two' },
           { title: '', url: 'https://example.com/rejected' },
           { title: 'Unsafe protocol', url: 'httpx://example.com/rejected' },
         ],
@@ -322,6 +323,7 @@ describe('AI client branch coverage', () => {
 
     expect(outcome.discoveredSources).toEqual([
       { title: 'Source with malformed metadata', url: 'https://example.com/source' },
+      { title: 'Protocol-less source', url: 'https://example.com/source-two' },
     ]);
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Source with malformed metadata',
@@ -428,10 +430,10 @@ describe('AI client branch coverage', () => {
       title: 'Source C',
       content: 'C content',
       type: 'url',
-      origin: 'https://c.com',
+      origin: 'https://c.com/',
       folder: 'Auto-saved',
       isActive: true,
-      metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com' }),
+      metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com/' }),
     });
   });
 
