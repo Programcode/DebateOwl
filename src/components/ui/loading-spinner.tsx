@@ -29,7 +29,7 @@ interface LoadingOverlayProps {
 export function LoadingOverlay({ message = 'Processing...' }: LoadingOverlayProps) {
   return (
     <div className="motion-swap absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-lg bg-background/80 backdrop-blur-sm">
-      <div className="motion-loading-card">
+      <div>
         <LoadingSpinner size="lg" />
       </div>
       <p className="text-sm font-medium text-muted-foreground" role="status" aria-live="polite">{message}</p>

@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteErrorBoundary, ToolRouteAnalytics } from "@/App";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { filterObservabilityBreadcrumb } from "@/lib/observability";
 
 const observability = vi.hoisted(() => ({
   captureException: vi.fn(),
@@ -15,7 +16,10 @@ const authState = vi.hoisted(() => ({
   user: null as object | null,
 }));
 
-vi.mock("@/lib/observability", () => observability);
+vi.mock("@/lib/observability", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/observability")>()),
+  ...observability,
+}));
 vi.mock("@/lib/supabase/AuthProvider", async () => {
   const React = await import("react");
   return {
@@ -158,6 +162,12 @@ describe("App route observability", () => {
       );
       expect(JSON.stringify(observability.captureException.mock.calls)).not.toContain(error.message);
       expect(observability.captureException.mock.calls[0][1]).not.toHaveProperty("componentStack");
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain(error.message);
+      const retainedBreadcrumbs = consoleError.mock.calls
+        .map((args) => filterObservabilityBreadcrumb({ category: "console", level: "error", data: { arguments: args } }))
+        .filter((breadcrumb) => breadcrumb !== null);
+      expect(retainedBreadcrumbs.flatMap((breadcrumb) => breadcrumb.data?.arguments ?? [])).not.toContain(error);
+      expect(JSON.stringify(retainedBreadcrumbs)).not.toContain("at ExplodingRoute");
     } finally {
       window.removeEventListener("error", suppressWindowError);
       consoleError.mockRestore();

@@ -27,7 +27,7 @@ export function SectionCard({
 }: SectionCardProps) {
   const { t } = useTranslation();
   return (
-    <Card className={cn('motion-reveal card-hover-glow hover-lift relative overflow-hidden', className)}>
+    <Card className={cn('card-hover-glow relative overflow-hidden', className)}>
       {isLoading && <LoadingOverlay message={`Generating ${title.toLowerCase()}...`} />}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">

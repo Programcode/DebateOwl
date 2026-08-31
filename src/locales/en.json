@@ -1054,7 +1054,7 @@
   "privacyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated",
-    "date": "May 1, 2026",
+    "date": "August 31, 2026",
     "s1": "Information We Collect",
     "p1": "We collect information you provide when creating an account (name, email via Google OAuth) and usage data including generated content, saved items, and interaction patterns.",
     "s2": "How We Use Your Information",
@@ -1068,7 +1068,7 @@
     "s6": "Your Rights",
     "p6": "You may access, export, or delete your data at any time from your account settings. Account deletion removes all associated data.",
     "s7": "Cookies and Tracking",
-    "p7": "We use essential cookies for authentication and preferences. We use analytics to improve service quality.",
+    "p7": "We use essential cookies for authentication and preferences. We use PostHog for product analytics and Sentry for error reporting. PostHog receives feature, format, status, and timing data, not debate content, chat messages, source titles, or email addresses; automatic interaction capture and session recording are disabled. Sentry is configured not to send default personal information.",
     "s8": "Children's Privacy",
     "p8": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
     "s9": "Changes to This Policy",

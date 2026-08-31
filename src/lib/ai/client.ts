@@ -47,12 +47,12 @@ const MAX_CROSSFIRE_SOURCE_COUNT = 10;
 const MAX_CROSSFIRE_SOURCE_CHARS = 8_000;
 const MAX_CROSSFIRE_SOURCE_TOTAL_CHARS = 24_000;
 
-interface AIRequestOptions {
+interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;
   includeCustomSystemPrompt?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
-  transformResponse?: (data: unknown) => unknown;
+  transformResponse?: (data: unknown) => T;
 }
 
 function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
@@ -315,12 +315,45 @@ export function classifyAIError(error: unknown, userInitiatedAbort = false): AIE
   return { errorName, statusCode, shouldCaptureException: true };
 }
 
-async function callSupabaseAI(
+interface AIFailureReport {
+  error: unknown;
+  feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring' | 'crossfire';
+  provider: string;
+  model: string;
+  startTime: number;
+  requestId: string;
+  streaming?: boolean;
+  userInitiatedAbort?: boolean;
+}
+
+/** Reports an AI failure without forwarding user-controlled error text. */
+export function reportAIFailure(report: AIFailureReport): void {
+  const classification = classifyAIError(report.error, report.userInitiatedAbort);
+  const durationMs = Math.round(performance.now() - report.startTime);
+  const properties = {
+    feature: report.feature,
+    ...(report.streaming === undefined ? {} : { streaming: report.streaming }),
+    provider: report.provider,
+    model: report.model,
+    durationMs,
+    errorName: classification.errorName,
+    statusCode: classification.statusCode,
+  };
+  captureProductEvent('ai_request_failed', properties);
+
+  if (classification.shouldCaptureException) {
+    const safeError = new Error(classification.errorName);
+    safeError.name = classification.errorName;
+    captureException(safeError, { ...properties, requestId: report.requestId });
+  }
+}
+
+async function callSupabaseAI<T = unknown>(
   feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring' | 'crossfire',
   input: unknown,
   config: ProviderConfig,
-  options: AIRequestOptions = {},
-) {
+  options: AIRequestOptions<T> = {},
+): Promise<T> {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const startTime = performance.now();
 
@@ -344,31 +377,15 @@ async function callSupabaseAI(
   });
 
   const reportFailure = (error: unknown, userInitiatedAbort = false): void => {
-    const classification = classifyAIError(error, userInitiatedAbort);
-    const durationMs = Math.round(performance.now() - startTime);
-    const properties = {
+    reportAIFailure({
+      error,
       feature,
       provider,
       model: config.model,
-      durationMs,
-      errorName: classification.errorName,
-      statusCode: classification.statusCode,
-    };
-    captureProductEvent('ai_request_failed', properties);
-
-    if (classification.shouldCaptureException) {
-      const safeError = new Error(classification.errorName);
-      safeError.name = classification.errorName;
-      captureException(safeError, {
-        feature,
-        provider,
-        model: config.model,
-        durationMs,
-        errorName: classification.errorName,
-        statusCode: classification.statusCode,
-        requestId,
-      });
-    }
+      startTime,
+      requestId,
+      userInitiatedAbort,
+    });
   };
 
   const controller = new AbortController();
@@ -488,7 +505,7 @@ async function callSupabaseAI(
       });
     }
 
-    const response = options.transformResponse ? options.transformResponse(data) : data;
+    const response = options.transformResponse ? options.transformResponse(data) : data as T;
     captureProductEvent('ai_request_succeeded', {
       feature,
       provider,
@@ -632,7 +649,7 @@ export async function crossfire(
     });
   }
 
-  return await callSupabaseAI(
+  return await callSupabaseAI<CrossfireReply | CrossfireDebrief>(
     'crossfire',
     input.data as unknown as Record<string, unknown>,
     config,
@@ -665,7 +682,7 @@ export async function crossfire(
         return debrief.data;
       },
     },
-  ) as CrossfireReply | CrossfireDebrief;
+  );
 }
 
 export function mapAIError(
@@ -1060,7 +1077,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
-  const response = await callSupabaseAI('generate', inputWithLanguage, config, {
+  const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
@@ -1072,14 +1089,14 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
       }
       return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
     },
-  }) as ResultWithSources<GenerateOutput>;
+  });
   await autosaveDiscoveredSources(response.discoveredSources, 'generate');
   return response;
 }
 
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
   if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
-  const response = await callSupabaseAI('attack', input as Record<string, unknown>, config, {
+  const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', input as Record<string, unknown>, config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1087,14 +1104,14 @@ export async function attackCase(input: AttackInput, config: ProviderConfig): Pr
         discoveredSources: parseDiscoveredSources(data.discoveredSources),
       };
     },
-  }) as ResultWithSources<AttackOutput>;
+  });
   await autosaveDiscoveredSources(response.discoveredSources, 'attack');
   return response;
 }
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
   if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
-  const response = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config, {
+  const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', input as Record<string, unknown>, config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1102,7 +1119,7 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
         discoveredSources: parseDiscoveredSources(data.discoveredSources),
       };
     },
-  }) as ResultWithSources<BrainstormOutput>;
+  });
   await autosaveDiscoveredSources(response.discoveredSources, 'brainstorm');
   return response;
 }
@@ -1117,7 +1134,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     sourceCount: input.sourceCount || 5,
     language,
   } as Record<string, unknown>;
-  const response = await callSupabaseAI('factoids', inputWithLanguage, config, {
+  const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const parsed = FactoidsOutputSchema.safeParse(data.output);
@@ -1139,7 +1156,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
         discoveredSources: parseDiscoveredSources(data.discoveredSources),
       };
     },
-  }) as ResultWithSources<FactoidsOutput>;
+  });
   await autosaveDiscoveredSources(response.discoveredSources, 'factoids');
   return response;
 }
@@ -1160,7 +1177,7 @@ export async function askChat(
 ): Promise<AskOutput> {
   const output = config.provider === 'mock'
     ? await mockAsk(message, mode)
-    : await callSupabaseAI('ask', {
+    : await callSupabaseAI<AskOutput>('ask', {
       message,
       history,
       mode,
@@ -1180,7 +1197,7 @@ export async function askChat(
         return parsed.data;
       },
     });
-  return output as AskOutput;
+  return output;
 }
 
 function sparringLanguage(language: string): string {
@@ -1269,9 +1286,9 @@ async function generateSparringTurnOnce(
     return validateSparringTurnResponse(await mockGenerateSparringTurn(inputResult.data));
   }
 
-  return await callSupabaseAI('sparring', inputResult.data, config, {
+  return await callSupabaseAI<SparringTurnResponse>('sparring', inputResult.data, config, {
     transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
-  }) as SparringTurnResponse;
+  });
 }
 
 /** Judge a completed sparring session and return its validated scorecard. */
@@ -1321,7 +1338,7 @@ async function judgeSparringSessionOnce(
     return validateSparringScoreResponse(await mockJudgeSparringSession(inputResult.data));
   }
 
-  return await callSupabaseAI('sparring', inputResult.data, config, {
+  return await callSupabaseAI<SparringScoreResponse>('sparring', inputResult.data, config, {
     transformResponse: (rawData) => validateSparringScoreResponse((rawData as { output: unknown }).output),
-  }) as SparringScoreResponse;
+  });
 }

@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -15,6 +15,7 @@ import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { Loader2 } from "lucide-react";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { captureException, captureProductEvent } from "@/lib/observability";
+import { getRouteMotion, ROUTE_TRANSITION_DURATION_SECONDS } from "@/lib/motion-policy";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -78,7 +79,7 @@ function getToolForPathname(pathname: string): ToolName | undefined {
 // Loading fallback component
 const PageLoader = () => (
   <div className="motion-loading-shell flex min-h-[60vh] items-center justify-center">
-    <div className="motion-loading-card flex flex-col items-center gap-4 rounded-lg border bg-card/80 px-8 py-7 shadow-lg">
+    <div className="flex flex-col items-center gap-4 rounded-lg border bg-card/80 px-8 py-7 shadow-lg">
       <div className="relative flex h-12 w-12 items-center justify-center">
         <span className="motion-ping-ring absolute h-full w-full rounded-full border border-primary/40" />
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -97,8 +98,8 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, { fai
     return { failed: true };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Route rendering failed', error, info);
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    console.error('Route rendering failed');
     captureException(new Error("Route rendering failed"), { boundary: "route" });
   }
 
@@ -131,19 +132,20 @@ export function ToolRouteAnalytics(): null {
 function AnimatedRoutes() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
+  const routeMotion = getRouteMotion(Boolean(shouldReduceMotion));
   useSessionStorageSync();
 
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={location.pathname}
-        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 6, scale: 0.998 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -4, scale: 0.998 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
+        {...routeMotion}
+        data-reduced-motion={shouldReduceMotion ? "true" : "false"}
+        data-route-transition-ms={ROUTE_TRANSITION_DURATION_SECONDS * 1000}
         className="min-h-screen motion-reduce:transform-none"
       >
-        <Routes location={location}>
+        <Suspense fallback={<PageLoader />}>
+          <Routes location={location}>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/terms" element={<TermsPage />} />
@@ -178,7 +180,8 @@ function AnimatedRoutes() {
             <Route path="/app/admin" element={<AdminPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );
@@ -188,18 +191,18 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ThemeProvider>
-        <TooltipProvider delayDuration={200}>
-          <Toaster />
-          <Sonner />
-          <OfflineIndicator />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <RouteErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
+        <MotionConfig reducedMotion="user">
+          <TooltipProvider delayDuration={200}>
+            <Toaster />
+            <Sonner />
+            <OfflineIndicator />
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <RouteErrorBoundary>
                 <AnimatedRoutes />
-              </Suspense>
-            </RouteErrorBoundary>
-          </BrowserRouter>
-        </TooltipProvider>
+              </RouteErrorBoundary>
+            </BrowserRouter>
+          </TooltipProvider>
+        </MotionConfig>
       </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>

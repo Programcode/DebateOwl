@@ -28,6 +28,13 @@ export default function SparringPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const session = useSparringStore((state) => state.currentSession);
+  const currentView = !session ? 'setup' : session.phase === 'complete' && session.scorecard ? 'scorecard' : 'round';
+  const previousViewRef = useRef(currentView);
+  const viewChanged = previousViewRef.current !== currentView;
+  useEffect(() => {
+    previousViewRef.current = currentView;
+  }, [currentView]);
+  const stateMotionClass = viewChanged ? 'motion-swap' : undefined;
   const startSession = useSparringStore((state) => state.startSession);
   const submitUserSpeech = useSparringStore((state) => state.submitUserSpeech);
   const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
@@ -222,7 +229,7 @@ export default function SparringPage() {
 
   if (!session) {
     return (
-      <div className="container px-4 py-8 sm:py-10">
+      <div className={cn(stateMotionClass, 'container px-4 py-8 sm:py-10')}>
         <SparringSetup onStart={handleStart} />
       </div>
     );
@@ -230,14 +237,14 @@ export default function SparringPage() {
 
   if (session.phase === 'complete' && session.scorecard) {
     return (
-      <div className="container px-4 py-8 sm:py-10">
+      <div className={cn(stateMotionClass, 'container px-4 py-8 sm:py-10')}>
         <SparringScorecard session={session} scorecard={session.scorecard} onRestart={handleRestart} onExport={handleExportDocx} onExportPdf={handleExportPdf} />
       </div>
     );
   }
 
   return (
-    <div className="container px-4 py-6 sm:py-8">
+    <div className={cn(stateMotionClass, 'container px-4 py-6 sm:py-8')}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/app')} className="-ml-2 text-muted-foreground"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t('sparring.round.backToWorkspace', 'Back to workspace')}</Button>
         <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', !isOnline && 'text-amber-600 dark:text-amber-400')}><CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />{t('sparring.round.draftSavedNotice', 'Drafts save in this tab')}</span>

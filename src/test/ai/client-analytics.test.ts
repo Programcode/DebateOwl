@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
+import type { CrossfireAIInput } from '@/lib/crossfire/schemas';
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -79,7 +80,7 @@ const output: GenerateOutput = {
   metadata: { side: 'pro', format: 'bp', generatedAt: '2026-01-01T00:00:00.000Z' },
 };
 
-function nextTurnInput() {
+function nextTurnInput(): CrossfireAIInput {
   return {
     operation: 'next-turn' as const,
     config: {
@@ -147,7 +148,9 @@ describe('non-streaming AI request analytics', () => {
       expect.objectContaining({ name: 'AIProviderError', message: 'AIProviderError' }),
       expect.objectContaining({ feature: 'generate', provider: 'openai', model: 'gpt-4o' }),
     );
-    expect(JSON.stringify(mocks.captureException.mock.calls[0])).not.toContain(input.motion);
+    const [capturedError, capturedContext] = mocks.captureException.mock.calls[0];
+    expect(capturedError).toMatchObject({ message: 'AIProviderError' });
+    expect(JSON.stringify(capturedContext)).not.toContain(input.motion);
   });
 
   it('skips Sentry for expected auth failures', async () => {
@@ -196,7 +199,9 @@ describe('non-streaming AI request analytics', () => {
       errorName: 'AIError',
     }));
     expect(mocks.captureException).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(mocks.captureException.mock.calls[0])).not.toContain(input.motion);
+    const [capturedError, capturedContext] = mocks.captureException.mock.calls[0];
+    expect(capturedError).toMatchObject({ message: 'AIError' });
+    expect(JSON.stringify(capturedContext)).not.toContain(input.motion);
   });
 
   it('does not send caller aborts to Sentry', async () => {

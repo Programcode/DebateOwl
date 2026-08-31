@@ -28,6 +28,7 @@ vi.mock('framer-motion', () => ({
     AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
     useAnimation: () => ({}),
     useInView: () => true,
+    useReducedMotion: () => false,
 }));
 
 // Mock useAuth

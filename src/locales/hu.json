@@ -1054,7 +1054,7 @@
   "privacyPage": {
     "title": "Adatvédelmi Irányelvek",
     "lastUpdated": "Utolsó frissítés",
-    "date": "2026. május 1.",
+    "date": "2026. augusztus 31.",
     "s1": "Gyűjtött Információk",
     "p1": "Gyűjtjük a fiók létrehozásakor megadott adatokat (név, email Google OAuth-on keresztül) és használati adatokat, beleértve a generált tartalmat, mentett elemeket és interakciós mintákat.",
     "s2": "Hogyan Használjuk az Információidat",
@@ -1068,7 +1068,7 @@
     "s6": "Jogaid",
     "p6": "Bármikor hozzáférhetsz, exportálhatod vagy törölheted adataidat a fiókbeállításokból. A fiók törlése eltávolítja az összes kapcsolódó adatot.",
     "s7": "Sütik és Nyomkövetés",
-    "p7": "Alapvető sütiket használunk hitelesítéshez és beállításokhoz. Analitikát használunk a szolgáltatás minőségének javítására.",
+    "p7": "Alapvető sütiket használunk hitelesítéshez és a beállítások megőrzéséhez. A PostHogot termékanalitikára, a Sentryt hibajelentésre használjuk. A PostHog funkció-, formátum-, állapot- és időzítési adatokat kap, vitatartalmat, csevegőüzeneteket, forráscímeket vagy e-mail-címeket nem; az automatikus interakciórögzítés és a munkamenet-felvétel ki van kapcsolva. A Sentry úgy van beállítva, hogy ne küldjön alapértelmezett személyes adatokat.",
     "s8": "Gyermekek Adatvédelme",
     "p8": "A DebateLab 13 éves és idősebb felhasználóknak készült. Tudatosan nem gyűjtünk adatot 13 év alatti gyermekektől.",
     "s9": "Irányelvek Módosítása",

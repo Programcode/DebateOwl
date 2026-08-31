@@ -16,6 +16,7 @@ import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/valida
 import { formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
 import { ModelSelector } from '@/components/ModelSelector';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useReducedMotion } from 'framer-motion';
 
 interface Message {
   id: string;
@@ -368,14 +369,15 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const shouldReduceMotion = useReducedMotion();
 
   const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
   const hasStreamingMessage = messages.some((message) => message.isStreaming);
 
   // Auto-scroll to bottom on new messages or streaming content
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView?.({ behavior: shouldReduceMotion ? 'auto' : 'smooth' });
+  }, [messages, shouldReduceMotion]);
 
   // Cycle through loading messages
   useEffect(() => {

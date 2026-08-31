@@ -86,10 +86,10 @@ describe('StaggeredContainer', () => {
     expect(div.style.getPropertyValue('--stagger-ms')).toBe('300ms');
   });
 
-  it('uses default staggerMs of 200', () => {
+  it('uses a short default stagger for dense result lists', () => {
     const { container } = render(<StaggeredContainer><span>Test</span></StaggeredContainer>);
     const div = container.querySelector('.staggered-container') as HTMLElement;
-    expect(div.style.getPropertyValue('--stagger-ms')).toBe('200ms');
+    expect(div.style.getPropertyValue('--stagger-ms')).toBe('60ms');
   });
 
   it('renders style element', () => {
