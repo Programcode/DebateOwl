@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const Navbar = () => {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
+    const shouldReduceMotion = useReducedMotion();
 
     const navLinks = [
         { href: "#features", label: t('nav.features') },
@@ -70,7 +71,7 @@ const Navbar = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
                         className="border-b border-border bg-background/95 backdrop-blur-xl md:hidden"
                     >
                         <div className="section-container flex flex-col gap-4 py-4">

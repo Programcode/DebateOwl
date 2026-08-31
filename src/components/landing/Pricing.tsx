@@ -47,7 +47,7 @@ const Pricing = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                         viewport={{ once: true }}
-                        className="rounded-2xl border border-border/70 bg-card/80 p-7 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                        className="rounded-2xl border border-border/70 bg-card/80 p-7 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
                     >
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
@@ -80,7 +80,7 @@ const Pricing = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                         viewport={{ once: true }}
-                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur ring-1 ring-primary/10 transition-all duration-300 hover:-translate-y-1"
+                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur ring-1 ring-primary/10 transition-all duration-300 hover:-translate-y-1 motion-reduce:hover:translate-y-0"
                     >
                         <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
                             <Sparkles className="h-3.5 w-3.5" />

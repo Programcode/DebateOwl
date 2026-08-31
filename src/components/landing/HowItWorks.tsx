@@ -43,7 +43,7 @@ const HowItWorks = () => {
                                 className="relative flex flex-col items-center text-center"
                             >
                                 <div className="relative mb-6">
-                                    <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center relative z-10 transition-transform duration-300 hover:scale-110">
+                                    <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center relative z-10 transition-transform duration-300 hover:scale-110 motion-reduce:hover:scale-100">
                                         <step.icon className="w-8 h-8 text-primary" />
                                     </div>
                                     <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-md">

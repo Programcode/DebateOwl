@@ -34,7 +34,7 @@ interface StaggeredContainerProps {
   className?: string;
 }
 
-export function StaggeredContainer({ children, staggerMs = 200, className }: StaggeredContainerProps) {
+export function StaggeredContainer({ children, staggerMs = 60, className }: StaggeredContainerProps) {
   // Unique per-instance class so the generated nth-child animation-delay
   // rules below don't leak across multiple StaggeredContainers on one page.
   const instanceClass = `staggered-container-${useId().replace(/:/g, '')}`;
@@ -46,7 +46,7 @@ export function StaggeredContainer({ children, staggerMs = 200, className }: Sta
         .${instanceClass} > * {
           opacity: 0;
           transform: translateY(8px);
-          animation: stagger-in 0.3s ease-out forwards;
+          animation: stagger-in 0.2s ease-out forwards;
         }
         ${Array.from({ length: 10 }, (_, i) => `.${instanceClass} > *:nth-child(${i + 1}) { animation-delay: ${i * staggerMs}ms; }`).join('\n')}
         @keyframes stagger-in {

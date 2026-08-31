@@ -42,11 +42,11 @@ const WhatsNew = () => {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.45, delay: index * 0.08 }}
                             viewport={{ once: true }}
-                            className="group rounded-2xl border border-border/70 bg-card/75 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                            className="group rounded-2xl border border-border/70 bg-card/75 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
                         >
                             <div className="mb-4 flex items-center justify-between">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                                    <update.icon className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                                    <update.icon className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100" />
                                 </div>
                                 <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
                                     {update.badge}

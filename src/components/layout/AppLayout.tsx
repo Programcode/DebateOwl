@@ -1,6 +1,6 @@
 // src/components/layout/AppLayout.tsx
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
@@ -49,14 +49,14 @@ export function AppLayout() {
       {/* Header */}
       <header className="native-safe-top sticky top-0 z-50 border-b border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]">
         <div className="container flex h-16 items-center justify-between px-4">
-          <a href="/app" className="flex items-center gap-3 shrink-0">
+          <Link to="/app" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
               <img src="/favicon.png" alt="DebateLab" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</h1>
             </div>
-          </a>
+          </Link>
 
           {/* Desktop Nav */}
           <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-0.5 xl:gap-1 overflow-x-auto scrollbar-hide ml-4">
@@ -129,7 +129,7 @@ export function AppLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="native-main-content flex-1 page-enter">
+      <main className="native-main-content flex-1">
         <Outlet />
       </main>
 
@@ -138,8 +138,8 @@ export function AppLayout() {
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">
-            <a href="/terms" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.terms')}</a>
-            <a href="/privacy" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.privacy')}</a>
+            <Link to="/terms" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.terms')}</Link>
+            <Link to="/privacy" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.privacy')}</Link>
           </div>
         </div>
       </footer>

@@ -119,13 +119,13 @@ export default function AttackPage() {
           </AnimatedSection>
 
           {/* Results */}
-          <AnimatedSection delay={150}>
+          <div>
             {attackLoading ? (
               <div key="attack-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
                 <StreamingIndicator messages={[t('attackForm.loadingMsg1'), t('attackForm.loadingMsg2'), t('attackForm.loadingMsg3'), t('attackForm.loadingMsg4'), t('attackForm.loadingMsg5')]} />
               </div>
             ) : attackResult ? (
-              <div key="attack-results" className="motion-swap">
+              <div key="attack-results">
                 <AttackResults
                   result={attackResult}
                   discoveredSources={discoveredSources}
@@ -135,14 +135,14 @@ export default function AttackPage() {
               </div>
             ) : (
               <div key="attack-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">
-                <div className="motion-loading-card text-6xl mb-4">⚔️</div>
+                <div className="text-6xl mb-4">⚔️</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('attack.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('attack.emptyDesc')}
                 </p>
               </div>
             )}
-          </AnimatedSection>
+          </div>
         </div>
       </div>
 
