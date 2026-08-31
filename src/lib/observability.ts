@@ -101,6 +101,7 @@ export function initializeObservability(): void {
     Sentry.init({
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
+      ignoreErrors: [/^Synthetic observability verification$/],
       sendDefaultPii: false,
       beforeBreadcrumb: filterObservabilityBreadcrumb,
       dataCollection: {
