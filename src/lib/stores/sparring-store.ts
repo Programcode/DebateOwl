@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { supabase } from '@/lib/supabase/client';
 import {
   SparringScorecardSchema,
+  SparringSpeakerSchema,
   SparringSpeechSchema,
+  SparringTurnSchema,
   type SparringDifficulty,
   type SparringFormat,
   type SparringScorecard,
@@ -77,6 +79,46 @@ const SavedRowsSchema = z.array(z.object({
   created_at: z.string(),
   updated_at: z.string(),
 }));
+
+const PersistedSparringSessionSchema = z.object({
+  id: z.string(),
+  motion: z.string(),
+  userSide: z.enum(['pro', 'con']),
+  format: z.enum(['standard', 'ld', 'pf']),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  turns: z.array(SparringTurnSchema.extend({ speaker: SparringSpeakerSchema })),
+  speeches: z.array(SparringSpeechSchema),
+  currentTurnIndex: z.number().int().nonnegative(),
+  phase: z.enum(['round', 'judging', 'complete']),
+  draft: z.string(),
+  timerRemainingSeconds: z.number().nonnegative(),
+  timerRunning: z.boolean(),
+  timerDeadline: z.number().nullable(),
+  scorecard: SparringScorecardSchema.optional(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
+const PersistedSparringStateSchema = z.object({
+  currentSession: PersistedSparringSessionSchema.nullable().optional(),
+  savedSessions: z.array(PersistedSparringSessionSchema).optional(),
+});
+
+type PersistedSparringState = Pick<SparringStoreState, 'currentSession' | 'savedSessions'>;
+
+function migratePersistedSparringState(value: unknown): PersistedSparringState {
+  const parsed = PersistedSparringStateSchema.safeParse(value);
+  if (!parsed.success) return { currentSession: null, savedSessions: [] };
+  const rebuildTurns = (session: z.output<typeof PersistedSparringSessionSchema>): SparringSession => ({
+    ...session,
+    timerDeadline: session.timerDeadline ?? null,
+    turns: buildSparringTurns(session.format, session.userSide),
+  });
+  return {
+    currentSession: parsed.data.currentSession ? rebuildTurns(parsed.data.currentSession) : null,
+    savedSessions: (parsed.data.savedSessions ?? []).map(rebuildTurns),
+  };
+}
 
 function createId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -337,7 +379,8 @@ export const useSparringStore = create<SparringStoreState>()(
     {
       name: 'debate-sparring-storage',
       storage: createJSONStorage(() => sessionStorage),
-      version: 1,
+      version: 2,
+      migrate: (persistedState) => migratePersistedSparringState(persistedState),
       partialize: (state) => ({
         currentSession: state.currentSession,
         savedSessions: state.savedSessions,

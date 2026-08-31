@@ -313,7 +313,7 @@ export default function HistoryPage() {
                           <div className="min-w-0 space-y-1">
                             <h4 className="truncate font-semibold">{session.motion}</h4>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <Badge variant="outline">{session.format.toUpperCase()}</Badge>
+                              <Badge variant="outline">{t(`sparring.format.${session.format}`, session.format.toUpperCase())}</Badge>
                               <Badge variant="outline">{session.userSide === 'pro' ? t('export.proposition') : t('export.opposition')}</Badge>
                               {session.scorecard && <span>{t('historyPage.score', { user: session.scorecard.userScore, ai: session.scorecard.aiScore })}</span>}
                               <span>{formatEuropeanDateTime(session.updatedAt)}</span>

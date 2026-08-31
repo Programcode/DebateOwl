@@ -1,6 +1,6 @@
 import type { SparringFormat, SparringSide } from '@/lib/ai/schemas/sparring';
 
-export type SparringTurnKind = 'opening' | 'constructive' | 'rebuttal' | 'summary' | 'final';
+export type SparringTurnKind = 'introductor' | 'r1' | 'r2' | 'conclusor' | 'opening' | 'constructive' | 'rebuttal' | 'summary' | 'final';
 
 export interface SparringTurn {
   id: string;
@@ -22,8 +22,8 @@ export interface SparringFormatDefinition {
 const FORMAT_DEFINITIONS: Record<SparringFormat, SparringFormatDefinition> = {
   standard: {
     id: 'standard',
-    name: 'Standard',
-    shortDescription: 'A full 4-6-6-3 team-style round with four speeches per side.',
+    name: 'School 4-6-6-3',
+    shortDescription: 'Your school format: Introductor, R1, R2, and Conclusor for both sides.',
     turnCount: 8,
     approximateMinutes: 38,
   },
@@ -47,14 +47,14 @@ type TurnTemplate = Omit<SparringTurn, 'id' | 'speaker'>;
 
 const TURN_TEMPLATES: Record<SparringFormat, TurnTemplate[]> = {
   standard: [
-    { label: 'Pro opening', side: 'pro', kind: 'opening', timeLimitSeconds: 4 * 60 },
-    { label: 'Con opening', side: 'con', kind: 'opening', timeLimitSeconds: 4 * 60 },
-    { label: 'Pro first constructive', side: 'pro', kind: 'constructive', timeLimitSeconds: 6 * 60 },
-    { label: 'Con first constructive', side: 'con', kind: 'constructive', timeLimitSeconds: 6 * 60 },
-    { label: 'Pro second constructive', side: 'pro', kind: 'rebuttal', timeLimitSeconds: 6 * 60 },
-    { label: 'Con second constructive', side: 'con', kind: 'rebuttal', timeLimitSeconds: 6 * 60 },
-    { label: 'Pro conclusion', side: 'pro', kind: 'final', timeLimitSeconds: 3 * 60 },
-    { label: 'Con conclusion', side: 'con', kind: 'final', timeLimitSeconds: 3 * 60 },
+    { label: 'Pro Introductor', side: 'pro', kind: 'introductor', timeLimitSeconds: 4 * 60 },
+    { label: 'Con Introductor', side: 'con', kind: 'introductor', timeLimitSeconds: 4 * 60 },
+    { label: 'Pro R1', side: 'pro', kind: 'r1', timeLimitSeconds: 6 * 60 },
+    { label: 'Con R1', side: 'con', kind: 'r1', timeLimitSeconds: 6 * 60 },
+    { label: 'Pro R2', side: 'pro', kind: 'r2', timeLimitSeconds: 6 * 60 },
+    { label: 'Con R2', side: 'con', kind: 'r2', timeLimitSeconds: 6 * 60 },
+    { label: 'Pro Conclusor', side: 'pro', kind: 'conclusor', timeLimitSeconds: 3 * 60 },
+    { label: 'Con Conclusor', side: 'con', kind: 'conclusor', timeLimitSeconds: 3 * 60 },
   ],
   ld: [
     { label: 'Affirmative constructive', side: 'pro', kind: 'constructive', timeLimitSeconds: 6 * 60 },

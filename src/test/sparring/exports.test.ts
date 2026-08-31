@@ -141,6 +141,16 @@ const SESSION: SparringSession = {
   updatedAt: 3_000,
 };
 
+const SCHOOL_SESSION: SparringSession = {
+  ...SESSION,
+  format: 'standard',
+  turns: buildSparringTurns('standard', 'pro'),
+  speeches: [
+    { ...SESSION.speeches[0], turnId: 'standard-1', role: 'Pro Introductor' },
+    { ...SESSION.speeches[1], turnId: 'standard-2', role: 'Con Introductor' },
+  ],
+};
+
 describe('sparring transcript exports', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -193,5 +203,18 @@ describe('sparring transcript exports', () => {
       return Array.isArray(body) && body.some((row) => Array.isArray(row) && row[0] === 'Logika');
     });
     expect(categoryTable).toBeDefined();
+  });
+
+  it('names the school format and speaker roles in DOCX and PDF exports', async () => {
+    await expect(exportSparringToDocx(SCHOOL_SESSION)).resolves.toBe(true);
+    const docxText = exportMocks.textRuns.map((run) => run.text).filter((value): value is string => typeof value === 'string');
+    expect(docxText).toContain('School 4-6-6-3');
+    expect(docxText).toContain('1. Pro Introductor');
+
+    await expect(exportSparringToPdf(SCHOOL_SESSION)).resolves.toBe(true);
+    const pdf = exportMocks.pdfDocuments.at(-1);
+    const textCalls = ((pdf?.textCalls as unknown[] | undefined) ?? []).flatMap((value) => Array.isArray(value) ? value : [value]);
+    expect(textCalls.some((value) => typeof value === 'string' && value.includes('School 4-6-6-3'))).toBe(true);
+    expect(textCalls).toContain('1. Pro Introductor');
   });
 });

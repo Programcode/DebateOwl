@@ -35,7 +35,7 @@ function speech(overrides: Partial<SparringSpeech> = {}): SparringSpeech {
     turnId: 'standard-2',
     speaker: 'ai',
     side: 'con',
-    role: 'Con opening',
+    role: 'Con Introductor',
     content: 'A narrower policy could address the same concern with fewer tradeoffs.',
     createdAt: 2_000,
     timeLimitSeconds: 240,
@@ -57,7 +57,7 @@ function validSavedRow(id: string) {
         turnId: 'standard-1',
         speaker: 'user',
         side: 'pro',
-        role: 'Pro opening',
+        role: 'Pro Introductor',
         content: 'Universal access removes a direct barrier to participation.',
         createdAt: 1_000,
         timeLimitSeconds: 240,
@@ -93,6 +93,7 @@ describe('sparring-store', () => {
     expect(session.motion).toBe('This House would make public transport free.');
     expect(session.currentTurnIndex).toBe(0);
     expect(session.turns[0].speaker).toBe('user');
+    expect(session.turns[0]).toMatchObject({ label: 'Pro Introductor', kind: 'introductor', timeLimitSeconds: 240 });
     expect(session.timerRemainingSeconds).toBe(240);
     expect(session.timerRunning).toBe(true);
     expect(session.timerDeadline).toBe(241_000);
@@ -104,6 +105,42 @@ describe('sparring-store', () => {
       state?: { currentSession?: { draft?: string } };
     };
     expect(persisted.state?.currentSession?.draft).toBe('My opening claim and warrant.');
+  });
+
+  it('migrates an in-progress legacy standard round to the school roles', async () => {
+    const session = useSparringStore.getState().startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+    useSparringStore.setState({ currentSession: null, savedSessions: [] });
+    sessionStorage.setItem('debate-sparring-storage', JSON.stringify({
+      version: 1,
+      state: {
+        currentSession: {
+          ...session,
+          turns: session.turns.map((turn, index) => ({
+            ...turn,
+            label: index < 2 ? `${turn.side === 'pro' ? 'Pro' : 'Con'} opening` : turn.label,
+            kind: index < 2 ? 'opening' : index < 4 ? 'constructive' : index < 6 ? 'rebuttal' : 'final',
+          })),
+        },
+        savedSessions: [],
+      },
+    }));
+    await useSparringStore.persist.rehydrate();
+
+    expect(getSession().turns.map(({ label, kind }) => ({ label, kind }))).toEqual([
+      { label: 'Pro Introductor', kind: 'introductor' },
+      { label: 'Con Introductor', kind: 'introductor' },
+      { label: 'Pro R1', kind: 'r1' },
+      { label: 'Con R1', kind: 'r1' },
+      { label: 'Pro R2', kind: 'r2' },
+      { label: 'Con R2', kind: 'r2' },
+      { label: 'Pro Conclusor', kind: 'conclusor' },
+      { label: 'Con Conclusor', kind: 'conclusor' },
+    ]);
   });
 
   it('pauses, resumes, and times out against a wall-clock deadline', () => {

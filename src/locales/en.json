@@ -1170,24 +1170,24 @@
     "user": "You",
     "opponent": "AI opponent",
     "format": {
-      "standard": "Standard",
+      "standard": "School 4-6-6-3",
       "ld": "Lincoln-Douglas",
       "pf": "Public Forum"
     },
     "formatDescription": {
-      "standard": "A full 4-6-6-3 team-style round with four speeches per side.",
+      "standard": "Your school format: Introductor, R1, R2, and Conclusor for both sides.",
       "ld": "A focused values round with constructives and two rebuttal stages.",
       "pf": "Constructive, rebuttal, summary, and final focus for both sides."
     },
     "turns": {
-      "standard-1": "Pro opening",
-      "standard-2": "Con opening",
-      "standard-3": "Pro first constructive",
-      "standard-4": "Con first constructive",
-      "standard-5": "Pro second constructive",
-      "standard-6": "Con second constructive",
-      "standard-7": "Pro conclusion",
-      "standard-8": "Con conclusion",
+      "standard-1": "Pro Introductor",
+      "standard-2": "Con Introductor",
+      "standard-3": "Pro R1",
+      "standard-4": "Con R1",
+      "standard-5": "Pro R2",
+      "standard-6": "Con R2",
+      "standard-7": "Pro Conclusor",
+      "standard-8": "Con Conclusor",
       "ld-1": "Affirmative constructive",
       "ld-2": "Negative constructive",
       "ld-3": "First affirmative rebuttal",
@@ -1206,6 +1206,12 @@
       "easy": "Warm-up",
       "medium": "Tournament",
       "hard": "Ruthless"
+    },
+    "roleGuidance": {
+      "introductor": "Open with an exordio, define the key terms, set the framework and thesis, then give the roadmap. Save the full arguments for R1.",
+      "r1": "Build the core arguments with claims, warrants, support, and impacts. Use the final part to anticipate or answer the strongest opposition.",
+      "r2": "Extend R1, answer the opponent directly, identify the central clashes, and compare the impacts. Do not simply repeat the case.",
+      "conclusor": "Add no new arguments. Crystallize the decisive clashes, weigh the round, and close with the reason your side wins."
     },
     "category": {
       "Logic": "Logic",

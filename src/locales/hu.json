@@ -1170,24 +1170,24 @@
     "user": "Te",
     "opponent": "MI ellenfél",
     "format": {
-      "standard": "Standard",
+      "standard": "Iskolai 4-6-6-3",
       "ld": "Lincoln-Douglas",
       "pf": "Public Forum"
     },
     "formatDescription": {
-      "standard": "Teljes 4-6-6-3-as csapatforduló, oldalanként négy beszéddel.",
+      "standard": "Az iskolai formátum: Introductor, R1, R2 és Conclusor mindkét oldalon.",
       "ld": "Értékalapú forduló konstruktív beszédekkel és két cáfolati szakasszal.",
       "pf": "Konstruktív beszédek, cáfolatok, összegzések és végső fókusz mindkét oldalnak."
     },
     "turns": {
-      "standard-1": "Pro nyitóbeszéd",
-      "standard-2": "Kontra nyitóbeszéd",
-      "standard-3": "Pro első érvelése",
-      "standard-4": "Kontra első érvelése",
-      "standard-5": "Pro második érvelése",
-      "standard-6": "Kontra második érvelése",
-      "standard-7": "Pro záróbeszéd",
-      "standard-8": "Kontra záróbeszéd",
+      "standard-1": "Pro Introductor",
+      "standard-2": "Kontra Introductor",
+      "standard-3": "Pro R1",
+      "standard-4": "Kontra R1",
+      "standard-5": "Pro R2",
+      "standard-6": "Kontra R2",
+      "standard-7": "Pro Conclusor",
+      "standard-8": "Kontra Conclusor",
       "ld-1": "Affirmatív érvelés",
       "ld-2": "Negatív érvelés",
       "ld-3": "Első affirmatív cáfolat",
@@ -1206,6 +1206,12 @@
       "easy": "Bemelegítés",
       "medium": "Verseny",
       "hard": "Kíméletlen"
+    },
+    "roleGuidance": {
+      "introductor": "Kezdj exordióval, határozd meg a kulcsfogalmakat, állítsd fel a keretet és a tézist, majd ismertesd az érvelés menetét. A teljes érveket hagyd az R1-re.",
+      "r1": "Építsd fel a fő érveket állítással, indoklással, alátámasztással és hatással. A végén előzd meg vagy válaszold meg a legerősebb ellenérvet.",
+      "r2": "Mélyítsd el az R1 érveit, válaszolj közvetlenül az ellenfélnek, nevezd meg a fő ütközési pontokat, és mérd össze a hatásokat. Ne csak ismételd az esetet.",
+      "conclusor": "Ne hozz új érvet. Kristályosítsd ki a döntő ütközési pontokat, mérlegeld a fordulót, és zárd le azzal, miért a te oldalad nyer."
     },
     "category": {
       "Logic": "Logika",

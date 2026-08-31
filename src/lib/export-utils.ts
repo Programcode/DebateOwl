@@ -32,6 +32,10 @@ function getSparringTurnLabel(speech: SparringSession['speeches'][number]): stri
   return i18n.t(`sparring.turns.${speech.turnId}`, speech.role);
 }
 
+function getSparringFormatLabel(format: SparringSession['format']): string {
+  return i18n.t(`sparring.format.${format}`, format.toUpperCase());
+}
+
 export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean> {
   try {
     if (
@@ -598,7 +602,7 @@ export async function exportSparringToDocx(session: SparringSession): Promise<bo
     const scorecard = session.scorecard;
     const metadata = [
       [i18n.t('export.motion'), session.motion],
-      [i18n.t('export.sparringFormat'), session.format.toUpperCase()],
+      [i18n.t('export.sparringFormat'), getSparringFormatLabel(session.format)],
       [i18n.t('export.side'), getSparringSideLabel(session.userSide)],
       [i18n.t('export.sparringDifficulty'), i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)],
       [i18n.t('export.sparringCompleted'), formatEuropeanDateTime(session.updatedAt)],

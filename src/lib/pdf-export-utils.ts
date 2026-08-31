@@ -45,6 +45,10 @@ function getSparringTurnLabel(speech: SparringSession['speeches'][number]): stri
     return i18n.t(`sparring.turns.${speech.turnId}`, speech.role);
 }
 
+function getSparringFormatLabel(format: SparringSession['format']): string {
+    return i18n.t(`sparring.format.${format}`, format.toUpperCase());
+}
+
 interface PDFHelpers {
     doc: import('jspdf').jsPDF;
     y: number;
@@ -656,12 +660,12 @@ export async function exportSparringToPdf(session: SparringSession): Promise<boo
 
         addHeader(
             i18n.t('export.sparringTranscript'),
-            `${getSparringSideLabel(session.userSide)} | ${session.format.toUpperCase()} | ${i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)}`,
+            `${getSparringSideLabel(session.userSide)} | ${getSparringFormatLabel(session.format)} | ${i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)}`,
         );
 
         addSectionTitle(i18n.t('export.sparringConfiguration'));
         addParagraph(`${i18n.t('export.motion')}: ${session.motion}`);
-        addParagraph(`${i18n.t('export.sparringFormat')}: ${session.format.toUpperCase()}`);
+        addParagraph(`${i18n.t('export.sparringFormat')}: ${getSparringFormatLabel(session.format)}`);
         addParagraph(`${i18n.t('export.side')}: ${getSparringSideLabel(session.userSide)}`);
         addParagraph(`${i18n.t('export.sparringDifficulty')}: ${i18n.t(`sparring.difficulty.${session.difficulty}`, session.difficulty)}`);
 

@@ -28,6 +28,22 @@ describe('Sparring AI contract', () => {
     expect(SparringInputSchema.safeParse({ ...session, action: 'score' }).success).toBe(true);
   });
 
+  it('accepts every first-class school speaker role', () => {
+    for (const [kind, label, seconds] of [
+      ['introductor', 'Con Introductor', 240],
+      ['r1', 'Con R1', 360],
+      ['r2', 'Con R2', 360],
+      ['conclusor', 'Con Conclusor', 180],
+    ] as const) {
+      expect(SparringInputSchema.safeParse({
+        ...session,
+        format: 'standard',
+        action: 'respond',
+        currentTurn: { id: `standard-${kind}`, label, side: 'con', kind, timeLimitSeconds: seconds },
+      }).success).toBe(true);
+    }
+  });
+
   it('caps session context at twelve speeches and requires all score categories', () => {
     const speech = {
       id: 'speech-1', turnId: 'pf-1', speaker: 'user', side: 'pro', role: 'Pro constructive',
@@ -65,5 +81,16 @@ describe('Sparring AI contract', () => {
     const score = await mockJudgeSparringSession(scoreInput);
     expect(SparringScoreResponseSchema.safeParse(score).success).toBe(true);
     expect(score.scorecard.categories.map((category) => category.name)).toEqual(['Logic', 'Evidence', 'Delivery', 'Strategy']);
+  });
+
+  it('makes the mock opponent perform the assigned school role', async () => {
+    const response = await mockGenerateSparringTurn({
+      ...session,
+      format: 'standard',
+      action: 'respond',
+      currentTurn: { id: 'standard-8', label: 'Con Conclusor', side: 'con', kind: 'conclusor', timeLimitSeconds: 180 },
+    });
+    expect(response.speech.strategy).toContain('Add no new argument');
+    expect(response.speech.content).toContain('As Con Conclusor');
   });
 });

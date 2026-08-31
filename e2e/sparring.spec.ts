@@ -91,10 +91,41 @@ test('completes an LD sparring round through mocked opponent turns and judging',
   expect(hasHorizontalOverflow).toBe(false);
 });
 
+test('uses the school 4-6-6-3 roles and coaching in the default round', async ({ page }) => {
+  const actions: string[] = [];
+  await page.route('**/functions/v1/ai**', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
+      return;
+    }
+    const body = route.request().postDataJSON() as { input?: { action?: string } };
+    actions.push(body.input?.action ?? 'unknown');
+    await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ output: opponentSpeech(1) }) });
+  });
+
+  await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('Motion').fill('This House would require community service for graduation.');
+  await page.getByRole('button', { name: 'Start round' }).click();
+
+  const introductor = page.getByRole('textbox', { name: 'Draft for Pro Introductor' });
+  await expect(introductor).toBeVisible();
+  await expect(page.getByText(/Open with an exordio, define the key terms/)).toBeVisible();
+  await introductor.fill('Our framework is civic responsibility. We define service as supervised work that directly benefits the local community.');
+  await page.getByRole('button', { name: 'Submit speech' }).click();
+
+  await expect(page.getByText('Opponent response 1:')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Draft for Pro R1' })).toBeVisible();
+  await expect(page.getByText(/Build the core arguments with claims, warrants, support, and impacts/)).toBeVisible();
+  expect(actions).toEqual(['respond']);
+});
+
 test('keeps the setup usable on mobile with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /School 4-6-6-3 · 8 speeches/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Pro Introductor')).toBeVisible();
+  await expect(page.getByText('Pro Conclusor')).toBeVisible();
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
   expect(hasHorizontalOverflow).toBe(false);

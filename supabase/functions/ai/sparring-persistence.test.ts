@@ -105,6 +105,43 @@ Deno.test("rejects invalid sparring request invariants", () => {
   }
 });
 
+Deno.test("normalizes school-format turns to Introductor, R1, R2, and Conclusor roles", () => {
+  const parsed = parseSparringRequest({
+    action: "respond",
+    sessionId: "00000000-0000-4000-8000-000000000010",
+    motion: "This house would require community service for graduation",
+    userSide: "pro",
+    format: "standard",
+    difficulty: "medium",
+    language: "en",
+    speeches: [{
+      id: "school-speech-1",
+      turnId: "standard-1",
+      speaker: "user",
+      side: "pro",
+      role: "Injected role",
+      content: "The policy connects graduation with civic responsibility.",
+      createdAt: 1,
+      timeLimitSeconds: 999,
+      timeUsedSeconds: 30,
+    }],
+    currentTurn: {
+      id: "standard-2",
+      label: "Injected label",
+      side: "pro",
+      kind: "final",
+      timeLimitSeconds: 999,
+    },
+  });
+  if ("error" in parsed) throw new Error(parsed.error);
+  if (parsed.request.speeches[0].role !== "Pro Introductor" || parsed.request.speeches[0].timeLimitSeconds !== 240) {
+    throw new Error("school Introductor was not restored from the server plan");
+  }
+  if (parsed.request.currentTurn?.label !== "Con Introductor" || parsed.request.currentTurn.kind !== "introductor") {
+    throw new Error("next school role was not restored from the server plan");
+  }
+});
+
 Deno.test("claims and completes a difficulty-mapped session row", async () => {
   let savedRow: Record<string, unknown> = {};
   let completedRow: Record<string, unknown> = {};

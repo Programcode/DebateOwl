@@ -9,14 +9,14 @@ const EXPECTED_TURNS: Record<SparringFormat, Array<{
   seconds: number;
 }>> = {
   standard: [
-    { label: 'Pro opening', side: 'pro', kind: 'opening', seconds: 240 },
-    { label: 'Con opening', side: 'con', kind: 'opening', seconds: 240 },
-    { label: 'Pro first constructive', side: 'pro', kind: 'constructive', seconds: 360 },
-    { label: 'Con first constructive', side: 'con', kind: 'constructive', seconds: 360 },
-    { label: 'Pro second constructive', side: 'pro', kind: 'rebuttal', seconds: 360 },
-    { label: 'Con second constructive', side: 'con', kind: 'rebuttal', seconds: 360 },
-    { label: 'Pro conclusion', side: 'pro', kind: 'final', seconds: 180 },
-    { label: 'Con conclusion', side: 'con', kind: 'final', seconds: 180 },
+    { label: 'Pro Introductor', side: 'pro', kind: 'introductor', seconds: 240 },
+    { label: 'Con Introductor', side: 'con', kind: 'introductor', seconds: 240 },
+    { label: 'Pro R1', side: 'pro', kind: 'r1', seconds: 360 },
+    { label: 'Con R1', side: 'con', kind: 'r1', seconds: 360 },
+    { label: 'Pro R2', side: 'pro', kind: 'r2', seconds: 360 },
+    { label: 'Con R2', side: 'con', kind: 'r2', seconds: 360 },
+    { label: 'Pro Conclusor', side: 'pro', kind: 'conclusor', seconds: 180 },
+    { label: 'Con Conclusor', side: 'con', kind: 'conclusor', seconds: 180 },
   ],
   ld: [
     { label: 'Affirmative constructive', side: 'pro', kind: 'constructive', seconds: 360 },
@@ -67,6 +67,14 @@ describe('sparring formats', () => {
       expect(definition.shortDescription).toBeTruthy();
       expect(definition.approximateMinutes).toBeGreaterThan(0);
     }
+  });
+
+  it('presents the school format as the primary 4-6-6-3 format', () => {
+    expect(getSparringFormat('standard')).toMatchObject({
+      name: 'School 4-6-6-3',
+      turnCount: 8,
+      approximateMinutes: 38,
+    });
   });
 
   it.each([

@@ -1170,24 +1170,24 @@
     "user": "Tú",
     "opponent": "Oponente de IA",
     "format": {
-      "standard": "Estándar",
+      "standard": "Formato escolar 4-6-6-3",
       "ld": "Lincoln-Douglas",
       "pf": "Foro público"
     },
     "formatDescription": {
-      "standard": "Ronda completa de estilo por equipos 4-6-6-3 con cuatro intervenciones por lado.",
+      "standard": "El formato del colegio: Introductor, R1, R2 y Conclusor para ambos lados.",
       "ld": "Ronda de valores centrada con discursos constructivos y dos etapas de refutación.",
       "pf": "Constructivos, refutaciones, resúmenes y enfoque final para ambos lados."
     },
     "turns": {
-      "standard-1": "Apertura a favor",
-      "standard-2": "Apertura en contra",
-      "standard-3": "Primer constructivo a favor",
-      "standard-4": "Primer constructivo en contra",
-      "standard-5": "Segundo constructivo a favor",
-      "standard-6": "Segundo constructivo en contra",
-      "standard-7": "Conclusión a favor",
-      "standard-8": "Conclusión en contra",
+      "standard-1": "Introductor a favor",
+      "standard-2": "Introductor en contra",
+      "standard-3": "R1 a favor",
+      "standard-4": "R1 en contra",
+      "standard-5": "R2 a favor",
+      "standard-6": "R2 en contra",
+      "standard-7": "Conclusor a favor",
+      "standard-8": "Conclusor en contra",
       "ld-1": "Constructivo afirmativo",
       "ld-2": "Constructivo negativo",
       "ld-3": "Primera refutación afirmativa",
@@ -1206,6 +1206,12 @@
       "easy": "Calentamiento",
       "medium": "Torneo",
       "hard": "Implacable"
+    },
+    "roleGuidance": {
+      "introductor": "Abre con un exordio, define los términos clave, fija el marco y la tesis, y presenta la hoja de ruta. Reserva los argumentos completos para R1.",
+      "r1": "Construye los argumentos centrales con afirmaciones, razonamientos, apoyo e impactos. Usa la parte final para anticipar o responder a la oposición más fuerte.",
+      "r2": "Amplía R1, responde directamente al oponente, identifica los choques centrales y compara los impactos. No te limites a repetir el caso.",
+      "conclusor": "No añadas argumentos nuevos. Cristaliza los choques decisivos, sopesa la ronda y cierra explicando por qué gana tu lado."
     },
     "category": {
       "Logic": "Lógica",

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
-import { formatRoundTime } from '@/lib/sparring/formats';
+import { formatRoundTime, type SparringTurnKind } from '@/lib/sparring/formats';
 import type { SparringSession } from '@/lib/stores/sparring-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 
@@ -27,6 +27,13 @@ function wordCount(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed.split(/\s+/).length : 0;
 }
+
+const SCHOOL_ROLE_GUIDANCE: Partial<Record<SparringTurnKind, string>> = {
+  introductor: 'Open with an exordio, define the key terms, set the framework and thesis, then give the roadmap. Save the full arguments for R1.',
+  r1: 'Build the core arguments with claims, warrants, support, and impacts. Use the final part to anticipate or answer the strongest opposition.',
+  r2: 'Extend R1, answer the opponent directly, identify the central clashes, and compare the impacts. Do not simply repeat the case.',
+  conclusor: 'Add no new arguments. Crystallize the decisive clashes, weigh the round, and close with the reason your side wins.',
+};
 
 export function SparringRound({
   session,
@@ -49,6 +56,9 @@ export function SparringRound({
   const currentWordCount = wordCount(session.draft);
   const totalWords = useMemo(() => session.speeches.reduce((sum, speech) => sum + wordCount(speech.content), 0), [session.speeches]);
   const userTurn = currentTurn?.speaker === 'user';
+  const roleGuidance = currentTurn && SCHOOL_ROLE_GUIDANCE[currentTurn.kind]
+    ? t(`sparring.roleGuidance.${currentTurn.kind}`, SCHOOL_ROLE_GUIDANCE[currentTurn.kind])
+    : t('sparring.round.yourSpeechDescription', 'Make the case in the time you have. The opponent will respond to this text.');
   const timerProgress = currentTurn?.timeLimitSeconds ? Math.max(0, Math.min(100, (session.timerRemainingSeconds / currentTurn.timeLimitSeconds) * 100)) : 0;
   const isUrgent = session.timerRemainingSeconds <= 30 && session.timerRemainingSeconds > 0;
 
@@ -81,7 +91,7 @@ export function SparringRound({
       <header className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Badge variant="outline" className="rounded-md">{session.format.toUpperCase()}</Badge>
+            <Badge variant="outline" className="rounded-md">{t(`sparring.format.${session.format}`, session.format.toUpperCase())}</Badge>
             <span>{t('sparring.round.inProgress', 'Round in progress')}</span>
             <span aria-hidden="true">·</span>
             <span>{session.userSide === 'pro' ? t('sparring.round.youArePro', 'You are Pro') : t('sparring.round.youAreCon', 'You are Con')}</span>
@@ -157,7 +167,7 @@ export function SparringRound({
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <CardTitle className="flex items-center gap-2 text-lg"><UserRound className="h-5 w-5 text-primary" aria-hidden="true" /> {t('sparring.round.yourSpeech', 'Your speech')}</CardTitle>
-                        <p className="mt-1 text-sm text-muted-foreground">{t('sparring.round.yourSpeechDescription', 'Make the case in the time you have. The opponent will respond to this text.')}</p>
+                        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{roleGuidance}</p>
                       </div>
                       <Badge variant="outline" className="shrink-0 rounded-md font-mono text-xs tabular-nums">{t('sparring.round.wordCount', '{{count}} words', { count: currentWordCount })}</Badge>
                     </div>

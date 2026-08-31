@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
-import { formatRoundTime } from '@/lib/sparring/formats';
+import { formatRoundTime, getSparringFormat } from '@/lib/sparring/formats';
 import type { SparringScorecard } from '@/lib/ai/schemas/sparring';
 import type { SparringSession } from '@/lib/stores/sparring-store';
 
@@ -28,6 +28,7 @@ function winnerTone(winner: SparringScorecard['winner']) {
 export function SparringScorecard({ session, scorecard, onRestart, onExport, onExportPdf }: SparringScorecardProps) {
   const { t } = useTranslation();
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const formatLabel = t(`sparring.format.${session.format}`, getSparringFormat(session.format).name);
   const chartData = scorecard.categories.map((category) => ({
     category: category.name,
     You: category.userScore,
@@ -141,7 +142,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="flex items-center gap-2 text-xl"><FileText className="h-5 w-5 text-primary" aria-hidden="true" />{t('sparring.scorecard.fullTranscript', 'Full transcript')}</CardTitle>
-            <CardDescription className="mt-1">{t('sparring.scorecard.transcriptDescription', '{{count}} speeches from this {{format}} round.', { count: session.speeches.length, format: session.format.toUpperCase() })}</CardDescription>
+            <CardDescription className="mt-1">{t('sparring.scorecard.transcriptDescription', '{{count}} speeches from this {{format}} round.', { count: session.speeches.length, format: formatLabel })}</CardDescription>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => setTranscriptOpen((open) => !open)} aria-expanded={transcriptOpen}>{transcriptOpen ? t('sparring.scorecard.hideTranscript', 'Hide transcript') : t('sparring.scorecard.showTranscript', 'Show transcript')}</Button>
         </CardHeader>

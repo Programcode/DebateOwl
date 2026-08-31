@@ -420,14 +420,23 @@ export async function mockGenerateSparringTurn(input: SparringRespondInput): Pro
   const targetedPoint = latestPoint
     ? `Your latest claim, “${latestPoint}”, needs a clearer link to the motion.`
     : `The ${input.currentTurn.label.toLowerCase()} needs a clear claim, warrant, and impact.`;
+  const roleMove = {
+    introductor: 'Set the framework, thesis, definitions, and roadmap without spending the full constructive case.',
+    r1: 'Build the core constructive case, then answer the strongest opposing material already available.',
+    r2: 'Extend R1, win the central clash, and compare the competing impacts.',
+    conclusor: 'Add no new argument; crystallize the decisive clashes, weigh them, and close the ballot.',
+    opening: 'Establish the opening case and its central mechanism.',
+    constructive: 'Build the constructive case with a complete warrant and impact.',
+    rebuttal: 'Answer the strongest opposing material and protect the core case.',
+    summary: 'Collapse the round to its central clashes and comparisons.',
+    final: 'Weigh the remaining offense and explain the ballot without adding a new argument.',
+  }[input.currentTurn.kind];
 
   return {
     action: 'respond',
     speech: {
-      content: `On ${input.motion}, the ${input.currentTurn.side} side has to explain why its proposed outcome follows in practice. ${targetedPoint} ${difficultyLine}`,
-      strategy: input.difficulty === 'hard'
-        ? 'Pressure the causal link, then weigh the remaining impact against the motion.'
-        : 'Answer the main point directly and keep the comparison tied to the motion.',
+      content: `As ${input.currentTurn.label}, the job is to ${roleMove.charAt(0).toLowerCase()}${roleMove.slice(1)} On ${input.motion}, the ${input.currentTurn.side} side has to explain why its proposed outcome follows in practice. ${targetedPoint} ${difficultyLine}`,
+      strategy: roleMove,
       targetedPoints: [targetedPoint],
     },
   };
@@ -475,7 +484,9 @@ export async function mockJudgeSparringSession(input: SparringScoreInput): Promi
         userScore: userScores[name],
         aiScore: aiScores[name],
         feedback: name === 'Delivery'
-          ? 'Judged from clarity, organization, and time discipline in the transcript, not vocal performance.'
+          ? input.format === 'standard'
+            ? 'Judged from clarity, organization, time discipline, and fulfillment of the Introductor, R1, R2, and Conclusor roles, not vocal performance.'
+            : 'Judged from clarity, organization, and time discipline in the transcript, not vocal performance.'
           : `The comparison reflects the ${name.toLowerCase()} visible in the completed speeches.`,
       })),
       overallFeedback: `${winnerLabel} The mock judge compared the completed speeches on the motion “${input.motion}”.`,
@@ -484,7 +495,9 @@ export async function mockJudgeSparringSession(input: SparringScoreInput): Promi
         : ['No user speech was submitted, so there was no user argument to weigh.'],
       improvementAreas: [
         'Make each warrant explicit before moving to the impact.',
-        'Name the opponent’s strongest point, then explain why your weighing still wins.',
+        input.format === 'standard'
+          ? 'Keep each school-format speaker in role: Introductor frames, R1 builds, R2 clashes, and Conclusor adds no new argument.'
+          : 'Name the opponent’s strongest point, then explain why your weighing still wins.',
       ],
       winner,
       verdict: winner === 'tie'

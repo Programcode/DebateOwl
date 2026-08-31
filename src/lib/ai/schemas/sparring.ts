@@ -5,6 +5,10 @@ export const SparringFormatSchema = z.enum(['standard', 'ld', 'pf']);
 export const SparringDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 export const SparringSpeakerSchema = z.enum(['user', 'ai']);
 export const SparringTurnKindSchema = z.enum([
+  'introductor',
+  'r1',
+  'r2',
+  'conclusor',
   'opening',
   'constructive',
   'rebuttal',

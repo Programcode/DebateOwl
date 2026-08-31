@@ -56,7 +56,7 @@ export type SparringProviderOutput =
   | { action: "respond"; speech: { content: string; strategy: string; targetedPoints: string[] } }
   | { action: "score"; scorecard: SparringScorecardRecord };
 
-type SparringTurnKind = "opening" | "constructive" | "rebuttal" | "summary" | "final";
+type SparringTurnKind = "introductor" | "r1" | "r2" | "conclusor" | "opening" | "constructive" | "rebuttal" | "summary" | "final";
 
 type PlannedTurn = {
   label: string;
@@ -67,14 +67,14 @@ type PlannedTurn = {
 
 const SPARRING_TURN_PLANS: Record<SparringRequest["format"], readonly PlannedTurn[]> = {
   standard: [
-    { label: "Pro opening", side: "pro", kind: "opening", timeLimitSeconds: 240 },
-    { label: "Con opening", side: "con", kind: "opening", timeLimitSeconds: 240 },
-    { label: "Pro first constructive", side: "pro", kind: "constructive", timeLimitSeconds: 360 },
-    { label: "Con first constructive", side: "con", kind: "constructive", timeLimitSeconds: 360 },
-    { label: "Pro second constructive", side: "pro", kind: "rebuttal", timeLimitSeconds: 360 },
-    { label: "Con second constructive", side: "con", kind: "rebuttal", timeLimitSeconds: 360 },
-    { label: "Pro conclusion", side: "pro", kind: "final", timeLimitSeconds: 180 },
-    { label: "Con conclusion", side: "con", kind: "final", timeLimitSeconds: 180 },
+    { label: "Pro Introductor", side: "pro", kind: "introductor", timeLimitSeconds: 240 },
+    { label: "Con Introductor", side: "con", kind: "introductor", timeLimitSeconds: 240 },
+    { label: "Pro R1", side: "pro", kind: "r1", timeLimitSeconds: 360 },
+    { label: "Con R1", side: "con", kind: "r1", timeLimitSeconds: 360 },
+    { label: "Pro R2", side: "pro", kind: "r2", timeLimitSeconds: 360 },
+    { label: "Con R2", side: "con", kind: "r2", timeLimitSeconds: 360 },
+    { label: "Pro Conclusor", side: "pro", kind: "conclusor", timeLimitSeconds: 180 },
+    { label: "Con Conclusor", side: "con", kind: "conclusor", timeLimitSeconds: 180 },
   ],
   ld: [
     { label: "Affirmative constructive", side: "pro", kind: "constructive", timeLimitSeconds: 360 },
@@ -232,7 +232,7 @@ function parseCurrentTurn(value: unknown): SparringRequest["currentTurn"] | null
   const id = cleanString(value.id, 120);
   const label = cleanString(value.label, 200);
   const side = value.side === "pro" || value.side === "con" ? value.side : null;
-  const kinds: SparringTurnKind[] = ["opening", "constructive", "rebuttal", "summary", "final"];
+  const kinds: SparringTurnKind[] = ["introductor", "r1", "r2", "conclusor", "opening", "constructive", "rebuttal", "summary", "final"];
   const kind = typeof value.kind === "string" ? kinds.find((candidate) => candidate === value.kind) : undefined;
   if (!id || !label || !side || !kind || !integerInRange(value.timeLimitSeconds, 1, 86_400)) return null;
   return { id, label, side, kind, timeLimitSeconds: value.timeLimitSeconds };

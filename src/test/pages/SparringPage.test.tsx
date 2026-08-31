@@ -80,7 +80,7 @@ function speech(overrides: Partial<SparringSpeech> = {}): SparringSpeech {
     turnId: 'standard-1',
     speaker: 'user',
     side: 'pro',
-    role: 'Pro opening',
+    role: 'Pro Introductor',
     content: 'Universal access removes the direct price barrier to participation.',
     createdAt: 1_000,
     timeLimitSeconds: 240,
@@ -113,6 +113,9 @@ describe('SparringPage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /School 4-6-6-3 · 8 speeches/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Pro Introductor')).toBeInTheDocument();
+    expect(screen.getByText('Pro Conclusor')).toBeInTheDocument();
     const motion = screen.getByLabelText('Motion');
     expect(screen.getByRole('button', { name: 'Start round' })).toBeDisabled();
 
@@ -158,7 +161,8 @@ describe('SparringPage', () => {
     fireEvent.change(screen.getByLabelText('Motion'), { target: { value: 'This House would make public transport free.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Start round' }));
 
-    const draft = screen.getByRole('textbox', { name: /Draft for Pro opening/i });
+    expect(screen.getByText(/Open with an exordio, define the key terms/)).toBeInTheDocument();
+    const draft = screen.getByRole('textbox', { name: /Draft for Pro Introductor/i });
     fireEvent.change(draft, { target: { value: 'Universal access removes the price barrier.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
 
@@ -183,7 +187,7 @@ describe('SparringPage', () => {
     renderPage();
     fireEvent.change(screen.getByLabelText('Motion'), { target: { value: 'This House would make public transport free.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Start round' }));
-    fireEvent.change(screen.getByRole('textbox', { name: /Draft for Pro opening/i }), { target: { value: 'Universal access removes the price barrier.' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /Draft for Pro Introductor/i }), { target: { value: 'Universal access removes the price barrier.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Retry opponent turn' })).toBeInTheDocument());
@@ -205,7 +209,7 @@ describe('SparringPage', () => {
     useSparringStore.setState({
       currentSession: {
         ...session,
-        speeches: [speech(), speech({ id: 'speech-2', turnId: 'standard-2', speaker: 'ai', side: 'con', role: 'Con opening', content: 'Targeted support costs less.', createdAt: 2_000 })],
+        speeches: [speech(), speech({ id: 'speech-2', turnId: 'standard-2', speaker: 'ai', side: 'con', role: 'Con Introductor', content: 'Targeted support costs less.', createdAt: 2_000 })],
         currentTurnIndex: session.turns.length,
         phase: 'judging',
         draft: '',
@@ -260,7 +264,7 @@ describe('SparringPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start round' })).not.toBeDisabled());
     fireEvent.click(screen.getByRole('button', { name: 'Start round' }));
 
-    const draft = screen.getByRole('textbox', { name: /Draft for Pro opening/i });
+    const draft = screen.getByRole('textbox', { name: /Draft for Pro Introductor/i });
     fireEvent.change(draft, { target: { value: 'Universal access removes the price barrier.' } });
     act(() => {
       window.dispatchEvent(new Event('offline'));

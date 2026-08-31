@@ -88,3 +88,17 @@ Deno.test("sparring system prompt defines difficulty and transcript-only scoring
   if (!prompt.includes("clarity, organization, and time discipline")) throw new Error("typed delivery guidance missing");
   if (!prompt.includes("Never invent citations")) throw new Error("transcript-only guidance missing");
 });
+
+Deno.test("sparring system prompt teaches the school 4-6-6-3 speaker duties", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: August 31, 2026 (2026)" });
+  for (const expected of ["Introductor", "R1", "R2", "Conclusor", "no new arguments"]) {
+    if (!prompt.includes(expected)) throw new Error(`school role guidance missing: ${expected}`);
+  }
+});
+
+Deno.test("sparring system prompt keeps LD and PF duties separate from school roles", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: August 31, 2026 (2026)" });
+  if (!prompt.includes('When format is "standard"')) throw new Error("school role condition missing");
+  if (!prompt.includes('When format is "ld" or "pf"')) throw new Error("LD/PF role condition missing");
+  if (!prompt.includes("rather than importing the school roles")) throw new Error("format separation missing");
+});
