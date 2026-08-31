@@ -2,6 +2,7 @@ import { assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.t
 
 const browserCalledFunctions = [
   "admin",
+  "announcements",
   "ai",
   "ai-stream",
   "create-checkout",

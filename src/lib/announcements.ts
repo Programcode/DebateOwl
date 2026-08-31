@@ -1,0 +1,183 @@
+import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
+import { z } from 'zod';
+
+export type AnnouncementTargetType = 'all' | 'users';
+
+export interface UserAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  startsAt: string;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminAnnouncement extends UserAnnouncement {
+  targetType: AnnouncementTargetType;
+  targetUserIds: string[] | null;
+  createdBy: string;
+}
+
+export interface CreateAnnouncementInput {
+  title: string;
+  body: string;
+  targetType: AnnouncementTargetType;
+  targetUserIds?: string[];
+  startsAt?: string;
+  expiresAt?: string;
+}
+
+const AnnouncementRowSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  body: z.string(),
+  starts_at: z.iso.datetime({ offset: true }),
+  expires_at: z.iso.datetime({ offset: true }).nullable(),
+  created_at: z.iso.datetime({ offset: true }),
+});
+
+const AdminAnnouncementRowSchema = AnnouncementRowSchema.extend({
+  target_type: z.enum(['all', 'users']),
+  target_user_ids: z.array(z.uuid()).nullable(),
+  created_by: z.uuid(),
+});
+
+const ActiveAnnouncementsResponseSchema = z.object({
+  announcements: z.array(AnnouncementRowSchema),
+});
+
+const AdminAnnouncementsResponseSchema = z.object({
+  announcements: z.array(AdminAnnouncementRowSchema),
+});
+
+const CreateAnnouncementResponseSchema = z.object({
+  announcement: AdminAnnouncementRowSchema,
+});
+
+type AnnouncementRow = z.infer<typeof AnnouncementRowSchema>;
+type AdminAnnouncementRow = z.infer<typeof AdminAnnouncementRowSchema>;
+
+async function requestFunction({
+  functionName,
+  action,
+  method = 'GET',
+  body,
+  signal,
+}: {
+  functionName: 'admin' | 'announcements';
+  action?: string;
+  method?: 'GET' | 'POST';
+  body?: unknown;
+  signal?: AbortSignal;
+}): Promise<unknown> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const query = action ? `?action=${encodeURIComponent(action)}` : '';
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}${query}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
+  });
+
+  const text = await response.text();
+  let payload: unknown;
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    const message = typeof payload === 'object' && payload !== null && 'error' in payload &&
+      typeof payload.error === 'string'
+      ? payload.error
+      : `Request failed: ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
+function normalizeAnnouncement(row: AnnouncementRow): UserAnnouncement {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    startsAt: row.starts_at,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+  };
+}
+
+function normalizeAdminAnnouncement(row: AdminAnnouncementRow): AdminAnnouncement {
+  return {
+    ...normalizeAnnouncement(row),
+    targetType: row.target_type,
+    targetUserIds: row.target_user_ids,
+    createdBy: row.created_by,
+  };
+}
+
+function toIsoOrUndefined(value: string | undefined) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+}
+
+export async function listActiveAnnouncements(signal?: AbortSignal): Promise<UserAnnouncement[]> {
+  const payload = await requestFunction({
+    functionName: 'announcements',
+    signal,
+  });
+  const response = ActiveAnnouncementsResponseSchema.parse(payload);
+  return response.announcements.map(normalizeAnnouncement);
+}
+
+export async function dismissAnnouncement(announcementId: string): Promise<void> {
+  await requestFunction({
+    functionName: 'announcements',
+    action: 'dismiss',
+    method: 'POST',
+    body: { announcementId },
+  });
+}
+
+export async function listAdminAnnouncements(signal?: AbortSignal): Promise<AdminAnnouncement[]> {
+  const payload = await requestFunction({
+    functionName: 'admin',
+    action: 'announcements',
+    signal,
+  });
+  const response = AdminAnnouncementsResponseSchema.parse(payload);
+  return response.announcements.map(normalizeAdminAnnouncement);
+}
+
+export async function createAnnouncement(input: CreateAnnouncementInput): Promise<AdminAnnouncement> {
+  const payload = await requestFunction({
+    functionName: 'admin',
+    action: 'create-announcement',
+    method: 'POST',
+    body: {
+      ...input,
+      targetUserIds: input.targetType === 'users' ? input.targetUserIds : undefined,
+      startsAt: toIsoOrUndefined(input.startsAt),
+      expiresAt: toIsoOrUndefined(input.expiresAt),
+    },
+  });
+  const response = CreateAnnouncementResponseSchema.parse(payload);
+  return normalizeAdminAnnouncement(response.announcement);
+}
+
+export async function deleteAnnouncement(announcementId: string): Promise<void> {
+  await requestFunction({
+    functionName: 'admin',
+    action: 'delete-announcement',
+    method: 'POST',
+    body: { announcementId },
+  });
+}

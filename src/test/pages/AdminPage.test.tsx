@@ -377,4 +377,138 @@ describe('AdminPage Integration', () => {
         expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
         expect(screen.getByText('7 requests missing token data')).toBeInTheDocument();
     });
+
+    it('creates an announcement from the admin tab and adds it to history', async () => {
+        const createdBody: Record<string, unknown> = {};
+        const emptyStats = {
+            totals: { requests: 0, cost: 0, successRate: 100 },
+            daily: [] as unknown[],
+            byFeature: {},
+            byUser: [] as unknown[],
+        };
+
+        globalFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(emptyStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            }
+            if (url.includes('action=promo-codes')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            }
+            if (url.includes('action=subscribers')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ subscribers: [] }) };
+            }
+            if (url.includes('action=announcements')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ announcements: [] }) };
+            }
+            if (url.includes('action=create-announcement')) {
+                Object.assign(createdBody, JSON.parse(String(init?.body ?? '{}')));
+                return {
+                    ok: true,
+                    status: 201,
+                    text: async () => JSON.stringify({
+                        announcement: {
+                            id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+                            title: createdBody.title,
+                            body: createdBody.body,
+                            target_type: createdBody.targetType,
+                            target_user_ids: null,
+                            starts_at: '2026-08-31T12:00:00+00:00',
+                            expires_at: null,
+                            created_by: '99999999-9999-4999-8999-999999999999',
+                            created_at: '2026-08-31T12:00:00+00:00',
+                        },
+                    }),
+                };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Announcements' }), { button: 0 });
+
+        await screen.findByText('No announcements yet');
+        fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Service update' } });
+        fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'DebateLab is back online.' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create announcement' }));
+
+        await waitFor(() => expect(createdBody.title).toBe('Service update'));
+        expect(createdBody.body).toBe('DebateLab is back online.');
+        expect(createdBody.targetType).toBe('all');
+        expect(await screen.findByText('Service update')).toBeInTheDocument();
+        expect(screen.getByText('DebateLab is back online.')).toBeInTheDocument();
+    });
+
+    it('lists and deletes an existing announcement after confirmation', async () => {
+        const announcementId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+        const emptyStats = {
+            totals: { requests: 0, cost: 0, successRate: 100 },
+            daily: [] as unknown[],
+            byFeature: {},
+            byUser: [] as unknown[],
+        };
+        const deleteBody: Record<string, unknown> = {};
+
+        globalFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+            if (url.includes('action=stats')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify(emptyStats) };
+            }
+            if (url.includes('action=users')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            }
+            if (url.includes('action=promo-codes')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            }
+            if (url.includes('action=subscribers')) {
+                return { ok: true, status: 200, text: async () => JSON.stringify({ subscribers: [] }) };
+            }
+            if (url.includes('action=announcements')) {
+                return {
+                    ok: true,
+                    status: 200,
+                    text: async () => JSON.stringify({
+                        announcements: [{
+                            id: announcementId,
+                            title: 'Remove me',
+                            body: 'This announcement is no longer needed.',
+                            target_type: 'all',
+                            target_user_ids: null,
+                            starts_at: '2026-08-31T12:00:00+00:00',
+                            expires_at: null,
+                            created_by: '99999999-9999-4999-8999-999999999999',
+                            created_at: '2026-08-31T12:00:00+00:00',
+                        }],
+                    }),
+                };
+            }
+            if (url.includes('action=delete-announcement')) {
+                Object.assign(deleteBody, JSON.parse(String(init?.body ?? '{}')));
+                return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Announcements' }), { button: 0 });
+        await screen.findByText('Remove me');
+        fireEvent.click(screen.getByRole('button', { name: 'Delete announcement: Remove me' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Delete announcement' }));
+
+        await waitFor(() => expect(deleteBody.announcementId).toBe(announcementId));
+        expect(screen.queryByText('Remove me')).not.toBeInTheDocument();
+    });
 });

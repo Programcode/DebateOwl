@@ -1,6 +1,6 @@
 // src/components/layout/AppLayout.tsx
-import { useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
@@ -24,6 +24,12 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
+import {
+  dismissAnnouncement,
+  listActiveAnnouncements,
+  type UserAnnouncement,
+} from '@/lib/announcements';
 
 const navItems = [
   { path: '/app', key: 'home', icon: Home },
@@ -42,7 +48,51 @@ const navItems = [
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState<UserAnnouncement[]>([]);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
+  const dismissedAnnouncementIds = useRef(new Set<string>());
   const { t } = useTranslation();
+  const location = useLocation();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadAnnouncements = async () => {
+      try {
+        const active = await listActiveAnnouncements(controller.signal);
+        if (!controller.signal.aborted) {
+          setAnnouncements(active.filter(
+            (announcement) => !dismissedAnnouncementIds.current.has(announcement.id),
+          ));
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.warn('[Announcements] Unable to load', error instanceof Error ? error.message : 'Unknown error');
+          setAnnouncements([]);
+        }
+      }
+    };
+    setDismissError(null);
+    void loadAnnouncements();
+    return () => controller.abort();
+  }, [location.pathname]);
+
+  const handleDismissAnnouncement = async (announcementId: string) => {
+    try {
+      setDismissingId(announcementId);
+      setDismissError(null);
+      await dismissAnnouncement(announcementId);
+      dismissedAnnouncementIds.current.add(announcementId);
+      setAnnouncements((current) => current.filter((announcement) => announcement.id !== announcementId));
+    } catch (error) {
+      setDismissError({
+        announcementId,
+        message: error instanceof Error ? error.message : 'Could not dismiss this announcement.',
+      });
+    } finally {
+      setDismissingId(null);
+    }
+  };
 
   return (
     <div className="native-safe-screen flex flex-col bg-background">
@@ -127,6 +177,17 @@ export function AppLayout() {
           </nav>
         )}
       </header>
+
+      {announcements[0] && (
+        <AnnouncementBanner
+          announcement={announcements[0]}
+          position={1}
+          total={announcements.length}
+          dismissing={dismissingId === announcements[0].id}
+          error={dismissError?.announcementId === announcements[0].id ? dismissError.message : null}
+          onDismiss={() => handleDismissAnnouncement(announcements[0].id)}
+        />
+      )}
 
       {/* Main Content */}
       <main className="native-main-content flex-1">
