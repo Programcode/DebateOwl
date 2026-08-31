@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hydrateSessionStore = useSessionStore((state) => state.hydrateFromServer);
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
   const hydrateSparringStore = useSparringStore((state) => state.hydrateSavedSessions);
+  const prepareSparringStore = useSparringStore((state) => state.prepareForUser);
   const resetSessionStore = useSessionStore((state) => state.resetLocalData);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
   const resetSparringStore = useSparringStore((state) => state.resetLocalData);
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hydrateStores = (userId?: string) => {
       if (!userId || hydratedUserId === userId) return;
       hydratedUserId = userId;
+      prepareSparringStore(userId);
       Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
       Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
       Promise.resolve(hydrateSparringStore()).catch((err) => console.warn('[Auth] hydrateSparringStore failed:', err));
@@ -186,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }, [hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,

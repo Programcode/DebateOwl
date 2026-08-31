@@ -65,6 +65,7 @@ export function AppLayout() {
                 key={item.path}
                 to={item.path}
                 end={item.path === '/app'}
+                aria-label={t(`nav.${item.key}`)}
                 data-tour={`nav-${item.key}`}
                 className={cn(
                   "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap",

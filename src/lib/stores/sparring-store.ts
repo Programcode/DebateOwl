@@ -44,6 +44,7 @@ interface StartSessionInput {
 }
 
 interface SparringStoreState {
+  ownerUserId: string | null;
   currentSession: SparringSession | null;
   savedSessions: SparringSession[];
   hydrated: boolean;
@@ -57,6 +58,7 @@ interface SparringStoreState {
   appendAiSpeech: (speech: SparringSpeech, now?: number) => SparringSession | null;
   completeSession: (scorecard: SparringScorecard, now?: number) => SparringSession | null;
   hydrateSavedSessions: () => Promise<void>;
+  prepareForUser: (userId: string) => void;
   loadSavedSession: (id: string) => void;
   deleteSavedSession: (id: string) => Promise<void>;
   abandonSession: () => void;
@@ -100,11 +102,12 @@ const PersistedSparringSessionSchema = z.object({
 });
 
 const PersistedSparringStateSchema = z.object({
+  ownerUserId: z.string().nullable().optional(),
   currentSession: PersistedSparringSessionSchema.nullable().optional(),
   savedSessions: z.array(PersistedSparringSessionSchema).optional(),
 });
 
-type PersistedSparringState = Pick<SparringStoreState, 'currentSession' | 'savedSessions'>;
+type PersistedSparringState = Pick<SparringStoreState, 'ownerUserId' | 'currentSession' | 'savedSessions'>;
 const MAX_SAVED_SESSIONS = 50;
 const PERSIST_DELAY_MS = 250;
 let pendingStorageWrite: { name: string; value: string } | null = null;
@@ -160,13 +163,14 @@ if (typeof window !== 'undefined') window.addEventListener('pagehide', flushPend
 
 function migratePersistedSparringState(value: unknown): PersistedSparringState {
   const parsed = PersistedSparringStateSchema.safeParse(value);
-  if (!parsed.success) return { currentSession: null, savedSessions: [] };
+  if (!parsed.success) return { ownerUserId: null, currentSession: null, savedSessions: [] };
   const rebuildTurns = (session: z.output<typeof PersistedSparringSessionSchema>): SparringSession => ({
     ...session,
     timerDeadline: session.timerDeadline ?? null,
     turns: buildSparringTurns(session.format, session.userSide),
   });
   return {
+    ownerUserId: parsed.data.ownerUserId ?? null,
     currentSession: parsed.data.currentSession ? rebuildTurns(parsed.data.currentSession) : null,
     savedSessions: (parsed.data.savedSessions ?? []).map(rebuildTurns),
   };
@@ -264,6 +268,7 @@ function parseSavedRows(value: unknown): SparringSession[] {
 export const useSparringStore = create<SparringStoreState>()(
   persist(
     (set, get) => ({
+      ownerUserId: null as string | null,
       currentSession: null as SparringSession | null,
       savedSessions: [] as SparringSession[],
       hydrated: false,
@@ -386,6 +391,12 @@ export const useSparringStore = create<SparringStoreState>()(
         return completed;
       },
 
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        hydrationEpoch += 1;
+        set({ ownerUserId: userId, currentSession: null, savedSessions: [], hydrated: false });
+      },
+
       hydrateSavedSessions: async () => {
         if (get().hydrated) return;
         const epoch = hydrationEpoch;
@@ -428,7 +439,7 @@ export const useSparringStore = create<SparringStoreState>()(
       abandonSession: () => set({ currentSession: null }),
       resetLocalData: () => {
         hydrationEpoch += 1;
-        set({ currentSession: null, savedSessions: [], hydrated: false });
+        set({ ownerUserId: null, currentSession: null, savedSessions: [], hydrated: false });
       },
     }),
     {
@@ -441,6 +452,7 @@ export const useSparringStore = create<SparringStoreState>()(
         ...migratePersistedSparringState(persistedState),
       }),
       partialize: (state) => ({
+        ownerUserId: state.ownerUserId,
         currentSession: state.currentSession,
         savedSessions: state.savedSessions.slice(0, MAX_SAVED_SESSIONS),
       }),

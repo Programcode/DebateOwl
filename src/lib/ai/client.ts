@@ -52,6 +52,15 @@ interface AIRequestOptions {
   signal?: AbortSignal;
 }
 
+function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(new DOMException('The request was canceled.', 'AbortError'));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    Promise.resolve().then(operation).then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
 interface AIRequestSource {
   title: string;
   content: string;
@@ -299,35 +308,6 @@ async function callSupabaseAI(
     : selectedSources;
 
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-
-  // Log request details in development
-  if (DEBUG) {
-    console.log(`[AI Request ${requestId}]`, {
-      feature,
-      provider,
-      model: config.model,
-      hasAccessToken: !!accessToken,
-      activeSources: activeSources.length,
-    });
-  }
-
-  // Require authentication for AI features
-  if (!accessToken) {
-    throw new AIAuthError('Please sign in to use AI features', { requestId });
-  }
-
-  const requestBody = {
-    feature,
-    input,
-    provider,
-    model: config.model,
-    temperature: config.temperature,
-    customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
-    sources: activeSources,
-  };
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -337,6 +317,33 @@ async function callSupabaseAI(
   else options.signal?.addEventListener('abort', abortFromCaller, { once: true });
 
   try {
+    const { data: sessionData } = await waitForAbortable(() => supabase.auth.getSession(), controller.signal);
+    const accessToken = sessionData.session?.access_token;
+
+    if (DEBUG) {
+      console.log(`[AI Request ${requestId}]`, {
+        feature,
+        provider,
+        model: config.model,
+        hasAccessToken: !!accessToken,
+        activeSources: activeSources.length,
+      });
+    }
+
+    if (!accessToken) {
+      throw new AIAuthError('Please sign in to use AI features', { requestId });
+    }
+
+    const requestBody = {
+      feature,
+      input,
+      provider,
+      model: config.model,
+      temperature: config.temperature,
+      customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
+      sources: activeSources,
+    };
+
     const { data, error } = await supabase.functions.invoke('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: requestBody,

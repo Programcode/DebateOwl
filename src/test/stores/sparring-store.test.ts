@@ -78,7 +78,7 @@ describe('sparring-store', () => {
     localStorage.clear();
     sessionStorage.clear();
     resetMockState();
-    useSparringStore.setState({ currentSession: null, savedSessions: [], hydrated: false });
+    useSparringStore.setState({ ownerUserId: null, currentSession: null, savedSessions: [], hydrated: false });
   });
 
   it('starts a session with a live user timer and preserves the draft without writing on every keystroke', () => {
@@ -161,6 +161,31 @@ describe('sparring-store', () => {
     await useSparringStore.persist.rehydrate();
 
     expect(useSparringStore.getState()).toMatchObject({ currentSession: null, savedSessions: [] });
+  });
+
+  it('clears unowned or cross-user state before hydrating a signed-in user', () => {
+    const session = useSparringStore.getState().startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+    useSparringStore.setState({ savedSessions: [session] });
+
+    useSparringStore.getState().prepareForUser('user-a');
+    expect(useSparringStore.getState()).toMatchObject({ ownerUserId: 'user-a', currentSession: null, savedSessions: [], hydrated: false });
+
+    const ownedSession = useSparringStore.getState().startSession({
+      motion: 'This House supports protected bike lanes.',
+      userSide: 'con',
+      format: 'ld',
+      difficulty: 'hard',
+    });
+    useSparringStore.getState().prepareForUser('user-a');
+    expect(useSparringStore.getState().currentSession?.id).toBe(ownedSession.id);
+
+    useSparringStore.getState().prepareForUser('user-b');
+    expect(useSparringStore.getState()).toMatchObject({ ownerUserId: 'user-b', currentSession: null, savedSessions: [], hydrated: false });
   });
 
   it('pauses, resumes, and times out against a wall-clock deadline', () => {

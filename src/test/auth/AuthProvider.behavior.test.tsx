@@ -15,6 +15,9 @@ const {
   hydrateSettingsStoreMock,
   resetSessionStoreMock,
   resetSettingsStoreMock,
+  hydrateSparringStoreMock,
+  prepareSparringStoreMock,
+  resetSparringStoreMock,
   callbackRef,
   openExternalUrlMock,
 } = vi.hoisted(() => {
@@ -29,6 +32,9 @@ const {
   const hydrateSettingsStoreMock = vi.fn();
   const resetSessionStoreMock = vi.fn();
   const resetSettingsStoreMock = vi.fn();
+  const hydrateSparringStoreMock = vi.fn();
+  const prepareSparringStoreMock = vi.fn();
+  const resetSparringStoreMock = vi.fn();
   const callbackRef: { current: ((event: string, session: any) => void) | null } = { current: null };
   const openExternalUrlMock = vi.fn();
 
@@ -49,6 +55,9 @@ const {
     hydrateSettingsStoreMock,
     resetSessionStoreMock,
     resetSettingsStoreMock,
+    hydrateSparringStoreMock,
+    prepareSparringStoreMock,
+    resetSparringStoreMock,
     callbackRef,
     openExternalUrlMock,
   };
@@ -84,6 +93,14 @@ vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: (selector: (state: any) => any) => selector({
     hydrateFromServer: hydrateSettingsStoreMock,
     resetLocalData: resetSettingsStoreMock,
+  }),
+}));
+
+vi.mock('@/lib/stores/sparring-store', () => ({
+  useSparringStore: (selector: (state: any) => any) => selector({
+    hydrateSavedSessions: hydrateSparringStoreMock,
+    prepareForUser: prepareSparringStoreMock,
+    resetLocalData: resetSparringStoreMock,
   }),
 }));
 
@@ -126,6 +143,7 @@ describe('AuthProvider behavior', () => {
     callbackRef.current = null;
     hydrateSessionStoreMock.mockResolvedValue(undefined);
     hydrateSettingsStoreMock.mockResolvedValue(undefined);
+    hydrateSparringStoreMock.mockResolvedValue(undefined);
     getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     setSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     exchangeCodeForSessionMock.mockResolvedValue({ data: { session: null }, error: null });
@@ -151,6 +169,8 @@ describe('AuthProvider behavior', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('user_1');
     expect(hydrateSessionStoreMock).toHaveBeenCalled();
     expect(hydrateSettingsStoreMock).toHaveBeenCalled();
+    expect(prepareSparringStoreMock).toHaveBeenCalledWith('user_1');
+    expect(hydrateSparringStoreMock).toHaveBeenCalled();
     expect(onAuthStateChangeMock).toHaveBeenCalled();
   });
 
@@ -175,6 +195,8 @@ describe('AuthProvider behavior', () => {
 
     expect(hydrateSessionStoreMock).toHaveBeenCalledTimes(1);
     expect(hydrateSettingsStoreMock).toHaveBeenCalledTimes(1);
+    expect(prepareSparringStoreMock).toHaveBeenCalledTimes(1);
+    expect(hydrateSparringStoreMock).toHaveBeenCalledTimes(1);
   });
 
   it('removes refresh tokens persisted by older clients during startup', async () => {

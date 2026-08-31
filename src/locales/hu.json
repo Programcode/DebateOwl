@@ -1366,7 +1366,7 @@
     "hu": "Magyar"
   },
   "crossfire": {
-    "openFromResult": "Megnyitás a Crossfire-ban",
+    "openFromResult": "Megnyitás a Keresztkérdezésben",
     "validationError": "Kezdés előtt add meg a tételt és az érvelést.",
     "storageError": "A böngésző nem tudta helyben menteni a befejezetlen alkalmat.",
     "noGroundedFinding": "Ehhez nincs a leirat által alátámasztott megállapítás.",

@@ -147,4 +147,9 @@ Deno.test("prompt source library is capped by count, per-source text, and aggreg
   if (oversizedTotal !== MAX_PROMPT_SOURCE_TOTAL_CHARS) {
     throw new Error(`aggregate cap was not enforced: ${oversizedTotal}`);
   }
+
+  const malformed = boundPromptSources([null, {}, { title: "Valid", content: "Evidence", type: "x".repeat(100), origin: "o".repeat(600) }]);
+  if (malformed.length !== 1 || malformed[0].type.length !== 64 || (malformed[0].origin?.length ?? 0) !== 500) {
+    throw new Error("malformed sources were not rejected or metadata was not bounded");
+  }
 });
