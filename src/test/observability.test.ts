@@ -72,7 +72,7 @@ describe("observability primitives", () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     const properties = {
       tool: "generate",
-      format: "bp",
+      format: "pdf",
       durationMs: 123,
       streaming: false,
     };
@@ -123,6 +123,31 @@ describe("observability primitives", () => {
       ...sentryMetricsCountMock.mock.calls,
       ...sentryMetricsDistributionMock.mock.calls,
     ])).not.toContain("private debate content");
+  });
+
+  it("rejects private strings in allowlisted fields and rejects unknown event names", () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
+    vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
+
+    captureProductEvent("ai_request_succeeded", {
+      feature: "private debate content",
+      model: "student@example.com",
+      provider: "openai",
+    });
+    captureProductEvent("student@example.com", { feature: "ask" });
+
+    expect(captureMock).toHaveBeenCalledOnce();
+    expect(captureMock).toHaveBeenCalledWith("ai_request_succeeded", { provider: "openai" });
+    expect(sentryLoggerInfoMock).toHaveBeenCalledOnce();
+    expect(sentryLoggerInfoMock).toHaveBeenCalledWith("Product event", {
+      event_name: "ai_request_succeeded",
+      provider: "openai",
+    });
+    expect(JSON.stringify([
+      ...captureMock.mock.calls,
+      ...sentryLoggerInfoMock.mock.calls,
+      ...sentryMetricsCountMock.mock.calls,
+    ])).not.toMatch(/private debate content|student@example\.com/);
   });
 
   it("does not send exceptions when Sentry is not configured", () => {

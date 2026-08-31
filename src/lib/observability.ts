@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react";
 import posthog from "posthog-js";
+import { DEFAULT_PROVIDERS } from "@/lib/ai/providers/types";
 
 let initialized = false;
 
@@ -22,35 +23,75 @@ export function filterObservabilityBreadcrumb<T extends ConsoleBreadcrumb>(bread
   return isReactCaughtRenderError ? null : breadcrumb;
 }
 
-const PRODUCT_PROPERTY_KEYS = new Set([
-  "durationMs",
-  "errorName",
-  "feature",
-  "format",
-  "model",
-  "provider",
-  "roundIndex",
-  "speechCount",
-  "statusCode",
-  "streaming",
-  "tool",
-  "winner",
+const PRODUCT_EVENT_NAMES = new Set([
+  "ai_request_failed",
+  "ai_request_started",
+  "ai_request_succeeded",
+  "content_exported",
+  "sparring_round_completed",
+  "sparring_session_judged",
+  "tool_opened",
 ]);
+
+const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
+  errorName: new Set([
+    "AIAuthError",
+    "AIModelRestrictionError",
+    "AIProviderError",
+    "AIRateLimitError",
+    "AIResponseError",
+    "AISubscriptionError",
+    "Error",
+    "TimeoutError",
+    "TypeError",
+    "UnknownError",
+  ]),
+  feature: new Set(["ask", "attack", "brainstorm", "crossfire", "factoids", "generate", "sparring"]),
+  format: new Set(["docx", "google_docs", "ld", "pdf", "pf", "standard"]),
+  model: new Set(DEFAULT_PROVIDERS.flatMap((provider) => provider.models.map((model) => model.id))),
+  provider: new Set(DEFAULT_PROVIDERS.map((provider) => provider.id)),
+  tool: new Set([
+    "admin",
+    "ask",
+    "attack",
+    "brainstorm",
+    "crossfire",
+    "factoids",
+    "flowchart",
+    "generate",
+    "history",
+    "library",
+    "settings",
+    "sparring",
+    "timer",
+  ]),
+  winner: new Set(["ai", "tie", "user"]),
+};
 
 type TelemetryAttribute = string | number | boolean;
 
+/** Retains only bounded values from the product telemetry schema. */
 function safeProductProperties(properties?: Record<string, unknown>): Record<string, TelemetryAttribute> {
   if (!properties) return {};
 
   const safeProperties: Record<string, TelemetryAttribute> = {};
   for (const [key, value] of Object.entries(properties)) {
-    if (!PRODUCT_PROPERTY_KEYS.has(key)) continue;
-    if (typeof value === "string" || typeof value === "boolean") safeProperties[key] = value;
-    if (typeof value === "number" && Number.isFinite(value)) safeProperties[key] = value;
+    if (typeof value === "string" && STRING_PROPERTY_VALUES[key]?.has(value)) safeProperties[key] = value;
+    if (key === "streaming" && typeof value === "boolean") safeProperties[key] = value;
+    if (key === "durationMs" && typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 3_600_000) {
+      safeProperties[key] = value;
+    }
+    if ((key === "roundIndex" || key === "speechCount") && Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 100) {
+      safeProperties[key] = Number(value);
+    }
+    if (key === "statusCode" && Number.isInteger(value) && Number(value) >= 100 && Number(value) <= 599) {
+      safeProperties[key] = Number(value);
+    }
   }
   return safeProperties;
 }
 
+/** Initializes configured observability SDKs once with explicit privacy controls. */
 export function initializeObservability(): void {
   if (initialized) return;
   initialized = true;
@@ -100,7 +141,9 @@ export function initializeObservability(): void {
   }
 }
 
+/** Reports a named product event only when its name and properties match the closed schema. */
 export function captureProductEvent(name: string, properties?: Record<string, unknown>): void {
+  if (!PRODUCT_EVENT_NAMES.has(name)) return;
   const safeProperties = safeProductProperties(properties);
 
   if (import.meta.env.VITE_POSTHOG_KEY) {
@@ -128,6 +171,7 @@ export function captureProductEvent(name: string, properties?: Record<string, un
   }
 }
 
+/** Reports a safely constructed exception without allowing telemetry failures into product flows. */
 export function captureException(error: unknown, context?: Record<string, unknown>): void {
   if (!import.meta.env.VITE_SENTRY_DSN) return;
 
