@@ -168,12 +168,117 @@ Deno.test("Exa search keeps caller cancellation active during JSON body read", a
   }
 });
 
+Deno.test("Exa search sends supported first-class filter fields", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  let requestBody: Record<string, unknown> | undefined;
+  Deno.env.set("EXA_API_KEY", "test-key");
+  globalThis.fetch = ((_input: Request | URL | string, init?: RequestInit) => {
+    requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return Promise.resolve(new Response(JSON.stringify({ results: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+  }) as typeof fetch;
+
+  try {
+    await exaSearch({
+      query: "official energy data",
+      includeDomains: ["*.gov", "worldbank.org"],
+      excludeDomains: ["reddit.com"],
+      startPublishedDate: "2024-01-01T00:00:00.000Z",
+      category: "news",
+    });
+    if (!requestBody) throw new Error("search body was not captured");
+    if (requestBody.numResults !== 10) throw new Error("numResults was not sent in Exa's supported casing");
+    if (!Array.isArray(requestBody.includeDomains) || !requestBody.includeDomains.includes("*.gov")) {
+      throw new Error("includeDomains was not sent");
+    }
+    if (requestBody.startPublishedDate !== "2024-01-01T00:00:00.000Z") {
+      throw new Error("startPublishedDate was not sent");
+    }
+    const contents = requestBody.contents as { text?: { maxCharacters?: number } } | undefined;
+    if (contents?.text?.maxCharacters !== 10000) throw new Error("contents maxCharacters used unsupported casing");
+    if ("num_results" in requestBody) throw new Error("legacy snake_case field leaked into request");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
 Deno.test("Exa contents keeps caller cancellation active during JSON body read", async () => {
   const previousApiKey = Deno.env.get("EXA_API_KEY");
   Deno.env.set("EXA_API_KEY", "test-key");
   try {
     await assertStalledJsonReadCancels((signal) => exaGetContents("https://example.com/stalled", signal));
   } finally {
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
+Deno.test("Exa contents sends the documented maxCharacters field", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  let requestBody: Record<string, unknown> | undefined;
+  Deno.env.set("EXA_API_KEY", "test-key");
+  globalThis.fetch = ((_input: Request | URL | string, init?: RequestInit) => {
+    requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return Promise.resolve(new Response(JSON.stringify({ results: [{ text: "content" }] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+  }) as typeof fetch;
+
+  try {
+    await exaGetContents("https://example.com/report");
+    const text = requestBody?.text as { maxCharacters?: number; max_characters?: number } | undefined;
+    if (text?.maxCharacters !== 8000) throw new Error("contents maxCharacters was not sent");
+    if (text?.max_characters !== undefined) throw new Error("legacy contents casing leaked into request");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
+Deno.test("filtered research retries without domain filters when Exa returns no results", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  const bodies: Array<Record<string, unknown>> = [];
+  Deno.env.set("EXA_API_KEY", "test-key");
+  globalThis.fetch = ((_input: Request | URL | string, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    bodies.push(body);
+    const filtered = Array.isArray(body.includeDomains);
+    return Promise.resolve(new Response(JSON.stringify({
+      results: filtered ? [] : [{
+        title: "Official procurement guidance",
+        url: "https://gsa.gov/policy/procurement",
+        text: "Official government procurement policy and supporting evidence with detailed methodology.",
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+  }) as typeof fetch;
+
+  try {
+    const result = await deepResearch("federal procurement reform", "United States", {
+      provider: "openai",
+      model: "test-model",
+      callModel: async () => ({ output: { queries: [] } }),
+    }, {
+      maxFollowUpQueries: 0,
+      maxUrlsToRead: 0,
+      maxSeedQueries: 1,
+      overallTimeoutMs: 1000,
+      preferredSourceType: "government",
+    });
+    if (bodies.length !== 2) throw new Error(`expected filtered request and fallback, got ${bodies.length}`);
+    if (!Array.isArray(bodies[0].includeDomains)) throw new Error("first request was not domain-filtered");
+    if (bodies[1].includeDomains !== undefined) throw new Error("fallback retained includeDomains");
+    if (!result.rankedResults.some((item) => item.url?.includes("gsa.gov"))) throw new Error("fallback result was lost");
+  } finally {
+    globalThis.fetch = originalFetch;
     if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
     else Deno.env.set("EXA_API_KEY", previousApiKey);
   }

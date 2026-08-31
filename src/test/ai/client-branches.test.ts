@@ -501,8 +501,49 @@ describe('AI client branch coverage', () => {
 
     const result = await factoids({ claim: 'Claim', direction: 'for', sourceType: 'any', sourceCount: 3 }, config);
 
-    expect(result.factoids).toHaveLength(3);
-    expect(result.filteredOutCount).toBe(1);
+    expect(result.result.factoids).toHaveLength(3);
+    expect(result.result.filteredOutCount).toBe(1);
+  });
+
+  it('returns and autosaves discovered sources for factoids responses', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: {
+          factoids: [],
+          searchSuggestions: [],
+          warnings: [],
+          verificationStatus: 'complete',
+        },
+        discoveredSources: [{
+          title: 'Factoids source',
+          url: 'https://example.com/factoids',
+          content: 'Evidence content',
+          sourceType: 'government',
+          qualityLabel: 'moderate',
+          qualityScore: 70,
+          query: 'factoids query',
+        }],
+      },
+      error: null,
+    });
+
+    const outcome = await factoids({ claim: 'Claim', direction: 'for', sourceType: 'any', sourceCount: 3 }, config);
+
+    expect(outcome.discoveredSources).toEqual([{
+      title: 'Factoids source',
+      url: 'https://example.com/factoids',
+      content: 'Evidence content',
+      sourceType: 'government',
+      qualityLabel: 'moderate',
+      qualityScore: 70,
+      query: 'factoids query',
+    }]);
+    expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Factoids source',
+      origin: 'https://example.com/factoids',
+      isActive: true,
+      metadata: expect.objectContaining({ capturedVia: 'factoids', qualityLabel: 'moderate' }),
+    }));
   });
 
   it('maps invoke errors with 401 status to AIAuthError', async () => {
@@ -846,7 +887,7 @@ describe('AI client branch coverage', () => {
 
     expect(attack.overallAssessment.score).toBeTypeOf('number');
     expect(ideas.nextSteps).toBeInstanceOf(Array);
-    expect(facts.factoids).toBeInstanceOf(Array);
+    expect(facts.result.factoids).toBeInstanceOf(Array);
     expect(chat.response).toContain('hello');
     expect(invokeMock).not.toHaveBeenCalled();
   }, 15000);

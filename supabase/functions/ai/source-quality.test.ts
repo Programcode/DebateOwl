@@ -1,4 +1,4 @@
-import { buildSearchQueries, rankSearchResults } from "../_shared/source-quality.ts";
+import { buildSearchQueries, buildSearchRequests, rankSearchResults } from "../_shared/source-quality.ts";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -52,9 +52,14 @@ Deno.test("source ranking respects requested government source type", () => {
 });
 
 Deno.test("search query builder adds debate tab queries for tournament claims", () => {
-  const queries = buildSearchQueries("best country in WSDC debate 2026");
+  const requests = buildSearchRequests("best country in WSDC debate 2026");
+  const queries = requests.map((request) => request.query);
   assert(queries.some((query) => /tabbycat|calicotab/i.test(query)), `Expected tab search query, got ${queries.join("; ")}`);
   assert(queries.some((query) => /official/i.test(query)), `Expected official search query, got ${queries.join("; ")}`);
+  assert(
+    requests.some((request) => request.includeDomains?.includes("*.tabbycat.com")),
+    "Expected first-class debate result domain filters",
+  );
 });
 
 Deno.test("search query builder adds policy and statistics source queries", () => {
@@ -67,4 +72,33 @@ Deno.test("search query builder adds legal primary-source queries", () => {
   const queries = buildSearchQueries("new court ruling on social media regulation", "European Union");
   assert(queries.some((query) => /official law court/i.test(query)), `Expected official legal source query, got ${queries.join("; ")}`);
   assert(queries.some((query) => /primary source/i.test(query)), `Expected primary source query, got ${queries.join("; ")}`);
+});
+
+Deno.test("preferred source filters use Exa fields instead of site operators", () => {
+  const government = buildSearchRequests("solar costs", "United States", "government", "2024-2026");
+  assert(government.every((request) => !request.query.includes("site:")), "site operators must not remain in query text");
+  assert(government.some((request) => request.includeDomains?.includes("energy.gov")), "government domains must use includeDomains");
+  assert(
+    government.some((request) => request.startPublishedDate === "2024-01-01T00:00:00.000Z"),
+    "timeframe must use startPublishedDate",
+  );
+  assert(
+    government.some((request) => request.endPublishedDate === "2026-12-31T23:59:59.999Z"),
+    "timeframe must use endPublishedDate",
+  );
+
+  const academic = buildSearchRequests("carbon pricing", "", "academic", "2023");
+  assert(academic.some((request) => request.category === "publication"), "academic search must use publication category");
+
+  const news = buildSearchRequests("election policy", "", "news", "2025-2026");
+  assert(news.some((request) => request.category === "news"), "news search must use news category");
+});
+
+Deno.test("intergovernmental domains satisfy the government source preference", () => {
+  const ranked = rankSearchResults([{
+    title: "World development indicators",
+    url: "https://data.worldbank.org/indicator/NY.GDP.MKTP.CD",
+    content: "World Bank official indicator data with methodology and country statistics.",
+  }], "GDP statistics", "government");
+  assert(ranked[0]?.sourceType === "government", `Expected World Bank to classify as government, got ${ranked[0]?.sourceType}`);
 });

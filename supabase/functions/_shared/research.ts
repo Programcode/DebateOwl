@@ -4,11 +4,13 @@
 // and free of provider-specific code.
 
 import {
-  buildSearchQueries,
+  buildFollowUpSearchRequest,
+  buildSearchRequests,
   formatRankedSearchResults,
   rankSearchResults,
   sourceTitleFromUrl,
   type ExaResult,
+  type ExaSearchRequest,
   type RankedSearchResult,
   type ResearchSource,
 } from "./source-quality.ts";
@@ -252,7 +254,9 @@ export async function fetchJsonWithTimeout<T = unknown>(
 // ============== EXA FUNCTIONS ==============
 
 // exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
-export async function exaSearch(query: string, signal?: AbortSignal): Promise<ExaResult[]> {
+export async function exaSearch(search: string | ExaSearchRequest, signal?: AbortSignal): Promise<ExaResult[]> {
+  const request = typeof search === "string" ? { query: search } : search;
+  const query = request.query;
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
@@ -264,10 +268,10 @@ export async function exaSearch(query: string, signal?: AbortSignal): Promise<Ex
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
       body: JSON.stringify({
-        query,
+        ...request,
         type: "auto",
-        num_results: 10,
-        contents: { text: { max_characters: 10000 } },
+        numResults: 10,
+        contents: { text: { maxCharacters: 10000 } },
       }),
     }, 30000, signal);
     throwIfAborted(signal);
@@ -301,7 +305,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ urls: [url], text: { max_characters: 8000 } }),
+      body: JSON.stringify({ urls: [url], text: { maxCharacters: 8000 } }),
     }, 30000, signal);
     throwIfAborted(signal);
     if (!response.ok) {
@@ -431,15 +435,27 @@ async function deepResearchInner(
   console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
 
   const preferredSourceType = options.preferredSourceType || "any";
-  const seedQueries = buildSearchQueries(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
+  const seedRequests = buildSearchRequests(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
   const allResults: Array<ExaResult & { query: string }> = [];
   const matchesPreferredSourceType = (result: RankedSearchResult) => (
     preferredSourceType === "any" ||
     result.sourceType === preferredSourceType
   );
 
-  const seedResults = await Promise.all(seedQueries.map(async (query) => {
-    const results = await exaSearch(query, signal);
+  const searchWithFallback = async (request: ExaSearchRequest) => {
+    const filtered = await exaSearch(request, signal);
+    if (filtered.length > 0 || (!request.includeDomains && !request.category)) return filtered;
+    const {
+      includeDomains: _includeDomains,
+      category: _category,
+      ...fallbackRequest
+    } = request;
+    return exaSearch(fallbackRequest, signal);
+  };
+
+  const seedResults = await Promise.all(seedRequests.map(async (request) => {
+    const { query } = request;
+    const results = await searchWithFallback(request);
     throwIfAborted(signal);
     const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
@@ -459,7 +475,7 @@ async function deepResearchInner(
     console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
-      const results = await exaSearch(query, signal);
+      const results = await searchWithFallback(buildFollowUpSearchRequest(query, preferredSourceType, options.timeframe));
       throwIfAborted(signal);
       const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
       const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);

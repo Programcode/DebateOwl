@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
 import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
+import type { DiscoveredSource } from '@/lib/ai/client';
 
 vi.mock('@/components/features/ExportToolbar', () => ({
   ExportToolbar: (): null => null,
@@ -34,4 +35,19 @@ test('does not expose source verification while no verification behavior exists'
   render(<FactoidsResults result={result} />);
 
   expect(screen.queryByRole('button', { name: /verify all sources/i })).not.toBeInTheDocument();
+});
+
+test('renders consulted sources with a fallback label for weak sources', () => {
+  const discoveredSources: DiscoveredSource[] = [{
+    title: 'Broad fallback article',
+    url: 'https://example.com/fallback',
+    qualityLabel: 'weak',
+    qualityScore: 20,
+  }];
+
+  render(<FactoidsResults result={result} discoveredSources={discoveredSources} />);
+
+  expect(screen.getByRole('heading', { name: /researched sources/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /broad fallback article/i })).toHaveAttribute('href', discoveredSources[0].url);
+  expect(screen.getByText('fallback context only')).toBeInTheDocument();
 });

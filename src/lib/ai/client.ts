@@ -924,7 +924,7 @@ function validateGenerateOutput(output: unknown): GenerateOutput {
   return parsed.data;
 }
 
-type AutosaveFeature = 'generate' | 'attack' | 'brainstorm';
+type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
 async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
   if (sources.length === 0) return;
@@ -1021,8 +1021,8 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
   };
 }
 
-export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
-  if (config.provider === 'mock') return mockFactoids(input.claim);
+export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<ResultWithSources<FactoidsOutput>> {
+  if (config.provider === 'mock') return { result: await mockFactoids(input.claim), discoveredSources: [] };
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = {
@@ -1031,7 +1031,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     sourceCount: input.sourceCount || 5,
     language,
   } as Record<string, unknown>;
-  const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
+  const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
   const parsed = FactoidsOutputSchema.safeParse(data.output);
   if (!parsed.success) {
     throw new AIResponseError('AI response did not match the expected factoids schema.', {
@@ -1042,10 +1042,16 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
   const allFactoids = parsed.data.factoids;
   const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
   const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
+  const discovered = parseDiscoveredSources(data.discoveredSources);
+  await autosaveDiscoveredSources(discovered, 'factoids');
+
   return {
-    ...parsed.data,
-    factoids: returnedFactoids,
-    filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
+    result: {
+      ...parsed.data,
+      factoids: returnedFactoids,
+      filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
+    },
+    discoveredSources: discovered,
   };
 }
 

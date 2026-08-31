@@ -51,6 +51,8 @@ Tests: `_shared/research.test.ts`, extended `source-quality.test.ts`, frontend `
 
 Deferred:
 
-- Replace inline `site:gov` query text with Exa's dedicated domain-filter request field (needs a live Exa parameter-verification pass).
-- Handler-level integration test that mocks Exa end-to-end through `Deno.serve`; current coverage is at the extracted-function level plus frontend mocks.
-- Factoids UI panel listing all consulted sources with quality chips.
+- None. The remaining search-quality scope was completed on `t3code/search-quality-completion`:
+  - Exa search requests use the documented camelCase fields (`includeDomains`, `excludeDomains`, `category`, `startPublishedDate`, `endPublishedDate`, `numResults`, and `contents.text.maxCharacters`) instead of inline `site:` operators. Domain/category filters retry without the restrictive filter when they return no results.
+  - The exported Edge handler has a Deno boundary test that mocks authentication, quota, Exa search/content, and the model response, then verifies citation quality and consulted-source provenance in the HTTP response.
+  - Factoids returns `discoveredSources`, autosaves their provenance, and renders the shared consulted-source quality list, including the weak-source fallback warning.
+  - Authenticated Playwright coverage exercises the Factoids flow on isolated desktop and mobile Chromium projects.

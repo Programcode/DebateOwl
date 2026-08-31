@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
 
 vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
@@ -140,8 +141,9 @@ vi.mock('@/components/features/factoids/FactoidsForm', () => ({
 }));
 
 vi.mock('@/components/features/factoids/FactoidsResults', () => ({
-  FactoidsResults: ({ onDiscuss, onSaveSource }: { onDiscuss: () => void, onSaveSource: (t: string, c: string, u?: string) => void }) => (
+  FactoidsResults: ({ onDiscuss, onSaveSource, discoveredSources }: { onDiscuss: () => void, onSaveSource: (t: string, c: string, u?: string) => void, discoveredSources?: unknown[] }) => (
     <div>
+      <output data-testid="factoids-source-count">{discoveredSources?.length ?? 0}</output>
       <button type="button" onClick={() => void onDiscuss()} data-testid="factoids-discuss">factoids-discuss</button>
       <button type="button" onClick={() => onSaveSource('Fact source', 'Fact content', 'https://example.com')} data-testid="factoids-save">
         factoids-save
@@ -165,6 +167,9 @@ describe('Conversation Pages', () => {
     sessionState.brainstormLoading = false;
     sessionState.factoidsResult = null;
     sessionState.factoidsLoading = false;
+    sessionState.setFactoidsResult.mockImplementation((result: any) => {
+      sessionState.factoidsResult = result;
+    });
 
     subErrorState.handleSubscriptionError.mockReturnValue(false);
     mockIsTimeoutError.mockReturnValue(false);
@@ -580,7 +585,8 @@ describe('Conversation Pages', () => {
   });
 
   it('FactoidsPage submits and stores factoid results', async () => {
-    mockFactoids.mockResolvedValueOnce({ factoids: [], searchSuggestions: [], warnings: [], verificationStatus: 'complete' });
+    const factoidsResult: FactoidsOutput = { factoids: [], searchSuggestions: [], warnings: [], verificationStatus: 'complete' };
+    mockFactoids.mockResolvedValueOnce({ result: factoidsResult, discoveredSources: [{ title: 'Consulted source', url: 'https://example.com' }] });
 
     render(
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -595,8 +601,28 @@ describe('Conversation Pages', () => {
     });
 
     expect(sessionState.setFactoidsLoading).toHaveBeenCalledWith(true);
-    expect(sessionState.setFactoidsResult).toHaveBeenCalledWith({ factoids: [], searchSuggestions: [], warnings: [], verificationStatus: 'complete' });
+    expect(sessionState.setFactoidsResult).toHaveBeenCalledWith(factoidsResult);
+    expect(screen.getByTestId('factoids-source-count')).toHaveTextContent('1');
     expect(sessionState.setFactoidsLoading).toHaveBeenCalledWith(false);
+  });
+
+  it('FactoidsPage clears and replaces consulted sources for each request', async () => {
+    const factoidsResult: FactoidsOutput = { factoids: [], searchSuggestions: [], warnings: [], verificationStatus: 'complete' };
+    mockFactoids
+      .mockResolvedValueOnce({ result: factoidsResult, discoveredSources: [{ title: 'First source', url: 'https://example.com/first' }] })
+      .mockResolvedValueOnce({ result: factoidsResult, discoveredSources: [] });
+
+    render(
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <FactoidsPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('factoids-submit'));
+    await waitFor(() => expect(screen.getByTestId('factoids-source-count')).toHaveTextContent('1'));
+
+    fireEvent.click(screen.getByTestId('factoids-submit'));
+    await waitFor(() => expect(screen.getByTestId('factoids-source-count')).toHaveTextContent('0'));
   });
 
   it('FactoidsPage discuss flow navigates and appends assistant response', async () => {
