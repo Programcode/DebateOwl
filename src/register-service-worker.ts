@@ -6,7 +6,7 @@ export function registerServiceWorker() {
   if (isNativeApp()) return;
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
 
-  const hadController = navigator.serviceWorker.controller !== null;
+  let hadController = navigator.serviceWorker.controller !== null;
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(SERVICE_WORKER_URL)
@@ -27,7 +27,10 @@ export function registerServiceWorker() {
   });
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController) return;
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
     if (sessionStorage.getItem('pwa-refreshing') === 'true') return;
     sessionStorage.setItem('pwa-refreshing', 'true');
     window.location.reload();
