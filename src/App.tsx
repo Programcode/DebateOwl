@@ -73,7 +73,8 @@ const TOOL_BY_ROUTE = new Map<string, ToolName>([
 ]);
 
 function getToolForPathname(pathname: string): ToolName | undefined {
-  return TOOL_BY_ROUTE.get(pathname);
+  const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return TOOL_BY_ROUTE.get(normalizedPathname);
 }
 
 // Loading fallback component

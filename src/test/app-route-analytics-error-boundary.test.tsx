@@ -55,6 +55,16 @@ describe("App route observability", () => {
     },
   );
 
+  it("tracks a recognized tool route with a trailing slash", () => {
+    render(
+      <MemoryRouter initialEntries={["/app/generate/"]}>
+        <ToolRouteAnalytics />
+      </MemoryRouter>,
+    );
+
+    expect(observability.captureProductEvent).toHaveBeenCalledWith("tool_opened", { tool: "generate" });
+  });
+
   it("tracks tool openings from location changes without path data", () => {
     function Navigation() {
       const navigate = useNavigate();
