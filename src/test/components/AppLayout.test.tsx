@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
@@ -93,6 +93,36 @@ describe('AppLayout announcements', () => {
 
     await waitFor(() => expect(mockDismissAnnouncement).toHaveBeenCalledWith(announcement.id));
     expect(screen.queryByText('Could not dismiss the old announcement')).not.toBeInTheDocument();
+  });
+
+  it('does not restore a dismissed announcement from a stale route load', async () => {
+    let resolveDismissal: () => void = () => undefined;
+    let resolveStaleLoad: (announcements: UserAnnouncement[]) => void = () => undefined;
+    const pendingDismissal = new Promise<void>((resolve) => {
+      resolveDismissal = resolve;
+    });
+    const staleLoad = new Promise<UserAnnouncement[]>((resolve) => {
+      resolveStaleLoad = resolve;
+    });
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([announcement])
+      .mockReturnValueOnce(staleLoad);
+    mockDismissAnnouncement.mockReturnValue(pendingDismissal);
+
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+    await waitFor(() => expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2));
+
+    resolveDismissal();
+    await waitFor(() => expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument());
+    await act(async () => {
+      resolveStaleLoad([announcement]);
+      await staleLoad;
+    });
+
+    expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
   });
 
   it('keeps the app usable when announcements fail to load', async () => {

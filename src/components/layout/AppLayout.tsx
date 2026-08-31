@@ -1,5 +1,5 @@
 // src/components/layout/AppLayout.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -51,6 +51,7 @@ export function AppLayout() {
   const [announcements, setAnnouncements] = useState<UserAnnouncement[]>([]);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
+  const dismissedAnnouncementIds = useRef(new Set<string>());
   const { t } = useTranslation();
   const location = useLocation();
 
@@ -59,7 +60,11 @@ export function AppLayout() {
     const loadAnnouncements = async () => {
       try {
         const active = await listActiveAnnouncements(controller.signal);
-        if (!controller.signal.aborted) setAnnouncements(active);
+        if (!controller.signal.aborted) {
+          setAnnouncements(active.filter(
+            (announcement) => !dismissedAnnouncementIds.current.has(announcement.id),
+          ));
+        }
       } catch (error) {
         if (!controller.signal.aborted) {
           console.warn('[Announcements] Unable to load', error instanceof Error ? error.message : 'Unknown error');
@@ -77,6 +82,7 @@ export function AppLayout() {
       setDismissingId(announcementId);
       setDismissError(null);
       await dismissAnnouncement(announcementId);
+      dismissedAnnouncementIds.current.add(announcementId);
       setAnnouncements((current) => current.filter((announcement) => announcement.id !== announcementId));
     } catch (error) {
       setDismissError({
