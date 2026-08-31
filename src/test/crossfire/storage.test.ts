@@ -45,8 +45,15 @@ describe('Crossfire draft storage', () => {
   it('clears account-bound data on sign-out or account switch, not token refresh', () => {
     const storage = new MemoryStorage();
     storage.setItem(crossfireStorageKey('user-a'), 'draft');
+    storage.setItem(crossfireStorageKey('user-b'), 'incoming draft');
+    expect(clearCrossfireDraftOnAuthChange(undefined, 'user-b', storage)).toBe(true);
+    expect(storage.getItem(crossfireStorageKey('user-b'))).toBe('incoming draft');
     expect(clearCrossfireDraftOnAuthChange('user-a', 'user-a', storage)).toBe(false);
     expect(storage.getItem(crossfireStorageKey('user-a'))).toBe('draft');
+    expect(clearCrossfireDraftOnAuthChange('user-a', 'user-b', storage)).toBe(true);
+    expect(storage.getItem(crossfireStorageKey('user-a'))).toBeNull();
+    expect(storage.getItem(crossfireStorageKey('user-b'))).toBe('incoming draft');
+    storage.setItem(crossfireStorageKey('user-a'), 'new draft');
     expect(clearCrossfireDraftOnAuthChange('user-a', undefined, storage)).toBe(true);
     expect(storage.getItem(crossfireStorageKey('user-a'))).toBeNull();
   });

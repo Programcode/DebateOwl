@@ -98,8 +98,5 @@ export function clearCrossfireDraftOnAuthChange(
   if (previousUserId) {
     try { storage?.removeItem(crossfireStorageKey(previousUserId)); } catch { /* storage unavailable */ }
   }
-  if (nextUserId) {
-    try { storage?.removeItem(crossfireStorageKey(nextUserId)); } catch { /* storage unavailable */ }
-  }
   return true;
 }

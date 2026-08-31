@@ -1140,7 +1140,7 @@
     "hu": "Magyar"
   },
   "crossfire": {
-    "openFromResult": "Abrir en Crossfire",
+    "openFromResult": "Abrir en Interrogatorio",
     "validationError": "Introduce una resolución y un argumento antes de empezar.",
     "storageError": "Este navegador no pudo guardar localmente la sesión sin terminar.",
     "noGroundedFinding": "No hay una conclusión respaldada por esta transcripción.",
@@ -1196,6 +1196,9 @@
     "errorDesc": "No pudimos obtener una respuesta válida. Tu sesión sigue a salvo.",
     "invalidResponse": "No se pudo leer la respuesta",
     "invalidResponseDesc": "El coach devolvió una respuesta incompleta. Inténtalo de nuevo para continuar.",
+    "invalidDebriefResponseDesc": "El coach devolvió un informe incompleto. Inténtalo de nuevo para continuar.",
+    "interruptedRequest": "La solicitud anterior se interrumpió. Reinténtala para continuar.",
+    "interruptedDebrief": "El informe anterior se interrumpió. Reinténtalo para continuar.",
     "emptyTitle": "Cuando quieras",
     "emptyDesc": "Define una resolución y un argumento para iniciar un interrogatorio preciso.",
     "timerLabel": "Tiempo restante",
@@ -1216,7 +1219,8 @@
     "answerPlaceholder": "Responde a la pregunta del coach...",
     "submitQuestion": "Enviar pregunta",
     "submitAnswer": "Enviar respuesta",
-    "charactersRemaining": "Quedan {{count}} caracteres",
+    "charactersRemaining_one": "Queda {{count}} carácter",
+    "charactersRemaining_other": "Quedan {{count}} caracteres",
     "sessionEnded": "Sesión terminada",
     "sessionEndedTimer": "Se acabó el tiempo.",
     "sessionEndedManual": "Terminaste la sesión.",

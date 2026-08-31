@@ -2,6 +2,7 @@ import {
   CrossfireConfigSchema,
   CrossfireDebriefSchema,
   CrossfireSetupConfigSchema,
+  CrossfireStateSchema,
   CrossfireTurnSchema,
   type CrossfireConfig,
   type CrossfireDebrief,
@@ -31,6 +32,7 @@ export type CrossfireAction =
   }
   | { type: 'debrief-retried' }
   | { type: 'debrief-received'; debrief: CrossfireDebrief }
+  | { type: 'state-restored'; state: CrossfireState }
   | { type: 'session-reset'; prefill?: CrossfirePrefill };
 
 const DEFAULT_CONFIG: CrossfireSetupConfig = {
@@ -169,6 +171,10 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
         endedReason: state.endedReason,
         debrief: debrief.data,
       };
+    }
+    case 'state-restored': {
+      const restored = CrossfireStateSchema.safeParse(action.state);
+      return restored.success ? restored.data : createCrossfireSetupState();
     }
     case 'session-reset':
       return createCrossfireSetupState(action.prefill);

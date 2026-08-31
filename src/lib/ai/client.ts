@@ -24,12 +24,36 @@ import {
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 export const CROSSFIRE_REQUEST_TIMEOUT_MS = 75 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
+const MAX_CROSSFIRE_SOURCE_COUNT = 10;
+const MAX_CROSSFIRE_SOURCE_CHARS = 8_000;
+const MAX_CROSSFIRE_SOURCE_TOTAL_CHARS = 24_000;
 
 interface AIRequestOptions {
   includeActiveSources?: boolean;
   includeCustomSystemPrompt?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
+}
+
+interface AIRequestSource {
+  title: string;
+  content: string;
+  origin?: string;
+  type: string;
+}
+
+function boundCrossfireRequestSources(sources: AIRequestSource[]): AIRequestSource[] {
+  let remaining = MAX_CROSSFIRE_SOURCE_TOTAL_CHARS;
+  return sources.slice(0, MAX_CROSSFIRE_SOURCE_COUNT).flatMap((source) => {
+    if (remaining <= 0) return [];
+    const title = source.title.trim().slice(0, 240);
+    const content = source.content.trim().slice(0, Math.min(MAX_CROSSFIRE_SOURCE_CHARS, remaining));
+    const type = source.type.trim().slice(0, 64);
+    if (!title || !content || !type) return [];
+    remaining -= content.length;
+    const origin = source.origin?.trim().slice(0, 240);
+    return [{ title, content, type, ...(origin ? { origin } : {}) }];
+  });
 }
 
 /** A web source discovered during research, with auditable ranking metadata from the edge function. */
@@ -248,11 +272,14 @@ async function callSupabaseAI(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const activeSources = options.includeActiveSources === false
+  const selectedSources = options.includeActiveSources === false
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
       .map((s) => ({ title: s.title, content: s.content, origin: s.origin, type: s.type }));
+  const activeSources = feature === 'crossfire'
+    ? boundCrossfireRequestSources(selectedSources)
+    : selectedSources;
 
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
   const { data: sessionData } = await supabase.auth.getSession();

@@ -68,7 +68,7 @@ function restoreState(userId: string | undefined, prefill: CrossfirePrefill | un
             status: 'failed',
             expectedReply: restored.request.expectedReply,
             errorKind: 'request',
-            message: 'The previous request was interrupted. Retry it to continue.',
+            message: 'crossfire.interruptedRequest',
           },
         }
       : restored;
@@ -79,7 +79,7 @@ function restoreState(userId: string | undefined, prefill: CrossfirePrefill | un
           ...restored,
           requestStatus: 'failed',
           errorKind: 'request',
-          errorMessage: 'The previous debrief was interrupted. Retry it to continue.',
+          errorMessage: 'crossfire.interruptedDebrief',
         }
       : restored;
   }
@@ -266,7 +266,7 @@ export default function CrossfirePage() {
   useEffect(() => {
     if (stateOwnerId === user?.id) return;
     requestRef.current?.abort();
-    dispatch({ type: 'session-reset' });
+    dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
     setStateOwnerId(user?.id);
     setDraftTurn('');
     setFormError('');
@@ -299,7 +299,16 @@ export default function CrossfirePage() {
         transcript: snapshot.turns,
         expectedReply,
       }, modelConfig, { signal: controller.signal });
-      if (controller.signal.aborted || !('type' in result)) return;
+      if (controller.signal.aborted) return;
+      if (!('type' in result)) {
+        dispatch({
+          type: 'request-failed',
+          expectedReply,
+          errorKind: 'response',
+          message: 'crossfire.invalidResponseDesc',
+        });
+        return;
+      }
       dispatch({
         type: 'ai-turn-received',
         turn: nextTurn(snapshot.turns.length + 1, 'ai', result.type, result.text),
@@ -321,7 +330,15 @@ export default function CrossfirePage() {
         config: snapshot.config,
         transcript: snapshot.turns,
       }, modelConfig, { signal: controller.signal });
-      if (controller.signal.aborted || 'type' in result) return;
+      if (controller.signal.aborted) return;
+      if ('type' in result) {
+        dispatch({
+          type: 'debrief-failed',
+          errorKind: 'response',
+          message: 'crossfire.invalidDebriefResponseDesc',
+        });
+        return;
+      }
       dispatch({ type: 'debrief-received', debrief: result });
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -660,7 +677,9 @@ export default function CrossfirePage() {
                   <AlertCircle className="h-7 w-7 text-destructive" />
                   <div>
                     <h2 className="font-semibold">{state.errorKind === 'timeout' ? t('crossfire.debriefTimeout') : t('crossfire.debriefError')}</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{state.errorMessage}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t(state.errorMessage ?? 'crossfire.errorDesc', { defaultValue: state.errorMessage ?? t('crossfire.errorDesc') })}
+                    </p>
                   </div>
                   <Button data-testid="retry-debrief" onClick={retryDebrief}>
                     <RefreshCw className="mr-2 h-4 w-4" />
@@ -706,7 +725,11 @@ export default function CrossfirePage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{state.request.errorKind === 'timeout' ? t('crossfire.timeout') : state.request.errorKind === 'response' ? t('crossfire.invalidResponse') : t('crossfire.error')}</AlertTitle>
             <AlertDescription className="space-y-3">
-              <p>{state.request.errorKind === 'timeout' ? t('crossfire.timeoutDesc') : state.request.message}</p>
+              <p>
+                {state.request.errorKind === 'timeout'
+                  ? t('crossfire.timeoutDesc')
+                  : t(state.request.message, { defaultValue: state.request.message })}
+              </p>
               <Button data-testid="retry-ai" size="sm" variant="outline" onClick={retryTurn}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {t('crossfire.retryResponse')}

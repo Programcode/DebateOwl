@@ -330,6 +330,25 @@ Deno.test("JSON helper rejects a successful provider body over the byte cap", as
   }
 });
 
+Deno.test("JSON helper accepts a successful provider body exactly at the byte cap", async () => {
+  const originalFetch = globalThis.fetch;
+  const prefix = '{"payload":"';
+  const suffix = '"}';
+  const body = `${prefix}${"x".repeat(MAX_PROVIDER_RESPONSE_BYTES - prefix.length - suffix.length)}${suffix}`;
+  globalThis.fetch = ((_input: Request | URL | string) => Promise.resolve(
+    new Response(body, { headers: { "content-type": "application/json" } }),
+  )) as typeof fetch;
+
+  try {
+    const result = await fetchJsonWithTimeout<{ payload: string }>("https://api.example.test/exact", {}, 500);
+    if (result.data?.payload.length !== MAX_PROVIDER_RESPONSE_BYTES - prefix.length - suffix.length) {
+      throw new Error("exact-limit response body was not preserved");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("JSON helper truncates non-OK provider bodies to the error character cap", async () => {
   const originalFetch = globalThis.fetch;
   const errorText = "provider failure ".repeat(MAX_PROVIDER_ERROR_BODY_CHARS);

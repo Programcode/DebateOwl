@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   userId: 'user-a',
-  crossfire: vi.fn(() => new Promise(() => undefined)),
+  crossfire: vi.fn<() => Promise<unknown>>(() => new Promise(() => undefined)),
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
@@ -28,6 +28,8 @@ vi.mock('@/lib/ai/client', () => ({
 }));
 
 import CrossfirePage from '@/pages/CrossfirePage';
+import { createCrossfireSetupState } from '@/lib/crossfire/reducer';
+import { loadCrossfireDraft, saveCrossfireDraft } from '@/lib/crossfire/storage';
 
 function renderPage() {
   return render(
@@ -40,7 +42,8 @@ function renderPage() {
 describe('CrossfirePage', () => {
   beforeEach(() => {
     mocks.userId = 'user-a';
-    mocks.crossfire.mockClear();
+    mocks.crossfire.mockReset();
+    mocks.crossfire.mockImplementation(() => new Promise(() => undefined));
     localStorage.clear();
   });
 
@@ -70,6 +73,11 @@ describe('CrossfirePage', () => {
     fireEvent.click(screen.getByTestId('submit-turn'));
     expect(screen.getByText('What is the mechanism?')).toBeInTheDocument();
 
+    const userBDraft = createCrossfireSetupState({
+      resolution: 'Resolved: preserve B',
+      argument: 'Account B saved case',
+    });
+    expect(saveCrossfireDraft('user-b', userBDraft, window.localStorage, 10)).toBe(true);
     setItemSpy.mockClear();
     mocks.userId = 'user-b';
     view.rerender(
@@ -78,11 +86,50 @@ describe('CrossfirePage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('crossfire-resolution')).toHaveValue(''));
+    await waitFor(() => expect(screen.getByTestId('crossfire-resolution')).toHaveValue('Resolved: preserve B'));
     expect(screen.queryByText('What is the mechanism?')).not.toBeInTheDocument();
-    expect(screen.getByTestId('crossfire-argument')).toHaveValue('');
+    expect(screen.getByTestId('crossfire-argument')).toHaveValue('Account B saved case');
     const writesForUserB = setItemSpy.mock.calls.filter(([key]) => key === 'debatelab-crossfire-draft:user-b');
     expect(writesForUserB.every(([, value]) => !value.includes('What is the mechanism?'))).toBe(true);
+    expect(loadCrossfireDraft('user-b', window.localStorage)).toEqual(userBDraft);
     setItemSpy.mockRestore();
+  });
+
+  it('moves an unexpected next-turn variant into the retry state', async () => {
+    mocks.crossfire.mockResolvedValueOnce({
+      concessionsSecured: [],
+      controlledQuestions: [],
+      weakOrRepetitiveQuestions: [],
+      evasiveOrIncompleteAnswers: [],
+      missedFollowUps: [],
+      betterFollowUpQuestions: [],
+      strongestExchange: null,
+    });
+    renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+    fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+
+    expect(await screen.findByTestId('retry-ai')).toBeInTheDocument();
+    expect(screen.getByText('The coach returned an incomplete response. Try again to continue.')).toBeInTheDocument();
+  });
+
+  it('moves an unexpected debrief variant into the retry state', async () => {
+    mocks.crossfire
+      .mockResolvedValueOnce({ type: 'answer', text: 'A bounded answer.' })
+      .mockResolvedValueOnce({ type: 'question', text: 'Not a debrief.' });
+    renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+    fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+    expect(await screen.findByText('A bounded answer.')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('end-crossfire'));
+
+    expect(await screen.findByTestId('retry-debrief')).toBeInTheDocument();
+    expect(screen.getByText('The coach returned an incomplete debrief. Try again to continue.')).toBeInTheDocument();
   });
 });

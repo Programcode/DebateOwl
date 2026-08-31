@@ -113,4 +113,15 @@ Deno.test("prompt source library is capped by count, per-source text, and aggreg
   }
   const aggregate = bounded.reduce((sum, source) => sum + source.content.length, 0);
   if (aggregate > MAX_PROMPT_SOURCE_TOTAL_CHARS) throw new Error("aggregate source cap was not applied");
+  const oversized = boundPromptSources(
+    Array.from({ length: MAX_PROMPT_SOURCE_COUNT }, (_, index) => ({
+      title: `Big ${index}`,
+      content: "x".repeat(MAX_PROMPT_SOURCE_CHARS),
+      type: "text",
+    })),
+  );
+  const oversizedTotal = oversized.reduce((sum, source) => sum + source.content.length, 0);
+  if (oversizedTotal !== MAX_PROMPT_SOURCE_TOTAL_CHARS) {
+    throw new Error(`aggregate cap was not enforced: ${oversizedTotal}`);
+  }
 });

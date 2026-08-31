@@ -63,6 +63,28 @@ describe('Crossfire schemas', () => {
     }).success).toBe(false);
   });
 
+  it('rejects duplicate turn IDs and non-consecutive sequences', () => {
+    const secondTurn = {
+      ...turn,
+      id: 'T2',
+      sequence: 2,
+      speaker: 'ai' as const,
+      kind: 'answer' as const,
+    };
+    expect(CrossfireAIInputSchema.safeParse({
+      operation: 'next-turn',
+      config,
+      transcript: [turn, { ...secondTurn, id: turn.id }],
+      expectedReply: 'question',
+    }).success).toBe(false);
+    expect(CrossfireAIInputSchema.safeParse({
+      operation: 'next-turn',
+      config,
+      transcript: [turn, { ...secondTurn, sequence: 3 }],
+      expectedReply: 'question',
+    }).success).toBe(false);
+  });
+
   it('validates strict, bounded AI replies', () => {
     expect(CrossfireReplySchema.parse({ type: 'answer', text: 'The policy reduces vehicle trips.' })).toEqual({
       type: 'answer',

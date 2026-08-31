@@ -307,7 +307,7 @@ describe('AuthProvider behavior', () => {
     expect(resetSessionStoreMock).toHaveBeenCalled();
     expect(resetSettingsStoreMock).toHaveBeenCalled();
     expect(localStorage.getItem(crossfireStorageKey('user_old'))).toBeNull();
-    expect(localStorage.getItem(crossfireStorageKey('user_new'))).toBeNull();
+    expect(localStorage.getItem(crossfireStorageKey('user_new'))).toBe('new-draft');
   });
 
   it('signInWithGoogle gets a Supabase OAuth URL and redirects', async () => {

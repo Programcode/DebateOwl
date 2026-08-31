@@ -124,6 +124,19 @@ describe('crossfireReducer', () => {
       expectedReply: 'answer',
     });
     expect(active.phase === 'active' && active.turns).toHaveLength(0);
+
+    active = crossfireReducer(active, {
+      type: 'user-turn-submitted',
+      turn: turn(1, 'user', 'question'),
+      expectedReply: 'answer',
+    });
+    active = crossfireReducer(active, { type: 'ai-turn-received', turn: turn(2, 'ai', 'answer') });
+    const duplicateId = crossfireReducer(active, {
+      type: 'user-turn-submitted',
+      turn: { ...turn(3, 'user', 'question'), id: 'T1' },
+      expectedReply: 'answer',
+    });
+    expect(duplicateId).toBe(active);
   });
 
   it('patches valid setup fields, rejects invalid patches, and resets with a prefill', () => {
@@ -170,5 +183,14 @@ describe('crossfireReducer', () => {
       debrief: { ...debrief, concessionsSecured: [{ turnIds: [], claim: 'Missing reference' }] },
     });
     expect(invalidDebrief).toBe(debriefing);
+  });
+
+  it('restores only schema-valid state when the session owner changes', () => {
+    const current = configured();
+    const restored = configured('ai-questions-user');
+    expect(crossfireReducer(current, { type: 'state-restored', state: restored })).toEqual(restored);
+
+    const invalid = { phase: 'active', turns: 'not-a-transcript' } as unknown as CrossfireState;
+    expect(crossfireReducer(current, { type: 'state-restored', state: invalid })).toEqual(createCrossfireSetupState());
   });
 });

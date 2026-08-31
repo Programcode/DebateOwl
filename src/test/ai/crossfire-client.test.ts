@@ -92,6 +92,10 @@ const validDebrief: CrossfireDebrief = {
 describe('Crossfire AI client', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
+      { title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
+      { title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
+    );
     mocks.getSession.mockResolvedValue({ data: { session: { access_token: 'token' } } });
   });
 
@@ -107,6 +111,27 @@ describe('Crossfire AI client', () => {
     expect(secondCall.body.sources).toEqual([
       expect.objectContaining({ title: 'Active source', content: 'Grounded evidence' }),
     ]);
+  });
+
+  it('bounds active Crossfire sources before serializing non-ASCII content', async () => {
+    mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
+      ...Array.from({ length: 12 }, (_, index) => ({
+        title: `Source ${index}`,
+        content: '界'.repeat(9_000),
+        origin: `https://example.com/${index}`,
+        type: 'text',
+        isActive: true,
+      })),
+    );
+    mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'A bounded answer.' } }, error: null });
+
+    await crossfire(nextTurnInput(true), config);
+
+    const sources = mocks.invoke.mock.calls[0][1].body.sources as Array<{ content: string }>;
+    expect(sources).toHaveLength(3);
+    expect(sources.every((source) => source.content.length <= 8_000)).toBe(true);
+    expect(sources.reduce((sum, source) => sum + source.content.length, 0)).toBe(24_000);
+    expect(new TextEncoder().encode(JSON.stringify(mocks.invoke.mock.calls[0][1].body)).byteLength).toBeLessThan(200_000);
   });
 
   it('rejects malformed and wrong-kind next-turn responses', async () => {

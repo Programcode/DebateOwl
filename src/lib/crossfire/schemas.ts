@@ -60,6 +60,24 @@ export type CrossfireTurn = z.infer<typeof CrossfireTurnSchema>;
 export const CrossfireTranscriptSchema = z.array(CrossfireTurnSchema)
   .max(MAX_CROSSFIRE_TRANSCRIPT_TURNS)
   .superRefine((turns, context) => {
+    const ids = new Set<string>();
+    turns.forEach((turn, index) => {
+      if (ids.has(turn.id)) {
+        context.addIssue({
+          code: 'custom',
+          path: [index, 'id'],
+          message: `Transcript contains duplicate turn id ${turn.id}`,
+        });
+      }
+      ids.add(turn.id);
+      if (turn.sequence !== index + 1) {
+        context.addIssue({
+          code: 'custom',
+          path: [index, 'sequence'],
+          message: `Transcript turn ${index + 1} must have sequence ${index + 1}`,
+        });
+      }
+    });
     const total = turns.reduce((sum, turn) => sum + turn.text.length, 0);
     if (total > MAX_CROSSFIRE_TRANSCRIPT_CHARS) {
       context.addIssue({

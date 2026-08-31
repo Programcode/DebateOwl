@@ -161,11 +161,6 @@ async function readResponseBytes(
       }
       chunks.push(value);
       totalBytes += value.byteLength;
-      if (totalBytes === maxBytes) {
-        await reader.cancel(new Error("Response body reached its byte limit"));
-        if (!truncate) throw new Error(`Provider response exceeds ${maxBytes} bytes`);
-        return { bytes: joinBytes(chunks, totalBytes), truncated: true };
-      }
     }
     return { bytes: joinBytes(chunks, totalBytes), truncated: false };
   } finally {

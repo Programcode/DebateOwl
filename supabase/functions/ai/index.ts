@@ -97,6 +97,10 @@ import {
   type ResearchDeps,
   type ResearchSource,
 } from "../_shared/research.ts";
+import {
+  MAX_CROSSFIRE_REPLY_CHARS,
+  validateCrossfireDebrief,
+} from "../_shared/crossfire-response.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -454,9 +458,6 @@ export const MAX_CROSSFIRE_TURN_CHARS = 2_000;
 export const MAX_CROSSFIRE_RESOLUTION_CHARS = 500;
 export const MAX_CROSSFIRE_ARGUMENT_CHARS = 16_000;
 export const MAX_CROSSFIRE_SEED_QUESTIONS = 10;
-export const MAX_CROSSFIRE_REPLY_CHARS = 2_500;
-export const MAX_CROSSFIRE_DEBRIEF_ITEMS = 8;
-export const MAX_CROSSFIRE_REFERENCE_IDS = 6;
 const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|text)/i,
   /disregard\s+(all\s+)?(previous|prior|above)/i,
@@ -995,87 +996,6 @@ function crossfireReplyOutput(value: unknown, expectedReply: "question" | "answe
   const text = typeof value.text === "string" ? value.text.trim() : "";
   if (!text || text.length > MAX_CROSSFIRE_REPLY_CHARS) return { error: "Crossfire response text is empty or too long" };
   return { value: { type: expectedReply, text } };
-}
-
-type CrossfireDebriefItem = { turnIds: string[]; claim: string };
-type CrossfireBetterFollowUp = { turnIds: string[]; question: string; reason: string };
-type CrossfireDebriefOutput = {
-  concessionsSecured: CrossfireDebriefItem[];
-  controlledQuestions: CrossfireDebriefItem[];
-  weakOrRepetitiveQuestions: CrossfireDebriefItem[];
-  evasiveOrIncompleteAnswers: CrossfireDebriefItem[];
-  missedFollowUps: CrossfireDebriefItem[];
-  betterFollowUpQuestions: CrossfireBetterFollowUp[];
-  strongestExchange: CrossfireDebriefItem | null;
-};
-
-function crossfireReferenceIds(value: unknown, validIds: Set<string>, fieldName: string): { value: string[] } | { error: string } {
-  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_CROSSFIRE_REFERENCE_IDS) {
-    return { error: `${fieldName}.turnIds must contain 1-${MAX_CROSSFIRE_REFERENCE_IDS} IDs` };
-  }
-  const ids: string[] = [];
-  for (const item of value) {
-    if (typeof item !== "string" || item.trim().length < 1 || item.trim().length > 40 || !validIds.has(item.trim())) {
-      return { error: `${fieldName}.turnIds contains an invalid transcript ID` };
-    }
-    if (ids.includes(item.trim())) return { error: `${fieldName}.turnIds contains a duplicate ID` };
-    ids.push(item.trim());
-  }
-  return { value: ids };
-}
-
-function crossfireDebriefItem(value: unknown, validIds: Set<string>, fieldName: string): { value: CrossfireDebriefItem } | { error: string } {
-  if (!isRecord(value) || !hasOnlyKeys(value, ["turnIds", "claim"])) return { error: `${fieldName} is invalid` };
-  const turnIds = crossfireReferenceIds(value.turnIds, validIds, fieldName);
-  if ("error" in turnIds) return turnIds;
-  if (typeof value.claim !== "string" || !value.claim.trim() || value.claim.trim().length > 800) return { error: `${fieldName}.claim is invalid` };
-  return { value: { turnIds: turnIds.value, claim: value.claim.trim() } };
-}
-
-function validateCrossfireDebrief(value: unknown, transcript: CrossfirePromptTurn[]): { value: CrossfireDebriefOutput } | { error: string } {
-  const fields = ["concessionsSecured", "controlledQuestions", "weakOrRepetitiveQuestions", "evasiveOrIncompleteAnswers", "missedFollowUps", "betterFollowUpQuestions", "strongestExchange"] as const;
-  if (!isRecord(value) || !hasOnlyKeys(value, fields)) return { error: "Crossfire debrief response has unsupported fields" };
-  const validIds = new Set(transcript.map((turn) => turn.id));
-  const items: Record<string, CrossfireDebriefItem[]> = {};
-  for (const field of fields.slice(0, 5)) {
-    if (!Array.isArray(value[field]) || value[field].length > MAX_CROSSFIRE_DEBRIEF_ITEMS) return { error: `${field} must be an array of at most ${MAX_CROSSFIRE_DEBRIEF_ITEMS} items` };
-    items[field] = [];
-    for (let index = 0; index < value[field].length; index += 1) {
-      const item = crossfireDebriefItem(value[field][index], validIds, `${field}[${index}]`);
-      if ("error" in item) return item;
-      items[field].push(item.value);
-    }
-  }
-  if (!Array.isArray(value.betterFollowUpQuestions) || value.betterFollowUpQuestions.length > MAX_CROSSFIRE_DEBRIEF_ITEMS) {
-    return { error: `betterFollowUpQuestions must be an array of at most ${MAX_CROSSFIRE_DEBRIEF_ITEMS} items` };
-  }
-  const betterFollowUpQuestions: CrossfireBetterFollowUp[] = [];
-  for (let index = 0; index < value.betterFollowUpQuestions.length; index += 1) {
-    const item = value.betterFollowUpQuestions[index];
-    if (!isRecord(item) || !hasOnlyKeys(item, ["turnIds", "question", "reason"])) return { error: `betterFollowUpQuestions[${index}] is invalid` };
-    const turnIds = crossfireReferenceIds(item.turnIds, validIds, `betterFollowUpQuestions[${index}]`);
-    if ("error" in turnIds) return turnIds;
-    if (typeof item.question !== "string" || !item.question.trim() || item.question.trim().length > MAX_CROSSFIRE_REPLY_CHARS) return { error: `betterFollowUpQuestions[${index}].question is invalid` };
-    if (typeof item.reason !== "string" || !item.reason.trim() || item.reason.trim().length > 800) return { error: `betterFollowUpQuestions[${index}].reason is invalid` };
-    betterFollowUpQuestions.push({ turnIds: turnIds.value, question: item.question.trim(), reason: item.reason.trim() });
-  }
-  let strongestExchange: CrossfireDebriefItem | null = null;
-  if (value.strongestExchange !== null) {
-    const item = crossfireDebriefItem(value.strongestExchange, validIds, "strongestExchange");
-    if ("error" in item) return item;
-    strongestExchange = item.value;
-  }
-  return {
-    value: {
-      concessionsSecured: items.concessionsSecured,
-      controlledQuestions: items.controlledQuestions,
-      weakOrRepetitiveQuestions: items.weakOrRepetitiveQuestions,
-      evasiveOrIncompleteAnswers: items.evasiveOrIncompleteAnswers,
-      missedFollowUps: items.missedFollowUps,
-      betterFollowUpQuestions,
-      strongestExchange,
-    },
-  };
 }
 
 // ============== MAIN HANDLER ==============
