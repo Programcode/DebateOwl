@@ -5,6 +5,7 @@ import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
 import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate, formatEuropeanDateTime } from './date-format';
+import { captureProductEvent } from './observability';
 
 function formatSparringDuration(seconds: number): string {
   const totalSeconds = Math.max(0, Math.round(seconds));
@@ -192,6 +193,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     const blob = await Packer.toBlob(doc);
     const fileSuffix = result.metadata.side || 'case';
     saveAs(blob, `DebateCase_${fileSuffix}.docx`);
+    captureProductEvent('content_exported', { format: 'docx', tool: 'generate' });
     return true;
   } catch (error) {
     console.error('Failed to export case to DOCX:', error);
@@ -290,6 +292,7 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
 
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `AttackAnalysis_${new Date().toISOString().split('T')[0]}.docx`);
+    captureProductEvent('content_exported', { format: 'docx', tool: 'attack' });
     return true;
   } catch (error) {
     console.error('Failed to export attack to DOCX:', error);
@@ -377,6 +380,7 @@ export async function exportBrainstormToDocx(result: BrainstormOutput): Promise<
     const doc = new Document({ sections: [{ properties: {}, children }] });
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `Brainstorm_${new Date().toISOString().split('T')[0]}.docx`);
+    captureProductEvent('content_exported', { format: 'docx', tool: 'brainstorm' });
     return true;
   } catch (error) {
     console.error('Failed to export brainstorm to DOCX:', error);
@@ -452,6 +456,7 @@ export async function exportFactoidsToDocx(result: FactoidsOutput): Promise<bool
 
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `Factoids_${new Date().toISOString().split('T')[0]}.docx`);
+    captureProductEvent('content_exported', { format: 'docx', tool: 'factoids' });
     return true;
   } catch (error) {
     console.error('Failed to export factoids to DOCX:', error);
@@ -552,6 +557,7 @@ async function callGoogleDocsEdgeFunction(
       sessionStorage.setItem('google_provider_token', respData.newAccessToken);
     }
 
+    captureProductEvent('content_exported', { format: 'google_docs', tool: mode });
     return { success: true, documentUrl: typeof respData.documentUrl === 'string' ? respData.documentUrl : undefined };
   } catch (error) {
     console.error('Failed to export to Google Docs:', error);
@@ -695,6 +701,7 @@ export async function exportSparringToDocx(session: SparringSession): Promise<bo
 
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.docx`);
+    captureProductEvent('content_exported', { format: 'docx', tool: 'sparring' });
     return true;
   } catch (error) {
     console.error('Failed to export sparring transcript to DOCX:', error);

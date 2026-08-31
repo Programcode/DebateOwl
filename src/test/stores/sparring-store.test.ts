@@ -3,8 +3,16 @@ import { supabaseMock, resetMockState, setMockTableResponse } from '../mocks/sup
 import { useSparringStore, type SparringSession } from '@/lib/stores/sparring-store';
 import type { SparringScorecard, SparringSpeech } from '@/lib/ai/schemas/sparring';
 
+const { captureProductEventMock } = vi.hoisted(() => ({
+  captureProductEventMock: vi.fn(),
+}));
+
 vi.mock('@/lib/supabase/client', () => ({
   supabase: supabaseMock,
+}));
+
+vi.mock('@/lib/observability', () => ({
+  captureProductEvent: captureProductEventMock,
 }));
 
 const SCORECARD: SparringScorecard = {
@@ -78,6 +86,7 @@ describe('sparring-store', () => {
     localStorage.clear();
     sessionStorage.clear();
     resetMockState();
+    captureProductEventMock.mockClear();
     useSparringStore.setState({ ownerUserId: null, currentSession: null, savedSessions: [], hydrated: false });
   });
 
@@ -260,6 +269,46 @@ describe('sparring-store', () => {
     expect(getSession().speeches.filter((item) => item.id === opponentSpeech.id)).toHaveLength(1);
   });
 
+  it('captures the zero-based final turn index when the round enters judging', () => {
+    const store = useSparringStore.getState();
+    const session = store.startSession({
+      motion: 'This House would make public transport free.',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+    const finalTurnIndex = session.turns.length - 1;
+    useSparringStore.setState({
+      currentSession: {
+        ...session,
+        currentTurnIndex: finalTurnIndex,
+        timerRemainingSeconds: session.turns[finalTurnIndex].timeLimitSeconds,
+        timerRunning: false,
+        timerDeadline: null,
+      },
+    });
+
+    const completedRound = store.appendAiSpeech(speech({
+      id: 'ai-final-speech',
+      turnId: session.turns[finalTurnIndex].id,
+      role: session.turns[finalTurnIndex].label,
+      timeLimitSeconds: session.turns[finalTurnIndex].timeLimitSeconds,
+    }), 10_000);
+
+    expect(completedRound?.phase).toBe('judging');
+    // The store's currentTurnIndex is zero-based, so the final standard turn is index 7.
+    expect(captureProductEventMock).toHaveBeenCalledWith('sparring_round_completed', {
+      format: 'standard',
+      roundIndex: finalTurnIndex,
+    });
+
+    expect(store.appendAiSpeech(speech({
+      id: 'ai-final-retry',
+      turnId: session.turns[finalTurnIndex].id,
+    }), 11_000)).toBeNull();
+    expect(captureProductEventMock).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects a speech that exceeds the server content limit without advancing', () => {
     const store = useSparringStore.getState();
     store.startSession({
@@ -311,6 +360,14 @@ describe('sparring-store', () => {
     expect(completed?.phase).toBe('complete');
     expect(completed?.scorecard).toEqual(SCORECARD);
     expect(useSparringStore.getState().savedSessions).toEqual([completed]);
+    expect(captureProductEventMock).toHaveBeenCalledWith('sparring_session_judged', {
+      format: 'ld',
+      winner: 'user',
+      speechCount: 0,
+    });
+
+    expect(store.completeSession(SCORECARD, 11_000)).toBeNull();
+    expect(captureProductEventMock).toHaveBeenCalledTimes(1);
   });
 
   it('hydrates only complete rows that pass the nested speech and scorecard schemas', async () => {

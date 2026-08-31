@@ -20,6 +20,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { formatEuropeanDate } from '@/lib/date-format';
+import { captureProductEvent } from '@/lib/observability';
 
 interface UsageStats {
     totals: { requests: number; cost: number; successRate: number; unknownCostRequests?: number };
@@ -235,6 +236,10 @@ export default function AdminPage() {
         };
         loadData();
     }, [toast]);
+
+    useEffect(() => {
+        if (isAdmin === true) captureProductEvent('tool_opened', { tool: 'admin' });
+    }, [isAdmin]);
 
     const handleSetUserRole = async (userId: string, role: string) => {
         try {

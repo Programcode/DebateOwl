@@ -27,6 +27,7 @@ import { useSessionStore } from '../stores/session-store';
 import type { SourceProvenance } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { captureException, captureProductEvent } from '@/lib/observability';
 import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
@@ -50,6 +51,7 @@ interface AIRequestOptions {
   includeCustomSystemPrompt?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
+  transformResponse?: (data: unknown) => unknown;
 }
 
 function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
@@ -286,6 +288,31 @@ export function isAIModelRestrictionError(error: unknown): error is AIModelRestr
   return error instanceof AIModelRestrictionError || (error instanceof Error && error.name === 'AIModelRestrictionError');
 }
 
+export interface AIErrorClassification {
+  errorName: string;
+  statusCode?: number;
+  shouldCaptureException: boolean;
+}
+
+/** Classifies AI failures into stable, privacy-safe telemetry fields. */
+export function classifyAIError(error: unknown, userInitiatedAbort = false): AIErrorClassification {
+  const statusCode = error instanceof AIError ? error.statusCode : undefined;
+  const errorName = error instanceof Error ? error.name : 'UnknownError';
+
+  if (userInitiatedAbort) return { errorName: 'AbortError', shouldCaptureException: false };
+  if (isAIAuthError(error)) return { errorName: 'AIAuthError', statusCode, shouldCaptureException: false };
+  if (isAIRateLimitError(error)) return { errorName: 'AIRateLimitError', statusCode, shouldCaptureException: false };
+  if (isAISubscriptionError(error)) return { errorName: 'AISubscriptionError', statusCode, shouldCaptureException: false };
+  if (isAIModelRestrictionError(error)) return { errorName: 'AIModelRestrictionError', statusCode, shouldCaptureException: false };
+  if (isTimeoutError(error)) return { errorName: 'TimeoutError', statusCode, shouldCaptureException: true };
+  if (error instanceof AIResponseError || (error instanceof Error && error.name === 'AIResponseError')) {
+    return { errorName: 'AIResponseError', statusCode, shouldCaptureException: true };
+  }
+  if (isAIProviderError(error)) return { errorName: 'AIProviderError', statusCode, shouldCaptureException: true };
+
+  return { errorName, statusCode, shouldCaptureException: true };
+}
+
 async function callSupabaseAI(
   feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring' | 'crossfire',
   input: unknown,
@@ -308,6 +335,40 @@ async function callSupabaseAI(
     : selectedSources;
 
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
+  captureProductEvent('ai_request_started', {
+    feature,
+    provider,
+    model: config.model,
+  });
+
+  const reportFailure = (error: unknown, userInitiatedAbort = false): void => {
+    const classification = classifyAIError(error, userInitiatedAbort);
+    const durationMs = Math.round(performance.now() - startTime);
+    const properties = {
+      feature,
+      provider,
+      model: config.model,
+      durationMs,
+      errorName: classification.errorName,
+      statusCode: classification.statusCode,
+    };
+    captureProductEvent('ai_request_failed', properties);
+
+    if (classification.shouldCaptureException) {
+      const safeError = new Error(classification.errorName);
+      safeError.name = classification.errorName;
+      captureException(safeError, {
+        feature,
+        provider,
+        model: config.model,
+        durationMs,
+        errorName: classification.errorName,
+        statusCode: classification.statusCode,
+        requestId,
+      });
+    }
+  };
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -425,27 +486,40 @@ async function callSupabaseAI(
       });
     }
 
-    return data;
+    const response = options.transformResponse ? options.transformResponse(data) : data;
+    captureProductEvent('ai_request_succeeded', {
+      feature,
+      provider,
+      model: config.model,
+      durationMs: Math.round(performance.now() - startTime),
+    });
+    return response;
   } catch (err) {
     // Re-throw our custom errors
     if (err instanceof AIError) {
+      reportFailure(err);
       throw err;
     }
 
     // Handle timeout
     if (err instanceof TimeoutError) {
+      reportFailure(err);
       throw err;
     }
 
     // Handle abort (our timeout triggered)
     if (options.signal?.aborted) {
-      throw options.signal.reason instanceof Error
+      const abortError = options.signal.reason instanceof Error
         ? options.signal.reason
         : new DOMException('The request was canceled.', 'AbortError');
+      reportFailure(abortError, true);
+      throw abortError;
     }
 
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new TimeoutError();
+      const timeoutError = new TimeoutError();
+      reportFailure(timeoutError);
+      throw timeoutError;
     }
 
     // Wrap unknown errors
@@ -453,10 +527,14 @@ async function callSupabaseAI(
 
     // Check if the error message indicates an abort/timeout
     if (message.includes('abort') || message.includes('signal')) {
-      throw new TimeoutError();
+      const timeoutError = new TimeoutError();
+      reportFailure(timeoutError);
+      throw timeoutError;
     }
 
-    throw new AIError(message, { requestId });
+    const wrappedError = new AIError(message, { requestId });
+    reportFailure(wrappedError);
+    throw wrappedError;
   } finally {
     clearTimeout(timeoutId);
     options.signal?.removeEventListener('abort', abortFromCaller);
@@ -552,7 +630,7 @@ export async function crossfire(
     });
   }
 
-  const data = await callSupabaseAI(
+  return await callSupabaseAI(
     'crossfire',
     input.data as unknown as Record<string, unknown>,
     config,
@@ -561,29 +639,31 @@ export async function crossfire(
       includeCustomSystemPrompt: false,
       timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
       signal: options.signal,
+      transformResponse: (rawData) => {
+        const data = rawData as { output: unknown };
+        if (input.data.operation === 'next-turn') {
+          const reply = CrossfireReplySchema.safeParse(data.output);
+          if (!reply.success || reply.data.type !== input.data.expectedReply) {
+            throw new AIResponseError('AI response did not match the expected Crossfire turn.', {
+              details: reply.success
+                ? { expectedReply: input.data.expectedReply, actualReply: reply.data.type }
+                : { issues: reply.error.issues },
+            });
+          }
+          return reply.data;
+        }
+
+        const debrief = CrossfireDebriefSchema.safeParse(data.output);
+        if (!debrief.success) {
+          throw new AIResponseError('AI response did not match the expected Crossfire debrief.', {
+            details: { issues: debrief.error.issues },
+          });
+        }
+        validateCrossfireTurnReferences(input.data, debrief.data);
+        return debrief.data;
+      },
     },
-  ) as { output: unknown };
-
-  if (input.data.operation === 'next-turn') {
-    const reply = CrossfireReplySchema.safeParse(data.output);
-    if (!reply.success || reply.data.type !== input.data.expectedReply) {
-      throw new AIResponseError('AI response did not match the expected Crossfire turn.', {
-        details: reply.success
-          ? { expectedReply: input.data.expectedReply, actualReply: reply.data.type }
-          : { issues: reply.error.issues },
-      });
-    }
-    return reply.data;
-  }
-
-  const debrief = CrossfireDebriefSchema.safeParse(data.output);
-  if (!debrief.success) {
-    throw new AIResponseError('AI response did not match the expected Crossfire debrief.', {
-      details: { issues: debrief.error.issues },
-    });
-  }
-  validateCrossfireTurnReferences(input.data, debrief.data);
-  return debrief.data;
+  ) as CrossfireReply | CrossfireDebrief;
 }
 
 export function mapAIError(
@@ -978,47 +1058,51 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   // Inject global language into input for the edge function
   const language = useSettingsStore.getState().outputLanguage;
   const inputWithLanguage = { ...input, language } as Record<string, unknown>;
-  const data = await callSupabaseAI('generate', inputWithLanguage, config) as { output: unknown; discoveredSources?: unknown };
-  const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
-  const expectedCount = expectedContentionCount(input.length);
-  if (result.contentions.length !== expectedCount) {
-    throw new AIResponseError('AI response did not contain the expected number of contentions.', {
-      details: { expectedCount, actualCount: result.contentions.length },
-    });
-  }
-
-  const discovered = parseDiscoveredSources(data.discoveredSources);
-  await autosaveDiscoveredSources(discovered, 'generate');
-
-  return {
-    result,
-    discoveredSources: discovered,
-  };
+  const response = await callSupabaseAI('generate', inputWithLanguage, config, {
+    transformResponse: (rawData) => {
+      const data = rawData as { output: unknown; discoveredSources?: unknown };
+      const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
+      const expectedCount = expectedContentionCount(input.length);
+      if (result.contentions.length !== expectedCount) {
+        throw new AIResponseError('AI response did not contain the expected number of contentions.', {
+          details: { expectedCount, actualCount: result.contentions.length },
+        });
+      }
+      return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
+    },
+  }) as ResultWithSources<GenerateOutput>;
+  await autosaveDiscoveredSources(response.discoveredSources, 'generate');
+  return response;
 }
 
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
   if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
-  const data = await callSupabaseAI('attack', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
-  const result = validateAttackOutput(data.output);
-  const discovered = parseDiscoveredSources(data.discoveredSources);
-  await autosaveDiscoveredSources(discovered, 'attack');
-
-  return {
-    result,
-    discoveredSources: discovered,
-  };
+  const response = await callSupabaseAI('attack', input as Record<string, unknown>, config, {
+    transformResponse: (rawData) => {
+      const data = rawData as { output: unknown; discoveredSources?: unknown };
+      return {
+        result: validateAttackOutput(data.output),
+        discoveredSources: parseDiscoveredSources(data.discoveredSources),
+      };
+    },
+  }) as ResultWithSources<AttackOutput>;
+  await autosaveDiscoveredSources(response.discoveredSources, 'attack');
+  return response;
 }
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
   if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
-  const data = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config) as { output: unknown; discoveredSources?: unknown };
-  const discovered = parseDiscoveredSources(data.discoveredSources);
-  await autosaveDiscoveredSources(discovered, 'brainstorm');
-
-  return {
-    result: transformBrainstormResponse(data.output as Record<string, unknown>),
-    discoveredSources: discovered,
-  };
+  const response = await callSupabaseAI('brainstorm', input as Record<string, unknown>, config, {
+    transformResponse: (rawData) => {
+      const data = rawData as { output: unknown; discoveredSources?: unknown };
+      return {
+        result: transformBrainstormResponse(data.output as Record<string, unknown>),
+        discoveredSources: parseDiscoveredSources(data.discoveredSources),
+      };
+    },
+  }) as ResultWithSources<BrainstormOutput>;
+  await autosaveDiscoveredSources(response.discoveredSources, 'brainstorm');
+  return response;
 }
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<FactoidsOutput> {
@@ -1031,22 +1115,26 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig): Pr
     sourceCount: input.sourceCount || 5,
     language,
   } as Record<string, unknown>;
-  const data = await callSupabaseAI('factoids', inputWithLanguage, config) as { output: unknown };
-  const parsed = FactoidsOutputSchema.safeParse(data.output);
-  if (!parsed.success) {
-    throw new AIResponseError('AI response did not match the expected factoids schema.', {
-      details: { issues: parsed.error.issues },
-    });
-  }
+  return await callSupabaseAI('factoids', inputWithLanguage, config, {
+    transformResponse: (rawData) => {
+      const data = rawData as { output: unknown };
+      const parsed = FactoidsOutputSchema.safeParse(data.output);
+      if (!parsed.success) {
+        throw new AIResponseError('AI response did not match the expected factoids schema.', {
+          details: { issues: parsed.error.issues },
+        });
+      }
 
-  const allFactoids = parsed.data.factoids;
-  const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
-  const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
-  return {
-    ...parsed.data,
-    factoids: returnedFactoids,
-    filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
-  };
+      const allFactoids = parsed.data.factoids;
+      const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
+      const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
+      return {
+        ...parsed.data,
+        factoids: returnedFactoids,
+        filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
+      };
+    },
+  }) as FactoidsOutput;
 }
 
 export interface AskChatOptions {
@@ -1065,7 +1153,7 @@ export async function askChat(
 ): Promise<AskOutput> {
   const output = config.provider === 'mock'
     ? await mockAsk(message, mode)
-    : (await callSupabaseAI('ask', {
+    : await callSupabaseAI('ask', {
       message,
       history,
       mode,
@@ -1073,14 +1161,19 @@ export async function askChat(
       webSearch: Boolean(options.webSearch),
       prosConsMode: Boolean(options.prosConsMode),
       argumentMapMode: Boolean(options.argumentMapMode),
-    }, config) as { output: unknown }).output;
-  const parsed = AskOutputSchema.safeParse(output);
-  if (!parsed.success) {
-    throw new AIResponseError('AI response did not match the expected ask schema.', {
-      details: { issues: parsed.error.issues },
+    }, config, {
+      transformResponse: (rawData) => {
+        const data = rawData as { output: unknown };
+        const parsed = AskOutputSchema.safeParse(data.output);
+        if (!parsed.success) {
+          throw new AIResponseError('AI response did not match the expected ask schema.', {
+            details: { issues: parsed.error.issues },
+          });
+        }
+        return parsed.data;
+      },
     });
-  }
-  return parsed.data;
+  return output as AskOutput;
 }
 
 function sparringLanguage(language: string): string {
@@ -1169,8 +1262,9 @@ async function generateSparringTurnOnce(
     return validateSparringTurnResponse(await mockGenerateSparringTurn(inputResult.data));
   }
 
-  const data = await callSupabaseAI('sparring', inputResult.data, config) as { output: unknown };
-  return validateSparringTurnResponse(data.output);
+  return await callSupabaseAI('sparring', inputResult.data, config, {
+    transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
+  }) as SparringTurnResponse;
 }
 
 /** Judge a completed sparring session and return its validated scorecard. */
@@ -1220,6 +1314,7 @@ async function judgeSparringSessionOnce(
     return validateSparringScoreResponse(await mockJudgeSparringSession(inputResult.data));
   }
 
-  const data = await callSupabaseAI('sparring', inputResult.data, config) as { output: unknown };
-  return validateSparringScoreResponse(data.output);
+  return await callSupabaseAI('sparring', inputResult.data, config, {
+    transformResponse: (rawData) => validateSparringScoreResponse((rawData as { output: unknown }).output),
+  }) as SparringScoreResponse;
 }

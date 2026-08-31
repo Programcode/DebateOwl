@@ -6,13 +6,14 @@ import { BrowserRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
 
 // Hoist mocks
-const { mockSupabase, mockToast } = vi.hoisted(() => ({
+const { mockSupabase, mockToast, captureProductEventMock } = vi.hoisted(() => ({
     mockSupabase: {
         auth: {
             getSession: vi.fn(),
         },
     },
     mockToast: vi.fn(),
+    captureProductEventMock: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -39,6 +40,10 @@ vi.mock('recharts', () => {
 
 vi.mock('@/hooks/use-toast', () => ({
     useToast: (): { toast: typeof mockToast } => ({ toast: mockToast }),
+}));
+
+vi.mock('@/lib/observability', () => ({
+    captureProductEvent: captureProductEventMock,
 }));
 
 // Mock global fetch
@@ -86,6 +91,7 @@ describe('AdminPage Integration', () => {
         await waitFor(() => {
             expect(screen.getByText('Access Denied')).toBeInTheDocument();
         });
+        expect(captureProductEventMock).not.toHaveBeenCalled();
     });
 
     it('loads and displays analytics when admin', async () => {
@@ -130,6 +136,7 @@ describe('AdminPage Integration', () => {
         await waitFor(() => {
             expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
         });
+        expect(captureProductEventMock).toHaveBeenCalledWith('tool_opened', { tool: 'admin' });
 
         // Debug output if fails
         // screen.debug(); 
