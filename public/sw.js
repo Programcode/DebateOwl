@@ -12,6 +12,7 @@ const APP_SHELL = [
   '/app/ask',
   '/app/library',
   '/app/timer',
+  '/app/sparring',
   '/app/flowchart',
   '/app/history',
   '/app/settings',
@@ -20,6 +21,7 @@ const APP_SHELL = [
   '/theme-init.js',
   '/manifest.webmanifest',
   '/favicon.ico',
+  '/favicon.png',
   '/hero-visual.png',
 ];
 

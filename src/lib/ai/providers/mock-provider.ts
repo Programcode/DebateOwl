@@ -4,6 +4,12 @@ import type { AttackOutput } from '../schemas/attack';
 import type { BrainstormOutput } from '../schemas/brainstorm';
 import type { FactoidsOutput } from '../schemas/factoids';
 import type { AskOutput } from '../schemas/ask';
+import type {
+  SparringRespondInput,
+  SparringScoreInput,
+  SparringScoreResponse,
+  SparringTurnResponse,
+} from '../schemas/sparring';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -393,3 +399,114 @@ export async function mockAsk(message: string, mode: string): Promise<AskOutput>
 
   return baseResponse;
 }
+
+function wordCount(text: string): number {
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(25, Math.round(score)));
+}
+
+/** Deterministic sparring reply for local development and offline UI tests. */
+export async function mockGenerateSparringTurn(input: SparringRespondInput): Promise<SparringTurnResponse> {
+  const latestSpeech = [...input.speeches].reverse().find((speech) => speech.speaker === 'user');
+  const latestPoint = latestSpeech?.content.trim().replace(/\s+/g, ' ').slice(0, 140);
+  const difficultyLine = {
+    easy: 'I will keep this response focused on the most visible clash.',
+    medium: 'I will answer the central claim and press the warrant underneath it.',
+    hard: 'I will test the warrant, the link, and the impact comparison before moving on.',
+  }[input.difficulty];
+  const targetedPoint = latestPoint
+    ? `Your latest claim, “${latestPoint}”, needs a clearer link to the motion.`
+    : `The ${input.currentTurn.label.toLowerCase()} needs a clear claim, warrant, and impact.`;
+  const roleMove = {
+    introductor: 'Set the framework, thesis, definitions, and roadmap without spending the full constructive case.',
+    r1: 'Build the core constructive case, then answer the strongest opposing material already available.',
+    r2: 'Extend R1, win the central clash, and compare the competing impacts.',
+    conclusor: 'Add no new argument; crystallize the decisive clashes, weigh them, and close the ballot.',
+    opening: 'Establish the opening case and its central mechanism.',
+    constructive: 'Build the constructive case with a complete warrant and impact.',
+    rebuttal: 'Answer the strongest opposing material and protect the core case.',
+    summary: 'Collapse the round to its central clashes and comparisons.',
+    final: 'Weigh the remaining offense and explain the ballot without adding a new argument.',
+  }[input.currentTurn.kind];
+
+  return {
+    action: 'respond',
+    speech: {
+      content: `As ${input.currentTurn.label}, the job is to ${roleMove.charAt(0).toLowerCase()}${roleMove.slice(1)} On ${input.motion}, the ${input.currentTurn.side} side has to explain why its proposed outcome follows in practice. ${targetedPoint} ${difficultyLine}`,
+      strategy: roleMove,
+      targetedPoints: [targetedPoint],
+    },
+  };
+}
+
+/** Deterministic scorecard for local development. It never depends on time or randomness. */
+export async function mockJudgeSparringSession(input: SparringScoreInput): Promise<SparringScoreResponse> {
+  const userWords = input.speeches
+    .filter((speech) => speech.speaker === 'user')
+    .reduce((total, speech) => total + wordCount(speech.content), 0);
+  const aiWords = input.speeches
+    .filter((speech) => speech.speaker === 'ai')
+    .reduce((total, speech) => total + wordCount(speech.content), 0);
+  const userTurns = input.speeches.filter((speech) => speech.speaker === 'user').length;
+  const aiTurns = input.speeches.filter((speech) => speech.speaker === 'ai').length;
+  const difficultyAdjustment = { easy: -2, medium: 0, hard: 2 }[input.difficulty];
+  const userDepth = Math.min(10, userWords / 80);
+  const aiDepth = Math.min(10, aiWords / 80);
+  const userScores = {
+    Logic: clampScore(14 + userDepth),
+    Evidence: clampScore(11 + userDepth / 2),
+    Delivery: clampScore(13 + Math.min(10, userTurns * 2)),
+    Strategy: clampScore(12 + userDepth / 2 + (userTurns > 1 ? 2 : 0)),
+  };
+  const aiScores = {
+    Logic: clampScore(14 + aiDepth + difficultyAdjustment),
+    Evidence: clampScore(12 + aiDepth / 2 + difficultyAdjustment),
+    Delivery: clampScore(14 + Math.min(10, aiTurns * 2) + difficultyAdjustment),
+    Strategy: clampScore(13 + aiDepth / 2 + (aiTurns > 1 ? 2 : 0) + difficultyAdjustment),
+  };
+  const categoryNames = ['Logic', 'Evidence', 'Delivery', 'Strategy'] as const;
+  const userScore = categoryNames.reduce((total, name) => total + userScores[name], 0);
+  const aiScore = categoryNames.reduce((total, name) => total + aiScores[name], 0);
+  const winner = userScore === aiScore ? 'tie' : userScore > aiScore ? 'user' : 'ai';
+  const winnerLabel = winner === 'tie' ? 'The round is close.' : `${winner === 'user' ? 'You' : 'The AI'} win the simulated ballot.`;
+  const firstUserSpeech = input.speeches.find((speech) => speech.speaker === 'user');
+
+  return {
+    action: 'score',
+    scorecard: {
+      userScore,
+      aiScore,
+      categories: categoryNames.map((name) => ({
+        name,
+        userScore: userScores[name],
+        aiScore: aiScores[name],
+        feedback: name === 'Delivery'
+          ? input.format === 'standard'
+            ? 'Judged from clarity, organization, time discipline, and fulfillment of the Introductor, R1, R2, and Conclusor roles, not vocal performance.'
+            : 'Judged from clarity, organization, and time discipline in the transcript, not vocal performance.'
+          : `The comparison reflects the ${name.toLowerCase()} visible in the completed speeches.`,
+      })),
+      overallFeedback: `${winnerLabel} The mock judge compared the completed speeches on the motion “${input.motion}”.`,
+      keyMoments: firstUserSpeech
+        ? [`Your opening turn established: “${firstUserSpeech.content.trim().replace(/\s+/g, ' ').slice(0, 120)}”`]
+        : ['No user speech was submitted, so there was no user argument to weigh.'],
+      improvementAreas: [
+        'Make each warrant explicit before moving to the impact.',
+        input.format === 'standard'
+          ? 'Keep each school-format speaker in role: Introductor frames, R1 builds, R2 clashes, and Conclusor adds no new argument.'
+          : 'Name the opponent’s strongest point, then explain why your weighing still wins.',
+      ],
+      winner,
+      verdict: winner === 'tie'
+        ? 'Close round. The next improvement should target the clearest unresolved clash.'
+        : `${winner === 'user' ? 'Your' : 'The AI’s'} side wins on the aggregate category score.`,
+    },
+  };
+}
+
+// Names kept short for callers that treat the mock provider as a feature adapter.
+export const mockSparringResponse = mockGenerateSparringTurn;
+export const mockSparringScore = mockJudgeSparringSession;

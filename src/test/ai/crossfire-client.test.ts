@@ -163,6 +163,17 @@ describe('Crossfire AI client', () => {
     expect(mocks.invoke).not.toHaveBeenCalled();
   });
 
+  it('aborts while session resolution is pending without invoking the edge function', async () => {
+    mocks.getSession.mockImplementationOnce(() => new Promise(() => undefined));
+    const controller = new AbortController();
+    const request = crossfire(nextTurnInput(), config, { signal: controller.signal });
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+
   it('cancels an oversized Function error stream before buffering the full body', async () => {
     let pulls = 0;
     let canceled = false;

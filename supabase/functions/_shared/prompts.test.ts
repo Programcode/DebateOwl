@@ -8,6 +8,7 @@ import {
   JSON_RULES,
   PRODUCT_IDENTITY,
   RESEARCH_RULES,
+  SPARRING_PROMPT,
   boundPromptSources,
   buildSystemPrompt,
   MAX_PROMPT_SOURCE_CHARS,
@@ -16,7 +17,7 @@ import {
   type Feature,
 } from "./prompts.ts";
 
-const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask", "crossfire"];
+const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask", "sparring", "crossfire"];
 
 const FEATURE_PROMPTS: Record<Feature, string> = {
   generate: GENERATE_PROMPT,
@@ -24,6 +25,7 @@ const FEATURE_PROMPTS: Record<Feature, string> = {
   brainstorm: BRAINSTORM_PROMPT,
   factoids: FACTOIDS_PROMPT,
   ask: ASK_PROMPT,
+  sparring: SPARRING_PROMPT,
   crossfire: CROSSFIRE_PROMPT,
 };
 
@@ -86,6 +88,27 @@ Deno.test("product identity includes the humanizer style rules", () => {
   if (!PRODUCT_IDENTITY.includes("HUMANIZER STYLE INSTRUCTIONS")) throw new Error("humanizer missing from identity layer");
 });
 
+Deno.test("sparring system prompt defines difficulty and transcript-only scoring", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: Testdate" });
+  if (!prompt.includes("Difficulty is a real control")) throw new Error("difficulty guidance missing");
+  if (!prompt.includes("clarity, organization, and time discipline")) throw new Error("typed delivery guidance missing");
+  if (!prompt.includes("Never invent citations")) throw new Error("transcript-only guidance missing");
+});
+
+Deno.test("sparring system prompt teaches the school 4-6-6-3 speaker duties", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: August 31, 2026 (2026)" });
+  for (const expected of ["Introductor", "R1", "R2", "Conclusor", "no new arguments"]) {
+    if (!prompt.includes(expected)) throw new Error(`school role guidance missing: ${expected}`);
+  }
+});
+
+Deno.test("sparring system prompt keeps LD and PF duties separate from school roles", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: August 31, 2026 (2026)" });
+  if (!prompt.includes('When format is "standard"')) throw new Error("school role condition missing");
+  if (!prompt.includes('When format is "ld" or "pf"')) throw new Error("LD/PF role condition missing");
+  if (!prompt.includes("rather than importing the school roles")) throw new Error("format separation missing");
+});
+
 Deno.test("crossfire system prompt carries strict turn and debrief safety rules", () => {
   const prompt = buildSystemPrompt({ feature: "crossfire" });
   if (!prompt.includes("Each non-empty debrief item must cite only actual turn IDs")) {
@@ -123,5 +146,10 @@ Deno.test("prompt source library is capped by count, per-source text, and aggreg
   const oversizedTotal = oversized.reduce((sum, source) => sum + source.content.length, 0);
   if (oversizedTotal !== MAX_PROMPT_SOURCE_TOTAL_CHARS) {
     throw new Error(`aggregate cap was not enforced: ${oversizedTotal}`);
+  }
+
+  const malformed = boundPromptSources([null, {}, { title: "Valid", content: "Evidence", type: "x".repeat(100), origin: "o".repeat(600) }]);
+  if (malformed.length !== 1 || malformed[0].type.length !== 64 || (malformed[0].origin?.length ?? 0) !== 500) {
+    throw new Error("malformed sources were not rejected or metadata was not bounded");
   }
 });

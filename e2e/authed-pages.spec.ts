@@ -13,6 +13,7 @@ const AUTH_ROUTES = [
   { path: '/app/library', name: 'library' },
   { path: '/app/history', name: 'history' },
   { path: '/app/timer', name: 'timer' },
+  { path: '/app/sparring', name: 'sparring' },
   { path: '/app/flowchart', name: 'flowchart' },
   { path: '/app/settings', name: 'settings' },
 ] as const;

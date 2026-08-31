@@ -14,6 +14,7 @@ import {
   X,
   Clock,
   Timer,
+  Dumbbell,
   Database,
   GitBranch,
   Crosshair
@@ -34,6 +35,7 @@ const navItems = [
   { path: '/app/crossfire', key: 'crossfire', icon: Crosshair },
   { path: '/app/library', key: 'library', icon: Database },
   { path: '/app/timer', key: 'timer', icon: Timer },
+  { path: '/app/sparring', key: 'sparring', icon: Dumbbell },
   { path: '/app/flowchart', key: 'flowchart', icon: GitBranch },
   { path: '/app/history', key: 'history', icon: Clock },
 ];
@@ -49,7 +51,7 @@ export function AppLayout() {
         <div className="container flex h-16 items-center justify-between px-4">
           <a href="/app" className="flex items-center gap-3 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
-              <img src="/favicon.ico" alt="DebateLab" className="h-full w-full object-cover" />
+              <img src="/favicon.png" alt="DebateLab" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</h1>
@@ -63,6 +65,7 @@ export function AppLayout() {
                 key={item.path}
                 to={item.path}
                 end={item.path === '/app'}
+                aria-label={t(`nav.${item.key}`)}
                 data-tour={`nav-${item.key}`}
                 className={cn(
                   "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap",

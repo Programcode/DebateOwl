@@ -30,6 +30,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const LibraryPage = lazy(() => import("./pages/LibraryPage"));
 const TimerPage = lazy(() => import("./pages/TimerPage"));
+const SparringPage = lazy(() => import("./pages/SparringPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const SharedPage = lazy(() => import("./pages/SharedPage"));
 const FlowchartPage = lazy(() => import("./pages/FlowchartPage"));
@@ -123,6 +124,7 @@ function AnimatedRoutes() {
             <Route path="/app/history" element={<HistoryPage />} />
             <Route path="/app/library" element={<LibraryPage />} />
             <Route path="/app/timer" element={<TimerPage />} />
+            <Route path="/app/sparring" element={<SparringPage />} />
             <Route path="/app/flowchart" element={<FlowchartPage />} />
             <Route path="/app/settings" element={<SettingsPage />} />
             <Route path="/app/admin" element={<AdminPage />} />

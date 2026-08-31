@@ -1,0 +1,258 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, CircleHelp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useSparringStore } from '@/lib/stores/sparring-store';
+import { useSettingsStore } from '@/lib/stores/settings-store';
+import { generateSparringTurn, judgeSparringSession } from '@/lib/ai/client';
+import type { SparringRespondInput, SparringScoreInput, SparringSpeech } from '@/lib/ai/schemas/sparring';
+import { SparringSetup, type SparringSetupValues } from '@/components/features/sparring/SparringSetup';
+import { SparringRound } from '@/components/features/sparring/SparringRound';
+import { SparringScorecard } from '@/components/features/sparring/SparringScorecard';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { exportSparringToDocx } from '@/lib/export-utils';
+import { exportSparringToPdf } from '@/lib/pdf-export-utils';
+
+function readableError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
+}
+
+function estimateAiTimeUsedSeconds(content: string, limit: number) {
+  const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+  return Math.min(limit, Math.max(1, Math.round((words / 140) * 60)));
+}
+
+export default function SparringPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const session = useSparringStore((state) => state.currentSession);
+  const startSession = useSparringStore((state) => state.startSession);
+  const submitUserSpeech = useSparringStore((state) => state.submitUserSpeech);
+  const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
+  const completeSession = useSparringStore((state) => state.completeSession);
+  const abandonSession = useSparringStore((state) => state.abandonSession);
+  const getFeatureConfig = useSettingsStore((state) => state.getFeatureConfig);
+  const outputLanguage = useSettingsStore((state) => state.outputLanguage);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [judgingError, setJudgingError] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const aiRequestRef = useRef<string | null>(null);
+  const judgeRequestRef = useRef<string | null>(null);
+  const aiInFlightRef = useRef(false);
+  const judgeInFlightRef = useRef(false);
+  const isOnlineRef = useRef(isOnline);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      isOnlineRef.current = true;
+      setIsOnline(true);
+      // Re-run a request that was gated while offline. Do not disturb a call
+      // that was already in flight before the connectivity event.
+      if (!aiInFlightRef.current && !judgeInFlightRef.current) {
+        setRetryNonce((value) => value + 1);
+      }
+    };
+    const handleOffline = () => {
+      isOnlineRef.current = false;
+      setIsOnline(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session?.id) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [session?.id]);
+
+  const config = useMemo(() => getFeatureConfig('sparring'), [getFeatureConfig]);
+
+  const retryAi = useCallback(() => {
+    aiRequestRef.current = null;
+    setAiError(null);
+    setRetryNonce((value) => value + 1);
+  }, []);
+
+  const retryJudging = useCallback(() => {
+    judgeRequestRef.current = null;
+    setJudgingError(null);
+    setRetryNonce((value) => value + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!session || session.phase !== 'round') return;
+    const currentTurn = session.turns[session.currentTurnIndex];
+    if (!currentTurn || currentTurn.speaker !== 'ai') {
+      setAiLoading(false);
+      return;
+    }
+
+    if (!isOnlineRef.current) {
+      setAiLoading(false);
+      setAiError(t('sparring.round.aiOffline', 'Reconnect to let the opponent answer. Your transcript is safe.'));
+      return;
+    }
+
+    const requestKey = `${session.id}:${currentTurn.id}:${session.speeches.length}`;
+    if (aiRequestRef.current === requestKey) return;
+    aiRequestRef.current = requestKey;
+    aiInFlightRef.current = true;
+    setAiLoading(true);
+    setAiError(null);
+    const { speaker: _speaker, ...turnInput } = currentTurn;
+    const input: SparringRespondInput = {
+      action: 'respond',
+      sessionId: session.id,
+      motion: session.motion,
+      userSide: session.userSide,
+      format: session.format,
+      difficulty: session.difficulty,
+      speeches: session.speeches,
+      language: outputLanguage,
+      currentTurn: turnInput,
+    };
+
+    void generateSparringTurn(input, config)
+      .then((result) => {
+        if (aiRequestRef.current !== requestKey) return;
+        if (useSparringStore.getState().currentSession?.id !== session.id) return;
+        const generated = result.speech;
+        const speech: SparringSpeech = {
+          id: `ai-${session.id}-${currentTurn.id}`,
+          turnId: currentTurn.id,
+          speaker: 'ai',
+          side: currentTurn.side,
+          role: currentTurn.label,
+          content: generated.content,
+          createdAt: Date.now(),
+          timeLimitSeconds: currentTurn.timeLimitSeconds,
+          timeUsedSeconds: estimateAiTimeUsedSeconds(generated.content, currentTurn.timeLimitSeconds),
+          integrityToken: generated.integrityToken,
+        };
+        appendAiSpeech(speech);
+      })
+      .catch((error: unknown) => {
+        if (aiRequestRef.current !== requestKey) return;
+        setAiError(readableError(error, t('sparring.round.aiRequestFailed', 'The AI request failed. Check your connection and try again.')));
+      })
+      .finally(() => {
+        if (aiRequestRef.current === requestKey) {
+          aiInFlightRef.current = false;
+          setAiLoading(false);
+        }
+      });
+  }, [appendAiSpeech, config, outputLanguage, retryNonce, session, t]);
+
+  useEffect(() => {
+    if (!session || session.phase !== 'judging') return;
+    if (!isOnlineRef.current) {
+      setJudgingError(t('sparring.round.judgeOffline', 'Reconnect to score this round. Your transcript is safe.'));
+      return;
+    }
+    const requestKey = `${session.id}:judge:${session.speeches.length}`;
+    if (judgeRequestRef.current === requestKey) return;
+    judgeRequestRef.current = requestKey;
+    judgeInFlightRef.current = true;
+    setJudgingError(null);
+    const input: SparringScoreInput = {
+      action: 'score',
+      sessionId: session.id,
+      motion: session.motion,
+      userSide: session.userSide,
+      format: session.format,
+      difficulty: session.difficulty,
+      speeches: session.speeches,
+      language: outputLanguage,
+    };
+    void judgeSparringSession(input, config)
+      .then((result) => {
+        if (judgeRequestRef.current !== requestKey) return;
+        if (useSparringStore.getState().currentSession?.id !== session.id) return;
+        completeSession(result.scorecard);
+      })
+      .catch((error: unknown) => {
+        if (judgeRequestRef.current !== requestKey) return;
+        setJudgingError(readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
+      })
+      .finally(() => {
+        if (judgeRequestRef.current === requestKey) judgeInFlightRef.current = false;
+      });
+  }, [completeSession, config, outputLanguage, retryNonce, session, t]);
+
+  const handleStart = (values: SparringSetupValues) => {
+    startSession(values);
+    setAiError(null);
+    setJudgingError(null);
+    setRetryNonce(0);
+    aiRequestRef.current = null;
+    judgeRequestRef.current = null;
+    setSubmissionError(null);
+  };
+
+  const handleRestart = () => {
+    abandonSession();
+    setAiError(null);
+    setJudgingError(null);
+    setRetryNonce(0);
+    aiRequestRef.current = null;
+    judgeRequestRef.current = null;
+    setSubmissionError(null);
+  };
+
+  const handleSubmit = (content: string) => {
+    const result = submitUserSpeech(content);
+    setSubmissionError(result ? null : t('sparring.round.speechRejected', 'This speech could not be submitted. Check the timer and length, then try again.'));
+  };
+
+  const handleExportDocx = () => {
+    if (session) void exportSparringToDocx(session);
+  };
+
+  const handleExportPdf = () => {
+    if (session) void exportSparringToPdf(session);
+  };
+
+  if (!session) {
+    return (
+      <div className="container px-4 py-8 sm:py-10">
+        <SparringSetup onStart={handleStart} />
+      </div>
+    );
+  }
+
+  if (session.phase === 'complete' && session.scorecard) {
+    return (
+      <div className="container px-4 py-8 sm:py-10">
+        <SparringScorecard session={session} scorecard={session.scorecard} onRestart={handleRestart} onExport={handleExportDocx} onExportPdf={handleExportPdf} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container px-4 py-6 sm:py-8">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/app')} className="-ml-2 text-muted-foreground"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t('sparring.round.backToWorkspace', 'Back to workspace')}</Button>
+        <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', !isOnline && 'text-amber-600 dark:text-amber-400')}><CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />{t('sparring.round.draftSavedNotice', 'Drafts save in this tab')}</span>
+      </div>
+      <SparringRound
+        session={session}
+        aiLoading={aiLoading}
+        aiError={aiError}
+        judging={session.phase === 'judging'}
+        judgingError={judgingError}
+        submissionError={submissionError}
+        onSubmit={handleSubmit}
+        onRetryAi={retryAi}
+        onRetryJudging={retryJudging}
+      />
+    </div>
+  );
+}

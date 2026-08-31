@@ -1,10 +1,27 @@
-import { mockGenerateCase, mockAttackCase, mockBrainstorm, mockFactoids, mockAsk } from './providers/mock-provider';
+import {
+  mockGenerateCase,
+  mockAttackCase,
+  mockBrainstorm,
+  mockFactoids,
+  mockAsk,
+  mockGenerateSparringTurn,
+  mockJudgeSparringSession,
+} from './providers/mock-provider';
 import type { ProviderConfig } from './providers/types';
 import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from './schemas/generate';
 import { AttackOutputSchema, type AttackOutput, type AttackInput } from './schemas/attack';
 import type { BrainstormOutput, BrainstormInput } from './schemas/brainstorm';
 import { FactoidsOutputSchema, type FactoidsOutput, type FactoidsInput } from './schemas/factoids';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
+import {
+  SparringInputSchema,
+  SparringScoreResponseSchema,
+  SparringTurnResponseSchema,
+  type SparringRespondInput,
+  type SparringScoreInput,
+  type SparringScoreResponse,
+  type SparringTurnResponse,
+} from './schemas/sparring';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
 import type { SourceProvenance } from '../stores/session-store';
@@ -33,6 +50,15 @@ interface AIRequestOptions {
   includeCustomSystemPrompt?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
+}
+
+function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(new DOMException('The request was canceled.', 'AbortError'));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    Promise.resolve().then(operation).then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
 }
 
 interface AIRequestSource {
@@ -261,8 +287,8 @@ export function isAIModelRestrictionError(error: unknown): error is AIModelRestr
 }
 
 async function callSupabaseAI(
-  feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'crossfire',
-  input: Record<string, unknown>,
+  feature: 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring' | 'crossfire',
+  input: unknown,
   config: ProviderConfig,
   options: AIRequestOptions = {},
 ) {
@@ -272,7 +298,7 @@ async function callSupabaseAI(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const selectedSources = options.includeActiveSources === false
+  const selectedSources = options.includeActiveSources === false || feature === 'sparring'
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
@@ -282,35 +308,6 @@ async function callSupabaseAI(
     : selectedSources;
 
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-
-  // Log request details in development
-  if (DEBUG) {
-    console.log(`[AI Request ${requestId}]`, {
-      feature,
-      provider,
-      model: config.model,
-      hasAccessToken: !!accessToken,
-      activeSources: activeSources.length,
-    });
-  }
-
-  // Require authentication for AI features
-  if (!accessToken) {
-    throw new AIAuthError('Please sign in to use AI features', { requestId });
-  }
-
-  const requestBody = {
-    feature,
-    input,
-    provider,
-    model: config.model,
-    temperature: config.temperature,
-    customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
-    sources: activeSources,
-  };
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -320,6 +317,33 @@ async function callSupabaseAI(
   else options.signal?.addEventListener('abort', abortFromCaller, { once: true });
 
   try {
+    const { data: sessionData } = await waitForAbortable(() => supabase.auth.getSession(), controller.signal);
+    const accessToken = sessionData.session?.access_token;
+
+    if (DEBUG) {
+      console.log(`[AI Request ${requestId}]`, {
+        feature,
+        provider,
+        model: config.model,
+        hasAccessToken: !!accessToken,
+        activeSources: activeSources.length,
+      });
+    }
+
+    if (!accessToken) {
+      throw new AIAuthError('Please sign in to use AI features', { requestId });
+    }
+
+    const requestBody = {
+      feature,
+      input,
+      provider,
+      model: config.model,
+      temperature: config.temperature,
+      customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
+      sources: activeSources,
+    };
+
     const { data, error } = await supabase.functions.invoke('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: requestBody,
@@ -1057,4 +1081,145 @@ export async function askChat(
     });
   }
   return parsed.data;
+}
+
+function sparringLanguage(language: string): string {
+  return language.trim() || useSettingsStore.getState().outputLanguage;
+}
+
+function validateSparringTurnResponse(output: unknown): SparringTurnResponse {
+  const parsed = SparringTurnResponseSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected sparring turn schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+  return parsed.data;
+}
+
+function validateSparringScoreResponse(output: unknown): SparringScoreResponse {
+  const parsed = SparringScoreResponseSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new AIResponseError('AI response did not match the expected sparring score schema.', {
+      details: { issues: parsed.error.issues },
+    });
+  }
+  return parsed.data;
+}
+
+// Page navigation can unmount and remount the sparring screen while a provider
+// request is still running. Keep identical work process-wide so the returning
+// screen joins the original promise instead of consuming a second AI request.
+const pendingSparringTurns = new Map<string, Promise<SparringTurnResponse>>();
+const pendingSparringScores = new Map<string, Promise<SparringScoreResponse>>();
+
+async function sparringRequestKey(
+  input: SparringRespondInput | SparringScoreInput,
+  config: ProviderConfig,
+): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const authScope = data.session?.user?.id ?? data.session?.access_token ?? 'signed-out';
+  return JSON.stringify([authScope, input, config.provider, config.model, config.temperature]);
+}
+
+/** Generate the opponent's next speech for a validated sparring turn. */
+export async function generateSparringTurn(
+  input: SparringRespondInput,
+  config: ProviderConfig,
+): Promise<SparringTurnResponse> {
+  const requestInput: SparringRespondInput = {
+    ...input,
+    language: sparringLanguage(input.language),
+  };
+  const inputResult = SparringInputSchema.safeParse(requestInput);
+  if (!inputResult.success || inputResult.data.action !== 'respond') {
+    throw new AIResponseError('Invalid sparring turn request.', {
+      details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
+    });
+  }
+  const requestKey = await sparringRequestKey(inputResult.data, config);
+  const pending = pendingSparringTurns.get(requestKey);
+  if (pending) return pending;
+
+  const request = generateSparringTurnOnce(inputResult.data, config);
+  pendingSparringTurns.set(requestKey, request);
+  try {
+    return await request;
+  } finally {
+    if (pendingSparringTurns.get(requestKey) === request) pendingSparringTurns.delete(requestKey);
+  }
+}
+
+async function generateSparringTurnOnce(
+  input: SparringRespondInput,
+  config: ProviderConfig,
+): Promise<SparringTurnResponse> {
+  const requestInput: SparringRespondInput = {
+    ...input,
+    language: sparringLanguage(input.language),
+  };
+  const inputResult = SparringInputSchema.safeParse(requestInput);
+  if (!inputResult.success || inputResult.data.action !== 'respond') {
+    throw new AIResponseError('Invalid sparring turn request.', {
+      details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
+    });
+  }
+
+  if (config.provider === 'mock') {
+    return validateSparringTurnResponse(await mockGenerateSparringTurn(inputResult.data));
+  }
+
+  const data = await callSupabaseAI('sparring', inputResult.data, config) as { output: unknown };
+  return validateSparringTurnResponse(data.output);
+}
+
+/** Judge a completed sparring session and return its validated scorecard. */
+export async function judgeSparringSession(
+  input: SparringScoreInput,
+  config: ProviderConfig,
+): Promise<SparringScoreResponse> {
+  const requestInput: SparringScoreInput = {
+    ...input,
+    language: sparringLanguage(input.language),
+  };
+  const inputResult = SparringInputSchema.safeParse(requestInput);
+  if (!inputResult.success || inputResult.data.action !== 'score') {
+    throw new AIResponseError('Invalid sparring score request.', {
+      details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
+    });
+  }
+  const requestKey = await sparringRequestKey(inputResult.data, config);
+  const pending = pendingSparringScores.get(requestKey);
+  if (pending) return pending;
+
+  const request = judgeSparringSessionOnce(inputResult.data, config);
+  pendingSparringScores.set(requestKey, request);
+  try {
+    return await request;
+  } finally {
+    if (pendingSparringScores.get(requestKey) === request) pendingSparringScores.delete(requestKey);
+  }
+}
+
+async function judgeSparringSessionOnce(
+  input: SparringScoreInput,
+  config: ProviderConfig,
+): Promise<SparringScoreResponse> {
+  const requestInput: SparringScoreInput = {
+    ...input,
+    language: sparringLanguage(input.language),
+  };
+  const inputResult = SparringInputSchema.safeParse(requestInput);
+  if (!inputResult.success || inputResult.data.action !== 'score') {
+    throw new AIResponseError('Invalid sparring score request.', {
+      details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
+    });
+  }
+
+  if (config.provider === 'mock') {
+    return validateSparringScoreResponse(await mockJudgeSparringSession(inputResult.data));
+  }
+
+  const data = await callSupabaseAI('sparring', inputResult.data, config) as { output: unknown };
+  return validateSparringScoreResponse(data.output);
 }

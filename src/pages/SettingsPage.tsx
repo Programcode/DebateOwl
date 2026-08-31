@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +40,7 @@ const tierLabels: Record<string, { labelKey: string; color: string }> = {
 export default function SettingsPage() {
   const { language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
+  const resetSparringLocalData = useSparringStore((state) => state.resetLocalData);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -88,6 +90,7 @@ export default function SettingsPage() {
 
     void clearAllData().then(() => {
       clearSession();
+      resetSparringLocalData();
       localStorage.removeItem('debate-trainer-storage');
       setDeleteDialogOpen(false);
       setDeleteEmail('');
@@ -96,6 +99,15 @@ export default function SettingsPage() {
       console.error('Failed to delete data:', error);
       toast({ title: t('settings.deleteFailed'), description: t('settings.deleteFailedDesc'), variant: "destructive" });
     });
+  };
+
+  const handleSignOut = () => {
+    void signOut()
+      .then(() => resetSparringLocalData())
+      .catch((error) => {
+        console.error('Failed to sign out:', error);
+        toast({ title: t('common.error', 'Error'), description: t('settings.signOutFailed', 'Could not sign out. Please try again.'), variant: 'destructive' });
+      });
   };
 
   const handleManageSubscription = async () => {
@@ -278,7 +290,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
                 <p className="font-medium">{user?.email || t('settings.unknownUser')}</p>
               </div>
-              <Button variant="outline" onClick={() => void signOut()}>
+              <Button variant="outline" onClick={handleSignOut}>
                 {t('settings.signOut')}
               </Button>
             </div>

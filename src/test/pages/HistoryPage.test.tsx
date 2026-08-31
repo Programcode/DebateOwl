@@ -79,7 +79,7 @@ describe('HistoryPage', () => {
   it('renders with all tabs visible', () => {
     render(<HistoryPage />);
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.length).toBe(5);
+    expect(tabs.length).toBe(6);
   });
 
   it('has container class', () => {
