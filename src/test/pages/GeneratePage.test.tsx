@@ -115,6 +115,23 @@ describe('GeneratePage Integration', () => {
         expect(screen.queryByTestId('generate-results')).not.toBeInTheDocument();
     });
 
+    it('scrolls a restored result into view after it mounts', async () => {
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Restored result' },
+            contentions: [],
+            predictedOpponentCase: {},
+            counters: [],
+        };
+
+        render(
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled());
+    });
+
     it('handles form submission and successful generation', async () => {
         // Setup API mock
         const mockResult = {

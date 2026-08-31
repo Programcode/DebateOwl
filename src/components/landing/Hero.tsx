@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 
 const Hero = () => {
@@ -128,11 +128,15 @@ const PHASE_TIMINGS: Record<Phase, number> = {
     impact: 1800,
 };
 
-const TypewriterText = ({ text, durationMs }: { text: string; durationMs: number }) => {
+const TypewriterText = ({ text, durationMs, shouldReduceMotion }: { text: string; durationMs: number; shouldReduceMotion: boolean }) => {
     const [displayed, setDisplayed] = React.useState("");
     const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
     React.useEffect(() => {
+        if (shouldReduceMotion) {
+            setDisplayed(text);
+            return;
+        }
         let i = 0;
         setDisplayed("");
         const charInterval = durationMs / text.length;
@@ -142,21 +146,26 @@ const TypewriterText = ({ text, durationMs }: { text: string; durationMs: number
             if (i >= text.length && intervalRef.current) clearInterval(intervalRef.current);
         }, charInterval);
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [text, durationMs]);
+    }, [text, durationMs, shouldReduceMotion]);
 
     return <>{displayed}<span className="animate-pulse">|</span></>;
 };
 
 const HeroPreview = () => {
     const { t } = useTranslation();
+    const shouldReduceMotion = Boolean(useReducedMotion());
     const outputContent = {
         thesis: t('hero.preview.thesis'),
         contention: t('hero.preview.contention'),
         impact: t('hero.preview.outputImpact'),
     };
-    const [phase, setPhase] = React.useState<Phase>("idle");
+    const [phase, setPhase] = React.useState<Phase>(shouldReduceMotion ? "impact" : "idle");
 
     React.useEffect(() => {
+        if (shouldReduceMotion) {
+            setPhase("impact");
+            return;
+        }
         const phases: Phase[] = ["idle", "shimmer", "generating", "thesis", "contention", "impact"];
         let idx = 0;
         let timeout: ReturnType<typeof setTimeout>;
@@ -169,7 +178,7 @@ const HeroPreview = () => {
 
         timeout = setTimeout(advance, PHASE_TIMINGS[phases[0]]);
         return () => clearTimeout(timeout);
-    }, []);
+    }, [shouldReduceMotion]);
 
     const showThesis = phase === "thesis" || phase === "contention" || phase === "impact";
     const showContention = phase === "contention" || phase === "impact";
@@ -249,7 +258,7 @@ const HeroPreview = () => {
                             >
                                 <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">{t('hero.preview.mainArgument')}</p>
                                 <p className="mt-1 text-xs text-emerald-900/90 dark:text-emerald-100/90">
-                                    {phase === "thesis" ? <TypewriterText text={outputContent.thesis} durationMs={1500} /> : outputContent.thesis}
+                                    {phase === "thesis" ? <TypewriterText text={outputContent.thesis} durationMs={1500} shouldReduceMotion={shouldReduceMotion} /> : outputContent.thesis}
                                 </p>
                             </motion.div>
                         )}
@@ -263,7 +272,7 @@ const HeroPreview = () => {
                             >
                                 <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">{t('hero.preview.reasoning')}</p>
                                 <p className="mt-1 text-xs text-sky-900/90 dark:text-sky-100/90">
-                                    {phase === "contention" ? <TypewriterText text={outputContent.contention} durationMs={1500} /> : outputContent.contention}
+                                    {phase === "contention" ? <TypewriterText text={outputContent.contention} durationMs={1500} shouldReduceMotion={shouldReduceMotion} /> : outputContent.contention}
                                 </p>
                             </motion.div>
                         )}
@@ -277,7 +286,7 @@ const HeroPreview = () => {
                             >
                                 <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">{t('hero.preview.impact')}</p>
                                 <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
-                                    <TypewriterText text={outputContent.impact} durationMs={1500} />
+                                    <TypewriterText text={outputContent.impact} durationMs={1500} shouldReduceMotion={shouldReduceMotion} />
                                 </p>
                             </motion.div>
                         )}

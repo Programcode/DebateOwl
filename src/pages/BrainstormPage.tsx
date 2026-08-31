@@ -110,25 +110,25 @@ export default function BrainstormPage() {
           </AnimatedSection>
 
           {/* Results */}
-          <AnimatedSection delay={150}>
+          <div>
             {brainstormLoading ? (
               <div key="brainstorm-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
                 <StreamingIndicator messages={[t('brainstormForm.loadingMsg1'), t('brainstormForm.loadingMsg2'), t('brainstormForm.loadingMsg3'), t('brainstormForm.loadingMsg4'), t('brainstormForm.loadingMsg5')]} />
               </div>
             ) : brainstormResult ? (
-              <div key="brainstorm-results" className="motion-swap">
+              <div key="brainstorm-results">
                 <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
               </div>
             ) : (
               <div key="brainstorm-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">
-                <div className="motion-loading-card text-6xl mb-4">💡</div>
+                <div className="text-6xl mb-4">💡</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('brainstorm.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('brainstorm.emptyDesc')}
                 </p>
               </div>
             )}
-          </AnimatedSection>
+          </div>
         </div>
       </div>
 

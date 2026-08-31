@@ -1,5 +1,5 @@
 // src/components/features/generate/GenerateForm.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,6 +31,11 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const { t } = useTranslation();
   const { generateForm, setGenerateForm } = useSessionStore();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (advancedOptionsRef.current) advancedOptionsRef.current.inert = !advancedOpen;
+  }, [advancedOpen]);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
     resolver: zodResolver(GenerateInputSchema),
@@ -198,9 +203,11 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
           </div>
 
           <div
+            ref={advancedOptionsRef}
             id="generate-more-options"
             className="motion-expand"
             data-open={advancedOpen}
+            aria-hidden={!advancedOpen}
           >
             <div className="grid gap-4 pt-1 sm:grid-cols-3">
               {/* Length */}

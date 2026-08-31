@@ -250,6 +250,10 @@ export default function CrossfirePage() {
     undefined,
     () => restoreState(user?.id, importedPrefill),
   );
+  const previousPhaseRef = useRef(state.phase);
+  const phaseChanged = previousPhaseRef.current !== state.phase;
+  previousPhaseRef.current = state.phase;
+  const stateMotionClass = phaseChanged ? 'motion-swap' : undefined;
   const [draftTurn, setDraftTurn] = useState('');
   const [now, setNow] = useState(Date.now());
   const [formError, setFormError] = useState('');
@@ -442,7 +446,7 @@ export default function CrossfirePage() {
 
   if (state.phase === 'setup') {
     return (
-      <div className="container px-4 py-8">
+      <div className={cn(stateMotionClass, 'container px-4 py-8')}>
         <div className="mx-auto max-w-5xl space-y-6">
           <header className="max-w-2xl">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -648,7 +652,7 @@ export default function CrossfirePage() {
 
   if (state.phase === 'complete') {
     return (
-      <div className="container px-4 py-8">
+      <div className={cn(stateMotionClass, 'container px-4 py-8')}>
         <div className="mx-auto max-w-5xl space-y-10">
           <CrossfireDebriefView debrief={state.debrief} onRestart={restart} />
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
@@ -659,7 +663,7 @@ export default function CrossfirePage() {
 
   if (state.phase === 'debriefing') {
     return (
-      <div className="container px-4 py-8">
+      <div className={cn(stateMotionClass, 'container px-4 py-8')}>
         <div className="mx-auto max-w-4xl space-y-6">
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
           <Card>
@@ -697,7 +701,7 @@ export default function CrossfirePage() {
   const inputKind = expectedUserTurnKind(state);
   const remaining = state.endsAt - now;
   return (
-    <div className="container px-4 py-6 md:py-8">
+    <div className={cn(stateMotionClass, 'container px-4 py-6 md:py-8')}>
       <div className="mx-auto max-w-5xl space-y-5">
         <header className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>

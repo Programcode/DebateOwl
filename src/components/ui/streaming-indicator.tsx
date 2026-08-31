@@ -48,7 +48,7 @@ export function StreamingIndicator({ messages, intervalMs = 3000, className }: S
     <div className={cn('motion-swap flex flex-col items-center justify-center gap-5 py-12', className)} role="status" aria-label="Loading">
       <div className="relative flex h-16 w-16 items-center justify-center">
         <span className="motion-ping-ring absolute h-full w-full rounded-full border border-primary/35" />
-        <span className="motion-loading-card absolute h-10 w-10 rounded-full bg-primary/10" />
+        <span className="absolute h-10 w-10 rounded-full bg-primary/10" />
         <span className="h-4 w-4 rounded-full bg-primary shadow-[0_0_24px_hsl(var(--primary)/0.55)]" />
       </div>
       <div key={index} className={cn('text-sm font-medium text-muted-foreground transition-opacity duration-200', fading ? 'opacity-0' : 'opacity-100')} aria-live="polite">

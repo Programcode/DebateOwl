@@ -57,7 +57,7 @@ export default function HomePage() {
                 <CardTitle className="text-lg">{t('home.sparring')}</CardTitle>
                 <CardDescription className="mt-1">{t('home.sparringDesc')}</CardDescription>
               </div>
-              <ArrowRight className="h-5 w-5 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-5 w-5 shrink-0 text-primary transition-transform group-hover:translate-x-1 motion-reduce:group-hover:translate-x-0" />
             </CardHeader>
           </Card>
         </Link>
@@ -77,7 +77,7 @@ export default function HomePage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
                       <mode.icon className="h-5 w-5" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary motion-reduce:group-hover:translate-x-0" />
                   </div>
                   <CardTitle className="text-lg">{t(`home.${mode.key}`)}</CardTitle>
                   <CardDescription>{t(`home.${mode.key}Desc`)}</CardDescription>

@@ -1,5 +1,5 @@
 // src/components/features/attack/AttackForm.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +32,11 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
   const { t } = useTranslation();
   const { attackForm, setAttackForm } = useSessionStore();
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const advancedOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (advancedOptionsRef.current) advancedOptionsRef.current.inert = !optionsOpen;
+  }, [optionsOpen]);
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<AttackInput>({
     resolver: zodResolver(AttackInputSchema),
     defaultValues: {
@@ -114,9 +119,11 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
           </div>
 
           <div
+            ref={advancedOptionsRef}
             id="attack-options"
             className="motion-expand"
             data-open={optionsOpen}
+            aria-hidden={!optionsOpen}
           >
             <div className="space-y-4 pt-1">
               {/* Settings Grid */}

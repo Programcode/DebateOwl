@@ -121,13 +121,13 @@ export default function FactoidsPage() {
           </AnimatedSection>
 
           {/* Results */}
-          <AnimatedSection delay={150}>
+          <div>
             {factoidsLoading ? (
               <div key="factoids-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
                 <StreamingIndicator messages={[t('factoidsForm.loadingMsg1'), t('factoidsForm.loadingMsg2'), t('factoidsForm.loadingMsg3'), t('factoidsForm.loadingMsg4'), t('factoidsForm.loadingMsg5')]} />
               </div>
             ) : factoidsResult ? (
-              <div key="factoids-results" className="motion-swap">
+              <div key="factoids-results">
                 <FactoidsResults
                   result={factoidsResult}
                   onDiscuss={handleDiscuss}
@@ -137,14 +137,14 @@ export default function FactoidsPage() {
               </div>
             ) : (
               <div key="factoids-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
-                <div className="motion-loading-card text-6xl mb-4">📚</div>
+                <div className="text-6xl mb-4">📚</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('factoids.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('factoids.emptyDesc')}
                 </p>
               </div>
             )}
-          </AnimatedSection>
+          </div>
         </div>
       </div>
 

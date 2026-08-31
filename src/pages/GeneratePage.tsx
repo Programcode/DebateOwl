@@ -1,5 +1,5 @@
 // src/pages/GeneratePage.tsx
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -22,6 +22,7 @@ import { Save } from 'lucide-react';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
+import { useReducedMotion } from 'framer-motion';
 
 export default function GeneratePage() {
   const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases } = useSessionStore();
@@ -32,7 +33,17 @@ export default function GeneratePage() {
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
+  const shouldReduceMotion = useReducedMotion();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const resultsAnchorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!generateResult || generateLoading) return;
+    const timer = window.setTimeout(() => {
+      resultsAnchorRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth', block: 'start' });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [generateLoading, generateResult, shouldReduceMotion]);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
@@ -61,11 +72,6 @@ export default function GeneratePage() {
       setDiscoveredSources(sources);
       setGenerateResult(result);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
-      // Capture the node now; the delayed callback must not touch the global
-      // document after this async flow may have been torn down (test and
-      // unmount safety).
-      const resultsAnchor = document.getElementById('generate-results');
-      setTimeout(() => resultsAnchor?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch (error) {
       console.error('Failed to generate case:', error);
 
@@ -335,13 +341,13 @@ export default function GeneratePage() {
           </AnimatedSection>
 
           {/* Results */}
-          <AnimatedSection delay={150}>
+          <div>
             {generateLoading ? (
               <div key="generate-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
                 <StreamingIndicator messages={[t('generateForm.loadingMsg1'), t('generateForm.loadingMsg2'), t('generateForm.loadingMsg3'), t('generateForm.loadingMsg4'), t('generateForm.loadingMsg5')]} />
               </div>
             ) : generateResult ? (
-              <div key="generate-results" id="generate-results" className="motion-swap space-y-4">
+              <div ref={resultsAnchorRef} key="generate-results" id="generate-results" className="space-y-4">
                 <GenerateResults
                   result={generateResult}
                   discoveredSources={discoveredSources}
@@ -355,14 +361,14 @@ export default function GeneratePage() {
               </div>
             ) : (
               <div key="generate-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
-                <div className="motion-loading-card mb-4 text-6xl">🎯</div>
+                <div className="mb-4 text-6xl">🎯</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{t('generate.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   {t('generate.emptyDesc')}
                 </p>
               </div>
             )}
-          </AnimatedSection>
+          </div>
         </div>
       </div>
     </div>
