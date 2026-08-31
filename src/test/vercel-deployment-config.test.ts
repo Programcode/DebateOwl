@@ -90,14 +90,21 @@ describe("Vercel frontend deployment configuration", () => {
     const config = loadConfig();
     const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
+    const bootstrap = readProjectFile("src/bootstrap.ts");
+    const jamLoader = readProjectFile("src/jam-loader.ts");
     const nginxConfig = readProjectFile("nginx.conf");
     const nginxCsp = nginxConfig.match(/add_header Content-Security-Policy "([^"]+)"/)?.[1];
 
     expect(csp).toContain("script-src 'self' https://*.jam.dev");
     expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
     expect(nginxCsp).toBe(csp);
-    expect(indexHtml).toContain('<script src="https://js.jam.dev/recorder.js" type="module"></script>');
-    expect(indexHtml).toContain('<script src="https://js.jam.dev/capture.js" type="module"></script>');
+    expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
+    expect(indexHtml).not.toContain('<script type="module" src="/src/main.tsx"></script>');
+    expect(bootstrap).toContain('loadJamRecorder()');
+    expect(bootstrap).toContain("then(() => import('./main'))");
+    expect(jamLoader).toContain("typeof globalThis.MediaRecorder !== 'undefined'");
+    expect(jamLoader).toContain("https://js.jam.dev/recorder.js");
+    expect(jamLoader).toContain("https://js.jam.dev/capture.js");
     expect(indexHtml).toContain('<meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />');
   });
 
