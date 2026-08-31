@@ -28,6 +28,7 @@ import type { SourceProvenance } from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
+import { validateUrl } from '@/lib/validation/url';
 import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
@@ -112,7 +113,7 @@ function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
 
     const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
     const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
-    if (!title || !url) return [];
+    if (!title || !validateUrl(url)) return [];
 
     const source: DiscoveredSource = { title, url };
     if (typeof candidate.content === 'string') source.content = candidate.content;

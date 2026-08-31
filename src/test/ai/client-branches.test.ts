@@ -312,6 +312,7 @@ describe('AI client branch coverage', () => {
             query: 42,
           },
           { title: '', url: 'https://example.com/rejected' },
+          { title: 'Unsafe protocol', url: 'httpx://example.com/rejected' },
         ],
       },
       error: null,
