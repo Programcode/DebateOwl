@@ -5,7 +5,7 @@ import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
 import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate, formatEuropeanDateTime } from './date-format';
-import { captureProductEvent } from './observability';
+import { captureProductEvent } from '@/lib/observability';
 
 function formatSparringDuration(seconds: number): string {
   const totalSeconds = Math.max(0, Math.round(seconds));

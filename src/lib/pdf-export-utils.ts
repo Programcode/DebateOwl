@@ -7,7 +7,7 @@ import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
 import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate } from './date-format';
-import { captureProductEvent } from './observability';
+import { captureProductEvent } from '@/lib/observability';
 
 // Color constants for consistent branding
 const COLORS = {

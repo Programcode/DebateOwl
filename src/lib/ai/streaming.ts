@@ -1,6 +1,6 @@
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
-import { captureException, captureProductEvent } from '@/lib/observability';
-import { AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, classifyAIError, mapAIError } from './client';
+import { captureProductEvent } from '@/lib/observability';
+import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, mapAIError, reportAIFailure } from './client';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
@@ -92,25 +92,19 @@ function captureStreamFailure(
   provider: string,
   model: string,
   startTime: number,
+  requestId: string,
   callerAborted: boolean,
 ): void {
-  const classification = classifyAIError(error, callerAborted);
-  const properties: Record<string, unknown> = {
+  reportAIFailure({
+    error,
     feature: 'ask',
     streaming: true,
     provider,
     model,
-    durationMs: Math.round(performance.now() - startTime),
-    errorName: classification.errorName,
-    statusCode: classification.statusCode,
-  };
-
-  captureProductEvent('ai_request_failed', properties);
-  if (classification.shouldCaptureException) {
-    const safeError = new Error(classification.errorName);
-    safeError.name = classification.errorName;
-    captureException(safeError, properties);
-  }
+    startTime,
+    requestId,
+    userInitiatedAbort: callerAborted,
+  });
 }
 
 export async function streamAskChat(
@@ -133,7 +127,7 @@ export async function streamAskChat(
 
   if (handlers.signal?.aborted) {
     const error = abortError();
-    captureStreamFailure(error, provider, config.model, startTime, true);
+    captureStreamFailure(error, provider, config.model, startTime, requestId, true);
     throw error;
   }
 
@@ -141,19 +135,18 @@ export async function streamAskChat(
   try {
     ({ data: sessionData } = await waitForCaller(supabase.auth.getSession(), handlers.signal));
   } catch (error) {
-    captureStreamFailure(error, provider, config.model, startTime, Boolean(handlers.signal?.aborted));
+    captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));
     throw error;
   }
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) {
-    const error = new Error('Please sign in to use AI features');
-    error.name = 'AIAuthError';
-    captureStreamFailure(error, provider, config.model, startTime, Boolean(handlers.signal?.aborted));
+    const error = new AIAuthError('Please sign in to use AI features', { requestId });
+    captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));
     throw error;
   }
   if (handlers.signal?.aborted) {
     const error = abortError();
-    captureStreamFailure(error, provider, config.model, startTime, true);
+    captureStreamFailure(error, provider, config.model, startTime, requestId, true);
     throw error;
   }
 
@@ -284,7 +277,7 @@ export async function streamAskChat(
       : controller.signal.aborted
         ? new TimeoutError()
         : error;
-    captureStreamFailure(reportedError, provider, config.model, startTime, callerAborted);
+    captureStreamFailure(reportedError, provider, config.model, startTime, requestId, callerAborted);
     if (callerAborted) throw reportedError;
     if (controller.signal.aborted) throw reportedError;
     throw error;
