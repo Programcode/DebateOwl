@@ -64,6 +64,8 @@ describe("Vercel frontend deployment configuration", () => {
 
     expect(headers["Content-Security-Policy"]).toContain("default-src 'self'");
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
+    expect(headers["Content-Security-Policy"]).toContain("worker-src 'self' blob:");
+    expect(headers["Content-Security-Policy"]).not.toMatch(/script-src[^;]*blob:/);
     expect(headers["X-Frame-Options"]).toBe("SAMEORIGIN");
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
