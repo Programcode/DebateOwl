@@ -86,6 +86,21 @@ describe("Vercel frontend deployment configuration", () => {
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
 
+  it("allows the installed Jam scripts and recorder frames in production", () => {
+    const config = loadConfig();
+    const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
+    const indexHtml = readProjectFile("index.html");
+    const nginxConfig = readProjectFile("nginx.conf");
+    const nginxCsp = nginxConfig.match(/add_header Content-Security-Policy "([^"]+)"/)?.[1];
+
+    expect(csp).toContain("script-src 'self' https://*.jam.dev");
+    expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
+    expect(nginxCsp).toBe(csp);
+    expect(indexHtml).toContain('<script src="https://js.jam.dev/recorder.js" type="module"></script>');
+    expect(indexHtml).toContain('<script src="https://js.jam.dev/capture.js" type="module"></script>');
+    expect(indexHtml).toContain('<meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />');
+  });
+
   it("refreshes the offline app shell after successful navigation", () => {
     const serviceWorker = readProjectFile("public/sw.js");
     expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
