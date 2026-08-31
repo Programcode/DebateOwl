@@ -91,6 +91,12 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
   });
 
+  it("does not reload the page when the service worker first takes control", () => {
+    const registration = readProjectFile("src/register-service-worker.ts");
+    expect(registration).toContain("const hadController = navigator.serviceWorker.controller !== null");
+    expect(registration).toContain("if (!hadController) return");
+  });
+
   it.each(["/app", "/app/(.*)", "/login", "/share/(.*)"])(
     "keeps private route %s out of search indexes",
     (source) => {
