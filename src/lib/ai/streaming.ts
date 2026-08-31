@@ -1,5 +1,6 @@
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
-import { AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, mapAIError } from './client';
+import { captureException, captureProductEvent } from '@/lib/observability';
+import { AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, classifyAIError, mapAIError } from './client';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
@@ -69,6 +70,49 @@ export function consumeSSEChunk(buffer: string, chunk: string): { events: Parsed
   return { events, buffer: rest };
 }
 
+function abortError(): DOMException {
+  return new DOMException('Aborted', 'AbortError');
+}
+
+function waitForCaller<T>(operation: PromiseLike<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return Promise.resolve(operation);
+  if (signal.aborted) return Promise.reject(abortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    Promise.resolve(operation)
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
+function captureStreamFailure(
+  error: unknown,
+  provider: string,
+  model: string,
+  startTime: number,
+  callerAborted: boolean,
+): void {
+  const classification = classifyAIError(error, callerAborted);
+  const properties: Record<string, unknown> = {
+    feature: 'ask',
+    streaming: true,
+    provider,
+    model,
+    durationMs: Math.round(performance.now() - startTime),
+    errorName: classification.errorName,
+    statusCode: classification.statusCode,
+  };
+
+  captureProductEvent('ai_request_failed', properties);
+  if (classification.shouldCaptureException) {
+    const safeError = new Error(classification.errorName);
+    safeError.name = classification.errorName;
+    captureException(safeError, properties);
+  }
+}
+
 export async function streamAskChat(
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[],
@@ -77,19 +121,42 @@ export async function streamAskChat(
   options: AskStreamOptions,
   handlers: AskStreamHandlers
 ): Promise<AskOutput> {
-  if (handlers.signal?.aborted) {
-    throw new DOMException('Aborted', 'AbortError');
-  }
-
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-  if (!accessToken) throw new Error('Please sign in to use AI features');
-  if (handlers.signal?.aborted) {
-    throw new DOMException('Aborted', 'AbortError');
-  }
-
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
   const requestId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const startTime = performance.now();
+  captureProductEvent('ai_request_started', {
+    feature: 'ask',
+    streaming: true,
+    provider,
+    model: config.model,
+  });
+
+  if (handlers.signal?.aborted) {
+    const error = abortError();
+    captureStreamFailure(error, provider, config.model, startTime, true);
+    throw error;
+  }
+
+  let sessionData: Awaited<ReturnType<typeof supabase.auth.getSession>>['data'];
+  try {
+    ({ data: sessionData } = await waitForCaller(supabase.auth.getSession(), handlers.signal));
+  } catch (error) {
+    captureStreamFailure(error, provider, config.model, startTime, Boolean(handlers.signal?.aborted));
+    throw error;
+  }
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    const error = new Error('Please sign in to use AI features');
+    error.name = 'AIAuthError';
+    captureStreamFailure(error, provider, config.model, startTime, Boolean(handlers.signal?.aborted));
+    throw error;
+  }
+  if (handlers.signal?.aborted) {
+    const error = abortError();
+    captureStreamFailure(error, provider, config.model, startTime, true);
+    throw error;
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const abortForCaller = () => controller.abort();
@@ -186,6 +253,7 @@ export async function streamAskChat(
         throw new DOMException('Aborted', 'AbortError');
       }
       const { done, value } = await reader.read();
+      if (handlers.signal?.aborted) throw abortError();
       if (done) break;
 
       const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
@@ -200,10 +268,25 @@ export async function streamAskChat(
       throw new AIResponseError('Streaming request ended before a final response was received', { requestId });
     }
 
+    captureProductEvent('ai_request_succeeded', {
+      feature: 'ask',
+      streaming: true,
+      provider,
+      model: config.model,
+      durationMs: Math.round(performance.now() - startTime),
+    });
+
     return finalOutput;
   } catch (error) {
-    if (handlers.signal?.aborted) throw error;
-    if (controller.signal.aborted) throw new TimeoutError();
+    const callerAborted = Boolean(handlers.signal?.aborted);
+    const reportedError = callerAborted
+      ? abortError()
+      : controller.signal.aborted
+        ? new TimeoutError()
+        : error;
+    captureStreamFailure(reportedError, provider, config.model, startTime, callerAborted);
+    if (callerAborted) throw reportedError;
+    if (controller.signal.aborted) throw reportedError;
     throw error;
   } finally {
     clearTimeout(timeoutId);

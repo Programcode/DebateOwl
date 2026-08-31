@@ -7,6 +7,7 @@ import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
 import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate } from './date-format';
+import { captureProductEvent } from './observability';
 
 // Color constants for consistent branding
 const COLORS = {
@@ -436,6 +437,7 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
 
         addFooter();
         doc.save(`DebateCase_${sideValue}.pdf`);
+        captureProductEvent('content_exported', { format: 'pdf', tool: 'generate' });
         return true;
     } catch (error) {
         console.error('Failed to export case to PDF:', error);
@@ -516,6 +518,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
 
         addFooter();
         doc.save(`AttackAnalysis_${score}.pdf`);
+        captureProductEvent('content_exported', { format: 'pdf', tool: 'attack' });
         return true;
     } catch (error) {
         console.error('Failed to export attack to PDF:', error);
@@ -580,6 +583,7 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
 
         addFooter();
         doc.save('BrainstormResults.pdf');
+        captureProductEvent('content_exported', { format: 'pdf', tool: 'brainstorm' });
         return true;
     } catch (error) {
         console.error('Failed to export brainstorm to PDF:', error);
@@ -640,6 +644,7 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
 
         addFooter();
         doc.save('ResearchFactoids.pdf');
+        captureProductEvent('content_exported', { format: 'pdf', tool: 'factoids' });
         return true;
     } catch (error) {
         console.error('Failed to export factoids to PDF:', error);
@@ -737,6 +742,7 @@ export async function exportSparringToPdf(session: SparringSession): Promise<boo
 
         addFooter();
         doc.save(`SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.pdf`);
+        captureProductEvent('content_exported', { format: 'pdf', tool: 'sparring' });
         return true;
     } catch (error) {
         console.error('Failed to export sparring transcript to PDF:', error);
