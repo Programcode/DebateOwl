@@ -22,6 +22,7 @@ vi.mock("posthog-js", () => ({
 import {
   captureException,
   captureProductEvent,
+  filterObservabilityBreadcrumb,
   initializeObservability,
 } from "@/lib/observability";
 
@@ -96,6 +97,28 @@ describe("observability primitives", () => {
     expect(() => captureException(new Error("synthetic test error"))).not.toThrow();
   });
 
+  it("drops React error-boundary console breadcrumbs but preserves other console errors", () => {
+    const reactBreadcrumb = {
+      category: "console",
+      level: "error",
+      data: {
+        arguments: [
+          new Error("private descendant message"),
+          "The above error occurred in the <PrivateRoute> component:\n    at PrivateRoute",
+          "React will try to recreate this component tree from scratch using the error boundary you provided.",
+        ],
+      },
+    };
+    const ordinaryBreadcrumb = {
+      category: "console",
+      level: "error",
+      data: { arguments: ["ordinary application error"] },
+    };
+
+    expect(filterObservabilityBreadcrumb(reactBreadcrumb)).toBeNull();
+    expect(filterObservabilityBreadcrumb(ordinaryBreadcrumb)).toBe(ordinaryBreadcrumb);
+  });
+
   it("initializes both SDKs once with privacy-preserving options", () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://posthog.example");
@@ -108,6 +131,7 @@ describe("observability primitives", () => {
     expect(sentryInitMock).toHaveBeenCalledWith(expect.objectContaining({
       dsn: "https://public-test@sentry.example/1",
       sendDefaultPii: false,
+      beforeBreadcrumb: filterObservabilityBreadcrumb,
     }));
     expect(posthogInitMock).toHaveBeenCalledOnce();
     expect(posthogInitMock).toHaveBeenCalledWith("posthog-test-key", expect.objectContaining({
