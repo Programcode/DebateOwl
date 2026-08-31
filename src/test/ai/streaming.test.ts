@@ -178,7 +178,9 @@ describe('AI streaming helpers', () => {
         expect.objectContaining({ name: 'AIProviderError' }),
         expect.objectContaining({ errorName: 'AIProviderError', statusCode: 500 }),
       );
-      expect(JSON.stringify(captureExceptionMock.mock.calls)).not.toContain('private question');
+      const [capturedError, capturedContext] = captureExceptionMock.mock.calls[0];
+      expect(capturedError).toMatchObject({ message: 'AIProviderError' });
+      expect(JSON.stringify(capturedContext)).not.toContain('private question');
     });
 
     it.each([
