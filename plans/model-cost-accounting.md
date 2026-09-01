@@ -2,7 +2,7 @@
 
 **Owner:** DebateLab application, admin, and Supabase Edge Function maintainers
 
-**Snapshot:** 2026-08-31, `main` at `acaac0d`
+**Snapshot:** 2026-09-01, `main` at `79b65ca`. Re-verified: PRs #16-#28 did not touch cost accounting.
 
 **Goal:** Finish the operational accounting cleanup so stored model costs stay auditable, incomplete provider work is not billed as complete, and admin totals distinguish unknown cost from non-AI activity.
 

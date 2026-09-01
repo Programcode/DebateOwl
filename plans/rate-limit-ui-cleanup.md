@@ -1,6 +1,6 @@
 # Rate-limit UI cleanup plan
 
-**Status as of 2026-08-31:** Partially complete. Marketing and upgrade copy was already softened; the remaining change is the prominent numeric usage block in Settings.
+**Status as of 2026-09-01 (`79b65ca`):** Partially complete. Marketing and upgrade copy was already softened; the remaining change is the prominent numeric usage block in Settings.
 
 ## Goal
 

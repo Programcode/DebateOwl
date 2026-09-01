@@ -1,6 +1,6 @@
 # Bugs and polish backlog
 
-Audit date: 2026-08-31 on `main` (`acaac0d`). This file now lists only reproducible items from the earlier backlog. All other entries were removed after checking current source and history.
+Audit date: 2026-09-01 on `main` (`79b65ca`). This file lists only reproducible items from the earlier backlog. All other entries were removed after checking current source and history. All four items below were re-verified against `79b65ca`, including their line references.
 
 ## Preconditions
 

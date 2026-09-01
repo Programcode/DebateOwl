@@ -2,7 +2,7 @@
 
 **Owner:** DebateLab application and Supabase Edge Function maintainers
 
-**Snapshot:** 2026-08-31, `main` at `acaac0d`
+**Snapshot:** 2026-09-01, `main` at `79b65ca`. Re-verified: PRs #16-#28 did not touch control enforcement.
 
 **Goal:** Keep every visible AI control honest at the edge boundary, including requests that do not come from the browser.
 

@@ -1,6 +1,6 @@
 # System prompt improvement plan
 
-**Status:** Remaining work as of 2026-08-31 on `main` (`acaac0d`).
+**Status:** Remaining work as of 2026-09-01 on `main` (`79b65ca`). Re-verified: PRs #16-#28 did not touch the prompt builders.
 
 ## Preconditions
 
