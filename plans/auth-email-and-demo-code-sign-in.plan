@@ -1,77 +1,117 @@
-Email and Demo Code Sign-In Plan
+# Email and demo-code sign-in plan
 
-Goals
+**Status as of 2026-08-31:** Partially implemented. The demo-code backend and schema already exist; the user-facing login and admin management work is still missing.
 
-- Keep Google sign-in as the quickest path for normal users.
-- Add email sign-in for users who do not want Google.
-- Add admin-created demo accounts that can sign in with a short code only.
-- Make demo access easy to reset, expire, and audit from the admin page.
+## Goal
 
-Recommended Auth Model
+Keep Google OAuth as the fast default, add passwordless email OTP sign-in, and expose the existing admin-issued demo-code flow through the Login and Admin pages. Every path must end in an ordinary Supabase Auth session so RLS, subscriptions, saved data, usage accounting, and Edge Function JWT checks continue to work.
 
-Use Supabase Auth for real user sessions in all cases. Do not create a separate local-only auth mode, because the rest of the app already relies on auth.uid(), RLS, subscriptions, usage tracking, saved items, and Edge Function JWT validation.
+## Prerequisites and isolation
 
-Email Sign-In
+- Use Node 22.x as declared in `package.json`, npm, and the checked-in `package-lock.json`.
+- Work in this plan's own isolated T3 Code worktree and feature branch. Before editing, run `pwd`, `git branch --show-current`, `git status --short --untracked-files=all`, and `git worktree list`. Confirm the worktree is not `main` and is not another plan worktree.
+- Preserve every pre-existing dirty or untracked change. Do not reset, clean, checkout, or edit files outside this plan's scope.
+- Verify the intended Supabase project and Auth provider configuration before staging. Production provider changes, redirect changes, Edge Function deployment, and creation of real demo codes or accounts require Adam's explicit approval.
+- Before browser checks, confirm port `18080` is unoccupied. With `CI=1`, the current `playwright.config.ts` starts a fresh Vite server instead of reusing another checkout.
 
-1. Enable Supabase email auth.
-2. Add an email form on LoginPage.
-3. Prefer magic-link/OTP first:
-   - User enters email.
-   - Supabase sends sign-in link or six-digit OTP.
-   - App verifies OTP and creates a normal Supabase session.
-4. Add password sign-up later only if needed. Magic-link keeps the product simpler for students and demo users.
+## Current verified baseline
 
-Demo Code Sign-In
+- `src/pages/LoginPage.tsx` renders only a Google button and calls `useAuth().signInWithGoogle()`.
+- `src/lib/supabase/AuthProvider.tsx` owns the PKCE callback exchange, auth-state hydration, user-bound store resets, and Google redirect. `src/lib/supabase/client.ts` uses `flowType: 'pkce'` with URL detection disabled. No email or demo method is exposed by the auth context.
+- `src/locales/en.json`, `src/locales/es.json`, and `src/locales/hu.json` describe Google as required. The Terms and Privacy translation text also describes Google-only sign-in.
+- The demo backend is already in `supabase/functions/demo-code-login/index.ts` and is configured with `verify_jwt = false` in `supabase/config.toml` because it runs before a session exists. It normalizes `DEMO-XXXX-XXXX` codes, hashes them with a server pepper, rate-limits failed attempts by IP/browser value, checks disabled/expired/max-use state, atomically reserves a use, provisions or finds the assigned Auth user, prevents a demo code from granting admin, and returns a `tokenHash` plus verification type.
+- `supabase/migrations/20260820070000_reconcile_prod_only_objects.sql` already records the production `demo_access_codes` and `demo_access_attempts` tables as recovered/applied objects. Do not create a duplicate table migration. Commits `c21c64e`, `f631d4c`, `f8ae2b3`, and `c5b4a7a` contain the recovered and hardened flow.
+- `src/pages/AdminPage.tsx` has no demo-access controls. The existing admin function has no demo-code actions. The schema keeps hashes and attempt logs service-role-only, so the browser must not query either table directly.
 
-Create a demo_access_codes table:
+## Remaining scope
 
-- id uuid primary key
-- code_hash text not null unique
-- label text not null
-- email text not null unique
-- role text default 'user'
-- expires_at timestamptz
-- max_uses int
-- use_count int default 0
-- created_by uuid references auth.users(id)
-- last_used_at timestamptz
-- disabled_at timestamptz
-- created_at timestamptz default now()
+1. Enable and verify Supabase email OTP settings and redirect allowlists in each approved environment, then wire the client flow.
+2. Add email OTP and demo-code controls to the existing auth context and Login page.
+3. Add admin-only create/list/disable/reset actions for the existing demo-code table. Generate a raw code server-side and return it only in the create response; list responses must never include `code_hash` or a raw code.
+4. Update legal/login copy in all three locales and add focused UI, auth, function-contract, and browser tests.
 
-Code rules:
+Do not add a second auth system, password sign-up, a new demo-code table, a client-stored raw code, an admin-granting demo role, or an email alias workaround unless a separate product/security decision proves the OTP flow cannot work.
 
-- Store only a hash, never the raw code.
-- Generate human-friendly codes such as DEMO-7KQ4-MV9P.
-- Rate-limit attempts by IP and browser fingerprint.
-- Expire codes by default after the event/demo date.
+## Likely files
 
-Demo Code Login Flow
+- Modify: `src/lib/supabase/AuthProvider.tsx`
+- Modify: `src/pages/LoginPage.tsx`
+- Modify: `src/pages/AdminPage.tsx`
+- Modify: `supabase/functions/admin/index.ts`
+- Modify: `supabase/functions/demo-code-login/index.ts` only if shared validation or response behavior must be extracted for testing
+- Create: `supabase/functions/_shared/demo-code.ts` if hashing/generation helpers are shared between admin creation and login
+- Create: `supabase/functions/demo-code-login/index.test.ts` or focused shared tests for normalization, format, hashing, and safe error behavior
+- Create: `supabase/functions/admin/index.test.ts` or focused admin-action contract tests
+- Modify: `src/test/auth/AuthProvider.behavior.test.tsx`
+- Create: `src/test/pages/LoginPage.test.tsx`
+- Modify: `src/test/pages/AdminPage.test.tsx`
+- Modify: `src/test/i18n.test.ts`
+- Modify: `src/locales/en.json`
+- Modify: `src/locales/es.json`
+- Modify: `src/locales/hu.json`
+- Create: `e2e/login-auth-methods.spec.ts`
 
-1. Login page shows a "Demo code" tab.
-2. User enters code.
-3. Client calls a new Supabase Edge Function, demo-code-login.
-4. Function validates the code using the service role key.
-5. Function creates or finds a Supabase Auth user for the code's assigned email.
-6. Function returns a magic link or OTP-style session handoff.
-7. Client receives a normal Supabase session, so existing app logic works unchanged.
+## Sequenced implementation
 
-Preferred implementation detail: use Supabase Admin APIs to generate a magic link for the demo account, then return the link target/session flow to the client. If Supabase cannot safely return a session directly, use an OTP email alias owned by the app for demo-only users.
+### 1. Confirm the provider configuration before code changes
 
-Admin UI
+In staging, enable Supabase email OTP with the approved mail transport and allow only the app's existing origins/redirect paths. Use a six-digit `verifyOtp({ type: 'email' })` flow to avoid introducing a second callback path. Record the exact staging configuration and the production change still requiring approval. Do not print keys, tokens, callback URLs containing secrets, or email contents.
 
-Add a "Demo access" section to AdminPage:
+### 2. Extend the auth context with passwordless methods
 
-- Create code with label, expiry, max uses, and optional role.
-- Copy raw code once after creation.
-- Disable a code.
-- Reset use count.
-- See last used time and assigned demo email.
+Add methods for sending an email OTP, verifying an email OTP, and completing a demo-code sign-in. The email path should call `signInWithOtp` and then `verifyOtp` with the normalized email and bounded six-digit token. The demo path should call the existing `demo-code-login` function, then pass its returned `tokenHash` and verification type to Supabase `verifyOtp`. Let the existing `onAuthStateChange` path hydrate stores and route the user; do not manually manufacture a session or bypass the current user-bound reset logic.
 
-Rollout Order
+### 3. Add the Login page states
 
-1. Add email magic-link/OTP sign-in.
-2. Add database migration and Edge Function for demo codes.
-3. Add admin UI to create/disable codes.
-4. Add Login page tabs: Google, Email, Demo code.
-5. Add tests for email submit, code submit, expired code, disabled code, max-use code, and admin creation.
-6. Update Terms/Privacy text to say users can sign in with Google, email, or admin-issued demo codes.
+Keep Google as the primary action and add clearly separated Email and Demo code tabs. Email needs validation, send/resend state, OTP entry, success, expired/invalid-token, and retry messages. Demo code needs normalization, a bounded input, rate-limit/error display, and a loading state. If a browser-session identifier is sent for the existing attempt limiter, keep it in `sessionStorage`, bound it before sending, and do not persist a raw code or token in localStorage.
+
+### 4. Add admin demo-code management
+
+Extend `supabase/functions/admin/index.ts` with admin-only actions to list codes (redacted), create a code, disable a code, and reset its use count. Use the existing `DEMO_CODE_PEPPER` hashing contract and a cryptographically random human-readable `DEMO-XXXX-XXXX` generator. Validate email, label, expiry, and positive max uses server-side. Store role as `user` for this self-service flow and never expose the schema's legacy `admin` option in the UI. Reset and disable actions must re-check the current admin role and return stable errors.
+
+Add a Demo access section to `AdminPage.tsx` with label, assigned email, expiry, max uses, status, use count, last-used time, disable, and reset controls. Show the raw generated code once with an explicit copy action and a warning that it cannot be recovered after leaving the response. Never fetch the service-only tables from the browser.
+
+### 5. Update user-facing legal and login copy
+
+Add matching keys and translations to `en.json`, `es.json`, and `hu.json` for Google, email OTP, demo code, errors, and one-time-code states. Update the existing Terms and Privacy translation paragraphs to describe Google, email OTP, and admin-issued demo codes accurately. Keep all locale key sets equal.
+
+### 6. Add focused coverage and browser proof
+
+Extend `AuthProvider.behavior.test.tsx` for email send/verify, demo function invocation, verification, auth-state hydration, and error paths. Add Login and Admin page tests for all submit states and redaction. Add function/shared tests for code format, hashing, expiry/disabled/max-use responses, rate limiting, atomic-use response handling, and the invariant that a demo code cannot grant admin. Add Playwright coverage with mocked Supabase responses for Google, email OTP, demo-code success, and rejected demo codes.
+
+## Verification
+
+Run focused checks first:
+
+```bash
+npm test -- --run src/test/auth/AuthProvider.behavior.test.tsx src/test/pages/LoginPage.test.tsx src/test/pages/AdminPage.test.tsx src/test/i18n.test.ts
+deno check supabase/functions/admin/index.ts supabase/functions/demo-code-login/index.ts
+deno test --allow-read --allow-env=EXA_API_KEY --allow-net=127.0.0.1 supabase/functions/
+```
+
+Run the repository gates and browser suite:
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+```
+
+Before any environment change, verify the target Supabase project, migration state, function diff, redirect allowlist, and rollback path. A passing local mock does not prove provider configuration or a real email delivery path, so stage a real OTP and demo-code smoke test before requesting production approval.
+
+## Acceptance criteria
+
+- Google sign-in remains unchanged and still uses the existing PKCE redirect and store hydration path.
+- A user can request and verify a six-digit email OTP, receives a normal Supabase session, reaches the intended route, and sees useful validation, resend, expiry, and failure states.
+- A valid demo code reaches the existing Edge Function, consumes one server-side use, verifies the returned token hash into a normal Supabase session, and hydrates the same stores. Invalid, expired, disabled, max-use, and rate-limited codes show safe errors.
+- No raw demo code, code hash, service-role key, access token, or refresh token is stored in localStorage or returned by list endpoints. A demo code cannot grant admin.
+- An admin can create a bounded code, copy the raw value once, list redacted metadata, disable it, and reset its use count. Non-admin create/list/disable/reset calls return `403`.
+- English, Spanish, and Hungarian locale keys stay in sync, and Terms/Privacy accurately describe the enabled sign-in methods.
+
+## Rollout, rollback, and authorization
+
+Deploy the frontend and any changed Edge Functions to staging after the provider configuration is verified there. Exercise a real email OTP, a valid demo code, and each rejection path without revealing tokens in logs. Production email-provider configuration, redirect changes, function deployment, and any creation of real demo accounts/codes require Adam's explicit approval for the concrete production operation.
+
+Rollback by reverting the frontend/admin-function release. Disable affected demo codes and, if necessary, disable the email provider in the environment after confirming no users depend on it. Keep the existing demo tables and audit attempts; do not drop or rewrite them as part of rollback. Re-run the Google-only smoke path after rollback.

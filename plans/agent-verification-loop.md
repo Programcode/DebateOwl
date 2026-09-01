@@ -120,7 +120,6 @@ must run all of these gates:
 npm run lint
 npm run typecheck
 npm test -- --coverage
-npm run test:edge
 npm run build
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 ```
@@ -182,8 +181,8 @@ npm run test:e2e:staging
 
 The CI staging job may run only from a protected environment on an authorized
 `main` push or explicitly authorized main-branch dispatch. It must not run on
-pull requests or arbitrary branch dispatches. It disables traces, screenshots,
-and video and uploads no authenticated browser artifacts.
+pull requests or arbitrary branch dispatches. The job should upload the same
+failure artifacts without exposing secret-bearing logs.
 
 ### 4. Add the verification playbook
 
@@ -210,10 +209,11 @@ npx playwright install --with-deps chromium
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run verify
 ```
 
-WebKit is configured as an explicit local and release smoke gate. Install it
-with `npx playwright install --with-deps webkit`, then run
-`CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webkit`.
-Chromium remains the credential-free PR gate. The protected staging suite is also
+WebKit is conditional. If the implementation adds a `webkit` project to
+`playwright.config.ts`, install it and run
+`CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npx playwright test --project=webkit`
+as an additional local/release smoke gate. Until that project is configured,
+Chromium is the credential-free PR gate. The protected staging suite is also
 required for a release that changes authenticated data or AI flows.
 Capture the current-head CI result and artifact links. A billing-blocked CI run
 is reported as an exception, never as a pass.

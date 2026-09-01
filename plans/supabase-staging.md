@@ -1,178 +1,309 @@
-# Supabase staging environment + admin env switcher
+# Supabase staging synchronization and switcher verification
 
 ## Goal
 
-Have a parallel Supabase project (`debate-trainer-staging`) that mirrors prod's schema, so we can:
-1. Test risky migrations / edge function changes without touching prod data.
-2. Let admin users in the UI toggle the running app between prod and staging at runtime.
+Finish the existing `debate-trainer-staging` project without recreating it or
+replacing the existing runtime environment resolver. As of 2026-08-31 the
+remaining work is to apply the two latest migrations, synchronize the 11
+deployed functions and their JWT settings, prove the required staging secrets
+and auth path, and verify the existing switcher safely.
 
-## What `supabase` CLI can and can't do
+## Verified current state
 
-**Can do (verified 2026-05-19):**
-- `supabase projects create <name> --org-id <id> --db-password <pw> --region <code>` — creates a new project under our org (`xfaxcdgescvjfckjsxqq` = Debate-Trainer). Returns a new project ref id and connection details.
-- `supabase link --project-ref <ref>` — switch the local CLI context to a different project. Used to push migrations and deploy functions to staging.
-- `supabase db push` — applies local migrations to whichever project is currently linked.
-- `supabase functions deploy <name>` — deploys the local function code to the linked project.
+- `supabase projects list` reports both `debate-trainer`
+  (`uziwdtkzofptihahfooo`) and `debate-trainer-staging`
+  (`brifeyypjauyusmkptkx`) as `ACTIVE_HEALTHY`. The staging project was
+  created on 2026-05-20 in the same organization and is not the linked local
+  project.
+- The local repository has 23 migration files. A read-only
+  `npx supabase migration list --project-ref brifeyypjauyusmkptkx` shows 21
+  applied migrations and exactly these two missing migrations:
+  `20260830000000_complete_sparring_sessions` and
+  `20260830000001_index_sparring_sessions_concurrently`.
+- The local repository has 11 deployable functions. Staging has all 11 active,
+  but its versions predate the current checkout for several functions. Its
+  current `verify_jwt` values also differ from `supabase/config.toml` for
+  `export-gdoc`, `create-checkout`, `create-portal`, `import-source`, and
+  `redeem-promo`. The sync must correct both code and gateway settings.
+- `supabase secrets list --project-ref brifeyypjauyusmkptkx` reports 16 secret
+  names, including the provider keys, `DEMO_CODE_PEPPER`, Google OAuth values,
+  and Supabase platform values. `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET` are absent. Secret-name presence does not prove that a
+  provider request or OAuth flow works. Do not print or copy any value.
+- `src/lib/supabase/env.ts` already contains the production and staging URL/key
+  pairs and localStorage selection through `getActiveEnv` and `setActiveEnv`.
+  `src/lib/supabase/client.ts` uses the selected environment's auth storage key.
+  `src/pages/SettingsPage.tsx` has the existing `isAdmin` gate, but `rg`
+  confirms that nothing on current `main` calls `setActiveEnv`. The exact
+  `VITE_FORCE_SUPABASE_ENV` and `AdminDeveloperPanel.tsx` identifiers are not
+  present. Preserve the resolver and gate while restoring the admin-only UI;
+  use the existing localStorage mechanism for E2E unless a separate forced
+  build-time selector is proven necessary.
+- Function CORS responses already accept `http://localhost:8080` and return the
+  expected origin for staging preflight requests. No hosted staging hostname
+  has been approved, so do not add a speculative domain to the function code.
+- Git history contains the earlier switcher implementation in `e1e2143`; the
+  current `main` checkout retains its resolver groundwork but not that exact
+  panel. The backend/client contracts include Crossfire and sparring changes
+  from `f1ce741` and `0b94c9e`.
 
-**Can't do (manual steps):**
-- Copy **secrets** (`OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `EXA_API_KEY`, `STRIPE_*`) — must be set in the staging dashboard or via `supabase secrets set` per project.
-- Copy **OAuth providers** (Google Sign-In is configured in the dashboard). Need to add the staging redirect URL to the Google OAuth client.
-- Copy **data**. `supabase db dump` requires Docker; even if you run it, you usually don't want to copy real user data into staging. Better: seed with one test user.
-- Configure **CORS** for the staging URL in the edge function code (the `ALLOWED_ORIGINS` arrays). If the staging frontend is hosted on a different URL, that URL must be added.
+Project creation, full-clone work, and the resolver groundwork are complete and
+must not be repeated. The admin UI around that resolver is still required.
 
-## Step-by-step staging clone
+## Preconditions and isolation
 
-### 1. Create the project (5 min)
+The implementation agent must work from its own isolated T3 Code worktree and
+feature branch. It must not use the `main` checkout or another plan's
+worktree. Before edits or remote commands, run:
 
 ```bash
-# Generate a strong password and save it locally first
-STAGING_DB_PASSWORD=$(openssl rand -base64 32)
-echo "$STAGING_DB_PASSWORD" > .staging-db-password.local    # gitignored
-
-npx supabase projects create debate-trainer-staging \
-  --org-id xfaxcdgescvjfckjsxqq \
-  --db-password "$STAGING_DB_PASSWORD" \
-  --region eu-north-1
+pwd
+git branch --show-current
+git worktree list --porcelain
+git status --short --branch
 ```
 
-Save the returned `Project Ref` — you'll need it everywhere below. Call it `STAGING_REF`.
+Stop if the worktree or branch is wrong, if unrelated dirty state is present,
+or if either project ref does not match the verified values above. Use explicit
+`--project-ref` arguments. Do not relink the checkout to production.
 
-### 2. Link & push migrations (5 min)
+## Remaining work
+
+### 1. Capture a safe remote baseline
+
+Read-only commands:
 
 ```bash
-# Note current prod ref so we can switch back
+STAGING_REF=brifeyypjauyusmkptkx
 PROD_REF=uziwdtkzofptihahfooo
-
-# Switch to staging
-npx supabase link --project-ref "$STAGING_REF"
-npx supabase db push   # applies ALL local migrations from supabase/migrations/ to staging
+npx supabase projects list --output-format json
+npx supabase migration list --project-ref "$STAGING_REF" --output-format json
+npx supabase functions list --project-ref "$STAGING_REF" --output-format json
+npx supabase secrets list --project-ref "$STAGING_REF" --output-format json
 ```
 
-If `db push` complains about missing migration history (it shouldn't on a fresh project, but just in case), repair it the same way we did for prod earlier.
+Record only project status, migration IDs, function slugs/versions/JWT flags,
+secret names, and timestamps. Never record key values, tokens, connection
+strings, or auth credentials. Confirm the dry-run below lists only the two
+missing migration IDs before applying anything.
 
-### 3. Set secrets on staging (5 min, manual)
+### 2. Apply the two missing migrations to staging
 
-In the Supabase dashboard for `debate-trainer-staging` → **Project Settings → Edge Functions → Secrets**:
+Files reviewed:
 
-| Secret | Source |
-|--------|--------|
-| `OPENAI_API_KEY` | Same as prod, OR a separate dev key |
-| `GOOGLE_API_KEY` | Same |
-| `ANTHROPIC_API_KEY` | Same |
-| `EXA_API_KEY` | Same |
-| `STRIPE_SECRET_KEY` | **Use Stripe TEST key, not live** |
-| `STRIPE_WEBHOOK_SECRET` | Generate a new test webhook in Stripe pointing at the staging webhook URL |
-| `AI_DEFAULT_PROVIDER` | `google` |
-| `AI_DEFAULT_MODEL` | `gemini-2.0-flash` |
+- `supabase/migrations/20260830000000_complete_sparring_sessions.sql`
+- `supabase/migrations/20260830000001_index_sparring_sessions_concurrently.sql`
 
-### 4. Deploy edge functions to staging (5 min)
+The first migration adds the shipped sparring columns, policies, clear-marker
+fence, and service-role claim functions. The second adds the user/update index
+outside a transaction. These are additive changes needed by the current
+sparring client and must run in timestamp order.
 
-Still linked to staging:
-```bash
-npx supabase functions deploy ai
-npx supabase functions deploy ai-stream
-npx supabase functions deploy admin
-npx supabase functions deploy share
-npx supabase functions deploy export-gdoc
-npx supabase functions deploy create-checkout
-npx supabase functions deploy create-portal
-npx supabase functions deploy stripe-webhook
-npx supabase functions deploy redeem-promo
-npx supabase functions deploy import-source
-```
-
-### 5. Update CORS allowlists in edge functions (one-time)
-
-The `ALLOWED_ORIGINS` arrays in every edge function `index.ts` currently include `https://debate.pi-stack.org` and localhost variants. Add the staging frontend URL (e.g., `https://staging.debate.pi-stack.org` or whatever you pick). Commit that change to main.
-
-### 6. Configure Google OAuth for staging (5 min, manual)
-
-In Google Cloud Console → OAuth client used by Supabase Auth:
-- Add the staging Supabase auth callback URL: `https://<staging-ref>.supabase.co/auth/v1/callback`
-- Add the staging frontend URL to "Authorized redirect URIs"
-
-Then in the staging Supabase dashboard → **Authentication → Providers → Google** → paste the same client ID/secret as prod (or a separate one if you want).
-
-### 7. Switch local CLI back to prod (1 min)
+Dry-run and apply, targeting staging explicitly:
 
 ```bash
-npx supabase link --project-ref "$PROD_REF"
+npx supabase db push --project-ref "$STAGING_REF" --dry-run
+npx supabase db push --project-ref "$STAGING_REF"
+npx supabase migration list --project-ref "$STAGING_REF" --output-format json
 ```
 
-Verify: `npx supabase status` should show debate-trainer (prod) as linked.
+The dry-run must name only `20260830000000` and `20260830000001`. The final
+list must show all 23 local IDs applied with no divergent or unexpected remote
+rows. If the dry-run proposes an earlier migration, a history repair, a role
+change, or any production ref, stop for review. `db push` is the only staging
+data/schema mutation in this step and requires Adam's explicit authorization.
 
-## Admin-only env switcher in the UI
+### 3. Synchronize current function code and gateway settings
 
-### Design
+Local function sources are the 11 directories under `supabase/functions/`:
 
-The Supabase URL and anon key are currently read from `import.meta.env.VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` at build time. To switch at runtime requires:
-
-1. **Bundling both sets of credentials.** Add `VITE_SUPABASE_STAGING_URL` and `VITE_SUPABASE_STAGING_ANON_KEY` to `.env`. The staging anon key is safe to bundle (it's already public).
-
-2. **A small env-resolver module** that reads `localStorage.getItem('debate-supabase-env')` on app start and exports the right URL/key.
-
-3. **An admin-only UI toggle** in Settings → a new "Developer" card visible only when `is_admin = true`. Selecting "Staging" sets the localStorage flag and forces a full page reload (the supabase client and all auth state must be rebuilt).
-
-### Hard truth: auth session does not survive the switch
-
-The Supabase auth session is signed by the project's JWT secret. Switching projects = session is invalid. The user **will be logged out** and must re-sign-in to the other project.
-
-We can't transparently switch users between projects unless:
-- Both projects use the same auth provider (which they do — Google OAuth).
-- The user is signed in to Google in their browser.
-- The auth state in `localStorage` is cleared on switch so the new project performs a fresh sign-in.
-
-That's an acceptable UX for an admin debugging tool, but worth being explicit.
-
-### Files to create/touch
-
-```
-src/lib/supabase/env.ts          (NEW)  — reads/writes the env flag, exports URL/anon for the active env
-src/lib/supabase/client.ts       (EDIT) — import from env.ts instead of import.meta.env directly
-src/components/settings/
-  AdminDeveloperPanel.tsx        (NEW)  — admin-only Settings card with the switcher
-src/pages/SettingsPage.tsx       (EDIT) — render <AdminDeveloperPanel> when is_admin
-.env.example                     (EDIT) — document the new VITE_SUPABASE_STAGING_* keys
+```text
+admin
+ai
+ai-stream
+create-checkout
+create-portal
+demo-code-login
+export-gdoc
+import-source
+redeem-promo
+share
+stripe-webhook
 ```
 
-### Behavior on switch
+After the migration succeeds, deploy exactly those names to staging without
+pruning anything:
 
-1. Confirm dialog: "Switch to Staging Supabase? You'll be signed out and need to sign in again on the staging project."
-2. On confirm:
-   - `supabase.auth.signOut()` (drops cookies)
-   - `localStorage.removeItem('sb-<prod-ref>-auth-token')` and any cached tokens
-   - `localStorage.setItem('debate-supabase-env', 'staging')`
-   - `window.location.reload()`
-3. App boots pointing at staging. User signs in. The Supabase auth session for staging is now stored under a different localStorage key (Supabase uses the project ref in the key by default), so there's no collision.
+```bash
+npx supabase functions deploy \
+  admin ai ai-stream create-checkout create-portal demo-code-login \
+  export-gdoc import-source redeem-promo share stripe-webhook \
+  --project-ref "$STAGING_REF" --use-api
+npx supabase functions list --project-ref "$STAGING_REF" --output-format json
+```
 
-### Reversibility
+Verify that all 11 are `ACTIVE`, the deployment timestamps and source hashes
+are current for the implementation commit, and `verify_jwt` matches the local
+`supabase/config.toml` contract. Do not use `--prune`, deploy to `PROD_REF`,
+or redeploy unrelated functions after the evidence check. Function deployment
+is a staging mutation and requires Adam's explicit authorization.
 
-To switch back to prod: same flow, set `'production'` (or just remove the key).
+### 4. Verify secrets and browser CORS without changing them
 
-If the admin UI ever shows the wrong env or refuses to switch, the user can edit localStorage directly in DevTools and reload.
+The operator must compare the staging secret-name list with what the current
+browser-facing functions require: `OPENAI_API_KEY`, `GOOGLE_API_KEY`,
+`ANTHROPIC_API_KEY`, `EXA_API_KEY`, `DEMO_CODE_PEPPER`, Google OAuth
+configuration, and the Supabase platform values. If a required name is absent,
+stop and have Adam supply a staging-only value through the Supabase dashboard or
+`supabase secrets set`. Never paste a secret into a file, command output,
+commit, PR, or chat, and do not copy production provider values by default.
 
-## Rollback / restore-to-here
+Check the already-supported local caller without mutating data:
 
-This plan adds a staging Supabase project and a runtime switcher. Neither touches prod data or schema. To fully undo:
+```bash
+for fn in admin ai ai-stream create-checkout create-portal demo-code-login \
+  export-gdoc import-source redeem-promo share; do
+  /usr/bin/curl -sS -D - -o /dev/null -X OPTIONS \
+    "https://brifeyypjauyusmkptkx.supabase.co/functions/v1/$fn" \
+    -H 'Origin: http://localhost:8080'
+done
+```
 
-- Delete the staging project: `npx supabase projects delete <STAGING_REF>` (or via dashboard).
-- Revert the frontend changes: `git revert <env-switcher-commits>`.
+Each response must be 200 or 204 and return
+`Access-Control-Allow-Origin: http://localhost:8080`. A hosted staging URL is
+not part of this plan. If Adam later chooses one, stop and obtain the exact
+hostname plus OAuth redirect approval before editing every affected function's
+allowlist.
 
-Prod (`uziwdtkzofptihahfooo`) is never modified by this plan.
+`stripe-webhook` is server-to-server and is intentionally excluded from this
+browser CORS loop. Its staging `STRIPE_SECRET_KEY` and
+`STRIPE_WEBHOOK_SECRET` are currently missing. If Stripe behavior is in scope,
+Adam must provide staging-only Stripe test credentials and configure a test
+webhook endpoint. Verify it with a signed Stripe test event and the resulting
+database state, not with a browser preflight or a fabricated 200/204 response.
 
-## Acceptance criteria
+### 5. Implement and prove the staging auth path and admin switcher
 
-- [ ] Staging project exists in the same org as prod.
-- [ ] Staging has all migrations applied (`supabase migration list` shows alignment).
-- [ ] Staging has all edge functions deployed.
-- [ ] Staging has all required secrets set.
-- [ ] Google OAuth works against staging (admin can sign in on staging).
-- [ ] Admin user sees a "Developer" panel in Settings.
-- [ ] Toggling the switch reloads the app, signs out, and the new auth signs in against the other project.
-- [ ] Non-admin users do NOT see the switcher.
+Preserve `getActiveEnv` and `setActiveEnv` in `src/lib/supabase/env.ts` and
+restore an admin-only control around them. The likely files are
+`src/components/features/settings/AdminDeveloperPanel.tsx` (new) and
+`src/pages/SettingsPage.tsx` (render it only after the existing `isAdmin` check
+succeeds). The control must sign out before switching, call `setActiveEnv`, and
+reload. Reuse the existing translations in `src/locales/en.json`,
+`src/locales/es.json`, and `src/locales/hu.json` when they match the UI.
 
-## Open questions to confirm before implementing
+Do not add `VITE_FORCE_SUPABASE_ENV` to the product runtime by default. The
+staging Playwright setup can set
+`localStorage['debate-supabase-env']='staging'` before app scripts run. Add a
+staging-only build-time selector in `src/lib/supabase/env.ts` only if that
+browser setup is demonstrably insufficient, and reject production values in
+that test-only path.
 
-1. Where does the staging frontend live? Same Cloudflare tunnel + subdomain, or a separate Pi/deploy? This affects CORS and OAuth redirect URIs.
-2. Do we want staging to use the same Google OAuth client as prod (simpler) or a separate one (more isolated)?
-3. Do we want to seed staging with a known test user / test promo codes, or start truly empty?
+Add focused tests in `src/test/supabase/env.test.ts` and
+`src/test/components/AdminDeveloperPanel.test.tsx` (or extend the existing
+settings-page test if that is the repository's established location). Cover
+production default, localStorage staging selection, admin visibility, cancel,
+sign-out, reload behavior, and the selected auth storage key. If a separate
+test-only build selector is added, cover its staging-only validation there. Do
+not expose service-role credentials in tests.
+
+Then use the protected test identity and code prepared for the verification
+plan. The real browser setup belongs in `e2e/staging/auth.setup.ts` and must
+call the staging `demo-code-login` function followed by anon-client
+`verifyOtp({ type: 'magiclink' })`. Before the app loads, set the existing
+`localStorage['debate-supabase-env']` key to `staging`. It must not use
+production or a service-role key. Acceptance requires:
+
+1. The test identity can authenticate on staging and remains authenticated
+   after a page reload.
+2. One bounded source read/write and one short AI request reach staging and
+   return the expected response, with no browser console error.
+3. A staging admin account sees `Developer` in
+   `src/components/features/settings/AdminDeveloperPanel.tsx`; a non-admin
+   account does not.
+4. Confirming the panel switch signs out, updates
+   `localStorage['debate-supabase-env']`, reloads, and uses the other project's
+   auth storage key. Cancel leaves the current environment unchanged.
+
+The staging browser flow may run locally or from the protected main-only job
+described in `plans/agent-verification-loop.md`. It must never receive staging
+secrets on pull-request jobs.
+
+## Full acceptance gates
+
+Repository gates must pass on the implementation branch before any remote
+staging mutation:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npx vitest run src/test/ai/sparring.test.ts supabase/functions/ai/sparring-persistence.test.ts
+deno check supabase/functions/*/index.ts
+npm test -- --coverage
+npm run build
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+```
+
+Then, with explicit staging authorization and the migration/function baseline
+captured:
+
+```bash
+npx supabase migration list --project-ref "$STAGING_REF" --output-format json
+npx supabase functions list --project-ref "$STAGING_REF" --output-format json
+CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:staging
+```
+
+The release record must include the current branch/commit, both remote lists,
+the preflight results, the real authenticated browser evidence, and any CI
+billing exception. It must not include secrets.
+
+## Stop conditions
+
+- Either ref is ambiguous, the CLI is linked to production, or a command would
+  touch `uziwdtkzofptihahfooo`.
+- The migration dry-run includes anything other than the two 20260830 files,
+  detects divergent history, or asks for an unsafe repair.
+- A migration, function deployment, secret change, OAuth change, or cleanup is
+  attempted without explicit staging authorization.
+- A required staging secret name is missing, a provider request is not
+  configured, or the demo-code test identity is unavailable. Do not substitute
+  production credentials or a real user.
+- Function slugs, JWT flags, source hashes, or CORS results do not match the
+  local contract.
+- The requested hosted staging hostname or Google OAuth redirect has not been
+  chosen and approved.
+- Browser proof is only a mocked render, or the real staging path fails. Stop
+  and retain the trace/screenshot/video instead of reporting success.
+
+## Rollback
+
+The two migrations are additive. If a staging regression appears, stop using
+the affected sparring path and leave the columns/functions in place while the
+implementation is corrected. A hand-written down migration, `DROP`, or
+`TRUNCATE` requires a separate explicit staging authorization and a reviewed
+rollback script. Do not edit migration history to hide a failed apply.
+
+For function regressions, capture the current version/source-hash baseline and
+redeploy the previously verified commit's exact function names to staging:
+
+```bash
+npx supabase functions deploy <function-name> --project-ref "$STAGING_REF" --use-api
+```
+
+Do not use `--prune`, delete the project, rotate secrets, or deploy the rollback
+to production. Frontend changes to the existing switcher roll back through the
+normal branch revert; changing the localStorage flag back to production and
+reloading is the user-level recovery path.
+
+## Authorization boundaries
+
+- Read-only project, migration, function, secret-name, preflight, and status
+  checks may run with secret-safe output.
+- Applying migrations, deploying functions, creating test data, changing CORS,
+  setting secrets, configuring OAuth, and staging cleanup require Adam's
+  explicit authorization for the staging project.
+- Provider keys, service-role keys, OAuth secrets, and demo-code plaintext stay
+  in protected environment storage. They never enter the repository or chat.
+- No command in this plan may migrate, deploy, seed, delete, or change secrets
+  on production. Production remains a read-only comparison target only.
