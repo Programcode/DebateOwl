@@ -210,7 +210,6 @@ describe("observability primitives", () => {
     expect(sentryInitMock).toHaveBeenCalledWith(expect.objectContaining({
       dsn: "https://public-test@sentry.example/1",
       ignoreErrors: [/^Synthetic observability verification$/],
-      sendDefaultPii: false,
       beforeBreadcrumb: filterObservabilityBreadcrumb,
       dataCollection: {
         userInfo: false,
@@ -228,6 +227,9 @@ describe("observability primitives", () => {
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1,
     }));
+    // Deprecated and ignored whenever dataCollection is set: passing it would
+    // read as a PII control that does nothing.
+    expect(sentryInitMock.mock.calls[0][0]).not.toHaveProperty("sendDefaultPii");
     expect(browserTracingIntegrationMock).toHaveBeenCalledOnce();
     expect(replayIntegrationMock).toHaveBeenCalledWith({
       maskAllText: true,
