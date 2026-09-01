@@ -99,6 +99,8 @@ describe("Vercel frontend deployment configuration", () => {
 
     expect(csp).toContain("script-src 'self' https://*.jam.dev");
     expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
+    // Loading the recorder is useless if it cannot upload the capture.
+    expect(csp).toContain("connect-src 'self' https://*.jam.dev");
     expect(nginxCsp).toBe(csp);
     expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
     expect(indexHtml).not.toContain('<script type="module" src="/src/main.tsx"></script>');

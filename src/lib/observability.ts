@@ -102,7 +102,8 @@ export function initializeObservability(): void {
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
       ignoreErrors: [/^Synthetic observability verification$/],
-      sendDefaultPii: false,
+      // No sendDefaultPii: deprecated, and Sentry ignores it whenever
+      // dataCollection is set. The block below is the only PII control.
       beforeBreadcrumb: filterObservabilityBreadcrumb,
       dataCollection: {
         userInfo: false,
