@@ -508,5 +508,3 @@ export async function mockJudgeSparringSession(input: SparringScoreInput): Promi
 }
 
 // Names kept short for callers that treat the mock provider as a feature adapter.
-export const mockSparringResponse = mockGenerateSparringTurn;
-export const mockSparringScore = mockJudgeSparringSession;

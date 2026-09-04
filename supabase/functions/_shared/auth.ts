@@ -71,21 +71,6 @@ export async function requireUser(req: Request): Promise<AuthContext> {
   };
 }
 
-export async function requireAdmin(req: Request): Promise<AuthContext> {
-  const context = await requireUser(req);
-  const { data, error } = await context.adminClient
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", context.user.id)
-    .maybeSingle();
-
-  if (error || data?.role !== "admin") {
-    throw new HttpError(403, "Admin access required");
-  }
-
-  return context;
-}
-
 export function jsonError(error: unknown, corsHeaders: Record<string, string>) {
   const status = error instanceof HttpError ? error.status : 500;
   const message = error instanceof Error ? error.message : "Internal server error";

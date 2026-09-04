@@ -383,10 +383,6 @@ export function buildSearchRequests(claim: string, region = "", preferredSourceT
   return deduplicated.slice(0, 6);
 }
 
-export function buildSearchQueries(claim: string, region = "", preferredSourceType = "any", timeframe = ""): string[] {
-  return buildSearchRequests(claim, region, preferredSourceType, timeframe).map((request) => request.query);
-}
-
 // Bounded per-result snippet: Exa may return up to 10k characters per result,
 // which would bloat prompts when several results are included.
 const MAX_RESULT_SNIPPET_CHARS = 1200;
