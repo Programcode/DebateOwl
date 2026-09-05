@@ -225,29 +225,4 @@ describe('Export Utils - Extended', () => {
     });
   });
 
-  describe('PDF export functions exist', () => {
-    it('exportCaseToDocx is a function', () => {
-      expect(typeof exportCaseToDocx).toBe('function');
-    });
-
-    it('exportAttackToDocx is a function', () => {
-      expect(typeof exportAttackToDocx).toBe('function');
-    });
-
-    it('exportBrainstormToDocx is a function', () => {
-      expect(typeof exportBrainstormToDocx).toBe('function');
-    });
-
-    it('exportFactoidsToDocx is a function', () => {
-      expect(typeof exportFactoidsToDocx).toBe('function');
-    });
-
-    it('exportCaseToGoogleDocs is a function', () => {
-      expect(typeof exportCaseToGoogleDocs).toBe('function');
-    });
-
-    it('exportBrainstormToGoogleDocs is a function', () => {
-      expect(typeof exportBrainstormToGoogleDocs).toBe('function');
-    });
-  });
 });

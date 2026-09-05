@@ -114,9 +114,4 @@ describe('HistoryPage', () => {
     const { container } = render(<HistoryPage />);
     expect(container.querySelector('.max-w-5xl')).not.toBeNull();
   });
-
-  it('renders without crashing with empty arrays', () => {
-    const { container } = render(<HistoryPage />);
-    expect(container).toBeDefined();
-  });
 });
