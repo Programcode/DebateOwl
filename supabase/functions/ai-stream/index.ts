@@ -23,7 +23,7 @@ function getCorsHeaders(origin: string | null) {
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
-import { isAskStreamingModeAllowed } from "../_shared/control-enforcement.ts";
+import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
 import {
   calculateRequestCost,
   type CostResult,
@@ -312,7 +312,7 @@ async function logUsage(
   }
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
   const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
 
   if (req.method === "OPTIONS") {
@@ -341,16 +341,24 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Invalid JSON body" }, 400, corsHeaders);
   }
 
-  const model = sanitizeText(body.model, 80) || "gpt-5.4-mini";
-  const input = body.input && typeof body.input === "object" ? body.input as Record<string, unknown> : {};
-  const mode = sanitizeText(input.mode, 40) || "general";
-
   if (body.feature !== "ask") {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
+  const model = sanitizeText(body.model, 80) || "gpt-5.4-mini";
+  const rawInput = body.input && typeof body.input === "object" && !Array.isArray(body.input)
+    ? body.input as Record<string, unknown>
+    : {};
+  const input: Record<string, unknown> = {
+    ...rawInput,
+    ...(typeof rawInput.mode === "string" ? { mode: sanitizeText(rawInput.mode, 40) } : {}),
+  };
+  const controlError = validateControlInput("ask", input);
+  if (controlError) return jsonResponse({ error: controlError }, 400, corsHeaders);
+
+  const mode = typeof input.mode === "string" ? input.mode : "general";
   if (!isAskStreamingModeAllowed(mode)) {
-    return jsonResponse({ error: "Streaming is not available for clarify mode" }, 400, corsHeaders);
+    return jsonResponse({ error: `Streaming is not available for ${mode} mode` }, 400, corsHeaders);
   }
 
   const advancedMode = Boolean(input.citationMode || input.webSearch || input.prosConsMode || input.argumentMapMode);
@@ -597,4 +605,8 @@ Deno.serve(async (req) => {
       "Cache-Control": "no-cache, no-transform",
     },
   });
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}
