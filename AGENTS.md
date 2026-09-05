@@ -7,6 +7,12 @@
 - The development server normally uses port 8080. Automated browser verification owns `127.0.0.1:18080` and never reuses an existing server.
 - Local Supabase development uses port 54321. Do not point staging checks at the production project.
 
+## Parallel Superset workspaces
+
+Each Superset workspace is a separate git worktree. `.superset/config.json` runs `npm ci` on create and `./.superset/dev.sh` for the Run button; `dev.sh` allocates a free port for this workspace from a shared `~/.superset/debatelab-ports/allocations.json` file (range 8080-8179) so several workspaces' dev servers never collide on the hardcoded `:8080` in `vite.config.ts`, and `./.superset/teardown.sh` releases that allocation on delete.
+
+The local Supabase stack is not parallel-safe: `supabase/config.toml` sets no `project_id` or custom port block, so `supabase db start` always binds the CLI's default ports and container names. Run the DB gate through `./.superset/db-gate.sh` rather than calling `supabase db start` / `npm run test:db` directly whenever more than one workspace might be active - it takes an exclusive lock (`~/.superset/debatelab-db.lock`, up to 10 minutes) before starting the stack and stops it afterward.
+
 ## Verification ladder
 
 Run the smallest relevant reproduction first, then the complete gate before a PR:

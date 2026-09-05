@@ -1,0 +1,5 @@
+{
+  "setup": ["npm ci"],
+  "run": ["./.superset/dev.sh"],
+  "teardown": ["./.superset/teardown.sh"]
+}
