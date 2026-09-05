@@ -1,0 +1,4 @@
+{
+  "setup": ["npm ci", "cp \"$SUPERSET_ROOT_PATH/.env\" .env 2>/dev/null || true"],
+  "run": ["npm run dev"]
+}
