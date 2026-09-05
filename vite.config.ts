@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'capacitor' ? './' : '/',
   server: {
     host: "::",
-    port: 8080,
+    port: Number(process.env.PORT) || 8080,
     hmr: {
       overlay: false,
     },
