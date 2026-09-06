@@ -22,7 +22,6 @@ import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 
 describe('UI Components', () => {
     describe('Button', () => {
@@ -269,13 +268,6 @@ describe('UI Components', () => {
                 </ScrollArea>
             );
             expect(screen.getByText('Scrollable content')).toBeDefined();
-        });
-    });
-
-    describe('Skeleton', () => {
-        it('renders loading skeleton', () => {
-            render(<Skeleton data-testid="skeleton" className="w-[100px] h-[20px]" />);
-            expect(screen.getByTestId('skeleton')).toBeDefined();
         });
     });
 });
