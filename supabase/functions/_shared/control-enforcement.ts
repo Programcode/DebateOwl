@@ -11,7 +11,65 @@ export interface AskControls {
 }
 
 export function isAskStreamingModeAllowed(mode: unknown): boolean {
-  return mode !== "clarify";
+  return mode === "general";
+}
+
+const ENUM_CONTROLS: Record<string, Record<string, readonly string[]>> = {
+  ask: {
+    mode: ["general", "clarify", "summarize", "proscons", "argumentmap"],
+  },
+  attack: {
+    aggressiveness: ["mild", "moderate", "ruthless"],
+    judgeParadigm: ["logic", "values", "policy"],
+  },
+  brainstorm: {
+    side: ["pro", "con", "both"],
+    outputMode: ["mindmap", "buckets", "topfive"],
+  },
+  factoids: {
+    direction: ["for", "against"],
+    sourceType: ["academic", "government", "news", "any"],
+  },
+  generate: {
+    side: ["pro", "con"],
+    format: ["custom", "bp", "policy", "classroom"],
+    role: ["intro", "r1", "r2", "conc", "general"],
+    length: ["brief", "standard", "comprehensive"],
+    audience: ["beginner", "intermediate", "advanced"],
+    tone: ["formal", "conversational", "aggressive"],
+  },
+};
+
+const BOOLEAN_CONTROLS: Record<string, readonly string[]> = {
+  ask: ["citationMode", "webSearch", "prosConsMode", "argumentMapMode"],
+  attack: ["detectFallacies", "analyzeWeighing"],
+};
+
+/** Returns a safe client-facing error for malformed, present AI controls. */
+export function validateControlInput(feature: string, input: Record<string, unknown>): string | null {
+  for (const [name, allowed] of Object.entries(ENUM_CONTROLS[feature] ?? {})) {
+    if (Object.hasOwn(input, name) && (typeof input[name] !== "string" || !allowed.includes(input[name]))) {
+      return `${feature}.${name} is invalid`;
+    }
+  }
+
+  for (const name of BOOLEAN_CONTROLS[feature] ?? []) {
+    if (Object.hasOwn(input, name) && typeof input[name] !== "boolean") {
+      return `${feature}.${name} must be a boolean`;
+    }
+  }
+
+  if (feature === "factoids") {
+    if (Object.hasOwn(input, "timeframe") && typeof input.timeframe !== "string") {
+      return "factoids.timeframe must be a string";
+    }
+    if (Object.hasOwn(input, "sourceCount") &&
+      (typeof input.sourceCount !== "number" || !Number.isFinite(input.sourceCount) || input.sourceCount < 3 || input.sourceCount > 15)) {
+      return "factoids.sourceCount must be a number from 3 to 15";
+    }
+  }
+
+  return null;
 }
 
 const CLARIFY_NOTE = "Clarify mode was requested, but no clarifying questions were returned.";

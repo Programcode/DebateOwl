@@ -16,6 +16,57 @@ const environment = {
 for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value);
 
 const { handleRequest } = await import("./index.ts");
+const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
+
+Deno.test("AI handlers reject malformed controls before quota or provider work", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+
+  globalThis.fetch = (async (input: Request | URL | string) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    calls.push(url.href);
+    if (url.origin === "https://supabase.test" && url.pathname === "/auth/v1/user") {
+      return jsonResponse({ id: "user-1", aud: "authenticated" });
+    }
+    throw new Error(`Malformed controls reached unexpected work: ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        feature: "ask",
+        model: "gpt-5.4-mini",
+        input: { message: "Question", mode: "\u200Bgeneral", citationMode: "false" },
+      }),
+    }));
+    if (response.status !== 400) throw new Error(`non-streaming handler returned ${response.status}`);
+    if (!(await response.text()).includes("ask.citationMode")) throw new Error("non-streaming error hid the invalid control");
+    if (calls.length !== 0) throw new Error(`non-streaming validation performed remote work: ${calls.join(", ")}`);
+
+    const streamResponse = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer test-user-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        feature: "ask",
+        model: "gpt-5.4-mini",
+        input: { message: "Question", mode: "general", citationMode: "false" },
+      }),
+    }));
+    if (streamResponse.status !== 400) throw new Error(`streaming handler returned ${streamResponse.status}`);
+    if (!(await streamResponse.text()).includes("ask.citationMode")) throw new Error("streaming error hid the invalid control");
+    const observedCalls: string[] = Array.from(calls);
+    if (observedCalls.length !== 1 || !observedCalls[0].includes("/auth/v1/user")) {
+      throw new Error(`streaming validation performed quota or provider work: ${observedCalls.join(", ")}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 Deno.test("factoids handler carries Exa filters and consulted-source metadata across the request boundary", async () => {
   const originalFetch = globalThis.fetch;
