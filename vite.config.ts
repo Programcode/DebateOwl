@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [react()],
   optimizeDeps: {
+    // Narrows dev prebundling to the SPA entry. Without this, Vite crawls all
+    // 84 HTML files under the root, including the prerendered pages in public/.
     entries: ['index.html'],
   },
   resolve: {
