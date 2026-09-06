@@ -196,7 +196,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <OfflineIndicator />
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
               <RouteErrorBoundary>
                 <AnimatedRoutes />
               </RouteErrorBoundary>

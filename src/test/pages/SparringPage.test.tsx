@@ -91,10 +91,7 @@ function speech(overrides: Partial<SparringSpeech> = {}): SparringSpeech {
 
 function renderPage() {
   return render(
-    <MemoryRouter
-      initialEntries={['/app/sparring']}
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >
+    <MemoryRouter initialEntries={['/app/sparring']}>
       <SparringPage />
     </MemoryRouter>,
   );

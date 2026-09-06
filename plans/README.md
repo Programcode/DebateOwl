@@ -2,23 +2,28 @@
 
 This folder holds implementation plans for remaining DebateLab product work. Keep plans actionable: scope, files, data model, rollout steps, tests, and deployment notes.
 
+Last reconciled against `origin/main` on 2026-09-01 at `79b65ca`.
+
 ## Active Plans
 
-- [Admin announcements](./admin-announcements.md)
-- [Ask and sitewide search quality](./search-quality.md)
+- [Email and demo-code sign-in](./auth-email-and-demo-code-sign-in.plan)
 - [Control honesty and deterministic toggles](./control-honesty.md)
 - [Model cost accounting](./model-cost-accounting.md)
-- [Prompt evaluation sheet (manual)](./prompt-eval-sheet.md)
-- [Quality & Truth release checklist](./release-checklist.md)
+- [PR #11 salvage work](./pr11-salvage.md)
 - [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
-- [Source auto-import](./source-auto-import.md)
-- [Streaming AI](./streaming-ai.md)
+- [Supabase staging](./supabase-staging.md)
 - [System prompt improvement](./system-prompt-improvement.md)
-- [Animation polish](./animation-polish.md)
 
-## Done
+## Backlog
 
-- [Debate sparring](./sparring-and-streaming.md)
 - [Bug and polish cleanup](./done/bugs.txt)
-- [Admin trial gifts](./done/admin-trial-gifts.md)
-- [Top users email fallback](./done/top-users-email-fallback.md)
+
+## Shipped
+
+Removed after verifying the merged implementation on `origin/main`:
+
+- Admin announcements — PR #19, with deactivation and dismissal history in #26
+- Agent verification loop — PR #21, with CI gating in #26 and #27
+- Analytics and error tracking — PRs #16, #18, #22, #23, #24, #25, #28
+- Animation polish — PR #20
+- Ask and sitewide search quality — PR #17

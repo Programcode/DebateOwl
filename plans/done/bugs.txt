@@ -1,224 +1,57 @@
-# Bugs and Polish Backlog
+# Bugs and polish backlog
 
-Audit performed 2026-05-19. Each item has a file:line pointer so it can be addressed without re-investigation. "Bug" = could cause user-visible failure, data loss, or security weakness. "Polish" = product feels less professional but nothing is broken.
+Audit date: 2026-09-01 on `main` (`79b65ca`). This file lists only reproducible items from the earlier backlog. All other entries were removed after checking current source and history. All four items below were re-verified against `79b65ca`, including their line references.
 
-## Bugs (15)
+## Preconditions
 
-1. **session-store.ts:260 — `clearLibrary` deletes via `.delete().neq('id', '')`**
-   Relies entirely on RLS to scope to the current user. If RLS is ever disabled, misconfigured, or the policy regresses, this wipes every user's sources.
-   Fix: add `.eq('user_id', userId)` defense-in-depth.
+- Create and use your own isolated T3 Code worktree and feature branch for this backlog; do not edit `main` or reuse another plan's worktree. Before edits, verify `pwd`, `git branch --show-current`, `git status --short --branch`, and `git worktree list --porcelain`, and keep this branch/worktree independent through its PR lifecycle.
+- Use Node `22.x` from `package.json`, npm, and the committed `package-lock.json`; verify `node --version`, `npm --version`, and `test -f package-lock.json`, then run `npm ci` before the gates.
 
-2. **redeem-promo/index.ts:174-177 — Non-atomic `redemptions_count` increment**
-   Read-modify-write `redemptions_count: (promo.redemptions_count || 0) + 1`. Two simultaneous redemptions can both read N and both write N+1, letting `max_redemptions` overflow by one.
-   Fix: use `supabase.rpc` to call a Postgres function with `UPDATE … SET redemptions_count = redemptions_count + 1`, or use Postgres `LOCK` / row-level locking.
+## Retained items
 
-3. **redeem-promo/index.ts:99-172 — Multi-step writes without transaction**
-   Updates `user_settings` then inserts into `user_promos` then bumps `redemptions_count`. If step 2 or 3 fails, the user has the perk but no audit row / no count bump.
-   Fix: wrap in a Postgres function called via `rpc` so all three writes are atomic.
+1. **Static consultation date in `src/pages/SourcesPage.tsx:133-155`**
 
-4. **redeem-promo/index.ts:99-105 — Duplicate-redemption race**
-   `user_promos` duplicate check fires before insert. Two near-simultaneous requests both see no conflict and both insert, violating the unique constraint and giving the same user the perk twice before the second insert fails.
-   Fix: `upsert` with `onConflict: 'user_id,promo_code_id'` and ignore conflicts.
+   The bibliography still renders `[Consulta: 8 de marzo de 2026]` for every source. It is stale as of this audit. Remove the consultation date or derive it from an intentional build/research timestamp. Add a focused render test and an E2E assertion that no stale hard-coded date remains.
 
-5. **stripe-webhook/index.ts (customer.subscription.updated handler) — Grace period not cleared on reactivation**
-   When a subscription flips back to `active`, the user's `grace_period_ends_at` is not cleared. If grace was set during a past lapse, it remains and may interact weirdly with later tier decisions.
-   Fix: explicitly set `grace_period_ends_at = null` whenever transitioning to an active Pro subscription.
+   Likely files: `src/pages/SourcesPage.tsx`, new `src/test/pages/SourcesPage.test.tsx`, and new `e2e/quality-backlog.spec.ts`.
 
-6. **AuthProvider.tsx:45-46 — Promise rejection swallowed via `.catch?.()`**
-   The optional-chaining call means the catch handler may not exist on certain promise polyfills/values; rejections in `hydrateSessionStore()` are silently dropped. User stays logged in with empty client state.
-   Fix: `.catch((err) => console.warn('hydrate failed', err))`.
+2. **Unlabeled icon-only Factoids save button in `src/components/features/factoids/FactoidsResults.tsx:75-84`**
 
-7. **use-subscription.ts:86,96 (and ai/index.ts:179,186,200,217,229) — `Math.max(50, override)` clamps overrides upward**
-   Admin/promo can never lower an existing pro tier's daily limit (Math.max(50, 20) = 50). The new "Gift Trial" dialog accepts a `dailyLimit` argument that is effectively ignored when it's below the floor for the user's tier.
-   Fix: treat `daily_limit_override` as the override, not as a minimum floor: `data.daily_limit_override ?? defaultForTier`.
+   The button has a translated `title` but no accessible name. Add a localized `aria-label` tied to the factoid claim and test it with `getByRole('button', { name: ... })`. Recheck all remaining `size="icon"` controls while changing this file; do not remove existing visible labels or screen-reader text.
 
-8. **session-store.ts:477-495 — Whole-history hydration has no per-query error handling**
-   `Promise.all` of all history fetches; any single 4xx/RLS failure rejects the whole hydration and the user appears to lose all data. No partial recovery.
-   Fix: `Promise.allSettled` and log/skip the failed table.
+   Likely files: `src/components/features/factoids/FactoidsResults.tsx`, `src/test/components/FactoidsResults.test.tsx`, and `e2e/quality-backlog.spec.ts`.
 
-9. **ai/client.ts (around line 232-240) — Double-timeout race**
-   AbortController timeout and a `withTimeout` Promise race fire independently. If the request is already resolved when the AbortController fires, the second timer can call `abort()` on a completed request and stays scheduled with no `clearTimeout`.
-   Fix: pick one mechanism. Prefer AbortController and remove `withTimeout`.
+3. **Navigation labels do not match feature page titles**
 
-10. **admin/index.ts:112-118 — Admin role check is not transactional with the action**
-    Between `isAdmin(user.id)` and the action handler executing, another admin could revoke the role. Window is small but exists. For destructive admin actions (ban, role change, gift trial) this matters.
-    Fix: re-check `user_roles` inside the action body's transaction, or do the action as a Postgres function with the role check baked into the SQL.
+   `src/components/layout/AppLayout.tsx:28-78` uses short labels such as `Generate`, `Attack`, `Brainstorm`, and `Ask`, while the page headings in `src/locales/en.json:75-118` read `Generate Case`, `Attack My Case`, `Brainstorm Ideas`, and `Ask Your Coach`. Choose one product vocabulary, put it in the shared `nav.*` keys, reuse it for the matching page H1s in `src/pages/{Generate,Attack,Brainstorm,Factoids,Ask}Page.tsx`, and update `en/es/hu` together. Add an authenticated E2E assertion for nav-to-heading agreement in each locale.
 
-11. **create-checkout/index.ts (promo lookup) — Promo applied without checking past redemption**
-    A user can pass a promo code at checkout that they have already redeemed. The redemption history (`user_promos`) isn't queried in `create-checkout`, only in `redeem-promo`.
-    Fix: query `user_promos` for `(user_id, promo_code_id)` before attaching the promo to the Stripe session, and reject if already redeemed.
+   Likely files: `src/components/layout/AppLayout.tsx`, the five feature pages, `src/locales/{en,es,hu}.json`, and `e2e/quality-backlog.spec.ts`.
 
-12. **ai/client.ts:657,684 — Auto-saved discovered sources can silently fail**
-    Sources discovered during research are added to the store and persisted via `session.addSource()` but the rejection path is a fire-and-forget `.catch()` that logs nothing user-visible. User sees the source in the UI but it disappears after refresh.
-    Fix: surface a toast on failure, or queue and retry.
+4. **Selected Flowchart node deletion has no success feedback in `src/pages/FlowchartPage.tsx:337-341`**
 
-13. **AskPage.tsx (file context handling) — No client-side size cap on combined message**
-    Multiple files plus prompt can blow past the edge function's 50KB input limit. No client guard / no truncation message. User just sees a generic AI error.
-    Fix: check `fileContext.length + prompt.length` against MAX_INPUT_LENGTH and reject in UI with a clear message before sending.
+   `deleteSelectedNode` removes the node and connected edges immediately, but it neither confirms the action nor reports success. Add a focused confirmation or undo path appropriate for the editor, then show a localized success/error toast and cover both paths in a new `src/test/pages/FlowchartPage.test.tsx`. Keep saved-flowchart deletion's existing feedback intact.
 
-14. **stripe-webhook/index.ts — Webhook idempotency depends on Stripe event ordering, not event id**
-    No `webhook_events` table to record processed `event.id`s. If Stripe re-delivers the same event (which it sometimes does), the handler runs again. Most handlers are write-idempotent by accident, but `redemptions_count++` and audit inserts are not.
-    Fix: insert `event.id` into a `webhook_events` table with unique constraint at the top of the handler; bail if conflict.
+   Likely files: `src/pages/FlowchartPage.tsx`, `src/locales/{en,es,hu}.json`, new `src/test/pages/FlowchartPage.test.tsx`, and `e2e/quality-backlog.spec.ts`.
 
-15. **session-store.ts (form setters around line 200) — Shallow merge loses nested fields**
-    `set({ form: { ...state.form, ...partial } })` merges only the top level. If `form.options` is a nested object and the user changes `form.title`, the merge leaves `options` untouched only because it was passed through — but any setter that doesn't include `options` would reset it. Pattern is fragile.
-    Fix: use a deep-merge helper, or restructure form state so all setters operate at the leaf level.
+## Ordered implementation and gates
 
-## Polish (15)
+1. Fix the stale Sources page date and add its render/browser proof.
+2. Add the Factoids accessible name and focused test.
+3. Align navigation and page headings in all three locales, then run authenticated browser checks.
+4. Add Flowchart node-delete confirmation/feedback and its focused page test.
 
-1. **GeneratePage.tsx:65 — Save uses `window.prompt`**
-    Native browser prompt is jarring, unstyled, blocks the page, and is broken on mobile in some browsers. Replace with the existing shadcn Dialog pattern (see `LimitReachedModal` for reference).
+Run focused tests after each item, then:
 
-2. **LibraryPage.tsx:43 — Clear library uses `window.confirm`**
-    Same issue as above. Replace with an `AlertDialog` confirm modal.
+```bash
+npm run lint
+npm run typecheck
+npm test -- --coverage
+npm run build
+CI=1 PORT=18084 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18084 npm run test:e2e -- e2e/quality-backlog.spec.ts
+```
 
-3. **SettingsPage.tsx:79-96 — Delete-all-data uses `confirm` + `prompt` in sequence**
-    Two native dialogs back-to-back. Critical action that deserves an inline confirmation step. Replace with a single modal that has an email-input field.
+Confirm port `18084` is free before the browser run; the explicit `PORT` and `PLAYWRIGHT_BASE_URL` prevent reuse of the dev server's default `8080`. The new focused browser spec must cover the affected desktop/mobile flows; do not treat a static string search as sufficient proof for browser behavior. No Deno gate applies to this frontend/localization-only backlog.
 
-4. **SettingsPage.tsx (most strings) — Hardcoded English copy**
-    "Settings", "Subscription", "Daily Usage", "Resets at midnight UTC", "Open Admin Panel", "Danger Zone", "Delete All My Data" etc. are not translated. Only this page leaks English for Spanish/Hungarian users in production.
-    Fix: extract into `settings.*` keys in en/es/hu.
+## Rollout and authorization boundary
 
-5. **GeneratePage.tsx:111-117 — Flowchart import toasts are hardcoded English**
-    "Import Failed", "Case Imported", "Could not build flowchart from case data." — bypass i18n.
-    Fix: add `flowchart.toast.*` keys.
-
-6. **SourcesPage.tsx:2 — Hardcoded `updated = "March 9, 2026"`**
-    Stale and never updated automatically. Either pull from build metadata or remove the "last updated" line.
-
-7. **AttackForm vs GenerateForm vs BrainstormForm — Inconsistent submit button styles**
-    `variant="destructive"` on attack submit, default on generate, secondary on brainstorm. No semantic reason for the difference. Pick one (default + primary color).
-
-8. **HistoryPage.tsx empty states — Plain muted text**
-    Each tab's empty state is a single muted line. Compare to feature pages which use illustration + CTA. Add a `<EmptyState>` shared component used by HistoryPage tabs and SourcesPage's blank state.
-
-9. **FlowchartPage.tsx:97, BrainstormPage.tsx:54 — `.toUpperCase()` on user-visible labels**
-    "CONTENTION", "PRO", "CON" come from raw strings then upper-cased in JSX. For i18n languages (Hungarian, Spanish) the original word should come from a translation key, not be force-upper-cased English.
-    Fix: store the label translated, style-uppercase via CSS `text-transform: uppercase`.
-
-10. **Icon-only buttons missing `aria-label` (AdminPage user rows, HistoryPage delete, several others)**
-    `<Button><Trash2 /></Button>` with no accessible name. Screen readers announce "button" with no context. Audit + add `aria-label={t('common.delete')}`.
-
-11. **GenerateForm.tsx:273-284 — Submit loading state has no `aria-busy`**
-    Loading spinner shows visually but `aria-busy="true"` is missing on the form/button. Assistive tech doesn't know the action is in flight.
-
-12. **Usage bar in SettingsPage:156-191 — No help text or tooltip explaining behavior**
-    Users see "8 of 50" with no indication of what happens at the cap, when it resets in their local timezone, etc. Add a tooltip / "Resets in 4h 22m" countdown.
-
-13. **AskPage.tsx:100 — Generic fallback error message**
-    `getUserFacingAIError(error) || t('ask.failedDesc')` — the fallback is itself generic. Provide a more actionable fallback ("Couldn't reach the AI. Check your connection and retry.") and a retry button on the toast.
-
-14. **SourcesPage.tsx:154 — Long URLs use `break-all`**
-    Breaks mid-word on mobile, ugly. Use `break-words` + `overflow-wrap: anywhere` for nicer line breaking.
-
-15. **`/timer` page and others have no toast confirmation for destructive actions**
-    Deleting a saved case, clearing a flowchart, etc. — no follow-up toast confirming the action succeeded. User has to infer from the UI. Add a `toast({ title: t('common.deleted') })` after every successful destructive action.
-
-## Notes on prioritization
-
-- **Highest priority bugs** (data loss / billing correctness): #1, #2, #3, #4, #11, #14
-- **Highest priority polish** (most user-visible): #4 (i18n), #1-3 (native dialogs)
-- Bugs #6-#10, #12, #15 are quality issues that bite occasionally but don't block users
-- Polish items #7-#10 are cross-cutting and should land as a single "UX consistency" pass
-
-## How to attack this
-
-A reasonable order:
-1. Land bugs #14 (Stripe idempotency) and #2-4 (promo races) together as a "payment correctness" PR — they share concepts.
-2. Land bug #1 (`.neq('id','')`) and #8 (hydration error handling) as a "store safety" PR.
-3. Pick the i18n polish items as a single "translate Settings + toasts" PR.
-4. Replace the three native dialogs (polish #1-3) in one "kill window.prompt" PR.
-5. Everything else can be picked off opportunistically.
-
----
-
-## Round 2: Additional Bugs (10)
-
-16. **share/index.ts (collision retry loop) — Share-code generation is check-then-insert**
-    Two requests racing can both generate the same short code, both pass the "does it exist?" check, both insert. The DB unique constraint will reject one but the user sees an error instead of a fresh code.
-    Fix: rely on a UNIQUE constraint + retry on conflict, not a pre-insert lookup.
-
-17. **stripe-webhook/index.ts (checkout.session.completed) — Update path overwrites subscription rows by user_id, not by stripe_subscription_id**
-    If the same user has historical subscriptions (canceled then resubscribed), the handler updates the most recent row rather than upserting on the new `stripe_subscription_id`. Old row's status can get clobbered.
-    Fix: upsert on `stripe_subscription_id` with `onConflict`.
-
-18. **ai/index.ts (prompt injection patterns ~line 401-415) — Pattern set misses common variants**
-    Current regex covers `<\|im_start\|>` etc but not `<|system|>`, HTML comments `<!-- system: -->`, or zero-width-space delimiters that some prompt-injection attacks use.
-    Fix: broaden the deny-list and add a unit test fixture of known injection patterns.
-
-19. **ai/index.ts (Ask URL extraction ~line 1448-1449) — No aggregate cap on combined context size**
-    Each fetched URL is capped at 8K chars individually, but up to 3 URLs + system prompt + user message + research context can blow past provider token limits with no client-side check.
-    Fix: enforce a total-size budget after all context is assembled; truncate the last-added pieces first.
-
-20. **ai/index.ts (input truncation around line 427-430) — Silent truncation, no `wasTruncated` flag returned**
-    When user input exceeds `MAX_INPUT_LENGTH`, the function sanitizes-and-truncates without telling the caller. User sees output that was generated from a partial prompt.
-    Fix: return a `meta.truncated: true` flag and surface a warning in the UI.
-
-21. **export-gdoc/index.ts (~line 920-927) — Token refresh retry only on first 401**
-    On second 401 (e.g., refresh succeeded but new token is also invalid for some reason), the function doesn't retry. Combined with cached state, user gets confusing auth errors.
-    Fix: explicit one-attempt retry; if still 401 after refresh, surface "Re-authenticate with Google" prompt.
-
-22. **export-gdoc/index.ts (~line 960) — `documentId` unguarded after parsing Google response**
-    `docResponse.json().documentId` is used directly. If Google's API returns an error in JSON form (no documentId), the resulting URL is `https://docs.google.com/document/d/undefined/edit` — visibly broken link.
-    Fix: validate `documentId` is a string before constructing the URL; otherwise throw a meaningful error.
-
-23. **export-gdoc/index.ts (mode parameter ~line 806) — Unvalidated enum cast**
-    `body.mode as ExportMode` is a cast, not validation. Unknown mode falls through the switch silently.
-    Fix: validate against an allowlist before the switch.
-
-24. **admin/index.ts (set-prompt action ~line 450) — Feature validation happens after upsert**
-    If `feature` is invalid, the row is already inserted by the time the validation runs, polluting the `global_prompts` table.
-    Fix: validate `feature` against allowed values at the top of the handler.
-
-25. **admin/index.ts (getAuthEmailMap, lines 35-69) — Individual user fetch failures swallowed silently**
-    `Promise.all` of `getUserById` calls; failures are logged but not surfaced. Admin sees an incomplete top-users list with no indication.
-    Fix: return a `{ resolved, failed }` shape so the UI can show "N users couldn't be loaded".
-
-## Round 2: Additional Polish (10)
-
-16. **FactoidsResults.tsx:159-165 — Google Docs export opens the document twice**
-    `window.open()` fires immediately AND the success toast has an action button that also opens the doc. User ends up with two identical tabs.
-    Fix: remove the auto-open; rely only on the toast action button.
-
-17. **BrainstormForm.tsx:139 — Hardcoded amber submit button**
-    `className="bg-amber-500 hover:bg-amber-600"` overrides the theme system. Looks fine in light mode, off in dark mode, and inconsistent with other feature forms (see existing polish #7).
-    Fix: use the standard `Button` variant; if a distinct color is desired, add a theme token rather than hex/Tailwind color.
-
-18. **AttackResults.tsx (severity badge) — `.toUpperCase()` on translated severity string**
-    Same pattern as polish #9 but in a different file. Forcing uppercase in JSX rather than CSS breaks Spanish/Hungarian.
-    Fix: store labels translated, apply `text-transform: uppercase` in className.
-
-19. **FactoidsForm.tsx:132 — Submit button uses `variant="secondary"`**
-    Adds to the inconsistency catalogued in polish #7 (each feature form's submit looks different). Now we have four flavors across four forms.
-    Fix: unify in the same PR that addresses polish #7.
-
-20. **AskChat.tsx (typing indicator ~line 391) — Animated dots with no accompanying text**
-    Other loading states in the app say "Thinking…", "Researching…", "Building arguments…". The chat indicator is just dots, giving less feedback than the rest of the app.
-    Fix: add a rotating status label like the `StreamingIndicator` component uses.
-
-21. **HistoryPage.tsx (delete saved case) — One-click destructive action, no confirm, no undo**
-    Tapping the trash icon deletes immediately. No "Are you sure?" and no toast-with-undo. Worse on mobile where mis-taps are common.
-    Fix: add an AlertDialog confirm, or convert to "soft delete + 5-second undo toast" pattern.
-
-22. **AskChat.tsx (long URLs in message bubbles) — `break-all` makes citations look broken**
-    Same root issue as polish #14 (SourcesPage) but in a more user-facing place. Citations in chat look like garbled strings on mobile.
-    Fix: `break-words` + `overflow-wrap: anywhere`.
-
-23. **TimerPage.tsx — Preset buttons don't visually distinguish the active timer**
-    All preset buttons look the same; user has to read the timer to know which one is running. Highlight the active preset.
-    Fix: add `data-state="active"` + a primary outline ring.
-
-24. **AppLayout.tsx / Sidebar / MobileNav — Inconsistent terminology**
-    "Generate" vs "Generate Arguments", "Ask" vs "Coach Chat", "Brainstorm" vs "Brainstorm Ideas". Nav labels disagree with page titles for the same feature.
-    Fix: lock down terminology in `nav.*` keys and reuse them as page H1s, or pick one consistent shorthand per feature.
-
-25. **Cross-cutting (any destructive action) — No success toast after delete**
-    Deleting a case, clearing the library, removing a flowchart, etc. — silently update UI without confirming the action. Compounds with polish #21.
-    Fix: every destructive mutation should resolve with a `toast({ title: t('common.deleted') })`.
-
-## Updated prioritization
-
-- **Bugs newly added:** #17 (Stripe subscription overwrite) is billing-correctness; #19 (no aggregate context cap) is the most common cause of "AI request failed" in production.
-- **Polish newly added:** #16 (double-open Google Doc) is a top-of-list quick win — single-line fix that is immediately visible to every user who exports.
-- The "unify form submit buttons" PR now covers polish #7 + #17 + #18 + #19 (4 form-related items).
-- The "confirm before destructive action" PR covers polish #21 + #25 + LibraryPage clear (existing polish #2).
+These are frontend/localization changes. Do not deploy, publish, alter Supabase state, or change secrets during implementation. Roll back the previous frontend build if a destructive action loses data, a locale falls back unexpectedly, or navigation no longer reaches the intended heading.
