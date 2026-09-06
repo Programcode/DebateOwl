@@ -36,6 +36,9 @@ jobs:
           deno-version: 2.9.5
           cache: true
 
+      - name: Documentation
+        run: npm run docs:check
+
       - name: Lint
         run: npm run lint
 

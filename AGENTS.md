@@ -1,17 +1,32 @@
 # DebateLab agent guide
 
-## Runtime and install
+## Start here
 
-- Use Node 22 and npm. The lockfile is `package-lock.json`.
-- Start a clean checkout with `npm ci`.
-- The development server normally uses port 8080. Automated browser verification owns `127.0.0.1:18080` and never reuses an existing server.
-- Local Supabase development uses port 54321. Do not point staging checks at the production project.
+- The repository is DebateLab. Never infer its directory from an old repository name.
+- Run `git rev-parse --show-toplevel` and stay inside that returned worktree. On Adam's VPS, `/home/codex/Projects/DebateLab` is the primary checkout, but Superset and other agents use linked worktrees elsewhere.
+- Before editing, inspect the branch and working tree. Preserve unrelated changes.
+- Use Node 22, npm, and the committed `package-lock.json`. Install with `npm ci`.
 
-## Verification ladder
+## System map
 
-Run the smallest relevant reproduction first, then the complete gate before a PR:
+- `src/` is the React 18 and TypeScript client. Routes and lazy page entry points live in `src/App.tsx`.
+- `src/lib/stores/` owns browser state and Supabase hydration. `src/lib/ai/client.ts` is the client AI boundary.
+- `supabase/functions/` contains Deno Edge Functions. Shared auth, CORS, research, pricing, and validation code lives in `supabase/functions/_shared/`.
+- `supabase/migrations/` is the database history and schema source of truth.
+- `.github/workflows/` owns CI behavior. `Dockerfile` and `nginx.conf` own production packaging.
+
+## Normal ports
+
+- Vite development server: `8080` by default.
+- Automated browser server: isolated `127.0.0.1:18080`, never an existing dev server.
+- Local Supabase: CLI defaults beginning at `54321`. The stack is not parallel-safe across worktrees.
+
+## Focused verification
+
+Run the smallest relevant check first:
 
 ```bash
+npm run docs:check
 npm run lint
 npm run typecheck
 npm test -- --coverage
@@ -20,9 +35,9 @@ npm run build
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 ```
 
-`npm run verify` runs that full credential-free ladder. It starts an isolated Vite server and executes the desktop and mobile Chromium projects. Browser failures stay in ignored `test-results/` and `playwright-report/` directories. CI uploads those directories for seven days when the browser step fails.
+`npm run verify` runs the complete credential-free ladder, including desktop and mobile Chromium against a fresh Vite server.
 
-Database migrations and pgTAP policies have a separate Docker-backed gate. Supabase CLI 2.115 or newer is required so `CREATE INDEX CONCURRENTLY` runs outside the migration batch:
+Database migrations and pgTAP policies use a separate Docker-backed gate:
 
 ```bash
 supabase db start
@@ -30,41 +45,40 @@ npm run test:db
 supabase stop --no-backup
 ```
 
-WebKit is an additional release smoke gate:
+Supabase CLI 2.115 or newer is required. Do not run this gate concurrently from multiple worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
+
+WebKit is a separate release smoke test:
 
 ```bash
 npx playwright install --with-deps webkit
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webkit
 ```
 
-## Protected staging verification
+## Hard boundaries
 
-The staging suite uses a real staging user and backend. It never uses a service-role key. Supply all three protected values together:
+- Start bug fixes with a failing test or repeatable browser reproduction when a suitable test layer exists.
+- Stub sessions prove rendering only. Do not call them authenticated backend proof.
+- Never put staging or production credentials in jobs, logs, traces, screenshots, commits, comments, or docs.
+- Never substitute the production project when local or staging access is unavailable.
+- Production deployments, data changes, migrations, Edge Function deployments, and secret changes require explicit authorization.
+- A local pass proves only the local commit. Check the current-head GitHub run before calling CI green.
+- A skipped staging job is not a pass. Report exactly which browser and staging checks ran.
+- Do not weaken tests, RLS, authentication, branch protection, or required checks to make a run pass.
 
-- `STAGING_SUPABASE_URL`
-- `STAGING_SUPABASE_ANON_KEY`
-- `STAGING_DEMO_CODE`
+## Protected staging
 
-Then run:
+Staging E2E requires all three values together: `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`, and `STAGING_DEMO_CODE`. The suite rejects the production project, disables browser captures, writes only uniquely named test data, and deletes only that data. Read [docs/testing.md](docs/testing.md) before running it and [docs/operations.md](docs/operations.md) before changing staging configuration.
 
-```bash
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 \
-STAGING_SUPABASE_URL=<staging-url> \
-STAGING_SUPABASE_ANON_KEY=<staging-anon-key> \
-STAGING_DEMO_CODE=<dedicated-test-code> \
-npm run test:e2e:staging
-```
+## Documentation router
 
-The suite rejects the production project, checks that the anon key belongs to the supplied staging URL, authenticates through `demo-code-login`, proves session reload, writes and reads back one unique source, makes one bounded AI request, and deletes only that source. It saves temporary auth state under `test-results/.auth/`. Staging disables traces, screenshots, and video, and its workflow uploads no browser artifacts.
+Open only what the task needs:
 
-GitHub runs staging only for `main` push or a main-branch manual dispatch, through the protected `staging` environment, after the credential-free build job passes. Set the repository variable `STAGING_E2E_ENABLED=true` only after the protected environment has the three secrets, current staging functions, schema, provider secret, dedicated unlimited-use test code, and a main-only deployment rule. A skipped staging job is not a pass.
+- [docs/architecture.md](docs/architecture.md): runtime boundaries, request flows, state, auth, billing, observability, PWA, and iOS.
+- [docs/development.md](docs/development.md): setup, environment behavior, worktrees, and common workflows.
+- [docs/testing.md](docs/testing.md): what each gate proves, browser matrices, staging, artifacts, and cleanup.
+- [docs/operations.md](docs/operations.md): CI, Docker, Nginx, staging, deployment, rollback, and live verification.
+- [supabase/README.md](supabase/README.md): Edge Functions, shared backend modules, migrations, auth boundaries, and required secret names.
+- [plans/README.md](plans/README.md): active plans. Revalidate every plan against current source before executing it.
+- [docs/README.md](docs/README.md): complete documentation index and freshness labels.
 
-The staging origin `http://127.0.0.1:18080` must be deployed in the CORS allowlists for `demo-code-login`, `ai`, `ai-stream`, `admin`, and `announcements` before enabling the gate. Do not deploy those functions or apply migrations to an unverified project.
-
-## Working rules
-
-- Start bug fixes with a failing test or a repeatable browser reproduction when the repository has a suitable test layer.
-- Keep stub sessions limited to render checks. Do not describe them as authenticated backend proof.
-- Never put staging or production secrets in PR jobs, logs, traces, screenshots, commits, or comments.
-- A local pass proves only the local commit. Inspect the current-head GitHub run before calling CI green. Account billing or spending-limit failures are external exceptions, not passing checks.
-- State exactly which browser and staging checks ran. If credentials, provider access, or staging synchronization are missing, stop that gate and report it instead of substituting production or mocks.
+When commands, ports, workflows, or runtime boundaries change, update the owning focused document in the same change. Do not copy large source trees, schemas, dependency lists, or model catalogs into documentation.

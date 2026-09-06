@@ -1,5 +1,7 @@
 # DebateLab SEO escalation - 2026-07-05
 
+> **Historical snapshot:** This file records an escalation and search evidence from 2026-07-05. Recheck current Search Console, indexing, and ranking state before using it.
+
 ## Why this escalation happened
 
 Adam correctly pointed out that the first SEO pass did **not** achieve the stated ranking objective: for the broad query `debatelab`, `https://debate.pi-stack.org` still was not appearing in the sampled top results.

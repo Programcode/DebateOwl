@@ -1,39 +1,176 @@
-# Supabase Backend (Production-Ready Wiring)
+# Supabase backend
 
-This backend is fully wired to the app (auth + data + AI proxy). No placeholders.
+**Status:** Current orientation. Function code, migrations, tests, and `supabase/config.toml` remain authoritative.
 
-## Project
-- URL: https://uziwdtkzofptihahfooo.supabase.co
-- Publishable key: sb_publishable_FCOjs726U466nD8jmv-HZw_DUYqSz-6
+## Responsibilities
 
-## What this provides
-- Auth via Google OAuth (required to use the app)
-- Postgres storage for cases, chats, sources, settings
-- Edge Function AI proxy (no API keys in browser)
+Supabase provides:
 
-## Setup (Supabase dashboard)
+- user sessions and OAuth;
+- PostgreSQL persistence and Row Level Security;
+- RPCs, triggers, quotas, subscriptions, sharing, sparring, announcements, and usage accounting;
+- Edge Functions that protect privileged credentials and integrate with external services;
+- local migration replay and pgTAP policy tests.
 
-1) Run the migration SQL
-- Open SQL editor
-- Paste `supabase/migrations/20260129_init.sql`
+Do not configure this backend by copying SQL or keys from documentation. Use checked-in migrations, CLI commands, protected environments, and explicit deployment authorization.
 
-2) Create Edge Function `ai`
-- In Supabase Dashboard, create a function named `ai`
-- Paste `supabase/functions/ai/index.ts`
-- Add secrets:
-  - OPENAI_API_KEY
-  - ANTHROPIC_API_KEY (optional)
-  - GOOGLE_API_KEY (optional)
-  - JINA_API_KEY (optional)
-  - AI_DEFAULT_PROVIDER (optional, default: openai)
-  - AI_DEFAULT_MODEL (optional, default: gpt-4o-mini)
+## Layout
 
-3) Enable Google OAuth
-- Auth -> Providers -> Google
-- Set redirect URL to: https://uziwdtkzofptihahfooo.supabase.co/auth/v1/callback
-- Add `http://localhost:8080` as a redirect URL for local dev
+```text
+supabase/config.toml       local and function gateway configuration
+supabase/functions/        Deno Edge Functions
+supabase/functions/_shared shared auth, validation, prompts, research, and cost logic
+supabase/migrations/       ordered database history
+supabase/tests/            pgTAP database and policy tests
+```
 
-## Local dev
-- Start app with `npm run dev`
-- Sign in with Google
-- All saved data syncs to Supabase
+## Function groups
+
+### AI and practice
+
+- `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity.
+- `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
+
+The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, model-pricing, cost, and control logic lives in `_shared`.
+
+### Content and sharing
+
+- `import-source`: authenticated public-URL import with SSRF protection on redirects, timeout, content-type and size limits, readable-text extraction, quota checks, and logging.
+- `share`: authenticated creation of expiring share codes for supported saved content.
+- `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
+
+### Authentication and administration
+
+- `demo-code-login`: bounded pre-session access-code flow with normalized hashing, attempt limits, atomic use consumption, demo-user provisioning, and a prohibition on granting administrator status.
+- `admin`: authenticated administrator operations with server-side role checks.
+- `announcements`: authenticated announcement listing and dismissal.
+- `redeem-promo`: authenticated atomic promo redemption.
+
+### Billing
+
+- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated.
+- `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
+- `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling with idempotency state.
+
+## Shared backend modules
+
+[`functions/_shared/auth.ts`](functions/_shared/auth.ts) validates bearer tokens, creates user-scoped and service clients, enforces administrator roles, and formats JSON errors.
+
+Other shared modules own:
+
+- prompt construction and source bounds;
+- research orchestration and source ranking;
+- public URL validation;
+- model pricing and normalized cost calculations;
+- control enforcement;
+- crossfire response validation;
+- announcement input validation.
+
+Move code into `_shared` only when multiple functions use the same boundary or policy. Feature-specific behavior stays with its handler.
+
+## Authentication boundary
+
+Several entries in [`config.toml`](config.toml) set `verify_jwt = false`. This does not make those functions public. Their handlers perform their own request validation because they need one of these patterns:
+
+- user bearer validation through shared auth helpers;
+- administrator role validation;
+- Stripe webhook signature verification;
+- pre-session demo-code validation;
+- short-lived Google token handling.
+
+Do not remove handler authentication because the gateway setting looks permissive. Do not enable gateway verification without checking custom request flows and tests.
+
+The effective gateway behavior for a function without an explicit config entry must be verified before documenting or changing it.
+
+## CORS
+
+Current handlers mostly define explicit origin allowlists. The exact list differs by endpoint and handler code is authoritative.
+
+Relevant origins include the production site, bounded local development hosts, automated staging browser origin, and `capacitor://localhost` where native access is supported.
+
+Do not use wildcard origins to hide a failed browser test. Before protected staging, verify `http://127.0.0.1:18080` for `demo-code-login`, `ai`, `ai-stream`, `admin`, and `announcements`.
+
+## Migrations and database tests
+
+Migration filenames define execution order. Never edit an applied migration to change production history; add a new forward migration.
+
+Local gate:
+
+```bash
+supabase db start
+npm run test:db
+supabase stop --no-backup
+```
+
+Requirements:
+
+- Docker
+- Supabase CLI 2.115 or newer
+- exclusive ownership of the default local ports and containers
+
+The stack begins at port `54321` and is not parallel-safe across worktrees. Coordinate before starting it. Stop the stack before finishing, including after failures when safe.
+
+The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
+
+## Edge Function tests
+
+Run:
+
+```bash
+npm run test:edge
+```
+
+The Deno suite covers shared modules, handler boundaries, control enforcement, research behavior, source validation, cost normalization, and persistence rules. The npm script grants only the permissions required by the test suite.
+
+Run focused tests while changing one function, then run the complete Edge Function gate.
+
+## Environment and secrets
+
+Document names, never values. Depending on deployed features, server-side configuration includes categories such as:
+
+- Supabase URL, anon key, and service-role key;
+- supported AI provider keys;
+- research provider keys;
+- Stripe secret, webhook secret, and price configuration;
+- demo-code hashing material;
+- sparring integrity material;
+- Google export configuration;
+- allowed origins and environment-specific application URLs.
+
+Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
+
+Public browser configuration in [`../src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) is not a replacement for server authorization.
+
+## Local, staging, and production
+
+### Local
+
+Use local Supabase for migration replay and pgTAP. Do not point local tests at a remote project.
+
+### Staging
+
+Protected staging must use a non-production project with matching anon key, current schema and functions, required provider access, a dedicated bounded demo code, correct CORS, and a protected main-only GitHub environment.
+
+Read [`../docs/testing.md`](../docs/testing.md) before running staging.
+
+### Production
+
+Migrations, function deployments, secret changes, and data mutation require explicit authorization. Confirm the linked project, exact diff, current baseline, rollback path, and local evidence before any operation.
+
+Read [`../docs/operations.md`](../docs/operations.md) before changing remote state.
+
+## Deployment checklist
+
+For an authorized backend change:
+
+1. Confirm the current worktree and commit.
+2. Resolve the linked Supabase project and environment.
+3. Inspect the exact migration or function diff.
+4. Capture the remote baseline needed for rollback.
+5. Run focused tests, `npm run test:edge`, and database tests when schema or RLS changes.
+6. Verify CORS and handler authentication.
+7. Apply one scoped operation.
+8. Exercise the live endpoint or user-scoped database path.
+9. Record the target, operation, result, and any exception without exposing secrets.
+
+Stop when the target is ambiguous, rollback is unproven, or the operation exceeds authorization.
