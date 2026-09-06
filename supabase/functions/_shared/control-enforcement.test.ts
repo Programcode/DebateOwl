@@ -4,7 +4,95 @@ import {
   enforceBrainstormControls,
   enforceGenerateControls,
   isAskStreamingModeAllowed,
+  validateControlInput,
 } from "./control-enforcement.ts";
+
+const ENUM_CONTROLS = {
+  ask: {
+    mode: ["general", "clarify", "summarize", "proscons", "argumentmap"],
+  },
+  attack: {
+    aggressiveness: ["mild", "moderate", "ruthless"],
+    judgeParadigm: ["logic", "values", "policy"],
+  },
+  brainstorm: {
+    side: ["pro", "con", "both"],
+    outputMode: ["mindmap", "buckets", "topfive"],
+  },
+  factoids: {
+    direction: ["for", "against"],
+    sourceType: ["academic", "government", "news", "any"],
+  },
+  generate: {
+    side: ["pro", "con"],
+    format: ["custom", "bp", "policy", "classroom"],
+    role: ["intro", "r1", "r2", "conc", "general"],
+    length: ["brief", "standard", "comprehensive"],
+    audience: ["beginner", "intermediate", "advanced"],
+    tone: ["formal", "conversational", "aggressive"],
+  },
+} as const;
+
+const BOOLEAN_CONTROLS = {
+  ask: ["citationMode", "webSearch", "prosConsMode", "argumentMapMode"],
+  attack: ["detectFallacies", "analyzeWeighing"],
+} as const;
+
+Deno.test("control validator accepts every enum value and omitted defaults", () => {
+  for (const [feature, controls] of Object.entries(ENUM_CONTROLS)) {
+    if (validateControlInput(feature, {}) !== null) throw new Error(`${feature} rejected omitted controls`);
+    for (const [control, values] of Object.entries(controls)) {
+      for (const value of values) {
+        const error = validateControlInput(feature, { [control]: value });
+        if (error !== null) throw new Error(`${feature}.${control} rejected ${value}: ${error}`);
+      }
+    }
+  }
+});
+
+Deno.test("control validator rejects every unsupported enum", () => {
+  for (const [feature, controls] of Object.entries(ENUM_CONTROLS)) {
+    for (const control of Object.keys(controls)) {
+      const error = validateControlInput(feature, { [control]: "unsupported" });
+      if (!error?.includes(`${feature}.${control}`)) throw new Error(`${feature}.${control} accepted an unsupported value`);
+    }
+  }
+});
+
+Deno.test("control validator accepts booleans and rejects wrong boolean types", () => {
+  for (const [feature, controls] of Object.entries(BOOLEAN_CONTROLS)) {
+    for (const control of controls) {
+      for (const value of [true, false]) {
+        if (validateControlInput(feature, { [control]: value }) !== null) {
+          throw new Error(`${feature}.${control} rejected ${value}`);
+        }
+      }
+      const error = validateControlInput(feature, { [control]: "false" });
+      if (!error?.includes(`${feature}.${control}`)) throw new Error(`${feature}.${control} accepted a string boolean`);
+    }
+  }
+});
+
+Deno.test("factoids typed controls enforce their existing boundaries", () => {
+  for (const sourceCount of [3, 5, 15]) {
+    if (validateControlInput("factoids", { sourceCount }) !== null) throw new Error(`rejected sourceCount ${sourceCount}`);
+  }
+  if (validateControlInput("factoids", { timeframe: "2020-2026" }) !== null) throw new Error("rejected string timeframe");
+
+  for (const input of [
+    { sourceCount: "5" },
+    { sourceCount: Number.NaN },
+    { sourceCount: Number.POSITIVE_INFINITY },
+    { sourceCount: 2 },
+    { sourceCount: 16 },
+    { timeframe: 2026 },
+  ]) {
+    if (validateControlInput("factoids", input) === null) {
+      throw new Error(`accepted invalid factoids control ${JSON.stringify(input)}`);
+    }
+  }
+  if (validateControlInput("unknown", { mode: "unsupported" }) !== null) throw new Error("unknown feature must be ignored");
+});
 
 Deno.test("ask pros/cons and argument map toggles deterministically shape the output", () => {
   const output: Record<string, unknown> = {
@@ -48,8 +136,10 @@ Deno.test("clarify mode guarantees a visible uncertainty note when no follow-up 
   if ((good.uncertainties as string[]).length !== 0) throw new Error("clarify with follow-ups must not add noise");
 });
 
-Deno.test("clarify mode is excluded from streaming while general mode remains eligible", () => {
-  if (isAskStreamingModeAllowed("clarify")) throw new Error("clarify mode must not stream");
+Deno.test("only general ask mode is eligible for streaming", () => {
+  for (const mode of ["clarify", "summarize", "proscons", "argumentmap", "unsupported", undefined]) {
+    if (isAskStreamingModeAllowed(mode)) throw new Error(`${mode} mode must not stream`);
+  }
   if (!isAskStreamingModeAllowed("general")) throw new Error("general mode should remain streamable");
 });
 

@@ -2,7 +2,7 @@
 
 **Status:** Plan index. Plans describe proposed work, not current implementation truth.
 
-Last reconciled against the `super-cauliflower` worktree at `cc39416` on 2026-09-06.
+Last reconciled against `origin/main` at `c7d3437` on 2026-09-06.
 
 Before executing any plan, recheck its branch, commit, paths, assumptions, product decisions, and verification commands against current source. Do not treat an old line number or completed review as fresh evidence.
 

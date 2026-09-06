@@ -32,6 +32,32 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 
+vi.mock('@/components/ui/select', () => ({
+  Select: ({
+    children,
+    onValueChange,
+    value,
+  }: {
+    children: React.ReactNode;
+    onValueChange: (value: string) => void;
+    value: string;
+  }) => (
+    <select
+      aria-label="Audience"
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      {children}
+    </select>
+  ),
+  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <option value={value}>{children}</option>
+  ),
+  SelectTrigger: (): null => null,
+  SelectValue: (): null => null,
+}));
+
 describe('AdminAnnouncements', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,8 +91,7 @@ describe('AdminAnnouncements', () => {
     await screen.findByText('No announcements yet');
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Targeted note' } });
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'This message is for one user.' } });
-    fireEvent.click(screen.getByLabelText('Audience'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Selected users' }));
+    fireEvent.change(screen.getByLabelText('Audience'), { target: { value: 'users' } });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select selected@example.com' }));
     fireEvent.click(screen.getByRole('button', { name: 'Create announcement' }));
 

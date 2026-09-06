@@ -105,7 +105,13 @@ Requirements:
 - Supabase CLI 2.115 or newer
 - exclusive ownership of the local Supabase ports and containers
 
-Run:
+In Superset, run:
+
+```bash
+./.superset/db-gate.sh
+```
+
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts the stack, runs `npm run test:db`, and stops the stack. Outside Superset, run:
 
 ```bash
 supabase db start

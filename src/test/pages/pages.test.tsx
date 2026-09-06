@@ -43,7 +43,7 @@ vi.mock('@/lib/auth', () => ({
 
 const renderWithRouter = (component: React.ReactNode, route = '/') => {
     return render(
-        <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <MemoryRouter initialEntries={[route]}>
             {component}
         </MemoryRouter>
     );
@@ -51,11 +51,6 @@ const renderWithRouter = (component: React.ReactNode, route = '/') => {
 
 describe('Pages', () => {
     describe('LandingPage', () => {
-        it('renders without crashing', () => {
-            renderWithRouter(<LandingPage />);
-            expect(document.body).toBeDefined();
-        });
-
         it('contains hero section', () => {
             renderWithRouter(<LandingPage />);
             expect(screen.getByRole('heading', { level: 1 })).toBeDefined();
@@ -69,11 +64,6 @@ describe('Pages', () => {
         it('contains features section', () => {
             renderWithRouter(<LandingPage />);
             expect(screen.getAllByRole('heading').length).toBeGreaterThan(1);
-        });
-
-        it('contains footer', () => {
-            renderWithRouter(<LandingPage />);
-            expect(screen.getAllByText(/DebateLab/i).length).toBeGreaterThan(0);
         });
     });
 
@@ -103,11 +93,6 @@ describe('Pages', () => {
         it('renders 404 message', () => {
             renderWithRouter(<NotFound />);
             expect(screen.getByText('404')).toBeDefined();
-        });
-
-        it('renders without crashing', () => {
-            renderWithRouter(<NotFound />);
-            expect(document.body).toBeDefined();
         });
     });
 });

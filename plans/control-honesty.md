@@ -55,7 +55,7 @@ Both streaming gates currently reject only `clarify`. The client helper and `ai-
 
 Extend the existing shared control module with explicit allowlists for the controls already present in the feature input schemas. Validate Generate side/format/role/length/audience/tone, Attack aggressiveness/judge paradigm/toggles, Brainstorm side/output mode, Factoids direction/source type/timeframe/source count where typed, and Ask mode/toggles. Preserve current defaults for omitted optional fields. Return a safe client error for malformed present values.
 
-Call the validator after bounded sanitization and before quota reservation or any Exa/provider work. The streaming route must use the same Ask mode and boolean rules before it checks advanced-mode eligibility. Keep provider/model allowlisting unchanged.
+Call the validator on the raw control fields before any `String(...)` or `Boolean(...)` coercion and before quota reservation or any Exa/provider work. Bounded text sanitization may run first only when it preserves the original type of non-string fields; it must not normalize or coerce control values before validation. The streaming route must use the same Ask mode and boolean rules before it checks advanced-mode eligibility. Keep provider/model allowlisting unchanged.
 
 Change `isAskStreamingModeAllowed` and `isAskStreamingSupported` to allow only `general`; advanced toggles remain non-streaming. Use an error message that names the unsupported mode without implying that structured output was produced.
 

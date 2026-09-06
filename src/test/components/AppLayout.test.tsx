@@ -29,7 +29,7 @@ const announcement: UserAnnouncement = {
 
 function renderLayout() {
   return render(
-    <MemoryRouter initialEntries={['/app']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter initialEntries={['/app']}>
       <Routes>
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<Link to="next">Open next page</Link>} />

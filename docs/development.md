@@ -33,11 +33,15 @@ npm ci
 
 ## Start the client
 
+Outside Superset, start Vite directly:
+
 ```bash
 npm run dev
 ```
 
-[`vite.config.ts`](../vite.config.ts) uses port `8080` by default and maps `@` to `src/`. Use a different explicit port when another worktree already owns it:
+[`vite.config.ts`](../vite.config.ts) defaults to port `8080` and maps `@` to `src/`. Superset's Run action calls `./.superset/dev.sh`, which allocates an available port from `8080-8179` for the current worktree and releases it through `./.superset/teardown.sh`. Do not assume a Superset workspace uses `8080`.
+
+For another explicit local port:
 
 ```bash
 npm run dev -- --host 127.0.0.1 --port 8081
@@ -91,13 +95,21 @@ Handler authentication remains necessary where [`supabase/config.toml`](../supab
 
 Migrations live in [`supabase/migrations/`](../supabase/migrations/) and run in filename order. Database and policy tests live under [`supabase/tests/`](../supabase/tests/).
 
+In a Superset workspace, use the repository's locking wrapper:
+
+```bash
+./.superset/db-gate.sh
+```
+
+Outside Superset, run the underlying commands directly:
+
 ```bash
 supabase db start
 npm run test:db
 supabase stop --no-backup
 ```
 
-The default local stack begins at port `54321` and is not parallel-safe across worktrees. Coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
+The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` and stops the stack after the test. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
 
 Never point local tests at staging or production. Never apply a migration to an unverified project.
 

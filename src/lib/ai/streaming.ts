@@ -26,7 +26,7 @@ export type ParsedSSEEvent = {
 export function isAskStreamingSupported(config: ProviderConfig, options: AskStreamOptions = {}) {
   const provider = config.provider === 'lovable' ? 'openai' : config.provider;
   const advancedStructuredMode = Boolean(
-    options.mode === 'clarify' ||
+    (options.mode ?? 'general') !== 'general' ||
     options.citationMode ||
     options.webSearch ||
     options.prosConsMode ||

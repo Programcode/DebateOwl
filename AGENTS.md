@@ -7,6 +7,12 @@
 - Before editing, inspect the branch and working tree. Preserve unrelated changes.
 - Use Node 22, npm, and the committed `package-lock.json`. Install with `npm ci`.
 
+## Parallel Superset workspaces
+
+Each Superset workspace is a separate git worktree. `.superset/config.json` runs `npm ci` when it creates a workspace and starts the app through `./.superset/dev.sh`. That script allocates a port from `8080-8179` in `~/.superset/debatelab-ports/allocations.json`; `./.superset/teardown.sh` releases it.
+
+The local Supabase stack still uses shared default ports and container names. In Superset, run the database gate through `./.superset/db-gate.sh`. It holds `~/.superset/debatelab-db.lock` while the stack runs and stops the stack afterward.
+
 ## System map
 
 - `src/` is the React 18 and TypeScript client. Routes and lazy page entry points live in `src/App.tsx`.
@@ -17,7 +23,7 @@
 
 ## Normal ports
 
-- Vite development server: `8080` by default.
+- Vite development server: `8080` by default outside Superset; Superset allocates `8080-8179` per worktree.
 - Automated browser server: isolated `127.0.0.1:18080`, never an existing dev server.
 - Local Supabase: CLI defaults beginning at `54321`. The stack is not parallel-safe across worktrees.
 
@@ -37,7 +43,13 @@ CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 
 `npm run verify` runs the complete credential-free ladder, including desktop and mobile Chromium against a fresh Vite server.
 
-Database migrations and pgTAP policies use a separate Docker-backed gate:
+Database migrations and pgTAP policies use a separate Docker-backed gate. In Superset, use the locking wrapper:
+
+```bash
+./.superset/db-gate.sh
+```
+
+Outside Superset, run the underlying commands directly:
 
 ```bash
 supabase db start

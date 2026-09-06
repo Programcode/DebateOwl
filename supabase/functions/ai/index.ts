@@ -69,6 +69,7 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
+  validateControlInput,
 } from "../_shared/control-enforcement.ts";
 import {
   boundPromptSources,
@@ -1103,6 +1104,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     return badRequest(sanitizeResult.rejected, corsHeaders);
   }
   const sanitizedInput = sanitizeResult.sanitized;
+  const controlError = validateControlInput(feature, sanitizedInput);
+  if (controlError) {
+    log(requestId, "WARN", "AI control validation failed", { reason: controlError });
+    return badRequest(controlError, corsHeaders);
+  }
   let responseTruncated = sanitizeResult.truncated || crossfireSourcesTruncated;
   const sources: PromptSource[] = feature === "crossfire"
     ? crossfireSources

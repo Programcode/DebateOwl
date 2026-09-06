@@ -28,6 +28,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
+  // The dev server transforms lazily-imported route modules on demand, so the
+  // first assertion after navigating to a lazy route races that waterfall. On a
+  // shared CI runner it has measured over 3.5s from document to the component
+  // that owns the heading, which overruns the 5s default.
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   use: {
     baseURL,
     trace: 'retain-on-failure',

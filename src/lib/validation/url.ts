@@ -55,11 +55,3 @@ export function validateUrl(url?: string): string | undefined {
         return undefined;
     }
 }
-
-/**
- * Checks if a URL is safe without normalizing it.
- * Useful for validation-only scenarios.
- */
-export function isUrlSafe(url?: string): boolean {
-    return validateUrl(url) !== undefined;
-}

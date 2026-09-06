@@ -1,4 +1,4 @@
-import { assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertStringIncludes } from "jsr:@std/assert@1.0.19";
 
 const browserCalledFunctions = [
   "admin",
