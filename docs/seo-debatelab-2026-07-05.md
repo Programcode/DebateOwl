@@ -1,5 +1,7 @@
 # DebateLab SEO work log - 2026-07-05
 
+> **Historical snapshot:** This file records SEO work and search evidence from 2026-07-05. It is not current ranking, indexing, or deployment proof.
+
 ## Objective
 Make `https://debate.pi-stack.org` the strongest relevant result for the Google query `debatelab` without indexing private app surfaces or changing the authenticated app experience.
 

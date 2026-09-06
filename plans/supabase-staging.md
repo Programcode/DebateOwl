@@ -104,15 +104,15 @@ rollback script. Do not edit migration history to hide a failed apply.
 
 For function regressions, capture the current version/source-hash baseline and
 redeploy the previously verified commit's exact function names to staging. The
-CLI has no native revision rollback, so the working tree must actually be at
-that commit before deploying — deploying from an unrelated checkout redeploys
-whatever source happens to be on disk, not the verified revision:
+CLI has no native revision rollback, so the working tree must contain that
+revision's complete function tree before deployment. Deploying from unrelated
+on-disk source can mix revisions through shared imports:
 
 ```bash
-git status --short --branch   # must be clean before switching
-git checkout <verified-commit-sha> -- supabase/functions/<function-name>
+git status --short --branch # must be clean before switching
+git restore --source=<verified-commit-sha> --worktree -- supabase/functions
 npx supabase functions deploy <function-name> --project-ref "$STAGING_REF" --use-api
-git checkout - -- supabase/functions/<function-name>   # restore the working tree
+git restore --source=HEAD --worktree -- supabase/functions
 ```
 
 Do not use `--prune`, delete the project, rotate secrets, or deploy the rollback
