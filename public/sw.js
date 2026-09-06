@@ -18,7 +18,6 @@ const APP_SHELL = [
   '/app/history',
   '/app/settings',
   '/index.html',
-  '/config.js',
   '/theme-init.js',
   '/manifest.webmanifest',
   '/favicon.ico',

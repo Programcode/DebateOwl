@@ -127,7 +127,7 @@ describe("Vercel frontend deployment configuration", () => {
     },
   );
 
-  it.each(["/index.html", "/config.js", "/theme-init.js", "/sw.js"])(
+  it.each(["/index.html", "/theme-init.js", "/sw.js"])(
     "prevents stale caching for %s",
     (source) => {
       const config = loadConfig();
