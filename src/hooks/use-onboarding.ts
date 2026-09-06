@@ -8,7 +8,6 @@ interface OnboardingState {
     setOnboardingComplete: () => void;
     startTour: () => void;
     stopTour: () => void;
-    resetOnboarding: () => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -19,7 +18,6 @@ export const useOnboardingStore = create<OnboardingState>()(
             setOnboardingComplete: () => set({ hasCompletedOnboarding: true, isTourRunning: false }),
             startTour: () => set({ isTourRunning: true }),
             stopTour: () => set({ isTourRunning: false }),
-            resetOnboarding: () => set({ hasCompletedOnboarding: false, isTourRunning: false }),
         }),
         {
             name: 'debate-trainer-onboarding',
