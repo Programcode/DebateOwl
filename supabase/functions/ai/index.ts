@@ -27,13 +27,6 @@ function getCorsHeaders(origin: string | null) {
 
 type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask" | "sparring" | "crossfire";
 
-type Source = {
-  title: string;
-  content: string;
-  origin?: string;
-  type: string;
-};
-
 // Generate unique request ID for tracing
 function generateRequestId(): string {
   return `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

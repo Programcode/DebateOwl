@@ -81,10 +81,7 @@ function getProviderForModel(model: string): "openai" | "google" | "anthropic" |
 }
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return Response.json(body, { status, headers: corsHeaders });
 }
 
 function sse(event: string, payload: Record<string, unknown>) {
