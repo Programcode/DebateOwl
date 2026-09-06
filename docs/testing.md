@@ -111,7 +111,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts the stack, runs `npm run test:db`, and stops the stack. Outside Superset, run:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts the stack, runs `npm run test:db`, and stops the stack on exit, including after a test failure. Outside Superset, run:
 
 ```bash
 supabase db start

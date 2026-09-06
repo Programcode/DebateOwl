@@ -121,6 +121,17 @@ describe("checkDocs", () => {
     expect(issues[0].message).toContain("missing local link target");
   });
 
+  it("rejects a missing multiline local target", async () => {
+    const root = await createRoot();
+    await write(root, "README.md", "Read the [missing guide](\n  docs/missing.md\n).\n");
+
+    const issues = await (await loadCheckDocs())(root);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ file: "README.md", line: 1 });
+    expect(issues[0].message).toContain("missing local link target");
+  });
+
   it("accepts encoded paths and query or fragment suffixes", async () => {
     const root = await createRoot();
     await write(

@@ -109,7 +109,7 @@ npm run test:db
 supabase stop --no-backup
 ```
 
-The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` and stops the stack after the test. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
+The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` and stops the stack on exit, including after a test failure. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
 
 Never point local tests at staging or production. Never apply a migration to an unverified project.
 

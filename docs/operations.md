@@ -12,7 +12,7 @@ Never infer authorization from access. Never use production to replace missing l
 
 [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) owns credential-free quality, pull-request database and browser tests, asset upload, and conditional Docker packaging.
 
-The quality job uses Node 22, `npm ci`, and Deno 2.9.5, then runs:
+The quality job uses Node 22, `npm ci`, and Deno 2.9.6, then runs:
 
 - `npm run docs:check`
 - `npm run lint`

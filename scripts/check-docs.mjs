@@ -60,19 +60,28 @@ async function markdownFiles(rootDir) {
   return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
 }
 
-function linkTargets(line) {
-  const targets = [];
+function normalizeTarget(target) {
+  return target.startsWith("<") && target.endsWith(">") ? target.slice(1, -1) : target;
+}
 
-  for (const match of line.matchAll(INLINE_LINK)) {
-    targets.push(match[1]);
+function inlineTargets(content) {
+  const targets = [];
+  let line = 1;
+  let cursor = 0;
+
+  for (const match of content.matchAll(INLINE_LINK)) {
+    const index = match.index ?? 0;
+    line += content.slice(cursor, index).split("\n").length - 1;
+    targets.push({ target: normalizeTarget(match[1]), line });
+    cursor = index;
   }
 
-  const reference = line.match(REFERENCE_LINK);
-  if (reference) targets.push(reference[1] ?? reference[2]);
+  return targets;
+}
 
-  return targets.map((target) =>
-    target.startsWith("<") && target.endsWith(">") ? target.slice(1, -1) : target,
-  );
+function referenceTarget(line) {
+  const match = line.match(REFERENCE_LINK);
+  return match ? normalizeTarget(match[1] ?? match[2]) : null;
 }
 
 function localTarget(rootDir, documentPath, rawTarget) {
@@ -105,7 +114,27 @@ export async function checkDocs(rootDir) {
   const issues = [];
 
   for (const document of await markdownFiles(root)) {
-    const lines = (await readFile(document.absolutePath, "utf8")).split(/\r?\n/);
+    const content = await readFile(document.absolutePath, "utf8");
+    const lines = content.split(/\r?\n/);
+
+    async function checkTarget(rawTarget, line) {
+      const target = localTarget(root, document.absolutePath, rawTarget);
+      if (!target) return;
+      if (target.error) {
+        issues.push({ file: document.relativePath, line, message: target.error });
+        return;
+      }
+
+      try {
+        await stat(target.absolutePath);
+      } catch {
+        issues.push({
+          file: document.relativePath,
+          line,
+          message: `missing local link target: ${rawTarget}`,
+        });
+      }
+    }
 
     for (const [index, line] of lines.entries()) {
       if (RETIRED_CHECKOUT.some((pattern) => pattern.test(line))) {
@@ -116,24 +145,12 @@ export async function checkDocs(rootDir) {
         });
       }
 
-      for (const rawTarget of linkTargets(line)) {
-        const target = localTarget(root, document.absolutePath, rawTarget);
-        if (!target) continue;
-        if (target.error) {
-          issues.push({ file: document.relativePath, line: index + 1, message: target.error });
-          continue;
-        }
+      const reference = referenceTarget(line);
+      if (reference) await checkTarget(reference, index + 1);
+    }
 
-        try {
-          await stat(target.absolutePath);
-        } catch {
-          issues.push({
-            file: document.relativePath,
-            line: index + 1,
-            message: `missing local link target: ${rawTarget}`,
-          });
-        }
-      }
+    for (const inline of inlineTargets(content)) {
+      await checkTarget(inline.target, inline.line);
     }
   }
 

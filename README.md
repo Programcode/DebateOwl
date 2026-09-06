@@ -71,7 +71,7 @@ The full testing matrix, staging requirements, artifact behavior, and exact brow
 
 ## Stack
 
-The client uses React 18, TypeScript, Vite 7, React Router 6, Zustand, TanStack Query, Tailwind CSS, Radix-based UI components, Zod, Vitest, and Playwright.
+The client uses React 18, TypeScript, Vite 7, React Router 7, Zustand, TanStack Query, Tailwind CSS, Radix-based UI components, Zod, Vitest, and Playwright.
 
 The backend uses Supabase Auth, PostgreSQL, Row Level Security, migrations, pgTAP, and Deno Edge Functions. Server-side integrations include supported AI providers, research services, Stripe, and Google Docs export. Client observability uses Sentry, PostHog, Vercel Analytics, and Vercel Speed Insights.
 
