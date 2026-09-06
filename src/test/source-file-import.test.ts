@@ -19,8 +19,8 @@ vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
     promise: Promise.resolve({
       numPages: 1,
       getPage: pdfMocks.getPage,
-      destroy: pdfMocks.destroy,
     }),
+    destroy: pdfMocks.destroy,
   })),
 }));
 

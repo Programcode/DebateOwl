@@ -40,7 +40,7 @@ describe('Auth Flow Integration', () => {
         (supabase.auth.getSession as Mock).mockResolvedValue({ data: { session: null } });
 
         render(
-            <MemoryRouter initialEntries={['/protected']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <MemoryRouter initialEntries={['/protected']}>
                 <AuthProvider>
                     <Routes>
                         <Route path="/login" element={<LoginComponent />} />
@@ -70,7 +70,7 @@ describe('Auth Flow Integration', () => {
         (supabase.auth.getSession as Mock).mockResolvedValue({ data: { session: mockSession } });
 
         render(
-            <MemoryRouter initialEntries={['/protected']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <MemoryRouter initialEntries={['/protected']}>
                 <AuthProvider>
                     <Routes>
                         <Route path="/login" element={<LoginComponent />} />

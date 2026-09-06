@@ -140,15 +140,18 @@ async function readDocxFile(file: File) {
 }
 
 async function readPdfFile(file: File) {
-  let pdfDocument: Awaited<ReturnType<(typeof import('pdfjs-dist/legacy/build/pdf.mjs'))['getDocument']>['promise']> | undefined;
+  type PdfjsModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
+  let pdfLoadingTask: ReturnType<PdfjsModule['getDocument']> | undefined;
+  let pdfDocument: Awaited<ReturnType<PdfjsModule['getDocument']>['promise']> | undefined;
   try {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-    pdfDocument = await pdfjs.getDocument({
+    pdfLoadingTask = pdfjs.getDocument({
       data: new Uint8Array(await readFileAsArrayBuffer(file)),
       useWorkerFetch: false,
-    }).promise;
+    });
+    pdfDocument = await pdfLoadingTask.promise;
 
     const pages: string[] = [];
     const maxPages = Math.min(pdfDocument.numPages, 80);
@@ -173,7 +176,7 @@ async function readPdfFile(file: File) {
       'parse-failed',
     );
   } finally {
-    await pdfDocument?.destroy();
+    await pdfLoadingTask?.destroy();
   }
 }
 

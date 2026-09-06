@@ -43,7 +43,7 @@ vi.mock('@/lib/auth', () => ({
 
 const renderWithRouter = (component: React.ReactNode, route = '/') => {
     return render(
-        <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <MemoryRouter initialEntries={[route]}>
             {component}
         </MemoryRouter>
     );

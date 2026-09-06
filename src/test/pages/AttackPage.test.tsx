@@ -109,7 +109,7 @@ describe('AttackPage Integration', () => {
 
     it('renders the empty state initially', () => {
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <AttackPage />
             </BrowserRouter>
         );
@@ -131,7 +131,7 @@ describe('AttackPage Integration', () => {
         (attackCase as Mock).mockResolvedValue({ result: mockResult, discoveredSources: [] });
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <AttackPage />
             </BrowserRouter>
         );
@@ -163,7 +163,7 @@ describe('AttackPage Integration', () => {
         mockAttackResult = result;
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <AttackPage />
             </BrowserRouter>
         );

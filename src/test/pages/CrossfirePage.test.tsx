@@ -33,7 +33,7 @@ import { loadCrossfireDraft, saveCrossfireDraft } from '@/lib/crossfire/storage'
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/app/crossfire']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter initialEntries={['/app/crossfire']}>
       <CrossfirePage />
     </MemoryRouter>,
   );
@@ -81,7 +81,7 @@ describe('CrossfirePage', () => {
     setItemSpy.mockClear();
     mocks.userId = 'user-b';
     view.rerender(
-      <MemoryRouter initialEntries={['/app/crossfire']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <MemoryRouter initialEntries={['/app/crossfire']}>
         <CrossfirePage />
       </MemoryRouter>,
     );

@@ -103,10 +103,16 @@ implementation is corrected. A hand-written down migration, `DROP`, or
 rollback script. Do not edit migration history to hide a failed apply.
 
 For function regressions, capture the current version/source-hash baseline and
-redeploy the previously verified commit's exact function names to staging:
+redeploy the previously verified commit's exact function names to staging. The
+CLI has no native revision rollback, so the working tree must actually be at
+that commit before deploying — deploying from an unrelated checkout redeploys
+whatever source happens to be on disk, not the verified revision:
 
 ```bash
+git status --short --branch   # must be clean before switching
+git checkout <verified-commit-sha> -- supabase/functions/<function-name>
 npx supabase functions deploy <function-name> --project-ref "$STAGING_REF" --use-api
+git checkout - -- supabase/functions/<function-name>   # restore the working tree
 ```
 
 Do not use `--prune`, delete the project, rotate secrets, or deploy the rollback
