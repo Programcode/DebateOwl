@@ -137,7 +137,6 @@ interface SessionState {
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
   renameSourceFolder: (oldName: string, newName: string) => Promise<void>;
   deleteSourceFolder: (name: string, mode: 'empty-only' | 'move-to-general') => Promise<void>;
-  moveSourceToFolder: (sourceId: string, folder: string) => Promise<void>;
   setFolderActive: (folder: string, isActive: boolean) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   toggleSource: (id: string) => Promise<void>;
@@ -552,9 +551,6 @@ export const useSessionStore = create<SessionState>()(
           'delete source folder',
         );
         applyDelete();
-      },
-      moveSourceToFolder: async (sourceId, folder) => {
-        await get().updateSource(sourceId, { folder });
       },
       setFolderActive: async (folder, isActive) => {
         const normalized = normalizeFolder(folder);
