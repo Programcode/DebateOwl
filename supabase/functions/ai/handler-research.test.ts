@@ -10,13 +10,14 @@ const environment = {
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   SPARRING_INTEGRITY_SECRET: "test-sparring-secret",
   EXA_API_KEY: "test-exa-key",
-  OPENAI_API_KEY: "test-openai-key",
+  OPENROUTER_API_KEY: "test-openrouter-key",
 };
 
 for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value);
 
 const { handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
+const { MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
 
 Deno.test("AI handlers reject malformed controls before quota or provider work", async () => {
   const originalFetch = globalThis.fetch;
@@ -37,7 +38,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
-        model: "gpt-5.4-mini",
+        model: "openai/gpt-5.6-luna",
         input: { message: "Question", mode: "\u200Bgeneral", citationMode: "false" },
       }),
     }));
@@ -53,7 +54,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       },
       body: JSON.stringify({
         feature: "ask",
-        model: "gpt-5.4-mini",
+        model: "openai/gpt-5.6-luna",
         input: { message: "Question", mode: "general", citationMode: "false" },
       }),
     }));
@@ -124,7 +125,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
       });
     }
 
-    if (url.href === "https://api.openai.com/v1/chat/completions") {
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       providerCalls += 1;
       const content = providerCalls === 1
         ? { queries: [] }
@@ -151,7 +152,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
         };
       return jsonResponse({
         choices: [{ message: { content: JSON.stringify(content) } }],
-        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.000001 },
       });
     }
 
@@ -168,7 +169,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
       },
       body: JSON.stringify({
         feature: "factoids",
-        model: "gpt-5.4-mini",
+        model: "openai/gpt-5.6-luna",
         input: {
           claim: "solar energy costs",
           direction: "for",
@@ -322,5 +323,268 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     }
   } finally {
     globalThis.fetch = originalFetch;
+function supabaseTestResponse(url: URL): Response | undefined {
+  if (url.origin !== "https://supabase.test") return undefined;
+  if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
+  if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
+  if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({
+    subscription_tier: (globalThis as typeof globalThis & { __testTier?: string }).__testTier || "trial",
+    daily_limit_override: 50,
+    trial_ends_at: "2099-01-01T00:00:00.000Z",
+    grace_period_ends_at: null,
+  });
+  if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }]);
+  if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
+  if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+  if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
+  if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
+  throw new Error(`Unhandled Supabase request: ${url}`);
+}
+
+function askRequest(model: string, reasoningEffort?: string): Request {
+  return new Request("http://127.0.0.1/functions/v1/ai", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      feature: "ask",
+      model,
+      ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+      input: { message: "How can I compare two policies?", mode: "general" },
+    }),
+  });
+}
+
+Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning tiers", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalTier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier;
+  const openRouterBodies: Array<Record<string, unknown>> = [];
+  const testState = globalThis as typeof globalThis & { __testTier?: string };
+  const requestForModel = (model: string, tier: "trial" | "pro", effort = "high") => {
+    testState.__testTier = tier;
+    return handleRequest(askRequest(model, effort));
+  };
+
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      openRouterBodies.push(body);
+      return jsonResponse({
+        choices: [{ message: { content: "{}" } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.001 },
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const unknown = await handleRequest(askRequest("provider/unknown-model", "low"));
+    if (unknown.status !== 400 || openRouterBodies.length !== 0) throw new Error("unknown model reached routing");
+
+    for (const entry of MODEL_CATALOG) {
+      const response = await requestForModel(entry.id, entry.isProOnly ? "pro" : "trial");
+      if (response.status !== 200) throw new Error(`${entry.id} returned ${response.status}: ${await response.text()}`);
+    }
+    for (const effort of ["low", "medium", "high"]) {
+      const response = await requestForModel("anthropic/claude-sonnet-5", "pro", effort);
+      if (response.status !== 200) throw new Error(`Pro ${effort} returned ${response.status}: ${await response.text()}`);
+    }
+    for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
+      const response = await requestForModel(model, "pro", "medium");
+      if (response.status !== 200) throw new Error(`Pro medium ${model} returned ${response.status}: ${await response.text()}`);
+    }
+
+    if (openRouterBodies.length !== MODEL_CATALOG.length + 6) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
+    for (let index = 0; index < MODEL_CATALOG.length; index += 1) {
+      const entry = MODEL_CATALOG[index];
+      const body = openRouterBodies[index];
+      if (body.model !== entry.id) throw new Error(`wrong routed model: ${String(body.model)}`);
+      if (body.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error(`output cap was not enforced for ${entry.id}`);
+      const reasoning = body.reasoning as Record<string, unknown>;
+      const provider = body.provider as Record<string, unknown>;
+      if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
+      if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
+      if (body.response_format && (body.response_format as Record<string, unknown>).type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
+      if (entry.supportsTemperature !== ("temperature" in body)) throw new Error(`temperature support mismatch for ${entry.id}`);
+    }
+    for (const [offset, effort] of ["low", "medium", "high"].entries()) {
+      const body = openRouterBodies[MODEL_CATALOG.length + offset];
+      if ((body.reasoning as Record<string, unknown>).effort !== effort) throw new Error(`Pro effort ${effort} was not forwarded`);
+    }
+    for (const offset of [3, 4, 5]) {
+      const body = openRouterBodies[MODEL_CATALOG.length + offset];
+      if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalTier === undefined) delete testState.__testTier;
+    else testState.__testTier = originalTier;
+  }
+});
+
+Deno.test("streaming OpenRouter usage records zero and missing costs distinctly", async () => {
+  const originalFetch = globalThis.fetch;
+  const usageRows: Array<Record<string, unknown>> = [];
+  const streamBodies: Array<Record<string, unknown>> = [];
+  let includeUsage = true;
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) {
+      if (url.pathname.includes("/rest/v1/ai_requests")) {
+        usageRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      }
+      return supabaseResponse;
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      streamBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      const frames = [
+        `data: ${JSON.stringify({ choices: [{ delta: { content: "Hello" } }] })}\n\n`,
+        ...(includeUsage ? [`data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3, cost: 0 } })}\n\n`] : []),
+        "data: [DONE]\n\n",
+      ].join("");
+      return new Response(frames, { headers: { "Content-Type": "text/event-stream" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  const testState = globalThis as typeof globalThis & { __testTier?: string };
+  const originalTier = testState.__testTier;
+  testState.__testTier = "trial";
+  try {
+    const withZero = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    }));
+    await withZero.text();
+    if (streamBodies[0]?.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("stream output cap was not enforced");
+    if (usageRows.at(-1)?.cost_usd !== 0) throw new Error(`zero stream cost was not logged: ${JSON.stringify(usageRows.at(-1))}`);
+
+    includeUsage = false;
+    const withoutUsage = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    }));
+    await withoutUsage.text();
+    if (usageRows.at(-1)?.cost_usd !== null) throw new Error(`missing stream cost was estimated: ${JSON.stringify(usageRows.at(-1))}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalTier === undefined) delete testState.__testTier;
+    else testState.__testTier = originalTier;
+  }
+});
+
+Deno.test("streaming rejects provider errors and incomplete EOFs, while accepting a tail finish reason", async () => {
+  const originalFetch = globalThis.fetch;
+  const usageRows: Array<Record<string, unknown>> = [];
+  let frames = "";
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) {
+      if (url.pathname.includes("/rest/v1/ai_requests")) usageRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return supabaseResponse;
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      return new Response(frames, { headers: { "Content-Type": "text/event-stream" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  const request = () => new Request("http://127.0.0.1/functions/v1/ai-stream", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+  });
+
+  const testState = globalThis as typeof globalThis & { __testTier?: string };
+  const originalTier = testState.__testTier;
+  testState.__testTier = "trial";
+  try {
+    frames = `data: ${JSON.stringify({ error: { message: "provider exploded" } })}`;
+    const providerError = await (await handleStreamRequest(request())).text();
+    if (providerError.includes("event: final") || !providerError.includes("event: error") || !providerError.includes("provider exploded")) {
+      throw new Error(`provider error was not surfaced as an SSE error: ${providerError}`);
+    }
+    if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
+
+    frames = `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`;
+    const incomplete = await (await handleStreamRequest(request())).text();
+    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || !incomplete.includes("ended before completion")) {
+      throw new Error(`incomplete EOF was treated as success: ${incomplete}`);
+    }
+    if (usageRows.at(-1)?.cost_usd !== null) throw new Error("incomplete EOF published a cost");
+
+    frames = [
+      `data: ${JSON.stringify({ choices: [{ delta: { content: "complete" } }] })}`,
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}`,
+      `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 2, completion_tokens: 1, cost: 0.25 } })}`,
+    ].join("\n");
+    const finished = await (await handleStreamRequest(request())).text();
+    if (!finished.includes("event: final") || finished.includes("event: error")) throw new Error(`tail finish reason was rejected: ${finished}`);
+    if (usageRows.at(-1)?.cost_usd !== 0.25) throw new Error("tail usage was not logged");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalTier === undefined) delete testState.__testTier;
+    else testState.__testTier = originalTier;
+  }
+});
+
+Deno.test("cancelled streams keep observed cost unknown", async () => {
+  const originalFetch = globalThis.fetch;
+  const usageRows: Array<Record<string, unknown>> = [];
+  const encoder = new TextEncoder();
+  let providerStartedResolve!: () => void;
+  const providerStarted = new Promise<void>((resolve) => providerStartedResolve = resolve);
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) {
+      if (url.pathname.includes("/rest/v1/ai_requests")) usageRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return supabaseResponse;
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 2, completion_tokens: 1, cost: 0.25 } })}\n\n`));
+          providerStartedResolve();
+          init?.signal?.addEventListener("abort", () => controller.error(new DOMException("Upstream aborted", "AbortError")), { once: true });
+        },
+        pull() {
+          return new Promise<void>(() => {});
+        },
+      });
+      return new Response(body, { headers: { "Content-Type": "text/event-stream" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  const testState = globalThis as typeof globalThis & { __testTier?: string };
+  const originalTier = testState.__testTier;
+  testState.__testTier = "trial";
+  const caller = new AbortController();
+  try {
+    const response = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      signal: caller.signal,
+    }));
+    const read = response.text();
+    await providerStarted;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    caller.abort();
+    await read;
+    const row = usageRows.at(-1);
+    if (row?.status !== "cancelled" || row.cost_usd !== null) throw new Error(`cancelled stream was billed: ${JSON.stringify(row)}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalTier === undefined) delete testState.__testTier;
+    else testState.__testTier = originalTier;
   }
 });

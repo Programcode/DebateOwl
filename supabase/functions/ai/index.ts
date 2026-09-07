@@ -90,12 +90,19 @@ import {
   calculateRequestCost,
   type CostResult,
   mergeNormalizedUsage,
-  normalizeAnthropicUsage,
-  normalizeGoogleUsage,
-  normalizeOpenAIUsage,
+  normalizeOpenRouterUsage,
   selectObservedUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
+import {
+  DEFAULT_MODEL,
+  effectiveReasoningEffort,
+  getModelCatalogEntry,
+  isReasoningEffort,
+  MAX_REQUEST_OUTPUT_TOKENS,
+  type ModelCatalogEntry,
+  type ReasoningEffort,
+} from "../_shared/model-catalog.ts";
 import {
   ASK_RESEARCH,
   applyFactoidsVerification,
@@ -132,43 +139,17 @@ function narrowSparringDatabase(database: object): SparringDatabase {
 
 // ============== RATE LIMITING & SUBSCRIPTION GATING ==============
 
-// Pro-only models: require active subscription
-const PRO_MODELS = new Set([
-  "gpt-5.5",
-  "gpt-5.4",
-  "claude-opus-4-7",
-  "claude-sonnet-4-6",
-  "gemini-3.1-pro-preview",
-]);
+const OPENROUTER_PROVIDER: Provider = "openrouter";
 
-// Every model this endpoint will call, mapped to its provider. The client
-// picks a model; the server derives (and trusts) the provider from this
-// allowlist rather than the client-supplied provider field, so an arbitrary
-// or unlisted model/provider pair can never reach a provider API or bypass
-// PRO_MODELS gating.
-const MODEL_PROVIDERS: Record<string, Provider> = {
-  "gpt-5.5": "openai",
-  "gpt-5.4": "openai",
-  "gpt-5.4-mini": "openai",
-  "claude-opus-4-7": "anthropic",
-  "claude-sonnet-4-6": "anthropic",
-  "claude-haiku-4-5-20251001": "anthropic",
-  "gemini-3.1-pro-preview": "google",
-  "gemini-3-flash-preview": "google",
-  "gemini-3.1-flash-lite-preview": "google",
-  // Also served by ai-stream's allowlist; without this entry the model works
-  // while streaming but fails on every non-streaming (advanced) Ask request.
-  "gemini-3.5-flash": "google",
-};
-
-function providerForModel(model: string): Provider {
-  const provider = MODEL_PROVIDERS[model];
-  if (!provider) throw new Error("Unsupported model or provider combination");
-  return provider;
+function modelForRequest(model: string): ModelCatalogEntry {
+  const entry = getModelCatalogEntry(model);
+  if (!entry) throw new Error("Unsupported model or provider combination");
+  return entry;
 }
 
 interface RateLimitResult {
   allowed: boolean;
+  canAccessProModels?: boolean;
   reason?: string;
   limit?: number;
   current?: number;
@@ -358,7 +339,7 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
     }
 
     // Check model access
-    if (model && PRO_MODELS.has(model) && !sub.canAccessProModels) {
+    if (model && getModelCatalogEntry(model)?.isProOnly && !sub.canAccessProModels) {
       return {
         allowed: false,
         reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.",
@@ -404,7 +385,7 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
       };
     }
 
-    return { allowed: true, limit: dailyLimit, current: currentCount };
+    return { allowed: true, limit: dailyLimit, current: currentCount, canAccessProModels: sub.canAccessProModels };
   } catch (err) {
     console.error("[RATE LIMIT] Check failed:", err);
     return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
@@ -815,27 +796,25 @@ interface AIResult {
   usage?: NormalizedUsage;
 }
 
-type OpenAIResponse = {
+type OpenRouterResponse = {
   choices?: Array<{ message?: { content?: string | null } }>;
   usage?: unknown;
 };
 
-type AnthropicResponse = {
-  content?: Array<{ text?: string }>;
-  usage?: unknown;
-};
-
-type GoogleResponse = {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  usageMetadata?: unknown;
-};
-
-function normalizeProviderUsage(provider: Provider, usage: unknown): NormalizedUsage | undefined {
+function normalizeProviderUsage(usage: unknown): NormalizedUsage | undefined {
   if (!usage || typeof usage !== "object") return undefined;
-  const raw = usage as Record<string, unknown>;
-  if (provider === "openai") return normalizeOpenAIUsage(raw);
-  if (provider === "anthropic") return normalizeAnthropicUsage(raw);
-  return normalizeGoogleUsage(raw);
+  return normalizeOpenRouterUsage(usage as Record<string, unknown>);
+}
+
+function missingOpenRouterUsage(reason: string): NormalizedUsage {
+  return { incomplete: true, raw: { openrouter_usage_missing: reason } };
+}
+
+function attachMissingUsage(error: unknown, reason: string): unknown {
+  if (!error || typeof error !== "object") return error;
+  const errorWithUsage = error as { usage?: NormalizedUsage };
+  if (!errorWithUsage.usage) errorWithUsage.usage = missingOpenRouterUsage(reason);
+  return error;
 }
 
 async function callAI(
@@ -844,12 +823,13 @@ async function callAI(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   temperature: number,
+  reasoningEffort: ReasoningEffort,
   signal?: AbortSignal
 ): Promise<AIResult> {
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, temperature, signal);
+    return await callAIOnce(provider, model, systemPrompt, messages, temperature, reasoningEffort, signal);
   } catch (err) {
-    if (!(err instanceof InvalidJsonResponseError)) throw err;
+    if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
     let retry: AIResult;
@@ -860,14 +840,15 @@ async function callAI(
         `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
         withJsonRepairPrompt(messages),
         0,
+        reasoningEffort,
         signal,
       );
     } catch (retryError) {
       // Preserve the completed first attempt if cancellation or another
       // failure prevents the repair attempt from returning a result.
       const retryUsage = retryError && typeof retryError === "object" && "usage" in retryError
-        ? (retryError as { usage?: NormalizedUsage }).usage
-        : undefined;
+        ? (retryError as { usage?: NormalizedUsage }).usage ?? missingOpenRouterUsage("repair_retry")
+        : missingOpenRouterUsage("repair_retry");
       const usage = mergeNormalizedUsage([err.usage, retryUsage]);
       if (usage && retryError && typeof retryError === "object") {
         const errorWithUsage = retryError as {
@@ -879,7 +860,7 @@ async function callAI(
         // even if the retry is the operation cancelled by the caller.
         errorWithUsage.completedUsage = err.usage;
       }
-      throw retryError;
+      throw attachMissingUsage(retryError, "repair_retry");
     }
     // The failed attempt still consumed tokens; bill both.
     return {
@@ -910,55 +891,49 @@ async function callAIOnce(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   temperature: number,
+  reasoningEffort: ReasoningEffort,
   signal?: AbortSignal
 ): Promise<AIResult> {
-  const effectiveSystemPrompt = systemPrompt;
-  if (provider === "openai") {
-    return await callOpenAI([{ role: "system", content: effectiveSystemPrompt }, ...messages], model, temperature, signal);
-  } else if (provider === "anthropic") {
-    return await callAnthropic(messages, model, temperature, effectiveSystemPrompt, signal);
-  } else if (provider === "google") {
-    return await callGoogle(messages, model, temperature, effectiveSystemPrompt, signal);
-  }
-  throw new Error(`Unsupported provider: ${provider}`);
+  if (provider !== OPENROUTER_PROVIDER) throw new Error(`Unsupported provider: ${provider}`);
+  return await callOpenRouter(
+    [{ role: "system", content: systemPrompt }, ...messages],
+    model,
+    temperature,
+    reasoningEffort,
+    signal,
+  );
 }
 
-async function callOpenAI(messages: Array<{ role: string; content: string }>, model: string, temperature: number, signal?: AbortSignal): Promise<AIResult> {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) throw new Error("OPENAI_API_KEY missing");
-  const { response, data, errorBody } = await fetchJsonWithTimeout<OpenAIResponse>("https://api.openai.com/v1/chat/completions", {
+async function callOpenRouter(
+  messages: Array<{ role: string; content: string }>,
+  model: string,
+  temperature: number,
+  reasoningEffort: ReasoningEffort,
+  signal?: AbortSignal,
+): Promise<AIResult> {
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
+
+  const modelEntry = modelForRequest(model);
+  const payload: Record<string, unknown> = {
+    model,
+    messages,
+    max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
+    response_format: { type: "json_object" },
+    reasoning: { effort: reasoningEffort, exclude: true },
+    provider: { require_parameters: true },
+  };
+  if (modelEntry.supportsTemperature) payload.temperature = temperature;
+
+  const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages, temperature, response_format: { type: "json_object" } }),
+    body: JSON.stringify(payload),
   }, 60000, signal);
-  if (!response.ok) { const text = errorBody ?? ""; throw new Error(`OpenAI error: ${text}`); }
-  if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenAI returned no choices");
-  return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenAI", normalizeProviderUsage("openai", data.usage));
-}
-
-async function callAnthropic(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string, signal?: AbortSignal): Promise<AIResult> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
-  const { response, data, errorBody } = await fetchJsonWithTimeout<AnthropicResponse>("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model, system, messages, max_tokens: 4096, temperature }),
-  }, 60000, signal);
-  if (!response.ok) { const text = errorBody ?? ""; throw new Error(`Anthropic error: ${text}`); }
-  if (!data?.content || !Array.isArray(data.content) || data.content.length === 0) throw new Error("Anthropic returned no content");
-  return parseProviderContent(data.content[0]?.text || "", "Anthropic", normalizeProviderUsage("anthropic", data.usage));
-}
-
-async function callGoogle(messages: Array<{ role: string; content: string }>, model: string, temperature: number, system: string, signal?: AbortSignal): Promise<AIResult> {
-  const apiKey = Deno.env.get("GOOGLE_API_KEY");
-  if (!apiKey) throw new Error("GOOGLE_API_KEY missing");
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const contents = messages.map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] }));
-  const payload = { contents, systemInstruction: system ? { parts: [{ text: system }] } : undefined, generationConfig: { temperature, responseMimeType: "application/json" } };
-  const { response, data, errorBody } = await fetchJsonWithTimeout<GoogleResponse>(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, 60000, signal);
-  if (!response.ok) { const text = errorBody ?? ""; throw new Error(`Google error: ${text}`); }
-  if (!data?.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) throw new Error("Google returned no candidates");
-  return parseProviderContent(data.candidates[0]?.content?.parts?.[0]?.text || "", "Google", normalizeProviderUsage("google", data.usageMetadata));
+  if (!response.ok) throw new Error(`OpenRouter error: ${errorBody ?? ""}`);
+  if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
+  const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
+  return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
 }
 
 function extractUrls(text: string) {
@@ -1049,14 +1024,19 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
   const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
   const rawInput = body.input;
-  const model = (body.model as string | undefined) || Deno.env.get("AI_DEFAULT_MODEL") || "gemini-3-flash-preview";
-  let provider: Provider;
+  const model = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  let modelEntry: ModelCatalogEntry;
   try {
-    provider = providerForModel(model);
+    modelEntry = modelForRequest(model);
   } catch (err) {
     log(requestId, "WARN", "Rejected unsupported model/provider combination", { model });
     return badRequest(err instanceof Error ? err.message : "Unsupported model or provider combination", corsHeaders);
   }
+  const provider: Provider = OPENROUTER_PROVIDER;
+  const requestedReasoningEffort = body.reasoningEffort === undefined
+    ? undefined
+    : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
+  if (requestedReasoningEffort === null) return badRequest("Invalid reasoning effort", corsHeaders);
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   // Crossfire has non-overridable transcript-grounding and typed-session
   // safety rules. Ignore both user and admin custom prompts for this feature.
@@ -1238,6 +1218,14 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   }
 
+  const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
+  log(requestId, "INFO", "Resolved model controls", {
+    model: modelEntry.id,
+    requestedReasoningEffort: requestedReasoningEffort ?? "medium",
+    reasoningEffort,
+    supportsTemperature: modelEntry.supportsTemperature,
+  });
+
   const startTime = Date.now();
   // Usage from research sub-calls (search decision, follow-up queries) is
   // collected here so the parent request's row accounts for every token.
@@ -1246,13 +1234,14 @@ export async function handleRequest(req: Request): Promise<Response> {
   const researchDeps: ResearchDeps = {
     provider,
     model,
+    reasoningEffort,
     signal: req.signal,
     onTimeout: () => {
       researchAccountingIncomplete = true;
     },
     callModel: async (args) => {
       try {
-        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature, args.signal);
+        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature, args.reasoningEffort, args.signal);
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
@@ -1308,7 +1297,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature);
       const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
       const output = cleanGeneratedText(aiResult.output);
       const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
       const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);
@@ -1374,6 +1363,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         systemPrompt,
         [{ role: "user", content: userPrompt }],
         temperature,
+        reasoningEffort,
         req.signal,
       ));
       const cleanedOutput = cleanGeneratedText(aiResult.output);
@@ -1406,7 +1396,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
 
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
       // Post-process: quality floor. Only citations whose URL matches fetched,
@@ -1519,7 +1509,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
       const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
       if (output && typeof output === "object") {
@@ -1599,7 +1589,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
       // Preserve model evidence warnings when research exists. If research
@@ -1659,7 +1649,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
       const output = cleanGeneratedText(aiResult.output);
       enforceBrainstormControls(output, side, outputMode);
 
@@ -1687,7 +1677,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
       const output = cleanGeneratedText(aiResult.output);
       enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
@@ -1703,7 +1693,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     const systemPrompt = await buildSystemPromptFor(feature);
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
+    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
     const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;

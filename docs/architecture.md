@@ -47,7 +47,7 @@ Client-side environment selection is a developer convenience, not authorization.
 2. The client reads the current Supabase session.
 3. It invokes `ai` or `ai-stream` with selected controls and active source context.
 4. The Edge Function validates authentication, input bounds, supported model and control combinations, access limits, and feature-specific rules.
-5. The backend optionally gathers research, builds prompts, calls a provider, validates output, and records usage.
+5. The backend optionally gathers research, builds prompts, calls an allowlisted model through OpenRouter, validates output, and records the provider-reported usage and charge.
 6. The client validates or transforms the response and updates the relevant store.
 
 [`supabase/functions/ai/index.ts`](../supabase/functions/ai/index.ts) serves non-streaming structured tools and practice modes. [`supabase/functions/ai-stream/index.ts`](../supabase/functions/ai-stream/index.ts) serves Ask over server-sent events.
@@ -83,7 +83,9 @@ Supabase Auth owns user sessions. Protected routes provide a client navigation b
 
 Checkout and portal functions create Stripe sessions after authenticated ownership and redirect validation. The webhook updates subscription state and records event processing for idempotency. AI handlers record provider usage and calculated cost using shared pricing logic.
 
-Provider pricing evidence is retained under [`docs/pricing-snapshots/`](pricing-snapshots/). The snapshots are evidence, not runtime configuration.
+All supported model requests use the single OpenRouter backend route and `OPENROUTER_API_KEY`; the shared allowlist and request controls live in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts). OpenRouter usage remains raw in the audit row, and the reported charge is unknown when the provider does not return a complete cost.
+
+Historical provider pricing evidence is retained under [`docs/pricing-snapshots/`](pricing-snapshots/). Those snapshots support legacy calculator records and are evidence, not runtime configuration for the OpenRouter route.
 
 ## Observability
 

@@ -17,7 +17,9 @@ import {
 
 export type { ExaResult, RankedSearchResult, ResearchSource };
 
-export type Provider = "openai" | "anthropic" | "google";
+import type { ReasoningEffort } from "./model-catalog.ts";
+
+export type Provider = "openrouter";
 
 export const MAX_PROVIDER_RESPONSE_BYTES = 1_048_576;
 export const MAX_PROVIDER_ERROR_BODY_BYTES = 65_536;
@@ -63,6 +65,7 @@ export const ASK_RESEARCH: ResearchOptions = {
 export interface ResearchDeps {
   provider: Provider;
   model: string;
+  reasoningEffort: ReasoningEffort;
   /** Request-scoped cancellation signal, if the caller has one. */
   signal?: AbortSignal;
   /** Called synchronously when the overall research timeout fires. */
@@ -74,6 +77,7 @@ export interface ResearchDeps {
     systemPrompt: string;
     messages: Array<{ role: string; content: string }>;
     temperature: number;
+    reasoningEffort: ReasoningEffort;
     signal?: AbortSignal;
   }) => Promise<{ output: unknown }>;
 }
@@ -371,6 +375,7 @@ export async function decideAskSearch(
       systemPrompt: ASK_SEARCH_DECISION_PROMPT,
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
+      reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
     });
     const decision = decisionResult.output;
@@ -409,6 +414,7 @@ async function generateFollowUpQueries(
       systemPrompt: QUERY_GENERATION_PROMPT,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
+      reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
     });
     const parsed = typeof result.output === "object" && result.output !== null ? result.output : {};

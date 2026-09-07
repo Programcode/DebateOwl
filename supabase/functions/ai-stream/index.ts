@@ -28,11 +28,18 @@ import { buildStreamingAskSystemPrompt } from "../_shared/prompts.ts";
 import {
   calculateRequestCost,
   type CostResult,
-  normalizeAnthropicUsage,
-  normalizeGoogleUsage,
-  normalizeOpenAIUsage,
+  normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
+import {
+  DEFAULT_MODEL,
+  effectiveReasoningEffort,
+  getModelCatalogEntry,
+  isReasoningEffort,
+  MAX_REQUEST_OUTPUT_TOKENS,
+  type ModelCatalogEntry,
+  type ReasoningEffort,
+} from "../_shared/model-catalog.ts";
 
 type ChatRole = "user" | "assistant";
 
@@ -43,6 +50,7 @@ type ChatMessage = {
 
 type RateLimitResult = {
   allowed: boolean;
+  canAccessProModels?: boolean;
   reason?: string;
   limit?: number;
   current?: number;
@@ -60,25 +68,12 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const PRO_MODELS = new Set([
-  "gpt-5.5",
-  "gpt-5.4",
-  "claude-opus-4-7",
-  "claude-sonnet-4-6",
-  "gemini-3.1-pro-preview",
-]);
-
-const OPENAI_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-4o", "gpt-4o-mini"]);
-const GOOGLE_MODELS = new Set(["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview"]);
-const ANTHROPIC_MODELS = new Set(["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]);
 const MAX_INPUT_LENGTH = 50000;
 const MAX_HISTORY_ITEMS = 8;
+const OPENROUTER_PROVIDER = "openrouter" as const;
 
-function getProviderForModel(model: string): "openai" | "google" | "anthropic" | null {
-  if (OPENAI_MODELS.has(model)) return "openai";
-  if (GOOGLE_MODELS.has(model)) return "google";
-  if (ANTHROPIC_MODELS.has(model)) return "anthropic";
-  return null;
+function modelForRequest(model: string): ModelCatalogEntry | undefined {
+  return getModelCatalogEntry(model);
 }
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
@@ -217,7 +212,7 @@ async function checkRateLimit(userId: string, model: string): Promise<RateLimitR
       return { allowed: false, reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.", code: "trial_expired", limit: 0, current: 0, statusCode: 402 };
     }
 
-    if (PRO_MODELS.has(model) && !sub.canAccessProModels) {
+    if (getModelCatalogEntry(model)?.isProOnly && !sub.canAccessProModels) {
       return { allowed: false, reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.", code: "upgrade_required", statusCode: 403 };
     }
 
@@ -243,7 +238,7 @@ async function checkRateLimit(userId: string, model: string): Promise<RateLimitR
       return { allowed: false, reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`, code: "limit_reached", limit: dailyLimit, current, statusCode: 402 };
     }
 
-    return { allowed: true, limit: dailyLimit, current };
+    return { allowed: true, limit: dailyLimit, current, canAccessProModels: sub.canAccessProModels };
   } catch (err) {
     console.error("[AI STREAM] Rate-limit check failed:", err);
     return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
@@ -336,7 +331,13 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
-  const model = sanitizeText(body.model, 80) || "gpt-5.4-mini";
+  const model = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  const modelEntry = modelForRequest(model);
+  if (!modelEntry) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
+  const requestedReasoningEffort = body.reasoningEffort === undefined
+    ? undefined
+    : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
+  if (requestedReasoningEffort === null) return jsonResponse({ error: "Invalid reasoning effort" }, 400, corsHeaders);
   const rawInput = body.input && typeof body.input === "object" && !Array.isArray(body.input)
     ? body.input as Record<string, unknown>
     : {};
@@ -353,11 +354,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   const advancedMode = Boolean(input.citationMode || input.webSearch || input.prosConsMode || input.argumentMapMode);
-  // Provider is derived strictly from the allowlisted model, never from the
-  // client-supplied provider field, so an unlisted model can't reach any provider API.
-  const resolvedProvider = getProviderForModel(model);
-
-  if (!resolvedProvider || advancedMode) {
+  if (advancedMode) {
     return jsonResponse({ error: "Streaming is not available for this model/mode combination" }, 400, corsHeaders);
   }
 
@@ -374,18 +371,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     }, rateLimit.statusCode || 402, corsHeaders);
   }
 
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  const googleKey = Deno.env.get("GOOGLE_API_KEY");
-  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-
-  const providerKey = resolvedProvider === "openai" ? openaiKey
-    : resolvedProvider === "google" ? googleKey
-    : resolvedProvider === "anthropic" ? anthropicKey
-    : null;
-
-  if (!providerKey) {
-    return jsonResponse({ error: `${resolvedProvider} is not configured` }, 500, corsHeaders);
-  }
+  const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
+  console.info(JSON.stringify({
+    function: "ai-stream",
+    event: "model_controls",
+    model,
+    requestedReasoningEffort: requestedReasoningEffort ?? "medium",
+    effectiveReasoningEffort: reasoningEffort,
+  }));
+  const providerKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!providerKey) return jsonResponse({ error: "OpenRouter is not configured" }, 500, corsHeaders);
 
   const history = normalizeHistory(input.history);
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
@@ -395,23 +390,15 @@ export async function handleRequest(req: Request): Promise<Response> {
     async start(controller) {
       const encoder = new TextEncoder();
       let accumulated = "";
-      const streamUsageParts: Record<string, Record<string, unknown>> = { openai: {}, anthropic: {}, google: {} };
-
-      // Merge streamed usage fragments per provider, then normalize once at the end.
-      const mergeUsage = (part: "openai" | "anthropic" | "google", patch: Record<string, unknown>) => {
-        streamUsageParts[part] = { ...streamUsageParts[part], ...patch };
-      };
-      const collectUsage = (): NormalizedUsage | undefined => {
-        if (resolvedProvider === "openai") {
-          return Object.keys(streamUsageParts.openai).length ? normalizeOpenAIUsage(streamUsageParts.openai) : undefined;
-        }
-        if (resolvedProvider === "anthropic") {
-          return Object.keys(streamUsageParts.anthropic).length ? normalizeAnthropicUsage(streamUsageParts.anthropic) : undefined;
-        }
-        if (resolvedProvider === "google") {
-          return Object.keys(streamUsageParts.google).length ? normalizeGoogleUsage(streamUsageParts.google) : undefined;
-        }
-        return undefined;
+      let streamUsageRaw: Record<string, unknown> | undefined;
+      let streamIncomplete = false;
+      let streamSawDone = false;
+      let streamSawFinishReason = false;
+      const collectUsage = (): NormalizedUsage => {
+        const usage = streamUsageRaw
+          ? normalizeOpenRouterUsage(streamUsageRaw)
+          : { raw: { stream_usage_missing: true } };
+        return streamIncomplete ? { ...usage, incomplete: true } : usage;
       };
 
       const emit = (event: string, payload: Record<string, unknown>) => {
@@ -423,140 +410,77 @@ export async function handleRequest(req: Request): Promise<Response> {
       req.signal.addEventListener("abort", clientAbortHandler);
 
       try {
+        if (req.signal.aborted) throw new DOMException("Client aborted", "AbortError");
         const messages = buildMessages(userMessage, history, mode);
 
-        if (resolvedProvider === "openai") {
-          const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model, messages, temperature, stream: true, stream_options: { include_usage: true } }),
-            signal: upstreamAbort.signal,
-          });
-          if (!response.ok || !response.body) throw new Error(await response.text() || `OpenAI ${response.status}`);
+        const payload: Record<string, unknown> = {
+          model,
+          messages,
+          max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
+          reasoning: { effort: reasoningEffort, exclude: true },
+          provider: { require_parameters: true },
+          stream: true,
+        };
+        if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          while (true) {
-            if (req.signal.aborted) break;
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-              const data = trimmed.slice("data:".length).trim();
-              if (data === "[DONE]") continue;
-              let parsed: Record<string, unknown>;
-              try { parsed = JSON.parse(data); } catch { continue; }
-              const delta = (parsed.choices as Array<{ delta?: { content?: string } }>)?.[0]?.delta?.content;
-              if (typeof delta === "string" && delta) { accumulated += delta; emit("delta", { text: delta }); }
-              const usage = parsed.usage as Record<string, unknown> | undefined;
-              if (usage) mergeUsage("openai", usage);
-            }
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: upstreamAbort.signal,
+        });
+        if (!response.ok || !response.body) throw new Error(await response.text() || `OpenRouter ${response.status}`);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const processLine = (line: string) => {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) return;
+          const data = trimmed.slice("data:".length).trim();
+          if (data === "[DONE]") {
+            streamSawDone = true;
+            return;
           }
-
-        } else if (resolvedProvider === "google") {
-          const geminiMessages = messages.map((m) => ({
-            role: m.role === "assistant" ? "model" : m.role === "system" ? "user" : "user",
-            parts: [{ text: m.content }],
-          }));
-          // Gemini API: system instruction is separate
-          const systemInstruction = messages.find((m) => m.role === "system");
-          const contents = geminiMessages.filter((_, i) => messages[i].role !== "system");
-
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${providerKey}`;
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents,
-              ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction.content }] } } : {}),
-              generationConfig: { temperature },
-            }),
-            signal: upstreamAbort.signal,
-          });
-          if (!response.ok || !response.body) throw new Error(await response.text() || `Gemini ${response.status}`);
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          while (true) {
-            if (req.signal.aborted) break;
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-              const data = trimmed.slice("data:".length).trim();
-              let parsed: Record<string, unknown>;
-              try { parsed = JSON.parse(data); } catch { continue; }
-              const candidates = parsed.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
-              const text = candidates?.[0]?.content?.parts?.[0]?.text;
-              if (typeof text === "string" && text) { accumulated += text; emit("delta", { text }); }
-              const usageMeta = parsed.usageMetadata as Record<string, unknown> | undefined;
-              if (usageMeta) mergeUsage("google", usageMeta);
-            }
+          let parsed: Record<string, unknown>;
+          try { parsed = JSON.parse(data); } catch { return; }
+          if (parsed.error) {
+            const providerError = parsed.error;
+            const message = providerError && typeof providerError === "object" && "message" in providerError
+              ? (providerError as { message?: unknown }).message
+              : providerError;
+            throw new Error(typeof message === "string" ? message : "OpenRouter stream error");
           }
-
-        } else if (resolvedProvider === "anthropic") {
-          const systemMsg = messages.find((m) => m.role === "system")?.content || "";
-          const anthropicMessages = messages.filter((m) => m.role !== "system").map((m) => ({ role: m.role, content: m.content }));
-
-          const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": providerKey,
-              "anthropic-version": "2023-06-01",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ model, max_tokens: 4096, system: systemMsg, messages: anthropicMessages, temperature, stream: true }),
-            signal: upstreamAbort.signal,
-          });
-          if (!response.ok || !response.body) throw new Error(await response.text() || `Anthropic ${response.status}`);
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          while (true) {
-            if (req.signal.aborted) break;
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed.startsWith("event:")) continue;
-              if (!trimmed.startsWith("data:")) continue;
-              const data = trimmed.slice("data:".length).trim();
-              let parsed: Record<string, unknown>;
-              try { parsed = JSON.parse(data); } catch { continue; }
-              if (parsed.type === "content_block_delta") {
-                const delta = (parsed.delta as { text?: string })?.text;
-                if (typeof delta === "string" && delta) { accumulated += delta; emit("delta", { text: delta }); }
-              }
-              if (parsed.type === "message_start") {
-                const usage = (parsed.message as { usage?: Record<string, unknown> } | undefined)?.usage;
-                if (usage) mergeUsage("anthropic", usage);
-              }
-              if (parsed.type === "message_delta") {
-                const usage = parsed.usage as Record<string, unknown> | undefined;
-                if (usage) mergeUsage("anthropic", usage);
-              }
-            }
+          const delta = (Array.isArray(parsed.choices) ? parsed.choices[0] : undefined) as { delta?: { content?: string }; finish_reason?: unknown } | undefined;
+          if (typeof delta?.finish_reason === "string" && delta.finish_reason) streamSawFinishReason = true;
+          if (typeof delta?.delta?.content === "string" && delta.delta.content) {
+            accumulated += delta.delta.content;
+            emit("delta", { text: delta.delta.content });
           }
+          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
+            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
+          }
+        };
+        while (true) {
+          if (req.signal.aborted) throw new DOMException("Client aborted", "AbortError");
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) processLine(line);
+        }
+        buffer += decoder.decode();
+        for (const line of buffer.split("\n")) processLine(line);
+
+        if (!streamSawDone && !streamSawFinishReason) {
+          throw new Error("OpenRouter stream ended before completion");
         }
 
         const output = {
           response: accumulated.trim(),
           model,
-          provider: resolvedProvider,
+          provider: OPENROUTER_PROVIDER,
           durationMs: Date.now() - startedAt,
           generatedAt: new Date().toISOString(),
           followUpQuestions: [],
@@ -566,8 +490,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         if (!req.signal.aborted) {
           emit("final", { output });
         }
-        await logUsage(user.id, resolvedProvider, model, collectUsage(), Date.now() - startedAt);
+        await logUsage(user.id, OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
+        streamIncomplete = true;
         const errorMessage = err instanceof Error ? err.message : "Streaming failed";
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
         if (!isAbort) {
@@ -575,7 +500,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         }
         await logUsage(
           user.id,
-          resolvedProvider,
+          OPENROUTER_PROVIDER,
           model,
           collectUsage(),
           Date.now() - startedAt,

@@ -18,7 +18,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:edge": "deno test --allow-read --allow-env=DEMO_CODE_PEPPER,EXA_API_KEY,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,SPARRING_INTEGRITY_SECRET,OPENAI_API_KEY,GOOGLE_API_KEY,ANTHROPIC_API_KEY --allow-net=127.0.0.1 supabase/functions/",
+    "test:edge": "deno test --allow-read --allow-env=DEMO_CODE_PEPPER,EXA_API_KEY,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,SPARRING_INTEGRITY_SECRET,OPENROUTER_API_KEY --allow-net=127.0.0.1 supabase/functions/",
     "test:db": "supabase test db",
     "test:e2e": "playwright test --project=desktop-chromium --project=mobile-chromium",
     "test:e2e:webkit": "playwright test --project=webkit",

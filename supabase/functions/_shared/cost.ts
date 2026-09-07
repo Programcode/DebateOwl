@@ -10,6 +10,7 @@ import {
 } from "./model-pricing.ts";
 
 export const COST_CALCULATION_VERSION = "cost-calc-v1";
+export const OPENROUTER_COST_CALCULATION_VERSION = "openrouter-usage-v1";
 
 export interface NormalizedUsage {
   /** True when part of the request's provider work was not observed to settle. */
@@ -26,6 +27,8 @@ export interface NormalizedUsage {
   outputTokens?: number;
   /** Reported reasoning/thinking subset of outputTokens. Never billed twice. */
   reasoningOutputTokens?: number;
+  /** OpenRouter's authoritative account charge, in USD. */
+  reportedCostUsd?: number;
   /** Untouched provider usage object, kept verbatim for audit. */
   raw?: Record<string, unknown>;
 }
@@ -51,6 +54,10 @@ function intOrUndefined(value: unknown): number | undefined {
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function reportedCostOrUndefined(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
 export function normalizeOpenAIUsage(usage: Record<string, unknown>): NormalizedUsage {
@@ -100,6 +107,20 @@ export function normalizeGoogleUsage(usageMetadata: Record<string, unknown>): No
   };
 }
 
+export function normalizeOpenRouterUsage(usage: Record<string, unknown>): NormalizedUsage {
+  const promptDetails = asRecord(usage.prompt_tokens_details);
+  const completionDetails = asRecord(usage.completion_tokens_details);
+  return {
+    inputTokens: intOrUndefined(usage.prompt_tokens),
+    cachedInputTokens: intOrUndefined(promptDetails?.cached_tokens),
+    cacheWriteTokens: intOrUndefined(promptDetails?.cache_write_tokens),
+    outputTokens: intOrUndefined(usage.completion_tokens),
+    reasoningOutputTokens: intOrUndefined(completionDetails?.reasoning_tokens),
+    reportedCostUsd: reportedCostOrUndefined(usage.cost),
+    raw: usage,
+  };
+}
+
 function nonNegative(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
@@ -112,7 +133,8 @@ export function calculateRequestCost(args: {
   provider: PricingProvider | string;
   model: string;
   usage?: NormalizedUsage;
-}): CostResult {  const { provider, model, usage } = args;
+}): CostResult {
+  const { provider, model, usage } = args;
   // Cache writes report the combined 5m + 1h total for storage; raw_usage
   // keeps the exact TTL split for audit.
   const combinedCacheWrite = usage?.cacheWriteTokens !== undefined || usage?.cacheWrite1hTokens !== undefined
@@ -131,6 +153,14 @@ export function calculateRequestCost(args: {
     costCalculationVersion: COST_CALCULATION_VERSION,
   };
   if (usage?.raw) base.rawUsage = usage.raw;
+
+  if (provider === "openrouter") {
+    base.pricingSnapshotId = "openrouter-response-usage";
+    base.pricingSourceUrl = "https://openrouter.ai/docs/cookbook/administration/usage-accounting";
+    base.costCalculationVersion = OPENROUTER_COST_CALCULATION_VERSION;
+    base.costUsd = usage?.incomplete ? null : usage?.reportedCostUsd ?? null;
+    return base;
+  }
 
   // Preserve observed token fields and raw audit data, but never publish a
   // lower-bound cost when cancelled work may have consumed unobserved tokens.
@@ -202,6 +232,9 @@ export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>)
     cacheWrite1hTokens: sum(defined.map((u) => u.cacheWrite1hTokens)),
     outputTokens: sum(defined.map((u) => u.outputTokens)),
     reasoningOutputTokens: sum(defined.map((u) => u.reasoningOutputTokens)),
+    reportedCostUsd: defined.every((u) => !u.incomplete && typeof u.reportedCostUsd === "number")
+      ? defined.reduce((total, usage) => total + (usage.reportedCostUsd ?? 0), 0)
+      : undefined,
     raw: { calls: defined.map((u) => u.raw ?? null) },
   };
   return merged;
