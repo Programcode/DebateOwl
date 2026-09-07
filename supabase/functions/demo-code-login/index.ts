@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getDemoCodeDenialReason, hashDemoCode } from "../_shared/demo-code.ts";
 
 const ALLOWED_ORIGINS = [
   "https://debate.pi-stack.org",
@@ -12,7 +13,6 @@ const ALLOWED_ORIGINS = [
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const demoCodePepper = Deno.env.get("DEMO_CODE_PEPPER") || supabaseServiceKey;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 type DemoAccessCode = {
@@ -51,16 +51,6 @@ function sanitizeRedirectTo(value: unknown): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-async function sha256Hex(input: string) {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function hashCode(code: string) {
-  return sha256Hex(`${demoCodePepper}:${code}`);
 }
 
 function getIpAddress(req: Request) {
@@ -175,7 +165,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const codeHash = await hashCode(code);
+    const codeHash = await hashDemoCode(code);
     const { data: demoCode, error: lookupError } = await supabase
       .from("demo_access_codes")
       .select("*")
@@ -192,7 +182,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (demoCode.disabled_at) {
+    const denialReason = getDemoCodeDenialReason(demoCode);
+    if (denialReason === "disabled") {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "disabled" });
       return new Response(JSON.stringify({ error: "This demo code has been disabled." }), {
         status: 403,
@@ -200,7 +191,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (demoCode.expires_at && new Date(demoCode.expires_at).getTime() <= Date.now()) {
+    if (denialReason === "expired") {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "expired" });
       return new Response(JSON.stringify({ error: "This demo code has expired." }), {
         status: 403,
@@ -208,7 +199,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (demoCode.max_uses !== null && demoCode.use_count >= demoCode.max_uses) {
+    if (denialReason === "max_uses") {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "max_uses" });
       return new Response(JSON.stringify({ error: "This demo code has no uses left." }), {
         status: 403,

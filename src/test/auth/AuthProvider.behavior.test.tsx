@@ -7,6 +7,9 @@ const {
   getSessionMock,
   onAuthStateChangeMock,
   signInWithOAuthMock,
+  signInWithOtpMock,
+  verifyOtpMock,
+  functionsInvokeMock,
   setSessionMock,
   exchangeCodeForSessionMock,
   signOutMock,
@@ -24,6 +27,9 @@ const {
   const getSessionMock = vi.fn();
   const onAuthStateChangeMock = vi.fn();
   const signInWithOAuthMock = vi.fn();
+  const signInWithOtpMock = vi.fn();
+  const verifyOtpMock = vi.fn();
+  const functionsInvokeMock = vi.fn();
   const setSessionMock = vi.fn();
   const exchangeCodeForSessionMock = vi.fn();
   const signOutMock = vi.fn();
@@ -47,6 +53,9 @@ const {
     getSessionMock,
     onAuthStateChangeMock,
     signInWithOAuthMock,
+    signInWithOtpMock,
+    verifyOtpMock,
+    functionsInvokeMock,
     setSessionMock,
     exchangeCodeForSessionMock,
     signOutMock,
@@ -70,9 +79,14 @@ vi.mock('@/lib/supabase/client', () => ({
       getSession: getSessionMock,
       onAuthStateChange: onAuthStateChangeMock,
       signInWithOAuth: signInWithOAuthMock,
+      signInWithOtp: signInWithOtpMock,
+      verifyOtp: verifyOtpMock,
       setSession: setSessionMock,
       exchangeCodeForSession: exchangeCodeForSessionMock,
       signOut: signOutMock,
+    },
+    functions: {
+      invoke: functionsInvokeMock,
     },
   },
 }));
@@ -121,6 +135,18 @@ function AuthConsumer() {
   );
 }
 
+function PasswordlessAuthConsumer() {
+  const { signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode } = useAuth();
+
+  return (
+    <div>
+      <button onClick={() => void signInWithEmailOtp(' student@example.com ')} type="button">email-otp</button>
+      <button onClick={() => void verifyEmailOtp(' student@example.com ', ' 123456 ')} type="button">verify-email-otp</button>
+      <button onClick={() => void signInWithDemoCode(' DEMO-AB12-CD34 ')} type="button">demo-code</button>
+    </div>
+  );
+}
+
 function SignInErrorConsumer() {
   const { signInWithGoogle } = useAuth();
   const [error, setError] = useState('');
@@ -147,6 +173,9 @@ describe('AuthProvider behavior', () => {
     getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     setSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     exchangeCodeForSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+    signInWithOtpMock.mockResolvedValue({ data: { user: null, session: null }, error: null });
+    verifyOtpMock.mockResolvedValue({ data: { user: null, session: null }, error: null });
+    functionsInvokeMock.mockResolvedValue({ data: { email: 'demo@example.com', tokenHash: 'hash', type: 'magiclink' }, error: null });
     openExternalUrlMock.mockResolvedValue(undefined);
   });
 
@@ -381,6 +410,61 @@ describe('AuthProvider behavior', () => {
           scopes: 'https://www.googleapis.com/auth/drive.file',
           queryParams: undefined,
         },
+      });
+    });
+  });
+
+  it('sends an email OTP for the normalized email address', async () => {
+    render(
+      <AuthProvider>
+        <PasswordlessAuthConsumer />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'email-otp' }));
+
+    await waitFor(() => {
+      expect(signInWithOtpMock).toHaveBeenCalledWith({ email: 'student@example.com' });
+    });
+  });
+
+  it('verifies an email OTP with the normalized email and token', async () => {
+    render(
+      <AuthProvider>
+        <PasswordlessAuthConsumer />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'verify-email-otp' }));
+
+    await waitFor(() => {
+      expect(verifyOtpMock).toHaveBeenCalledWith({
+        email: 'student@example.com',
+        token: '123456',
+        type: 'email',
+      });
+    });
+  });
+
+  it('redeems a demo code and verifies the returned magic-link handoff', async () => {
+    render(
+      <AuthProvider>
+        <PasswordlessAuthConsumer />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'demo-code' }));
+
+    await waitFor(() => {
+      expect(functionsInvokeMock).toHaveBeenCalledWith('demo-code-login', {
+        body: {
+          code: 'DEMO-AB12-CD34',
+          browserFingerprint: expect.any(String),
+        },
+      });
+      expect(verifyOtpMock).toHaveBeenCalledWith({
+        token_hash: 'hash',
+        type: 'magiclink',
       });
     });
   });

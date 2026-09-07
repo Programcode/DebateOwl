@@ -1,0 +1,4 @@
+ts	phase	decision	why	evidence	result
+2026-09-02T00:00:00Z	preflight	reused the dedicated clean T3 worktree and feature branch	it already exactly matched the requested isolation and avoided redundant worktree state	git worktree list; git status --short --branch	clean t3code/email-otp-demo-code-auth at origin/main
+2026-09-02T00:00:01Z	design	preserved the established auth and admin design system	the feature extends existing product surfaces and does not justify a redesign	src/pages/LoginPage.tsx; src/pages/AdminPage.tsx	implementation split into disjoint existing modules
+2026-09-02T00:00:02Z	security	kept demo login on the existing hashed-code and OTP-handoff backend	the plan requires normal Supabase sessions without exposing raw codes or service credentials	supabase/functions/demo-code-login/index.ts; e2e/staging/auth.setup.ts	shared contract locked before parallel edits

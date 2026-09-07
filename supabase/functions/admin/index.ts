@@ -6,6 +6,7 @@ import {
     validateAnnouncementId,
     validateCreateAnnouncement,
 } from "../_shared/announcements.ts";
+import { generateDemoCode, hashDemoCode } from "../_shared/demo-code.ts";
 
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
@@ -33,6 +34,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const ADMIN_ANNOUNCEMENT_COLUMNS =
     "id,title,body,target_type,target_user_ids,starts_at,expires_at,deactivated_at,created_by,created_at";
+const ADMIN_DEMO_CODE_COLUMNS =
+    "id,label,email,role,expires_at,max_uses,use_count,created_by,last_used_at,disabled_at,created_at";
 
 type UsageByUserRow = {
     user_id: string;
@@ -454,6 +457,191 @@ Deno.serve(async (req) => {
             );
 
             return new Response(JSON.stringify({ users: enrichedUsers }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // GET /admin?action=demo-codes - List demo codes without hashes or raw codes
+        if (action === "demo-codes" && req.method === "GET") {
+            await assertCurrentAdmin(user.id);
+            const { data, error } = await supabase
+                .from("demo_access_codes")
+                .select(ADMIN_DEMO_CODE_COLUMNS)
+                .order("created_at", { ascending: false });
+
+            if (error) throw error;
+
+            return new Response(JSON.stringify({ codes: data || [] }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=create-demo-code - Create a code and return its raw value once
+        if (action === "create-demo-code" && req.method === "POST") {
+            await assertCurrentAdmin(user.id);
+            const body = await req.json().catch(() => ({}));
+            if (!body || typeof body !== "object" || Array.isArray(body)) {
+                return new Response(JSON.stringify({ error: "Request body must be a JSON object" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+            const label = typeof body.label === "string" ? body.label.trim() : "";
+            const requestedEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+            const role = body.role || "user";
+            const rawMaxUses = body.maxUses;
+            const rawExpiresAt = body.expiresAt;
+
+            if (!label || label.length > 120) {
+                return new Response(JSON.stringify({ error: "Label is required and must be 120 characters or fewer" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            if (requestedEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail) || requestedEmail.length > 254)) {
+                return new Response(JSON.stringify({ error: "Invalid demo email" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            // Demo codes can never provision an admin account. Admin access is
+            // assigned through user_roles by a separate admin-only action.
+            if (!["user", "banned"].includes(role)) {
+                return new Response(JSON.stringify({ error: "Demo codes may only use user or banned roles" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            let maxUses: number | null = null;
+            if (rawMaxUses !== undefined && rawMaxUses !== null && rawMaxUses !== "") {
+                maxUses = Number(rawMaxUses);
+                if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 1_000_000) {
+                    return new Response(JSON.stringify({ error: "Max uses must be a positive integer" }), {
+                        status: 400,
+                        headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    });
+                }
+            }
+
+            let expiresAt: string | null = null;
+            if (rawExpiresAt !== undefined && rawExpiresAt !== null && rawExpiresAt !== "") {
+                const parsedExpiresAt = new Date(rawExpiresAt);
+                if (typeof rawExpiresAt !== "string" || Number.isNaN(parsedExpiresAt.getTime()) || parsedExpiresAt.getTime() <= Date.now()) {
+                    return new Response(JSON.stringify({ error: "Expiry must be a future date" }), {
+                        status: 400,
+                        headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    });
+                }
+                expiresAt = parsedExpiresAt.toISOString();
+            }
+
+            const { data: duplicateEmail, error: duplicateError } = requestedEmail
+                ? await supabase.from("demo_access_codes").select("id").eq("email", requestedEmail).maybeSingle()
+                : { data: null, error: null };
+            if (duplicateError) throw duplicateError;
+            if (duplicateEmail) {
+                return new Response(JSON.stringify({ error: "A demo code already uses that email" }), {
+                    status: 409,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            let rawCode = "";
+            let createdCode: Record<string, unknown> | null = null;
+            for (let attempt = 0; attempt < 5 && !createdCode; attempt += 1) {
+                rawCode = generateDemoCode();
+                const codeHash = await hashDemoCode(rawCode);
+                const email = requestedEmail || `demo-${crypto.randomUUID()}@debate.pi-stack.org`;
+                const { data, error } = await supabase
+                    .from("demo_access_codes")
+                    .insert({
+                        code_hash: codeHash,
+                        label,
+                        email,
+                        role,
+                        expires_at: expiresAt,
+                        max_uses: maxUses,
+                        created_by: user.id,
+                    })
+                    .select(ADMIN_DEMO_CODE_COLUMNS)
+                    .single();
+
+                if (!error) {
+                    createdCode = data;
+                    break;
+                }
+                if (error.code !== "23505") throw error;
+            }
+
+            if (!createdCode) throw new Error("Could not create demo code");
+
+            return new Response(JSON.stringify({ code: rawCode, demoCode: createdCode }), {
+                status: 201,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=disable-demo-code - Disable a code without deleting its audit data
+        if (action === "disable-demo-code" && req.method === "POST") {
+            await assertCurrentAdmin(user.id);
+            const body = await req.json().catch(() => ({}));
+            const id = typeof body.id === "string" ? body.id.trim() : "";
+            if (!id) {
+                return new Response(JSON.stringify({ error: "Demo code ID is required" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { data, error } = await supabase
+                .from("demo_access_codes")
+                .update({ disabled_at: new Date().toISOString() })
+                .eq("id", id)
+                .select(ADMIN_DEMO_CODE_COLUMNS)
+                .maybeSingle();
+            if (error) throw error;
+            if (!data) {
+                return new Response(JSON.stringify({ error: "Demo code not found" }), {
+                    status: 404,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ demoCode: data }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // POST /admin?action=reset-demo-code - Reset usage while preserving the code's status
+        if (action === "reset-demo-code" && req.method === "POST") {
+            await assertCurrentAdmin(user.id);
+            const body = await req.json().catch(() => ({}));
+            const id = typeof body.id === "string" ? body.id.trim() : "";
+            if (!id) {
+                return new Response(JSON.stringify({ error: "Demo code ID is required" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            const { data, error } = await supabase
+                .from("demo_access_codes")
+                .update({ use_count: 0, last_used_at: null })
+                .eq("id", id)
+                .select(ADMIN_DEMO_CODE_COLUMNS)
+                .maybeSingle();
+            if (error) throw error;
+            if (!data) {
+                return new Response(JSON.stringify({ error: "Demo code not found" }), {
+                    status: 404,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            return new Response(JSON.stringify({ demoCode: data }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }

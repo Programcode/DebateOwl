@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { EmailOtpType, Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -14,12 +14,66 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   signInWithGoogle: (options?: { driveAccess?: boolean }) => Promise<void>;
+  signInWithEmailOtp: (email: string) => Promise<void>;
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
+  signInWithDemoCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_OPERATION_TIMEOUT_MS = 4000;
 const OAUTH_CODE_EXCHANGE_TIMEOUT_MS = 15_000;
+const DEMO_FINGERPRINT_STORAGE_KEY = 'debate-demo-browser-fingerprint';
+const EMAIL_OTP_TYPES: EmailOtpType[] = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'];
+
+type DemoCodeHandoff = {
+  email: string;
+  tokenHash: string;
+  type: EmailOtpType;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isEmailOtpType(value: unknown): value is EmailOtpType {
+  return typeof value === 'string' && EMAIL_OTP_TYPES.some((type) => type === value);
+}
+
+function parseDemoCodeHandoff(value: unknown): DemoCodeHandoff {
+  if (!isRecord(value) || typeof value.email !== 'string') {
+    throw new Error('Demo sign-in returned an invalid session handoff.');
+  }
+
+  const tokenHash = typeof value.tokenHash === 'string'
+    ? value.tokenHash
+    : typeof value.token_hash === 'string'
+      ? value.token_hash
+      : '';
+  const email = value.email.trim();
+  if (!email || !tokenHash) throw new Error('Demo sign-in returned an invalid session handoff.');
+
+  return {
+    email,
+    tokenHash,
+    type: isEmailOtpType(value.type) ? value.type : 'email',
+  };
+}
+
+function getDemoBrowserFingerprint() {
+  try {
+    const existing = sessionStorage.getItem(DEMO_FINGERPRINT_STORAGE_KEY);
+    if (existing) return existing;
+
+    const fingerprint = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem(DEMO_FINGERPRINT_STORAGE_KEY, fingerprint);
+    return fingerprint;
+  } catch {
+    return 'unavailable';
+  }
+}
 
 class AuthTimeoutError extends Error {
   constructor(message: string) {
@@ -214,6 +268,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
       await openExternalUrl(data.url);
+    },
+    signInWithEmailOtp: async (email) => {
+      const normalizedEmail = email.trim();
+      if (!normalizedEmail) throw new Error('Email is required.');
+
+      const { error } = await supabase.auth.signInWithOtp({ email: normalizedEmail });
+      if (error) throw error;
+    },
+    verifyEmailOtp: async (email, token) => {
+      const normalizedEmail = email.trim();
+      const normalizedToken = token.trim();
+      if (!normalizedEmail) throw new Error('Email is required.');
+      if (!normalizedToken) throw new Error('Verification code is required.');
+
+      const { error } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: normalizedToken,
+        type: 'email',
+      });
+      if (error) throw error;
+    },
+    signInWithDemoCode: async (code) => {
+      const normalizedCode = code.trim();
+      if (!normalizedCode) throw new Error('Demo code is required.');
+
+      const { data, error } = await supabase.functions.invoke('demo-code-login', {
+        body: {
+          code: normalizedCode,
+          browserFingerprint: getDemoBrowserFingerprint(),
+        },
+      });
+      if (error) throw error;
+
+      const handoff = parseDemoCodeHandoff(data);
+      // demo-code-login currently returns generateLink's hashed token and
+      // verification type. Supabase requires token_hash for magic links, while
+      // email OTPs use the email + token form.
+      const verification = handoff.type === 'email'
+        ? supabase.auth.verifyOtp({ email: handoff.email, token: handoff.tokenHash, type: 'email' })
+        : supabase.auth.verifyOtp({ token_hash: handoff.tokenHash, type: handoff.type });
+      const { error: verificationError } = await verification;
+      if (verificationError) throw verificationError;
     },
     signOut: async () => {
       await supabase.auth.signOut();

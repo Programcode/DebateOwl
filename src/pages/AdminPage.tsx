@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone, KeyRound, Copy, RotateCcw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
@@ -19,7 +19,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate } from '@/lib/date-format';
+import { formatEuropeanDate, formatEuropeanDateTime } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -64,6 +64,374 @@ interface Subscriber {
     stripe_customer_id: string | null;
     status: string | null;
     current_period_end: string | null;
+}
+
+interface DemoAccessCode {
+    id: string;
+    label: string;
+    email: string;
+    role: string;
+    expiresAt: string | null;
+    maxUses: number | null;
+    useCount: number;
+    lastUsedAt: string | null;
+    disabledAt: string | null;
+    createdAt: string | null;
+}
+
+interface DemoAccessForm {
+    label: string;
+    expiresAt: string;
+    maxUses: string;
+    role: string;
+}
+
+type DemoAction = 'disable' | 'reset';
+
+const EMPTY_DEMO_FORM: DemoAccessForm = { label: '', expiresAt: '', maxUses: '', role: 'user' };
+
+function normalizeDemoCode(value: unknown): DemoAccessCode | null {
+    if (!value || typeof value !== 'object') return null;
+    const row = value as Record<string, unknown>;
+    if (typeof row.id !== 'string') return null;
+    const expiresAt = row.expires_at ?? row.expiresAt;
+    const maxUses = row.max_uses ?? row.maxUses;
+    const lastUsedAt = row.last_used_at ?? row.lastUsedAt;
+    const disabledAt = row.disabled_at ?? row.disabledAt;
+    const createdAt = row.created_at ?? row.createdAt;
+    const useCount = row.use_count ?? row.useCount;
+    return {
+        id: row.id,
+        label: typeof row.label === 'string' ? row.label : 'Unlabelled demo',
+        email: typeof row.email === 'string' ? row.email : 'Unknown email',
+        role: typeof row.role === 'string' ? row.role : 'user',
+        expiresAt: typeof expiresAt === 'string' ? expiresAt : null,
+        maxUses: typeof maxUses === 'number' ? maxUses : null,
+        useCount: typeof useCount === 'number' ? useCount : 0,
+        lastUsedAt: typeof lastUsedAt === 'string' ? lastUsedAt : null,
+        disabledAt: typeof disabledAt === 'string' ? disabledAt : null,
+        createdAt: typeof createdAt === 'string' ? createdAt : null,
+    };
+}
+
+function getDemoCodes(data: unknown): DemoAccessCode[] {
+    if (!data || typeof data !== 'object') return [];
+    const payload = data as Record<string, unknown>;
+    const rows = payload.codes ?? payload.demo_codes ?? payload.demoCodes;
+    return Array.isArray(rows) ? rows.map(normalizeDemoCode).filter((row): row is DemoAccessCode => row !== null) : [];
+}
+
+function getRawDemoCode(data: unknown): string | null {
+    if (!data || typeof data !== 'object') return null;
+    const payload = data as Record<string, unknown>;
+    const nested = payload.demoCode ?? payload.demo_code ?? payload.codeRecord;
+    const candidates = [
+        payload.rawCode,
+        payload.raw_code,
+        payload.code,
+        payload.demo_code,
+        nested && typeof nested === 'object' ? (nested as Record<string, unknown>).code : null,
+    ];
+    return candidates.find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)?.trim() || null;
+}
+
+function getDemoCodeStatus(code: DemoAccessCode) {
+    if (code.disabledAt) return 'disabled';
+    if (code.expiresAt && new Date(code.expiresAt).getTime() <= Date.now()) return 'expired';
+    if (code.maxUses !== null && code.useCount >= code.maxUses) return 'exhausted';
+    return 'active';
+}
+
+function formatDemoDate(value: string | null, includeTime = false) {
+    if (!value) return 'Never';
+    return includeTime ? formatEuropeanDateTime(value, 'Invalid date') : formatEuropeanDate(value, 'Invalid date');
+}
+
+interface DemoAccessPanelProps {
+    codes: DemoAccessCode[];
+    loading: boolean;
+    error: string | null;
+    onCreate: (form: DemoAccessForm) => Promise<string | null>;
+    onDisable: (id: string) => Promise<void>;
+    onReset: (id: string) => Promise<void>;
+}
+
+function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }: DemoAccessPanelProps) {
+    const [form, setForm] = useState<DemoAccessForm>(EMPTY_DEMO_FORM);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [createdCode, setCreatedCode] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ type: DemoAction; code: DemoAccessCode } | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
+
+    const updateForm = (updates: Partial<DemoAccessForm>) => {
+        setForm((current) => ({ ...current, ...updates }));
+        setFormError(null);
+    };
+
+    const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const label = form.label.trim();
+        if (!label) {
+            setFormError('Label is required.');
+            return;
+        }
+        const maxUses = form.maxUses.trim() ? Number(form.maxUses) : null;
+        if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) {
+            setFormError('Max uses must be a whole number greater than zero.');
+            return;
+        }
+        let expiresAt: string | null = null;
+        if (form.expiresAt) {
+            const expiry = new Date(form.expiresAt);
+            if (Number.isNaN(expiry.getTime())) {
+                setFormError('Expiry must be a valid date and time.');
+                return;
+            }
+            expiresAt = expiry.toISOString();
+        }
+
+        setSubmitting(true);
+        setFormError(null);
+        setCreatedCode(null);
+        setCopied(false);
+        try {
+            const rawCode = await onCreate({ label, expiresAt: expiresAt || '', maxUses: maxUses === null ? '' : String(maxUses), role: form.role });
+            if (!rawCode) throw new Error('The server did not return the generated demo code.');
+            setCreatedCode(rawCode);
+            setForm(EMPTY_DEMO_FORM);
+        } catch (createError) {
+            setFormError(createError instanceof Error ? createError.message : 'Failed to create demo code.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const copyCreatedCode = async () => {
+        if (!createdCode) return;
+        let fallbackInput: HTMLTextAreaElement | null = null;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(createdCode);
+            } else {
+                fallbackInput = document.createElement('textarea');
+                fallbackInput.value = createdCode;
+                fallbackInput.setAttribute('readonly', '');
+                fallbackInput.style.position = 'fixed';
+                fallbackInput.style.opacity = '0';
+                document.body.appendChild(fallbackInput);
+                fallbackInput.select();
+                if (!document.execCommand('copy')) throw new Error('Copy was rejected');
+            }
+            setCopied(true);
+        } catch {
+            setFormError('Could not copy the demo code. Select it and copy it manually.');
+        } finally {
+            fallbackInput?.remove();
+        }
+    };
+
+    const confirmAction = async () => {
+        if (!pendingAction) return;
+        setActionLoading(true);
+        setActionError(null);
+        try {
+            if (pendingAction.type === 'disable') await onDisable(pendingAction.code.id);
+            else await onReset(pendingAction.code.id);
+            setPendingAction(null);
+        } catch (actionError) {
+            setActionError(actionError instanceof Error ? actionError.message : 'Demo code action failed.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    return (
+        <div className="grid gap-6 xl:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <KeyRound className="h-5 w-5" />
+                        Create demo code
+                    </CardTitle>
+                    <CardDescription>Issue a one-time code for a demo account. The raw code appears only after creation.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form className="space-y-4" onSubmit={handleCreate} noValidate>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-label">Label</Label>
+                            <Input
+                                id="demo-label"
+                                value={form.label}
+                                onChange={(event) => updateForm({ label: event.target.value })}
+                                placeholder="e.g. September school demo"
+                                autoComplete="off"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-expires-at">Expiry (optional)</Label>
+                            <Input
+                                id="demo-expires-at"
+                                type="datetime-local"
+                                value={form.expiresAt}
+                                onChange={(event) => updateForm({ expiresAt: event.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-max-uses">Max uses (optional)</Label>
+                            <Input
+                                id="demo-max-uses"
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={form.maxUses}
+                                onChange={(event) => updateForm({ maxUses: event.target.value })}
+                                placeholder="Unlimited"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-role">Role (optional)</Label>
+                            <Select value={form.role} onValueChange={(role) => updateForm({ role })}>
+                                <SelectTrigger id="demo-role" aria-label="Role">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="user">User</SelectItem>
+                                    <SelectItem value="banned">Banned</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
+                        <Button type="submit" className="w-full" disabled={submitting}>
+                            {submitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <KeyRound className="mr-1 h-4 w-4" />}
+                            {submitting ? 'Creating…' : 'Create demo code'}
+                        </Button>
+                    </form>
+                    {createdCode && (
+                        <div className="mt-5 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4" role="status" aria-live="polite">
+                            <div>
+                                <p className="font-medium">Demo code created</p>
+                                <p className="text-sm text-muted-foreground">Copy this code now. It will not be shown again.</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <code className="rounded bg-background px-2 py-1 font-mono text-sm font-bold tracking-wide">{createdCode}</code>
+                                <Button type="button" size="sm" variant="outline" onClick={copyCreatedCode}>
+                                    <Copy className="mr-1 h-4 w-4" />
+                                    {copied ? 'Copied' : 'Copy code'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Demo access</CardTitle>
+                    <CardDescription>{codes.length} {codes.length === 1 ? 'code' : 'codes'} issued</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading && <p className="py-8 text-center text-sm text-muted-foreground" role="status">Loading demo codes…</p>}
+                    {error && (
+                        <p className="mb-4 text-sm text-destructive" role="alert">Unable to load demo codes: {error}</p>
+                    )}
+                    {!loading && codes.length === 0 && !error && (
+                        <div className="rounded-lg border border-dashed p-8 text-center">
+                            <KeyRound className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+                            <p className="font-medium">No demo codes yet</p>
+                            <p className="mt-1 text-sm text-muted-foreground">Create a code for your next demo or event.</p>
+                        </div>
+                    )}
+                    {codes.length > 0 && (
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[860px] text-left text-sm">
+                                <caption className="sr-only">Issued demo access codes</caption>
+                                <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                                    <tr>
+                                        <th className="px-3 py-3 font-medium">Assigned email</th>
+                                        <th className="px-3 py-3 font-medium">Label</th>
+                                        <th className="px-3 py-3 font-medium">Role</th>
+                                        <th className="px-3 py-3 font-medium">Expiry</th>
+                                        <th className="px-3 py-3 font-medium">Uses</th>
+                                        <th className="px-3 py-3 font-medium">Last used</th>
+                                        <th className="px-3 py-3 font-medium">Status</th>
+                                        <th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {codes.map((code) => {
+                                        const status = getDemoCodeStatus(code);
+                                        const statusVariant = status === 'active' ? 'default' : status === 'disabled' || status === 'expired' ? 'destructive' : 'secondary';
+                                        return (
+                                            <tr key={code.id}>
+                                                <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email}</td>
+                                                <td className="max-w-[14rem] px-3 py-4">
+                                                    <span className="block truncate" title={code.label}>{code.label}</span>
+                                                </td>
+                                                <td className="px-3 py-4 capitalize">{code.role}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-muted-foreground">{formatDemoDate(code.expiresAt, true)}</td>
+                                                <td className="whitespace-nowrap px-3 py-4">{code.useCount} / {code.maxUses === null ? 'Unlimited' : code.maxUses}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-muted-foreground">{formatDemoDate(code.lastUsedAt, true)}</td>
+                                                <td className="px-3 py-4"><Badge variant={statusVariant}>{status}</Badge></td>
+                                                <td className="px-3 py-4">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            disabled={status === 'disabled'}
+                                                            aria-label={`Disable demo code ${code.label}`}
+                                                            onClick={() => { setActionError(null); setPendingAction({ type: 'disable', code }); }}
+                                                        >
+                                                            Disable
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            aria-label={`Reset use count for ${code.label}`}
+                                                            onClick={() => { setActionError(null); setPendingAction({ type: 'reset', code }); }}
+                                                        >
+                                                            <RotateCcw className="mr-1 h-4 w-4" />
+                                                            Reset uses
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Dialog open={pendingAction !== null} onOpenChange={(open) => { if (!open && !actionLoading) setPendingAction(null); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{pendingAction?.type === 'disable' ? 'Disable demo code?' : 'Reset use count?'}</DialogTitle>
+                        <DialogDescription>
+                            {pendingAction?.type === 'disable'
+                                ? `People will no longer be able to sign in with ${pendingAction.code.label}.`
+                                : `Set ${pendingAction?.code.label || 'this code'} use count back to zero.`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {actionError && <p className="text-sm text-destructive" role="alert">{actionError}</p>}
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setPendingAction(null)} disabled={actionLoading}>Cancel</Button>
+                        <Button type="button" variant={pendingAction?.type === 'disable' ? 'destructive' : 'default'} onClick={confirmAction} disabled={actionLoading}>
+                            {actionLoading && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                            {pendingAction?.type === 'disable' ? 'Disable code' : 'Reset use count'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
 }
 
 const COLORS: Record<string, string> = {
@@ -112,6 +480,9 @@ export default function AdminPage() {
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+    const [demoCodes, setDemoCodes] = useState<DemoAccessCode[]>([]);
+    const [demoCodesLoading, setDemoCodesLoading] = useState(true);
+    const [demoCodesError, setDemoCodesError] = useState<string | null>(null);
     const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
     const [giftTarget, setGiftTarget] = useState<User | null>(null);
     const [giftDays, setGiftDays] = useState(30);
@@ -193,11 +564,19 @@ export default function AdminPage() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [statsData, usersData, promoData, subData] = await Promise.all([
+                const demoDataRequest: Promise<unknown> = fetchAdminData('demo-codes');
+                const demoDataPromise: Promise<{ data: unknown; error: Error | null }> = demoDataRequest
+                    .then((data: unknown): { data: unknown; error: Error | null } => ({ data, error: null }))
+                    .catch((error: unknown): { data: unknown; error: Error | null } => ({
+                        data: null,
+                        error: error instanceof Error ? error : new Error('Failed to load demo codes'),
+                    }));
+                const [statsData, usersData, promoData, subData, demoData] = await Promise.all([
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
                     fetchAdminData('promo-codes').catch(() => ({ codes: [] as PromoCode[] })),
                     fetchAdminData('subscribers').catch(() => ({ subscribers: [] as Subscriber[] })),
+                    demoDataPromise,
                 ]);
                 const loadedUsers = usersData.users || [];
                 const emailByUserId = new Map<string, string>();
@@ -218,6 +597,8 @@ export default function AdminPage() {
                 setUsers(loadedUsers);
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
+                setDemoCodes(getDemoCodes(demoData.data));
+                setDemoCodesError(demoData.error?.message || null);
                 setIsAdmin(true);
             } catch (err) {
                 console.error('Admin load error:', err);
@@ -232,6 +613,7 @@ export default function AdminPage() {
                     toast({ title: 'Error', description: message || 'Failed to load admin data', variant: 'destructive' });
                 }
             } finally {
+                setDemoCodesLoading(false);
                 setLoading(false);
             }
         };
@@ -290,6 +672,36 @@ export default function AdminPage() {
         } finally {
             setGiftSubmitting(false);
         }
+    };
+
+    const handleCreateDemoCode = async (form: DemoAccessForm) => {
+        const result = await postAdminData('create-demo-code', {
+            label: form.label,
+            expiresAt: form.expiresAt || null,
+            maxUses: form.maxUses ? Number(form.maxUses) : null,
+            role: form.role || 'user',
+        });
+        const createdCode = getRawDemoCode(result);
+        const createdRow = normalizeDemoCode(
+            result && typeof result === 'object'
+                ? (result as Record<string, unknown>).demoCode
+                    ?? (result as Record<string, unknown>).demo_code
+                    ?? (result as Record<string, unknown>).codeRecord
+                : null,
+        );
+        if (createdRow) setDemoCodes((current) => [createdRow, ...current.filter((code) => code.id !== createdRow.id)]);
+        setDemoCodesError(null);
+        return createdCode;
+    };
+
+    const handleDisableDemoCode = async (id: string) => {
+        await postAdminData('disable-demo-code', { id });
+        setDemoCodes((current) => current.map((code) => code.id === id ? { ...code, disabledAt: new Date().toISOString() } : code));
+    };
+
+    const handleResetDemoCode = async (id: string) => {
+        await postAdminData('reset-demo-code', { id });
+        setDemoCodes((current) => current.map((code) => code.id === id ? { ...code, useCount: 0, lastUsedAt: null } : code));
     };
 
     if (loading) {
@@ -396,6 +808,10 @@ export default function AdminPage() {
                         <TabsTrigger value="announcements">
                             <Megaphone className="h-4 w-4 mr-1" />
                             Announcements
+                        </TabsTrigger>
+                        <TabsTrigger value="demo-access">
+                            <KeyRound className="h-4 w-4 mr-1" />
+                            Demo access
                         </TabsTrigger>
                         <TabsTrigger value="promo-codes">
                             <Ticket className="h-4 w-4 mr-1" />
@@ -638,6 +1054,17 @@ export default function AdminPage() {
 
                     <TabsContent value="announcements" className="space-y-6">
                         <AdminAnnouncements users={users} />
+                    </TabsContent>
+
+                    <TabsContent value="demo-access" className="space-y-6">
+                        <DemoAccessPanel
+                            codes={demoCodes}
+                            loading={demoCodesLoading}
+                            error={demoCodesError}
+                            onCreate={handleCreateDemoCode}
+                            onDisable={handleDisableDemoCode}
+                            onReset={handleResetDemoCode}
+                        />
                     </TabsContent>
 
                     {/* Promo Codes Tab */}
