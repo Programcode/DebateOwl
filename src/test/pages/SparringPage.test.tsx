@@ -114,8 +114,8 @@ describe('SparringPage', () => {
   it('renders setup, validates the motion, and starts a chosen round', async () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /School 4-6-6-3 · 8 speeches/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Sparring' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Round format' })).toHaveTextContent('School 4-6-6-3 · 8 speeches');
     expect(screen.getByText('Pro Introductor')).toBeInTheDocument();
     expect(screen.getByText('Pro Conclusor')).toBeInTheDocument();
     const motion = screen.getByLabelText('Motion');
@@ -126,7 +126,7 @@ describe('SparringPage', () => {
     expect(screen.getByRole('button', { name: 'Start round' })).toBeDisabled();
 
     fireEvent.change(motion, { target: { value: 'This House would make public transport free.' } });
-    fireEvent.click(screen.getByRole('button', { name: /^Con Challenge/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Con' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start round' }));
 
     expect(useSparringStore.getState().currentSession).toMatchObject({
@@ -265,13 +265,13 @@ describe('SparringPage', () => {
     })));
 
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sparring' })).toBeInTheDocument();
     expect(document.body.textContent).toContain('Start round');
 
     act(() => {
       window.dispatchEvent(new Event('offline'));
     });
-    expect(screen.getByText('Offline. Your draft stays in this tab.')).toBeInTheDocument();
+    expect(screen.getByText(/Reconnect to start a round/)).toBeInTheDocument();
   });
 
   it('gates setup and draft submission while offline, then resumes online', async () => {
