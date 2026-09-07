@@ -60,6 +60,7 @@ export function AppLayout() {
   const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
   const dismissedAnnouncementIds = useRef(new Set<string>());
   const moreMenuRef = useRef<HTMLDetailsElement>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const { t } = useTranslation();
   const location = useLocation();
 
@@ -94,11 +95,15 @@ export function AppLayout() {
     const closeMenus = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setMobileMenuOpen(false);
-      moreMenuRef.current?.removeAttribute('open');
+      if (moreMenuRef.current?.hasAttribute('open')) {
+        moreMenuRef.current.removeAttribute('open');
+        moreMenuRef.current.querySelector('summary')?.focus();
+      }
+      if (mobileMenuOpen) mobileMenuTriggerRef.current?.focus();
     };
     document.addEventListener('keydown', closeMenus);
     return () => document.removeEventListener('keydown', closeMenus);
-  }, []);
+  }, [mobileMenuOpen]);
 
   const handleDismissAnnouncement = async (announcementId: string) => {
     try {
@@ -196,6 +201,7 @@ export function AppLayout() {
               <Settings className="h-5 w-5" aria-hidden="true" />
             </NavLink>
             <Button
+              ref={mobileMenuTriggerRef}
               variant="ghost"
               size="icon"
               className="lg:hidden text-muted-foreground"

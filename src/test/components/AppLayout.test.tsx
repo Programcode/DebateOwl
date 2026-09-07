@@ -155,6 +155,29 @@ describe('AppLayout announcements', () => {
     }
   });
 
+  it('closes menus on Escape and returns focus to the trigger', async () => {
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+
+    const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    const moreSummary = within(mainNavigation).getByText('More');
+    fireEvent.click(moreSummary);
+    within(mainNavigation).getByRole('link', { name: 'Brainstorm' }).focus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(moreSummary.closest('details')).not.toHaveAttribute('open');
+    expect(moreSummary).toHaveFocus();
+
+    const menuTrigger = screen.getByRole('button', { name: 'Open menu' });
+    fireEvent.click(menuTrigger);
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    within(mobileNavigation).getByRole('link', { name: /^Brainstorm/ }).focus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
+    expect(menuTrigger).toHaveFocus();
+  });
+
   it('keeps the app usable when announcements fail to load', async () => {
     mockListActiveAnnouncements.mockRejectedValue(new Error('Network unavailable'));
     renderLayout();
