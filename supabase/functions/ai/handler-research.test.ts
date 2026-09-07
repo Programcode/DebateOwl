@@ -588,3 +588,52 @@ Deno.test("cancelled streams keep observed cost unknown", async () => {
     else testState.__testTier = originalTier;
   }
 });
+
+Deno.test("cancelled JSON repair keeps observed tokens but makes the total cost unknown", async () => {
+  const originalFetch = globalThis.fetch;
+  const usageRows: Array<Record<string, unknown>> = [];
+  const caller = new AbortController();
+  let providerCalls = 0;
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) {
+      if (url.pathname.includes("/rest/v1/ai_requests")) usageRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return supabaseResponse;
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      providerCalls += 1;
+      if (providerCalls === 1) {
+        return jsonResponse({
+          choices: [{ message: { content: "not valid JSON" } }],
+          usage: { prompt_tokens: 11, completion_tokens: 7, cost: 0.25 },
+        });
+      }
+      caller.abort(new DOMException("Repair cancelled", "AbortError"));
+      throw new DOMException("Repair cancelled", "AbortError");
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  const testState = globalThis as typeof globalThis & { __testTier?: string };
+  const originalTier = testState.__testTier;
+  testState.__testTier = "trial";
+  try {
+    const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      signal: caller.signal,
+    }));
+    if (response.status !== 500) throw new Error(`cancelled repair returned ${response.status}`);
+    if (providerCalls !== 2) throw new Error(`expected initial and repair calls, got ${providerCalls}`);
+    const row = usageRows.at(-1);
+    if (row?.cost_usd !== null || row.input_tokens !== 11 || row.output_tokens !== 7) {
+      throw new Error(`cancelled repair accounting was not incomplete: ${JSON.stringify(row)}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalTier === undefined) delete testState.__testTier;
+    else testState.__testTier = originalTier;
+  }
+});

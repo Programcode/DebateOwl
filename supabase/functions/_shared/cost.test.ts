@@ -240,6 +240,16 @@ Deno.test("observed usage selection prefers completed usage after abort and supp
     throw new Error("completed usage selection changed token counts");
   }
 
+  const incompleteUsage = mergeNormalizedUsage([usage, { incomplete: true, raw: { repair_cancelled: true } }]);
+  if (!incompleteUsage) throw new Error("incomplete usage merge failed");
+  const incompleteSelection = selectObservedUsage({ usage: incompleteUsage, completedUsage }, true);
+  if (incompleteSelection !== incompleteUsage || !incompleteSelection.incomplete) {
+    throw new Error("incomplete merged usage must take precedence after abort");
+  }
+  if (incompleteSelection.inputTokens !== 300 || incompleteSelection.outputTokens !== 100) {
+    throw new Error("incomplete usage did not retain observed tokens");
+  }
+
   if (selectObservedUsage({ completedUsage }, false) !== completedUsage) {
     throw new Error("non-aborted selection did not fall back to completed usage");
   }
