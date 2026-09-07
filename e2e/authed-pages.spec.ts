@@ -55,6 +55,24 @@ for (const locale of LOCALES) {
   });
 }
 
+test('aligns Factoids timeframe and model controls at desktop widths', async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  await page.goto('/app/factoids', { waitUntil: 'domcontentloaded' });
+
+  const timeframe = page.locator('#timeframe');
+  const model = page.getByRole('combobox', { name: /Select AI model for factoids/i });
+  await expect(timeframe).toBeVisible();
+  await expect(model).toBeVisible();
+  const topDelta = await page.evaluate(() => {
+    const timeframeElement = document.querySelector('#timeframe');
+    const modelElement = document.querySelector('[aria-label*="Select AI model for factoids"]');
+    if (!timeframeElement || !modelElement) throw new Error('Factoids alignment controls are missing.');
+    return Math.abs(timeframeElement.getBoundingClientRect().top - modelElement.getBoundingClientRect().top);
+  });
+  expect(topDelta).toBeLessThanOrEqual(1);
+});
+
 test('visible Ask advanced controls use the non-streaming contract', async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);

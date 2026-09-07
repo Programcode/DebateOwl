@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Check, Cpu, Gauge, Swords } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +79,6 @@ export function SparringSetup({ onStart, isStarting = false }: SparringSetupProp
                 </div>
                 <div>
                   <CardTitle className="text-xl">{t('sparring.setup.setMotion', 'Set the motion')}</CardTitle>
-                  <CardDescription className="mt-1">{t('sparring.setup.setMotionDescription', 'Write the resolution as you would hear it in the room.')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -93,10 +92,9 @@ export function SparringSetup({ onStart, isStarting = false }: SparringSetupProp
                 className="min-h-[132px] resize-y text-base leading-7"
                 maxLength={1200}
                 autoFocus
-                aria-describedby="sparring-motion-help sparring-motion-count"
+                aria-describedby="sparring-motion-count"
               />
               <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
-                <span id="sparring-motion-help">{t('sparring.setup.motionHelp', 'A precise motion gives the opponent something concrete to attack.')}</span>
                 <span id="sparring-motion-count" className="shrink-0 tabular-nums">{motion.length}/1,200</span>
               </div>
               {motion.length > 0 && motion.trim().length < 8 && (
@@ -195,12 +193,13 @@ export function SparringSetup({ onStart, isStarting = false }: SparringSetupProp
 
           <Card className="border-primary/20 bg-primary/[0.025]">
             <CardContent className="space-y-4 pt-6">
-              <details className="rounded-xl border border-border/70 bg-background/70 p-3">
-                <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                  <span className="flex items-center justify-between gap-3">
+              <details className="group rounded-xl border border-border/70 bg-background/70 p-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  <span className="flex flex-1 items-center justify-between gap-3">
                     <span>{t('sparring.setup.speakingOrder', 'Speaking order')}</span>
                     <Badge variant="outline" className="rounded-md">{t('sparring.setup.turns', '{{count}} turns', { count: selectedFormat.turnCount })}</Badge>
                   </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <ol className="mt-3 space-y-2">
                   {plannedTurns.map((turn, index) => (
