@@ -1,5 +1,6 @@
 // src/pages/SettingsPage.tsx
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Info } from 'lucide-react';
@@ -19,7 +20,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
-import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
@@ -47,40 +48,26 @@ export default function SettingsPage() {
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
 
-  useEffect(() => {
-    if (!user) {
-      setIsAdmin(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    void supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        if (!cancelled) setIsAdmin(false);
-        return;
-      }
-
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin?action=stats`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!cancelled) setIsAdmin(response.ok);
-    }).catch(() => {
-      if (!cancelled) setIsAdmin(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+  const adminRole = useQuery({
+    queryKey: ['admin-role', user?.id],
+    enabled: Boolean(user),
+    retry: false,
+    queryFn: async ({ signal }) => {
+      if (!user) return false;
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .abortSignal(signal)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.role === 'admin';
+    },
+  });
+  const isAdmin = Boolean(user) && adminRole.isSuccess && adminRole.data;
 
   const handleDeleteAllData = () => {
     if (deleteEmail !== user?.email) {
@@ -297,6 +284,17 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {user && adminRole.isPending && (
+          <div role="status" aria-label={t('settings.loading')} className="my-8 h-40 animate-pulse rounded-lg bg-muted motion-reduce:animate-none" />
+        )}
+        {user && adminRole.isError && (
+          <div role="alert" className="my-8 flex items-center gap-3 text-sm">
+            <p>{t('settings.adminAccessFailed', 'Could not check admin access.')}</p>
+            <Button variant="outline" size="sm" onClick={() => void adminRole.refetch()}>
+              {t('settings.retry', 'Try again')}
+            </Button>
+          </div>
+        )}
         {isAdmin && (
           <Card className="mt-8 mb-8 border-primary/20 bg-primary/5">
             <CardHeader>
