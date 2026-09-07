@@ -99,7 +99,10 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .eq("ip_address", ipAddress)
           .eq("success", false)
           .gte("created_at", since)
-          .then(({ count }) => count || 0),
+          .then(({ count, error }) => {
+            if (error) throw error;
+            return count || 0;
+          }),
     ),
     );
   }
@@ -112,7 +115,10 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .eq("browser_fingerprint", browserFingerprint)
           .eq("success", false)
           .gte("created_at", since)
-          .then(({ count }) => count || 0),
+          .then(({ count, error }) => {
+            if (error) throw error;
+            return count || 0;
+          }),
     ),
     );
   }
@@ -133,7 +139,7 @@ async function findUserByEmail(email: string) {
   return null;
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request) {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
@@ -212,12 +218,28 @@ Deno.serve(async (req) => {
     }
 
     const existingUser = await findUserByEmail(demoCode.email);
-    if (existingUser && !isDemoUserForCode(existingUser.user_metadata, demoCode.id)) {
+    if (existingUser && !isDemoUserForCode(existingUser.app_metadata, demoCode.id)) {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "email_conflict" });
       return new Response(JSON.stringify({ error: "This demo code cannot be used." }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (existingUser) {
+      const { data: existingRole, error: existingRoleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", existingUser.id)
+        .maybeSingle<{ role: string }>();
+      if (existingRoleError) throw existingRoleError;
+      if (existingRole?.role === "admin" || existingRole?.role === "banned") {
+        await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "account_role_conflict" });
+        return new Response(JSON.stringify({ error: "This demo code cannot be used." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Reserve the use atomically before creating or changing the demo account.
@@ -239,8 +261,10 @@ Deno.serve(async (req) => {
       : (await supabase.auth.admin.createUser({
         email: demoCode.email,
         email_confirm: true,
-        user_metadata: {
+        app_metadata: {
           demo_access_code_id: demoCode.id,
+        },
+        user_metadata: {
           demo_label: demoCode.label,
         },
       })).data;
@@ -304,4 +328,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

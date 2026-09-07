@@ -72,11 +72,12 @@ Do not infer current schema from old README examples or store query names. Repla
 
 Supabase Auth owns user sessions. Protected routes provide a client navigation boundary, but server authorization is decisive.
 
+- Google OAuth, six-digit email OTP, and demo-code token-hash handoffs all finish as ordinary Supabase sessions and use the same store hydration path.
 - RLS owns row visibility and mutation rights.
 - Shared backend helpers validate bearer tokens and admin roles.
 - Admin endpoints verify server-side roles.
 - Stripe webhook requests use Stripe signatures rather than user sessions.
-- Demo-code login is a pre-session flow with hashing, rate limits, bounded use, and a rule that demo access cannot grant administrator status.
+- Demo-code login is a pre-session flow with hashing, fail-closed rate limits, bounded use, and a rule that demo access cannot grant administrator status. Existing demo accounts are reusable only when server-controlled Auth `app_metadata` binds the user to that code.
 
 ## Billing and usage
 
