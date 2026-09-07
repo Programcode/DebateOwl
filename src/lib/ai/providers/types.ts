@@ -16,22 +16,6 @@ export interface AIModel {
   isProOnly?: boolean;
 }
 
-export interface AIRequest {
-  systemPrompt: string;
-  userPrompt: string;
-  temperature?: number;
-  maxTokens?: number;
-  responseFormat?: 'json' | 'text';
-}
-
-export interface AIResponse {
-  content: string;
-  model: string;
-  provider: string;
-  latency: number;
-  tokensUsed?: number;
-}
-
 export interface ProviderConfig {
   provider: string;
   model: string;
