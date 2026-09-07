@@ -51,7 +51,7 @@ test('mounts the app before Jam recorder modules resolve', async ({ page }) => {
   });
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByText('Choose a mode to start.')).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('heading', { name: 'DebateLab', exact: true, level: 1 })).toBeVisible({ timeout: 5_000 });
   await expect(page.locator('#root > .seo-fallback')).toHaveCount(0);
   expect(await page.evaluate(() => {
     const jam = (window as Window & { __jam__?: { exports?: { metadata?: unknown } } }).__jam__;
