@@ -114,8 +114,18 @@ export function OnboardingTour() {
         return allTourSteps.map((step) => {
             if (step.target === 'body') return step;
             const target = String(step.target);
-            return document.querySelector(target)
-                ? step
+            const element = Array.from(document.querySelectorAll<HTMLElement>(target))
+                .find((candidate) => {
+                    const style = window.getComputedStyle(candidate);
+                    const rect = candidate.getBoundingClientRect();
+                    return style.display !== 'none'
+                        && style.visibility !== 'hidden'
+                        && candidate.getClientRects().length > 0
+                        && rect.width > 0
+                        && rect.height > 0;
+                });
+            return element
+                ? { ...step, target: element }
                 : { ...step, target: 'body', placement: 'center' as const };
         });
     }, [allTourSteps]);

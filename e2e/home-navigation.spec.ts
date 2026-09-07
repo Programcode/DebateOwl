@@ -30,6 +30,51 @@ test('home groups the eight main tools and keeps utility routes visible', async 
   }
 });
 
+test('onboarding follows visible home targets when secondary navigation is closed', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: false, isTourRunning: false },
+      version: 0,
+    }));
+  });
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+
+  const desktopMoreMenu = page.locator('details').filter({ has: page.locator('summary[aria-label="More"]') });
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    await expect(desktopMoreMenu).not.toHaveAttribute('open');
+  }
+
+  await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
+  await page.locator('[data-test-id="button-primary"]').click();
+
+  for (const key of ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'library', 'timer', 'flowchart', 'history']) {
+    await expect(page.locator(`[data-tour="mode-${key}"]`)).toBeVisible();
+    await expect.poll(() => page.evaluate((targetKey) => {
+      const spotlight = document.querySelector('[data-test-id="spotlight"]');
+      if (!(spotlight instanceof HTMLElement)) return false;
+
+      const spotlightWidth = Number.parseFloat(spotlight.style.width);
+      const spotlightHeight = Number.parseFloat(spotlight.style.height);
+      return Array.from(document.querySelectorAll<HTMLElement>(
+        `[data-tour="mode-${targetKey}"], [data-tour="nav-${targetKey}"]`,
+      )).some((target) => {
+        const style = window.getComputedStyle(target);
+        const rect = target.getBoundingClientRect();
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && target.getClientRects().length > 0
+          && rect.width > 0
+          && rect.height > 0
+          && Math.abs(spotlightWidth - rect.width - 20) < 2
+          && Math.abs(spotlightHeight - rect.height - 20) < 2;
+      });
+    }, key)).toBe(true);
+    await page.locator('[data-test-id="button-primary"]').click();
+  }
+
+  await page.locator('[data-test-id="button-skip"]').click();
+});
+
 test('desktop More menu exposes secondary destinations without horizontal scrolling', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1024, 'Desktop-only More menu check');
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
