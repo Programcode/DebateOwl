@@ -416,7 +416,7 @@ describe('AuthProvider behavior', () => {
     });
   });
 
-  it('sends an email OTP for the normalized email address', async () => {
+  it('allows email OTP signup for the normalized email address', async () => {
     render(
       <AuthProvider>
         <PasswordlessAuthConsumer />
@@ -428,7 +428,7 @@ describe('AuthProvider behavior', () => {
     await waitFor(() => {
       expect(signInWithOtpMock).toHaveBeenCalledWith({
         email: 'student@example.com',
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: true },
       });
     });
   });
