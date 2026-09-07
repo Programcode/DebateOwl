@@ -2,7 +2,7 @@
 (function () {
   try {
     var pathname = window.location.pathname;
-    if (pathname === '/app' || pathname.indexOf('/app/') === 0) {
+    if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login') {
       document.documentElement.classList.add('app-shell');
     }
   } catch {

@@ -85,6 +85,7 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).toContain('<script src="/theme-init.js"></script>');
     expect(indexHtml).not.toContain('// Prevent flash of wrong theme');
     expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
+    expect(themeBootstrap).toContain("pathname === '/login'");
     expect(nginxConfig).toMatch(/location = \/theme-init\.js \{[\s\S]*?Cache-Control/);
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });

@@ -24,6 +24,19 @@ test('shows a dark private startup shell while the entry module is delayed', asy
   }))).toEqual({ appShell: true, dark: true });
 });
 
+test('shows the startup shell on login while the entry module is delayed', async ({ page }) => {
+  await setLocale(page, 'en');
+  await page.route('**/src/bootstrap.ts*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+
+  await page.goto('/login', { waitUntil: 'commit' });
+  await expect(page.locator('[data-startup-shell]')).toBeVisible();
+  await expect(page.locator('#root > .seo-fallback')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('app-shell'))).toBe(true);
+});
+
 test('mounts the app before Jam recorder modules resolve', async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
@@ -40,6 +53,10 @@ test('mounts the app before Jam recorder modules resolve', async ({ page }) => {
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Choose a mode to start.')).toBeVisible({ timeout: 5_000 });
   await expect(page.locator('#root > .seo-fallback')).toHaveCount(0);
+  expect(await page.evaluate(() => {
+    const jam = (window as Window & { __jam__?: { exports?: { metadata?: unknown } } }).__jam__;
+    return typeof jam?.exports?.metadata === 'function';
+  })).toBe(true);
 });
 
 test('shows a recoverable message when the main entry fails', async ({ page }) => {
