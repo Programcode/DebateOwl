@@ -378,6 +378,134 @@ describe('AdminPage Integration', () => {
         expect(screen.getByText('7 requests missing token data')).toBeInTheDocument();
     });
 
+    it('creates a demo code and copies the raw code once', async () => {
+        const createdBody: Record<string, unknown> = {};
+        const copyMock = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: copyMock } });
+        const emptyStats = {
+            totals: { requests: 0, cost: 0, successRate: 100 },
+            daily: [] as unknown[],
+            byFeature: {},
+            byUser: [] as unknown[],
+        };
+        const createdRow = {
+            id: 'demo-1',
+            label: 'September school demo',
+            email: 'demo-1@example.com',
+            role: 'user',
+            expires_at: '2026-09-30T12:00:00.000Z',
+            max_uses: 4,
+            use_count: 0,
+            last_used_at: null as string | null,
+            disabled_at: null as string | null,
+            created_at: '2026-09-02T12:00:00.000Z',
+        };
+
+        globalFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+            if (url.includes('action=stats')) return { ok: true, status: 200, text: async () => JSON.stringify(emptyStats) };
+            if (url.includes('action=users')) return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            if (url.includes('action=promo-codes')) return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            if (url.includes('action=subscribers')) return { ok: true, status: 200, text: async () => JSON.stringify({ subscribers: [] }) };
+            if (url.includes('action=demo-codes')) return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            if (url.includes('action=create-demo-code')) {
+                Object.assign(createdBody, JSON.parse(String(init?.body || '{}')));
+                return { ok: true, status: 201, text: async () => JSON.stringify({ code: 'DEMO-7KQ4-MV9P', demoCode: createdRow }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Demo access' }), { button: 0 });
+        fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'September school demo' } });
+        fireEvent.change(screen.getByLabelText('Assigned email (optional)'), { target: { value: 'school@example.com' } });
+        fireEvent.change(screen.getByLabelText('Expiry (optional)'), { target: { value: '2026-09-30T12:00' } });
+        fireEvent.change(screen.getByLabelText('Max uses (optional)'), { target: { value: '4' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create demo code' }));
+
+        await waitFor(() => expect(createdBody.label).toBe('September school demo'));
+        expect(createdBody.email).toBe('school@example.com');
+        expect(createdBody.expiresAt).toBe('2026-09-30T12:00:00.000Z');
+        expect(createdBody.maxUses).toBe(4);
+        expect(createdBody.role).toBeUndefined();
+        expect(screen.getByText('DEMO-7KQ4-MV9P')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));
+        await waitFor(() => expect(copyMock).toHaveBeenCalledWith('DEMO-7KQ4-MV9P'));
+    });
+
+    it('confirms disabling and resetting a demo code', async () => {
+        const demoId = 'demo-2';
+        const disableBody: Record<string, unknown> = {};
+        const resetBody: Record<string, unknown> = {};
+        const emptyStats = {
+            totals: { requests: 0, cost: 0, successRate: 100 },
+            daily: [] as unknown[],
+            byFeature: {},
+            byUser: [] as unknown[],
+        };
+        globalFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+            if (url.includes('action=stats')) return { ok: true, status: 200, text: async () => JSON.stringify(emptyStats) };
+            if (url.includes('action=users')) return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) };
+            if (url.includes('action=promo-codes')) return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            if (url.includes('action=subscribers')) return { ok: true, status: 200, text: async () => JSON.stringify({ subscribers: [] }) };
+            if (url.includes('action=demo-codes')) {
+                return {
+                    ok: true,
+                    status: 200,
+                    text: async () => JSON.stringify({ codes: [{
+                        id: demoId,
+                        label: 'Tournament room',
+                        email: 'room@example.com',
+                        role: 'user',
+                        expires_at: null,
+                        max_uses: 2,
+                        use_count: 1,
+                        last_used_at: '2026-09-02T12:00:00.000Z',
+                        disabled_at: null,
+                        created_at: '2026-09-01T12:00:00.000Z',
+                    }] }),
+                };
+            }
+            if (url.includes('action=disable-demo-code')) {
+                Object.assign(disableBody, JSON.parse(String(init?.body || '{}')));
+                return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) };
+            }
+            if (url.includes('action=reset-demo-code')) {
+                Object.assign(resetBody, JSON.parse(String(init?.body || '{}')));
+                return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) };
+            }
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(
+            <BrowserRouter>
+                <AdminPage />
+            </BrowserRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Demo access' }), { button: 0 });
+        expect(screen.getByText('room@example.com')).toBeInTheDocument();
+        expect(screen.getByText('1 / 2')).toBeInTheDocument();
+        expect(screen.getByText('active')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Disable demo code Tournament room' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Disable code' }));
+        await waitFor(() => expect(disableBody.id).toBe(demoId));
+        expect(screen.getByText('disabled')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Reset use count for Tournament room' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Reset use count' }));
+        await waitFor(() => expect(resetBody.id).toBe(demoId));
+        expect(screen.getByText('0 / 2')).toBeInTheDocument();
+    });
+
     it('creates an announcement from the admin tab and adds it to history', async () => {
         const createdBody: Record<string, unknown> = {};
         const emptyStats = {

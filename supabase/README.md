@@ -41,8 +41,8 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 ### Authentication and administration
 
-- `demo-code-login`: bounded pre-session access-code flow with normalized hashing, attempt limits, atomic use consumption, demo-user provisioning, and a prohibition on granting administrator status.
-- `admin`: authenticated administrator operations with server-side role checks.
+- `demo-code-login`: bounded pre-session access-code flow with normalized hashing, fail-closed attempt limits, atomic use consumption, server-owned demo-user bindings in Auth `app_metadata`, and a prohibition on granting administrator status.
+- `admin`: authenticated administrator operations with server-side role checks, including redacted demo-code list/create/disable/reset actions.
 - `announcements`: authenticated announcement listing and dismissal.
 - `redeem-promo`: authenticated atomic promo redemption.
 

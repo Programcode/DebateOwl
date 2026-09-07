@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone, KeyRound, Copy, RotateCcw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
@@ -19,7 +20,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate } from '@/lib/date-format';
+import { formatEuropeanDate, formatEuropeanDateTime } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -64,6 +65,358 @@ interface Subscriber {
     stripe_customer_id: string | null;
     status: string | null;
     current_period_end: string | null;
+}
+
+interface DemoAccessCode {
+    id: string;
+    label: string;
+    email: string;
+    role: string;
+    expiresAt: string | null;
+    maxUses: number | null;
+    useCount: number;
+    lastUsedAt: string | null;
+    disabledAt: string | null;
+    createdAt: string | null;
+}
+
+interface DemoAccessForm {
+    label: string;
+    email: string;
+    expiresAt: string;
+    maxUses: string;
+}
+
+type DemoAction = 'disable' | 'reset';
+
+const EMPTY_DEMO_FORM: DemoAccessForm = { label: '', email: '', expiresAt: '', maxUses: '' };
+
+function normalizeDemoCode(value: unknown): DemoAccessCode | null {
+    if (!value || typeof value !== 'object') return null;
+    const row = value as Record<string, unknown>;
+    if (typeof row.id !== 'string') return null;
+    return {
+        id: row.id,
+        label: typeof row.label === 'string' ? row.label : 'Unlabelled demo',
+        email: typeof row.email === 'string' ? row.email : 'Unknown email',
+        role: typeof row.role === 'string' ? row.role : 'user',
+        expiresAt: typeof row.expires_at === 'string' ? row.expires_at : null,
+        maxUses: typeof row.max_uses === 'number' ? row.max_uses : null,
+        useCount: typeof row.use_count === 'number' ? row.use_count : 0,
+        lastUsedAt: typeof row.last_used_at === 'string' ? row.last_used_at : null,
+        disabledAt: typeof row.disabled_at === 'string' ? row.disabled_at : null,
+        createdAt: typeof row.created_at === 'string' ? row.created_at : null,
+    };
+}
+
+function getDemoCodes(data: unknown): DemoAccessCode[] {
+    if (!data || typeof data !== 'object') return [];
+    const payload = data as Record<string, unknown>;
+    const rows = payload.codes;
+    return Array.isArray(rows) ? rows.map(normalizeDemoCode).filter((row): row is DemoAccessCode => row !== null) : [];
+}
+
+function getRawDemoCode(data: unknown): string | null {
+    if (!data || typeof data !== 'object') return null;
+    const payload = data as Record<string, unknown>;
+    return typeof payload.code === 'string' && payload.code.trim() ? payload.code.trim() : null;
+}
+
+function getDemoCodeStatus(code: DemoAccessCode) {
+    if (code.disabledAt) return 'disabled';
+    if (code.expiresAt && new Date(code.expiresAt).getTime() <= Date.now()) return 'expired';
+    if (code.maxUses !== null && code.useCount >= code.maxUses) return 'exhausted';
+    return 'active';
+}
+
+interface DemoAccessPanelProps {
+    codes: DemoAccessCode[];
+    loading: boolean;
+    error: string | null;
+    onCreate: (form: DemoAccessForm) => Promise<string | null>;
+    onDisable: (id: string) => Promise<void>;
+    onReset: (id: string) => Promise<void>;
+}
+
+function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }: DemoAccessPanelProps) {
+    const { t } = useTranslation();
+    const [form, setForm] = useState<DemoAccessForm>(EMPTY_DEMO_FORM);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [createdCode, setCreatedCode] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ type: DemoAction; code: DemoAccessCode } | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const formatDemoDate = (value: string | null) => value
+        ? formatEuropeanDateTime(value, t('admin.invalidDate'))
+        : t('admin.never');
+
+    const updateForm = (updates: Partial<DemoAccessForm>) => {
+        setForm((current) => ({ ...current, ...updates }));
+        setFormError(null);
+    };
+
+    const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const label = form.label.trim();
+        if (!label) {
+            setFormError(t('admin.labelRequired'));
+            return;
+        }
+        const maxUses = form.maxUses.trim() ? Number(form.maxUses) : null;
+        if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) {
+            setFormError(t('admin.maxUsesInvalid'));
+            return;
+        }
+        let expiresAt: string | null = null;
+        if (form.expiresAt) {
+            const expiry = new Date(form.expiresAt);
+            if (Number.isNaN(expiry.getTime())) {
+                setFormError(t('admin.expiryInvalid'));
+                return;
+            }
+            expiresAt = expiry.toISOString();
+        }
+
+        setSubmitting(true);
+        setFormError(null);
+        setCreatedCode(null);
+        setCopied(false);
+        try {
+            const rawCode = await onCreate({ ...form, label, expiresAt: expiresAt || '', maxUses: maxUses === null ? '' : String(maxUses) });
+            if (!rawCode) throw new Error(t('admin.serverCodeMissing'));
+            setCreatedCode(rawCode);
+            setForm(EMPTY_DEMO_FORM);
+        } catch (createError) {
+            setFormError(createError instanceof Error ? createError.message : t('admin.createFailed'));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const copyCreatedCode = async () => {
+        if (!createdCode) return;
+        let fallbackInput: HTMLTextAreaElement | null = null;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(createdCode);
+            } else {
+                fallbackInput = document.createElement('textarea');
+                fallbackInput.value = createdCode;
+                fallbackInput.setAttribute('readonly', '');
+                fallbackInput.style.position = 'fixed';
+                fallbackInput.style.opacity = '0';
+                document.body.appendChild(fallbackInput);
+                fallbackInput.select();
+                if (!document.execCommand('copy')) throw new Error('Copy was rejected');
+            }
+            setCopied(true);
+        } catch {
+            setFormError(t('admin.copyFailed'));
+        } finally {
+            fallbackInput?.remove();
+        }
+    };
+
+    const confirmAction = async () => {
+        if (!pendingAction) return;
+        setActionLoading(true);
+        setActionError(null);
+        try {
+            if (pendingAction.type === 'disable') await onDisable(pendingAction.code.id);
+            else await onReset(pendingAction.code.id);
+            setPendingAction(null);
+        } catch (actionError) {
+            setActionError(actionError instanceof Error ? actionError.message : t('admin.actionFailed'));
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    return (
+        <div className="grid gap-6 xl:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <KeyRound className="h-5 w-5" />
+                        {t('admin.createDemoCode')}
+                    </CardTitle>
+                    <CardDescription>{t('admin.createDemoCodeDescription')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form className="space-y-4" onSubmit={handleCreate} noValidate>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-label">{t('admin.label')}</Label>
+                            <Input
+                                id="demo-label"
+                                value={form.label}
+                                onChange={(event) => updateForm({ label: event.target.value })}
+                                placeholder={t('admin.labelPlaceholder')}
+                                autoComplete="off"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-email">{t('admin.emailOptional')}</Label>
+                            <Input
+                                id="demo-email"
+                                type="email"
+                                maxLength={254}
+                                value={form.email}
+                                onChange={(event) => updateForm({ email: event.target.value })}
+                                autoComplete="off"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-expires-at">{t('admin.expiryOptional')}</Label>
+                            <Input
+                                id="demo-expires-at"
+                                type="datetime-local"
+                                value={form.expiresAt}
+                                onChange={(event) => updateForm({ expiresAt: event.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="demo-max-uses">{t('admin.maxUsesOptional')}</Label>
+                            <Input
+                                id="demo-max-uses"
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={form.maxUses}
+                                onChange={(event) => updateForm({ maxUses: event.target.value })}
+                                placeholder={t('admin.unlimited')}
+                            />
+                        </div>
+                        {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
+                        <Button type="submit" className="w-full" disabled={submitting}>
+                            {submitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <KeyRound className="mr-1 h-4 w-4" />}
+                            {submitting ? t('admin.creating') : t('admin.createDemoCode')}
+                        </Button>
+                    </form>
+                    {createdCode && (
+                        <div className="mt-5 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4" role="status" aria-live="polite">
+                            <div>
+                                <p className="font-medium">{t('admin.created')}</p>
+                                <p className="text-sm text-muted-foreground">{t('admin.copyNow')}</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <code className="rounded bg-background px-2 py-1 font-mono text-sm font-bold tracking-wide">{createdCode}</code>
+                                <Button type="button" size="sm" variant="outline" onClick={copyCreatedCode}>
+                                    <Copy className="mr-1 h-4 w-4" />
+                                    {copied ? t('admin.copied') : t('admin.copyCode')}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t('admin.demoAccess')}</CardTitle>
+                    <CardDescription>{t('admin.codesIssued', { count: codes.length })}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading && <p className="py-8 text-center text-sm text-muted-foreground" role="status">{t('admin.loading')}</p>}
+                    {error && (
+                        <p className="mb-4 text-sm text-destructive" role="alert">{t('admin.loadFailed', { error })}</p>
+                    )}
+                    {!loading && codes.length === 0 && !error && (
+                        <div className="rounded-lg border border-dashed p-8 text-center">
+                            <KeyRound className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+                            <p className="font-medium">{t('admin.noneTitle')}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{t('admin.noneDescription')}</p>
+                        </div>
+                    )}
+                    {codes.length > 0 && (
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[860px] text-left text-sm">
+                                <caption className="sr-only">{t('admin.tableCaption')}</caption>
+                                <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                                    <tr>
+                                        <th className="px-3 py-3 font-medium">{t('admin.assignedEmail')}</th>
+                                        <th className="px-3 py-3 font-medium">{t('admin.label')}</th>
+                                        <th className="px-3 py-3 font-medium">{t('admin.role')}</th>
+                                        <th className="px-3 py-3 font-medium">{t('admin.expiry')}</th>
+                                        <th className="px-3 py-3 font-medium">{t('admin.uses')}</th>
+                                        <th className="px-3 py-3 font-medium">{t('admin.lastUsed')}</th>
+                                        <th className="px-3 py-3 font-medium">{t('admin.status')}</th>
+                                        <th className="px-3 py-3 font-medium"><span className="sr-only">{t('admin.actions')}</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {codes.map((code) => {
+                                        const status = getDemoCodeStatus(code);
+                                        const statusVariant = status === 'active' ? 'default' : status === 'disabled' || status === 'expired' ? 'destructive' : 'secondary';
+                                        return (
+                                            <tr key={code.id}>
+                                                <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email}</td>
+                                                <td className="max-w-[14rem] px-3 py-4">
+                                                    <span className="block truncate" title={code.label}>{code.label}</span>
+                                                </td>
+                                                <td className="px-3 py-4 capitalize">{code.role}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-muted-foreground">{formatDemoDate(code.expiresAt)}</td>
+                                                <td className="whitespace-nowrap px-3 py-4">{code.useCount} / {code.maxUses === null ? t('admin.unlimited') : code.maxUses}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-muted-foreground">{formatDemoDate(code.lastUsedAt)}</td>
+                                                <td className="px-3 py-4"><Badge variant={statusVariant}>{t(`admin.${status}`)}</Badge></td>
+                                                <td className="px-3 py-4">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            disabled={status === 'disabled'}
+                                                            aria-label={t('admin.disableAriaLabel', { label: code.label })}
+                                                            onClick={() => { setActionError(null); setPendingAction({ type: 'disable', code }); }}
+                                                        >
+                                                            {t('admin.disable')}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            aria-label={t('admin.resetAriaLabel', { label: code.label })}
+                                                            onClick={() => { setActionError(null); setPendingAction({ type: 'reset', code }); }}
+                                                        >
+                                                            <RotateCcw className="mr-1 h-4 w-4" />
+                                                            {t('admin.resetUses')}
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Dialog open={pendingAction !== null} onOpenChange={(open) => { if (!open && !actionLoading) setPendingAction(null); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{pendingAction?.type === 'disable' ? t('admin.disableTitle') : t('admin.resetTitle')}</DialogTitle>
+                        <DialogDescription>
+                            {pendingAction?.type === 'disable'
+                                ? t('admin.disableDescription', { label: pendingAction.code.label })
+                                : t('admin.resetDescription', { label: pendingAction?.code.label || t('admin.thisCode') })}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {actionError && <p className="text-sm text-destructive" role="alert">{actionError}</p>}
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setPendingAction(null)} disabled={actionLoading}>{t('admin.cancel')}</Button>
+                        <Button type="button" variant={pendingAction?.type === 'disable' ? 'destructive' : 'default'} onClick={confirmAction} disabled={actionLoading}>
+                            {actionLoading && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                            {pendingAction?.type === 'disable' ? t('admin.disableCode') : t('admin.resetUseCount')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
 }
 
 const COLORS: Record<string, string> = {
@@ -112,12 +465,16 @@ export default function AdminPage() {
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+    const [demoCodes, setDemoCodes] = useState<DemoAccessCode[]>([]);
+    const [demoCodesLoading, setDemoCodesLoading] = useState(true);
+    const [demoCodesError, setDemoCodesError] = useState<string | null>(null);
     const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
     const [giftTarget, setGiftTarget] = useState<User | null>(null);
     const [giftDays, setGiftDays] = useState(30);
     const [giftNotes, setGiftNotes] = useState('');
     const [giftSubmitting, setGiftSubmitting] = useState(false);
     const { toast } = useToast();
+    const { t } = useTranslation();
 
     const fetchAdminData = async (action: string) => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -193,11 +550,19 @@ export default function AdminPage() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const [statsData, usersData, promoData, subData] = await Promise.all([
+                const demoDataRequest: Promise<unknown> = fetchAdminData('demo-codes');
+                const demoDataPromise: Promise<{ data: unknown; error: Error | null }> = demoDataRequest
+                    .then((data: unknown): { data: unknown; error: Error | null } => ({ data, error: null }))
+                    .catch((error: unknown): { data: unknown; error: Error | null } => ({
+                        data: null,
+                        error: error instanceof Error ? error : new Error('Failed to load demo codes'),
+                    }));
+                const [statsData, usersData, promoData, subData, demoData] = await Promise.all([
                     fetchAdminData('stats'),
                     fetchAdminData('users'),
                     fetchAdminData('promo-codes').catch(() => ({ codes: [] as PromoCode[] })),
                     fetchAdminData('subscribers').catch(() => ({ subscribers: [] as Subscriber[] })),
+                    demoDataPromise,
                 ]);
                 const loadedUsers = usersData.users || [];
                 const emailByUserId = new Map<string, string>();
@@ -218,6 +583,8 @@ export default function AdminPage() {
                 setUsers(loadedUsers);
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
+                setDemoCodes(getDemoCodes(demoData.data));
+                setDemoCodesError(demoData.error?.message || null);
                 setIsAdmin(true);
             } catch (err) {
                 console.error('Admin load error:', err);
@@ -232,6 +599,7 @@ export default function AdminPage() {
                     toast({ title: 'Error', description: message || 'Failed to load admin data', variant: 'destructive' });
                 }
             } finally {
+                setDemoCodesLoading(false);
                 setLoading(false);
             }
         };
@@ -290,6 +658,32 @@ export default function AdminPage() {
         } finally {
             setGiftSubmitting(false);
         }
+    };
+
+    const handleCreateDemoCode = async (form: DemoAccessForm) => {
+        const result = await postAdminData('create-demo-code', {
+            label: form.label,
+            email: form.email.trim() || null,
+            expiresAt: form.expiresAt || null,
+            maxUses: form.maxUses ? Number(form.maxUses) : null,
+        });
+        const createdCode = getRawDemoCode(result);
+        const createdRow = normalizeDemoCode(result && typeof result === 'object'
+            ? (result as Record<string, unknown>).demoCode
+            : null);
+        if (createdRow) setDemoCodes((current) => [createdRow, ...current.filter((code) => code.id !== createdRow.id)]);
+        setDemoCodesError(null);
+        return createdCode;
+    };
+
+    const handleDisableDemoCode = async (id: string) => {
+        await postAdminData('disable-demo-code', { id });
+        setDemoCodes((current) => current.map((code) => code.id === id ? { ...code, disabledAt: new Date().toISOString() } : code));
+    };
+
+    const handleResetDemoCode = async (id: string) => {
+        await postAdminData('reset-demo-code', { id });
+        setDemoCodes((current) => current.map((code) => code.id === id ? { ...code, useCount: 0, lastUsedAt: null } : code));
     };
 
     if (loading) {
@@ -396,6 +790,10 @@ export default function AdminPage() {
                         <TabsTrigger value="announcements">
                             <Megaphone className="h-4 w-4 mr-1" />
                             Announcements
+                        </TabsTrigger>
+                        <TabsTrigger value="demo-access">
+                            <KeyRound className="h-4 w-4 mr-1" />
+                            {t('admin.demoAccess')}
                         </TabsTrigger>
                         <TabsTrigger value="promo-codes">
                             <Ticket className="h-4 w-4 mr-1" />
@@ -638,6 +1036,17 @@ export default function AdminPage() {
 
                     <TabsContent value="announcements" className="space-y-6">
                         <AdminAnnouncements users={users} />
+                    </TabsContent>
+
+                    <TabsContent value="demo-access" className="space-y-6">
+                        <DemoAccessPanel
+                            codes={demoCodes}
+                            loading={demoCodesLoading}
+                            error={demoCodesError}
+                            onCreate={handleCreateDemoCode}
+                            onDisable={handleDisableDemoCode}
+                            onReset={handleResetDemoCode}
+                        />
                     </TabsContent>
 
                     {/* Promo Codes Tab */}

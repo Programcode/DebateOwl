@@ -1,4 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  getDemoCodeDenialReason,
+  getDemoLoginRole,
+  hashDemoCode,
+  isDemoCodeRateLimited,
+  isDemoUserForCode,
+  isValidDemoCode,
+  normalizeDemoCode,
+} from "../_shared/demo-code.ts";
 
 const ALLOWED_ORIGINS = [
   "https://debate.pi-stack.org",
@@ -12,7 +21,6 @@ const ALLOWED_ORIGINS = [
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const demoCodePepper = Deno.env.get("DEMO_CODE_PEPPER") || supabaseServiceKey;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 type DemoAccessCode = {
@@ -36,10 +44,6 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-function normalizeCode(value: unknown) {
-  return String(value || "").trim().toUpperCase().replace(/\s+/g, "");
-}
-
 // Only hand generateLink a redirectTo that points at one of our own origins,
 // so a client-supplied value can't be used for an open redirect off the auth
 // handoff link.
@@ -51,16 +55,6 @@ function sanitizeRedirectTo(value: unknown): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-async function sha256Hex(input: string) {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function hashCode(code: string) {
-  return sha256Hex(`${demoCodePepper}:${code}`);
 }
 
 function getIpAddress(req: Request) {
@@ -105,7 +99,10 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .eq("ip_address", ipAddress)
           .eq("success", false)
           .gte("created_at", since)
-          .then(({ count }) => count || 0),
+          .then(({ count, error }) => {
+            if (error) throw error;
+            return count || 0;
+          }),
     ),
     );
   }
@@ -118,14 +115,17 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .eq("browser_fingerprint", browserFingerprint)
           .eq("success", false)
           .gte("created_at", since)
-          .then(({ count }) => count || 0),
+          .then(({ count, error }) => {
+            if (error) throw error;
+            return count || 0;
+          }),
     ),
     );
   }
 
   if (checks.length === 0) return false;
   const counts = await Promise.all(checks);
-  return counts.some((count) => count >= 10);
+  return isDemoCodeRateLimited(counts);
 }
 
 async function findUserByEmail(email: string) {
@@ -139,7 +139,7 @@ async function findUserByEmail(email: string) {
   return null;
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request) {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const code = normalizeCode(body.code);
+    const code = normalizeDemoCode(body.code);
     const browserFingerprint = String(body.browserFingerprint || "").slice(0, 256) || null;
 
     if (await isRateLimited(ipAddress, browserFingerprint)) {
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!/^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
+    if (!isValidDemoCode(code)) {
       await recordAttempt({ ipAddress, browserFingerprint, success: false, failureReason: "invalid_format" });
       return new Response(JSON.stringify({ error: "Enter a valid demo code." }), {
         status: 400,
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const codeHash = await hashCode(code);
+    const codeHash = await hashDemoCode(code);
     const { data: demoCode, error: lookupError } = await supabase
       .from("demo_access_codes")
       .select("*")
@@ -192,7 +192,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (demoCode.disabled_at) {
+    const denialReason = getDemoCodeDenialReason(demoCode);
+    if (denialReason === "disabled") {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "disabled" });
       return new Response(JSON.stringify({ error: "This demo code has been disabled." }), {
         status: 403,
@@ -200,7 +201,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (demoCode.expires_at && new Date(demoCode.expires_at).getTime() <= Date.now()) {
+    if (denialReason === "expired") {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "expired" });
       return new Response(JSON.stringify({ error: "This demo code has expired." }), {
         status: 403,
@@ -208,7 +209,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (demoCode.max_uses !== null && demoCode.use_count >= demoCode.max_uses) {
+    if (denialReason === "max_uses") {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "max_uses" });
       return new Response(JSON.stringify({ error: "This demo code has no uses left." }), {
         status: 403,
@@ -216,10 +217,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Reserve the use atomically, and before touching the user's account, so a
-    // stale read plus an ordinary update can't let concurrent requests
-    // oversubscribe max_uses, and a declined/raced reservation never leaves
-    // behind a provisioned (pro-tier) account for a code that wasn't granted.
+    const existingUser = await findUserByEmail(demoCode.email);
+    if (existingUser && !isDemoUserForCode(existingUser.app_metadata, demoCode.id)) {
+      await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "email_conflict" });
+      return new Response(JSON.stringify({ error: "This demo code cannot be used." }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (existingUser) {
+      const { data: existingRole, error: existingRoleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", existingUser.id)
+        .maybeSingle<{ role: string }>();
+      if (existingRoleError) throw existingRoleError;
+      if (existingRole?.role === "admin" || existingRole?.role === "banned") {
+        await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "account_role_conflict" });
+        return new Response(JSON.stringify({ error: "This demo code cannot be used." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Reserve the use atomically before creating or changing the demo account.
     const { data: reservation, error: reservationError } = await supabase.rpc("consume_demo_access_code", {
       p_code_id: demoCode.id,
     });
@@ -233,14 +256,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const existingUser = await findUserByEmail(demoCode.email);
     const userResult = existingUser
       ? { user: existingUser }
       : (await supabase.auth.admin.createUser({
         email: demoCode.email,
         email_confirm: true,
-        user_metadata: {
+        app_metadata: {
           demo_access_code_id: demoCode.id,
+        },
+        user_metadata: {
           demo_label: demoCode.label,
         },
       })).data;
@@ -250,7 +274,7 @@ Deno.serve(async (req) => {
     // Never let a demo code grant admin: the schema allows demo_access_codes.role
     // to be "admin", but self-service demo sign-in must not be a privilege
     // escalation path. Admin status is granted separately, not through this flow.
-    const grantedRole = demoCode.role === "banned" ? "banned" : "user";
+    const grantedRole = getDemoLoginRole(demoCode.role);
     const { error: roleError } = await supabase
       .from("user_roles")
       .upsert({
@@ -304,4 +328,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

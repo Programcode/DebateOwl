@@ -14,12 +14,71 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   signInWithGoogle: (options?: { driveAccess?: boolean }) => Promise<void>;
+  signInWithEmailOtp: (email: string) => Promise<void>;
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
+  signInWithDemoCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_OPERATION_TIMEOUT_MS = 4000;
 const OAUTH_CODE_EXCHANGE_TIMEOUT_MS = 15_000;
+const DEMO_FINGERPRINT_STORAGE_KEY = 'debate-demo-browser-fingerprint';
+
+type DemoCodeHandoff = {
+  email: string;
+  tokenHash: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseDemoCodeHandoff(value: unknown): DemoCodeHandoff {
+  if (!isRecord(value) || typeof value.email !== 'string' || value.type !== 'magiclink') {
+    throw new Error('Demo sign-in returned an invalid session handoff.');
+  }
+
+  const tokenHash = typeof value.tokenHash === 'string'
+    ? value.tokenHash
+    : typeof value.token_hash === 'string'
+      ? value.token_hash
+      : '';
+  const email = value.email.trim();
+  if (!email || !tokenHash) throw new Error('Demo sign-in returned an invalid session handoff.');
+
+  return {
+    email,
+    tokenHash,
+  };
+}
+
+async function getFunctionError(error: unknown) {
+  if (isRecord(error) && error.context instanceof Response) {
+    try {
+      const body: unknown = await error.context.json();
+      if (isRecord(body) && typeof body.error === 'string' && body.error) return new Error(body.error);
+    } catch {
+      // Fall back to the SDK error below when the response is not JSON.
+    }
+  }
+  return error instanceof Error ? error : new Error('Demo sign-in failed.');
+}
+
+function getDemoBrowserFingerprint() {
+  try {
+    const existing = sessionStorage.getItem(DEMO_FINGERPRINT_STORAGE_KEY);
+    if (existing) return existing;
+
+    const fingerprint = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem(DEMO_FINGERPRINT_STORAGE_KEY, fingerprint);
+    return fingerprint;
+  } catch {
+    return 'unavailable';
+  }
+}
 
 class AuthTimeoutError extends Error {
   constructor(message: string) {
@@ -214,6 +273,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data?.url) throw new Error('Google sign-in could not start. Please try again.');
 
       await openExternalUrl(data.url);
+    },
+    signInWithEmailOtp: async (email) => {
+      const normalizedEmail = email.trim();
+      if (!normalizedEmail) throw new Error('Email is required.');
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: { shouldCreateUser: false },
+      });
+      if (error) throw error;
+    },
+    verifyEmailOtp: async (email, token) => {
+      const normalizedEmail = email.trim();
+      const normalizedToken = token.trim();
+      if (!normalizedEmail) throw new Error('Email is required.');
+      if (!normalizedToken) throw new Error('Verification code is required.');
+
+      const { error } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: normalizedToken,
+        type: 'email',
+      });
+      if (error) throw error;
+    },
+    signInWithDemoCode: async (code) => {
+      const normalizedCode = code.trim().toUpperCase().replace(/\s+/g, '');
+      if (!normalizedCode) throw new Error('Demo code is required.');
+
+      const { data, error } = await supabase.functions.invoke('demo-code-login', {
+        body: {
+          code: normalizedCode,
+          browserFingerprint: getDemoBrowserFingerprint(),
+        },
+      });
+      if (error) throw await getFunctionError(error);
+
+      const handoff = parseDemoCodeHandoff(data);
+      const { error: verificationError } = await supabase.auth.verifyOtp({
+        token_hash: handoff.tokenHash,
+        type: 'magiclink',
+      });
+      if (verificationError) throw verificationError;
     },
     signOut: async () => {
       await supabase.auth.signOut();
