@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
@@ -123,6 +123,36 @@ describe('AppLayout announcements', () => {
     });
 
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+  });
+
+  it('keeps all tool destinations reachable across desktop and mobile navigation', async () => {
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+
+    const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(mainNavigation).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/app');
+    for (const label of ['Generate', 'Attack', 'Ask', 'Crossfire', 'Sparring']) {
+      expect(within(mainNavigation).getByRole('link', { name: label })).toBeInTheDocument();
+    }
+    expect(within(mainNavigation).getByText('More')).toBeInTheDocument();
+    fireEvent.click(within(mainNavigation).getByText('More'));
+    for (const [label, path] of [
+      ['Brainstorm', '/app/brainstorm'],
+      ['Factoids', '/app/factoids'],
+      ['Flowchart', '/app/flowchart'],
+      ['Library', '/app/library'],
+      ['Timer', '/app/timer'],
+      ['History', '/app/history'],
+    ] as const) {
+      expect(within(mainNavigation).getByRole('link', { name: label })).toHaveAttribute('href', path);
+    }
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/app/settings');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    for (const label of ['Home', 'Generate', 'Attack', 'Brainstorm', 'Factoids', 'Ask', 'Crossfire', 'Library', 'Timer', 'Sparring', 'Flowchart', 'History']) {
+      expect(within(mobileNavigation).getByRole('link', { name: new RegExp(`^${label}`) })).toBeInTheDocument();
+    }
   });
 
   it('keeps the app usable when announcements fail to load', async () => {

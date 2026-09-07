@@ -87,6 +87,16 @@ describe('Pages', () => {
             expect(container.querySelector('[data-tour="mode-generate"]')).toBeInTheDocument();
             expect(container.querySelector('[data-tour="mode-flowchart"]')).toBeInTheDocument();
         });
+
+        it('groups the homepage tools without the old subtitle', () => {
+            renderWithRouter(<HomePage />, '/app');
+            expect(screen.getByRole('heading', { name: 'Prepare' })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Practice' })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Utilities' })).toBeInTheDocument();
+            expect(screen.queryByText('Choose a mode to start.')).not.toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /Generate/ })).toHaveAttribute('href', '/app/generate');
+            expect(screen.getByRole('link', { name: /History/ })).toHaveAttribute('href', '/app/history');
+        });
     });
 
     describe('NotFound', () => {
