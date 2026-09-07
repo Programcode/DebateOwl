@@ -23,10 +23,7 @@ function getCorsHeaders(origin: string | null) {
 }
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return Response.json(data, { status, headers: corsHeaders });
 }
 
 Deno.serve(async (req) => {

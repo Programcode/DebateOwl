@@ -33,10 +33,7 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 function jsonResponse(body: unknown, status: number, headers: Record<string, string>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...headers, "Content-Type": "application/json" },
-  });
+  return Response.json(body, { status, headers });
 }
 
 async function isUserBanned(userId: string): Promise<boolean> {
