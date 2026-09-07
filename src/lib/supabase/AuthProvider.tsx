@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { EmailOtpType, Session, User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -24,24 +24,18 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_OPERATION_TIMEOUT_MS = 4000;
 const OAUTH_CODE_EXCHANGE_TIMEOUT_MS = 15_000;
 const DEMO_FINGERPRINT_STORAGE_KEY = 'debate-demo-browser-fingerprint';
-const EMAIL_OTP_TYPES: EmailOtpType[] = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'];
 
 type DemoCodeHandoff = {
   email: string;
   tokenHash: string;
-  type: EmailOtpType;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isEmailOtpType(value: unknown): value is EmailOtpType {
-  return typeof value === 'string' && EMAIL_OTP_TYPES.some((type) => type === value);
-}
-
 function parseDemoCodeHandoff(value: unknown): DemoCodeHandoff {
-  if (!isRecord(value) || typeof value.email !== 'string') {
+  if (!isRecord(value) || typeof value.email !== 'string' || value.type !== 'magiclink') {
     throw new Error('Demo sign-in returned an invalid session handoff.');
   }
 
@@ -56,8 +50,19 @@ function parseDemoCodeHandoff(value: unknown): DemoCodeHandoff {
   return {
     email,
     tokenHash,
-    type: isEmailOtpType(value.type) ? value.type : 'email',
   };
+}
+
+async function getFunctionError(error: unknown) {
+  if (isRecord(error) && error.context instanceof Response) {
+    try {
+      const body: unknown = await error.context.json();
+      if (isRecord(body) && typeof body.error === 'string' && body.error) return new Error(body.error);
+    } catch {
+      // Fall back to the SDK error below when the response is not JSON.
+    }
+  }
+  return error instanceof Error ? error : new Error('Demo sign-in failed.');
 }
 
 function getDemoBrowserFingerprint() {
@@ -273,7 +278,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const normalizedEmail = email.trim();
       if (!normalizedEmail) throw new Error('Email is required.');
 
-      const { error } = await supabase.auth.signInWithOtp({ email: normalizedEmail });
+      const { error } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: { shouldCreateUser: false },
+      });
       if (error) throw error;
     },
     verifyEmailOtp: async (email, token) => {
@@ -290,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
     },
     signInWithDemoCode: async (code) => {
-      const normalizedCode = code.trim();
+      const normalizedCode = code.trim().toUpperCase().replace(/\s+/g, '');
       if (!normalizedCode) throw new Error('Demo code is required.');
 
       const { data, error } = await supabase.functions.invoke('demo-code-login', {
@@ -299,16 +307,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           browserFingerprint: getDemoBrowserFingerprint(),
         },
       });
-      if (error) throw error;
+      if (error) throw await getFunctionError(error);
 
       const handoff = parseDemoCodeHandoff(data);
-      // demo-code-login currently returns generateLink's hashed token and
-      // verification type. Supabase requires token_hash for magic links, while
-      // email OTPs use the email + token form.
-      const verification = handoff.type === 'email'
-        ? supabase.auth.verifyOtp({ email: handoff.email, token: handoff.tokenHash, type: 'email' })
-        : supabase.auth.verifyOtp({ token_hash: handoff.tokenHash, type: handoff.type });
-      const { error: verificationError } = await verification;
+      const { error: verificationError } = await supabase.auth.verifyOtp({
+        token_hash: handoff.tokenHash,
+        type: 'magiclink',
+      });
       if (verificationError) throw verificationError;
     },
     signOut: async () => {

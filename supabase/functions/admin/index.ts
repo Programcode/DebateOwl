@@ -6,7 +6,7 @@ import {
     validateAnnouncementId,
     validateCreateAnnouncement,
 } from "../_shared/announcements.ts";
-import { generateDemoCode, hashDemoCode } from "../_shared/demo-code.ts";
+import { generateDemoCode, hashDemoCode, isCreatableDemoRole } from "../_shared/demo-code.ts";
 
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
@@ -488,7 +488,7 @@ Deno.serve(async (req) => {
             }
             const label = typeof body.label === "string" ? body.label.trim() : "";
             const requestedEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-            const role = body.role || "user";
+            const role = body.role ?? "user";
             const rawMaxUses = body.maxUses;
             const rawExpiresAt = body.expiresAt;
 
@@ -506,10 +506,9 @@ Deno.serve(async (req) => {
                 });
             }
 
-            // Demo codes can never provision an admin account. Admin access is
-            // assigned through user_roles by a separate admin-only action.
-            if (!["user", "banned"].includes(role)) {
-                return new Response(JSON.stringify({ error: "Demo codes may only use user or banned roles" }), {
+            // Self-service demo codes always provision an ordinary user.
+            if (!isCreatableDemoRole(role)) {
+                return new Response(JSON.stringify({ error: "Demo codes may only use the user role" }), {
                     status: 400,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });

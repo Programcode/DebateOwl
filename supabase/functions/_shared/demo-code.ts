@@ -9,6 +9,31 @@ export type DemoCodeState = {
 
 export type DemoCodeDenialReason = "disabled" | "expired" | "max_uses" | null;
 
+export function isCreatableDemoRole(role: unknown): role is "user" {
+  return role === "user";
+}
+
+export function getDemoLoginRole(role: unknown): "user" | "banned" {
+  return role === "banned" ? "banned" : "user";
+}
+
+export function normalizeDemoCode(value: unknown) {
+  return String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+}
+
+export function isValidDemoCode(code: string) {
+  return /^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code);
+}
+
+export function isDemoCodeRateLimited(failedAttemptCounts: number[]) {
+  return failedAttemptCounts.some((count) => count >= 10);
+}
+
+export function isDemoUserForCode(metadata: unknown, codeId: string) {
+  return typeof metadata === "object" && metadata !== null && !Array.isArray(metadata) &&
+    "demo_access_code_id" in metadata && metadata.demo_access_code_id === codeId;
+}
+
 export function generateDemoCode() {
   const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);

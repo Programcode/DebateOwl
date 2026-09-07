@@ -137,12 +137,14 @@ function AuthConsumer() {
 
 function PasswordlessAuthConsumer() {
   const { signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode } = useAuth();
+  const [error, setError] = useState('');
 
   return (
     <div>
       <button onClick={() => void signInWithEmailOtp(' student@example.com ')} type="button">email-otp</button>
       <button onClick={() => void verifyEmailOtp(' student@example.com ', ' 123456 ')} type="button">verify-email-otp</button>
-      <button onClick={() => void signInWithDemoCode(' DEMO-AB12-CD34 ')} type="button">demo-code</button>
+      <button onClick={() => void signInWithDemoCode(' DEMO-AB12-CD34 ').catch((reason: Error) => setError(reason.message))} type="button">demo-code</button>
+      <span data-testid="passwordless-error">{error}</span>
     </div>
   );
 }
@@ -424,7 +426,10 @@ describe('AuthProvider behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: 'email-otp' }));
 
     await waitFor(() => {
-      expect(signInWithOtpMock).toHaveBeenCalledWith({ email: 'student@example.com' });
+      expect(signInWithOtpMock).toHaveBeenCalledWith({
+        email: 'student@example.com',
+        options: { shouldCreateUser: false },
+      });
     });
   });
 
@@ -467,6 +472,35 @@ describe('AuthProvider behavior', () => {
         type: 'magiclink',
       });
     });
+  });
+
+  it('surfaces a demo-code denial returned by the Edge Function', async () => {
+    functionsInvokeMock.mockResolvedValue({
+      data: null,
+      error: { context: new Response(JSON.stringify({ error: 'This demo code has expired.' })) },
+    });
+    render(
+      <AuthProvider>
+        <PasswordlessAuthConsumer />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'demo-code' }));
+
+    await waitFor(() => expect(screen.getByTestId('passwordless-error')).toHaveTextContent('This demo code has expired.'));
+  });
+
+  it('rejects an invalid demo-code session handoff', async () => {
+    functionsInvokeMock.mockResolvedValue({ data: { tokenHash: 'hash', type: 'magiclink' }, error: null });
+    render(
+      <AuthProvider>
+        <PasswordlessAuthConsumer />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'demo-code' }));
+
+    await waitFor(() => expect(screen.getByTestId('passwordless-error')).toHaveTextContent('invalid session handoff'));
   });
 
   it('exchanges PKCE codes from the callback URL and clears the query string', async () => {

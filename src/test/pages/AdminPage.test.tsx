@@ -423,14 +423,16 @@ describe('AdminPage Integration', () => {
         await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument());
         fireEvent.mouseDown(screen.getByRole('tab', { name: 'Demo access' }), { button: 0 });
         fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'September school demo' } });
+        fireEvent.change(screen.getByLabelText('Assigned email (optional)'), { target: { value: 'school@example.com' } });
         fireEvent.change(screen.getByLabelText('Expiry (optional)'), { target: { value: '2026-09-30T12:00' } });
         fireEvent.change(screen.getByLabelText('Max uses (optional)'), { target: { value: '4' } });
         fireEvent.click(screen.getByRole('button', { name: 'Create demo code' }));
 
         await waitFor(() => expect(createdBody.label).toBe('September school demo'));
+        expect(createdBody.email).toBe('school@example.com');
         expect(createdBody.expiresAt).toBe('2026-09-30T12:00:00.000Z');
         expect(createdBody.maxUses).toBe(4);
-        expect(createdBody.role).toBe('user');
+        expect(createdBody.role).toBeUndefined();
         expect(screen.getByText('DEMO-7KQ4-MV9P')).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));

@@ -1,5 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getDemoCodeDenialReason, hashDemoCode } from "../_shared/demo-code.ts";
+import {
+  getDemoCodeDenialReason,
+  getDemoLoginRole,
+  hashDemoCode,
+  isDemoCodeRateLimited,
+  isDemoUserForCode,
+  isValidDemoCode,
+  normalizeDemoCode,
+} from "../_shared/demo-code.ts";
 
 const ALLOWED_ORIGINS = [
   "https://debate.pi-stack.org",
@@ -34,10 +42,6 @@ function getCorsHeaders(origin: string | null) {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
-}
-
-function normalizeCode(value: unknown) {
-  return String(value || "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
 // Only hand generateLink a redirectTo that points at one of our own origins,
@@ -115,7 +119,7 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
 
   if (checks.length === 0) return false;
   const counts = await Promise.all(checks);
-  return counts.some((count) => count >= 10);
+  return isDemoCodeRateLimited(counts);
 }
 
 async function findUserByEmail(email: string) {
@@ -146,7 +150,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const code = normalizeCode(body.code);
+    const code = normalizeDemoCode(body.code);
     const browserFingerprint = String(body.browserFingerprint || "").slice(0, 256) || null;
 
     if (await isRateLimited(ipAddress, browserFingerprint)) {
@@ -157,7 +161,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!/^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
+    if (!isValidDemoCode(code)) {
       await recordAttempt({ ipAddress, browserFingerprint, success: false, failureReason: "invalid_format" });
       return new Response(JSON.stringify({ error: "Enter a valid demo code." }), {
         status: 400,
@@ -207,10 +211,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Reserve the use atomically, and before touching the user's account, so a
-    // stale read plus an ordinary update can't let concurrent requests
-    // oversubscribe max_uses, and a declined/raced reservation never leaves
-    // behind a provisioned (pro-tier) account for a code that wasn't granted.
+    const existingUser = await findUserByEmail(demoCode.email);
+    if (existingUser && !isDemoUserForCode(existingUser.user_metadata, demoCode.id)) {
+      await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "email_conflict" });
+      return new Response(JSON.stringify({ error: "This demo code cannot be used." }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Reserve the use atomically before creating or changing the demo account.
     const { data: reservation, error: reservationError } = await supabase.rpc("consume_demo_access_code", {
       p_code_id: demoCode.id,
     });
@@ -224,7 +234,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const existingUser = await findUserByEmail(demoCode.email);
     const userResult = existingUser
       ? { user: existingUser }
       : (await supabase.auth.admin.createUser({
@@ -241,7 +250,7 @@ Deno.serve(async (req) => {
     // Never let a demo code grant admin: the schema allows demo_access_codes.role
     // to be "admin", but self-service demo sign-in must not be a privilege
     // escalation path. Admin status is granted separately, not through this flow.
-    const grantedRole = demoCode.role === "banned" ? "banned" : "user";
+    const grantedRole = getDemoLoginRole(demoCode.role);
     const { error: roleError } = await supabase
       .from("user_roles")
       .upsert({

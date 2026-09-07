@@ -1,5 +1,8 @@
+import { getDemoLoginRole, isCreatableDemoRole } from "../_shared/demo-code.ts";
+
 Deno.test("admin exposes the demo-code lifecycle contract", async () => {
   const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  const loginSource = await Deno.readTextFile(new URL("../demo-code-login/index.ts", import.meta.url));
 
   for (const action of ["demo-codes", "create-demo-code", "disable-demo-code", "reset-demo-code"]) {
     if (!source.includes(`action === "${action}"`)) {
@@ -16,7 +19,19 @@ Deno.test("admin exposes the demo-code lifecycle contract", async () => {
   if (source.includes("rawCode.replaceAll")) {
     throw new Error("the assigned email must not reveal or derive the raw code");
   }
-  if (source.includes('["user", "admin", "banned"].includes(role)')) {
-    throw new Error("admin role cannot be assigned through a demo code");
+  if (!loginSource.includes("isDemoUserForCode") || !loginSource.includes("email_conflict")) {
+    throw new Error("demo login must not reuse an unrelated existing account");
+  }
+});
+
+Deno.test("create-demo-code only accepts the user role", () => {
+  if (!isCreatableDemoRole("user") || isCreatableDemoRole("admin") || isCreatableDemoRole("banned")) {
+    throw new Error("demo codes must create ordinary users");
+  }
+});
+
+Deno.test("demo-code login downgrades legacy admin rows", () => {
+  if (getDemoLoginRole("admin") !== "user") {
+    throw new Error("legacy admin-valued demo codes must grant user access");
   }
 });

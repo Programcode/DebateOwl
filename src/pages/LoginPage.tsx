@@ -13,6 +13,9 @@ import { useToast } from '@/hooks/use-toast';
 type AuthMode = 'email' | 'demo';
 type AuthStatus = 'idle' | 'submitting' | 'code-sent' | 'verifying' | 'success' | 'error';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEMO_CODE_PATTERN = /^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+
 function isAuthMode(value: string): value is AuthMode {
   return value === 'email' || value === 'demo';
 }
@@ -24,6 +27,7 @@ export default function LoginPage() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   const [demoCode, setDemoCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const otpInputRef = useRef<HTMLInputElement>(null);
@@ -59,14 +63,16 @@ export default function LoginPage() {
     setAuthMode(mode);
     setAuthStatus('idle');
     setErrorMessage('');
+    setOtp('');
+    setEmailSent(false);
   };
 
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedEmail = email.trim();
-    if (!normalizedEmail) {
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
       setAuthStatus('error');
-      setErrorMessage(t('login.requiredEmail', 'Enter your email address.'));
+      setErrorMessage(t('login.invalidEmail', 'Enter a valid email address.'));
       return;
     }
 
@@ -75,6 +81,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailOtp(normalizedEmail);
       setOtp('');
+      setEmailSent(true);
       setAuthStatus('code-sent');
     } catch (error) {
       setAuthStatus('error');
@@ -86,9 +93,9 @@ export default function LoginPage() {
     event.preventDefault();
     const normalizedEmail = email.trim();
     const normalizedOtp = otp.trim();
-    if (!normalizedOtp) {
+    if (!/^\d{6}$/.test(normalizedOtp)) {
       setAuthStatus('error');
-      setErrorMessage(t('login.requiredOtp', 'Enter the verification code.'));
+      setErrorMessage(t('login.invalidCode', 'Enter a valid six-digit code.'));
       return;
     }
 
@@ -103,12 +110,25 @@ export default function LoginPage() {
     }
   };
 
+  const handleResend = async () => {
+    setErrorMessage('');
+    setAuthStatus('submitting');
+    try {
+      await signInWithEmailOtp(email.trim());
+      setOtp('');
+      setAuthStatus('code-sent');
+    } catch (error) {
+      setAuthStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : t('login.emailOtpError', 'Could not send code.'));
+    }
+  };
+
   const handleDemoSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const normalizedCode = demoCode.trim();
-    if (!normalizedCode) {
+    const normalizedCode = demoCode.trim().toUpperCase().replace(/\s+/g, '');
+    if (!DEMO_CODE_PATTERN.test(normalizedCode)) {
       setAuthStatus('error');
-      setErrorMessage(t('login.requiredDemoCode', 'Enter your demo code.'));
+      setErrorMessage(t('login.invalidDemoCode', 'Enter a valid demo code.'));
       return;
     }
 
@@ -156,7 +176,7 @@ export default function LoginPage() {
               <TabsTrigger value="demo" disabled={isSubmitting}>{t('login.demoTab', 'Demo code')}</TabsTrigger>
             </TabsList>
             <TabsContent value="email">
-              {authStatus === 'code-sent' || authStatus === 'verifying' || ((authStatus === 'error' || authStatus === 'success') && otp.length > 0) ? (
+              {emailSent ? (
                 <form onSubmit={(event) => void handleOtpSubmit(event)} className="space-y-4" aria-busy={authStatus === 'verifying'}>
                   <div className="space-y-2">
                     <Label htmlFor="login-otp">{t('login.otpLabel', 'Verification code')}</Label>
@@ -167,7 +187,9 @@ export default function LoginPage() {
                       type="text"
                       inputMode="numeric"
                       autoComplete="one-time-code"
+                      placeholder={t('login.verificationCodePlaceholder', '123456')}
                       pattern="[0-9]*"
+                      maxLength={6}
                       value={otp}
                       onChange={(event) => setOtp(event.target.value)}
                       aria-describedby="login-otp-hint"
@@ -184,6 +206,9 @@ export default function LoginPage() {
                   <Button type="button" variant="ghost" className="w-full" onClick={() => resetAuthState('email')} disabled={isSubmitting}>
                     {t('login.useDifferentEmail', 'Use a different email')}
                   </Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => void handleResend()} disabled={isSubmitting || authStatus === 'success'}>
+                    {authStatus === 'submitting' ? t('login.resendingCode', 'Resending code...') : t('login.resendCode', 'Resend code')}
+                  </Button>
                 </form>
               ) : (
                 <form onSubmit={(event) => void handleEmailSubmit(event)} className="space-y-4" aria-busy={authStatus === 'submitting'}>
@@ -193,7 +218,9 @@ export default function LoginPage() {
                       id="login-email"
                       name="email"
                       type="email"
+                      maxLength={254}
                       autoComplete="email"
+                      placeholder={t('login.emailPlaceholder', 'you@example.com')}
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       aria-describedby="login-email-hint"
@@ -218,6 +245,8 @@ export default function LoginPage() {
                     name="demoCode"
                     type="text"
                     autoComplete="off"
+                    placeholder={t('login.demoCodePlaceholder', 'DEMO-AB12-CD34')}
+                    maxLength={14}
                     value={demoCode}
                     onChange={(event) => setDemoCode(event.target.value)}
                     aria-describedby="login-demo-code-hint"

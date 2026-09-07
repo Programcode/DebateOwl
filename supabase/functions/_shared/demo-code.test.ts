@@ -1,4 +1,11 @@
-import { generateDemoCode, getDemoCodeDenialReason } from "./demo-code.ts";
+import {
+  generateDemoCode,
+  getDemoCodeDenialReason,
+  isDemoCodeRateLimited,
+  isDemoUserForCode,
+  isValidDemoCode,
+  normalizeDemoCode,
+} from "./demo-code.ts";
 
 Deno.test("generated demo codes use the login format", () => {
   const code = generateDemoCode();
@@ -22,4 +29,24 @@ Deno.test("disabled demo codes are denied", () => {
 Deno.test("demo codes at their max use count are denied", () => {
   const reason = getDemoCodeDenialReason({ ...validCode, use_count: 3 });
   if (reason !== "max_uses") throw new Error(`expected max_uses, got ${reason}`);
+});
+
+Deno.test("demo code input is normalized and invalid formats are rejected", () => {
+  if (normalizeDemoCode(" demo-ab12-cd34 ") !== "DEMO-AB12-CD34") throw new Error("normalization failed");
+  if (!isValidDemoCode("DEMO-AB12-CD34") || isValidDemoCode("DEMO-ADMIN")) {
+    throw new Error("format validation failed");
+  }
+});
+
+Deno.test("ten failed attempts trigger rate limiting", () => {
+  if (isDemoCodeRateLimited([9]) || !isDemoCodeRateLimited([2, 10])) {
+    throw new Error("rate-limit threshold failed");
+  }
+});
+
+Deno.test("existing users must belong to the same demo code", () => {
+  if (!isDemoUserForCode({ demo_access_code_id: "code-1" }, "code-1")) throw new Error("matching demo user rejected");
+  if (isDemoUserForCode({}, "code-1") || isDemoUserForCode({ demo_access_code_id: "code-2" }, "code-1")) {
+    throw new Error("unrelated existing user accepted");
+  }
 });
