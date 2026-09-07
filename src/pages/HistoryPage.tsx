@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell } from 'lucide-react';
@@ -98,9 +98,6 @@ export default function HistoryPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('historyPage.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('historyPage.subtitle')}
-          </p>
         </div>
 
         <Tabs defaultValue="cases" className="space-y-6">
@@ -117,7 +114,6 @@ export default function HistoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('historyPage.casesTitle')}</CardTitle>
-                <CardDescription>{t('historyPage.casesDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {(store.autosavedCases?.length ?? 0) > 0 && (
@@ -173,7 +169,6 @@ export default function HistoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('historyPage.chatsTitle')}</CardTitle>
-                <CardDescription>{t('historyPage.chatsDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {store.savedChats.length === 0 ? (
@@ -201,7 +196,6 @@ export default function HistoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('historyPage.attacksTitle')}</CardTitle>
-                <CardDescription>{t('historyPage.attacksDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {store.savedAttacks.length === 0 ? (
@@ -232,7 +226,6 @@ export default function HistoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('historyPage.brainstormsTitle')}</CardTitle>
-                <CardDescription>{t('historyPage.brainstormsDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {store.savedBrainstorms.length === 0 ? (
@@ -263,7 +256,6 @@ export default function HistoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('historyPage.factoidsTitle')}</CardTitle>
-                <CardDescription>{t('historyPage.factoidsDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {store.savedFactoids.length === 0 ? (
@@ -294,7 +286,6 @@ export default function HistoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('historyPage.sparringTitle')}</CardTitle>
-                <CardDescription>{t('historyPage.sparringDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {sparringSessions.length === 0 ? (

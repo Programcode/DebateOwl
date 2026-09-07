@@ -5,7 +5,7 @@ const SocialProof = () => {
     const { t } = useTranslation();
 
     const proofItems = [
-        { value: "9", label: t('socialProof.modes') },
+        { value: "11", label: t('socialProof.modes') },
         { value: "2", label: t('socialProof.plans') },
         { value: "3", label: t('socialProof.upgrades') },
         { value: "1", label: t('socialProof.workspace') },

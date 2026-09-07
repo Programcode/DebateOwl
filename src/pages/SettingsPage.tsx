@@ -141,9 +141,6 @@ export default function SettingsPage() {
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
           </div>
-          <p className="text-muted-foreground">
-            {t('settings.subtitle')}
-          </p>
         </div>
 
         {/* Subscription Status */}
@@ -153,9 +150,6 @@ export default function SettingsPage() {
               <Crown className="h-5 w-5 text-amber-500" />
               <CardTitle>{t('settings.subscription')}</CardTitle>
             </div>
-            <CardDescription>
-              {t('settings.subscriptionDesc')}
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -213,7 +207,6 @@ export default function SettingsPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>{t('settings.globalSettings')}</CardTitle>
-            <CardDescription>{t('settings.globalSettingsDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">

@@ -8,6 +8,8 @@ import {
     Search,
     Database,
     MessageCircle,
+    Crosshair,
+    Dumbbell,
     Timer,
     GitBranch,
 } from "lucide-react";
@@ -21,6 +23,8 @@ const Features = () => {
         { icon: Brain, title: t('features.brainstorm'), description: t('features.brainstormDesc') },
         { icon: Search, title: t('features.factoids'), description: t('features.factoidsDesc') },
         { icon: MessageCircle, title: t('features.ask'), description: t('features.askDesc') },
+        { icon: Crosshair, title: t('features.crossfire'), description: t('features.crossfireDesc') },
+        { icon: Dumbbell, title: t('features.sparring'), description: t('features.sparringDesc') },
         { icon: Database, title: t('features.library'), description: t('features.libraryDesc') },
         { icon: Timer, title: t('features.timer'), description: t('features.timerDesc') },
         { icon: GitBranch, title: t('features.flowchart'), description: t('features.flowchartDesc') },

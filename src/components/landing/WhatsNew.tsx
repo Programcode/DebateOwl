@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Crown, GitBranch, Timer, History, Sparkles } from "lucide-react";
+import { Crown, GitBranch, Timer, History, Sparkles, Crosshair, Dumbbell } from "lucide-react";
 
 const WhatsNew = () => {
     const { t } = useTranslation();
@@ -10,6 +10,8 @@ const WhatsNew = () => {
         { icon: GitBranch, title: t('whatsNew.sub2Title'), description: t('whatsNew.sub2Desc'), badge: t('whatsNew.sub2Badge') },
         { icon: Timer, title: t('whatsNew.sub3Title'), description: t('whatsNew.sub3Desc'), badge: t('whatsNew.sub3Badge') },
         { icon: History, title: t('whatsNew.sub4Title'), description: t('whatsNew.sub4Desc'), badge: t('whatsNew.sub4Badge') },
+        { icon: Crosshair, title: t('whatsNew.sub5Title'), description: t('whatsNew.sub5Desc'), badge: t('whatsNew.sub5Badge') },
+        { icon: Dumbbell, title: t('whatsNew.sub6Title'), description: t('whatsNew.sub6Desc'), badge: t('whatsNew.sub6Badge') },
     ];
 
     return (
