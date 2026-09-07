@@ -406,7 +406,12 @@ export async function handleRequest(req: Request): Promise<Response> {
       };
 
       const upstreamAbort = new AbortController();
-      const clientAbortHandler = () => upstreamAbort.abort();
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      const cancelUpstream = () => {
+        upstreamAbort.abort();
+        void reader?.cancel().catch(() => undefined);
+      };
+      const clientAbortHandler = cancelUpstream;
       req.signal.addEventListener("abort", clientAbortHandler);
 
       try {
@@ -431,7 +436,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
         if (!response.ok || !response.body) throw new Error(await response.text() || `OpenRouter ${response.status}`);
 
-        const reader = response.body.getReader();
+        reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         const processLine = (line: string) => {
@@ -468,10 +473,19 @@ export async function handleRequest(req: Request): Promise<Response> {
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
-          for (const line of lines) processLine(line);
+          for (const line of lines) {
+            processLine(line);
+            if (streamSawDone) break;
+          }
+          if (streamSawDone) break;
         }
-        buffer += decoder.decode();
-        for (const line of buffer.split("\n")) processLine(line);
+        if (!streamSawDone) {
+          buffer += decoder.decode();
+          for (const line of buffer.split("\n")) {
+            processLine(line);
+            if (streamSawDone) break;
+          }
+        }
 
         if (!streamSawDone && !streamSawFinishReason) {
           throw new Error("OpenRouter stream ended before completion");
@@ -493,6 +507,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         await logUsage(user.id, OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         streamIncomplete = true;
+        cancelUpstream();
         const errorMessage = err instanceof Error ? err.message : "Streaming failed";
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
         if (!isAbort) {
@@ -509,6 +524,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         );
       } finally {
         req.signal.removeEventListener("abort", clientAbortHandler);
+        cancelUpstream();
+        try { await reader?.cancel(); } catch { /* already closed */ }
+        reader?.releaseLock();
         try { controller.close(); } catch { /* already closed */ }
       }
     },

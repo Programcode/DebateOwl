@@ -637,3 +637,87 @@ Deno.test("cancelled JSON repair keeps observed tokens but makes the total cost 
     else testState.__testTier = originalTier;
   }
 });
+
+Deno.test("stream terminal events stop an open upstream promptly", async () => {
+  const originalFetch = globalThis.fetch;
+  const usageRows: Array<Record<string, unknown>> = [];
+  const encoder = new TextEncoder();
+  let scenario: "done" | "error" = "done";
+  let upstreamCancelled: Promise<void> = Promise.resolve();
+  let resolveUpstreamCancelled = () => {};
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) {
+      if (url.pathname.includes("/rest/v1/ai_requests")) usageRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return supabaseResponse;
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      upstreamCancelled = new Promise<void>((resolve) => resolveUpstreamCancelled = resolve);
+      const payload = scenario === "done"
+        ? [
+          `data: ${JSON.stringify({ choices: [{ delta: { content: "complete" } }] })}\n\n`,
+          `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 2, completion_tokens: 1, cost: 0.25 } })}\n\n`,
+          "data: [DONE]\n\n",
+        ].join("")
+        : `data: ${JSON.stringify({ error: { message: "provider exploded" } })}\n\n`;
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode(payload));
+          init?.signal?.addEventListener("abort", () => {
+            resolveUpstreamCancelled();
+            controller.error(new DOMException("Upstream aborted", "AbortError"));
+          }, { once: true });
+        },
+        pull() {
+          return new Promise<void>(() => {});
+        },
+        cancel() {
+          resolveUpstreamCancelled();
+        },
+      });
+      return new Response(body, { headers: { "Content-Type": "text/event-stream" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  const request = (signal?: AbortSignal) => new Request("http://127.0.0.1/functions/v1/ai-stream", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    signal,
+  });
+  const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), 100)),
+  ]);
+
+  const testState = globalThis as typeof globalThis & { __testTier?: string };
+  const originalTier = testState.__testTier;
+  testState.__testTier = "trial";
+  try {
+    const doneCaller = new AbortController();
+    const doneRead = (await handleStreamRequest(request(doneCaller.signal))).text();
+    let doneText: string;
+    try {
+      doneText = await withTimeout(doneRead, "DONE stream");
+    } catch (error) {
+      doneCaller.abort();
+      await doneRead;
+      throw error;
+    }
+    if (!doneText.includes("event: final") || doneText.includes("event: error")) throw new Error(`DONE stream did not succeed: ${doneText}`);
+    await withTimeout(upstreamCancelled, "DONE upstream cancellation");
+    if (usageRows.at(-1)?.cost_usd !== 0.25) throw new Error("complete DONE stream lost its reported cost");
+
+    scenario = "error";
+    const errorText = await withTimeout((await handleStreamRequest(request())).text(), "error stream");
+    if (errorText.includes("event: final") || !errorText.includes("provider exploded")) throw new Error(`provider error was not emitted: ${errorText}`);
+    await withTimeout(upstreamCancelled, "error upstream cancellation");
+    if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalTier === undefined) delete testState.__testTier;
+    else testState.__testTier = originalTier;
+  }
+});
