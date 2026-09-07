@@ -415,7 +415,7 @@ describe('AdminPage Integration', () => {
         });
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <AdminPage />
             </BrowserRouter>
         );
@@ -482,7 +482,7 @@ describe('AdminPage Integration', () => {
         });
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <AdminPage />
             </BrowserRouter>
         );
