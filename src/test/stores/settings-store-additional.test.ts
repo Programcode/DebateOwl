@@ -42,10 +42,10 @@ describe('settings-store additional branches', () => {
   });
 
   it('setFeatureConfig merges correctly', () => {
-    useSettingsStore.getState().setFeatureConfig('generate', { model: 'gpt-5.5', provider: 'openai' });
+    useSettingsStore.getState().setFeatureConfig('generate', { model: 'anthropic/claude-sonnet-5', provider: 'openrouter' });
     const config = useSettingsStore.getState().featureConfigs.generate;
-    expect(config.model).toBe('gpt-5.5');
-    expect(config.provider).toBe('openai');
+    expect(config.model).toBe('anthropic/claude-sonnet-5');
+    expect(config.provider).toBe('openrouter');
     expect(config.temperature).toBe(0.7);
   });
 
@@ -57,15 +57,15 @@ describe('settings-store additional branches', () => {
 
   it('getFeatureConfig returns config for known feature', () => {
     const config = useSettingsStore.getState().getFeatureConfig('generate');
-    expect(config.provider).toBe('google');
-    expect(config.model).toBe('gemini-3-flash-preview');
+    expect(config.provider).toBe('openrouter');
+    expect(config.model).toBe('openai/gpt-5.6-luna');
   });
 
   it('getFeatureConfig returns defaults for unknown feature', () => {
     useSettingsStore.setState({ featureConfigs: {} as any });
     const config = useSettingsStore.getState().getFeatureConfig('generate');
     expect(config).toBeDefined();
-    expect(config.provider).toBe('google');
+    expect(config.provider).toBe('openrouter');
   });
 
   it('resetLocalData resets language', () => {
@@ -81,9 +81,9 @@ describe('settings-store additional branches', () => {
   });
 
   it('resetLocalData resets featureConfigs', () => {
-    useSettingsStore.getState().setFeatureConfig('generate', { model: 'gpt-5.5' });
+    useSettingsStore.getState().setFeatureConfig('generate', { model: 'openai/gpt-5.6-terra' });
     useSettingsStore.getState().resetLocalData();
-    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe('gemini-3-flash-preview');
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe('openai/gpt-5.6-luna');
   });
 
   it('resetLocalData resets customSystemPrompt', () => {

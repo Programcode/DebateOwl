@@ -38,7 +38,7 @@ describe('settings-store branch coverage', () => {
     expect(state.language).toBe('en');
     expect(state.theme).toBe('system');
     expect(state.customSystemPrompt).toBeUndefined();
-    expect(state.featureConfigs.generate.model).toBe('gemini-3-flash-preview');
+    expect(state.featureConfigs.generate.model).toBe('openai/gpt-5.6-luna');
   });
 
   it('normalizes persisted state in onRehydrateStorage callback', () => {
@@ -61,5 +61,35 @@ describe('settings-store branch coverage', () => {
     expect(partialState.language).toBe('en');
     expect(partialState.theme).toBe('system');
     expect(partialState.wikiResearchEnabled).toBe(false);
+  });
+
+  it('canonicalizes legacy local configs and removes client credentials', () => {
+    const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
+
+    const partialState = {
+      featureConfigs: {
+        generate: {
+          provider: 'google',
+          model: 'gemini-3-flash-preview',
+          temperature: 0.3,
+          reasoningEffort: 'medium',
+          apiKey: 'legacy-secret',
+          baseUrl: 'https://legacy.example.test',
+        },
+      },
+    } as any;
+
+    afterRehydrate(partialState);
+
+    expect(partialState.featureConfigs.generate).toMatchObject({
+      provider: 'openrouter',
+      model: 'google/gemini-3.8-flash',
+      temperature: 0.3,
+      reasoningEffort: 'medium',
+    });
+    expect(partialState.featureConfigs.generate).not.toHaveProperty('apiKey');
+    expect(partialState.featureConfigs.generate).not.toHaveProperty('baseUrl');
   });
 });

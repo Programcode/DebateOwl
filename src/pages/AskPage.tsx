@@ -215,7 +215,7 @@ export default function AskPage() {
         output: {
           ...result,
           model: result.model || config.model,
-          provider: result.provider || (config.provider === 'lovable' ? 'openai' : config.provider),
+          provider: result.provider || (config.provider === 'mock' ? 'mock' : 'openrouter'),
           durationMs: result.durationMs || Date.now() - askStartTime,
           generatedAt: result.generatedAt || new Date().toISOString(),
         }

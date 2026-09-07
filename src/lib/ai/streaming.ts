@@ -24,7 +24,6 @@ export type ParsedSSEEvent = {
 };
 
 export function isAskStreamingSupported(config: ProviderConfig, options: AskStreamOptions = {}) {
-  const provider = config.provider === 'lovable' ? 'openai' : config.provider;
   const advancedStructuredMode = Boolean(
     (options.mode ?? 'general') !== 'general' ||
     options.citationMode ||
@@ -33,7 +32,7 @@ export function isAskStreamingSupported(config: ProviderConfig, options: AskStre
     options.argumentMapMode
   );
 
-  return !advancedStructuredMode && ['openai', 'google', 'anthropic'].includes(provider);
+  return !advancedStructuredMode && config.provider === 'openrouter';
 }
 
 function parseEventBlock(block: string): ParsedSSEEvent | null {
@@ -115,7 +114,7 @@ export async function streamAskChat(
   options: AskStreamOptions,
   handlers: AskStreamHandlers
 ): Promise<AskOutput> {
-  const provider = config.provider === 'lovable' ? 'openai' : config.provider;
+  const provider = config.provider === 'mock' ? 'mock' : 'openrouter';
   const requestId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const startTime = performance.now();
   captureProductEvent('ai_request_started', {
@@ -203,6 +202,7 @@ export async function streamAskChat(
         provider,
         model: config.model,
         temperature: config.temperature,
+        reasoningEffort: config.reasoningEffort ?? 'low',
       }),
       signal: controller.signal,
     });

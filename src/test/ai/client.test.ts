@@ -41,7 +41,7 @@ vi.mock('@/lib/stores/session-store', () => ({
 
 describe('AI Client Integration', () => {
     const mockConfig: ProviderConfig = {
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-4o',
         temperature: 0.8,
     };
@@ -99,7 +99,7 @@ describe('AI Client Integration', () => {
                 headers: { Authorization: expect.stringContaining('Bearer') },
                 body: expect.objectContaining({
                     feature: 'generate',
-                    provider: 'openai',
+                    provider: 'openrouter',
                     model: 'gpt-4o',
                     temperature: 0.8,
                     input: expect.objectContaining(input),
@@ -115,7 +115,41 @@ describe('AI Client Integration', () => {
             expect(callArgs.body.sources).toHaveLength(1);
         });
 
-        it('should use "openai" provider when "lovable" is selected (legacy mapping)', async () => {
+        it('sends the configured reasoning effort in the non-streaming request', async () => {
+            const mockResponse: { output: GenerateOutput } = {
+                output: {
+                    caseStructure: {
+                        thesis: 'Test Thesis',
+                        framework: 'Framework',
+                        keyDefinitions: [],
+                        burdenOfProof: 'Burden',
+                    },
+                    contentions: [
+                        { id: '1', claim: 'Claim 1', reasoning: 'Reasoning 1', evidence: 'Evidence 1', needsSource: false, impact: 'Impact 1' },
+                        { id: '2', claim: 'Claim 2', reasoning: 'Reasoning 2', evidence: 'Evidence 2', needsSource: false, impact: 'Impact 2' },
+                    ],
+                    predictedOpponentCase: {
+                        likelyArguments: [],
+                        strategicWeaknesses: [],
+                        keyClashes: [],
+                    },
+                    counters: [],
+                    metadata: { side: 'pro', format: 'bp', generatedAt: '2026-01-01T00:00:00.000Z' },
+                },
+            };
+            setMockInvokeResponse(mockResponse);
+
+            await generateCase(
+                { motion: 'Test Motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'advanced', tone: 'formal' },
+                { ...mockConfig, reasoningEffort: 'high' },
+            );
+
+            expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
+                body: expect.objectContaining({ reasoningEffort: 'high' }),
+            }));
+        });
+
+        it('canonicalizes legacy providers to OpenRouter', async () => {
             const lovableConfig: ProviderConfig = { ...mockConfig, provider: 'lovable' };
             // Mock response
             const mockResponse: { output: GenerateOutput } = {
@@ -145,7 +179,7 @@ describe('AI Client Integration', () => {
 
             expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
                 body: expect.objectContaining({
-                    provider: 'openai' // Should be mapped
+                    provider: 'openrouter'
                 })
             }));
         });
@@ -251,7 +285,7 @@ describe('AI Client Integration', () => {
             expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
                 body: expect.objectContaining({
                     feature: 'attack',
-                    provider: 'openai',
+                    provider: 'openrouter',
                     model: 'gpt-4o',
                     input: expect.objectContaining(input),
                 })

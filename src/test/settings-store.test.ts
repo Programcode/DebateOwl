@@ -21,6 +21,7 @@ describe("settings-store", () => {
     const state = useSettingsStore.getState();
     expect(state.featureConfigs.generate.provider).toBe("openrouter");
     expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.generate.reasoningEffort).toBe("low");
     expect(state.featureConfigs.brainstorm.temperature).toBe(0.9);
     expect(state.featureConfigs.factoids.temperature).toBe(0.3);
   });
@@ -115,6 +116,46 @@ describe("settings-store", () => {
     const config = useSettingsStore.getState().getFeatureConfig("ask");
     expect(config.provider).toBe("openrouter");
     expect(config.model).toBe("z-ai/glm-5.3-flash");
+  });
+
+  it("canonicalizes legacy and unknown server configs without client credentials", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        feature_configs: {
+          generate: {
+            provider: "openai",
+            model: "gpt-5.5",
+            temperature: 0.4,
+            reasoningEffort: "high",
+            apiKey: "legacy-secret",
+            baseUrl: "https://legacy.example.test",
+          },
+          attack: {
+            provider: "unknown-provider",
+            model: "unknown-model",
+            temperature: 0.8,
+            reasoningEffort: "invalid",
+            apiKey: "another-secret",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    const state = useSettingsStore.getState();
+    const generate = state.featureConfigs.generate;
+    const attack = state.featureConfigs.attack;
+    expect(generate).toMatchObject({
+      provider: "openrouter",
+      model: "z-ai/glm-5.3-flash",
+      temperature: 0.4,
+      reasoningEffort: "high",
+    });
+    expect(generate).not.toHaveProperty("apiKey");
+    expect(generate).not.toHaveProperty("baseUrl");
+    expect(attack).toMatchObject({ provider: "openrouter", model: "z-ai/glm-5.3-flash", reasoningEffort: "low" });
+    expect(attack).not.toHaveProperty("apiKey");
   });
 
   it("does not upsert when user is not signed in", async () => {

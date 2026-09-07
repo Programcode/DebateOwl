@@ -39,7 +39,7 @@ function mockFetchOnce(body: BodyInit | null, init: ResponseInit = { status: 200
   return fetchMock;
 }
 
-const streamConfig = { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 } as const;
+const streamConfig = { provider: 'openrouter', model: 'gpt-5.4-mini', temperature: 0.7 } as const;
 const streamOptions = {};
 
 beforeEach(() => {
@@ -84,39 +84,39 @@ describe('AI streaming helpers', () => {
     ]);
   });
 
-  it('enables streaming for OpenAI, Google, and Anthropic basic ask chats', () => {
-    expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(true);
-    expect(isAskStreamingSupported({ provider: 'lovable', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(true);
-    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(true);
-    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', temperature: 0.7 })).toBe(true);
+  it('enables streaming for basic OpenRouter ask chats', () => {
+    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 })).toBe(true);
+    expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
       { citationMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
       { webSearch: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
       { prosConsMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
       { argumentMapMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
       { mode: 'clarify' }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
       { mode: 'general' }
     )).toBe(true);
     for (const mode of ['clarify', 'summarize', 'proscons', 'argumentmap']) {
       expect(isAskStreamingSupported(
-        { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+        { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
         { mode }
       )).toBe(false);
     }
@@ -141,13 +141,13 @@ describe('AI streaming helpers', () => {
       expect(captureProductEventMock).toHaveBeenNthCalledWith(1, 'ai_request_started', {
         feature: 'ask',
         streaming: true,
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-5.4-mini',
       });
       expect(captureProductEventMock).toHaveBeenNthCalledWith(2, 'ai_request_succeeded', expect.objectContaining({
         feature: 'ask',
         streaming: true,
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-5.4-mini',
         durationMs: expect.any(Number),
       }));
@@ -173,7 +173,7 @@ describe('AI streaming helpers', () => {
       expect(captureProductEventMock).toHaveBeenNthCalledWith(2, 'ai_request_failed', expect.objectContaining({
         feature: 'ask',
         streaming: true,
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-5.4-mini',
         durationMs: expect.any(Number),
         errorName: 'AIProviderError',
@@ -209,7 +209,7 @@ describe('AI streaming helpers', () => {
       expect(captureProductEventMock).toHaveBeenNthCalledWith(2, 'ai_request_failed', expect.objectContaining({
         feature: 'ask',
         streaming: true,
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-5.4-mini',
         errorName,
         statusCode: status,
@@ -232,7 +232,7 @@ describe('AI streaming helpers', () => {
       expect(captureProductEventMock).toHaveBeenNthCalledWith(2, 'ai_request_failed', expect.objectContaining({
         feature: 'ask',
         streaming: true,
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-5.4-mini',
         errorName: 'AIAuthError',
       }));
@@ -256,7 +256,7 @@ describe('AI streaming helpers', () => {
       expect(captureProductEventMock).toHaveBeenNthCalledWith(2, 'ai_request_failed', expect.objectContaining({
         feature: 'ask',
         streaming: true,
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-5.4-mini',
         errorName: 'AbortError',
       }));

@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import i18n from '@/i18n';
+import {
+  DEFAULT_MODEL,
+  DEFAULT_PRO_MODEL,
+} from '../ai/providers/types';
 import type { ProviderConfig } from '../ai/providers/types';
+import {
+  getModelCatalogEntry,
+  isReasoningEffort,
+} from '../../../supabase/functions/_shared/model-catalog';
 import { supabase } from '@/lib/supabase/client';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
@@ -27,10 +35,28 @@ interface SettingsState {
   resetLocalData: () => void;
 }
 
+const DEFAULT_PROVIDER = 'openrouter';
+
+const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
+  'gpt-5.5': DEFAULT_MODEL,
+  'gpt-5.4': DEFAULT_MODEL,
+  'gpt-5.4-mini': DEFAULT_MODEL,
+  'gpt-4o': DEFAULT_MODEL,
+  'gpt-4o-mini': DEFAULT_MODEL,
+  'claude-opus-4-7': DEFAULT_PRO_MODEL,
+  'claude-sonnet-4-6': DEFAULT_PRO_MODEL,
+  'claude-haiku-4-5-20251001': DEFAULT_MODEL,
+  'gemini-3.1-pro-preview': 'google/gemini-3.8-flash',
+  'gemini-3.5-flash': 'google/gemini-3.8-flash',
+  'gemini-3-flash-preview': 'google/gemini-3.8-flash',
+  'gemini-3.1-flash-lite-preview': 'google/gemini-3.8-flash',
+};
+
 const defaultConfig: ProviderConfig = {
-  provider: 'google',
-  model: 'gemini-3-flash-preview',
+  provider: DEFAULT_PROVIDER,
+  model: DEFAULT_MODEL,
   temperature: 0.7,
+  reasoningEffort: 'low',
 };
 
 const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
@@ -42,25 +68,43 @@ const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
   sparring: { ...defaultConfig },
 });
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): string {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  const model = value.trim();
+  if (getModelCatalogEntry(model)) return model;
+  return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
+}
+
+function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig): ProviderConfig {
+  const candidate = asRecord(value);
+  const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
+    ? candidate.temperature
+    : fallback.temperature;
+  const reasoningEffort = isReasoningEffort(candidate?.reasoningEffort)
+    ? candidate.reasoningEffort
+    : fallback.reasoningEffort ?? 'low';
+
+  return {
+    provider: DEFAULT_PROVIDER,
+    model: normalizeModelId(candidate?.model, fallback.model),
+    temperature,
+    reasoningEffort,
+  };
+}
+
 function normalizeFeatureConfigs(configs: unknown): Record<FeatureTab, ProviderConfig> {
   const defaults = getDefaultFeatureConfigs();
-  if (!configs || typeof configs !== 'object' || Array.isArray(configs)) return defaults;
+  const saved = asRecord(configs);
+  if (!saved) return defaults;
 
-  const saved = configs as Record<string, unknown>;
   return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
-    const value = saved[feature];
-    const candidate = value && typeof value === 'object' && !Array.isArray(value)
-      ? value as Partial<ProviderConfig>
-      : {};
-    const fallback = defaults[feature];
-    return [feature, {
-      ...fallback,
-      ...(typeof candidate.provider === 'string' ? { provider: candidate.provider } : {}),
-      ...(typeof candidate.model === 'string' ? { model: candidate.model } : {}),
-      ...(typeof candidate.temperature === 'number' ? { temperature: candidate.temperature } : {}),
-      ...(typeof candidate.apiKey === 'string' ? { apiKey: candidate.apiKey } : {}),
-      ...(typeof candidate.baseUrl === 'string' ? { baseUrl: candidate.baseUrl } : {}),
-    }];
+    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature])];
   })) as Record<FeatureTab, ProviderConfig>;
 }
 
@@ -147,7 +191,10 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           featureConfigs: {
             ...state.featureConfigs,
-            [feature]: { ...state.featureConfigs[feature], ...config },
+            [feature]: normalizeFeatureConfig(
+              { ...state.featureConfigs[feature], ...config },
+              getDefaultFeatureConfigs()[feature],
+            ),
           },
         }));
         void upsertSettings({
