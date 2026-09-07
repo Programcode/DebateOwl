@@ -1,24 +1,33 @@
 # Plans
 
-This folder holds implementation plans for remaining DebateLab product work. Keep plans actionable: scope, files, data model, rollout steps, tests, and deployment notes.
+**Status:** Plan index. Plans describe proposed work, not current implementation truth.
 
-## Active Plans
+Last reconciled against `origin/main` at `c7d3437` on 2026-09-06.
 
-- [Admin announcements](./admin-announcements.md)
-- [Ask and sitewide search quality](./search-quality.md)
-- [Control honesty and deterministic toggles](./control-honesty.md)
-- [Model cost accounting](./model-cost-accounting.md)
-- [Prompt evaluation sheet (manual)](./prompt-eval-sheet.md)
-- [Quality & Truth release checklist](./release-checklist.md)
-- [Rate-limit UI cleanup](./rate-limit-ui-cleanup.md)
-- [Source auto-import](./source-auto-import.md)
-- [Streaming AI](./streaming-ai.md)
-- [System prompt improvement](./system-prompt-improvement.md)
-- [Animation polish](./animation-polish.md)
+Before executing any plan, recheck its branch, commit, paths, assumptions, product decisions, and verification commands against current source. Do not treat an old line number or completed review as fresh evidence.
 
-## Done
+## Active plans
 
-- [Debate sparring](./sparring-and-streaming.md)
-- [Bug and polish cleanup](./done/bugs.txt)
-- [Admin trial gifts](./done/admin-trial-gifts.md)
-- [Top users email fallback](./done/top-users-email-fallback.md)
+- [Email and demo-code sign-in](auth-email-and-demo-code-sign-in.plan)
+- [Control honesty and deterministic toggles](control-honesty.md)
+- [Model cost accounting](model-cost-accounting.md)
+- [PR 11 salvage work](pr11-salvage.md)
+- [Rate-limit UI cleanup](rate-limit-ui-cleanup.md)
+- [Supabase staging](supabase-staging.md)
+- [System prompt improvement](system-prompt-improvement.md)
+
+## Backlog
+
+- [Bug and polish cleanup](bugs.md), four items reverified on 2026-09-06.
+
+## Shipped reference
+
+The following work was removed from active plans after merged implementation was verified on `origin/main` at the time recorded:
+
+- Admin announcements, PR 19, with deactivation and dismissal history in PR 26.
+- Agent verification loop, PR 21, with CI gating in PRs 26 and 27.
+- Analytics and error tracking, PRs 16, 18, 22, 23, 24, 25, and 28.
+- Animation polish, PR 20.
+- Ask and sitewide search quality, PR 17.
+
+These entries are historical pointers. Inspect current source and GitHub before relying on their behavior or status.

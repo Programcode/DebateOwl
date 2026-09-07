@@ -7,13 +7,15 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'capacitor' ? './' : '/',
   server: {
     host: "::",
-    port: 8080,
+    port: Number(process.env.PORT) || 8080,
     hmr: {
       overlay: false,
     },
   },
   plugins: [react()],
   optimizeDeps: {
+    // Narrows dev prebundling to the SPA entry. Without this, Vite crawls all
+    // 84 HTML files under the root, including the prerendered pages in public/.
     entries: ['index.html'],
   },
   resolve: {
@@ -29,7 +31,6 @@ export default defineConfig(({ mode }) => ({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-radix': [
             '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
             '@radix-ui/react-popover',
             '@radix-ui/react-select',
             '@radix-ui/react-tabs',

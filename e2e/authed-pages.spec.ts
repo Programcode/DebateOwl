@@ -54,3 +54,64 @@ for (const locale of LOCALES) {
     }
   });
 }
+
+test('visible Ask advanced controls use the non-streaming contract', async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-settings', JSON.stringify({
+      state: {
+        language: 'en',
+        outputLanguage: 'en',
+        theme: 'light',
+        featureConfigs: {
+          ask: { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+        },
+      },
+      version: 0,
+    }));
+  });
+
+  let requestBody: Record<string, unknown> | undefined;
+  let streamCalls = 0;
+  await page.route('**/functions/v1/ai-stream', async (route) => {
+    streamCalls += 1;
+    await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"unexpected stream"}' });
+  });
+  await page.route('**/functions/v1/ai', async (route) => {
+    requestBody = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        output: {
+          response: 'Clarification contract response',
+          followUpQuestions: ['Which debate format are you using?'],
+          uncertainties: [],
+        },
+      }),
+    });
+  });
+
+  await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Clarify' }).click();
+  for (const name of ['Citations', 'Web search', 'Pros/Cons', 'Arg Map']) {
+    await page.getByRole('switch', { name }).click();
+  }
+  await page.getByPlaceholder('Ask your debate coach...').fill('Which assumptions should I define?');
+  await page.getByRole('button', { name: 'Send message' }).click();
+
+  await expect(page.getByText('Clarification contract response')).toBeVisible();
+  expect(streamCalls).toBe(0);
+  expect(requestBody).toMatchObject({
+    feature: 'ask',
+    input: {
+      message: 'Which assumptions should I define?',
+      mode: 'clarify',
+      citationMode: true,
+      webSearch: true,
+      prosConsMode: true,
+      argumentMapMode: true,
+    },
+  });
+});

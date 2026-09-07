@@ -48,9 +48,6 @@ describe('settings-store branch coverage', () => {
     const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
     if (!afterRehydrate) throw new Error('Expected a rehydration callback');
 
-    // Covers the `if (!state) return` branch.
-    afterRehydrate(undefined as any);
-
     const partialState = {
       featureConfigs: undefined,
       language: '',

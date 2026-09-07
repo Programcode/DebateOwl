@@ -51,8 +51,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Run Deno-flavored function tests under vitest without rewriting them.
-      "https://deno.land/std@0.224.0/assert/mod.ts": path.resolve(
+      // Run Deno-flavored function tests under Vitest without rewriting them.
+      // Deno resolves this pinned JSR package directly; Vitest uses the shim.
+      "jsr:@std/assert@1.0.19": path.resolve(
         __dirname,
         "./src/test/deno-assert-shim.ts",
       ),

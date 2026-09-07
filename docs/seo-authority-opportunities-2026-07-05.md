@@ -1,5 +1,7 @@
 # DebateLab authority and backlink opportunities - 2026-07-05
 
+> **Historical snapshot:** This file records SEO observations and opportunities from 2026-07-05. Rankings, indexing state, URLs, and recommendations may have changed. Recheck live sources before acting.
+
 ## Positioning to use consistently
 
 Because `DebateLab` collides with KIT DebateLab and `debatelab.ai`, use a disambiguated entity label whenever possible:

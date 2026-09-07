@@ -114,6 +114,12 @@ describe('AI streaming helpers', () => {
       { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
       { mode: 'general' }
     )).toBe(true);
+    for (const mode of ['clarify', 'summarize', 'proscons', 'argumentmap']) {
+      expect(isAskStreamingSupported(
+        { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+        { mode }
+      )).toBe(false);
+    }
   });
 
   describe('telemetry', () => {

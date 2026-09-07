@@ -105,7 +105,7 @@ describe('GeneratePage Integration', () => {
     it('renders the empty state initially', () => {
         // Override store mock for this test if needed, but default is null result
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -126,7 +126,7 @@ describe('GeneratePage Integration', () => {
         (generateCase as Mock).mockResolvedValue({ result: mockResult, discoveredSources: [] });
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -160,7 +160,7 @@ describe('GeneratePage Integration', () => {
         mockSaveCurrentCase.mockRejectedValueOnce(new Error('save failed'));
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -192,7 +192,7 @@ describe('GeneratePage Integration', () => {
         };
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -212,7 +212,7 @@ describe('GeneratePage Integration', () => {
         };
 
         render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -241,7 +241,7 @@ describe('GeneratePage Integration', () => {
           });
 
         const view = render(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );
@@ -251,7 +251,7 @@ describe('GeneratePage Integration', () => {
 
         mockGenerateResult = initialResult;
         view.rerender(
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <BrowserRouter>
                 <GeneratePage />
             </BrowserRouter>
         );

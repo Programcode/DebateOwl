@@ -32,23 +32,6 @@ describe('i18n locale files', () => {
   const esKeys = flattenKeys(es);
   const huKeys = flattenKeys(hu);
 
-  it('en.json has keys', () => {
-    expect(enKeys.length).toBeGreaterThan(0);
-  });
-
-  it('es.json has keys', () => {
-    expect(esKeys.length).toBeGreaterThan(0);
-  });
-
-  it('hu.json has keys', () => {
-    expect(huKeys.length).toBeGreaterThan(0);
-  });
-
-  it('all 3 locale files have same number of keys', () => {
-    expect(enKeys.length).toBe(esKeys.length);
-    expect(enKeys.length).toBe(huKeys.length);
-  });
-
   it('all keys in en.json exist in es.json', () => {
     const esKeySet = new Set(esKeys);
     const missing = enKeys.filter(k => !esKeySet.has(k));
@@ -100,15 +83,9 @@ describe('i18n locale files', () => {
 });
 
 describe('i18n runtime', () => {
-  it('i18n.t returns correct English value for nav.home', () => {
+  it('i18n.t resolves English nav values', () => {
     expect(i18n.t('nav.home')).toBe('Home');
-  });
-
-  it('i18n.t returns correct English value for nav.generate', () => {
     expect(i18n.t('nav.generate')).toBe('Generate');
-  });
-
-  it('i18n.t returns correct English value for nav.settings', () => {
     expect(i18n.t('nav.settings')).toBe('Settings');
   });
 
@@ -122,11 +99,6 @@ describe('i18n runtime', () => {
     await i18n.changeLanguage('hu');
     expect(i18n.language).toBe('hu');
     await i18n.changeLanguage('en');
-  });
-
-  it('i18n.changeLanguage back to en', async () => {
-    await i18n.changeLanguage('en');
-    expect(i18n.language).toBe('en');
   });
 
   it('interpolation works for limitModal.limitReachedDesc', () => {

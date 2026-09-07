@@ -1,4 +1,4 @@
-import { buildSearchQueries, buildSearchRequests, rankSearchResults } from "../_shared/source-quality.ts";
+import { buildSearchRequests, rankSearchResults } from "../_shared/source-quality.ts";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -63,13 +63,13 @@ Deno.test("search query builder adds debate tab queries for tournament claims", 
 });
 
 Deno.test("search query builder adds policy and statistics source queries", () => {
-  const queries = buildSearchQueries("solar energy costs and inflation policy", "United States", "any", "2024 2025");
+  const queries = buildSearchRequests("solar energy costs and inflation policy", "United States", "any", "2024 2025").map((request) => request.query);
   assert(queries.some((query) => /World Bank|OECD|IMF|UN/i.test(query)), `Expected intergovernmental source query, got ${queries.join("; ")}`);
   assert(queries.some((query) => /government statistics/i.test(query)), `Expected government statistics query, got ${queries.join("; ")}`);
 });
 
 Deno.test("search query builder adds legal primary-source queries", () => {
-  const queries = buildSearchQueries("new court ruling on social media regulation", "European Union");
+  const queries = buildSearchRequests("new court ruling on social media regulation", "European Union").map((request) => request.query);
   assert(queries.some((query) => /official law court/i.test(query)), `Expected official legal source query, got ${queries.join("; ")}`);
   assert(queries.some((query) => /primary source/i.test(query)), `Expected primary source query, got ${queries.join("; ")}`);
 });

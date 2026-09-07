@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateUrl, isUrlSafe } from '@/lib/validation/url';
+import { validateUrl } from '@/lib/validation/url';
 import { validateFileUpload, validateSingleFile, MAX_FILE_SIZE, MAX_FILE_COUNT } from '@/lib/validation/file';
 
 describe('URL Validation', () => {
@@ -36,18 +36,6 @@ describe('URL Validation', () => {
 
         it('handles whitespace', () => {
             expect(validateUrl('  https://example.com  ')).toBe('https://example.com/');
-        });
-    });
-
-    describe('isUrlSafe', () => {
-        it('returns true for safe URLs', () => {
-            expect(isUrlSafe('https://example.com')).toBe(true);
-            expect(isUrlSafe('http://example.com')).toBe(true);
-        });
-
-        it('returns false for dangerous URLs', () => {
-            expect(isUrlSafe('javascript:alert(1)')).toBe(false);
-            expect(isUrlSafe('data:text/html,test')).toBe(false);
         });
     });
 });

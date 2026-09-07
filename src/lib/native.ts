@@ -9,11 +9,6 @@ export function isNativeApp(): boolean {
   return Capacitor.isNativePlatform();
 }
 
-export function getAppRedirectUrl(path = '/app'): string {
-  if (isNativeApp()) return `${NATIVE_URL_SCHEME}://${path.replace(/^\/+/, '')}`;
-  return `${window.location.origin}${path}`;
-}
-
 export function getWebAppRedirectUrl(path = '/app'): string {
   const origin = isNativeApp() ? PUBLIC_WEB_APP_ORIGIN : window.location.origin;
   return `${origin}${path}`;

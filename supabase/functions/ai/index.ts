@@ -27,13 +27,6 @@ function getCorsHeaders(origin: string | null) {
 
 type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask" | "sparring" | "crossfire";
 
-type Source = {
-  title: string;
-  content: string;
-  origin?: string;
-  type: string;
-};
-
 // Generate unique request ID for tracing
 function generateRequestId(): string {
   return `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -69,6 +62,7 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
+  validateControlInput,
 } from "../_shared/control-enforcement.ts";
 import {
   boundPromptSources,
@@ -1103,6 +1097,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     return badRequest(sanitizeResult.rejected, corsHeaders);
   }
   const sanitizedInput = sanitizeResult.sanitized;
+  const controlError = validateControlInput(feature, sanitizedInput);
+  if (controlError) {
+    log(requestId, "WARN", "AI control validation failed", { reason: controlError });
+    return badRequest(controlError, corsHeaders);
+  }
   let responseTruncated = sanitizeResult.truncated || crossfireSourcesTruncated;
   const sources: PromptSource[] = feature === "crossfire"
     ? crossfireSources

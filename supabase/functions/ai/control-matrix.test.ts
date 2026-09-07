@@ -154,7 +154,9 @@ Deno.test("ask toggles and modes appear verbatim in the request prompt", () => {
   assert(Array.isArray(stripped.citations) && stripped.citations.length === 0, "ask citations off clears list");
 });
 
-Deno.test("ask clarify mode is not eligible for streaming", () => {
-  assert(!isAskStreamingModeAllowed("clarify"), "ask.clarify streaming bypass");
+Deno.test("only plain general ask mode is eligible for streaming", () => {
+  for (const mode of ["clarify", "summarize", "proscons", "argumentmap"]) {
+    assert(!isAskStreamingModeAllowed(mode), `ask.${mode} streaming bypass`);
+  }
   assert(isAskStreamingModeAllowed("general"), "ask.general streaming eligibility");
 });

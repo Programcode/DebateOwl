@@ -39,4 +39,3 @@ const active = getActiveEnv();
 
 export const SUPABASE_URL = ENVS[active].url;
 export const SUPABASE_ANON_KEY = ENVS[active].anonKey;
-export const IS_STAGING = active === 'staging';
