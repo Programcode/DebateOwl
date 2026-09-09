@@ -211,3 +211,116 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
     await server.shutdown();
   }
 });
+
+Deno.test("Ask marks only surviving URL and research context as available", async () => {
+  const originalFetch = globalThis.fetch;
+  let scenario: "empty-search" | "empty-url" | "trimmed" = "empty-search";
+  const providerBodies: Array<Record<string, unknown>> = [];
+
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+
+    if (url.origin === "https://supabase.test") {
+      if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
+      if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
+      if (url.pathname.includes("/rest/v1/user_settings")) {
+        return jsonResponse({
+          subscription_tier: "trial",
+          daily_limit_override: 50,
+          trial_ends_at: "2099-01-01T00:00:00.000Z",
+          grace_period_ends_at: null,
+        });
+      }
+      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
+      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+        return jsonResponse([{ allowed: true, current_count: 1 }]);
+      }
+      if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
+      if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
+      throw new Error(`Unhandled Supabase request: ${url}`);
+    }
+
+    if (url.href === "https://api.exa.ai/search") {
+      return scenario === "trimmed"
+        ? jsonResponse({ results: [{ title: "Official government evidence report", url: "https://energy.gov/reports/evidence-2026", text: "Official government statistics and evidence report.", publishedDate: "2026-01-01T00:00:00.000Z" }] })
+        : jsonResponse({ results: [] });
+    }
+    if (url.href === "https://api.exa.ai/contents") return jsonResponse({ results: [] });
+
+    if (url.href === "https://api.openai.com/v1/chat/completions") {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      providerBodies.push(body);
+      const messages = body.messages as Array<{ content?: unknown }> | undefined;
+      const userContent = messages?.at(-1)?.content;
+      if (typeof userContent === "string" && userContent.startsWith("User message:")) {
+        return jsonResponse({
+          choices: [{ message: { content: JSON.stringify({ shouldSearch: true, query: "current debate evidence" }) } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        });
+      }
+      if (typeof userContent === "string" && userContent.startsWith("Claim:")) {
+        return jsonResponse({
+          choices: [{ message: { content: JSON.stringify({ queries: [] }) } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        });
+      }
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify({ response: "ok", followUpQuestions: [], uncertainties: [] }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      });
+    }
+
+    throw new Error(`Unhandled request: ${url}`);
+  }) as typeof fetch;
+
+  const runAsk = async (input: Record<string, unknown>) => {
+    providerBodies.length = 0;
+    const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "ask", model: "gpt-5.4-mini", input }),
+    }));
+    if (response.status !== 200) throw new Error(`Ask handler returned ${response.status}: ${await response.text()}`);
+    const mainRequest = providerBodies.find((body) => {
+      const messages = body.messages as Array<{ content?: unknown }> | undefined;
+      const lastMessage = messages?.at(-1);
+      return typeof lastMessage?.content === "string" && lastMessage.content.startsWith("Message:");
+    });
+    if (!mainRequest) throw new Error("Ask main provider request was not captured");
+    const messages = mainRequest.messages as Array<{ role?: string; content?: unknown }>;
+    return {
+      system: String(messages.find((message) => message.role === "system")?.content ?? ""),
+      user: String(messages.at(-1)?.content ?? ""),
+      body: await response.json(),
+    };
+  };
+
+  try {
+    const emptySearch = await runAsk({ message: "What is current evidence?", mode: "general", citationMode: true });
+    if (!emptySearch.user.includes("Research Context: NONE")) throw new Error("empty search was marked available");
+    if (emptySearch.user.includes("WEB RESEARCH RESULTS") || emptySearch.system.includes("RESEARCH CITATION RULES:")) {
+      throw new Error("empty search context leaked into the Ask provider prompt");
+    }
+
+    scenario = "empty-url";
+    const emptyUrl = await runAsk({ message: "Read https://example.com/empty", mode: "general", citationMode: false });
+    if (!emptyUrl.user.includes("Research Context: NONE") || emptyUrl.user.includes("WEB PAGE CONTEXT:")) {
+      throw new Error("empty URL fetch was marked as usable context");
+    }
+
+    scenario = "trimmed";
+    const untrimmed = await runAsk({ message: "What evidence is available?", mode: "general", citationMode: true });
+    if (untrimmed.body.output.searchInfo.sources.length === 0) {
+      throw new Error("trimming fixture must provide a citable source before trimming");
+    }
+    const trimmed = await runAsk({ message: "x".repeat(50_000), mode: "general", citationMode: true });
+    if (!trimmed.user.includes("Research Context: NONE") || trimmed.system.includes("RESEARCH CITATION RULES:")) {
+      throw new Error("trimmed research remained marked as available");
+    }
+    if (trimmed.body.output.searchInfo.sources.length !== 0 || (trimmed.body.output.citations?.length ?? 0) !== 0) {
+      throw new Error("trimmed research leaked into response sources or fallback citations");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

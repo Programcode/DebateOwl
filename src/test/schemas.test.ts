@@ -442,6 +442,10 @@ describe('Factoids Schema', () => {
             expect(FactoidsInputSchema.safeParse({ ...validInput, sourceType: 'blog' }).success).toBe(false);
         });
 
+        it('rejects fractional source counts', () => {
+            expect(FactoidsInputSchema.safeParse({ ...validInput, sourceCount: 3.5 }).success).toBe(false);
+        });
+
         it('accepts all valid sourceTypes', () => {
             expect(FactoidsInputSchema.safeParse({ ...validInput, sourceType: 'academic' }).success).toBe(true);
             expect(FactoidsInputSchema.safeParse({ ...validInput, sourceType: 'government' }).success).toBe(true);

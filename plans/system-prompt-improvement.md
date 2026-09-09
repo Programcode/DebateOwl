@@ -1,6 +1,6 @@
 # System prompt improvement plan
 
-**Status:** Implementation and manual baseline completed on the isolated `t3code/system-prompt-improvements` branch, based on `235bb49`. Release verification and rollout are tracked in the PR. See [prompt-eval-sheet.md](prompt-eval-sheet.md) for the dated 36-response comparison and its limits.
+**Status:** Implementation and manual baseline completed on the isolated `t3code/system-prompt-improvements` branch, based on `235bb49`. Credential-free and protected staging verification passed. Release verification and rollout are tracked in PR #42. See [prompt-eval-sheet.md](prompt-eval-sheet.md) for the dated 36-response comparison and its limits.
 
 ## Preconditions
 

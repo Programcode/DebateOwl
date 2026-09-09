@@ -240,7 +240,7 @@ Deno.test("ask toggles and modes appear verbatim in the request prompt", () => {
 });
 
 Deno.test("ask matrix preserves every mode, toggle, research, and output effect", () => {
-  const commonLanguageRule = "Match the language used in the user's question unless the user asks for another language.";
+  const commonLanguageRule = "Follow any explicit output-language instruction. Otherwise match the language used by the user.";
 
   for (const mode of ["general", "clarify"] as const) {
     for (const citationMode of [false, true]) {

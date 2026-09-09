@@ -64,8 +64,8 @@ export function validateControlInput(feature: string, input: Record<string, unkn
       return "factoids.timeframe must be a string";
     }
     if (Object.hasOwn(input, "sourceCount") &&
-      (typeof input.sourceCount !== "number" || !Number.isFinite(input.sourceCount) || input.sourceCount < 3 || input.sourceCount > 15)) {
-      return "factoids.sourceCount must be a number from 3 to 15";
+      (typeof input.sourceCount !== "number" || !Number.isInteger(input.sourceCount) || input.sourceCount < 3 || input.sourceCount > 15)) {
+      return "factoids.sourceCount must be an integer from 3 to 15";
     }
   }
 

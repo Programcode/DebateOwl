@@ -58,7 +58,7 @@ test('real staging session persists, writes and removes a source, and completes 
     const saveResponseButton = page.getByRole('button', { name: 'Save message' }).last();
     await expect(saveResponseButton).toBeAttached({ timeout: 90_000 });
     const assistantBubble = saveResponseButton.locator('..');
-    await expect(assistantBubble.locator(':scope > .text-sm')).toHaveText(/\S/, { timeout: 90_000 });
+    await expect(assistantBubble.locator(':scope > div.text-sm')).toHaveText(/\S/, { timeout: 90_000 });
   } finally {
     if (sourceCreated) {
       await page.goto('/app/library');
@@ -66,7 +66,7 @@ test('real staging session persists, writes and removes a source, and completes 
       const sourceDelete = page.waitForResponse((response) =>
         response.request().method() === 'DELETE' && response.url().includes('/rest/v1/sources?')
       );
-      await page.getByRole('button', { name: `Delete ${sourceTitle}` }).click();
+      await page.getByRole('button', { name: `Delete ${sourceTitle}`, exact: true }).click();
       expect((await sourceDelete).ok()).toBe(true);
       await page.evaluate(() => localStorage.removeItem('debate-trainer-storage'));
       await page.reload();

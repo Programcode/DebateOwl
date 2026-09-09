@@ -55,6 +55,7 @@ const generatedOutput = {
 Deno.test("generate marks every contention when research has no citable sources", async () => {
   const originalFetch = globalThis.fetch;
   let providerCalls = 0;
+  let generatedRequestBody: Record<string, unknown> | undefined;
 
   globalThis.fetch =
     (async (input: Request | URL | string, init?: RequestInit) => {
@@ -96,10 +97,11 @@ Deno.test("generate marks every contention when research has no citable sources"
 
       if (url.href === "https://api.openai.com/v1/chat/completions") {
         providerCalls += 1;
-        const content = providerCalls === 1 ? { queries: [] } : generatedOutput;
+        const content = providerCalls % 2 === 1 ? { queries: [] } : generatedOutput;
         const requestBody = init?.body
           ? JSON.parse(String(init.body)) as Record<string, unknown>
           : {};
+        if (providerCalls > 1) generatedRequestBody = requestBody;
         if (
           providerCalls === 1 &&
           !JSON.stringify(requestBody.messages).includes("follow-up")
@@ -146,6 +148,12 @@ Deno.test("generate marks every contention when research has no citable sources"
     const body = await response.json() as {
       output?: { contentions?: Array<{ needsSource?: boolean }> };
     };
+    const generatedPrompt = JSON.stringify(generatedRequestBody?.messages ?? []);
+    for (const marker of ["=== WEB RESEARCH RESULTS ===", "RESEARCH CITATION RULES:"]) {
+      if (generatedPrompt.includes(marker)) {
+        throw new Error(`empty research leaked into the Generate provider prompt: ${marker}`);
+      }
+    }
     const contentions = body.output?.contentions ?? [];
     if (
       contentions.length !== 3 ||
@@ -156,6 +164,42 @@ Deno.test("generate marks every contention when research has no citable sources"
           JSON.stringify(contentions)
         }`,
       );
+    }
+
+    for (const contention of generatedOutput.contentions) contention.needsSource = true;
+    const localSourceResponse = await handleRequest(
+      new Request("http://127.0.0.1/functions/v1/ai", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer test-user-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          feature: "generate",
+          model: "gpt-5.4-mini",
+          input: {
+            motion: "Should schools teach media literacy?",
+            side: "pro",
+            format: "custom",
+            role: "intro",
+            length: "standard",
+          },
+          sources: [{ title: "Local source", content: "Source content", type: "text" }],
+        }),
+      }),
+    );
+    if (localSourceResponse.status !== 200) {
+      throw new Error(`generate with a local source returned ${localSourceResponse.status}`);
+    }
+    const localSourceBody = await localSourceResponse.json() as {
+      output?: { contentions?: Array<{ needsSource?: boolean }> };
+    };
+    const localContentions = localSourceBody.output?.contentions ?? [];
+    if (
+      localContentions.length !== 3 ||
+      localContentions.some((contention) => contention.needsSource !== true)
+    ) {
+      throw new Error(`model evidence warning was not preserved with a local source: ${JSON.stringify(localContentions)}`);
     }
   } finally {
     globalThis.fetch = originalFetch;

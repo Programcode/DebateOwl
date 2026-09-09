@@ -564,6 +564,8 @@ export async function deepResearch(
 }
 
 export function buildResearchContext(research: ResearchContext): string {
+  if (research.rankedResults.length === 0 && research.readContent.length === 0) return "";
+
   let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
   ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only, do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
 

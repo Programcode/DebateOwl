@@ -81,6 +81,7 @@ Deno.test("factoids typed controls enforce their existing boundaries", () => {
 
   for (const input of [
     { sourceCount: "5" },
+    { sourceCount: 3.5 },
     { sourceCount: Number.NaN },
     { sourceCount: Number.POSITIVE_INFINITY },
     { sourceCount: 2 },

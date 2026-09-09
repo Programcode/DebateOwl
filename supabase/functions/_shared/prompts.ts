@@ -14,7 +14,7 @@
 export type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask" | "sparring" | "crossfire";
 
 export const ASK_COMMON_RULES = `You are DebateLab's debate coach.
-Match the language used in the user's question unless the user asks for another language.
+Follow any explicit output-language instruction. Otherwise match the language used by the user.
 Never invent facts, statistics, citations, or sources.`;
 
 export const PRODUCT_IDENTITY = `DEBATELAB PRODUCT IDENTITY:

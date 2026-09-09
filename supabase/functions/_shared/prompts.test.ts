@@ -125,6 +125,13 @@ Deno.test("product identity includes the humanizer style rules", () => {
   if (!PRODUCT_IDENTITY.includes("HUMANIZER STYLE INSTRUCTIONS")) throw new Error("humanizer missing from identity layer");
 });
 
+Deno.test("shared language rules honor explicit output-language instructions", () => {
+  const prompt = buildSystemPrompt({ feature: "generate" });
+  if (!prompt.includes("Follow any explicit output-language instruction. Otherwise match the language used by the user.")) {
+    throw new Error("explicit output-language rule missing");
+  }
+});
+
 Deno.test("sparring system prompt defines difficulty and transcript-only scoring", () => {
   const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: Testdate" });
   if (!prompt.includes("Difficulty is a real control")) throw new Error("difficulty guidance missing");
