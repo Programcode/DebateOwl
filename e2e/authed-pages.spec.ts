@@ -79,9 +79,8 @@ test('aligns Factoids timeframe and model controls responsively', async ({ page 
   });
 
   expect(layout.horizontalOverflow).toBe(false);
-  // FactoidsPage switches its form/results grid at Tailwind `lg` (1024px);
-  // below that width the settings grid remains one column below `sm` (640px).
-  if (layout.viewportWidth >= 1024) {
+  // FactoidsForm switches its settings grid at Tailwind `sm` (640px).
+  if (layout.viewportWidth >= 640) {
     expect(Math.abs(layout.timeframe.top - layout.model.top)).toBeLessThanOrEqual(1);
     expect(layout.model.left).toBeGreaterThan(layout.timeframe.left);
   } else {
