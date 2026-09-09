@@ -55,7 +55,7 @@ for (const locale of LOCALES) {
   });
 }
 
-test('aligns Factoids timeframe and model controls at desktop widths', async ({ page }) => {
+test('aligns Factoids timeframe and model controls responsively', async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.goto('/app/factoids', { waitUntil: 'domcontentloaded' });
@@ -64,13 +64,30 @@ test('aligns Factoids timeframe and model controls at desktop widths', async ({ 
   const model = page.getByRole('combobox', { name: /Select AI model for factoids/i });
   await expect(timeframe).toBeVisible();
   await expect(model).toBeVisible();
-  const topDelta = await page.evaluate(() => {
+  const layout = await page.evaluate(() => {
     const timeframeElement = document.querySelector('#timeframe');
     const modelElement = document.querySelector('[aria-label*="Select AI model for factoids"]');
     if (!timeframeElement || !modelElement) throw new Error('Factoids alignment controls are missing.');
-    return Math.abs(timeframeElement.getBoundingClientRect().top - modelElement.getBoundingClientRect().top);
+    const timeframeBox = timeframeElement.getBoundingClientRect();
+    const modelBox = modelElement.getBoundingClientRect();
+    return {
+      viewportWidth: window.innerWidth,
+      timeframe: { top: timeframeBox.top, bottom: timeframeBox.bottom, left: timeframeBox.left },
+      model: { top: modelBox.top, left: modelBox.left },
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    };
   });
-  expect(topDelta).toBeLessThanOrEqual(1);
+
+  expect(layout.horizontalOverflow).toBe(false);
+  // FactoidsPage switches its form/results grid at Tailwind `lg` (1024px);
+  // below that width the settings grid remains one column below `sm` (640px).
+  if (layout.viewportWidth >= 1024) {
+    expect(Math.abs(layout.timeframe.top - layout.model.top)).toBeLessThanOrEqual(1);
+    expect(layout.model.left).toBeGreaterThan(layout.timeframe.left);
+  } else {
+    expect(layout.model.top).toBeGreaterThanOrEqual(layout.timeframe.bottom);
+    expect(Math.abs(layout.timeframe.left - layout.model.left)).toBeLessThanOrEqual(1);
+  }
 });
 
 test('visible Ask advanced controls use the non-streaming contract', async ({ page }) => {
