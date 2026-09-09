@@ -129,30 +129,54 @@ describe('AppLayout announcements', () => {
     renderLayout();
     await screen.findByText('Scheduled maintenance');
 
+    const expectDestinations = (links: HTMLElement[], expected: readonly (readonly [string, string])[]) => {
+      const destinations = links.map((link) => ({
+        name: link.textContent?.trim() ?? '',
+        href: link.getAttribute('href'),
+      }));
+      for (const [label, path] of expected) {
+        expect(destinations).toContainEqual(expect.objectContaining({
+          name: expect.stringContaining(label),
+          href: path,
+        }));
+      }
+    };
+
     const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
-    expect(within(mainNavigation).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/app');
-    for (const label of ['Generate', 'Attack', 'Ask', 'Crossfire', 'Sparring']) {
-      expect(within(mainNavigation).getByRole('link', { name: label })).toBeInTheDocument();
-    }
-    expect(within(mainNavigation).getByText('More')).toBeInTheDocument();
     fireEvent.click(within(mainNavigation).getByText('More'));
-    for (const [label, path] of [
+    expectDestinations(within(mainNavigation).getAllByRole('link'), [
+      ['Home', '/app'],
+      ['Generate', '/app/generate'],
+      ['Attack', '/app/attack'],
+      ['Ask', '/app/ask'],
+      ['Crossfire', '/app/crossfire'],
+      ['Sparring', '/app/sparring'],
       ['Brainstorm', '/app/brainstorm'],
       ['Factoids', '/app/factoids'],
       ['Flowchart', '/app/flowchart'],
       ['Library', '/app/library'],
       ['Timer', '/app/timer'],
       ['History', '/app/history'],
-    ] as const) {
-      expect(within(mainNavigation).getByRole('link', { name: label })).toHaveAttribute('href', path);
-    }
+    ]);
+
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/app/settings');
 
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
-    for (const label of ['Home', 'Generate', 'Attack', 'Brainstorm', 'Factoids', 'Ask', 'Crossfire', 'Library', 'Timer', 'Sparring', 'Flowchart', 'History']) {
-      expect(within(mobileNavigation).getByRole('link', { name: new RegExp(`^${label}`) })).toBeInTheDocument();
-    }
+    expectDestinations(within(mobileNavigation).getAllByRole('link'), [
+      ['Home', '/app'],
+      ['Generate', '/app/generate'],
+      ['Attack', '/app/attack'],
+      ['Brainstorm', '/app/brainstorm'],
+      ['Factoids', '/app/factoids'],
+      ['Ask', '/app/ask'],
+      ['Crossfire', '/app/crossfire'],
+      ['Library', '/app/library'],
+      ['Timer', '/app/timer'],
+      ['Sparring', '/app/sparring'],
+      ['Flowchart', '/app/flowchart'],
+      ['History', '/app/history'],
+    ]);
   });
 
   it('closes menus on Escape and returns focus to the trigger', async () => {
