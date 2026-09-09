@@ -126,7 +126,7 @@ export function AppLayout() {
     <div className="native-safe-screen flex flex-col bg-background">
       {/* Header */}
       <header className="native-safe-top sticky top-0 z-50 border-b border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]">
-        <div className="container flex h-16 items-center justify-between px-4">
+        <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
           <Link to="/app" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
               <img src="/favicon.png" alt="DebateLab" className="h-full w-full object-cover" />
@@ -188,7 +188,7 @@ export function AppLayout() {
             </details>
           </nav>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 max-[359px]:gap-1 shrink-0">
             <LanguageSwitcher />
             <ThemeToggle />
             <NavLink
