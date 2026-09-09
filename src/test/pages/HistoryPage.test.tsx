@@ -41,9 +41,10 @@ describe('HistoryPage', () => {
     expect(screen.getByText('History')).toBeDefined();
   });
 
-  it('renders subtitle', () => {
+  it('renders the page heading without a decorative subtitle', () => {
     render(<HistoryPage />);
-    expect(screen.getByText('Access your saved prep sessions')).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeDefined();
+    expect(screen.queryByText('Access your saved prep sessions')).toBeNull();
   });
 
   it('renders cases tab', () => {
