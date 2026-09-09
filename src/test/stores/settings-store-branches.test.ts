@@ -92,4 +92,24 @@ describe('settings-store branch coverage', () => {
     expect(partialState.featureConfigs.generate).not.toHaveProperty('apiKey');
     expect(partialState.featureConfigs.generate).not.toHaveProperty('baseUrl');
   });
+
+  it('preserves the local mock fixture during local rehydration', () => {
+    const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
+
+    const partialState = {
+      featureConfigs: {
+        generate: { provider: 'mock', model: 'local', temperature: 0.7 },
+      },
+    } as any;
+
+    afterRehydrate(partialState);
+
+    expect(partialState.featureConfigs.generate).toMatchObject({
+      provider: 'mock',
+      model: 'local',
+      reasoningEffort: 'low',
+    });
+  });
 });

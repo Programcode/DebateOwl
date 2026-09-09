@@ -81,8 +81,9 @@ function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): str
   return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
 }
 
-function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig): ProviderConfig {
+function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig, preserveLocalMock = false): ProviderConfig {
   const candidate = asRecord(value);
+  const isLocalMock = preserveLocalMock && candidate?.provider === 'mock' && candidate?.model === 'local';
   const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
     ? candidate.temperature
     : fallback.temperature;
@@ -91,20 +92,20 @@ function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig): Provi
     : fallback.reasoningEffort ?? 'low';
 
   return {
-    provider: DEFAULT_PROVIDER,
-    model: normalizeModelId(candidate?.model, fallback.model),
+    provider: isLocalMock ? 'mock' : DEFAULT_PROVIDER,
+    model: isLocalMock ? 'local' : normalizeModelId(candidate?.model, fallback.model),
     temperature,
     reasoningEffort,
   };
 }
 
-function normalizeFeatureConfigs(configs: unknown): Record<FeatureTab, ProviderConfig> {
+function normalizeFeatureConfigs(configs: unknown, preserveLocalMock = false): Record<FeatureTab, ProviderConfig> {
   const defaults = getDefaultFeatureConfigs();
   const saved = asRecord(configs);
   if (!saved) return defaults;
 
   return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
-    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature])];
+    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], preserveLocalMock)];
   })) as Record<FeatureTab, ProviderConfig>;
 }
 
@@ -248,7 +249,7 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'debate-trainer-settings',
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs);
+        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs, true);
         if (!state.language) state.language = 'en';
         if (!state.outputLanguage) state.outputLanguage = 'en';
         if (!state.theme) state.theme = 'system';
