@@ -29,6 +29,20 @@ const FEATURE_PROMPTS: Record<Feature, string> = {
   crossfire: CROSSFIRE_PROMPT,
 };
 
+const FEATURE_MARKERS: Record<Feature, string> = {
+  generate: "You are an experienced competitive debater and coach with years of tournament experience.",
+  attack: "You are a ruthless, experienced competitive debater tasked with tearing apart an opponent's case.",
+  brainstorm: "You're in the prep room with your team before a tournament round.",
+  factoids: "You are a debate research specialist helping a team find cuttable evidence for tournament prep.",
+  ask: "You are a debate coach chat bot. Answer the user's question.",
+  sparring: "You are DebateLab's live debate sparring opponent and impartial judge.",
+  crossfire: "You are DebateLab's crossfire coach.",
+};
+
+function occurrences(text: string, value: string): number {
+  return value ? text.split(value).length - 1 : 0;
+}
+
 Deno.test("every feature system prompt carries the product identity layer", () => {
   for (const feature of FEATURES) {
     const prompt = buildSystemPrompt({ feature, dateContext: "CURRENT DATE: August 21, 2026" });
@@ -47,6 +61,29 @@ Deno.test("every feature system prompt carries the JSON-only output rules exactl
     const first = prompt.indexOf(JSON_RULES);
     if (first === -1) throw new Error(`${feature}: JSON rules missing`);
     if (prompt.indexOf(JSON_RULES, first + 1) !== -1) throw new Error(`${feature}: JSON rules duplicated`);
+  }
+});
+
+Deno.test("every feature system prompt carries exactly one feature task layer", () => {
+  for (const feature of FEATURES) {
+    const prompt = buildSystemPrompt({ feature });
+    if (occurrences(prompt, FEATURE_MARKERS[feature]) !== 1) {
+      throw new Error(`${feature}: feature task layer was duplicated or omitted`);
+    }
+  }
+});
+
+Deno.test("research citation rules appear exactly when research is attached", () => {
+  for (const feature of FEATURES) {
+    const withoutResearch = buildSystemPrompt({ feature });
+    if (withoutResearch.includes("RESEARCH CITATION RULES:")) {
+      throw new Error(`${feature}: research rules leaked without research`);
+    }
+
+    const withResearch = buildSystemPrompt({ feature, researchContext: "WEB RESEARCH RESULTS" });
+    if (occurrences(withResearch, RESEARCH_RULES) !== 1 || !withResearch.includes("WEB RESEARCH RESULTS")) {
+      throw new Error(`${feature}: research rules were not attached exactly once`);
+    }
   }
 });
 
@@ -107,6 +144,19 @@ Deno.test("sparring system prompt keeps LD and PF duties separate from school ro
   if (!prompt.includes('When format is "standard"')) throw new Error("school role condition missing");
   if (!prompt.includes('When format is "ld" or "pf"')) throw new Error("LD/PF role condition missing");
   if (!prompt.includes("rather than importing the school roles")) throw new Error("format separation missing");
+});
+
+Deno.test("sparring system prompt names the behavioral rules for school, LD, and PF", () => {
+  const prompt = buildSystemPrompt({ feature: "sparring" });
+  for (const expected of [
+    'When format is "standard"',
+    'When format is "ld" or "pf"',
+    "Difficulty is a real control",
+    "Follow the requested language for every prose field",
+  ]) {
+    if (!prompt.includes(expected)) throw new Error(`sparring control guidance missing: ${expected}`);
+  }
+  if (prompt.includes("RESEARCH CITATION RULES:")) throw new Error("sparring received research rules without research");
 });
 
 Deno.test("crossfire system prompt carries strict turn and debrief safety rules", () => {

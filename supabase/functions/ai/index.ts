@@ -1588,11 +1588,17 @@ export async function handleRequest(req: Request): Promise<Response> {
       const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
-      // Post-process: force needsSource to false since we provided research
+      // Preserve model evidence warnings when research exists. If research
+      // returned no usable material, every contention still needs a source.
       if (output && typeof output === "object" && "contentions" in output) {
-        const contentions = (output as { contentions: Array<{ needsSource?: boolean }> }).contentions;
-        for (const c of contentions) {
-          c.needsSource = false;
+        const contentions = (output as { contentions?: unknown }).contentions;
+        const hasUsableSources = getResearchSources(research).length > 0 || boundPromptSources(sources).length > 0;
+        if (Array.isArray(contentions) && !hasUsableSources) {
+          for (const contention of contentions) {
+            if (contention && typeof contention === "object") {
+              Object.assign(contention, { needsSource: true });
+            }
+          }
         }
       }
 
