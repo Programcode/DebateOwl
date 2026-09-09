@@ -24,6 +24,7 @@ function getCorsHeaders(origin: string | null) {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
 import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
+import { buildStreamingAskSystemPrompt } from "../_shared/prompts.ts";
 import {
   calculateRequestCost,
   type CostResult,
@@ -108,15 +109,8 @@ function normalizeHistory(value: unknown): ChatMessage[] {
   });
 }
 
-function buildMessages(message: string, history: ChatMessage[], mode: string) {
-  const system = [
-    "You are DebateLab's live debate coach.",
-    "Answer in clear Markdown that can stream smoothly token by token.",
-    "Be direct, concrete, and honest about uncertainty.",
-    "Do not invent citations. If the user asks for sources, explain that citation/search mode should be used.",
-    `Mode guidance: ${getAskModeGuidance(mode)}`,
-  ].join("\n");
-
+export function buildMessages(message: string, history: ChatMessage[], mode: string) {
+  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode));
   return [
     { role: "system", content: system },
     ...history,

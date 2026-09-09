@@ -8,7 +8,7 @@ export const FactoidsInputSchema = z.object({
   region: z.string().optional(),
   sourceType: z.enum(['academic', 'government', 'news', 'any']),
   timeframe: z.string().optional(),
-  sourceCount: z.coerce.number().min(3).max(15).default(5),
+  sourceCount: z.coerce.number().int().min(3).max(15).default(5),
 });
 
 export type FactoidsInput = z.infer<typeof FactoidsInputSchema>;

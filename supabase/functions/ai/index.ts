@@ -1465,9 +1465,14 @@ export async function handleRequest(req: Request): Promise<Response> {
       if (urls.size > 0) {
         const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
           const content = await exaGetContents(u, req.signal);
-          return `--- Content from ${u} ---\n${content.slice(0, 8000)}\n--- End of ${u} ---`;
+          return content.trim()
+            ? `--- Content from ${u} ---\n${content.slice(0, 8000)}\n--- End of ${u} ---`
+            : "";
         }));
-        urlContext = "\n\nWEB PAGE CONTEXT:\n" + contents.join("\n");
+        const usableContents = contents.filter(Boolean);
+        if (usableContents.length > 0) {
+          urlContext = "\n\nWEB PAGE CONTEXT:\n" + usableContents.join("\n");
+        }
       }
 
       // 2) Optional web search in Ask mode. When the user explicitly enables
@@ -1478,14 +1483,14 @@ export async function handleRequest(req: Request): Promise<Response> {
         askSearchQuery = searchDecision.query || message.slice(0, 240);
         if (askSearchQuery) {
           askResearch = await deepResearch(askSearchQuery, "", researchDeps, ASK_RESEARCH);
-          if (askResearch.searches.length > 0 || askResearch.readContent.length > 0) {
-            webSearchContext = `\n\n${buildResearchContext(askResearch)}`;
+          const renderedResearch = hasResearch(askResearch) ? buildResearchContext(askResearch) : "";
+          if (renderedResearch) {
+            webSearchContext = `\n\n${renderedResearch}`;
           }
         }
       }
 
-      const systemPrompt = await buildSystemPromptFor(feature, askResearch);
-      const basePrompt = buildAskBasePrompt({
+      const askPromptInput = {
         message,
         mode,
         citationMode,
@@ -1493,8 +1498,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         prosConsMode,
         argumentMapMode,
         researchAvailable: Boolean(webSearchContext || urlContext),
-      });
-      const contextBudget = Math.max(0, MAX_ASK_CONTEXT_LENGTH - basePrompt.length);
+      };
+      const initialBasePrompt = buildAskBasePrompt(askPromptInput);
+      const contextBudget = Math.max(0, MAX_ASK_CONTEXT_LENGTH - initialBasePrompt.length);
       const webSearchBudget = Math.max(0, contextBudget - urlContext.length);
       const trimmedWebSearch = truncateTextToBudget(webSearchContext, webSearchBudget);
       webSearchContext = trimmedWebSearch.text;
@@ -1505,6 +1511,12 @@ export async function handleRequest(req: Request): Promise<Response> {
       urlContext = trimmedUrlContext.text;
       responseTruncated = responseTruncated || trimmedUrlContext.truncated;
 
+      const researchAvailable = Boolean(webSearchContext || urlContext);
+      const basePrompt = researchAvailable === askPromptInput.researchAvailable
+        ? initialBasePrompt
+        : buildAskBasePrompt({ ...askPromptInput, researchAvailable });
+      const effectiveResearch = webSearchContext && askResearch ? askResearch : null;
+      const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
       const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
       const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
@@ -1526,7 +1538,9 @@ export async function handleRequest(req: Request): Promise<Response> {
           }));
         }
 
-        const researchSources = askResearch ? getResearchSources(askResearch) : [];
+        const researchSources = effectiveResearch
+          ? getResearchSources(effectiveResearch).filter((source) => webSearchContext.includes(source.url))
+          : [];
         if (shouldUseResearch) {
           typedOutput.searchInfo = {
             webSearchUsed: researchSources.length > 0,
@@ -1588,11 +1602,17 @@ export async function handleRequest(req: Request): Promise<Response> {
       const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, req.signal));
       const output = cleanGeneratedText(aiResult.output);
 
-      // Post-process: force needsSource to false since we provided research
+      // Preserve model evidence warnings when research exists. If research
+      // returned no usable material, every contention still needs a source.
       if (output && typeof output === "object" && "contentions" in output) {
-        const contentions = (output as { contentions: Array<{ needsSource?: boolean }> }).contentions;
-        for (const c of contentions) {
-          c.needsSource = false;
+        const contentions = (output as { contentions?: unknown }).contentions;
+        const hasUsableSources = getResearchSources(research).length > 0 || boundPromptSources(sources).length > 0;
+        if (Array.isArray(contentions) && !hasUsableSources) {
+          for (const contention of contentions) {
+            if (contention && typeof contention === "object") {
+              Object.assign(contention, { needsSource: true });
+            }
+          }
         }
       }
 

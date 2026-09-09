@@ -258,7 +258,7 @@ ${searchContext}
 Region: ${asString(input.region, "Global")}
 Source Type: ${asString(input.sourceType, "any")}
 Timeframe: ${asString(input.timeframe, "Recent (last 5 years)")}
-Source Count: ${asString(input.sourceCount, "5")}
+Source Count: ${typeof input.sourceCount === "number" && Number.isFinite(input.sourceCount) ? input.sourceCount : 5}
 Language: ${languageLabel(asString(input.language, "en"))} (${asString(input.language, "en")})`;
   }
 

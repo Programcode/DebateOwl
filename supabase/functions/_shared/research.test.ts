@@ -1,6 +1,7 @@
 import {
   applyFactoidsVerification,
   buildDiscoveredSources,
+  buildResearchContext,
   deepResearch,
   emptyResearchContext,
   exaGetContents,
@@ -15,6 +16,13 @@ import {
 function ctxWith(overrides: Partial<ResearchContext>): ResearchContext {
   return { ...emptyResearchContext(), ...overrides };
 }
+
+Deno.test("empty research does not render a research context block", () => {
+  const rendered = buildResearchContext(ctxWith({
+    searches: [{ query: "empty search", results: "" }],
+  }));
+  if (rendered !== "") throw new Error(`empty research rendered unexpected context: ${rendered}`);
+});
 
 Deno.test("factoid citations backed by strong or moderate fetched sources stay verified", () => {
   const research = ctxWith({

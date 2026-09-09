@@ -1,6 +1,6 @@
 # System prompt improvement plan
 
-**Status:** Remaining work as of 2026-09-01 on `main` (`79b65ca`). Re-verified: PRs #16-#28 did not touch the prompt builders.
+**Status:** Implementation and manual baseline completed on the isolated `t3code/system-prompt-improvements` branch, based on `235bb49`. Credential-free and protected staging verification passed. Release verification and rollout are tracked in PR #42. See [prompt-eval-sheet.md](prompt-eval-sheet.md) for the dated 36-response comparison and its limits.
 
 ## Preconditions
 
@@ -59,7 +59,7 @@ Run focused tests after each fixture group:
 
 ```bash
 npx vitest run supabase/functions/_shared/prompts.test.ts supabase/functions/ai/prompt-builder.test.ts supabase/functions/ai/control-matrix.test.ts src/test/supabase/prompt-builder.test.ts
-npx vitest run src/test/ai/streaming.test.ts src/test/ai/streaming-integration.test.ts
+npx vitest run supabase/functions/ai-stream/prompt.test.ts src/test/ai/streaming.test.ts src/test/ai/streaming-integration.test.ts
 ```
 
 Then run the repository gates:
@@ -70,9 +70,11 @@ npm run typecheck
 npm test -- --coverage
 npm run build
 deno check supabase/functions/_shared/prompts.ts supabase/functions/ai/index.ts supabase/functions/ai-stream/index.ts
-deno test --allow-read --allow-env=EXA_API_KEY --allow-net=127.0.0.1 supabase/functions/
+npm run test:edge
 CI=1 PORT=18082 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18082 npm run test:e2e -- e2e/authed-pages.spec.ts e2e/sparring.spec.ts e2e/crossfire.spec.ts
 ```
+
+The maintained `test:edge` script includes the environment permissions required by handler tests. The earlier `--allow-env=EXA_API_KEY` command fails when current tests set their synthetic Supabase and provider environment. Streaming handler tests run under native Deno.
 
 Confirm port `18082` is free before the browser run; the explicit `PORT` and `PLAYWRIGHT_BASE_URL` prevent reuse of the dev server's default `8080`. Use mocked provider responses and authenticated fixtures. Acceptance requires every visible control to have a tested prompt or post-processing effect, all structured outputs to pass their schema gates, streaming Ask to remain Markdown-only, no citation rule to leak into a no-research path, and the manual sheet to be dated and reproducible.
 

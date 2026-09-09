@@ -118,7 +118,6 @@ setup('authenticate with the protected staging demo code', async ({ page }) => {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   const { data, error } = await supabase.auth.verifyOtp({
-    email: handoff.email,
     token_hash: handoff.tokenHash,
     type: 'magiclink',
   });
