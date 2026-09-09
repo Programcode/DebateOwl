@@ -135,7 +135,7 @@ test('keeps the setup usable on mobile with reduced motion', async ({ page }) =>
   await expect(page.getByText('Write the resolution as you would hear it in the room.')).toHaveCount(0);
   await expect(page.getByText('A precise motion gives the opponent something concrete to attack.')).toHaveCount(0);
   await expect(page.getByText('Pro Introductor')).toBeHidden();
-  const speakingSummary = page.locator('details > summary');
+  const speakingSummary = page.locator('main details > summary');
   const summaryMetrics = await speakingSummary.evaluate((element) => {
     const icon = element.querySelector('svg');
     if (!icon) throw new Error('Speaking order disclosure is missing its chevron.');
