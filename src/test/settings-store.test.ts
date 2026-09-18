@@ -42,6 +42,13 @@ describe("settings-store", () => {
     expect(supabaseMock.from).toHaveBeenCalledWith("user_settings");
   });
 
+  it("setOutputLanguage updates state and persists", async () => {
+    useSettingsStore.getState().setOutputLanguage("hu");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(useSettingsStore.getState().outputLanguage).toBe("hu");
+    expect(supabaseMock.from).toHaveBeenCalledWith("user_settings");
+  });
+
   it("hydrateFromServer merges defaults with server configs", async () => {
     setMockTableResponse("user_settings", {
       single: {
@@ -156,6 +163,37 @@ describe("settings-store", () => {
     expect(generate).not.toHaveProperty("baseUrl");
     expect(attack).toMatchObject({ provider: "openrouter", model: "z-ai/glm-5.3-flash", reasoningEffort: "low" });
     expect(attack).not.toHaveProperty("apiKey");
+
+    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.upsert.mock.calls.length)?.value;
+    expect(settingsWrite.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        feature_configs: expect.objectContaining({
+          generate: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
+          attack: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
+        }),
+      }),
+      { onConflict: "user_id" },
+    );
+    expect(settingsWrite.upsert.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("apiKey");
+    expect(settingsWrite.upsert.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("baseUrl");
+  });
+
+  it("does not rewrite server feature configs that are already canonical", async () => {
+    const featureConfigs = structuredClone(useSettingsStore.getState().featureConfigs);
+    setMockTableResponse("user_settings", {
+      single: {
+        language: "en",
+        output_language: "en",
+        theme: "system",
+        custom_system_prompt: null,
+        feature_configs: featureConfigs,
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    const settingsWrites = supabaseMock.from.mock.results.filter(({ value }) => value.upsert.mock.calls.length);
+    expect(settingsWrites).toHaveLength(0);
   });
 
   it("does not upsert when user is not signed in", async () => {

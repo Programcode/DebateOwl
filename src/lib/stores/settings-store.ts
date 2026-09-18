@@ -1,10 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import i18n from '@/i18n';
-import {
-  DEFAULT_MODEL,
-  DEFAULT_PRO_MODEL,
-} from '../ai/providers/types';
+import { DEFAULT_MODEL } from '../ai/providers/types';
 import type { ProviderConfig } from '../ai/providers/types';
 import {
   getModelCatalogEntry,
@@ -43,13 +40,13 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gpt-5.4-mini': DEFAULT_MODEL,
   'gpt-4o': DEFAULT_MODEL,
   'gpt-4o-mini': DEFAULT_MODEL,
-  'claude-opus-4-7': DEFAULT_PRO_MODEL,
-  'claude-sonnet-4-6': DEFAULT_PRO_MODEL,
+  'claude-opus-4-7': DEFAULT_MODEL,
+  'claude-sonnet-4-6': DEFAULT_MODEL,
   'claude-haiku-4-5-20251001': DEFAULT_MODEL,
-  'gemini-3.1-pro-preview': 'google/gemini-3.8-flash',
-  'gemini-3.5-flash': 'google/gemini-3.8-flash',
-  'gemini-3-flash-preview': 'google/gemini-3.8-flash',
-  'gemini-3.1-flash-lite-preview': 'google/gemini-3.8-flash',
+  'gemini-3.1-pro-preview': DEFAULT_MODEL,
+  'gemini-3.5-flash': DEFAULT_MODEL,
+  'gemini-3-flash-preview': DEFAULT_MODEL,
+  'gemini-3.1-flash-lite-preview': DEFAULT_MODEL,
 };
 
 const defaultConfig: ProviderConfig = {
@@ -107,6 +104,24 @@ function normalizeFeatureConfigs(configs: unknown, preserveLocalMock = false): R
   return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
     return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], preserveLocalMock)];
   })) as Record<FeatureTab, ProviderConfig>;
+}
+
+function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab, ProviderConfig>): boolean {
+  const saved = asRecord(value);
+  const features = Object.keys(expected) as FeatureTab[];
+  if (!saved || Object.keys(saved).length !== features.length) return false;
+
+  const allowedKeys = new Set(['provider', 'model', 'temperature', 'reasoningEffort']);
+  return features.every((feature) => {
+    const config = asRecord(saved[feature]);
+    if (!config) return false;
+    const target = expected[feature];
+    return Object.keys(config).every((key) => allowedKeys.has(key))
+      && config.provider === target.provider
+      && config.model === target.model
+      && config.temperature === target.temperature
+      && config.reasoningEffort === target.reasoningEffort;
+  });
 }
 
 async function getUserId() {
@@ -222,17 +237,30 @@ export const useSettingsStore = create<SettingsState>()(
         if (error || !data) return;
 
         const mergedConfigs = normalizeFeatureConfigs(data.feature_configs);
+        const configsNeedMigration = !featureConfigsAreCanonical(data.feature_configs, mergedConfigs);
 
         const language = (data.language as 'en' | 'es' | 'hu') || 'en';
+        const outputLanguage = (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en';
+        const theme = (data.theme as 'light' | 'dark' | 'system') || 'system';
+        const customSystemPrompt = data.custom_system_prompt || undefined;
         await i18n.changeLanguage(language);
         set({
           language,
-          outputLanguage: (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en',
-          theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
+          outputLanguage,
+          theme,
           featureConfigs: mergedConfigs,
-          customSystemPrompt: data.custom_system_prompt || undefined,
+          customSystemPrompt,
           wikiResearchEnabled: get().wikiResearchEnabled,
         });
+        if (configsNeedMigration) {
+          await upsertSettings({
+            language,
+            output_language: outputLanguage,
+            theme,
+            feature_configs: mergedConfigs,
+            custom_system_prompt: customSystemPrompt ?? null,
+          });
+        }
       },
       resetLocalData: () => {
         set({
@@ -247,6 +275,15 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'debate-trainer-settings',
+      version: 1,
+      migrate: (persistedState: unknown) => {
+        const saved = asRecord(persistedState);
+        if (!saved) return persistedState;
+        return {
+          ...saved,
+          featureConfigs: normalizeFeatureConfigs(saved.featureConfigs, true),
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs, true);

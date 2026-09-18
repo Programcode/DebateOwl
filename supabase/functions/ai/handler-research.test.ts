@@ -17,7 +17,7 @@ for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value)
 
 const { handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
-const { MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+const { MAX_REQUEST_OUTPUT_TOKENS } = await import("../_shared/model-catalog.ts");
 
 Deno.test("AI handlers reject malformed controls before quota or provider work", async () => {
   const originalFetch = globalThis.fetch;
@@ -38,7 +38,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "z-ai/glm-5.3-flash",
         input: { message: "Question", mode: "\u200Bgeneral", citationMode: "false" },
       }),
     }));
@@ -54,7 +54,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "z-ai/glm-5.3-flash",
         input: { message: "Question", mode: "general", citationMode: "false" },
       }),
     }));
@@ -169,7 +169,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
       },
       body: JSON.stringify({
         feature: "factoids",
-        model: "openai/gpt-5.6-luna",
+        model: "z-ai/glm-5.3-flash",
         input: {
           claim: "solar energy costs",
           direction: "for",
@@ -248,7 +248,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     }
     if (url.href === "https://api.exa.ai/contents") return jsonResponse({ results: [] });
 
-    if (url.href === "https://api.openai.com/v1/chat/completions") {
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       providerBodies.push(body);
       const messages = body.messages as Array<{ content?: unknown }> | undefined;
@@ -279,7 +279,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "gpt-5.4-mini", input }),
+      body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input }),
     }));
     if (response.status !== 200) throw new Error(`Ask handler returned ${response.status}: ${await response.text()}`);
     const mainRequest = providerBodies.find((body) => {
@@ -323,6 +323,9 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     }
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
 function supabaseTestResponse(url: URL): Response | undefined {
   if (url.origin !== "https://supabase.test") return undefined;
   if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
@@ -383,40 +386,27 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const unknown = await handleRequest(askRequest("provider/unknown-model", "low"));
     if (unknown.status !== 400 || openRouterBodies.length !== 0) throw new Error("unknown model reached routing");
 
-    for (const entry of MODEL_CATALOG) {
-      const response = await requestForModel(entry.id, entry.isProOnly ? "pro" : "trial");
-      if (response.status !== 200) throw new Error(`${entry.id} returned ${response.status}: ${await response.text()}`);
-    }
-    for (const effort of ["low", "medium", "high"]) {
-      const response = await requestForModel("anthropic/claude-sonnet-5", "pro", effort);
-      if (response.status !== 200) throw new Error(`Pro ${effort} returned ${response.status}: ${await response.text()}`);
-    }
-    for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
-      const response = await requestForModel(model, "pro", "medium");
-      if (response.status !== 200) throw new Error(`Pro medium ${model} returned ${response.status}: ${await response.text()}`);
-    }
+    const trial = await requestForModel("z-ai/glm-5.3-flash", "trial", "high");
+    if (trial.status !== 200) throw new Error(`trial GLM returned ${trial.status}: ${await trial.text()}`);
+    const pro = await requestForModel("z-ai/glm-5.3-flash", "pro", "high");
+    if (pro.status !== 200) throw new Error(`Pro GLM returned ${pro.status}: ${await pro.text()}`);
+    const unsupportedMedium = await requestForModel("z-ai/glm-5.3-flash", "pro", "medium");
+    if (unsupportedMedium.status !== 200) throw new Error(`Pro medium GLM returned ${unsupportedMedium.status}: ${await unsupportedMedium.text()}`);
 
-    if (openRouterBodies.length !== MODEL_CATALOG.length + 6) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
-    for (let index = 0; index < MODEL_CATALOG.length; index += 1) {
-      const entry = MODEL_CATALOG[index];
-      const body = openRouterBodies[index];
-      if (body.model !== entry.id) throw new Error(`wrong routed model: ${String(body.model)}`);
-      if (body.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error(`output cap was not enforced for ${entry.id}`);
+    const routedBodies: Array<Record<string, unknown>> = Array.from(openRouterBodies);
+    if (routedBodies.length !== 3) throw new Error(`unexpected OpenRouter call count: ${routedBodies.length}`);
+    for (const body of routedBodies) {
+      if (body.model !== "z-ai/glm-5.3-flash") throw new Error(`wrong routed model: ${String(body.model)}`);
+      if (body.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("output cap was not enforced");
       const reasoning = body.reasoning as Record<string, unknown>;
       const provider = body.provider as Record<string, unknown>;
-      if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
-      if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
-      if (body.response_format && (body.response_format as Record<string, unknown>).type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
-      if (entry.supportsTemperature !== ("temperature" in body)) throw new Error(`temperature support mismatch for ${entry.id}`);
+      if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error("strict OpenRouter route missing");
+      if ((body.response_format as Record<string, unknown>)?.type !== "json_object") throw new Error("JSON response format missing");
+      if (!("temperature" in body)) throw new Error("GLM temperature was not forwarded");
     }
-    for (const [offset, effort] of ["low", "medium", "high"].entries()) {
-      const body = openRouterBodies[MODEL_CATALOG.length + offset];
-      if ((body.reasoning as Record<string, unknown>).effort !== effort) throw new Error(`Pro effort ${effort} was not forwarded`);
-    }
-    for (const offset of [3, 4, 5]) {
-      const body = openRouterBodies[MODEL_CATALOG.length + offset];
-      if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
-    }
+    if ((routedBodies[0].reasoning as Record<string, unknown>).effort !== "low") throw new Error("trial effort was not forced low");
+    if ((routedBodies[1].reasoning as Record<string, unknown>).effort !== "high") throw new Error("Pro high effort was not forwarded");
+    if ((routedBodies[2].reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported GLM medium was not lowered");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;
@@ -457,7 +447,7 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
     const withZero = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input: { message: "Hello", mode: "general" } }),
     }));
     await withZero.text();
     if (streamBodies[0]?.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("stream output cap was not enforced");
@@ -467,7 +457,7 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
     const withoutUsage = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input: { message: "Hello", mode: "general" } }),
     }));
     await withoutUsage.text();
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error(`missing stream cost was estimated: ${JSON.stringify(usageRows.at(-1))}`);
@@ -498,7 +488,7 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   const request = () => new Request("http://127.0.0.1/functions/v1/ai-stream", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input: { message: "Hello", mode: "general" } }),
   });
 
   const testState = globalThis as typeof globalThis & { __testTier?: string };
@@ -572,7 +562,7 @@ Deno.test("cancelled streams keep observed cost unknown", async () => {
     const response = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input: { message: "Hello", mode: "general" } }),
       signal: caller.signal,
     }));
     const read = response.text();
@@ -622,7 +612,7 @@ Deno.test("cancelled JSON repair keeps observed tokens but makes the total cost 
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input: { message: "Hello", mode: "general" } }),
       signal: caller.signal,
     }));
     if (response.status !== 500) throw new Error(`cancelled repair returned ${response.status}`);
@@ -684,7 +674,7 @@ Deno.test("stream terminal events stop an open upstream promptly", async () => {
   const request = (signal?: AbortSignal) => new Request("http://127.0.0.1/functions/v1/ai-stream", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "z-ai/glm-5.3-flash", input: { message: "Hello", mode: "general" } }),
     signal,
   });
   const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => await Promise.race([

@@ -83,7 +83,7 @@ Supabase Auth owns user sessions. Protected routes provide a client navigation b
 
 Checkout and portal functions create Stripe sessions after authenticated ownership and redirect validation. The webhook updates subscription state and records event processing for idempotency. AI handlers record provider usage and calculated cost using shared pricing logic.
 
-All supported model requests use the single OpenRouter backend route and `OPENROUTER_API_KEY`; the shared allowlist and request controls live in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts). OpenRouter usage remains raw in the audit row, and the reported charge is unknown when the provider does not return a complete cost.
+All model requests use the single OpenRouter backend route and `OPENROUTER_API_KEY`. The only selectable and default model is `z-ai/glm-5.3-flash`; the shared allowlist and request controls live in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts). OpenRouter usage remains raw in the audit row, and the reported charge is unknown when the provider does not return a complete cost.
 
 Historical provider pricing evidence is retained under [`docs/pricing-snapshots/`](pricing-snapshots/). Those snapshots support legacy calculator records and are evidence, not runtime configuration for the OpenRouter route.
 

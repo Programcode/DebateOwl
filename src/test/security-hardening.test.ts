@@ -64,8 +64,10 @@ describe('security hardening regressions', () => {
   });
 
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
-    expect(modelCatalog).toContain('id: "openai/gpt-5.6-luna"');
-    expect(modelCatalog).toContain('id: "anthropic/claude-sonnet-5"');
+    expect(modelCatalog).toContain('id: "z-ai/glm-5.3-flash"');
+    expect(modelCatalog).not.toContain('anthropic/');
+    expect(modelCatalog).not.toContain('openai/');
+    expect(modelCatalog).not.toContain('google/');
     expect(ai).toContain('function modelForRequest');
     expect(stream).toContain('function modelForRequest');
     expect(ai).toContain('const provider: Provider = OPENROUTER_PROVIDER');

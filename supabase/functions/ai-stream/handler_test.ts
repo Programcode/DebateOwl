@@ -222,7 +222,7 @@ Deno.test("streaming Ask rejects advanced modes and toggles before quota or prov
           },
           body: JSON.stringify({
             feature: "ask",
-            model: "gpt-5.4-mini",
+            model: "z-ai/glm-5.3-flash",
             input: { message: "Question", ...testCase.input },
           }),
         }),

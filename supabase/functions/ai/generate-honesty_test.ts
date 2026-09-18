@@ -2,7 +2,7 @@ const environment = {
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   EXA_API_KEY: "test-exa-key",
-  OPENAI_API_KEY: "test-openai-key",
+  OPENROUTER_API_KEY: "test-openrouter-key",
 };
 
 for (const [key, value] of Object.entries(environment)) {
@@ -95,7 +95,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         return jsonResponse({ results: [] });
       }
 
-      if (url.href === "https://api.openai.com/v1/chat/completions") {
+      if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
         providerCalls += 1;
         const content = providerCalls % 2 === 1 ? { queries: [] } : generatedOutput;
         const requestBody = init?.body
@@ -110,7 +110,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         }
         return jsonResponse({
           choices: [{ message: { content: JSON.stringify(content) } }],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.001 },
         });
       }
 
@@ -127,7 +127,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         },
         body: JSON.stringify({
           feature: "generate",
-          model: "gpt-5.4-mini",
+          model: "z-ai/glm-5.3-flash",
           input: {
             motion: "Should schools teach media literacy?",
             side: "pro",
@@ -176,7 +176,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         },
         body: JSON.stringify({
           feature: "generate",
-          model: "gpt-5.4-mini",
+          model: "z-ai/glm-5.3-flash",
           input: {
             motion: "Should schools teach media literacy?",
             side: "pro",

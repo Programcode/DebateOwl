@@ -44,7 +44,7 @@ describe('settings-store additional branches', () => {
   it('setFeatureConfig merges correctly', () => {
     useSettingsStore.getState().setFeatureConfig('generate', { model: 'anthropic/claude-sonnet-5', provider: 'openrouter' });
     const config = useSettingsStore.getState().featureConfigs.generate;
-    expect(config.model).toBe('anthropic/claude-sonnet-5');
+    expect(config.model).toBe('z-ai/glm-5.3-flash');
     expect(config.provider).toBe('openrouter');
     expect(config.temperature).toBe(0.7);
   });
@@ -58,7 +58,7 @@ describe('settings-store additional branches', () => {
   it('getFeatureConfig returns config for known feature', () => {
     const config = useSettingsStore.getState().getFeatureConfig('generate');
     expect(config.provider).toBe('openrouter');
-    expect(config.model).toBe('openai/gpt-5.6-luna');
+    expect(config.model).toBe('z-ai/glm-5.3-flash');
   });
 
   it('getFeatureConfig returns defaults for unknown feature', () => {
@@ -83,7 +83,7 @@ describe('settings-store additional branches', () => {
   it('resetLocalData resets featureConfigs', () => {
     useSettingsStore.getState().setFeatureConfig('generate', { model: 'openai/gpt-5.6-terra' });
     useSettingsStore.getState().resetLocalData();
-    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe('openai/gpt-5.6-luna');
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe('z-ai/glm-5.3-flash');
   });
 
   it('resetLocalData resets customSystemPrompt', () => {

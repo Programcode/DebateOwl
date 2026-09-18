@@ -85,38 +85,38 @@ describe('AI streaming helpers', () => {
   });
 
   it('enables streaming for basic OpenRouter ask chats', () => {
-    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 })).toBe(true);
+    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 })).toBe(true);
     expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x', temperature: 0.7 })).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
       { citationMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
       { webSearch: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
       { prosConsMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
       { argumentMapMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
       { mode: 'clarify' }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
       { mode: 'general' }
     )).toBe(true);
     for (const mode of ['clarify', 'summarize', 'proscons', 'argumentmap']) {
       expect(isAskStreamingSupported(
-        { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+        { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 },
         { mode }
       )).toBe(false);
     }

@@ -127,7 +127,7 @@ Deno.test("OpenRouter usage uses its reported account cost, including zero", () 
     cost: 0,
   };
   const usage = normalizeOpenRouterUsage(raw);
-  const result = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-5.6-luna", usage });
+  const result = calculateRequestCost({ provider: "openrouter", model: "z-ai/glm-5.3-flash", usage });
   if (usage.reportedCostUsd !== 0 || result.costUsd !== 0) {
     throw new Error(`zero OpenRouter cost was not preserved: ${JSON.stringify({ usage, result })}`);
   }
@@ -136,7 +136,7 @@ Deno.test("OpenRouter usage uses its reported account cost, including zero", () 
 
 Deno.test("OpenRouter usage without a reported cost fails closed", () => {
   const usage = normalizeOpenRouterUsage({ prompt_tokens: 10, completion_tokens: 5 });
-  const result = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-5.6-luna", usage });
+  const result = calculateRequestCost({ provider: "openrouter", model: "z-ai/glm-5.3-flash", usage });
   if (result.costUsd !== null) {
     throw new Error(`missing OpenRouter cost was estimated: ${JSON.stringify(result)}`);
   }
@@ -176,7 +176,7 @@ Deno.test("merged OpenRouter research usage sums only complete reported costs", 
     normalizeOpenRouterUsage({ prompt_tokens: 20, completion_tokens: 8, cost: 0.75 }),
   ]);
   if (complete?.reportedCostUsd !== 1) throw new Error(`complete costs were not summed: ${complete?.reportedCostUsd}`);
-  const completeCost = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-5.6-luna", usage: complete });
+  const completeCost = calculateRequestCost({ provider: "openrouter", model: "z-ai/glm-5.3-flash", usage: complete });
   if (completeCost.costUsd !== 1) throw new Error(`complete merged cost was not retained: ${completeCost.costUsd}`);
 
   const missing = mergeNormalizedUsage([
@@ -184,7 +184,7 @@ Deno.test("merged OpenRouter research usage sums only complete reported costs", 
     normalizeOpenRouterUsage({ prompt_tokens: 20, completion_tokens: 8 }),
   ]);
   if (missing?.reportedCostUsd !== undefined) throw new Error("missing sub-call cost was summed");
-  const missingCost = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-5.6-luna", usage: missing });
+  const missingCost = calculateRequestCost({ provider: "openrouter", model: "z-ai/glm-5.3-flash", usage: missing });
   if (missingCost.costUsd !== null) throw new Error(`missing sub-call cost was estimated: ${missingCost.costUsd}`);
 
   const incomplete = mergeNormalizedUsage([
@@ -192,7 +192,7 @@ Deno.test("merged OpenRouter research usage sums only complete reported costs", 
     { incomplete: true, raw: { aborted: true } },
   ]);
   if (!incomplete?.incomplete || incomplete.reportedCostUsd !== undefined) throw new Error("incomplete sub-call was billed");
-  const incompleteCost = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-5.6-luna", usage: incomplete });
+  const incompleteCost = calculateRequestCost({ provider: "openrouter", model: "z-ai/glm-5.3-flash", usage: incomplete });
   if (incompleteCost.costUsd !== null) throw new Error(`incomplete merged cost was estimated: ${incompleteCost.costUsd}`);
 });
 
