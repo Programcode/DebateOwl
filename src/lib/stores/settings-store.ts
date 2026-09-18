@@ -148,6 +148,18 @@ async function upsertSettings(payload: {
   }
 }
 
+async function persistMigratedFeatureConfigs(featureConfigs: Record<FeatureTab, ProviderConfig>) {
+  const userId = await getUserId();
+  if (!userId) return;
+  const { error } = await supabase
+    .from('user_settings')
+    .update({ feature_configs: featureConfigs, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('[SettingsStore] Failed to persist migrated settings:', error.message);
+  }
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
@@ -253,13 +265,7 @@ export const useSettingsStore = create<SettingsState>()(
           wikiResearchEnabled: get().wikiResearchEnabled,
         });
         if (configsNeedMigration) {
-          await upsertSettings({
-            language,
-            output_language: outputLanguage,
-            theme,
-            feature_configs: mergedConfigs,
-            custom_system_prompt: customSystemPrompt ?? null,
-          });
+          await persistMigratedFeatureConfigs(mergedConfigs);
         }
       },
       resetLocalData: () => {

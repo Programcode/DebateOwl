@@ -164,18 +164,18 @@ describe("settings-store", () => {
     expect(attack).toMatchObject({ provider: "openrouter", model: "z-ai/glm-5.3-flash", reasoningEffort: "low" });
     expect(attack).not.toHaveProperty("apiKey");
 
-    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.upsert.mock.calls.length)?.value;
-    expect(settingsWrite.upsert).toHaveBeenCalledWith(
+    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.update.mock.calls.length)?.value;
+    expect(settingsWrite.update).toHaveBeenCalledWith(
       expect.objectContaining({
         feature_configs: expect.objectContaining({
           generate: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
           attack: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
         }),
       }),
-      { onConflict: "user_id" },
     );
-    expect(settingsWrite.upsert.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("apiKey");
-    expect(settingsWrite.upsert.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("baseUrl");
+    expect(settingsWrite.update.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("apiKey");
+    expect(settingsWrite.update.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("baseUrl");
+    expect(settingsWrite.update.mock.results[0].value.eq).toHaveBeenCalledWith("user_id", "user_1");
   });
 
   it("does not rewrite server feature configs that are already canonical", async () => {
@@ -192,7 +192,9 @@ describe("settings-store", () => {
 
     await useSettingsStore.getState().hydrateFromServer();
 
-    const settingsWrites = supabaseMock.from.mock.results.filter(({ value }) => value.upsert.mock.calls.length);
+    const settingsWrites = supabaseMock.from.mock.results.filter(({ value }) =>
+      value.upsert.mock.calls.length || value.update.mock.calls.length
+    );
     expect(settingsWrites).toHaveLength(0);
   });
 
