@@ -96,7 +96,7 @@ describe('sparring AI client', () => {
       headers: { Authorization: expect.stringContaining('Bearer') },
       body: expect.objectContaining({
         feature: 'sparring',
-        provider: 'openai',
+        provider: 'openrouter',
         model: 'gpt-4o',
         input: expect.objectContaining({
           action: 'respond',

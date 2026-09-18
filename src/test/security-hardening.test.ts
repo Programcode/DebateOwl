@@ -8,6 +8,7 @@ const migration = read('supabase/migrations/20260819000000_security_hardening.sq
 const advisorMigration = read('supabase/migrations/20260820090000_advisor_security_cleanup.sql');
 const ai = read('supabase/functions/ai/index.ts');
 const stream = read('supabase/functions/ai-stream/index.ts');
+const modelCatalog = read('supabase/functions/_shared/model-catalog.ts');
 const importer = read('supabase/functions/import-source/index.ts');
 const share = read('supabase/functions/share/index.ts');
 const promo = read('supabase/functions/redeem-promo/index.ts');
@@ -63,8 +64,16 @@ describe('security hardening regressions', () => {
   });
 
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
-    expect(ai).toContain('function providerForModel');
+    expect(modelCatalog).toContain('id: "z-ai/glm-5.3-flash"');
+    expect(modelCatalog).not.toContain('anthropic/');
+    expect(modelCatalog).not.toContain('openai/');
+    expect(modelCatalog).not.toContain('google/');
+    expect(ai).toContain('function modelForRequest');
+    expect(stream).toContain('function modelForRequest');
+    expect(ai).toContain('const provider: Provider = OPENROUTER_PROVIDER');
+    expect(stream).toContain('const OPENROUTER_PROVIDER = "openrouter"');
     expect(ai).toContain('Unsupported model or provider combination');
+    expect(stream).toContain('Unsupported model or provider combination');
     // SSRF-safe verification now lives in the shared research module.
     expect(read('supabase/functions/_shared/research.ts')).toContain('Do not fetch model-provided citation URLs');
     expect(ai).not.toContain('fetchWithTimeout(currentUrl.toString(), { method: "HEAD"');

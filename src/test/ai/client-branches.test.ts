@@ -787,14 +787,14 @@ describe('AI client branch coverage', () => {
     expect(isTimeoutError({ name: 'TimeoutError' })).toBe(false);
   });
 
-  it('passes only active sources and mapped provider in invoke payload', async () => {
+  it('passes only active sources and the OpenRouter provider in invoke payload', async () => {
     invokeMock.mockResolvedValueOnce({ data: { output: validGenerateOutput }, error: null });
 
     await generateCase(validGenerateInput, { ...config, provider: 'lovable' });
 
     expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({
       body: expect.objectContaining({
-        provider: 'openai',
+        provider: 'openrouter',
         customSystemPrompt: 'custom-system-prompt',
         sources: [
           {

@@ -1,7 +1,7 @@
 const testEnvironment = {
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
-  OPENAI_API_KEY: "test-openai-key",
+  OPENROUTER_API_KEY: "test-openrouter-key",
 };
 
 for (const [key, value] of Object.entries(testEnvironment)) {
@@ -85,7 +85,10 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
       throw new Error(`Unexpected Supabase request: ${url}`);
     }
 
-    if (url.href === "https://api.openai.com/v1/chat/completions") {
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      if (new Headers(init?.headers).get("Authorization") !== "Bearer test-openrouter-key") {
+        throw new Error("streaming handler did not use OPENROUTER_API_KEY");
+      }
       providerRequest = JSON.parse(String(init?.body)) as Record<string, unknown>;
       return new Response(upstream, {
         headers: { "Content-Type": "text/event-stream" },
@@ -105,7 +108,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
         },
         body: JSON.stringify({
           feature: "ask",
-          model: "gpt-4o-mini",
+          model: "z-ai/glm-5.3-flash",
           input: {
             message: "¿Cómo respondo a este argumento?",
             history: [],
@@ -129,6 +132,9 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     assertIncludes(body, '"response":"Szia Adam"');
 
     const messages = providerRequest?.messages as Array<{ role: string; content: string }> | undefined;
+    if (providerRequest?.model !== "z-ai/glm-5.3-flash") {
+      throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
+    }
     const system = messages?.find((message) => message.role === "system")?.content ?? "";
     assertIncludes(system, "Answer in clear Markdown that can stream smoothly token by token.");
     assertIncludes(system, "Follow any explicit output-language instruction.");
@@ -216,7 +222,7 @@ Deno.test("streaming Ask rejects advanced modes and toggles before quota or prov
           },
           body: JSON.stringify({
             feature: "ask",
-            model: "gpt-5.4-mini",
+            model: "z-ai/glm-5.3-flash",
             input: { message: "Question", ...testCase.input },
           }),
         }),

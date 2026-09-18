@@ -116,12 +116,12 @@ describe('non-streaming AI request analytics', () => {
 
     expect(mocks.captureProductEvent).toHaveBeenNthCalledWith(1, 'ai_request_started', {
       feature: 'generate',
-      provider: 'openai',
+      provider: 'openrouter',
       model: 'gpt-4o',
     });
     expect(mocks.captureProductEvent).toHaveBeenNthCalledWith(2, 'ai_request_succeeded', {
       feature: 'generate',
-      provider: 'openai',
+      provider: 'openrouter',
       model: 'gpt-4o',
       durationMs: expect.any(Number),
     });
@@ -138,7 +138,7 @@ describe('non-streaming AI request analytics', () => {
 
     expect(mocks.captureProductEvent).toHaveBeenNthCalledWith(2, 'ai_request_failed', {
       feature: 'generate',
-      provider: 'openai',
+      provider: 'openrouter',
       model: 'gpt-4o',
       durationMs: expect.any(Number),
       errorName: 'AIProviderError',
@@ -146,7 +146,7 @@ describe('non-streaming AI request analytics', () => {
     });
     expect(mocks.captureException).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'AIProviderError', message: 'AIProviderError' }),
-      expect.objectContaining({ feature: 'generate', provider: 'openai', model: 'gpt-4o' }),
+      expect.objectContaining({ feature: 'generate', provider: 'openrouter', model: 'gpt-4o' }),
     );
     const [capturedError, capturedContext] = mocks.captureException.mock.calls[0];
     expect(capturedError).toMatchObject({ message: 'AIProviderError' });

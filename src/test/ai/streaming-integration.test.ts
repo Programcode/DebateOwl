@@ -31,7 +31,7 @@ function mockFetchOnce(body: BodyInit | null, init: ResponseInit = { status: 200
   return fetchMock;
 }
 
-const config: ProviderConfig = { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 };
+const config: ProviderConfig = { provider: 'openrouter', model: 'gpt-5.4-mini', temperature: 0.7 };
 const options = {};
 
 describe('streamAskChat (integration with mocked fetch)', () => {
@@ -64,6 +64,28 @@ describe('streamAskChat (integration with mocked fetch)', () => {
 
     expect(deltas).toEqual(['Hello', ' world']);
     expect(result.response).toBe('Hello world');
+  });
+
+  it('sends the configured reasoning effort in the SSE request', async () => {
+    const fetchMock = mockFetchOnce(streamFromChunks([
+      'event: final\ndata: {"output":{"response":"answer","followUpQuestions":[],"uncertainties":[]}}\n\n',
+    ]));
+
+    await streamAskChat(
+      'hi',
+      [],
+      'general',
+      { ...config, reasoningEffort: 'high' },
+      options,
+      { onDelta: () => undefined },
+    );
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown[] | undefined)?.[1] as RequestInit | undefined;
+    expect(JSON.parse(String(requestInit.body))).toMatchObject({
+      provider: 'openrouter',
+      model: 'gpt-5.4-mini',
+      reasoningEffort: 'high',
+    });
   });
 
   it('skips malformed JSON chunks and still delivers the final output', async () => {

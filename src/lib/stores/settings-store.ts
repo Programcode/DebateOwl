@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import i18n from '@/i18n';
+import { DEFAULT_MODEL } from '../ai/providers/types';
 import type { ProviderConfig } from '../ai/providers/types';
+import {
+  getModelCatalogEntry,
+  isReasoningEffort,
+} from '../../../supabase/functions/_shared/model-catalog';
 import { supabase } from '@/lib/supabase/client';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
@@ -27,10 +32,28 @@ interface SettingsState {
   resetLocalData: () => void;
 }
 
+const DEFAULT_PROVIDER = 'openrouter';
+
+const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
+  'gpt-5.5': DEFAULT_MODEL,
+  'gpt-5.4': DEFAULT_MODEL,
+  'gpt-5.4-mini': DEFAULT_MODEL,
+  'gpt-4o': DEFAULT_MODEL,
+  'gpt-4o-mini': DEFAULT_MODEL,
+  'claude-opus-4-7': DEFAULT_MODEL,
+  'claude-sonnet-4-6': DEFAULT_MODEL,
+  'claude-haiku-4-5-20251001': DEFAULT_MODEL,
+  'gemini-3.1-pro-preview': DEFAULT_MODEL,
+  'gemini-3.5-flash': DEFAULT_MODEL,
+  'gemini-3-flash-preview': DEFAULT_MODEL,
+  'gemini-3.1-flash-lite-preview': DEFAULT_MODEL,
+};
+
 const defaultConfig: ProviderConfig = {
-  provider: 'google',
-  model: 'gemini-3-flash-preview',
+  provider: DEFAULT_PROVIDER,
+  model: DEFAULT_MODEL,
   temperature: 0.7,
+  reasoningEffort: 'low',
 };
 
 const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
@@ -42,26 +65,63 @@ const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
   sparring: { ...defaultConfig },
 });
 
-function normalizeFeatureConfigs(configs: unknown): Record<FeatureTab, ProviderConfig> {
-  const defaults = getDefaultFeatureConfigs();
-  if (!configs || typeof configs !== 'object' || Array.isArray(configs)) return defaults;
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
 
-  const saved = configs as Record<string, unknown>;
+function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): string {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  const model = value.trim();
+  if (getModelCatalogEntry(model)) return model;
+  return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
+}
+
+function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig, preserveLocalMock = false): ProviderConfig {
+  const candidate = asRecord(value);
+  const isLocalMock = preserveLocalMock && candidate?.provider === 'mock' && candidate?.model === 'local';
+  const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
+    ? candidate.temperature
+    : fallback.temperature;
+  const reasoningEffort = isReasoningEffort(candidate?.reasoningEffort)
+    ? candidate.reasoningEffort
+    : fallback.reasoningEffort ?? 'low';
+
+  return {
+    provider: isLocalMock ? 'mock' : DEFAULT_PROVIDER,
+    model: isLocalMock ? 'local' : normalizeModelId(candidate?.model, fallback.model),
+    temperature,
+    reasoningEffort,
+  };
+}
+
+function normalizeFeatureConfigs(configs: unknown, preserveLocalMock = false): Record<FeatureTab, ProviderConfig> {
+  const defaults = getDefaultFeatureConfigs();
+  const saved = asRecord(configs);
+  if (!saved) return defaults;
+
   return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
-    const value = saved[feature];
-    const candidate = value && typeof value === 'object' && !Array.isArray(value)
-      ? value as Partial<ProviderConfig>
-      : {};
-    const fallback = defaults[feature];
-    return [feature, {
-      ...fallback,
-      ...(typeof candidate.provider === 'string' ? { provider: candidate.provider } : {}),
-      ...(typeof candidate.model === 'string' ? { model: candidate.model } : {}),
-      ...(typeof candidate.temperature === 'number' ? { temperature: candidate.temperature } : {}),
-      ...(typeof candidate.apiKey === 'string' ? { apiKey: candidate.apiKey } : {}),
-      ...(typeof candidate.baseUrl === 'string' ? { baseUrl: candidate.baseUrl } : {}),
-    }];
+    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], preserveLocalMock)];
   })) as Record<FeatureTab, ProviderConfig>;
+}
+
+function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab, ProviderConfig>): boolean {
+  const saved = asRecord(value);
+  const features = Object.keys(expected) as FeatureTab[];
+  if (!saved || Object.keys(saved).length !== features.length) return false;
+
+  const allowedKeys = new Set(['provider', 'model', 'temperature', 'reasoningEffort']);
+  return features.every((feature) => {
+    const config = asRecord(saved[feature]);
+    if (!config) return false;
+    const target = expected[feature];
+    return Object.keys(config).every((key) => allowedKeys.has(key))
+      && config.provider === target.provider
+      && config.model === target.model
+      && config.temperature === target.temperature
+      && config.reasoningEffort === target.reasoningEffort;
+  });
 }
 
 async function getUserId() {
@@ -147,7 +207,10 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           featureConfigs: {
             ...state.featureConfigs,
-            [feature]: { ...state.featureConfigs[feature], ...config },
+            [feature]: normalizeFeatureConfig(
+              { ...state.featureConfigs[feature], ...config },
+              getDefaultFeatureConfigs()[feature],
+            ),
           },
         }));
         void upsertSettings({
@@ -174,17 +237,30 @@ export const useSettingsStore = create<SettingsState>()(
         if (error || !data) return;
 
         const mergedConfigs = normalizeFeatureConfigs(data.feature_configs);
+        const configsNeedMigration = !featureConfigsAreCanonical(data.feature_configs, mergedConfigs);
 
         const language = (data.language as 'en' | 'es' | 'hu') || 'en';
+        const outputLanguage = (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en';
+        const theme = (data.theme as 'light' | 'dark' | 'system') || 'system';
+        const customSystemPrompt = data.custom_system_prompt || undefined;
         await i18n.changeLanguage(language);
         set({
           language,
-          outputLanguage: (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en',
-          theme: (data.theme as 'light' | 'dark' | 'system') || 'system',
+          outputLanguage,
+          theme,
           featureConfigs: mergedConfigs,
-          customSystemPrompt: data.custom_system_prompt || undefined,
+          customSystemPrompt,
           wikiResearchEnabled: get().wikiResearchEnabled,
         });
+        if (configsNeedMigration) {
+          await upsertSettings({
+            language,
+            output_language: outputLanguage,
+            theme,
+            feature_configs: mergedConfigs,
+            custom_system_prompt: customSystemPrompt ?? null,
+          });
+        }
       },
       resetLocalData: () => {
         set({
@@ -199,9 +275,18 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'debate-trainer-settings',
+      version: 1,
+      migrate: (persistedState: unknown) => {
+        const saved = asRecord(persistedState);
+        if (!saved) return persistedState;
+        return {
+          ...saved,
+          featureConfigs: normalizeFeatureConfigs(saved.featureConfigs, true),
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs);
+        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs, true);
         if (!state.language) state.language = 'en';
         if (!state.outputLanguage) state.outputLanguage = 'en';
         if (!state.theme) state.theme = 'system';

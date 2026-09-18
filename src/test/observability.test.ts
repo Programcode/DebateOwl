@@ -102,14 +102,14 @@ describe("observability primitives", () => {
       durationMs: 234,
       feature: "ask",
       message: "private debate content",
-      model: "gpt-5.4-mini",
+      model: "z-ai/glm-5.3-flash",
     });
 
     const attributes = {
       event_name: "ai_request_succeeded",
       durationMs: 234,
       feature: "ask",
-      model: "gpt-5.4-mini",
+      model: "z-ai/glm-5.3-flash",
     };
     expect(sentryLoggerInfoMock).toHaveBeenCalledWith("Product event", attributes);
     expect(sentryMetricsCountMock).toHaveBeenCalledWith("debatelab.product_event", 1, { attributes });
@@ -132,16 +132,16 @@ describe("observability primitives", () => {
     captureProductEvent("ai_request_succeeded", {
       feature: "private debate content",
       model: "student@example.com",
-      provider: "openai",
+      provider: "openrouter",
     });
     captureProductEvent("student@example.com", { feature: "ask" });
 
     expect(captureMock).toHaveBeenCalledOnce();
-    expect(captureMock).toHaveBeenCalledWith("ai_request_succeeded", { provider: "openai" });
+    expect(captureMock).toHaveBeenCalledWith("ai_request_succeeded", { provider: "openrouter" });
     expect(sentryLoggerInfoMock).toHaveBeenCalledOnce();
     expect(sentryLoggerInfoMock).toHaveBeenCalledWith("Product event", {
       event_name: "ai_request_succeeded",
-      provider: "openai",
+      provider: "openrouter",
     });
     expect(JSON.stringify([
       ...captureMock.mock.calls,
@@ -159,7 +159,7 @@ describe("observability primitives", () => {
   it("passes exceptions and structured context through when Sentry is configured", () => {
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
     const error = new Error("synthetic test error");
-    const context = { provider: "openai", category: "provider_error" };
+    const context = { provider: "openrouter", category: "provider_error" };
 
     captureException(error, context);
 

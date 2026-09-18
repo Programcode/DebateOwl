@@ -38,7 +38,7 @@ describe('settings-store branch coverage', () => {
     expect(state.language).toBe('en');
     expect(state.theme).toBe('system');
     expect(state.customSystemPrompt).toBeUndefined();
-    expect(state.featureConfigs.generate.model).toBe('gemini-3-flash-preview');
+    expect(state.featureConfigs.generate.model).toBe('z-ai/glm-5.3-flash');
   });
 
   it('normalizes persisted state in onRehydrateStorage callback', () => {
@@ -61,5 +61,85 @@ describe('settings-store branch coverage', () => {
     expect(partialState.language).toBe('en');
     expect(partialState.theme).toBe('system');
     expect(partialState.wikiResearchEnabled).toBe(false);
+  });
+
+  it('canonicalizes legacy local configs and removes client credentials', () => {
+    const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
+
+    const partialState = {
+      featureConfigs: {
+        generate: {
+          provider: 'google',
+          model: 'gemini-3-flash-preview',
+          temperature: 0.3,
+          reasoningEffort: 'medium',
+          apiKey: 'legacy-secret',
+          baseUrl: 'https://legacy.example.test',
+        },
+      },
+    } as any;
+
+    afterRehydrate(partialState);
+
+    expect(partialState.featureConfigs.generate).toMatchObject({
+      provider: 'openrouter',
+      model: 'z-ai/glm-5.3-flash',
+      temperature: 0.3,
+      reasoningEffort: 'medium',
+    });
+    expect(partialState.featureConfigs.generate).not.toHaveProperty('apiKey');
+    expect(partialState.featureConfigs.generate).not.toHaveProperty('baseUrl');
+  });
+
+  it('preserves the local mock fixture during local rehydration', () => {
+    const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
+
+    const partialState = {
+      featureConfigs: {
+        generate: { provider: 'mock', model: 'local', temperature: 0.7 },
+      },
+    } as any;
+
+    afterRehydrate(partialState);
+
+    expect(partialState.featureConfigs.generate).toMatchObject({
+      provider: 'mock',
+      model: 'local',
+      reasoningEffort: 'low',
+    });
+  });
+
+  it('durably migrates legacy local credentials to the OpenRouter GLM config', async () => {
+    localStorage.setItem('debate-trainer-settings', JSON.stringify({
+      version: 0,
+      state: {
+        featureConfigs: {
+          generate: {
+            provider: 'openai',
+            model: 'gpt-5.5',
+            temperature: 0.4,
+            apiKey: 'legacy-secret',
+            baseUrl: 'https://legacy.example.test',
+          },
+        },
+      },
+    }));
+
+    await useSettingsStore.persist.rehydrate();
+
+    const persisted = JSON.parse(localStorage.getItem('debate-trainer-settings') || '{}');
+    expect(persisted.version).toBe(1);
+    expect(persisted.state.featureConfigs.generate).toMatchObject({
+      provider: 'openrouter',
+      model: 'z-ai/glm-5.3-flash',
+      temperature: 0.4,
+      reasoningEffort: 'low',
+    });
+    expect(persisted.state.featureConfigs.generate).not.toHaveProperty('apiKey');
+    expect(persisted.state.featureConfigs.generate).not.toHaveProperty('baseUrl');
   });
 });

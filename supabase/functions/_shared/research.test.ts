@@ -271,8 +271,9 @@ Deno.test("filtered research retries without domain filters when Exa returns no 
 
   try {
     const result = await deepResearch("federal procurement reform", "United States", {
-      provider: "openai",
+      provider: "openrouter",
       model: "test-model",
+      reasoningEffort: "low",
       callModel: async () => ({ output: { queries: [] } }),
     }, {
       maxFollowUpQueries: 0,
@@ -484,8 +485,9 @@ Deno.test("research timeout stays bounded and marks accounting incomplete", asyn
   let providerCompletedAt: number | undefined;
   let timeoutMarked = false;
   const deps = {
-    provider: "openai" as const,
+    provider: "openrouter" as const,
     model: "test-model",
+    reasoningEffort: "low" as const,
     onTimeout: () => {
       timeoutMarked = true;
     },

@@ -8,4 +8,12 @@ describe('DEFAULT_PROVIDERS', () => {
     const allIds = DEFAULT_PROVIDERS.flatMap(p => p.models.map(m => m.id));
     expect(new Set(allIds).size).toBe(allIds.length);
   });
+
+  it('exposes only GLM 5.3 Flash through OpenRouter', () => {
+    expect(DEFAULT_PROVIDERS).toHaveLength(1);
+    expect(DEFAULT_PROVIDERS[0]?.id).toBe('openrouter');
+    expect(DEFAULT_PROVIDERS[0]?.models.map((model) => model.id)).toEqual([
+      'z-ai/glm-5.3-flash',
+    ]);
+  });
 });

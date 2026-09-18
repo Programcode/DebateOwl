@@ -28,14 +28,15 @@ vi.mock('@/lib/supabase/client', () => ({
 
 // Import after mocking
 import { useSettingsStore } from '@/lib/stores/settings-store';
+import type { ProviderConfig } from '@/lib/ai/providers/types';
 
 // Helper to create default configs since it's not exported
-const createDefaultConfigs = () => ({
-    generate: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 },
-    attack: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 },
-    brainstorm: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.9 },
-    factoids: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.3 },
-    ask: { provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 },
+const createDefaultConfigs = (): Record<'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask', ProviderConfig> => ({
+    generate: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
+    attack: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
+    brainstorm: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.9, reasoningEffort: 'low' },
+    factoids: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.3, reasoningEffort: 'low' },
+    ask: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
 });
 
 describe('Settings Store Extended', () => {
@@ -45,7 +46,7 @@ describe('Settings Store Extended', () => {
             useSettingsStore.setState({
                 language: 'en',
                 theme: 'system',
-                featureConfigs: createDefaultConfigs() as ReturnType<typeof createDefaultConfigs>,
+                featureConfigs: createDefaultConfigs(),
                 customSystemPrompt: undefined,
                 wikiResearchEnabled: false,
             });
@@ -148,7 +149,7 @@ describe('Settings Store Extended', () => {
             const store = useSettingsStore.getState();
             const config = store.getFeatureConfig('generate');
             expect(config).toBeDefined();
-            expect(config.provider).toBe('google');
+            expect(config.provider).toBe('openrouter');
         });
     });
 

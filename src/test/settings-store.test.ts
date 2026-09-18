@@ -17,10 +17,11 @@ describe("settings-store", () => {
     useSettingsStore.getState().resetLocalData();
   });
 
-  it("uses Gemini 3 Flash defaults for all features", () => {
+  it("uses GLM 5.3 Flash through OpenRouter for all features", () => {
     const state = useSettingsStore.getState();
-    expect(state.featureConfigs.generate.provider).toBe("google");
-    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.generate.provider).toBe("openrouter");
+    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.generate.reasoningEffort).toBe("low");
     expect(state.featureConfigs.brainstorm.temperature).toBe(0.9);
     expect(state.featureConfigs.factoids.temperature).toBe(0.3);
   });
@@ -38,6 +39,13 @@ describe("settings-store", () => {
     store.setSystemPrompt("Custom system");
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(useSettingsStore.getState().customSystemPrompt).toBe("Custom system");
+    expect(supabaseMock.from).toHaveBeenCalledWith("user_settings");
+  });
+
+  it("setOutputLanguage updates state and persists", async () => {
+    useSettingsStore.getState().setOutputLanguage("hu");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(useSettingsStore.getState().outputLanguage).toBe("hu");
     expect(supabaseMock.from).toHaveBeenCalledWith("user_settings");
   });
 
@@ -60,9 +68,9 @@ describe("settings-store", () => {
     expect(state.theme).toBe("dark");
     expect(state.customSystemPrompt).toBe("Server prompt");
     expect(state.featureConfigs.generate.temperature).toBe(0.4);
-    expect(state.featureConfigs.generate.provider).toBe("google");
-    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
-    expect(state.featureConfigs.attack.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.generate.provider).toBe("openrouter");
+    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.attack.model).toBe("z-ai/glm-5.3-flash");
   });
 
   it("resetLocalData restores defaults", () => {
@@ -75,7 +83,7 @@ describe("settings-store", () => {
     const state = useSettingsStore.getState();
     expect(state.theme).toBe("system");
     expect(state.customSystemPrompt).toBeUndefined();
-    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
     expect(state.wikiResearchEnabled).toBe(false);
   });
 
@@ -113,8 +121,79 @@ describe("settings-store", () => {
   it("getFeatureConfig returns defaults when missing", () => {
     useSettingsStore.setState({ featureConfigs: {} } as Partial<ReturnType<typeof useSettingsStore.getState>>);
     const config = useSettingsStore.getState().getFeatureConfig("ask");
-    expect(config.provider).toBe("google");
-    expect(config.model).toBe("gemini-3-flash-preview");
+    expect(config.provider).toBe("openrouter");
+    expect(config.model).toBe("z-ai/glm-5.3-flash");
+  });
+
+  it("canonicalizes legacy and unknown server configs without client credentials", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        feature_configs: {
+          generate: {
+            provider: "openai",
+            model: "gpt-5.5",
+            temperature: 0.4,
+            reasoningEffort: "high",
+            apiKey: "legacy-secret",
+            baseUrl: "https://legacy.example.test",
+          },
+          attack: {
+            provider: "unknown-provider",
+            model: "unknown-model",
+            temperature: 0.8,
+            reasoningEffort: "invalid",
+            apiKey: "another-secret",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    const state = useSettingsStore.getState();
+    const generate = state.featureConfigs.generate;
+    const attack = state.featureConfigs.attack;
+    expect(generate).toMatchObject({
+      provider: "openrouter",
+      model: "z-ai/glm-5.3-flash",
+      temperature: 0.4,
+      reasoningEffort: "high",
+    });
+    expect(generate).not.toHaveProperty("apiKey");
+    expect(generate).not.toHaveProperty("baseUrl");
+    expect(attack).toMatchObject({ provider: "openrouter", model: "z-ai/glm-5.3-flash", reasoningEffort: "low" });
+    expect(attack).not.toHaveProperty("apiKey");
+
+    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.upsert.mock.calls.length)?.value;
+    expect(settingsWrite.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        feature_configs: expect.objectContaining({
+          generate: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
+          attack: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
+        }),
+      }),
+      { onConflict: "user_id" },
+    );
+    expect(settingsWrite.upsert.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("apiKey");
+    expect(settingsWrite.upsert.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("baseUrl");
+  });
+
+  it("does not rewrite server feature configs that are already canonical", async () => {
+    const featureConfigs = structuredClone(useSettingsStore.getState().featureConfigs);
+    setMockTableResponse("user_settings", {
+      single: {
+        language: "en",
+        output_language: "en",
+        theme: "system",
+        custom_system_prompt: null,
+        feature_configs: featureConfigs,
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    const settingsWrites = supabaseMock.from.mock.results.filter(({ value }) => value.upsert.mock.calls.length);
+    expect(settingsWrites).toHaveLength(0);
   });
 
   it("does not upsert when user is not signed in", async () => {

@@ -31,6 +31,8 @@ supabase/tests/            pgTAP database and policy tests
 - `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity.
 - `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
 
+Both endpoints route every model inference through OpenRouter and allow only `z-ai/glm-5.3-flash`.
+
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, model-pricing, cost, and control logic lives in `_shared`.
 
 ### Content and sharing
@@ -129,7 +131,7 @@ Run focused tests while changing one function, then run the complete Edge Functi
 Document names, never values. Depending on deployed features, server-side configuration includes categories such as:
 
 - Supabase URL, anon key, and service-role key;
-- supported AI provider keys;
+- `OPENROUTER_API_KEY` for all model requests;
 - research provider keys;
 - Stripe secret, webhook secret, and price configuration;
 - demo-code hashing material;

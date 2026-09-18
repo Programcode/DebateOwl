@@ -369,7 +369,7 @@ async function callSupabaseAI<T = unknown>(
     ? boundCrossfireRequestSources(selectedSources)
     : selectedSources;
 
-  const provider = config.provider === 'lovable' ? 'openai' : config.provider;
+  const provider = config.provider === 'mock' ? 'mock' : 'openrouter';
   captureProductEvent('ai_request_started', {
     feature,
     provider,
@@ -420,6 +420,7 @@ async function callSupabaseAI<T = unknown>(
       provider,
       model: config.model,
       temperature: config.temperature,
+      reasoningEffort: config.reasoningEffort ?? 'low',
       customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
       sources: activeSources,
     };
@@ -1236,7 +1237,7 @@ async function sparringRequestKey(
 ): Promise<string> {
   const { data } = await supabase.auth.getSession();
   const authScope = data.session?.user?.id ?? data.session?.access_token ?? 'signed-out';
-  return JSON.stringify([authScope, input, config.provider, config.model, config.temperature]);
+  return JSON.stringify([authScope, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
 }
 
 /** Generate the opponent's next speech for a validated sparring turn. */

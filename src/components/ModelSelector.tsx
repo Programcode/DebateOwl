@@ -1,7 +1,8 @@
 import { Cpu } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
+import { DEFAULT_MODEL, DEFAULT_PROVIDERS, isReasoningEffort } from '@/lib/ai/providers/types';
+import type { ReasoningEffort } from '@/lib/ai/providers/types';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSubscription } from '@/hooks/use-subscription';
 import { Label } from '@/components/ui/label';
@@ -15,20 +16,29 @@ interface ModelSelectorProps {
 }
 
 const allModels = DEFAULT_PROVIDERS
-  .filter(p => p.id === 'google' || p.id === 'openai' || p.id === 'anthropic')
   .flatMap(p => p.models.map(m => ({ ...m, provider: p.id, providerName: p.name })));
+
+const reasoningOptions: { value: ReasoningEffort; labelKey: string; fallback: string }[] = [
+  { value: 'low', labelKey: 'modelSelector.reasoningLow', fallback: 'Low' },
+  { value: 'medium', labelKey: 'modelSelector.reasoningMedium', fallback: 'Medium' },
+  { value: 'high', labelKey: 'modelSelector.reasoningHigh', fallback: 'High' },
+];
 
 export function ModelSelector({ feature, className, showLabel = false }: ModelSelectorProps) {
   const { t } = useTranslation();
   const { featureConfigs, setFeatureConfig } = useSettingsStore();
-  const { isPro } = useSubscription();
+  const { isPro, loading: subscriptionLoading } = useSubscription();
   const config = featureConfigs?.[feature];
-  const currentModel = config?.model || 'gemini-3-flash-preview';
+  const selectedModel = allModels.find((model) => model.id === config?.model);
+  const currentModel = selectedModel?.id ?? DEFAULT_MODEL;
+  const currentReasoning = (isPro || subscriptionLoading) && config?.reasoningEffort && isReasoningEffort(config.reasoningEffort)
+    ? config.reasoningEffort
+    : 'low';
 
   return (
     <div className={cn("space-y-2", className)}>
       {showLabel && (
-        <Label className="flex items-center gap-2 text-sm font-medium">
+        <Label className="flex h-5 items-center gap-2 text-sm font-medium">
           <Cpu className="h-4 w-4 text-muted-foreground" />
           {t('modelSelector.label', 'AI model')}
         </Label>
@@ -62,6 +72,33 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
           ))}
         </SelectContent>
       </Select>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">
+          {t('modelSelector.reasoning', 'Reasoning')}
+        </Label>
+        <Select
+          value={currentReasoning}
+          disabled={!isPro}
+          onValueChange={(value) => {
+            if (!isPro || !isReasoningEffort(value)) return;
+            setFeatureConfig(feature, { reasoningEffort: value });
+          }}
+        >
+          <SelectTrigger
+            className="h-10 w-full text-sm"
+            aria-label={t('modelSelector.reasoning', 'Reasoning')}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {reasoningOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value} className="text-xs">
+                {t(option.labelKey, option.fallback)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }
