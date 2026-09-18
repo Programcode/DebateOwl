@@ -17,10 +17,10 @@ describe("settings-store", () => {
     useSettingsStore.getState().resetLocalData();
   });
 
-  it("uses Gemini 3 Flash defaults for all features", () => {
+  it("uses GLM 5.3 Flash through OpenRouter for all features", () => {
     const state = useSettingsStore.getState();
-    expect(state.featureConfigs.generate.provider).toBe("google");
-    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.generate.provider).toBe("openrouter");
+    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
     expect(state.featureConfigs.brainstorm.temperature).toBe(0.9);
     expect(state.featureConfigs.factoids.temperature).toBe(0.3);
   });
@@ -60,9 +60,9 @@ describe("settings-store", () => {
     expect(state.theme).toBe("dark");
     expect(state.customSystemPrompt).toBe("Server prompt");
     expect(state.featureConfigs.generate.temperature).toBe(0.4);
-    expect(state.featureConfigs.generate.provider).toBe("google");
-    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
-    expect(state.featureConfigs.attack.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.generate.provider).toBe("openrouter");
+    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.attack.model).toBe("z-ai/glm-5.3-flash");
   });
 
   it("resetLocalData restores defaults", () => {
@@ -75,7 +75,7 @@ describe("settings-store", () => {
     const state = useSettingsStore.getState();
     expect(state.theme).toBe("system");
     expect(state.customSystemPrompt).toBeUndefined();
-    expect(state.featureConfigs.generate.model).toBe("gemini-3-flash-preview");
+    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
     expect(state.wikiResearchEnabled).toBe(false);
   });
 
@@ -113,8 +113,8 @@ describe("settings-store", () => {
   it("getFeatureConfig returns defaults when missing", () => {
     useSettingsStore.setState({ featureConfigs: {} } as Partial<ReturnType<typeof useSettingsStore.getState>>);
     const config = useSettingsStore.getState().getFeatureConfig("ask");
-    expect(config.provider).toBe("google");
-    expect(config.model).toBe("gemini-3-flash-preview");
+    expect(config.provider).toBe("openrouter");
+    expect(config.model).toBe("z-ai/glm-5.3-flash");
   });
 
   it("does not upsert when user is not signed in", async () => {
