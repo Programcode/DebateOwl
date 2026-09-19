@@ -31,7 +31,7 @@ const FEATURE_PROMPTS: Record<Feature, string> = {
 
 const FEATURE_MARKERS: Record<Feature, string> = {
   generate: "You are an experienced competitive debater and coach with years of tournament experience.",
-  attack: "You are a ruthless, experienced competitive debater tasked with tearing apart an opponent's case.",
+  attack: "You are an experienced competitive debater and coach.",
   brainstorm: "You're in the prep room with your team before a tournament round.",
   factoids: "You are a debate research specialist helping a team find cuttable evidence for tournament prep.",
   ask: "You are a debate coach chat bot. Answer the user's question.",
@@ -123,6 +123,41 @@ Deno.test("date context replaces the placeholder in every feature task prompt", 
 
 Deno.test("product identity includes the humanizer style rules", () => {
   if (!PRODUCT_IDENTITY.includes("HUMANIZER STYLE INSTRUCTIONS")) throw new Error("humanizer missing from identity layer");
+});
+
+Deno.test("feature prompts carry plain-language calibration", () => {
+  const expectedByFeature: Record<Feature, string> = {
+    generate: "Match the requested audience, length, and tone.",
+    attack: "Be direct and substantive, not hostile.",
+    brainstorm: "Use plain language and concrete examples.",
+    factoids: "Write evidence in clear, card-ready language.",
+    ask: "Answer the user's question first in plain language.",
+    sparring: "Difficulty changes argument pressure, not vocabulary.",
+    crossfire: "Ask one direct question at a time.",
+  };
+
+  for (const feature of FEATURES) {
+    const prompt = buildSystemPrompt({ feature });
+    if (!prompt.includes(expectedByFeature[feature])) {
+      throw new Error(`${feature}: plain-language calibration missing`);
+    }
+  }
+});
+
+Deno.test("Crossfire keeps replies short and easy to say aloud", () => {
+  const prompt = buildSystemPrompt({ feature: "crossfire" });
+  if (!prompt.includes("Keep the answer short and easy to say aloud.")) {
+    throw new Error("Crossfire speech-length guidance missing");
+  }
+  if (!prompt.includes("Questions should be one sentence. Answers should be no more than three short sentences.")) {
+    throw new Error("Crossfire sentence-length guidance missing");
+  }
+  if (!prompt.includes("Use the user's own words where possible")) {
+    throw new Error("Crossfire vocabulary guidance missing");
+  }
+  if (!prompt.includes("Tie each reply to the latest relevant transcript turn")) {
+    throw new Error("Crossfire transcript-targeting guidance missing");
+  }
 });
 
 Deno.test("shared language rules honor explicit output-language instructions", () => {
