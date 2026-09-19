@@ -31,7 +31,7 @@ supabase/tests/            pgTAP database and policy tests
 - `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity.
 - `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
 
-Both endpoints route every model inference through OpenRouter and allow only `z-ai/glm-5.3-flash`.
+Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. GPT-5.6 Luna is the Basic default; Pro-only models require active Pro access.
 
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, model-pricing, cost, and control logic lives in `_shared`.
 

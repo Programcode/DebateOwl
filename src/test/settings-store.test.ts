@@ -178,6 +178,81 @@ describe("settings-store", () => {
     expect(settingsWrite.update.mock.results[0].value.eq).toHaveBeenCalledWith("user_id", "user_1");
   });
 
+  it("moves a trial user's former GLM default to Luna", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "low",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
+    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.update.mock.calls.length)?.value;
+    expect(settingsWrite.update).toHaveBeenCalledWith(expect.objectContaining({
+      feature_configs: expect.objectContaining({
+        generate: expect.objectContaining({ model: "openai/gpt-5.6-luna" }),
+      }),
+    }));
+  });
+
+  it("keeps GLM selected for Pro users", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "medium",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate).toMatchObject({
+      model: "z-ai/glm-5.3-flash",
+      reasoningEffort: "medium",
+    });
+  });
+
+  it("moves a former Pro user on a trial from GLM to Luna", async () => {
+    setMockTableResponse("subscriptions", { select: [] });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        grace_period_ends_at: "2020-01-01T00:00:00.000Z",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "low",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
+  });
+
   it("does not rewrite server feature configs that are already canonical", async () => {
     const featureConfigs = structuredClone(useSettingsStore.getState().featureConfigs);
     setMockTableResponse("user_settings", {
