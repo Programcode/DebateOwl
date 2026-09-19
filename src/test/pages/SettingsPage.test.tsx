@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     hasStripeBilling: false,
     refresh: vi.fn(),
   },
+  redirectToPortal: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
@@ -28,9 +29,11 @@ vi.mock('@/lib/stores/settings-store', () => ({ useSettingsStore: () => ({
 }) }));
 vi.mock('@/lib/stores/session-store', () => ({ useSessionStore: () => ({ clearSession: vi.fn(), clearAllData: vi.fn() }) }));
 vi.mock('@/lib/stores/sparring-store', () => ({ useSparringStore: () => vi.fn() }));
-vi.mock('@/components/features/subscription/PricingModal', () => ({ PricingModal: (): null => null }));
+vi.mock('@/components/features/subscription/PricingModal', () => ({
+  PricingModal: ({ open }: { open: boolean }) => open ? <div>Pricing open</div> : null,
+}));
 vi.mock('@/hooks/use-subscription', () => ({ useSubscription: () => mocks.subscription }));
-vi.mock('@/lib/stripe', () => ({ redirectToPortal: vi.fn() }));
+vi.mock('@/lib/stripe', () => ({ redirectToPortal: mocks.redirectToPortal }));
 
 function renderSettings() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -43,6 +46,8 @@ function renderSettings() {
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
+  Object.assign(mocks.subscription, { tier: 'trial', loading: false, hasStripeBilling: false });
+  mocks.redirectToPortal.mockReset().mockResolvedValue(undefined);
 });
 
 afterEach(() => cleanup());
@@ -63,5 +68,33 @@ describe('Settings subscription card', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByText('4 / 5 uses')).not.toBeInTheDocument();
     expect(screen.queryByText(/Resets in/)).not.toBeInTheDocument();
+    if (tier === 'trial') expect(screen.getByText('Ends 01/10/2026')).toBeInTheDocument();
+  });
+
+  it('does not claim access is active while the subscription is loading', () => {
+    Object.assign(mocks.subscription, { loading: true });
+
+    renderSettings();
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.queryByText('AI access is active. Usage limits may apply.')).not.toBeInTheDocument();
+  });
+
+  it('opens the upgrade flow', () => {
+    Object.assign(mocks.subscription, { tier: 'expired' });
+    renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Upgrade to Pro' }));
+
+    expect(screen.getByText('Pricing open')).toBeInTheDocument();
+  });
+
+  it('opens billing management for Stripe-backed Pro users', async () => {
+    Object.assign(mocks.subscription, { tier: 'pro', hasStripeBilling: true });
+    renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Subscription' }));
+
+    await waitFor(() => expect(mocks.redirectToPortal).toHaveBeenCalledOnce());
   });
 });

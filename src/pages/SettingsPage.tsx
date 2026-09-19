@@ -171,7 +171,9 @@ export default function SettingsPage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
+              {t(subscription.loading
+                ? 'settings.loading'
+                : subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
             </p>
           </CardContent>
         </Card>
