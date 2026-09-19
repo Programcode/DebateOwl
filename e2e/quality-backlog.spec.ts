@@ -35,6 +35,9 @@ for (const locale of locales) {
           .first()
           .click();
       } else {
+        if (!await desktopLink.isVisible()) {
+          await page.locator('summary[data-tour="nav-more"]').click();
+        }
         await desktopLink.click();
       }
       await expect(page).toHaveURL(new RegExp(`/app/${route}$`));

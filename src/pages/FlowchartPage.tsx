@@ -18,7 +18,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -423,7 +423,6 @@ export default function FlowchartPage() {
                             </div>
                             <div>
                                 <CardTitle>{t('flowchart.title')}</CardTitle>
-                                <CardDescription>{t('flowchart.subtitle')}</CardDescription>
                             </div>
                         </div>
                         <div className="flex gap-2">

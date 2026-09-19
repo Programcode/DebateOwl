@@ -71,6 +71,16 @@ export function OnboardingTour() {
             placement: 'bottom',
         },
         {
+            target: '[data-tour="mode-crossfire"], [data-tour="nav-crossfire"]',
+            content: <TourCopy title={t('onboarding.crossfire')} description={t('onboarding.crossfireDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-sparring"], [data-tour="nav-sparring"]',
+            content: <TourCopy title={t('onboarding.sparring')} description={t('onboarding.sparringDesc')} />,
+            placement: 'bottom',
+        },
+        {
             target: '[data-tour="mode-library"], [data-tour="nav-library"]',
             content: <TourCopy title={t('onboarding.library')} description={t('onboarding.libraryDesc')} />,
             placement: 'bottom',
@@ -114,8 +124,18 @@ export function OnboardingTour() {
         return allTourSteps.map((step) => {
             if (step.target === 'body') return step;
             const target = String(step.target);
-            return document.querySelector(target)
-                ? step
+            const element = Array.from(document.querySelectorAll<HTMLElement>(target))
+                .find((candidate) => {
+                    const style = window.getComputedStyle(candidate);
+                    const rect = candidate.getBoundingClientRect();
+                    return style.display !== 'none'
+                        && style.visibility !== 'hidden'
+                        && candidate.getClientRects().length > 0
+                        && rect.width > 0
+                        && rect.height > 0;
+                });
+            return element
+                ? { ...step, target: element }
                 : { ...step, target: 'body', placement: 'center' as const };
         });
     }, [allTourSteps]);

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import i18n from '@/i18n';
-import { DEFAULT_MODEL } from '../ai/providers/types';
+import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '../ai/providers/types';
 import type { ProviderConfig } from '../ai/providers/types';
 import {
   getModelCatalogEntry,
@@ -40,13 +40,13 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gpt-5.4-mini': DEFAULT_MODEL,
   'gpt-4o': DEFAULT_MODEL,
   'gpt-4o-mini': DEFAULT_MODEL,
-  'claude-opus-4-7': DEFAULT_MODEL,
-  'claude-sonnet-4-6': DEFAULT_MODEL,
+  'claude-opus-4-7': DEFAULT_PRO_MODEL,
+  'claude-sonnet-4-6': DEFAULT_PRO_MODEL,
   'claude-haiku-4-5-20251001': DEFAULT_MODEL,
-  'gemini-3.1-pro-preview': DEFAULT_MODEL,
-  'gemini-3.5-flash': DEFAULT_MODEL,
-  'gemini-3-flash-preview': DEFAULT_MODEL,
-  'gemini-3.1-flash-lite-preview': DEFAULT_MODEL,
+  'gemini-3.1-pro-preview': 'google/gemini-3.8-flash',
+  'gemini-3.5-flash': 'google/gemini-3.8-flash',
+  'gemini-3-flash-preview': 'google/gemini-3.8-flash',
+  'gemini-3.1-flash-lite-preview': 'google/gemini-3.8-flash',
 };
 
 const defaultConfig: ProviderConfig = {
@@ -56,13 +56,13 @@ const defaultConfig: ProviderConfig = {
   reasoningEffort: 'low',
 };
 
-const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
-  generate: { ...defaultConfig },
-  attack: { ...defaultConfig },
-  brainstorm: { ...defaultConfig, temperature: 0.9 },
-  factoids: { ...defaultConfig, temperature: 0.3 },
-  ask: { ...defaultConfig },
-  sparring: { ...defaultConfig },
+const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
+  generate: { ...defaultConfig, model },
+  attack: { ...defaultConfig, model },
+  brainstorm: { ...defaultConfig, model, temperature: 0.9 },
+  factoids: { ...defaultConfig, model, temperature: 0.3 },
+  ask: { ...defaultConfig, model },
+  sparring: { ...defaultConfig, model },
 });
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -78,9 +78,15 @@ function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): str
   return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
 }
 
-function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig, preserveLocalMock = false): ProviderConfig {
+function normalizeFeatureConfig(
+  value: unknown,
+  fallback: ProviderConfig,
+  preserveLocalMock = false,
+  allowProModels = true,
+): ProviderConfig {
   const candidate = asRecord(value);
   const isLocalMock = preserveLocalMock && candidate?.provider === 'mock' && candidate?.model === 'local';
+  const model = normalizeModelId(candidate?.model, fallback.model);
   const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
     ? candidate.temperature
     : fallback.temperature;
@@ -90,19 +96,24 @@ function normalizeFeatureConfig(value: unknown, fallback: ProviderConfig, preser
 
   return {
     provider: isLocalMock ? 'mock' : DEFAULT_PROVIDER,
-    model: isLocalMock ? 'local' : normalizeModelId(candidate?.model, fallback.model),
+    model: isLocalMock ? 'local' : (!allowProModels && getModelCatalogEntry(model)?.isProOnly ? DEFAULT_MODEL : model),
     temperature,
     reasoningEffort,
   };
 }
 
-function normalizeFeatureConfigs(configs: unknown, preserveLocalMock = false): Record<FeatureTab, ProviderConfig> {
-  const defaults = getDefaultFeatureConfigs();
+function normalizeFeatureConfigs(
+  configs: unknown,
+  preserveLocalMock = false,
+  allowProModels = true,
+  fallbackModel: string = DEFAULT_MODEL,
+): Record<FeatureTab, ProviderConfig> {
+  const defaults = getDefaultFeatureConfigs(fallbackModel);
   const saved = asRecord(configs);
   if (!saved) return defaults;
 
   return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
-    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], preserveLocalMock)];
+    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], preserveLocalMock, allowProModels)];
   })) as Record<FeatureTab, ProviderConfig>;
 }
 
@@ -122,6 +133,28 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
       && config.temperature === target.temperature
       && config.reasoningEffort === target.reasoningEffort;
   });
+}
+
+async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
+  const tier = settings.subscription_tier;
+  const graceEnd = typeof settings.grace_period_ends_at === 'string'
+    ? new Date(settings.grace_period_ends_at)
+    : null;
+  if ((tier === 'pro' || tier === 'legacy_free') && graceEnd && graceEnd > new Date()) return true;
+  if (tier !== 'pro') return false;
+
+  const userId = await getUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('status, current_period_end')
+    .eq('user_id', userId);
+  if (error) return null;
+  return Boolean(data?.some((subscription) =>
+    (subscription.status === 'active' || subscription.status === 'trialing')
+    && subscription.current_period_end
+    && new Date(subscription.current_period_end) > new Date()
+  ));
 }
 
 async function getUserId() {
@@ -248,7 +281,14 @@ export const useSettingsStore = create<SettingsState>()(
           .single();
         if (error || !data) return;
 
-        const mergedConfigs = normalizeFeatureConfigs(data.feature_configs);
+        const allowProModels = await canAccessProModels(data);
+        if (allowProModels === null) return;
+        const mergedConfigs = normalizeFeatureConfigs(
+          data.feature_configs,
+          false,
+          allowProModels,
+          allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL,
+        );
         const configsNeedMigration = !featureConfigsAreCanonical(data.feature_configs, mergedConfigs);
 
         const language = (data.language as 'en' | 'es' | 'hu') || 'en';
@@ -281,13 +321,19 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'debate-trainer-settings',
-      version: 1,
-      migrate: (persistedState: unknown) => {
+      version: 2,
+      migrate: (persistedState: unknown, version) => {
         const saved = asRecord(persistedState);
         if (!saved) return persistedState;
+        const featureConfigs = normalizeFeatureConfigs(saved.featureConfigs, true);
+        if (version < 2) {
+          for (const config of Object.values(featureConfigs)) {
+            if (config.model === 'z-ai/glm-5.3-flash') config.model = DEFAULT_MODEL;
+          }
+        }
         return {
           ...saved,
-          featureConfigs: normalizeFeatureConfigs(saved.featureConfigs, true),
+          featureConfigs,
         };
       },
       onRehydrateStorage: () => (state) => {

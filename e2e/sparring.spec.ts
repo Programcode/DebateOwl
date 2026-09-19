@@ -62,10 +62,11 @@ test('completes an LD sparring round through mocked opponent turns and judging',
   });
 
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sparring' })).toBeVisible();
 
   await page.getByLabel('Motion').fill('This House would make public transport free at the point of use.');
-  await page.getByRole('button', { name: /Lincoln-Douglas · 5 speeches/ }).click();
+  await page.getByRole('combobox', { name: 'Round format' }).click();
+  await page.getByRole('option', { name: /Lincoln-Douglas · 5 speeches/ }).click();
   await page.getByRole('button', { name: 'Start round' }).click();
 
   const userSpeeches = [
@@ -126,11 +127,24 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
 test('keeps the setup usable on mobile with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Spar with an opponent who listens.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sparring' })).toBeVisible();
   const logo = page.locator('header img[alt="DebateLab"]');
   await expect(logo).toHaveAttribute('src', '/favicon.png');
   await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-  await expect(page.getByRole('button', { name: /School 4-6-6-3 · 8 speeches/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('combobox', { name: 'Round format' })).toHaveText('School 4-6-6-3 · 8 speeches');
+  await expect(page.getByText('Write the resolution as you would hear it in the room.')).toHaveCount(0);
+  await expect(page.getByText('A precise motion gives the opponent something concrete to attack.')).toHaveCount(0);
+  await expect(page.getByText('Pro Introductor')).toBeHidden();
+  const speakingSummary = page.locator('main details > summary');
+  const summaryMetrics = await speakingSummary.evaluate((element) => {
+    const icon = element.querySelector('svg');
+    if (!icon) throw new Error('Speaking order disclosure is missing its chevron.');
+    const summaryBox = element.getBoundingClientRect();
+    const iconBox = icon.getBoundingClientRect();
+    return Math.abs((summaryBox.top + summaryBox.height / 2) - (iconBox.top + iconBox.height / 2));
+  });
+  expect(summaryMetrics).toBeLessThanOrEqual(1);
+  await page.getByText('Speaking order', { exact: true }).click();
   await expect(page.getByText('Pro Introductor')).toBeVisible();
   await expect(page.getByText('Pro Conclusor')).toBeVisible();
 

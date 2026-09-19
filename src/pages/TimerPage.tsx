@@ -280,9 +280,6 @@ export default function TimerPage() {
       <div className="max-w-3xl mx-auto text-center">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('timer.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('timer.subtitle')}
-          </p>
         </div>
 
         <div className="flex justify-between items-center mb-6 max-w-xl mx-auto">

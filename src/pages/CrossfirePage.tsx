@@ -455,7 +455,6 @@ export default function CrossfirePage() {
               <Flame className="h-5 w-5" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">{t('crossfire.title')}</h1>
-            <p className="mt-2 text-muted-foreground">{t('crossfire.subtitle')}</p>
           </header>
 
           {(formError || storageError) && (

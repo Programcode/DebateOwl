@@ -17,10 +17,10 @@ describe("settings-store", () => {
     useSettingsStore.getState().resetLocalData();
   });
 
-  it("uses GLM 5.3 Flash through OpenRouter for all features", () => {
+  it("uses GPT-5.6 Luna through OpenRouter for all features", () => {
     const state = useSettingsStore.getState();
     expect(state.featureConfigs.generate.provider).toBe("openrouter");
-    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
     expect(state.featureConfigs.generate.reasoningEffort).toBe("low");
     expect(state.featureConfigs.brainstorm.temperature).toBe(0.9);
     expect(state.featureConfigs.factoids.temperature).toBe(0.3);
@@ -69,8 +69,8 @@ describe("settings-store", () => {
     expect(state.customSystemPrompt).toBe("Server prompt");
     expect(state.featureConfigs.generate.temperature).toBe(0.4);
     expect(state.featureConfigs.generate.provider).toBe("openrouter");
-    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
-    expect(state.featureConfigs.attack.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
+    expect(state.featureConfigs.attack.model).toBe("openai/gpt-5.6-luna");
   });
 
   it("resetLocalData restores defaults", () => {
@@ -83,7 +83,7 @@ describe("settings-store", () => {
     const state = useSettingsStore.getState();
     expect(state.theme).toBe("system");
     expect(state.customSystemPrompt).toBeUndefined();
-    expect(state.featureConfigs.generate.model).toBe("z-ai/glm-5.3-flash");
+    expect(state.featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
     expect(state.wikiResearchEnabled).toBe(false);
   });
 
@@ -122,7 +122,7 @@ describe("settings-store", () => {
     useSettingsStore.setState({ featureConfigs: {} } as Partial<ReturnType<typeof useSettingsStore.getState>>);
     const config = useSettingsStore.getState().getFeatureConfig("ask");
     expect(config.provider).toBe("openrouter");
-    expect(config.model).toBe("z-ai/glm-5.3-flash");
+    expect(config.model).toBe("openai/gpt-5.6-luna");
   });
 
   it("canonicalizes legacy and unknown server configs without client credentials", async () => {
@@ -155,27 +155,144 @@ describe("settings-store", () => {
     const attack = state.featureConfigs.attack;
     expect(generate).toMatchObject({
       provider: "openrouter",
-      model: "z-ai/glm-5.3-flash",
+      model: "openai/gpt-5.6-luna",
       temperature: 0.4,
       reasoningEffort: "high",
     });
     expect(generate).not.toHaveProperty("apiKey");
     expect(generate).not.toHaveProperty("baseUrl");
-    expect(attack).toMatchObject({ provider: "openrouter", model: "z-ai/glm-5.3-flash", reasoningEffort: "low" });
+    expect(attack).toMatchObject({ provider: "openrouter", model: "openai/gpt-5.6-luna", reasoningEffort: "low" });
     expect(attack).not.toHaveProperty("apiKey");
 
     const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.update.mock.calls.length)?.value;
     expect(settingsWrite.update).toHaveBeenCalledWith(
       expect.objectContaining({
         feature_configs: expect.objectContaining({
-          generate: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
-          attack: expect.objectContaining({ provider: "openrouter", model: "z-ai/glm-5.3-flash" }),
+          generate: expect.objectContaining({ provider: "openrouter", model: "openai/gpt-5.6-luna" }),
+          attack: expect.objectContaining({ provider: "openrouter", model: "openai/gpt-5.6-luna" }),
         }),
       }),
     );
     expect(settingsWrite.update.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("apiKey");
     expect(settingsWrite.update.mock.calls[0][0].feature_configs.generate).not.toHaveProperty("baseUrl");
     expect(settingsWrite.update.mock.results[0].value.eq).toHaveBeenCalledWith("user_id", "user_1");
+  });
+
+  it("moves a trial user's former GLM default to Luna", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "low",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
+    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.update.mock.calls.length)?.value;
+    expect(settingsWrite.update).toHaveBeenCalledWith(expect.objectContaining({
+      feature_configs: expect.objectContaining({
+        generate: expect.objectContaining({ model: "openai/gpt-5.6-luna" }),
+      }),
+    }));
+  });
+
+  it("keeps GLM selected for Pro users", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "medium",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate).toMatchObject({
+      model: "z-ai/glm-5.3-flash",
+      reasoningEffort: "medium",
+    });
+  });
+
+  it("uses Sonnet when an active Pro user has no saved feature configs", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "trialing", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {},
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("anthropic/claude-sonnet-5");
+    expect(useSettingsStore.getState().featureConfigs.sparring.model).toBe("anthropic/claude-sonnet-5");
+  });
+
+  it("does not rewrite model settings when subscription access cannot be read", async () => {
+    setMockTableResponse("subscriptions", { error: { message: "subscription read failed" } });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
+    const settingsWrites = supabaseMock.from.mock.results.filter(({ value }) =>
+      value.upsert.mock.calls.length || value.update.mock.calls.length
+    );
+    expect(settingsWrites).toHaveLength(0);
+  });
+
+  it("moves a former Pro user on a trial from GLM to Luna", async () => {
+    setMockTableResponse("subscriptions", { select: [] });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        grace_period_ends_at: "2020-01-01T00:00:00.000Z",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "low",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
   });
 
   it("does not rewrite server feature configs that are already canonical", async () => {

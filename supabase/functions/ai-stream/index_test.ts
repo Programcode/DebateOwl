@@ -29,7 +29,7 @@ function request(signal?: AbortSignal): Request {
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
     body: JSON.stringify({
       feature: "ask",
-      model: "z-ai/glm-5.3-flash",
+      model: "openai/gpt-5.6-luna",
       input: { message: "Hello", mode: "general" },
     }),
   });

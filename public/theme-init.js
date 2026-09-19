@@ -1,6 +1,15 @@
 // Prevent flash of wrong theme before React mounts.
 (function () {
   try {
+    var pathname = window.location.pathname;
+    if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login') {
+      document.documentElement.classList.add('app-shell');
+    }
+  } catch {
+    // Ignore unavailable location or document globals.
+  }
+
+  try {
     var settings = JSON.parse(localStorage.getItem('debate-trainer-settings') || '{}');
     var theme = settings && settings.state && settings.state.theme;
     if (theme === 'dark') document.documentElement.classList.add('dark');

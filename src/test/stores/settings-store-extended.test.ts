@@ -32,11 +32,11 @@ import type { ProviderConfig } from '@/lib/ai/providers/types';
 
 // Helper to create default configs since it's not exported
 const createDefaultConfigs = (): Record<'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask', ProviderConfig> => ({
-    generate: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
-    attack: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
-    brainstorm: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.9, reasoningEffort: 'low' },
-    factoids: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.3, reasoningEffort: 'low' },
-    ask: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
+    generate: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
+    attack: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
+    brainstorm: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.9, reasoningEffort: 'low' },
+    factoids: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.3, reasoningEffort: 'low' },
+    ask: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
 });
 
 describe('Settings Store Extended', () => {

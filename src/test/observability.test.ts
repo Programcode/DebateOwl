@@ -102,14 +102,14 @@ describe("observability primitives", () => {
       durationMs: 234,
       feature: "ask",
       message: "private debate content",
-      model: "z-ai/glm-5.3-flash",
+      model: "openai/gpt-5.6-luna",
     });
 
     const attributes = {
       event_name: "ai_request_succeeded",
       durationMs: 234,
       feature: "ask",
-      model: "z-ai/glm-5.3-flash",
+      model: "openai/gpt-5.6-luna",
     };
     expect(sentryLoggerInfoMock).toHaveBeenCalledWith("Product event", attributes);
     expect(sentryMetricsCountMock).toHaveBeenCalledWith("debatelab.product_event", 1, { attributes });

@@ -84,6 +84,8 @@ describe("Vercel frontend deployment configuration", () => {
     expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(indexHtml).toContain('<script src="/theme-init.js"></script>');
     expect(indexHtml).not.toContain('// Prevent flash of wrong theme');
+    expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
+    expect(themeBootstrap).toContain("pathname === '/login'");
     expect(nginxConfig).toMatch(/location = \/theme-init\.js \{[\s\S]*?Cache-Control/);
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
@@ -103,9 +105,12 @@ describe("Vercel frontend deployment configuration", () => {
     expect(csp).toContain("connect-src 'self' https://*.jam.dev");
     expect(nginxCsp).toBe(csp);
     expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
+    expect(indexHtml).toContain('data-startup-shell');
+    expect(indexHtml).toContain('class="seo-fallback"');
     expect(indexHtml).not.toContain('<script type="module" src="/src/main.tsx"></script>');
     expect(bootstrap).toContain('loadJamRecorder()');
-    expect(bootstrap).toContain("then(() => import('./main'))");
+    expect(bootstrap).toContain("import('./main')");
+    expect(bootstrap).not.toContain("then(() => import('./main'))");
     expect(jamLoader).toContain("typeof globalThis.MediaRecorder !== 'undefined'");
     expect(jamLoader).toContain("https://js.jam.dev/recorder.js");
     expect(jamLoader).toContain("https://js.jam.dev/capture.js");

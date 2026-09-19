@@ -1,7 +1,7 @@
 // src/test/pages/pages.test.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LandingPage from '@/pages/LandingPage';
 import HomePage from '@/pages/HomePage';
@@ -65,6 +65,30 @@ describe('Pages', () => {
             renderWithRouter(<LandingPage />);
             expect(screen.getAllByRole('heading').length).toBeGreaterThan(1);
         });
+
+        it('shows the current eleven-tool inventory and interactive preview', () => {
+            renderWithRouter(<LandingPage />);
+
+            expect(screen.getByRole('heading', { name: 'Crossfire' })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Sparring' })).toBeInTheDocument();
+            expect(screen.getByText('11', { exact: true })).toBeInTheDocument();
+            const generateMode = screen.getByRole('button', { name: 'Generate' });
+            const crossfireMode = screen.getByRole('button', { name: 'Crossfire' });
+            const sparringMode = screen.getByRole('button', { name: 'Sparring' });
+            expect(generateMode).toHaveAttribute('aria-pressed', 'true');
+            expect(crossfireMode).toHaveAttribute('aria-pressed', 'false');
+
+            fireEvent.click(crossfireMode);
+            expect(screen.getByText('Crossfire exchange')).toBeInTheDocument();
+            expect(crossfireMode).toHaveAttribute('aria-pressed', 'true');
+            expect(generateMode).toHaveAttribute('aria-pressed', 'false');
+
+            fireEvent.click(sparringMode);
+            expect(screen.getByText('Round plan')).toBeInTheDocument();
+
+            expect(screen.getByRole('textbox', { name: 'Motion' })).toHaveValue('Should schools ban phones?');
+            expect(screen.getByRole('textbox', { name: 'Motion' })).toHaveAttribute('readonly');
+        });
     });
 
     describe('HomePage', () => {
@@ -86,6 +110,16 @@ describe('Pages', () => {
             const { container } = renderWithRouter(<HomePage />, '/app');
             expect(container.querySelector('[data-tour="mode-generate"]')).toBeInTheDocument();
             expect(container.querySelector('[data-tour="mode-flowchart"]')).toBeInTheDocument();
+        });
+
+        it('groups the homepage tools without the old subtitle', () => {
+            renderWithRouter(<HomePage />, '/app');
+            expect(screen.getByRole('heading', { name: 'Prepare' })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Practice' })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Utilities' })).toBeInTheDocument();
+            expect(screen.queryByText('Choose a mode to start.')).not.toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /Generate/ })).toHaveAttribute('href', '/app/generate');
+            expect(screen.getByRole('link', { name: /History/ })).toHaveAttribute('href', '/app/history');
         });
     });
 

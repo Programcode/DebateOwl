@@ -2,7 +2,7 @@ import { useEffect, useState, type AriaAttributes, type CSSProperties } from 're
 import { useTranslation } from 'react-i18next';
 import { List } from 'react-window';
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -422,7 +422,6 @@ export default function LibraryPage() {
         <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t('libraryPage.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setIsAdding(!isAdding)}>
@@ -534,7 +533,6 @@ export default function LibraryPage() {
                 <Sparkles className="h-5 w-5 text-primary" />
                 {t('libraryPage.addNewTitle')}
               </CardTitle>
-              <CardDescription>{t('libraryPage.addNewDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -676,7 +674,6 @@ export default function LibraryPage() {
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <CardTitle className="text-xl">{t('libraryPage.yourKBTitle')}</CardTitle>
-                <CardDescription>{t('libraryPage.yourKBDesc')}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">

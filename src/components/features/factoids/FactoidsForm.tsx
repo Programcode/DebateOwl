@@ -158,7 +158,7 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
 
             {/* Timeframe */}
             <div className="space-y-2">
-              <Label htmlFor="timeframe" className="text-sm font-medium">{t('factoidsForm.timeframe')}</Label>
+              <Label htmlFor="timeframe" className="block h-5 text-sm font-medium leading-5">{t('factoidsForm.timeframe')}</Label>
               <Input
                 id="timeframe"
                 {...register('timeframe')}

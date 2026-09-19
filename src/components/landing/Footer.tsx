@@ -16,9 +16,6 @@ const Footer = () => {
                             />
                             <span className="text-lg font-bold text-foreground">DebateLab</span>
                         </a>
-                        <span className="hidden md:inline text-muted-foreground text-sm">
-                            {t('footer.tagline')}
-                        </span>
                     </div>
 
                     <div className="flex items-center gap-4 text-sm">

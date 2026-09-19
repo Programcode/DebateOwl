@@ -65,13 +65,19 @@ describe('security hardening regressions', () => {
 
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
     expect(modelCatalog).toContain('id: "z-ai/glm-5.3-flash"');
-    expect(modelCatalog).not.toContain('anthropic/');
-    expect(modelCatalog).not.toContain('openai/');
-    expect(modelCatalog).not.toContain('google/');
+    expect(modelCatalog).toContain('id: "anthropic/claude-sonnet-5"');
+    expect(modelCatalog).toContain('id: "openai/gpt-5.6-luna"');
+    expect(modelCatalog).toContain('id: "google/gemini-3.8-flash"');
     expect(ai).toContain('function modelForRequest');
     expect(stream).toContain('function modelForRequest');
     expect(ai).toContain('const provider: Provider = OPENROUTER_PROVIDER');
     expect(stream).toContain('const OPENROUTER_PROVIDER = "openrouter"');
+    expect(ai).toContain('https://openrouter.ai/api/v1/chat/completions');
+    expect(stream).toContain('https://openrouter.ai/api/v1/chat/completions');
+    expect(ai).not.toContain('api.anthropic.com');
+    expect(ai).not.toContain('api.openai.com');
+    expect(stream).not.toContain('api.anthropic.com');
+    expect(stream).not.toContain('api.openai.com');
     expect(ai).toContain('Unsupported model or provider combination');
     expect(stream).toContain('Unsupported model or provider combination');
     // SSRF-safe verification now lives in the shared research module.

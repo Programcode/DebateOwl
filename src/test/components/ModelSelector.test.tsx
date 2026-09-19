@@ -11,24 +11,33 @@ vi.mock('@/hooks/use-subscription', () => ({
 vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: vi.fn(() => ({
     featureConfigs: {
-      generate: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
-      attack: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
-      brainstorm: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.9, reasoningEffort: 'low' },
-      factoids: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.3, reasoningEffort: 'low' },
-      ask: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
+      generate: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
+      attack: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
+      brainstorm: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.9, reasoningEffort: 'low' },
+      factoids: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.3, reasoningEffort: 'low' },
+      ask: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
     },
     setFeatureConfig: vi.fn(),
   })),
 }));
 
 vi.mock('@/lib/ai/providers/types', () => ({
-  DEFAULT_MODEL: 'z-ai/glm-5.3-flash',
+  DEFAULT_MODEL: 'openai/gpt-5.6-luna',
   isReasoningEffort: (value: unknown) => value === 'low' || value === 'medium' || value === 'high',
   DEFAULT_PROVIDERS: [
     {
       id: 'openrouter', name: 'OpenRouter',
       models: [
-        { id: 'z-ai/glm-5.3-flash', name: 'GLM 5.3 Flash', maxTokens: 131072, isProOnly: false, supportsTemperature: true },
+        { id: 'openai/gpt-5.6-luna', name: 'GPT-5.6 Luna', maxTokens: 128000, isProOnly: false, supportsTemperature: false },
+        { id: 'google/gemini-3.8-flash', name: 'Gemini 3.8 Flash', maxTokens: 65536, isProOnly: false, supportsTemperature: true },
+        { id: 'deepseek/deepseek-v4-flash-0731', name: 'DeepSeek V4 Flash', maxTokens: 131072, isProOnly: false, supportsTemperature: true },
+        { id: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5', maxTokens: 128000, isProOnly: true, supportsTemperature: false },
+        { id: 'anthropic/claude-opus-5', name: 'Claude Opus 5', maxTokens: 128000, isProOnly: true, supportsTemperature: true },
+        { id: 'openai/gpt-5.6-sol', name: 'GPT-5.6 Sol', maxTokens: 128000, isProOnly: true, supportsTemperature: false },
+        { id: 'openai/gpt-5.6-terra', name: 'GPT-5.6 Terra', maxTokens: 128000, isProOnly: true, supportsTemperature: false },
+        { id: 'deepseek/deepseek-v4-pro-0813', name: 'DeepSeek V4 Pro', maxTokens: 384000, isProOnly: true, supportsTemperature: true },
+        { id: 'z-ai/glm-5.3-flash', name: 'GLM-5.3 Flash', maxTokens: 131072, isProOnly: true, supportsTemperature: true },
+        { id: 'meta/muse-spark-1.3', name: 'Muse Spark 1.3', maxTokens: 943718, isProOnly: true, supportsTemperature: true },
       ],
       isAvailable: () => true,
     },
@@ -154,7 +163,7 @@ describe('ModelSelector', () => {
     const mockSetFeatureConfig = vi.fn();
     vi.mocked(useSettingsStore).mockReturnValue({
       featureConfigs: {
-        generate: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'high' },
+        generate: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'high' },
       } as any,
       setFeatureConfig: mockSetFeatureConfig,
     });
@@ -167,7 +176,7 @@ describe('ModelSelector', () => {
     expect(mockSetFeatureConfig).not.toHaveBeenCalled();
   });
 
-  it('falls back to GLM when a removed model is still saved', () => {
+  it('keeps a saved Pro model visible after trial entitlement resolves', () => {
     vi.mocked(useSettingsStore).mockReturnValue({
       featureConfigs: {
         generate: { provider: 'openrouter', model: 'anthropic/claude-sonnet-5', temperature: 0.7, reasoningEffort: 'low' },
@@ -177,7 +186,22 @@ describe('ModelSelector', () => {
 
     render(<ModelSelector feature="generate" />);
 
-    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('GLM 5.3 Flash');
+    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Claude Sonnet 5');
+  });
+
+  it('keeps saved Pro controls visible while entitlement is loading', () => {
+    subscriptionState.loading = true;
+    vi.mocked(useSettingsStore).mockReturnValue({
+      featureConfigs: {
+        generate: { provider: 'openrouter', model: 'anthropic/claude-sonnet-5', temperature: 0.7, reasoningEffort: 'high' },
+      } as any,
+      setFeatureConfig: vi.fn(),
+    });
+
+    render(<ModelSelector feature="generate" />);
+
+    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Claude Sonnet 5');
+    expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('High');
   });
 
   it('enables model and reasoning controls for Pro users', () => {
@@ -185,7 +209,7 @@ describe('ModelSelector', () => {
     subscriptionState.tier = 'pro';
     vi.mocked(useSettingsStore).mockReturnValue({
       featureConfigs: {
-        generate: { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7, reasoningEffort: 'low' },
+        generate: { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
       } as any,
       setFeatureConfig: vi.fn(),
     });

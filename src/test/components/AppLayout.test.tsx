@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
@@ -123,6 +123,83 @@ describe('AppLayout announcements', () => {
     });
 
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+  });
+
+  it('keeps all tool destinations reachable across desktop and mobile navigation', async () => {
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+
+    const expectDestinations = (links: HTMLElement[], expected: readonly (readonly [string, string])[]) => {
+      const destinations = links.map((link) => ({
+        name: link.textContent?.trim() ?? '',
+        href: link.getAttribute('href'),
+      }));
+      for (const [label, path] of expected) {
+        expect(destinations).toContainEqual(expect.objectContaining({
+          name: expect.stringContaining(label),
+          href: path,
+        }));
+      }
+    };
+
+    const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    fireEvent.click(within(mainNavigation).getByText('More'));
+    expectDestinations(within(mainNavigation).getAllByRole('link'), [
+      ['Home', '/app'],
+      ['Generate', '/app/generate'],
+      ['Attack', '/app/attack'],
+      ['Ask', '/app/ask'],
+      ['Crossfire', '/app/crossfire'],
+      ['Sparring', '/app/sparring'],
+      ['Brainstorm', '/app/brainstorm'],
+      ['Factoids', '/app/factoids'],
+      ['Flowchart', '/app/flowchart'],
+      ['Library', '/app/library'],
+      ['Timer', '/app/timer'],
+      ['History', '/app/history'],
+    ]);
+
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/app/settings');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    expectDestinations(within(mobileNavigation).getAllByRole('link'), [
+      ['Home', '/app'],
+      ['Generate', '/app/generate'],
+      ['Attack', '/app/attack'],
+      ['Brainstorm', '/app/brainstorm'],
+      ['Factoids', '/app/factoids'],
+      ['Ask', '/app/ask'],
+      ['Crossfire', '/app/crossfire'],
+      ['Library', '/app/library'],
+      ['Timer', '/app/timer'],
+      ['Sparring', '/app/sparring'],
+      ['Flowchart', '/app/flowchart'],
+      ['History', '/app/history'],
+    ]);
+  });
+
+  it('closes menus on Escape and returns focus to the trigger', async () => {
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+
+    const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    const moreSummary = within(mainNavigation).getByText('More');
+    fireEvent.click(moreSummary);
+    within(mainNavigation).getByRole('link', { name: 'Brainstorm' }).focus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(moreSummary.closest('details')).not.toHaveAttribute('open');
+    expect(moreSummary).toHaveFocus();
+
+    const menuTrigger = screen.getByRole('button', { name: 'Open menu' });
+    fireEvent.click(menuTrigger);
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    within(mobileNavigation).getByRole('link', { name: /^Brainstorm/ }).focus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
+    expect(menuTrigger).toHaveFocus();
   });
 
   it('keeps the app usable when announcements fail to load', async () => {

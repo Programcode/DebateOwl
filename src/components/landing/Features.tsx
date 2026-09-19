@@ -8,6 +8,8 @@ import {
     Search,
     Database,
     MessageCircle,
+    Crosshair,
+    Dumbbell,
     Timer,
     GitBranch,
 } from "lucide-react";
@@ -21,6 +23,8 @@ const Features = () => {
         { icon: Brain, title: t('features.brainstorm'), description: t('features.brainstormDesc') },
         { icon: Search, title: t('features.factoids'), description: t('features.factoidsDesc') },
         { icon: MessageCircle, title: t('features.ask'), description: t('features.askDesc') },
+        { icon: Crosshair, title: t('features.crossfire'), description: t('features.crossfireDesc') },
+        { icon: Dumbbell, title: t('features.sparring'), description: t('features.sparringDesc') },
         { icon: Database, title: t('features.library'), description: t('features.libraryDesc') },
         { icon: Timer, title: t('features.timer'), description: t('features.timerDesc') },
         { icon: GitBranch, title: t('features.flowchart'), description: t('features.flowchartDesc') },
@@ -40,14 +44,11 @@ const Features = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                     viewport={{ once: true }}
-                    className="mb-16 text-center"
+                    className="mb-12 text-center"
                 >
                     <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
                         {t('features.title')}
                     </h2>
-                    <p className="mx-auto mt-4 max-w-3xl text-lg text-muted-foreground">
-                        {t('features.subtitle')}
-                    </p>
                 </motion.div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
