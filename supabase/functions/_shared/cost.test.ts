@@ -1,6 +1,7 @@
 import {
   calculateRequestCost,
   mergeNormalizedUsage,
+  markIncompleteUsage,
   normalizeAnthropicUsage,
   normalizeGoogleUsage,
   normalizeOpenRouterUsage,
@@ -21,7 +22,7 @@ Deno.test("openai standard usage costs input and output at short-context rates",
   if (result.inputTokens !== 1000 || result.outputTokens !== 500) throw new Error("token passthrough failed");
   // 1000/1M * $0.75 + 500/1M * $4.50
   if (!approxEqual(result.costUsd, 0.00075 + 0.00225)) throw new Error(`unexpected cost ${result.costUsd}`);
-  if (result.pricingSnapshotId !== "official-docs-2026-08-22") throw new Error("snapshot id missing");
+  if (result.pricingSnapshotId !== "official-docs-2026-09-19") throw new Error("snapshot id missing");
 });
 
 Deno.test("openai cached and reasoning tokens are not double counted", () => {
@@ -259,4 +260,16 @@ Deno.test("observed usage selection prefers completed usage after abort and supp
   if (selectObservedUsage(undefined, true) !== undefined) {
     throw new Error("missing usage should remain undefined");
   }
+});
+
+Deno.test("incomplete stream usage preserves observations and fails closed without usage", () => {
+  const raw = { prompt_tokens: 100, completion_tokens: 20 };
+  const observed = normalizeOpenAIUsage(raw);
+  for (const usage of [observed, undefined]) {
+    const marked = markIncompleteUsage(usage);
+    const cost = calculateRequestCost({ provider: "openai", model: "gpt-5.4-mini", usage: marked });
+    if (!marked.incomplete || cost.costUsd !== null) throw new Error("Partial work must remain unknown-cost");
+    if (usage && (marked.raw !== raw || cost.inputTokens !== 100 || cost.outputTokens !== 20)) throw new Error("Observed usage changed");
+  }
+  if (observed.incomplete) throw new Error("Marker mutated original usage");
 });

@@ -431,15 +431,7 @@ async function logUsage(
       raw_usage: cost.rawUsage ?? null,
     };
 
-    let { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
-    // Retry only when the audit columns do not exist yet (Postgres 42703 or
-    // PostgREST PGRST204). Any other error must not retry: the first insert
-    // may have committed, and a second would double-log the request.
-    const isMissingColumn = error?.code === "42703" || error?.code === "PGRST204";
-    if (error && isMissingColumn) {
-      console.warn("[USAGE LOG] Audit columns missing; logging base row only:", error.message);
-      ({ error } = await supabase.from("ai_requests").insert(row));
-    }
+    const { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
     if (error) throw error;
   } catch (err) {
     console.warn("[USAGE LOG] Failed to log:", err);

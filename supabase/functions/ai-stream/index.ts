@@ -28,6 +28,7 @@ import { buildStreamingAskSystemPrompt } from "../_shared/prompts.ts";
 import {
   calculateRequestCost,
   type CostResult,
+  markIncompleteUsage,
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
@@ -283,15 +284,7 @@ async function logUsage(
       raw_usage: cost.rawUsage ?? null,
     };
 
-    let { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
-    // Retry only when the audit columns do not exist yet (Postgres 42703 or
-    // PostgREST PGRST204). Any other error must not retry: the first insert
-    // may have committed, and a second would double-log the request.
-    const isMissingColumn = error?.code === "42703" || error?.code === "PGRST204";
-    if (error && isMissingColumn) {
-      console.warn("[AI STREAM] Audit columns missing; logging base row only:", error.message);
-      ({ error } = await supabase.from("ai_requests").insert(row));
-    }
+    const { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
     if (error) throw error;
   } catch (err) {
     console.warn("[AI STREAM] Failed to log usage:", err);
@@ -391,14 +384,12 @@ export async function handleRequest(req: Request): Promise<Response> {
       const encoder = new TextEncoder();
       let accumulated = "";
       let streamUsageRaw: Record<string, unknown> | undefined;
-      let streamIncomplete = false;
       let streamSawDone = false;
       let streamSawFinishReason = false;
       const collectUsage = (): NormalizedUsage => {
-        const usage = streamUsageRaw
+        return streamUsageRaw
           ? normalizeOpenRouterUsage(streamUsageRaw)
           : { raw: { stream_usage_missing: true } };
-        return streamIncomplete ? { ...usage, incomplete: true } : usage;
       };
 
       const emit = (event: string, payload: Record<string, unknown>) => {
@@ -425,6 +416,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           reasoning: { effort: reasoningEffort, exclude: true },
           provider: { require_parameters: true },
           stream: true,
+          stream_options: { include_usage: true },
         };
         if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
@@ -487,6 +479,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           }
         }
 
+        if (req.signal.aborted) throw new DOMException("Client aborted", "AbortError");
         if (!streamSawDone && !streamSawFinishReason) {
           throw new Error("OpenRouter stream ended before completion");
         }
@@ -506,18 +499,18 @@ export async function handleRequest(req: Request): Promise<Response> {
         }
         await logUsage(user.id, OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
-        streamIncomplete = true;
         cancelUpstream();
         const errorMessage = err instanceof Error ? err.message : "Streaming failed";
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
         if (!isAbort) {
-          emit("error", { message: errorMessage });
+          try { emit("error", { message: errorMessage }); } catch { /* client disconnected */ }
         }
+        const observedUsage = collectUsage();
         await logUsage(
           user.id,
           OPENROUTER_PROVIDER,
           model,
-          collectUsage(),
+          !isAbort && (streamSawDone || streamSawFinishReason) ? observedUsage : markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
           isAbort ? "client_abort" : "stream_error",

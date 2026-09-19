@@ -7,6 +7,7 @@ import {
     validateCreateAnnouncement,
 } from "../_shared/announcements.ts";
 import { generateDemoCode, hashDemoCode, isCreatableDemoRole } from "../_shared/demo-code.ts";
+import { collectAdminUsagePages, getKnownCost, hasUnknownCost, isNonAiActivity } from "../_shared/admin-cost.ts";
 
 // SECURITY: Allow specific origins for CORS
 const ALLOWED_ORIGINS = [
@@ -44,22 +45,6 @@ type UsageByUserRow = {
     cost: number;
     unknownCostRequests?: number;
 };
-
-type CostAuditRow = {
-    user_id?: string | null;
-    cost_usd?: number | null;
-    input_tokens?: number | null;
-    output_tokens?: number | null;
-};
-
-function hasUnknownCost(row: CostAuditRow) {
-    return row.cost_usd === null ||
-        row.cost_usd === undefined ||
-        row.input_tokens === null ||
-        row.input_tokens === undefined ||
-        row.output_tokens === null ||
-        row.output_tokens === undefined;
-}
 
 async function getAuthEmailMap(userIds: string[]): Promise<{ resolved: Map<string, string>; failed: string[] }> {
     const wantedIds = new Set(userIds.filter(Boolean));
@@ -318,84 +303,94 @@ Deno.serve(async (req) => {
             since.setDate(since.getDate() - days);
 
             // Total requests and cost
-            const { data: totals } = await supabase
-                .from("ai_requests")
-                .select("id, provider, model, cost_usd, input_tokens, output_tokens, status")
-                .gte("created_at", since.toISOString());
-
-            const totalRequests = totals?.length || 0;
-            const totalCost = totals?.reduce((sum, r) => sum + (r.cost_usd || 0), 0) || 0;
+            const usageRows = await collectAdminUsagePages(async (from, to) => {
+                const { data, error } = await supabase
+                    .from("ai_requests")
+                    .select("id, user_id, feature, provider, model, cost_usd, input_tokens, output_tokens, status, created_at")
+                    .gte("created_at", since.toISOString())
+                    .order("created_at", { ascending: true })
+                    .order("id", { ascending: true })
+                    .range(from, to);
+                return { data, error };
+            });
+            const totalRequests = usageRows.length;
+            const totalCost = usageRows.reduce((sum, r) => sum + getKnownCost(r), 0);
             // "Unknown cost" means a provider request we cannot price. Rows
             // that never reached a provider (rate_limited) are not cost data
             // gaps and must not inflate the unknown count.
-            const isCostableRow = (r: { status: string }) => r.status === "success";
-            const unknownCostRequests = totals?.filter((r) => isCostableRow(r) && hasUnknownCost(r)).length || 0;
-            const successRate = totals?.length
-                ? (totals.filter(r => r.status === "success").length / totals.length) * 100
+            const unknownCostRequests = usageRows.filter((r) => hasUnknownCost(r)).length;
+            const successRate = usageRows.length
+                ? (usageRows.filter(r => r.status === "success").length / usageRows.length) * 100
                 : 100;
 
             // By model: known cost summed per model plus unknown-cost request counts.
             const modelAggregates = new Map<string, { provider: string; model: string; requests: number; cost: number; unknownCostRequests: number }>();
-            totals?.forEach((r) => {
+            usageRows.forEach((r) => {
+                if (isNonAiActivity(r)) return;
                 const key = `${r.provider}/${r.model}`;
                 const entry = modelAggregates.get(key) || { provider: r.provider, model: r.model, requests: 0, cost: 0, unknownCostRequests: 0 };
-                entry.requests += 1; // request volume counts every row; only unknown-cost uses isCostableRow
-                if (r.cost_usd != null && Number.isFinite(Number(r.cost_usd))) entry.cost += Number(r.cost_usd);
-                if (isCostableRow(r) && hasUnknownCost(r)) entry.unknownCostRequests += 1;
+                entry.requests += 1;
+                entry.cost += getKnownCost(r);
+                if (hasUnknownCost(r)) entry.unknownCostRequests += 1;
                 modelAggregates.set(key, entry);
             });
             const byModel = Array.from(modelAggregates.values()).sort((a, b) => b.requests - a.requests);
 
             // Daily breakdown
-            const { data: daily } = await supabase.rpc("get_daily_usage", { days_back: days });
+            const dailyAggregates = new Map<string, { date: string; requests: number; cost: number; errors: number }>();
+            usageRows.forEach((r) => {
+                const date = typeof r.created_at === "string" ? r.created_at.slice(0, 10) : "";
+                if (!date) return;
+                const entry = dailyAggregates.get(date) || { date, requests: 0, cost: 0, errors: 0 };
+                entry.requests += 1;
+                entry.cost += getKnownCost(r);
+                if (r.status !== "success") entry.errors += 1;
+                dailyAggregates.set(date, entry);
+            });
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const daily = Array.from(dailyAggregates.values())
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map((row) => ({
+                    ...row,
+                    date: `${months[Number(row.date.slice(5, 7)) - 1] || row.date.slice(5, 7)} ${row.date.slice(8, 10)}`,
+                }));
 
             // By feature
-            const { data: byFeature } = await supabase
-                .from("ai_requests")
-                .select("feature, cost_usd, input_tokens, output_tokens, status")
-                .gte("created_at", since.toISOString());
-
             const featureCounts: Record<string, number> = {};
             const featureAggregates = new Map<string, { feature: string; requests: number; cost: number; unknownCostRequests: number }>();
-            byFeature?.forEach(r => {
+            usageRows.forEach(r => {
                 featureCounts[r.feature] = (featureCounts[r.feature] || 0) + 1;
+                if (isNonAiActivity(r)) return;
                 const entry = featureAggregates.get(r.feature) || { feature: r.feature, requests: 0, cost: 0, unknownCostRequests: 0 };
-                entry.requests += 1; // request volume counts every row; only unknown-cost uses isCostableRow
-                if (r.cost_usd != null && Number.isFinite(Number(r.cost_usd))) entry.cost += Number(r.cost_usd);
-                if (isCostableRow(r) && hasUnknownCost(r)) entry.unknownCostRequests += 1;
+                entry.requests += 1;
+                entry.cost += getKnownCost(r);
+                if (hasUnknownCost(r)) entry.unknownCostRequests += 1;
                 featureAggregates.set(r.feature, entry);
             });
             const byFeatureCost = Array.from(featureAggregates.values()).sort((a, b) => b.requests - a.requests);
 
             // By user (top 10)
-            const { data: rawByUser } = await supabase.rpc("get_usage_by_user", { days_back: days, limit_count: 10 });
-            const byUser = (rawByUser || []) as UsageByUserRow[];
+            const userAggregates = new Map<string, UsageByUserRow>();
+            usageRows.forEach((r) => {
+                if (!r.user_id) return;
+                const entry = userAggregates.get(r.user_id) || { user_id: r.user_id, requests: 0, cost: 0, unknownCostRequests: 0 };
+                entry.requests += 1;
+                entry.cost += getKnownCost(r);
+                if (hasUnknownCost(r)) entry.unknownCostRequests = (entry.unknownCostRequests || 0) + 1;
+                userAggregates.set(r.user_id, entry);
+            });
+            const byUser = Array.from(userAggregates.values())
+                .sort((a, b) => b.requests - a.requests)
+                .slice(0, 10);
             const missingEmailUserIds = byUser
                 .filter((row) => !row.email)
                 .map((row) => row.user_id)
                 .filter(Boolean);
             const userEmails = await getAuthEmailMap(missingEmailUserIds);
-            const topUserIds = byUser.map((row) => row.user_id).filter(Boolean);
-            const unknownCostsByUser = new Map<string, number>();
-            if (topUserIds.length > 0) {
-                const { data: unknownCostRows } = await supabase
-                    .from("ai_requests")
-                    .select("user_id, cost_usd, input_tokens, output_tokens, status")
-                    .in("user_id", topUserIds)
-                    .gte("created_at", since.toISOString())
-                    .eq("status", "success");
-
-                unknownCostRows?.forEach((row) => {
-                    if (!hasUnknownCost(row)) return;
-                    if (!row.user_id) return;
-                    unknownCostsByUser.set(row.user_id, (unknownCostsByUser.get(row.user_id) || 0) + 1);
-                });
-            }
 
             const byUserWithEmail = byUser.map((row) => ({
                 ...row,
                 email: row.email || userEmails.resolved.get(row.user_id) || null,
-                unknownCostRequests: unknownCostsByUser.get(row.user_id) || 0,
             }));
 
             return new Response(JSON.stringify({
