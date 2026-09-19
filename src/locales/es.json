@@ -770,6 +770,7 @@
     "urlNeedsVerification": "La URL requiere verificación",
     "howToUse": "Cómo usar:",
     "saveToLibrary": "Guardar en Biblioteca",
+    "saveClaimToLibrary": "Guardar {{claim}} en la biblioteca",
     "discuss": "Discutir Evidencia",
     "verifyAll": "Verificar Todas las Fuentes",
     "verifying": "Verificando Fuentes...",
@@ -1021,7 +1022,12 @@
     "saveFailedToast": "Error al guardar diagrama",
     "loadedToast": "Diagrama cargado",
     "deletedToast": "Diagrama eliminado",
-    "deleteFailedToast": "Error al eliminar diagrama"
+    "deleteFailedToast": "Error al eliminar diagrama",
+    "deleteNodeTitle": "¿Eliminar nodo?",
+    "deleteNodeDescription": "Se eliminarán «{{label}}» y todas sus conexiones. Esta acción no se puede deshacer.",
+    "deleteNodeConfirm": "Eliminar nodo",
+    "deleteNodeCancel": "Cancelar",
+    "nodeDeletedToast": "Nodo eliminado"
   },
   "historyPage": {
     "title": "Historial",

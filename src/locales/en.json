@@ -770,6 +770,7 @@
     "urlNeedsVerification": "URL requires verification",
     "howToUse": "How to use:",
     "saveToLibrary": "Save to Library",
+    "saveClaimToLibrary": "Save {{claim}} to library",
     "discuss": "Discuss Evidence",
     "verifyAll": "Verify All Sources",
     "verifying": "Verifying Sources...",
@@ -1021,7 +1022,12 @@
     "saveFailedToast": "Failed to save flowchart",
     "loadedToast": "Flowchart loaded",
     "deletedToast": "Flowchart deleted",
-    "deleteFailedToast": "Failed to delete flowchart"
+    "deleteFailedToast": "Failed to delete flowchart",
+    "deleteNodeTitle": "Delete node?",
+    "deleteNodeDescription": "{{label}} and all of its connections will be removed. This cannot be undone.",
+    "deleteNodeConfirm": "Delete node",
+    "deleteNodeCancel": "Cancel",
+    "nodeDeletedToast": "Node deleted"
   },
   "historyPage": {
     "title": "History",

@@ -311,7 +311,7 @@ export default function AskPage() {
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
         <AnimatedSection className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">{t('ask.title')}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('nav.ask')}</h1>
         </AnimatedSection>
         <AnimatedSection delay={75}>
           <AskChat

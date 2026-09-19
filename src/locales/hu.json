@@ -770,6 +770,7 @@
     "urlNeedsVerification": "Az URL ellenőrzést igényel",
     "howToUse": "Használat:",
     "saveToLibrary": "Mentés a Könyvtárba",
+    "saveClaimToLibrary": "„{{claim}}” mentése a könyvtárba",
     "discuss": "Bizonyítékok Megvitatása",
     "verifyAll": "Összes Forrás Ellenőrzése",
     "verifying": "Források Ellenőrzése...",
@@ -1021,7 +1022,12 @@
     "saveFailedToast": "Nem sikerült menteni a folyamatábrát",
     "loadedToast": "Folyamatábra betöltve",
     "deletedToast": "Folyamatábra törölve",
-    "deleteFailedToast": "Nem sikerült törölni a folyamatábrát"
+    "deleteFailedToast": "Nem sikerült törölni a folyamatábrát",
+    "deleteNodeTitle": "Csomópont törlése?",
+    "deleteNodeDescription": "A(z) „{{label}}” csomópont és minden kapcsolata törlődik. Ez a művelet nem vonható vissza.",
+    "deleteNodeConfirm": "Csomópont törlése",
+    "deleteNodeCancel": "Mégse",
+    "nodeDeletedToast": "Csomópont törölve"
   },
   "historyPage": {
     "title": "Előzmények",

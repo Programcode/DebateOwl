@@ -2,7 +2,7 @@
 // Regenerate with `npx tsx scripts/update-model-pricing.ts`; see docs/pricing-snapshots/metadata.json
 // for retrieval timestamps, content hashes, and per-model findings.
 
-export const PRICING_SNAPSHOT_ID = "official-docs-2026-08-22";
+export const PRICING_SNAPSHOT_ID = "official-docs-2026-09-19";
 
 export const PRICING_SOURCE_URLS: Record<string, string> = {
   openai: "https://platform.openai.com/docs/pricing",
@@ -34,7 +34,7 @@ export interface ModelPricing {
 }
 
 // Every entry below was transcribed from the official pricing page captured in
-// docs/pricing-snapshots/ on 2026-08-22 (snapshot official-docs-2026-08-22). Models absent from this list are
+// docs/pricing-snapshots/ on 2026-09-19 (snapshot official-docs-2026-09-19). Models absent from this list are
 // unknown-priced on purpose: the calculator fails closed with costUsd=null.
 // gemini-3.1-flash-lite-preview has no exact entry on the official page at
 // retrieval time, so it is intentionally missing here.

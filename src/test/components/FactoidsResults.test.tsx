@@ -51,3 +51,18 @@ test('renders consulted sources with a fallback label for weak sources', () => {
   expect(screen.getByRole('link', { name: /broad fallback article/i })).toHaveAttribute('href', discoveredSources[0].url);
   expect(screen.getByText('fallback context only')).toBeInTheDocument();
 });
+
+test('names the save action with the factoid claim', () => {
+  render(<FactoidsResults result={{
+    ...result,
+    factoids: [{
+      ...result.factoids[0],
+      shortClaim: 'Solar costs fell by 42 percent',
+      citation: { ...result.factoids[0].citation, verified: 'verified' },
+    }],
+  }} onSaveSource={vi.fn()} />);
+
+  expect(screen.getByRole('button', {
+    name: 'Save Solar costs fell by 42 percent to library',
+  })).toBeInTheDocument();
+});
