@@ -21,6 +21,13 @@ function staticGraphFrom(file) {
 }
 
 const forbiddenFeature = /(?:\/src\/pages\/AdminPage\.tsx$|\/src\/lib\/(?:pdf-export-utils|export-utils)\.ts$|\/node_modules\/(?:jspdf|jspdf-autotable|docx|recharts|reactflow)\/)/i;
+const initialPageModules = new Set([
+  'LandingPage.tsx',
+  'LoginPage.tsx',
+  'HomePage.tsx',
+  'GeneratePage.tsx',
+  'AttackPage.tsx',
+]);
 const initialRoutes = [
   entryKey,
   'src/pages/LandingPage.tsx',
@@ -33,8 +40,13 @@ const violations = initialRoutes.flatMap((routeKey) => {
   const routeFile = manifest[routeKey]?.file;
   if (!routeFile) throw new Error(`Vite manifest has no emitted chunk for ${routeKey}.`);
   return [...staticGraphFrom(routeFile)].flatMap((file) => (bundleGraph[file]?.modules ?? [])
-    .filter((moduleId) => forbiddenFeature.test(moduleId))
-    .map((moduleId) => `${routeKey} -> ${file} -> ${moduleId}`));
+    .flatMap((moduleId) => {
+      const pageName = moduleId.match(/\/src\/pages\/([^/]+\.tsx)$/i)?.[1];
+      if ((pageName && !initialPageModules.has(pageName)) || forbiddenFeature.test(moduleId)) {
+        return [`${routeKey} -> ${file} -> ${moduleId}`];
+      }
+      return [];
+    }));
 });
 
 if (violations.length > 0) {

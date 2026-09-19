@@ -8,22 +8,33 @@ declare global {
   }
 }
 
+type ContentMarker = {
+  selector: string;
+  text?: string;
+};
+
 const publicRoutes = [
   ['/', 'h1'],
   ['/login', 'button'],
 ] as const;
 
 const privateRoutes = [
-  ['/app', 'main h1'],
-  ['/app/generate', 'main h1'],
-  ['/app/attack', 'main h1'],
-  ['/app/flowchart', 'main h3'],
-  ['/app/history', 'main h1'],
-  ['/app/admin', 'main h1, main h2, main h3'],
+  ['/app', { selector: 'main h1', text: 'DebateLab' }],
+  ['/app/generate', { selector: 'main h1', text: 'Generate' }],
+  ['/app/attack', { selector: 'main h1', text: 'Attack' }],
+  ['/app/flowchart', { selector: 'main h3', text: 'Argument Flowchart' }],
+  ['/app/history', { selector: 'main h1', text: 'History' }],
+  ['/app/admin', { selector: 'main h3', text: 'Access Denied' }],
 ] as const;
 
-async function waitForContent(page: Page, selector: string) {
-  await expect(page.locator(selector).first()).toBeVisible({ timeout: 15_000 });
+const attackContent: ContentMarker = { selector: 'main h1', text: 'Attack' };
+const attackChunk = /\/src\/pages\/AttackPage\.tsx(?:[?#]|$)/i;
+
+async function waitForContent(page: Page, marker: string | ContentMarker) {
+  const locator = typeof marker === 'string'
+    ? page.locator(marker).first()
+    : page.locator(marker.selector).filter({ hasText: marker.text ?? '' }).first();
+  await expect(locator).toBeVisible({ timeout: 15_000 });
 }
 
 async function openAppNav(page: Page, label: string) {
@@ -52,6 +63,11 @@ test('cold routes expose real content on both browser profiles', async ({ page }
   const appPage = await page.context().newPage();
   await setLocale(appPage, 'en');
   await stubSupabaseSession(appPage);
+  await appPage.route('**/functions/v1/admin*', (route) => route.fulfill({
+    status: 403,
+    contentType: 'application/json',
+    body: JSON.stringify({ error: 'Admin access required' }),
+  }));
   for (const [path, selector] of privateRoutes) {
     await appPage.goto(path, { waitUntil: 'domcontentloaded' });
     await waitForContent(appPage, selector);
@@ -63,7 +79,7 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, 'main h1');
+  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
 
   await page.evaluate(() => {
     window.__baselineShell = document.querySelector('header');
@@ -84,8 +100,12 @@ test('a delayed destination chunk exposes the route fallback without replacing t
 
   await openAppNav(page, 'Attack');
   await expect.poll(() => destinationRequested).toBe(true);
-  await expect(page.locator('.motion-loading-shell')).toBeVisible();
-  await waitForContent(page, 'main h1');
+  const pendingStatus = page.locator('main').getByRole('status', { name: /Attack/i });
+  await expect(pendingStatus).toHaveCount(1);
+  await expect(pendingStatus).toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
+  expect(await page.evaluate(() => document.querySelector('header') === window.__baselineShell)).toBe(true);
+  await waitForContent(page, attackContent);
   expect(await page.evaluate(() => document.querySelector('header') === window.__baselineShell)).toBe(true);
 
   const transitionMetrics = await page.evaluate(() => ({
@@ -109,3 +129,131 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   expect(transitionMetrics.measuredRequestCount).toBeLessThan(transitionMetrics.allRequestCount);
   expect(transitionMetrics.measuredLongTaskCount).toBeLessThanOrEqual(transitionMetrics.allLongTaskCount);
 });
+
+async function gotoGenerate(page: Page) {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
+}
+
+async function attackLink(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    return page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Attack/ });
+  }
+  return page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' });
+}
+
+async function waitForAnimationFrames(page: Page, count = 2) {
+  await page.evaluate((frameCount) => new Promise<void>((resolve) => {
+    let remaining = frameCount;
+    const nextFrame = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(nextFrame);
+    };
+    window.requestAnimationFrame(nextFrame);
+  }), count);
+}
+
+async function setConnection(page: Page, connection: { saveData?: boolean; effectiveType?: string }) {
+  await page.addInitScript((value) => {
+    Object.defineProperty(navigator, 'connection', {
+      configurable: true,
+      value,
+    });
+  }, connection);
+}
+
+function countAttackRequests(page: Page) {
+  let count = 0;
+  page.on('request', (request) => {
+    if (attackChunk.test(request.url())) count += 1;
+  });
+  return () => count;
+}
+
+async function signalAllowedIntent(page: Page, link: Awaited<ReturnType<typeof attackLink>>) {
+  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+    await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
+    return;
+  }
+  await link.hover();
+}
+
+test('hover intent fetches one destination chunk before click and keeps navigation in-document', async ({ page }) => {
+  const requestCount = countAttackRequests(page);
+  await gotoGenerate(page);
+  const link = await attackLink(page);
+  const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
+
+  await link.hover();
+  await destinationRequest;
+  expect(requestCount()).toBe(1);
+
+  const navigationEntriesBeforeClick = await page.evaluate(() => performance.getEntriesByType('navigation').length);
+  await link.click();
+  await waitForContent(page, attackContent);
+  expect(requestCount()).toBe(1);
+  expect(await page.evaluate(() => performance.getEntriesByType('navigation').length)).toBe(navigationEntriesBeforeClick);
+  await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
+});
+
+test('keyboard focus fetches one destination chunk before click', async ({ page }) => {
+  const requestCount = countAttackRequests(page);
+  await gotoGenerate(page);
+  const link = await attackLink(page);
+  const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
+
+  await link.focus();
+  await expect(link).toBeFocused();
+  await destinationRequest;
+  expect(requestCount()).toBe(1);
+
+  await link.click();
+  await waitForContent(page, attackContent);
+  expect(requestCount()).toBe(1);
+  await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
+});
+
+test('touch intent fetches one destination chunk before click', async ({ page }) => {
+  const requestCount = countAttackRequests(page);
+  await gotoGenerate(page);
+  const link = await attackLink(page);
+  const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
+
+  await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
+  await destinationRequest;
+  expect(requestCount()).toBe(1);
+
+  await link.click();
+  await waitForContent(page, attackContent);
+  expect(requestCount()).toBe(1);
+  await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
+});
+
+for (const [label, connection] of [
+  ['Save-Data', { saveData: true }],
+  ['slow connection', { effectiveType: '2g' }],
+] as const) {
+  test(`${label} skips speculative route requests for the same intent`, async ({ page }) => {
+    await setConnection(page, connection);
+    const requestCount = countAttackRequests(page);
+    await gotoGenerate(page);
+    const link = await attackLink(page);
+
+    await signalAllowedIntent(page, link);
+    await waitForAnimationFrames(page);
+    expect(requestCount()).toBe(0);
+
+    const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
+    await link.click();
+    await destinationRequest;
+    await waitForContent(page, attackContent);
+    expect(requestCount()).toBe(1);
+  });
+}
