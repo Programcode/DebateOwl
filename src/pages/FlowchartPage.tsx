@@ -41,6 +41,16 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     Plus,
     Download,
     Trash2,
@@ -219,6 +229,7 @@ export default function FlowchartPage() {
     const [newNodeType, setNewNodeType] = useState<NodeType>('contention');
     const [newNodeStrength, setNewNodeStrength] = useState<'strong' | 'moderate' | 'weak'>('moderate');
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
+    const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false);
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
     const [selectedEdgeType, setSelectedEdgeType] = useState<EdgeKind>('support');
 
@@ -300,6 +311,7 @@ export default function FlowchartPage() {
     const handleLoadFlowchart = (data: FlowchartData) => {
         setNodes(data.nodes);
         setEdges(data.edges);
+        setSelectedNode(null);
         setIsLoadDialogOpen(false);
         toast.success(t('flowchart.loadedToast'));
     };
@@ -339,7 +351,9 @@ export default function FlowchartPage() {
         setNodes((nds) => nds.filter((n) => n.id !== selectedNode));
         setEdges((eds) => eds.filter((e) => e.source !== selectedNode && e.target !== selectedNode));
         setSelectedNode(null);
-    }, [selectedNode, setNodes, setEdges]);
+        setIsDeleteNodeDialogOpen(false);
+        toast.success(t('flowchart.nodeDeletedToast'));
+    }, [selectedNode, setNodes, setEdges, t]);
 
     const autoLayout = useCallback(() => {
         const lanes: Record<NodeType, number> = {
@@ -583,7 +597,7 @@ export default function FlowchartPage() {
                                         <GitBranch className="h-4 w-4 mr-2" />
                                         {t('flowchart.edit')}
                                     </Button>
-                                    <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
+                                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteNodeDialogOpen(true)}>
                                         <Trash2 className="h-4 w-4 mr-2" />
                                         {t('flowchart.delete')}
                                     </Button>
@@ -655,7 +669,7 @@ export default function FlowchartPage() {
                                                 {t('flowchart.edit')}
                                             </Button>
                                             {selectedNode !== 'thesis' && (
-                                                <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
+                                                <Button variant="destructive" size="sm" onClick={() => setIsDeleteNodeDialogOpen(true)}>
                                                     <Trash2 className="h-4 w-4 mr-2" />
                                                     {t('flowchart.delete')}
                                                 </Button>
@@ -701,6 +715,28 @@ export default function FlowchartPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={isDeleteNodeDialogOpen} onOpenChange={setIsDeleteNodeDialogOpen}>
+                <AlertDialogContent style={{ zIndex: 51 }}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('flowchart.deleteNodeTitle')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('flowchart.deleteNodeDescription', {
+                                label: nodes.find((node) => node.id === selectedNode)?.data.label,
+                            })}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('flowchart.deleteNodeCancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={deleteSelectedNode}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {t('flowchart.deleteNodeConfirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Legend */}
             <Card>

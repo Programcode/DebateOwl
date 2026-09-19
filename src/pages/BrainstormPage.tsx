@@ -96,7 +96,7 @@ export default function BrainstormPage() {
       <div className="max-w-6xl mx-auto">
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('brainstorm.title')}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.brainstorm')}</h1>
             <p className="text-muted-foreground mt-1 transition-colors duration-300">
               {t('brainstorm.subtitle')}
             </p>
