@@ -311,6 +311,7 @@ export default function FlowchartPage() {
     const handleLoadFlowchart = (data: FlowchartData) => {
         setNodes(data.nodes);
         setEdges(data.edges);
+        setSelectedNode(null);
         setIsLoadDialogOpen(false);
         toast.success(t('flowchart.loadedToast'));
     };

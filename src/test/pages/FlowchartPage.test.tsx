@@ -2,7 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import FlowchartPage from '@/pages/FlowchartPage';
 
-const { mockToastSuccess } = vi.hoisted(() => ({ mockToastSuccess: vi.fn() }));
+const { mockSavedFlowcharts, mockToastSuccess } = vi.hoisted(() => ({
+  mockSavedFlowcharts: [] as Array<{
+    id: string;
+    title: string;
+    createdAt: number;
+    data: { nodes: unknown[]; edges: unknown[] };
+  }>,
+  mockToastSuccess: vi.fn(),
+}));
 
 vi.mock('sonner', () => ({
   toast: { success: mockToastSuccess, error: vi.fn() },
@@ -15,7 +23,7 @@ vi.mock('@/lib/stores/session-store', () => ({
     pendingFlowchartData: null as null,
     setPendingFlowchartData: vi.fn(),
     saveFlowchart: vi.fn(),
-    savedFlowcharts: [] as [],
+    savedFlowcharts: mockSavedFlowcharts,
     deleteSavedFlowchart: vi.fn(),
   }),
 }));
@@ -48,7 +56,10 @@ vi.mock('reactflow', async () => {
   };
 });
 
-beforeEach(() => mockToastSuccess.mockClear());
+beforeEach(() => {
+  mockSavedFlowcharts.length = 0;
+  mockToastSuccess.mockClear();
+});
 
 test('keeps a selected node when deletion is cancelled', () => {
   render(<FlowchartPage />);
@@ -71,4 +82,29 @@ test('deletes a selected node only after confirmation and reports success', () =
 
   expect(screen.queryByRole('button', { name: 'Argument 1' })).not.toBeInTheDocument();
   expect(mockToastSuccess).toHaveBeenCalledWith('Node deleted');
+});
+
+test('clears a stale node selection when a saved flowchart is loaded', () => {
+  mockSavedFlowcharts.push({
+    id: 'saved-1',
+    title: 'Loaded chart',
+    createdAt: Date.now(),
+    data: {
+      nodes: [{
+        id: 'loaded-node',
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: { label: 'Loaded argument', type: 'contention' },
+      }],
+      edges: [],
+    },
+  });
+  render(<FlowchartPage />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Argument 1' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+  fireEvent.click(screen.getByRole('button', { name: /Loaded chart/ }));
+
+  expect(screen.getByRole('button', { name: 'Loaded argument' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
 });
