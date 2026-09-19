@@ -143,38 +143,42 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
-                {subscription.tier === 'trial' && subscription.trialEndsAt && (
-                  <span className="text-sm text-muted-foreground">
-                    {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
-                  </span>
-                )}
-              </div>
-              {canManageStripeBilling ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void handleManageSubscription()}
-                  disabled={portalLoading}
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
-                </Button>
-              ) : (
-                <Button size="sm" onClick={() => setPricingOpen(true)}>
-                  <Zap className="h-4 w-4 mr-2" />
-                  {upgradeLabel}
-                </Button>
-              )}
-            </div>
+            {subscription.loading ? (
+              <p role="status" className="text-sm text-muted-foreground">{t('settings.loading')}</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
+                    {subscription.tier === 'trial' && subscription.trialEndsAt && (
+                      <span className="text-sm text-muted-foreground">
+                        {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
+                      </span>
+                    )}
+                  </div>
+                  {canManageStripeBilling ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleManageSubscription()}
+                      disabled={portalLoading}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={() => setPricingOpen(true)}>
+                      <Zap className="h-4 w-4 mr-2" />
+                      {upgradeLabel}
+                    </Button>
+                  )}
+                </div>
 
-            <p className="text-sm text-muted-foreground">
-              {t(subscription.loading
-                ? 'settings.loading'
-                : subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
-            </p>
+                <p className="text-sm text-muted-foreground">
+                  {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 

@@ -78,6 +78,8 @@ describe('Settings subscription card', () => {
 
     expect(screen.getByText('Loading...')).toBeInTheDocument();
     expect(screen.queryByText('AI access is active. Usage limits may apply.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Free Trial')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
   });
 
   it('opens the upgrade flow', () => {
