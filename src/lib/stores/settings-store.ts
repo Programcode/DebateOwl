@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import i18n from '@/i18n';
-import { DEFAULT_MODEL } from '../ai/providers/types';
+import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '../ai/providers/types';
 import type { ProviderConfig } from '../ai/providers/types';
 import {
   getModelCatalogEntry,
@@ -40,13 +40,13 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gpt-5.4-mini': DEFAULT_MODEL,
   'gpt-4o': DEFAULT_MODEL,
   'gpt-4o-mini': DEFAULT_MODEL,
-  'claude-opus-4-7': DEFAULT_MODEL,
-  'claude-sonnet-4-6': DEFAULT_MODEL,
+  'claude-opus-4-7': DEFAULT_PRO_MODEL,
+  'claude-sonnet-4-6': DEFAULT_PRO_MODEL,
   'claude-haiku-4-5-20251001': DEFAULT_MODEL,
-  'gemini-3.1-pro-preview': DEFAULT_MODEL,
-  'gemini-3.5-flash': DEFAULT_MODEL,
-  'gemini-3-flash-preview': DEFAULT_MODEL,
-  'gemini-3.1-flash-lite-preview': DEFAULT_MODEL,
+  'gemini-3.1-pro-preview': 'google/gemini-3.8-flash',
+  'gemini-3.5-flash': 'google/gemini-3.8-flash',
+  'gemini-3-flash-preview': 'google/gemini-3.8-flash',
+  'gemini-3.1-flash-lite-preview': 'google/gemini-3.8-flash',
 };
 
 const defaultConfig: ProviderConfig = {
