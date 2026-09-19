@@ -47,7 +47,7 @@ test('onboarding follows visible home targets when secondary navigation is close
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
   await page.locator('[data-test-id="button-primary"]').click();
 
-  for (const key of ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'library', 'timer', 'flowchart', 'history']) {
+  for (const key of ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'crossfire', 'sparring', 'library', 'timer', 'flowchart', 'history']) {
     await expect(page.locator(`[data-tour="mode-${key}"]`)).toBeVisible();
     await expect.poll(() => page.evaluate((targetKey) => {
       const spotlight = document.querySelector('[data-test-id="spotlight"]');
@@ -111,6 +111,19 @@ test('desktop More menu exposes secondary destinations without horizontal scroll
     await expect(moreMenu.getByRole('link', { name: label })).toHaveAttribute('href', href);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+});
+
+test('desktop header fits without internal or document overflow at supported widths', async ({ page }) => {
+  for (const width of [1024, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/app', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
+
+    const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(navigation).toBeVisible();
+    expect(await navigation.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
 });
 
 test('mobile menu exposes every tool destination and closes after navigation', async ({ page }) => {

@@ -19,7 +19,7 @@ const Hero = () => {
     ];
 
     return (
-        <section className="relative min-h-screen overflow-hidden pt-24 pb-20 md:pt-32">
+        <section className="relative min-h-[100dvh] overflow-hidden pt-24 pb-20 md:pt-32">
             <div className="absolute inset-0 aurora-bg opacity-80" />
             <div className="absolute inset-0 animated-grid opacity-50" />
             <div className="orb orb-primary w-[420px] h-[420px] -top-44 -left-44 opacity-70" />
@@ -162,13 +162,12 @@ const HeroPreview = () => {
             <div className="absolute -inset-8 bg-gradient-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
             <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-2xl backdrop-blur-xl">
                 {/* Browser chrome */}
-                <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+                <div className="flex items-center border-b border-border/60 px-5 py-3">
                     <div className="flex items-center gap-2">
                         <div className="h-2.5 w-2.5 rounded-full bg-rose-400" />
                         <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                         <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                     </div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('hero.preview.sampleLabel')}</p>
                 </div>
 
                 <div className="grid gap-4 bg-background/95 p-5 lg:grid-cols-[1.05fr_0.95fr]">

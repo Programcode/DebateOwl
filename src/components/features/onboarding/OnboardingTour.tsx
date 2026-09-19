@@ -71,6 +71,16 @@ export function OnboardingTour() {
             placement: 'bottom',
         },
         {
+            target: '[data-tour="mode-crossfire"], [data-tour="nav-crossfire"]',
+            content: <TourCopy title={t('onboarding.crossfire')} description={t('onboarding.crossfireDesc')} />,
+            placement: 'bottom',
+        },
+        {
+            target: '[data-tour="mode-sparring"], [data-tour="nav-sparring"]',
+            content: <TourCopy title={t('onboarding.sparring')} description={t('onboarding.sparringDesc')} />,
+            placement: 'bottom',
+        },
+        {
             target: '[data-tour="mode-library"], [data-tour="nav-library"]',
             content: <TourCopy title={t('onboarding.library')} description={t('onboarding.libraryDesc')} />,
             placement: 'bottom',
