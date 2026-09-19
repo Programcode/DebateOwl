@@ -754,7 +754,7 @@ export default function AdminPage() {
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 {stats?.totals.unknownCostRequests
-                                    ? `${stats.totals.unknownCostRequests} requests missing token data`
+                                    ? `${stats.totals.unknownCostRequests} requests with unknown cost`
                                     : 'Known API costs'}
                             </p>
                         </CardContent>

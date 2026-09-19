@@ -495,7 +495,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         };
 
         if (!req.signal.aborted) {
-          emit("final", { output });
+          try { emit("final", { output }); } catch { /* client disconnected after provider completion */ }
         }
         await logUsage(user.id, OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
@@ -510,7 +510,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           user.id,
           OPENROUTER_PROVIDER,
           model,
-          !isAbort && (streamSawDone || streamSawFinishReason) ? observedUsage : markIncompleteUsage(observedUsage),
+          markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
           isAbort ? "client_abort" : "stream_error",

@@ -13,7 +13,7 @@ for (const [key, value] of Object.entries({
 
 const { handleRequest } = await import("./index.ts");
 
-type Scenario = "complete" | "audit-error" | "truncated" | "provider-error" | "aborted" | "aborted-after-finish";
+type Scenario = "complete" | "audit-error" | "truncated" | "provider-error" | "provider-error-after-finish" | "aborted" | "aborted-after-finish";
 
 const usage = {
   prompt_tokens: 12,
@@ -48,6 +48,13 @@ function framesFor(scenario: Exclude<Scenario, "aborted">): string {
     return [
       `data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" } }] })}\n\n`,
       usageFrame,
+    ].join("");
+  }
+  if (scenario === "provider-error-after-finish") {
+    return [
+      usageFrame,
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`,
+      `data: ${JSON.stringify({ error: { message: "provider exploded" } })}\n\n`,
     ].join("");
   }
   return [
@@ -137,7 +144,7 @@ async function runScenario(scenario: Scenario) {
 }
 
 Deno.test("OpenRouter stream accounting bills only completed work", async () => {
-  for (const scenario of ["complete", "audit-error", "truncated", "provider-error", "aborted", "aborted-after-finish"] as const) {
+  for (const scenario of ["complete", "audit-error", "truncated", "provider-error", "provider-error-after-finish", "aborted", "aborted-after-finish"] as const) {
     const result = await runScenario(scenario);
     if (result.providerCalls !== 1) throw new Error(`${scenario}: expected one provider call, got ${result.providerCalls}`);
     if (result.rows.length !== 1) throw new Error(`${scenario}: expected one audit insert, got ${result.rows.length}`);
