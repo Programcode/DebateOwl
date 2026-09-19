@@ -38,7 +38,7 @@ describe('settings-store branch coverage', () => {
     expect(state.language).toBe('en');
     expect(state.theme).toBe('system');
     expect(state.customSystemPrompt).toBeUndefined();
-    expect(state.featureConfigs.generate.model).toBe('z-ai/glm-5.3-flash');
+    expect(state.featureConfigs.generate.model).toBe('openai/gpt-5.6-luna');
   });
 
   it('normalizes persisted state in onRehydrateStorage callback', () => {
@@ -85,7 +85,7 @@ describe('settings-store branch coverage', () => {
 
     expect(partialState.featureConfigs.generate).toMatchObject({
       provider: 'openrouter',
-      model: 'z-ai/glm-5.3-flash',
+      model: 'google/gemini-3.8-flash',
       temperature: 0.3,
       reasoningEffort: 'medium',
     });
@@ -113,7 +113,7 @@ describe('settings-store branch coverage', () => {
     });
   });
 
-  it('durably migrates legacy local credentials to the OpenRouter GLM config', async () => {
+  it('durably migrates legacy local credentials to the default OpenRouter config', async () => {
     localStorage.setItem('debate-trainer-settings', JSON.stringify({
       version: 0,
       state: {
@@ -135,7 +135,7 @@ describe('settings-store branch coverage', () => {
     expect(persisted.version).toBe(1);
     expect(persisted.state.featureConfigs.generate).toMatchObject({
       provider: 'openrouter',
-      model: 'z-ai/glm-5.3-flash',
+      model: 'openai/gpt-5.6-luna',
       temperature: 0.4,
       reasoningEffort: 'low',
     });

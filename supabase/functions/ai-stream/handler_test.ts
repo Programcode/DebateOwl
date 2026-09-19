@@ -108,7 +108,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
         },
         body: JSON.stringify({
           feature: "ask",
-          model: "z-ai/glm-5.3-flash",
+          model: "openai/gpt-5.6-luna",
           input: {
             message: "¿Cómo respondo a este argumento?",
             history: [],
@@ -132,7 +132,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     assertIncludes(body, '"response":"Szia Adam"');
 
     const messages = providerRequest?.messages as Array<{ role: string; content: string }> | undefined;
-    if (providerRequest?.model !== "z-ai/glm-5.3-flash") {
+    if (providerRequest?.model !== "openai/gpt-5.6-luna") {
       throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
     }
     const system = messages?.find((message) => message.role === "system")?.content ?? "";
@@ -222,7 +222,7 @@ Deno.test("streaming Ask rejects advanced modes and toggles before quota or prov
           },
           body: JSON.stringify({
             feature: "ask",
-            model: "z-ai/glm-5.3-flash",
+            model: "openai/gpt-5.6-luna",
             input: { message: "Question", ...testCase.input },
           }),
         }),
