@@ -3,11 +3,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Info } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -28,7 +27,6 @@ import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const tierLabels: Record<string, { labelKey: string; color: string }> = {
@@ -121,15 +119,8 @@ export default function SettingsPage() {
   };
 
   const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
-  const usagePercent = subscription.dailyLimit > 0 ? Math.min(100, (subscription.dailyUsed / subscription.dailyLimit) * 100) : 100;
   const canManageStripeBilling = subscription.tier === 'pro' && subscription.hasStripeBilling;
   const upgradeLabel = subscription.tier === 'pro' ? t('settings.setUpBilling') : t('settings.upgradeToPro');
-  const midnightUtc = new Date();
-  midnightUtc.setUTCDate(midnightUtc.getUTCDate() + 1);
-  midnightUtc.setUTCHours(0, 0, 0, 0);
-  const resetMs = Math.max(0, midnightUtc.getTime() - Date.now());
-  const resetHours = Math.floor(resetMs / 3_600_000);
-  const resetMinutes = Math.floor((resetMs % 3_600_000) / 60_000);
 
   return (
     <div className="container py-8 px-4">
@@ -152,54 +143,42 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
-                {subscription.tier === 'trial' && subscription.trialEndsAt && (
-                  <span className="text-sm text-muted-foreground">
-                    {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
-                  </span>
-                )}
-              </div>
-              {canManageStripeBilling ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void handleManageSubscription()}
-                  disabled={portalLoading}
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
-                </Button>
-              ) : (
-                <Button size="sm" onClick={() => setPricingOpen(true)}>
-                  <Zap className="h-4 w-4 mr-2" />
-                  {upgradeLabel}
-                </Button>
-              )}
-            </div>
+            {subscription.loading ? (
+              <p role="status" className="text-sm text-muted-foreground">{t('settings.loading')}</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
+                    {subscription.tier === 'trial' && subscription.trialEndsAt && (
+                      <span className="text-sm text-muted-foreground">
+                        {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
+                      </span>
+                    )}
+                  </div>
+                  {canManageStripeBilling ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleManageSubscription()}
+                      disabled={portalLoading}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={() => setPricingOpen(true)}>
+                      <Zap className="h-4 w-4 mr-2" />
+                      {upgradeLabel}
+                    </Button>
+                  )}
+                </div>
 
-            {/* Usage Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('settings.dailyUsage')}</span>
-                <span className="font-medium">
-                  {subscription.dailyUsed} / {subscription.dailyLimit} {t('settings.requests')}
-                </span>
-              </div>
-              <Progress value={usagePercent} className="h-2" />
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      {t('settings.resetsIn', { hours: resetHours, minutes: resetMinutes })}
-                      <Info className="h-3 w-3" />
-                    </p>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('settings.usageHelp')}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+                <p className="text-sm text-muted-foreground">
+                  {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
