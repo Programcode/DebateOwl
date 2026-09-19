@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "framer-motion";
+import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -15,7 +15,6 @@ import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { Loader2 } from "lucide-react";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { captureException, captureProductEvent } from "@/lib/observability";
-import { getRouteMotion, ROUTE_TRANSITION_DURATION_SECONDS } from "@/lib/motion-policy";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -129,30 +128,30 @@ export function ToolRouteAnalytics(): null {
   return null;
 }
 
-function AnimatedRoutes() {
+function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const shouldReduceMotion = useReducedMotion();
-  const routeMotion = getRouteMotion(Boolean(shouldReduceMotion));
+
+  return (
+    <RouteErrorBoundary key={location.pathname}>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </RouteErrorBoundary>
+  );
+}
+
+function AppRoutes() {
   useSessionStorageSync();
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={location.pathname}
-        {...routeMotion}
-        data-reduced-motion={shouldReduceMotion ? "true" : "false"}
-        data-route-transition-ms={ROUTE_TRANSITION_DURATION_SECONDS * 1000}
-        className="min-h-screen motion-reduce:transform-none"
-      >
-        <Suspense fallback={<PageLoader />}>
-          <Routes location={location}>
+    <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/expocit/sources" element={<SourcesPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/share/:code" element={<SharedPage />} />
+          <Route path="/" element={<RouteContent><LandingPage /></RouteContent>} />
+          <Route path="/terms" element={<RouteContent><TermsPage /></RouteContent>} />
+          <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
+          <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
+          <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
+          <Route path="/share/:code" element={<RouteContent><SharedPage /></RouteContent>} />
 
           {/* Protected App Routes */}
           <Route
@@ -164,26 +163,23 @@ function AnimatedRoutes() {
               </RequireAuth>
             }
           >
-            <Route path="/app" element={<HomePage />} />
-            <Route path="/app/generate" element={<GeneratePage />} />
-            <Route path="/app/attack" element={<AttackPage />} />
-            <Route path="/app/brainstorm" element={<BrainstormPage />} />
-            <Route path="/app/factoids" element={<FactoidsPage />} />
-            <Route path="/app/ask" element={<AskPage />} />
-            <Route path="/app/crossfire" element={<CrossfirePage />} />
-            <Route path="/app/history" element={<HistoryPage />} />
-            <Route path="/app/library" element={<LibraryPage />} />
-            <Route path="/app/timer" element={<TimerPage />} />
-            <Route path="/app/sparring" element={<SparringPage />} />
-            <Route path="/app/flowchart" element={<FlowchartPage />} />
-            <Route path="/app/settings" element={<SettingsPage />} />
-            <Route path="/app/admin" element={<AdminPage />} />
+            <Route path="/app" element={<RouteContent><HomePage /></RouteContent>} />
+            <Route path="/app/generate" element={<RouteContent><GeneratePage /></RouteContent>} />
+            <Route path="/app/attack" element={<RouteContent><AttackPage /></RouteContent>} />
+            <Route path="/app/brainstorm" element={<RouteContent><BrainstormPage /></RouteContent>} />
+            <Route path="/app/factoids" element={<RouteContent><FactoidsPage /></RouteContent>} />
+            <Route path="/app/ask" element={<RouteContent><AskPage /></RouteContent>} />
+            <Route path="/app/crossfire" element={<RouteContent><CrossfirePage /></RouteContent>} />
+            <Route path="/app/history" element={<RouteContent><HistoryPage /></RouteContent>} />
+            <Route path="/app/library" element={<RouteContent><LibraryPage /></RouteContent>} />
+            <Route path="/app/timer" element={<RouteContent><TimerPage /></RouteContent>} />
+            <Route path="/app/sparring" element={<RouteContent><SparringPage /></RouteContent>} />
+            <Route path="/app/flowchart" element={<RouteContent><FlowchartPage /></RouteContent>} />
+            <Route path="/app/settings" element={<RouteContent><SettingsPage /></RouteContent>} />
+            <Route path="/app/admin" element={<RouteContent><AdminPage /></RouteContent>} />
           </Route>
-          <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+          <Route path="*" element={<RouteContent><NotFound /></RouteContent>} />
+    </Routes>
   );
 }
 
@@ -198,7 +194,7 @@ const App = () => (
             <OfflineIndicator />
             <BrowserRouter>
               <RouteErrorBoundary>
-                <AnimatedRoutes />
+                <AppRoutes />
               </RouteErrorBoundary>
             </BrowserRouter>
           </TooltipProvider>

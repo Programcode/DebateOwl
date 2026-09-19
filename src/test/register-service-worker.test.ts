@@ -6,20 +6,19 @@ import { registerServiceWorker } from '@/register-service-worker';
 
 describe('registerServiceWorker', () => {
   const originalServiceWorker = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker');
-  let controllerChange: EventListener | undefined;
+  const addEventListener = vi.fn();
+  const registrationAddEventListener = vi.fn();
 
   beforeEach(() => {
     vi.stubEnv('PROD', true);
-    sessionStorage.clear();
-    controllerChange = undefined;
+    addEventListener.mockClear();
+    registrationAddEventListener.mockClear();
     Object.defineProperty(navigator, 'serviceWorker', {
       configurable: true,
       value: {
         controller: null,
-        register: vi.fn().mockResolvedValue({ addEventListener: vi.fn() }),
-        addEventListener: vi.fn((type: string, listener: EventListener) => {
-          if (type === 'controllerchange') controllerChange = listener;
-        }),
+        register: vi.fn().mockResolvedValue({ addEventListener: registrationAddEventListener }),
+        addEventListener,
       },
     });
   });
@@ -34,15 +33,13 @@ describe('registerServiceWorker', () => {
     }
   });
 
-  it('skips the initial claim but refreshes for a later controller change', () => {
+  it('registers without forcing an update activation or document reload', async () => {
     registerServiceWorker();
+    window.dispatchEvent(new Event('load'));
+    await Promise.resolve();
 
-    expect(controllerChange).toBeDefined();
-    controllerChange?.(new Event('controllerchange'));
-    expect(sessionStorage.getItem('pwa-refreshing')).toBeNull();
-
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    controllerChange?.(new Event('controllerchange'));
-    expect(sessionStorage.getItem('pwa-refreshing')).toBe('true');
+    expect(navigator.serviceWorker.register).toHaveBeenCalledWith('/sw.js');
+    expect(addEventListener).not.toHaveBeenCalledWith('controllerchange', expect.any(Function));
+    expect(registrationAddEventListener).not.toHaveBeenCalledWith('updatefound', expect.any(Function));
   });
 });

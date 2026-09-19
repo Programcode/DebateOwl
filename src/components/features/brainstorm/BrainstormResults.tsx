@@ -7,8 +7,6 @@ import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
 import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
-import { exportBrainstormToPdf } from '@/lib/pdf-export-utils';
-import { exportBrainstormToDocx, exportBrainstormToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
@@ -72,17 +70,23 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
   const [showDriveAuth, setShowDriveAuth] = useState(false);
 
   const handleDocxExport = async () => {
-    const success = await exportBrainstormToDocx(result);
-    if (success) {
-      toast.success(t('brainstormResults.exportedDocx'));
-    } else {
-      toast.error(t('brainstormResults.exportFailedDocx'));
+    try {
+      const { exportBrainstormToDocx } = await import('@/lib/export-utils');
+      const success = await exportBrainstormToDocx(result);
+      if (success) {
+        toast.success(t('brainstormResults.exportedDocx'));
+      } else {
+        toast.error(t('brainstormResults.exportFailedDocx'));
+      }
+    } catch {
+      toast.error(t('brainstormResults.exportError'));
     }
   };
 
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
     try {
+      const { exportBrainstormToGoogleDocs } = await import('@/lib/export-utils');
       const exportResult = await exportBrainstormToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
         const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
@@ -103,6 +107,15 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
       toast.error(t('brainstormResults.exportError'));
     } finally {
       setIsExportingGDocs(false);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    try {
+      const { exportBrainstormToPdf } = await import('@/lib/pdf-export-utils');
+      await exportBrainstormToPdf(result);
+    } catch {
+      toast.error(t('brainstormResults.exportError'));
     }
   };
 
@@ -142,7 +155,7 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
         </div>
       )}
       <ExportToolbar
-        onPdf={() => exportBrainstormToPdf(result)}
+        onPdf={handlePdfExport}
         onDocx={handleDocxExport}
         onGoogleDocs={handleGoogleDocsExport}
         isExportingGDocs={isExportingGDocs}

@@ -10,8 +10,6 @@ import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
 import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
-import { exportFactoidsToPdf } from '@/lib/pdf-export-utils';
-import { exportFactoidsToDocx, exportFactoidsToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
@@ -153,17 +151,23 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
   const totalCount = Math.max(factoids.length, 1);
 
   const handleDocxExport = async () => {
-    const success = await exportFactoidsToDocx(result);
-    if (success) {
-      toast.success(t('factoidsResults.exportedDocx'));
-    } else {
-      toast.error(t('factoidsResults.exportFailedDocx'));
+    try {
+      const { exportFactoidsToDocx } = await import('@/lib/export-utils');
+      const success = await exportFactoidsToDocx(result);
+      if (success) {
+        toast.success(t('factoidsResults.exportedDocx'));
+      } else {
+        toast.error(t('factoidsResults.exportFailedDocx'));
+      }
+    } catch {
+      toast.error(t('factoidsResults.exportError'));
     }
   };
 
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
     try {
+      const { exportFactoidsToGoogleDocs } = await import('@/lib/export-utils');
       const exportResult = await exportFactoidsToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
         const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
@@ -187,11 +191,20 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
     }
   };
 
+  const handlePdfExport = async () => {
+    try {
+      const { exportFactoidsToPdf } = await import('@/lib/pdf-export-utils');
+      await exportFactoidsToPdf(result);
+    } catch {
+      toast.error(t('factoidsResults.exportError'));
+    }
+  };
+
   return (
     <StaggeredContainer className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
       <ExportToolbar
-        onPdf={() => exportFactoidsToPdf(result)}
+        onPdf={handlePdfExport}
         onDocx={handleDocxExport}
         onGoogleDocs={handleGoogleDocsExport}
         isExportingGDocs={isExportingGDocs}

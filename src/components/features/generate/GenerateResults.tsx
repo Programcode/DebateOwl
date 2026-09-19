@@ -8,8 +8,6 @@ import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
 import { StaggeredContainer } from '@/components/ui/animated-section';
-import { exportCaseToDocx, exportCaseToGoogleDocs } from '@/lib/export-utils';
-import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
@@ -115,6 +113,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
     try {
+      const { exportCaseToGoogleDocs } = await import('@/lib/export-utils');
       const exportResult = await exportCaseToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
         const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })
@@ -135,6 +134,24 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       toast.error(t('generateResults.exportError'));
     } finally {
       setIsExportingGDocs(false);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    try {
+      const { exportCaseToPdf } = await import('@/lib/pdf-export-utils');
+      await exportCaseToPdf(result);
+    } catch {
+      toast.error(t('generateResults.exportError'));
+    }
+  };
+
+  const handleDocxExport = async () => {
+    try {
+      const { exportCaseToDocx } = await import('@/lib/export-utils');
+      await exportCaseToDocx(result);
+    } catch {
+      toast.error(t('generateResults.exportError'));
     }
   };
 
@@ -179,8 +196,8 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         </div>
         <div data-tour="export-section">
           <ExportToolbar
-            onPdf={() => exportCaseToPdf(result)}
-            onDocx={() => exportCaseToDocx(result)}
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
             onGoogleDocs={handleGoogleDocsExport}
             isExportingGDocs={isExportingGDocs}
             extraExports={(
