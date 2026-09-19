@@ -81,6 +81,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary"
               onClick={() => onSave(factoid.shortClaim, `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`, factoid.citation?.url)}
+              aria-label={t('factoidsResults.saveClaimToLibrary', { claim: factoid.shortClaim })}
               title={t('factoidsResults.saveToLibrary')}
             >
               <Bookmark className="h-4 w-4" />

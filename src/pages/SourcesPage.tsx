@@ -151,8 +151,7 @@ export default function SourcesPage() {
                     className="text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80 transition-colors"
                   >
                     {source.url}
-                  </a>{" "}
-                  [Consulta: 8 de marzo de 2026].
+                  </a>
                 </li>
               ))}
             </ol>
