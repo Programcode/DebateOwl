@@ -23,6 +23,7 @@ Standard
 
 | Model | Short context input | Short context cached input | Short context cache writes | Short context output | Long context input | Long context cached input | Long context cache writes | Long context output |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gpt-6-astra | $10.00 | $1.00 | $12.50 | $50.00 | $20.00 | $2.00 | $25.00 | $75.00 |
 | gpt-5.6-sol | $4.00 | $0.40 | $5.00 | $20.00 | $8.00 | $0.80 | $10.00 | $30.00 |
 | gpt-5.6-terra | $2.00 | $0.20 | $2.50 | $12.00 | $4.00 | $0.40 | $5.00 | $18.00 |
 | gpt-5.6-luna | $0.20 | $0.02 | $0.25 | $1.20 | $0.40 | $0.04 | $0.50 | $1.80 |
@@ -60,7 +61,7 @@ Standard
 | davinci-002 | $2.00 | - | - | $2.00 | - | - | - | - |
 | babbage-002 | $0.40 | - | - | $0.40 | - | - | - | - |
 
-Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible for data residency. See our [Your data](https://developers.openai.com/api/docs/guides/your-data) guide for supported regions and processing details. [OpenAI models in Amazon Bedrock](https://developers.openai.com/api/docs/guides/amazon-bedrock) are billed through AWS and may differ from direct OpenAI pricing. Priority processing was renamed Fast mode on July 30, 2026. You can use either `service_tier: "priority"` or `service_tier: "fast"` in your API requests. [Learn more about Fast mode](https://developers.openai.com/api/docs/guides/fast-mode). GPT-5.6 Sol’s promotional pricing is available at least through November 21, 2026.
+Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible for data residency. See our [Your data](https://developers.openai.com/api/docs/guides/your-data) guide for supported regions and processing details. [OpenAI models in Amazon Bedrock](https://developers.openai.com/api/docs/guides/amazon-bedrock) are billed through AWS. Bedrock pricing in commercial regions matches OpenAI direct pricing for equivalent services. Priority processing was renamed Fast mode on July 30, 2026. You can use either `service_tier: "priority"` or `service_tier: "fast"` in your API requests. [Learn more about Fast mode](https://developers.openai.com/api/docs/guides/fast-mode). GPT-5.6 Sol’s promotional pricing is available at least through November 21, 2026.
 
     
 
@@ -75,6 +76,7 @@ Batch
 
 | Model | Short context input | Short context cached input | Short context cache writes | Short context output | Long context input | Long context cached input | Long context cache writes | Long context output |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gpt-6-astra | $5.00 | $0.50 | $6.25 | $25.00 | $10.00 | $1.00 | $12.50 | $37.50 |
 | gpt-5.6-sol | $2.00 | $0.20 | $2.50 | $10.00 | $4.00 | $0.40 | $5.00 | $15.00 |
 | gpt-5.6-terra | $1.00 | $0.10 | $1.25 | $6.00 | $2.00 | $0.20 | $2.50 | $9.00 |
 | gpt-5.6-luna | $0.10 | $0.01 | $0.125 | $0.60 | $0.20 | $0.02 | $0.25 | $0.90 |
@@ -125,6 +127,7 @@ Flex
 
 | Model | Short context input | Short context cached input | Short context cache writes | Short context output | Long context input | Long context cached input | Long context cache writes | Long context output |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gpt-6-astra | $5.00 | $0.50 | $6.25 | $25.00 | $10.00 | $1.00 | $12.50 | $37.50 |
 | gpt-5.6-sol | $2.00 | $0.20 | $2.50 | $10.00 | $4.00 | $0.40 | $5.00 | $15.00 |
 | gpt-5.6-terra | $1.00 | $0.10 | $1.25 | $6.00 | $2.00 | $0.20 | $2.50 | $9.00 |
 | gpt-5.6-luna | $0.10 | $0.01 | $0.125 | $0.60 | $0.20 | $0.02 | $0.25 | $0.90 |
@@ -157,6 +160,7 @@ Fast mode
 
 | Model | Short context input | Short context cached input | Short context cache writes | Short context output | Long context input | Long context cached input | Long context cache writes | Long context output |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gpt-6-astra | $20.00 | $2.00 | $25.00 | $100.00 | $40.00 | $4.00 | $50.00 | $150.00 |
 | gpt-5.6-sol | $8.00 | $0.80 | $10.00 | $40.00 | $16.00 | $1.60 | $20.00 | $60.00 |
 | gpt-5.6-terra | $4.00 | $0.40 | $5.00 | $24.00 | $8.00 | $0.80 | $10.00 | $36.00 |
 | gpt-5.6-luna | $0.40 | $0.04 | $0.50 | $2.40 | $0.80 | $0.08 | $1.00 | $3.60 |
@@ -176,7 +180,7 @@ Fast mode
 | o3 | $3.50 | $0.875 | - | $14.00 | - | - | - | - |
 | o4-mini | $2.00 | $0.50 | - | $8.00 | - | - | - | - |
 
-Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible for data residency. See our [Your data](https://developers.openai.com/api/docs/guides/your-data) guide for supported regions and processing details.
+Fast mode is unavailable for GPT-6 Astra with EU data residency. Use Standard processing for those requests. See [Fast mode compatibility](https://developers.openai.com/api/docs/guides/fast-mode). Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible for data residency. See our [Your data](https://developers.openai.com/api/docs/guides/your-data) guide for supported regions and processing details.
 
 
 
@@ -204,15 +208,14 @@ Prices per 1M tokens.
 | gpt-5.6-sol | $4.00 | $0.40 | $5.00 | $20.00 | $8.00 | $0.80 | $10.00 | $30.00 |
 | gpt-5.6-cyber | $12.50 | $1.25 | $15.625 | $75.00 | - | - | - | - |
 | gpt-5.5-cyber | $12.50 | $1.25 | - | $75.00 | - | - | - | - |
-| gpt-5.4-cyber | - | - | - | - | - | - | - | - |
 
 
 
-  `daybreak-blue-latest` and `daybreak-red-latest` are
-  aliases that currently point to `gpt-5.6-sol` and 
-  `gpt-5.6-cyber`, respectively. As new frontier models are released
-  through the Daybreak program, these aliases will be updated to point to the
-  latest models, with pricing adjusted to match each underlying model.
+  `gpt-daybreak-blue-latest` and `gpt-daybreak-red-latest` 
+  are aliases that currently point to `gpt-5.6-sol` and 
+  `gpt-5.6-cyber`, respectively. As new models are released through
+  the Daybreak program, these aliases will be updated to point to the latest
+  models, with pricing adjusted to match each underlying model.
 
 
 
@@ -227,6 +230,27 @@ Multimodal models
   
 
 
+
+To estimate vision model input costs, use the [image input cost
+calculator](https://developers.openai.com/api/docs/guides/image-cost-calculator).
+
+
+  
+
+GPT-Live sessions
+
+
+
+
+[GPT-Live 1](https://developers.openai.com/api/docs/models/gpt-live-1) voice sessions are billed per second,
+without rounding up to a whole minute. Backend model and tool usage is charged
+separately.
+
+### Pricing Table data
+
+| Model | Price per minute |
+| --- | --- |
+| gpt-live-1 | $0.05 |
 
 
 
@@ -300,6 +324,10 @@ Standard
 
 | Model | Modality | Input | Cached input | Output |
 | --- | --- | --- | --- | --- |
+| gpt-image-2.5-sunburst | Image | $8.00 | $2.00 | $30.00 |
+| gpt-image-2.5-sunburst | Text | $5.00 | $1.25 | - |
+| gpt-image-2.5-flare | Image | $8.00 | $2.00 | $30.00 |
+| gpt-image-2.5-flare | Text | $5.00 | $1.25 | - |
 | gpt-image-2 | Image | $8.00 | $2.00 | $30.00 |
 | gpt-image-2 | Text | $5.00 | $1.25 | - |
 | gpt-image-1.5 | Image | $8.00 | $2.00 | $32.00 |
@@ -475,11 +503,14 @@ Standard
 | --- | --- | --- | --- | --- |
 | ChatGPT | chat-latest | $5.00 | $0.50 | $30.00 |
 | Codex | gpt-5.3-codex | $1.75 | $0.175 | $14.00 |
+| Life Sciences | gpt-rosalind-research | $5.00 | $0.50 | $25.00 |
 | Search | gpt-5-search-api | $1.25 | $0.125 | $10.00 |
 | Embedding | text-embedding-3-small | $0.02 | - | - |
 | Embedding | text-embedding-3-large | $0.13 | - | - |
 | Embedding | text-embedding-ada-002 | $0.10 | - | - |
 | Moderation | omni-moderation-latest | Free | - | - |
+
+Billing for `gpt-rosalind-research` begins on October 5, 2026. Cache-write pricing does not apply to this model. Access is limited to approved internal research through the [trusted-access program](https://help.openai.com/en/articles/20001193-gpt-rosalind-for-life-sciences-research). All eligible organizations will continue to get access to the latest GPT-Rosalind models as they’re released. Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible for data residency. See our [Your data](https://developers.openai.com/api/docs/guides/your-data) guide for supported regions and processing details.
 
     
 
@@ -495,6 +526,8 @@ Fast mode
 | Category | Model | Input | Cached input | Output |
 | --- | --- | --- | --- | --- |
 | Codex | gpt-5.3-codex | $3.50 | $0.35 | $28.00 |
+
+Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible for data residency. See our [Your data](https://developers.openai.com/api/docs/guides/your-data) guide for supported regions and processing details.
 
 
 

@@ -135,6 +135,10 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     if (providerRequest?.model !== "z-ai/glm-5.3-flash") {
       throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
     }
+    const streamOptions = providerRequest?.stream_options as { include_usage?: unknown } | undefined;
+    if (streamOptions?.include_usage !== true) {
+      throw new Error("streaming handler did not request terminal usage");
+    }
     const system = messages?.find((message) => message.role === "system")?.content ?? "";
     assertIncludes(system, "Answer in clear Markdown that can stream smoothly token by token.");
     assertIncludes(system, "Follow any explicit output-language instruction.");

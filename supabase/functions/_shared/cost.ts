@@ -255,3 +255,8 @@ export function selectObservedUsage(
     ? usageError?.completedUsage ?? usageError?.usage
     : usageError?.usage ?? usageError?.completedUsage;
 }
+
+/** Preserve observed fragments without treating partial provider work as a complete bill. */
+export function markIncompleteUsage(usage?: NormalizedUsage): NormalizedUsage {
+  return { ...usage, incomplete: true };
+}

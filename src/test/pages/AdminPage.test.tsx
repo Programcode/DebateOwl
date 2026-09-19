@@ -375,7 +375,7 @@ describe('AdminPage Integration', () => {
 
         expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
         expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
-        expect(screen.getByText('7 requests missing token data')).toBeInTheDocument();
+        expect(screen.getByText('7 requests with unknown cost')).toBeInTheDocument();
     });
 
     it('creates a demo code and copies the raw code once', async () => {
