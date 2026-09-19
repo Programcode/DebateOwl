@@ -66,14 +66,12 @@ describe('Pages', () => {
             expect(screen.getAllByRole('heading').length).toBeGreaterThan(1);
         });
 
-        it('shows the current eleven-tool inventory and interactive examples', () => {
+        it('shows the current eleven-tool inventory and interactive preview', () => {
             renderWithRouter(<LandingPage />);
 
             expect(screen.getByRole('heading', { name: 'Crossfire' })).toBeInTheDocument();
             expect(screen.getByRole('heading', { name: 'Sparring' })).toBeInTheDocument();
             expect(screen.getByText('11', { exact: true })).toBeInTheDocument();
-            expect(screen.getAllByText('Example', { exact: true })).toHaveLength(1);
-
             const generateMode = screen.getByRole('button', { name: 'Generate' });
             const crossfireMode = screen.getByRole('button', { name: 'Crossfire' });
             const sparringMode = screen.getByRole('button', { name: 'Sparring' });
