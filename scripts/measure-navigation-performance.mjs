@@ -140,6 +140,32 @@ async function stopServer(child) {
   signalGroup('SIGKILL');
 }
 
+async function cleanupResources({ browser, server, stopServerFn = stopServer, removeLogDirectory = rm }) {
+  const errors = [];
+  if (browser) {
+    try {
+      await browser.close();
+    } catch (error) {
+      errors.push(new Error(`browser.close failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
+  if (server?.child) {
+    try {
+      await stopServerFn(server.child);
+    } catch (error) {
+      errors.push(new Error(`Vite cleanup failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
+  if (server?.logDir) {
+    try {
+      await removeLogDirectory(server.logDir, { recursive: true, force: true });
+    } catch (error) {
+      errors.push(new Error(`Vite log cleanup failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
+  return errors.length ? new AggregateError(errors, 'Resource cleanup failed.') : null;
+}
+
 function authSession() {
   const expiresAt = Math.floor(Date.now() / 1000) + 3_600;
   return {
@@ -186,6 +212,22 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
   };
   const skeleton = () => visible(document.querySelector('.motion-loading-shell'));
 
+  const normalizePath = (value) => {
+    const path = value.replace(/\/+$/, '');
+    return path || '/';
+  };
+
+  document.addEventListener('click', (event) => {
+    if (!baseline.transition || baseline.transition.clickTime !== null) return;
+    const element = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!element) return;
+    const destination = new URL(element.href, window.location.href);
+    if (normalizePath(destination.pathname) !== normalizePath(baseline.transition.target)) return;
+    const clickTime = performance.now();
+    baseline.transition.clickTime = clickTime;
+    baseline.transition.resourceBoundary = clickTime;
+  }, true);
+
   const sample = () => {
     const now = performance.now();
     const path = window.location.pathname;
@@ -217,7 +259,8 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
     startTransition(target) {
       baseline.transition = {
         target,
-        clickTime: performance.now(),
+        clickTime: null,
+        resourceBoundary: null,
         firstSkeletonFrame: null,
         firstRealContentFrame: null,
         shellBefore: document.querySelector('header'),
@@ -229,6 +272,7 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
         transition: baseline.transition ? {
           target: baseline.transition.target,
           clickTime: baseline.transition.clickTime,
+          resourceBoundary: baseline.transition.resourceBoundary,
           firstSkeletonFrame: baseline.transition.firstSkeletonFrame,
           firstRealContentFrame: baseline.transition.firstRealContentFrame,
           shellDomIdentitySurvived: baseline.transition.shellBefore
@@ -302,6 +346,7 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
   const metricsHandle = await page.waitForFunction(({ target, chunkPattern }) => {
     const resources = performance.getEntriesByType('resource').map((entry) => ({
       name: entry.name,
+      sameOrigin: new URL(entry.name, location.href).origin === location.origin,
       startTime: entry.startTime,
       duration: entry.duration,
       responseEnd: entry.responseEnd,
@@ -316,12 +361,24 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
       longTasks: [],
       layoutShifts: [],
     };
-    const routeChunks = resources.filter((entry) => new RegExp(chunkPattern, 'i').test(entry.name));
     const transition = state.transition;
-    const relative = (value, start) => value === null ? null : Math.max(0, value - start);
+    const boundary = transition?.resourceBoundary ?? null;
+    const measuredResources = boundary === null
+      ? resources
+      : resources.filter((entry) => entry.startTime >= boundary);
+    const appResources = measuredResources.filter((entry) => entry.sameOrigin);
+    const measuredLongTasks = boundary === null
+      ? state.longTasks
+      : state.longTasks.filter((entry) => entry.startTime >= boundary);
+    const measuredLayoutShifts = boundary === null
+      ? state.layoutShifts
+      : state.layoutShifts.filter((entry) => entry.startTime >= boundary);
+    const routeChunks = appResources.filter((entry) => new RegExp(chunkPattern, 'i').test(entry.name));
+    const relative = (value, start) => value === null || start === null ? null : Math.max(0, value - start);
     return {
       path: target,
       clickTime: transition?.clickTime ?? null,
+      measurementBoundary: boundary,
       firstSkeletonFrameMs: transition
         ? relative(transition.firstSkeletonFrame, transition.clickTime)
         : state.initial.firstSkeletonFrame,
@@ -336,13 +393,20 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
         transferSize: entry.transferSize,
         decodedBodySize: entry.decodedBodySize,
       })),
-      longTasks: state.longTasks,
-      cls: state.layoutShifts.reduce((sum, entry) => sum + entry.value, 0),
-      layoutShifts: state.layoutShifts,
-      requestCount: resources.length,
-      transferredBytes: resources.reduce((sum, entry) => sum + (entry.transferSize || 0), 0),
-      encodedBytes: resources.reduce((sum, entry) => sum + (entry.encodedBodySize || 0), 0),
-      decodedBytes: resources.reduce((sum, entry) => sum + (entry.decodedBodySize || 0), 0),
+      longTasks: measuredLongTasks,
+      cls: measuredLayoutShifts.reduce((sum, entry) => sum + entry.value, 0),
+      layoutShifts: measuredLayoutShifts,
+      requestCount: appResources.length,
+      browserRequestCount: measuredResources.length,
+      externalRequestCount: measuredResources.length - appResources.length,
+      transferredBytes: appResources.reduce((sum, entry) => sum + (entry.transferSize || 0), 0),
+      encodedBytes: appResources.reduce((sum, entry) => sum + (entry.encodedBodySize || 0), 0),
+      decodedBytes: appResources.reduce((sum, entry) => sum + (entry.decodedBodySize || 0), 0),
+      sourceWorkExcluded: boundary === null ? null : {
+        requestCount: resources.filter((entry) => entry.sameOrigin && entry.startTime < boundary).length,
+        longTaskCount: state.longTasks.length - measuredLongTasks.length,
+        layoutShiftCount: state.layoutShifts.length - measuredLayoutShifts.length,
+      },
       navigationTiming: navigation ? {
         domContentLoaded: navigation.domContentLoadedEventEnd,
         loadEventEnd: navigation.loadEventEnd,
@@ -389,19 +453,23 @@ async function measureColdRoute(browser, profile, route, baseURL) {
   }
 }
 
-async function clickDestination(page, transition) {
-  if (transition.from === '/' && transition.to === '/app') {
+async function clickRoute(page, from, to) {
+  if (from === '/' && to === '/app') {
     await page.getByRole('link', { name: 'Start Trial' }).first().click();
     return;
   }
-  if (transition.from === '/app') {
-    const homeLink = page.locator(`main a[href="${transition.to}"]`).first();
+  if (to === '/app') {
+    await page.locator('header a[href="/app"]').first().click();
+    return;
+  }
+  if (from === '/app') {
+    const homeLink = page.locator(`main a[href="${to}"]`).first();
     if (await homeLink.count()) {
       await homeLink.click();
       return;
     }
   }
-  const label = transition.to.split('/').pop().replace(/^[a-z]/, (letter) => letter.toUpperCase());
+  const label = to.split('/').pop().replace(/^[a-z]/, (letter) => letter.toUpperCase());
   if ((page.viewportSize()?.width ?? 1280) < 1024) {
     await page.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: new RegExp(`^${label}`) }).click();
@@ -415,11 +483,14 @@ async function clickDestination(page, transition) {
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: label }).click();
 }
 
-async function startTransition(page, transition) {
-  await page.evaluate((target) => window.__navigationBaseline?.startTransition(target), transition.to);
-  await clickDestination(page, transition);
+async function clickDestination(page, transition, { measure = true } = {}) {
+  if (measure) await page.evaluate((target) => window.__navigationBaseline?.startTransition(target), transition.to);
+  await clickRoute(page, transition.from, transition.to);
   await page.waitForFunction((target) => window.location.pathname === target, transition.to, { timeout: CONTENT_TIMEOUT_MS });
   await waitForContent(page, transition.to);
+  if (measure) {
+    await page.waitForFunction(() => window.__navigationBaseline?.snapshot().clickTime !== null, undefined, { timeout: CONTENT_TIMEOUT_MS });
+  }
   await page.waitForLoadState('domcontentloaded', { timeout: CONTENT_TIMEOUT_MS }).catch(() => undefined);
   await sleep(150);
 }
@@ -429,21 +500,50 @@ async function measureTransition(browser, profile, transition, baseURL, warm) {
   try {
     await page.goto(`${baseURL}${transition.from}`, { waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS });
     await waitForContent(page, transition.from);
+    let warmCacheProof = null;
     if (warm) {
-      await page.goto(`${baseURL}${transition.to}`, { waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS });
-      await waitForContent(page, transition.to);
-      await page.goto(`${baseURL}${transition.from}`, { waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS });
+      await clickDestination(page, transition, { measure: false });
+      warmCacheProof = await page.evaluate((module) => {
+        const entry = performance.getEntriesByType('resource')
+          .filter((resource) => new RegExp(`/src/pages/${module}\\.tsx(?:[?#]|$)`, 'i').test(resource.name))
+          .at(-1);
+        return entry ? {
+          url: entry.name,
+          startTime: entry.startTime,
+          responseEnd: entry.responseEnd,
+          transferSize: entry.transferSize,
+          encodedBodySize: entry.encodedBodySize,
+          decodedBodySize: entry.decodedBodySize,
+        } : null;
+      }, transition.module);
+      if (transition.from === '/') {
+        await page.goBack({ waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS }).catch(() => undefined);
+      } else {
+        await clickRoute(page, transition.to, transition.from);
+      }
+      await page.waitForFunction((target) => window.location.pathname === target, transition.from, { timeout: CONTENT_TIMEOUT_MS });
       await waitForContent(page, transition.from);
     }
-    await startTransition(page, transition);
-    return await collectMetrics(page, {
+    await clickDestination(page, transition);
+    const metrics = await collectMetrics(page, {
       path: transition.to,
       kind: warm ? 'warm-click' : 'first-visit-click',
       profile: profile.name,
-      cacheState: warm ? 'browser cache warm after destination visit' : 'new context, browser cache empty',
+      cacheState: warm ? 'same-document destination visit, same-document return, module cache warm' : 'new context, browser cache empty',
       routeModule: transition.module,
       label: transition.label,
     });
+    return warm ? {
+      ...metrics,
+      warmCacheProof: {
+        sameDocumentNavigation: true,
+        destinationWarmRequest: warmCacheProof,
+        measuredDestinationRequestCount: metrics.routeChunkRequests.length,
+        semantics: metrics.routeChunkRequests.length === 0
+          ? 'destination module remained resolved across same-document return; measured click issued no destination request'
+          : 'destination request remained observable after same-document warm visit',
+      },
+    } : metrics;
   } finally {
     await context.close();
   }
@@ -473,7 +573,6 @@ async function captureDelayedTransition(browser, profile, baseURL, outputDir) {
   try {
     await page.goto(`${baseURL}${transition.from}`, { waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS });
     await waitForContent(page, transition.from);
-    await page.evaluate((target) => window.__navigationBaseline?.startTransition(target), transition.to);
     const clickPromise = clickDestination(page, transition);
     for (let index = 0; index < 8; index += 1) {
       await sleep(index === 0 ? 50 : 100);
@@ -593,14 +692,52 @@ function summarize(results) {
   };
 }
 
+async function runCleanupSelfTest() {
+  const calls = [];
+  const fakeServer = { child: {}, logDir: '/tmp/fake-vite-log' };
+  const stopServerFn = async () => { calls.push('server'); };
+  const removeLogDirectory = async () => { calls.push('logs'); };
+
+  const launchFailureCleanup = await cleanupResources({
+    browser: null,
+    server: fakeServer,
+    stopServerFn,
+    removeLogDirectory,
+  });
+  if (launchFailureCleanup || calls.join(',') !== 'server,logs') {
+    throw new Error(`Launch-failure cleanup self-test failed: ${calls.join(',')}`);
+  }
+
+  calls.length = 0;
+  const browserCloseFailureCleanup = await cleanupResources({
+    browser: { close: async () => { calls.push('browser'); throw new Error('simulated close failure'); } },
+    server: fakeServer,
+    stopServerFn,
+    removeLogDirectory,
+  });
+  if (!browserCloseFailureCleanup || calls.join(',') !== 'browser,server,logs') {
+    throw new Error(`Browser-close cleanup self-test failed: ${calls.join(',')}`);
+  }
+  console.log('cleanup self-test passed: launch failure and browser.close failure both clean Vite and logs');
+}
+
 async function main() {
   await mkdir(OUTPUT_DIR, { recursive: true });
   const port = await freePort();
   const server = await startServer(port);
-  const browser = await chromium.launch({ headless: true });
+  let browser = null;
+  let browserInfo = null;
   const results = [];
   const delayed = [];
+  let operationError = null;
   try {
+    browser = await chromium.launch({ headless: true });
+    browserInfo = {
+      name: 'Chromium',
+      version: browser.version(),
+      executablePath: chromium.executablePath(),
+      playwrightVersion: require('@playwright/test/package.json').version,
+    };
     for (const profile of PROFILES) {
       for (const route of ROUTES) {
         console.error(`[baseline] ${profile.name} cold ${route.path}`);
@@ -616,13 +753,20 @@ async function main() {
       const delayedMetrics = await captureDelayedTransition(browser, profile, server.baseURL, OUTPUT_DIR);
       delayed.push(delayedMetrics);
     }
+  } catch (error) {
+    operationError = error;
+    throw error;
   } finally {
-    await browser.close();
-    await stopServer(server.child);
-    await rm(server.logDir, { recursive: true, force: true });
+    const cleanupError = await cleanupResources({ browser, server });
+    if (cleanupError) {
+      if (operationError) {
+        console.error(cleanupError.stack);
+      } else {
+        throw cleanupError;
+      }
+    }
   }
   const bundleGraph = await captureBundleGraph();
-  const playwrightVersion = require('@playwright/test/package.json').version;
   const metadata = {
     runLabel: RUN_LABEL,
     capturedAt: new Date().toISOString(),
@@ -630,12 +774,7 @@ async function main() {
     harnessCommit: git(['rev-parse', 'HEAD']),
     nodeVersion: process.version,
     npmVersion: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(),
-    browser: {
-      name: 'Chromium',
-      version: browser.version(),
-      executablePath: chromium.executablePath(),
-      playwrightVersion,
-    },
+    browser: browserInfo,
     vite: {
       serverMode: 'development',
       productionGraphMode: 'production',
@@ -660,7 +799,8 @@ async function main() {
   console.log(JSON.stringify({ output: relative(ROOT, outputPath), ...output.summary, port, sourceCommit: metadata.sourceCommit, harnessCommit: metadata.harnessCommit }));
 }
 
-main().catch((error) => {
+const run = process.argv.includes('--self-test-cleanup') ? runCleanupSelfTest : main;
+run().catch((error) => {
   console.error(error instanceof Error ? error.stack : error);
   process.exitCode = 1;
 });

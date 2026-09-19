@@ -1,18 +1,16 @@
 # Smooth navigation baseline
 
-Captured 2026-09-19 from the merged-main application source at
-`origin/main` commit `b2ba178dee148d06d9bf89793f044add69d705b8`.
-The current harness checkout is `59c1982759b722365946562de269800943e7d0c4`;
-its commits contain only the performance documents and measurement harness.
+Captured 2026-09-19 from merged-main application source at
+`origin/main` commit `b2ba178dee148d06d9bf89793f044add69d705b8`. The baseline
+harness was committed at `c68c6c3` before this round-1 accounting correction;
+the follow-up commit contains the corrected harness and recaptured evidence.
 
 This is local Chromium lab evidence. It is not Lighthouse, field Core Web
 Vitals, authenticated backend proof, staging proof, or a production result.
-Protected routes use the repository's credential-free stub session, so they
-prove rendering and browser timing only.
+Protected routes use the credential-free stub session and blocked backend
+requests, so they prove rendering and browser timing only.
 
 ## Reproduce
-
-Use Node 22.23.2 and the committed npm lockfile:
 
 ```text
 export PATH=/home/codex/.nvm/versions/node/v22.23.2/bin:$PATH
@@ -24,169 +22,187 @@ BASELINE_RUN=run-1 node scripts/measure-navigation-performance.mjs
 BASELINE_RUN=run-2 node scripts/measure-navigation-performance.mjs
 ```
 
-The script allocates a free loopback port, starts a new Vite development
-server, launches a new browser for the matrix, and terminates the exact Vite
-process group before returning. Run 1 used port `38407`; run 2 used port
-`39951`. No measurement or network dependency was added.
+Each matrix run allocates a verified free loopback port, starts a fresh Vite
+development server, launches a browser, and terminates the exact Vite process
+group. Final runs used ports `43915` and `42453`. No measurement dependency was
+added.
 
-The measurement server ran in Vite development mode (`vite 7.3.6`). The
-production build graph was captured separately from the `npm run build` output.
-Cold route contexts disable Chromium HTTP cache through CDP and block service
-workers. First-visit clicks use a fresh browser cache. Warm clicks visit the
-destination once before returning to the source. External API, analytics, Jam,
-and auth requests are aborted at the browser boundary. The network profile is
-unthrottled loopback and the CPU profile is Chromium's default CPU with no
-emulation.
+Vite ran in development mode (`7.3.6`). The production graph came from
+`npm run build`. Cold route contexts disable Chromium HTTP cache through CDP
+and block service workers. First-visit clicks use a fresh browser cache. Warm
+clicks use same-document destination navigation, same-document return to the
+source, and the measured destination navigation. External API, analytics, Jam,
+and auth requests are aborted at the browser boundary.
 
 ## Tool and browser profile
 
-- Playwright `1.62.1` using installed Chromium `151.0.7922.34`.
+- Node `22.23.2`, npm `12.0.2`.
+- Playwright `1.62.1`, Chromium `151.0.7922.34`.
 - Desktop: `1280x800`, device scale factor `1`, touch disabled.
 - Pixel 5: `393x727`, device scale factor `2.75`, touch enabled, Chromium's
   Pixel 5 Android user agent.
-- The script records the exact executable, user agent, viewport, cache policy,
-  Vite port, source commit, harness commit, and tool versions in each JSON
-  run file.
+- Network: unthrottled loopback. CPU: Chromium default with no emulation.
 
-## Matrix and measurements
+## Matrix and boundary method
 
 Each run contains 38 measurements:
 
 - 16 cold refreshes: `/`, `/login`, `/app`, `/app/generate`, `/app/attack`,
   `/app/flowchart`, `/app/history`, and `/app/admin` on both profiles.
-- 10 first-visit clicks: landing CTA -> `/app`, Home -> Generate, Generate ->
-  Attack, Home -> Flowchart, and Home -> History on both profiles.
-- 10 warm clicks over the same five transitions and profiles.
+- 10 first-visit clicks and 10 warm clicks: landing CTA -> `/app`, Home ->
+  Generate, Generate -> Attack, Home -> Flowchart, and Home -> History on both
+  profiles.
 - 2 deterministic delayed clicks: Generate -> Attack with the destination
-  `AttackPage.tsx` request held for exactly 750 ms, one per profile.
+  `AttackPage.tsx` request delayed exactly 750 ms.
 
-For each route or transition the harness records:
+The transition boundary is the capture-phase click event on the final
+destination anchor. Opening a mobile menu or desktop More menu happens before
+that event and is excluded. Resources, long tasks, and layout shifts are
+filtered from that boundary. Request and byte totals count same-origin app
+resources; browser-wide and external blocked-request counts remain in the JSON
+for context. Route chunk timings are exact `PerformanceResourceTiming`
+start/end/duration values after the boundary.
 
-- click timestamp, destination chunk request start/end/duration, and transfer
-  and decoded bytes for the exact route module request;
-- first animation frame containing the route fallback and first animation frame
-  containing route-specific real text;
-- every observed long task and layout-shift entry, cumulative CLS, request count,
-  transferred/encoded/decoded byte totals, navigation timing, and whether the
-  persistent app-shell header retained the same DOM identity.
+The real-content marker uses route-specific visible text such as `Generate`,
+`Attack`, `Argument Flowchart`, and `History`, so the old route cannot count as
+destination content while Suspense is pending. Warm records include the first
+destination response transfer and prove the measured navigation issued no
+second destination request after the same-document return.
 
-The real-content markers include route text such as `Generate`, `Attack`,
-`Argument Flowchart`, and `History`. This prevents the previous route's generic
-`main h1` from being mistaken for destination content while the fallback is
-visible.
+The harness records click time, route chunk request timing, fallback and real
+content frames, boundary-scoped long tasks, CLS/layout shifts, request and
+byte totals, navigation timing, cache state, and app-shell DOM identity.
 
 ## Results
 
-The two runs had identical request counts and byte totals. Representative run
-1 values are below; all values are milliseconds unless stated otherwise.
+Run 1 desktop cold examples. Request counts are same-origin app resources;
+the JSON also records browser-wide and external counts:
 
-Desktop cold refreshes:
-
-- `/`: skeleton `2621.4`, real content `2911.4`, 143 requests,
+- `/`: fallback `2631.6 ms`, real content `2885.4 ms`, 133 app requests,
   7,455,868 transferred bytes, 3 long tasks, CLS `0.0000`.
-- `/app`: skeleton `555.6`, real content `650.5`, 140 requests,
+- `/app`: fallback `544.4 ms`, real content `617.4 ms`, 119 app requests,
   7,142,818 transferred bytes, 1 long task, CLS `0.0000`.
-- `/app/generate`: skeleton `559.8`, real content `895.3`, 184 requests,
-  8,770,111 transferred bytes, 2 long tasks, CLS `0.0029`.
-- `/app/attack`: skeleton `545.1`, real content `843.1`, 185 requests,
-  8,366,088 transferred bytes, 2 long tasks, CLS `0.0110`.
-- `/app/admin`: skeleton `521.5`, real content `760.8`, 160 requests,
-  8,980,386 transferred bytes, 2 long tasks, CLS `0.0000`.
+- `/app/generate`: fallback `595.8 ms`, real content `940.5 ms`, 162 app
+  requests, 8,770,111 transferred bytes, 2 long tasks, CLS `0.0029`.
+- `/app/attack`: fallback `597.1 ms`, real content `883.7 ms`, 163 app
+  requests, 8,366,088 transferred bytes, 2 long tasks, CLS `0.0110`.
 
-Pixel 5 cold refreshes:
+Run 1 Pixel 5 cold examples:
 
-- `/`: skeleton `500.6`, real content `772.8`, 143 requests,
+- `/`: fallback `400.2 ms`, real content `620.1 ms`, 133 app requests,
   7,455,868 transferred bytes, 2 long tasks, CLS `0.0000`.
-- `/app`: skeleton `608.9`, real content `663.1`, 140 requests,
-  7,142,818 transferred bytes, 2 long tasks, CLS `0.0647`.
-- `/app/generate`: skeleton `560.1`, real content `901.9`, 184 requests,
-  8,770,111 transferred bytes, 2 long tasks, CLS `0.1105`.
-- `/app/attack`: skeleton `621.2`, real content `956.2`, 185 requests,
-  8,366,088 transferred bytes, 2 long tasks, CLS `0.1114`.
-- `/app/admin`: skeleton `575.4`, real content `777.7`, 160 requests,
-  8,980,386 transferred bytes, 2 long tasks, CLS `0.0000`.
+- `/app`: fallback `596.4 ms`, real content `652.4 ms`, 119 app requests,
+  7,142,818 transferred bytes, 1 long task, CLS `0.0647`.
+- `/app/generate`: fallback `547.3 ms`, real content `869.0 ms`, 162 app
+  requests, 8,770,111 transferred bytes, 2 long tasks, CLS `0.1105`.
+- `/app/attack`: fallback `591.2 ms`, real content `877.1 ms`, 163 app
+  requests, 8,366,088 transferred bytes, 2 long tasks, CLS `0.1114`.
 
-Warm and first-visit navigation timing shows the current interruption is mostly
-the destination route's main-thread/module/render work, not a large network
-payload. On desktop, first-visit real-content times were 384.0 ms for Home ->
-Generate, 236.9 ms for Generate -> Attack, 269.9 ms for Home -> Flowchart, and
-282.1 ms for Home -> History. The same transitions retained the exact header
-DOM identity. Pixel 5 Generate -> Attack was the slowest sibling transition at
-1,213.8 ms first visit and 1,214.7 ms warm, with 204 requests and 8,991,932
-transferred bytes in both runs.
+Run 1 desktop first-visit transitions:
 
-The delayed desktop Generate -> Attack run requested
-`/src/pages/AttackPage.tsx` at `1030.9 ms`, ended at `1859.8 ms`, showed the
-fallback in four filmstrip frames, and reached route-specific content at
-`1092.9 ms`. The delayed Pixel 5 run showed the fallback in two frames and
-reached real content at `1952.0 ms`. Both retained the shell DOM identity and
-observed the exact 750 ms route-delay handler.
+- Home -> Generate: real content `345.0 ms`, route chunk `14.1 ms`, 44 app
+  requests, 1,652,826 transferred bytes, shell identity `true`.
+- Generate -> Attack: real content `184.8 ms`, route chunk `7.5 ms`, 8 app
+  requests, 221,821 transferred bytes, shell identity `true`.
+- Home -> Flowchart: real content `172.6 ms`, route chunk `15.0 ms`, 11 app
+  requests, 799,036 transferred bytes, shell identity `true`.
+- Home -> History: real content `141.3 ms`, route chunk `21.1 ms`, 10 app
+  requests, 257,018 transferred bytes, shell identity `true`.
+
+Warm transitions issued zero destination chunk requests and zero same-origin
+app requests after the measured click. For example, the desktop Home ->
+Generate warm visit recorded the warm `GeneratePage.tsx` response at
+`78,506` transferred bytes during the warm destination visit, then measured no
+destination request after returning to Home. This is same-document module-cache
+proof, not a claim that an HTTP reload reused the browser cache.
+
+Delayed destination evidence from run 1:
+
+- Desktop `AttackPage.tsx`: request start `1132.7 ms`, end `1917.9 ms`,
+  duration `785.2 ms`, transfer `33,746` bytes, fallback visible in 5 frames,
+  real content `926.4 ms`, shell identity `true`.
+- Pixel 5 `AttackPage.tsx`: request start `2117.2 ms`, end `2873.1 ms`,
+  duration `755.9 ms`, transfer `33,746` bytes, fallback visible in 4 frames,
+  real content `942.6 ms`, shell identity `true`.
 
 ## Repeatability
 
-The documented tolerance is 35% relative variance for animation-frame timing
-values, 5% for request and byte totals, and 0.1 absolute CLS variance. This is
-appropriate for a local Vite dev server and a shared Chromium host. The actual
-run-1/run-2 maximums were:
+The documented tolerance is 35% relative timing variance or 50 ms absolute
+variance, whichever is larger, plus 5% request/byte variance and 0.1 absolute
+CLS variance. This accounts for local Vite transform, JIT, and shared-host
+scheduling noise.
 
-- first skeleton frame: `31.56%`;
-- first real-content frame: `31.72%`;
-- request count and transferred/encoded/decoded bytes: `0.00%`;
-- maximum absolute CLS difference: `0.0647`.
+Run 1 versus run 2:
 
-The two runs therefore stayed inside the documented tolerance. The largest
-timing difference was desktop warm Home -> History skeleton detection
-(`117.3 ms` versus `171.4 ms`), and the largest real-content difference was
-desktop cold `/login` (`556.3 ms` versus `814.7 ms`).
+- maximum first fallback-frame relative variance: `47.14%`, with an absolute
+  difference below `50 ms`;
+- maximum first real-content-frame relative variance: `29.27%`;
+- same-origin request count variance: `0.00%`;
+- transferred, encoded, and decoded app-byte variance: `0.00%`;
+- maximum absolute CLS difference: `0.0000`;
+- every warm case proved same-document module-cache reuse with zero measured
+  destination requests.
+
+The two runs stayed inside the documented tolerance. The large relative
+fallback percentage came from a small desktop Home -> Generate frame value,
+not a large absolute delay.
 
 ## Manifest and bundle graph
 
-The build emitted 95 manifest entries and 94 JavaScript chunks. Each run JSON
-contains the complete `manifestEntries`, `routeStaticGraphs`, and `chunks`
-records. Every chunk record includes raw bytes, gzip bytes, imported files,
-normalized module membership, the routes whose static graph contains it, and
-the manifest dynamic-entry key when present. Criticality is not inferred from
-file names.
+The production build emitted 95 manifest entries and 94 JavaScript chunks. Each
+run JSON contains the complete `manifestEntries`, `routeStaticGraphs`, and
+`chunks` records. Every chunk includes raw bytes, gzip bytes, imports, normalized
+module membership, static route membership, and dynamic-entry key. Criticality
+is not inferred from filenames.
 
-Static graph summaries from the production build:
+Static graph totals:
 
-- `index.html`: 1 file, 1,138,188 raw bytes, 351,547 gzip bytes.
-- `/`: 10 files, 1,307,551 raw bytes, 403,940 gzip bytes.
-- `/login`: 5 files, 1,154,131 raw bytes, 357,485 gzip bytes.
-- `/app`: 4 files, 1,142,701 raw bytes, 353,345 gzip bytes.
-- `/app/generate`: 31 files, 1,530,191 raw bytes, 482,388 gzip bytes.
-- `/app/attack`: 28 files, 1,387,865 raw bytes, 436,303 gzip bytes.
-- `/app/flowchart`: 16 files, 1,333,376 raw bytes, 417,172 gzip bytes.
-- `/app/history`: 13 files, 1,179,425 raw bytes, 365,129 gzip bytes.
-- `/app/admin`: 21 files, 1,623,190 raw bytes, 488,345 gzip bytes.
+```text
+index.html       1 file   1,138,188 raw     351,547 gzip
+/                10 files 1,307,551 raw     403,940 gzip
+/login           5 files  1,154,131 raw     357,485 gzip
+/app             4 files  1,142,701 raw     353,345 gzip
+/app/generate    31 files 1,530,191 raw     482,388 gzip
+/app/attack      28 files 1,387,865 raw     436,303 gzip
+/app/flowchart   16 files 1,333,376 raw     417,172 gzip
+/app/history    13 files 1,179,425 raw     365,129 gzip
+/app/admin      21 files 1,623,190 raw     488,345 gzip
+```
 
-Route-entry chunk membership and gzip size:
+Route-entry chunks:
 
-- `LandingPage.tsx`: `assets/LandingPage-C861HgyL.js`, 45,725 raw,
-  11,133 gzip, 29 source modules.
-- `LoginPage.tsx`: `assets/LoginPage-NBbG4nMQ.js`, 6,791 raw, 2,207 gzip,
-  1 source module.
-- `HomePage.tsx`: `assets/HomePage-CejS6iLs.js`, 3,353 raw, 1,254 gzip,
-  1 source module.
-- `GeneratePage.tsx`: `assets/GeneratePage-BVMnUHTy.js`, 28,552 raw,
-  8,162 gzip, 5 source modules.
-- `AttackPage.tsx`: `assets/AttackPage-P8XAOh8x.js`, 19,037 raw,
-  5,369 gzip, 5 source modules.
-- `FlowchartPage.tsx`: `assets/FlowchartPage-BJaDG0uJ.js`, 50,503 raw,
-  16,770 gzip, 47 source modules.
-- `HistoryPage.tsx`: `assets/HistoryPage-Dq0oiiwR.js`, 11,679 raw,
-  2,619 gzip, 2 source modules.
-- `AdminPage.tsx`: `assets/AdminPage-D-E666bh.js`, 77,425 raw,
-  20,319 gzip, 21 source modules.
+```text
+LandingPage.tsx   45,725 raw   11,133 gzip  29 modules
+LoginPage.tsx      6,791 raw    2,207 gzip   1 module
+HomePage.tsx       3,353 raw    1,254 gzip   1 module
+GeneratePage.tsx  28,552 raw    8,162 gzip   5 modules
+AttackPage.tsx    19,037 raw    5,369 gzip   5 modules
+FlowchartPage.tsx 50,503 raw   16,770 gzip  47 modules
+HistoryPage.tsx   11,679 raw    2,619 gzip   2 modules
+AdminPage.tsx     77,425 raw   20,319 gzip  21 modules
+```
 
 ## Artifacts
 
-- [run 1 JSON](run-1.json) and [run 2 JSON](run-2.json): full structured
-  measurements and graph data.
+- [run 1 JSON](run-1.json) and [run 2 JSON](run-2.json): full corrected
+  boundary-scoped measurements, warm proofs, and graph data.
 - [desktop delayed video](desktop-delayed.webm) and
   [desktop delayed filmstrip](desktop-delayed-filmstrip.png).
 - [Pixel 5 delayed video](pixel-5-delayed.webm) and
   [Pixel 5 delayed filmstrip](pixel-5-delayed-filmstrip.png).
 
-Trace archives were not committed. Playwright traces can contain source
-snapshots, and the JSON, videos, and filmstrips contain no credentials.
+Trace archives were not committed because Playwright traces may contain source
+snapshots. The committed JSON, videos, and filmstrips contain no credentials.
+
+## Concerns and limits
+
+- This is local Chromium/Vite lab evidence, not a field-performance or
+  Lighthouse claim. No staging or production environment was substituted.
+- Stub sessions and blocked backend requests do not prove authenticated API
+  behavior, RLS, staging, or production.
+- Pixel 5 cold `/app/generate` and `/app/attack` recorded CLS above the 0.1 lab
+  guideline (`0.1105` and `0.1114`). This is baseline evidence for later work.
+- The script records unthrottled loopback and does not represent WAN, CPU, or
+  field percentile behavior.
+- `npm ci` emitted existing package deprecation and install-script warnings;
+  the lockfile and package manifest remained unchanged.

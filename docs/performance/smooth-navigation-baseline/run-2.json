@@ -1,9 +1,9 @@
 {
   "metadata": {
     "runLabel": "run-2",
-    "capturedAt": "2026-09-19T21:59:49.655Z",
+    "capturedAt": "2026-09-19T22:24:51.496Z",
     "sourceCommit": "b2ba178dee148d06d9bf89793f044add69d705b8",
-    "harnessCommit": "59c1982759b722365946562de269800943e7d0c4",
+    "harnessCommit": "c68c6c3fa68662ddc3dd9419794b620192a17136",
     "nodeVersion": "v22.23.2",
     "npmVersion": "12.0.2",
     "browser": {
@@ -16,7 +16,7 @@
       "serverMode": "development",
       "productionGraphMode": "production",
       "version": "7.3.6",
-      "port": 39951,
+      "port": 42453,
       "cacheState": "cold routes disable HTTP cache through CDP and block service workers; clicks use a fresh or warmed browser cache"
     },
     "profiles": [
@@ -65,38 +65,46 @@
     {
       "path": "/",
       "clickTime": null,
-      "firstSkeletonFrameMs": 2788.5999999046326,
-      "firstRealContentFrameMs": 3097.399999856949,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 2914.5999999046326,
+      "firstRealContentFrameMs": 3192.899999856949,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/LandingPage.tsx",
-          "startTime": 2773.199999809265,
-          "endTime": 2794.5,
-          "duration": 21.300000190734863,
+          "url": "http://127.0.0.1:42453/src/pages/LandingPage.tsx",
+          "startTime": 2899.399999856949,
+          "endTime": 2922.2000000476837,
+          "duration": 22.800000190734863,
           "transferSize": 7643,
           "decodedBodySize": 7343
         }
       ],
       "longTasks": [
         {
-          "startTime": 2612.0999999046326,
-          "duration": 133
+          "startTime": 2685.7999999523163,
+          "duration": 185
         },
         {
-          "startTime": 2985.199999809265,
-          "duration": 108
+          "startTime": 3096.5,
+          "duration": 92
+        },
+        {
+          "startTime": 3257.399999856949,
+          "duration": 87
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 143,
+      "requestCount": 133,
+      "browserRequestCount": 143,
+      "externalRequestCount": 10,
       "transferredBytes": 7455868,
       "encodedBytes": 7415968,
       "decodedBytes": 7415968,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 2743.899999856949,
-        "loadEventEnd": 2795,
-        "responseEnd": 1962.1999998092651
+        "domContentLoaded": 2869.2000000476837,
+        "loadEventEnd": 2921.7999999523163,
+        "responseEnd": 1966.2000000476837
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -108,34 +116,38 @@
     {
       "path": "/login",
       "clickTime": null,
-      "firstSkeletonFrameMs": 578.4000000953674,
-      "firstRealContentFrameMs": 814.7000000476837,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 517.2999999523163,
+      "firstRealContentFrameMs": 595.2999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/LoginPage.tsx",
-          "startTime": 560.4000000953674,
-          "endTime": 742.5,
-          "duration": 182.09999990463257,
+          "url": "http://127.0.0.1:42453/src/pages/LoginPage.tsx",
+          "startTime": 501.7000000476837,
+          "endTime": 528,
+          "duration": 26.299999952316284,
           "transferSize": 63754,
           "decodedBodySize": 63454
         }
       ],
       "longTasks": [
         {
-          "startTime": 344.30000019073486,
-          "duration": 180
+          "startTime": 340.7000000476837,
+          "duration": 129
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 131,
+      "requestCount": 121,
+      "browserRequestCount": 131,
+      "externalRequestCount": 10,
       "transferredBytes": 6934207,
       "encodedBytes": 6897907,
       "decodedBytes": 6897907,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 522.1000001430511,
-        "loadEventEnd": 584.6000001430511,
-        "responseEnd": 16.5
+        "domContentLoaded": 468.10000014305115,
+        "loadEventEnd": 522,
+        "responseEnd": 19.200000047683716
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -147,34 +159,42 @@
     {
       "path": "/app",
       "clickTime": null,
-      "firstSkeletonFrameMs": 597.3999998569489,
-      "firstRealContentFrameMs": 675.6999998092651,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 658,
+      "firstRealContentFrameMs": 725.7000000476837,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HomePage.tsx",
-          "startTime": 575.0999999046326,
-          "endTime": 593.2999999523163,
-          "duration": 18.200000047683716,
+          "url": "http://127.0.0.1:42453/src/pages/HomePage.tsx",
+          "startTime": 634.9000000953674,
+          "endTime": 653.9000000953674,
+          "duration": 19,
           "transferSize": 25533,
           "decodedBodySize": 25233
         }
       ],
       "longTasks": [
         {
-          "startTime": 352.39999985694885,
-          "duration": 141
+          "startTime": 365.40000009536743,
+          "duration": 173
+        },
+        {
+          "startTime": 541.2999999523163,
+          "duration": 53
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 140,
+      "requestCount": 119,
+      "browserRequestCount": 140,
+      "externalRequestCount": 21,
       "transferredBytes": 7142818,
       "encodedBytes": 7107118,
       "decodedBytes": 7107118,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 491.19999980926514,
-        "loadEventEnd": 615.5,
-        "responseEnd": 17
+        "domContentLoaded": 536.9000000953674,
+        "loadEventEnd": 677.2000000476837,
+        "responseEnd": 21.90000009536743
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -186,43 +206,51 @@
     {
       "path": "/app/generate",
       "clickTime": null,
-      "firstSkeletonFrameMs": 570.5,
-      "firstRealContentFrameMs": 911.7999999523163,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 593.5999999046326,
+      "firstRealContentFrameMs": 950.5,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/GeneratePage.tsx",
-          "startTime": 545.8999998569489,
-          "endTime": 568.8999998569489,
-          "duration": 23,
+          "url": "http://127.0.0.1:42453/src/pages/GeneratePage.tsx",
+          "startTime": 566.8999998569489,
+          "endTime": 595,
+          "duration": 28.100000143051147,
           "transferSize": 78506,
           "decodedBodySize": 78206
         }
       ],
       "longTasks": [
         {
-          "startTime": 338.69999980926514,
-          "duration": 126
+          "startTime": 314.2999999523163,
+          "duration": 145
         },
         {
-          "startTime": 825.8999998569489,
+          "startTime": 462.09999990463257,
+          "duration": 57
+        },
+        {
+          "startTime": 864.0999999046326,
           "duration": 85
         }
       ],
       "cls": 0.0028984375,
       "layoutShifts": [
         {
-          "startTime": 938.2999999523163,
+          "startTime": 976.5999999046326,
           "value": 0.0028984375
         }
       ],
-      "requestCount": 184,
+      "requestCount": 162,
+      "browserRequestCount": 184,
+      "externalRequestCount": 22,
       "transferredBytes": 8770111,
       "encodedBytes": 8721511,
       "decodedBytes": 8721511,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 462.5,
-        "loadEventEnd": 590.5,
-        "responseEnd": 13.699999809265137
+        "domContentLoaded": 457.89999985694885,
+        "loadEventEnd": 614.2999999523163,
+        "responseEnd": 11.399999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -234,43 +262,47 @@
     {
       "path": "/app/attack",
       "clickTime": null,
-      "firstSkeletonFrameMs": 601.7000000476837,
-      "firstRealContentFrameMs": 899.9000000953674,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 576.3999998569489,
+      "firstRealContentFrameMs": 883.8999998569489,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 577.7999999523163,
-          "endTime": 596.4000000953674,
-          "duration": 18.600000143051147,
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 547.1999998092651,
+          "endTime": 571.0999999046326,
+          "duration": 23.90000009536743,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
       "longTasks": [
         {
-          "startTime": 320.40000009536743,
-          "duration": 167
+          "startTime": 313.89999985694885,
+          "duration": 140
         },
         {
-          "startTime": 813.2999999523163,
-          "duration": 81
+          "startTime": 794.5,
+          "duration": 83
         }
       ],
       "cls": 0.01097265625,
       "layoutShifts": [
         {
-          "startTime": 899.6000001430511,
+          "startTime": 883.5999999046326,
           "value": 0.01097265625
         }
       ],
-      "requestCount": 185,
+      "requestCount": 163,
+      "browserRequestCount": 185,
+      "externalRequestCount": 22,
       "transferredBytes": 8366088,
       "encodedBytes": 8317188,
       "decodedBytes": 8317188,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 485.2999999523163,
-        "loadEventEnd": 622.4000000953674,
-        "responseEnd": 13.400000095367432
+        "domContentLoaded": 451.59999990463257,
+        "loadEventEnd": 511.69999980926514,
+        "responseEnd": 14.399999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -282,38 +314,42 @@
     {
       "path": "/app/flowchart",
       "clickTime": null,
-      "firstSkeletonFrameMs": 570.7999999523163,
-      "firstRealContentFrameMs": 774.0999999046326,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 633.4000000953674,
+      "firstRealContentFrameMs": 846.1000001430511,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/FlowchartPage.tsx",
-          "startTime": 546.7999999523163,
-          "endTime": 578.6999998092651,
-          "duration": 31.899999856948853,
+          "url": "http://127.0.0.1:42453/src/pages/FlowchartPage.tsx",
+          "startTime": 603.2999999523163,
+          "endTime": 643.5,
+          "duration": 40.200000047683716,
           "transferSize": 205577,
           "decodedBodySize": 205277
         }
       ],
       "longTasks": [
         {
-          "startTime": 316.19999980926514,
-          "duration": 148
+          "startTime": 347.60000014305115,
+          "duration": 155
         },
         {
-          "startTime": 714.0999999046326,
-          "duration": 53
+          "startTime": 779.7000000476837,
+          "duration": 57
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 150,
+      "requestCount": 129,
+      "browserRequestCount": 150,
+      "externalRequestCount": 21,
       "transferredBytes": 7916321,
       "encodedBytes": 7877621,
       "decodedBytes": 7877621,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 462.5,
-        "loadEventEnd": 589.3999998569489,
-        "responseEnd": 13.299999952316284
+        "domContentLoaded": 501.10000014305115,
+        "loadEventEnd": 657.2999999523163,
+        "responseEnd": 13.5
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -325,37 +361,41 @@
     {
       "path": "/app/history",
       "clickTime": null,
-      "firstSkeletonFrameMs": 582.7000000476837,
-      "firstRealContentFrameMs": 707.7000000476837,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 604.7999999523163,
+      "firstRealContentFrameMs": 746.0999999046326,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HistoryPage.tsx",
-          "startTime": 559.0999999046326,
-          "endTime": 588.2999999523163,
-          "duration": 29.200000047683716,
+          "url": "http://127.0.0.1:42453/src/pages/HistoryPage.tsx",
+          "startTime": 576.2999999523163,
+          "endTime": 606.7000000476837,
+          "duration": 30.40000009536743,
           "transferSize": 143448,
           "decodedBodySize": 143148
         }
       ],
       "longTasks": [
         {
-          "startTime": 311.2999999523163,
-          "duration": 148
+          "startTime": 326.59999990463257,
+          "duration": 142
         },
         {
-          "startTime": 461.5,
-          "duration": 52
+          "startTime": 470.89999985694885,
+          "duration": 60
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 149,
+      "requestCount": 128,
+      "browserRequestCount": 149,
+      "externalRequestCount": 21,
       "transferredBytes": 7374303,
       "encodedBytes": 7335903,
       "decodedBytes": 7335903,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 457.90000009536743,
-        "loadEventEnd": 594.7000000476837,
+        "domContentLoaded": 467.2000000476837,
+        "loadEventEnd": 623.2000000476837,
         "responseEnd": 13
       },
       "shellDomIdentitySurvived": null,
@@ -368,38 +408,42 @@
     {
       "path": "/app/admin",
       "clickTime": null,
-      "firstSkeletonFrameMs": 584.4000000953674,
-      "firstRealContentFrameMs": 794.1000001430511,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 587.5,
+      "firstRealContentFrameMs": 849.8000001907349,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AdminPage.tsx",
-          "startTime": 563.2000000476837,
-          "endTime": 603,
-          "duration": 39.799999952316284,
+          "url": "http://127.0.0.1:42453/src/pages/AdminPage.tsx",
+          "startTime": 562.3000001907349,
+          "endTime": 615.1000001430511,
+          "duration": 52.799999952316284,
           "transferSize": 394470,
           "decodedBodySize": 394170
         }
       ],
       "longTasks": [
         {
-          "startTime": 329.40000009536743,
-          "duration": 143
+          "startTime": 327.40000009536743,
+          "duration": 148
         },
         {
-          "startTime": 698.5,
-          "duration": 57
+          "startTime": 738.2000000476837,
+          "duration": 70
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 160,
+      "requestCount": 134,
+      "browserRequestCount": 160,
+      "externalRequestCount": 26,
       "transferredBytes": 8980386,
       "encodedBytes": 8940186,
       "decodedBytes": 8940186,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 470.7000000476837,
-        "loadEventEnd": 529.8000001907349,
-        "responseEnd": 15.700000047683716
+        "domContentLoaded": 473.40000009536743,
+        "loadEventEnd": 603.2000000476837,
+        "responseEnd": 14
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -410,39 +454,38 @@
     },
     {
       "path": "/app",
-      "clickTime": 685.7999999523163,
-      "firstSkeletonFrameMs": 738.0999999046326,
-      "firstRealContentFrameMs": 777.5,
+      "clickTime": 1611.7000000476837,
+      "measurementBoundary": 1611.7000000476837,
+      "firstSkeletonFrameMs": 55.39999985694885,
+      "firstRealContentFrameMs": 88.29999995231628,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HomePage.tsx",
-          "startTime": 1398.2000000476837,
-          "endTime": 1408.7000000476837,
-          "duration": 10.5,
+          "url": "http://127.0.0.1:42453/src/pages/HomePage.tsx",
+          "startTime": 1651.2999999523163,
+          "endTime": 1666.7000000476837,
+          "duration": 15.400000095367432,
           "transferSize": 25533,
           "decodedBodySize": 25233
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 252.79999995231628,
-          "duration": 123
-        },
-        {
-          "startTime": 566.3999998569489,
-          "duration": 79
-        }
-      ],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 165,
-      "transferredBytes": 7491624,
-      "encodedBytes": 7451124,
-      "decodedBytes": 7451124,
+      "requestCount": 2,
+      "browserRequestCount": 3,
+      "externalRequestCount": 1,
+      "transferredBytes": 35756,
+      "encodedBytes": 35156,
+      "decodedBytes": 35156,
+      "sourceWorkExcluded": {
+        "requestCount": 133,
+        "longTaskCount": 3,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 374.39999985694885,
-        "loadEventEnd": 425.2000000476837,
-        "responseEnd": 11.599999904632568
+        "domContentLoaded": 469.09999990463257,
+        "loadEventEnd": 523.5,
+        "responseEnd": 11.5
       },
       "shellDomIdentitySurvived": null,
       "kind": "first-visit-click",
@@ -453,78 +496,89 @@
     },
     {
       "path": "/app",
-      "clickTime": 536.9000000953674,
-      "firstSkeletonFrameMs": 771.5999999046326,
-      "firstRealContentFrameMs": 820.5999999046326,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/HomePage.tsx",
-          "startTime": 1289,
-          "endTime": 1307,
-          "duration": 18,
-          "transferSize": 25533,
-          "decodedBodySize": 25233
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 289.10000014305115,
-          "duration": 51
-        }
-      ],
+      "clickTime": 3029.9000000953674,
+      "measurementBoundary": 3029.9000000953674,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 100,
+      "routeChunkRequests": [],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 165,
-      "transferredBytes": 7491624,
-      "encodedBytes": 7451124,
-      "decodedBytes": 7451124,
+      "requestCount": 0,
+      "browserRequestCount": 1,
+      "externalRequestCount": 1,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 135,
+        "longTaskCount": 3,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 338.2000000476837,
-        "loadEventEnd": 369.40000009536743,
-        "responseEnd": 15.700000047683716
+        "domContentLoaded": 472.2000000476837,
+        "loadEventEnd": 526.2000000476837,
+        "responseEnd": 11
       },
       "shellDomIdentitySurvived": null,
       "kind": "warm-click",
       "label": "Landing CTA -> /app",
       "profile": "desktop",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "HomePage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "HomePage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/HomePage.tsx",
+          "startTime": 1524.1000001430511,
+          "responseEnd": 1530.9000000953674,
+          "transferSize": 25533,
+          "encodedBodySize": 25233,
+          "decodedBodySize": 25233
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/generate",
-      "clickTime": 638.4000000953674,
-      "firstSkeletonFrameMs": 127.39999985694885,
-      "firstRealContentFrameMs": 415.7999999523163,
+      "clickTime": 779.2000000476837,
+      "measurementBoundary": 779.2000000476837,
+      "firstSkeletonFrameMs": 52.39999985694885,
+      "firstRealContentFrameMs": 339,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/GeneratePage.tsx",
-          "startTime": 753.7000000476837,
-          "endTime": 761.7000000476837,
-          "duration": 8,
+          "url": "http://127.0.0.1:42453/src/pages/GeneratePage.tsx",
+          "startTime": 813.2999999523163,
+          "endTime": 821.0999999046326,
+          "duration": 7.799999952316284,
           "transferSize": 78506,
           "decodedBodySize": 78206
         }
       ],
       "longTasks": [
         {
-          "startTime": 316,
-          "duration": 131
-        },
-        {
-          "startTime": 956.5999999046326,
-          "duration": 97
+          "startTime": 1010.0999999046326,
+          "duration": 85
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 186,
-      "transferredBytes": 8795644,
-      "encodedBytes": 8746744,
-      "decodedBytes": 8746744,
+      "requestCount": 44,
+      "browserRequestCount": 46,
+      "externalRequestCount": 2,
+      "transferredBytes": 1652826,
+      "encodedBytes": 1639626,
+      "decodedBytes": 1639626,
+      "sourceWorkExcluded": {
+        "requestCount": 119,
+        "longTaskCount": 1,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 445,
-        "loadEventEnd": 569.7999999523163,
-        "responseEnd": 9.299999952316284
+        "domContentLoaded": 466,
+        "loadEventEnd": 516.4000000953674,
+        "responseEnd": 15.599999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -535,178 +589,182 @@
     },
     {
       "path": "/app/generate",
-      "clickTime": 487.60000014305115,
-      "firstSkeletonFrameMs": 143.5,
-      "firstRealContentFrameMs": 394.59999990463257,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/GeneratePage.tsx",
-          "startTime": 616.9000000953674,
-          "endTime": 623.5,
-          "duration": 6.599999904632568,
-          "transferSize": 78506,
-          "decodedBodySize": 78206
-        }
-      ],
+      "clickTime": 1383.2999999523163,
+      "measurementBoundary": 1383.2999999523163,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 92.39999985694885,
+      "routeChunkRequests": [],
       "longTasks": [
         {
-          "startTime": 805.6000001430511,
-          "duration": 64
+          "startTime": 1410.2999999523163,
+          "duration": 58
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 186,
-      "transferredBytes": 8795644,
-      "encodedBytes": 8746744,
-      "decodedBytes": 8746744,
+      "requestCount": 0,
+      "browserRequestCount": 11,
+      "externalRequestCount": 11,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 163,
+        "longTaskCount": 2,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 369,
-        "loadEventEnd": 444.40000009536743,
-        "responseEnd": 15.400000095367432
+        "domContentLoaded": 515.7999999523163,
+        "loadEventEnd": 563.3999998569489,
+        "responseEnd": 11.099999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Home -> Generate",
       "profile": "desktop",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "GeneratePage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "GeneratePage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/GeneratePage.tsx",
+          "startTime": 802.1999998092651,
+          "responseEnd": 817.6999998092651,
+          "transferSize": 78506,
+          "encodedBodySize": 78206,
+          "decodedBodySize": 78206
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/attack",
-      "clickTime": 933.9000000953674,
-      "firstSkeletonFrameMs": 129,
-      "firstRealContentFrameMs": 250.20000004768372,
+      "clickTime": 981.5,
+      "measurementBoundary": 981.5,
+      "firstSkeletonFrameMs": 36.90000009536743,
+      "firstRealContentFrameMs": 148.10000014305115,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 1047.7000000476837,
-          "endTime": 1055.1000001430511,
-          "duration": 7.400000095367432,
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 999.7000000476837,
+          "endTime": 1025.5,
+          "duration": 25.799999952316284,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 298.40000009536743,
-          "duration": 155
-        },
-        {
-          "startTime": 805.5,
-          "duration": 83
-        },
-        {
-          "startTime": 1117.5,
-          "duration": 61
-        }
-      ],
-      "cls": 0.0028984375,
-      "layoutShifts": [
-        {
-          "startTime": 908.7999999523163,
-          "value": 0.0028984375
-        }
-      ],
-      "requestCount": 194,
-      "transferredBytes": 8991932,
-      "encodedBytes": 8940932,
-      "decodedBytes": 8940932,
+      "longTasks": [],
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 8,
+      "browserRequestCount": 10,
+      "externalRequestCount": 2,
+      "transferredBytes": 221821,
+      "encodedBytes": 219421,
+      "decodedBytes": 219421,
+      "sourceWorkExcluded": {
+        "requestCount": 162,
+        "longTaskCount": 2,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 451.2999999523163,
-        "loadEventEnd": 506,
+        "domContentLoaded": 447,
+        "loadEventEnd": 500.40000009536743,
+        "responseEnd": 12.600000143051147
+      },
+      "shellDomIdentitySurvived": true,
+      "kind": "first-visit-click",
+      "label": "Generate -> Attack",
+      "profile": "desktop",
+      "cacheState": "new context, browser cache empty",
+      "routeModule": "AttackPage"
+    },
+    {
+      "path": "/app/attack",
+      "clickTime": 1511.0999999046326,
+      "measurementBoundary": 1511.0999999046326,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 63.90000009536743,
+      "routeChunkRequests": [],
+      "longTasks": [],
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 0,
+      "browserRequestCount": 2,
+      "externalRequestCount": 2,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 170,
+        "longTaskCount": 4,
+        "layoutShiftCount": 1
+      },
+      "navigationTiming": {
+        "domContentLoaded": 377.2999999523163,
+        "loadEventEnd": 480.09999990463257,
         "responseEnd": 10.900000095367432
       },
       "shellDomIdentitySurvived": true,
-      "kind": "first-visit-click",
+      "kind": "warm-click",
       "label": "Generate -> Attack",
       "profile": "desktop",
-      "cacheState": "new context, browser cache empty",
-      "routeModule": "AttackPage"
-    },
-    {
-      "path": "/app/attack",
-      "clickTime": 739.0999999046326,
-      "firstSkeletonFrameMs": 149.10000014305115,
-      "firstRealContentFrameMs": 284.7000000476837,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 868.2999999523163,
-          "endTime": 893.7000000476837,
-          "duration": 25.40000009536743,
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "AttackPage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 952.0999999046326,
+          "responseEnd": 958.7000000476837,
           "transferSize": 33746,
+          "encodedBodySize": 33446,
           "decodedBodySize": 33446
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 311.39999985694885,
-          "duration": 59
         },
-        {
-          "startTime": 627.5,
-          "duration": 65
-        },
-        {
-          "startTime": 963.7999999523163,
-          "duration": 54
-        }
-      ],
-      "cls": 0.0028984375,
-      "layoutShifts": [
-        {
-          "startTime": 708.2999999523163,
-          "value": 0.0028984375
-        }
-      ],
-      "requestCount": 194,
-      "transferredBytes": 8991932,
-      "encodedBytes": 8940932,
-      "decodedBytes": 8940932,
-      "navigationTiming": {
-        "domContentLoaded": 368.7000000476837,
-        "loadEventEnd": 402.5,
-        "responseEnd": 25.09999990463257
-      },
-      "shellDomIdentitySurvived": true,
-      "kind": "warm-click",
-      "label": "Generate -> Attack",
-      "profile": "desktop",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "AttackPage"
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 642.1999998092651,
-      "firstSkeletonFrameMs": 120.70000004768372,
-      "firstRealContentFrameMs": 243,
+      "clickTime": 700.6999998092651,
+      "measurementBoundary": 700.6999998092651,
+      "firstSkeletonFrameMs": 32.90000009536743,
+      "firstRealContentFrameMs": 182.40000009536743,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/FlowchartPage.tsx",
-          "startTime": 753.6999998092651,
-          "endTime": 766.3999998569489,
-          "duration": 12.700000047683716,
+          "url": "http://127.0.0.1:42453/src/pages/FlowchartPage.tsx",
+          "startTime": 723.5999999046326,
+          "endTime": 739.5,
+          "duration": 15.900000095367432,
           "transferSize": 205577,
           "decodedBodySize": 205277
         }
       ],
       "longTasks": [
         {
-          "startTime": 305.5,
-          "duration": 136
+          "startTime": 821.5999999046326,
+          "duration": 51
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 152,
-      "transferredBytes": 7941854,
-      "encodedBytes": 7902854,
-      "decodedBytes": 7902854,
+      "requestCount": 11,
+      "browserRequestCount": 12,
+      "externalRequestCount": 1,
+      "transferredBytes": 799036,
+      "encodedBytes": 795736,
+      "decodedBytes": 795736,
+      "sourceWorkExcluded": {
+        "requestCount": 119,
+        "longTaskCount": 1,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 439.69999980926514,
-        "loadEventEnd": 496.7999999523163,
-        "responseEnd": 11.799999952316284
+        "domContentLoaded": 406.89999985694885,
+        "loadEventEnd": 546,
+        "responseEnd": 10.899999856948853
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -717,74 +775,84 @@
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 514.6999998092651,
-      "firstSkeletonFrameMs": 126.10000014305115,
-      "firstRealContentFrameMs": 245.40000009536743,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/FlowchartPage.tsx",
-          "startTime": 620.0999999046326,
-          "endTime": 631.5999999046326,
-          "duration": 11.5,
-          "transferSize": 205577,
-          "decodedBodySize": 205277
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 346.89999985694885,
-          "duration": 59
-        }
-      ],
+      "clickTime": 1267.2000000476837,
+      "measurementBoundary": 1267.2000000476837,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 68.59999990463257,
+      "routeChunkRequests": [],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 152,
-      "transferredBytes": 7941854,
-      "encodedBytes": 7902854,
-      "decodedBytes": 7902854,
+      "requestCount": 0,
+      "browserRequestCount": 1,
+      "externalRequestCount": 1,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 130,
+        "longTaskCount": 2,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 404.89999985694885,
-        "loadEventEnd": 470,
-        "responseEnd": 35.5
+        "domContentLoaded": 501.09999990463257,
+        "loadEventEnd": 609.2000000476837,
+        "responseEnd": 12.900000095367432
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Home -> Flowchart",
       "profile": "desktop",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "FlowchartPage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "FlowchartPage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/FlowchartPage.tsx",
+          "startTime": 799.0999999046326,
+          "responseEnd": 806.5999999046326,
+          "transferSize": 205577,
+          "encodedBodySize": 205277,
+          "decodedBodySize": 205277
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/history",
-      "clickTime": 662.0999999046326,
-      "firstSkeletonFrameMs": 140.10000014305115,
-      "firstRealContentFrameMs": 210,
+      "clickTime": 787.2000000476837,
+      "measurementBoundary": 787.2000000476837,
+      "firstSkeletonFrameMs": 42.59999990463257,
+      "firstRealContentFrameMs": 133,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HistoryPage.tsx",
-          "startTime": 786.5999999046326,
-          "endTime": 794.5999999046326,
-          "duration": 8,
+          "url": "http://127.0.0.1:42453/src/pages/HistoryPage.tsx",
+          "startTime": 815.2999999523163,
+          "endTime": 822.8999998569489,
+          "duration": 7.599999904632568,
           "transferSize": 143448,
           "decodedBodySize": 143148
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 298.7999999523163,
-          "duration": 156
-        }
-      ],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 151,
-      "transferredBytes": 7399836,
-      "encodedBytes": 7361136,
-      "decodedBytes": 7361136,
+      "requestCount": 10,
+      "browserRequestCount": 11,
+      "externalRequestCount": 1,
+      "transferredBytes": 257018,
+      "encodedBytes": 254018,
+      "decodedBytes": 254018,
+      "sourceWorkExcluded": {
+        "requestCount": 119,
+        "longTaskCount": 2,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 453.5,
-        "loadEventEnd": 588.0999999046326,
-        "responseEnd": 10.599999904632568
+        "domContentLoaded": 471.7000000476837,
+        "loadEventEnd": 536.8999998569489,
+        "responseEnd": 13.5
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -795,78 +863,93 @@
     },
     {
       "path": "/app/history",
-      "clickTime": 446.59999990463257,
-      "firstSkeletonFrameMs": 171.40000009536743,
-      "firstRealContentFrameMs": 233.09999990463257,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/HistoryPage.tsx",
-          "startTime": 592.6999998092651,
-          "endTime": 601.5,
-          "duration": 8.800000190734863,
-          "transferSize": 143448,
-          "decodedBodySize": 143148
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 281.59999990463257,
-          "duration": 57
-        }
-      ],
+      "clickTime": 1156.8999998569489,
+      "measurementBoundary": 1156.8999998569489,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 37.5,
+      "routeChunkRequests": [],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 151,
-      "transferredBytes": 7399836,
-      "encodedBytes": 7361136,
-      "decodedBytes": 7361136,
+      "requestCount": 0,
+      "browserRequestCount": 1,
+      "externalRequestCount": 1,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 129,
+        "longTaskCount": 1,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 336.5,
-        "loadEventEnd": 360.09999990463257,
-        "responseEnd": 13.699999809265137
+        "domContentLoaded": 445.2999999523163,
+        "loadEventEnd": 506.69999980926514,
+        "responseEnd": 13.099999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Home -> History",
       "profile": "desktop",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "HistoryPage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "HistoryPage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/HistoryPage.tsx",
+          "startTime": 759.8999998569489,
+          "responseEnd": 775.5,
+          "transferSize": 143448,
+          "encodedBodySize": 143148,
+          "decodedBodySize": 143148
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/",
       "clickTime": null,
-      "firstSkeletonFrameMs": 542,
-      "firstRealContentFrameMs": 764.6000001430511,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 548.5,
+      "firstRealContentFrameMs": 790.2000000476837,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/LandingPage.tsx",
-          "startTime": 527,
-          "endTime": 543.4000000953674,
-          "duration": 16.40000009536743,
+          "url": "http://127.0.0.1:42453/src/pages/LandingPage.tsx",
+          "startTime": 527.2999999523163,
+          "endTime": 550.3999998569489,
+          "duration": 23.09999990463257,
           "transferSize": 7643,
           "decodedBodySize": 7343
         }
       ],
       "longTasks": [
         {
-          "startTime": 361.7000000476837,
-          "duration": 133
+          "startTime": 325,
+          "duration": 162
         },
         {
-          "startTime": 690.2999999523163,
-          "duration": 70
+          "startTime": 489.89999985694885,
+          "duration": 55
+        },
+        {
+          "startTime": 714.7000000476837,
+          "duration": 72
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 143,
+      "requestCount": 133,
+      "browserRequestCount": 143,
+      "externalRequestCount": 10,
       "transferredBytes": 7455868,
       "encodedBytes": 7415968,
       "decodedBytes": 7415968,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 492.90000009536743,
-        "loadEventEnd": 546.7000000476837,
-        "responseEnd": 13.600000143051147
+        "domContentLoaded": 484.89999985694885,
+        "loadEventEnd": 558.8999998569489,
+        "responseEnd": 15.399999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -878,34 +961,42 @@
     {
       "path": "/login",
       "clickTime": null,
-      "firstSkeletonFrameMs": 507.2999999523163,
-      "firstRealContentFrameMs": 579,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 525.5999999046326,
+      "firstRealContentFrameMs": 588.7000000476837,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/LoginPage.tsx",
-          "startTime": 490,
-          "endTime": 507.89999985694885,
-          "duration": 17.899999856948853,
+          "url": "http://127.0.0.1:42453/src/pages/LoginPage.tsx",
+          "startTime": 509.40000009536743,
+          "endTime": 528.5,
+          "duration": 19.09999990463257,
           "transferSize": 63754,
           "decodedBodySize": 63454
         }
       ],
       "longTasks": [
         {
-          "startTime": 312.89999985694885,
-          "duration": 144
+          "startTime": 301.59999990463257,
+          "duration": 169
+        },
+        {
+          "startTime": 473.40000009536743,
+          "duration": 50
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 131,
+      "requestCount": 121,
+      "browserRequestCount": 131,
+      "externalRequestCount": 10,
       "transferredBytes": 6934207,
       "encodedBytes": 6897907,
       "decodedBytes": 6897907,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 455.2000000476837,
-        "loadEventEnd": 515.2000000476837,
-        "responseEnd": 12.5
+        "domContentLoaded": 467.59999990463257,
+        "loadEventEnd": 530,
+        "responseEnd": 9.700000047683716
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -917,34 +1008,43 @@
     {
       "path": "/app",
       "clickTime": null,
-      "firstSkeletonFrameMs": 506.90000009536743,
-      "firstRealContentFrameMs": 564.9000000953674,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 677.2000000476837,
+      "firstRealContentFrameMs": 740.0999999046326,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HomePage.tsx",
-          "startTime": 487.2000000476837,
-          "endTime": 500.5,
-          "duration": 13.299999952316284,
+          "url": "http://127.0.0.1:42453/src/pages/HomePage.tsx",
+          "startTime": 655.4000000953674,
+          "endTime": 669.2000000476837,
+          "duration": 13.799999952316284,
           "transferSize": 25533,
           "decodedBodySize": 25233
         }
       ],
       "longTasks": [
         {
-          "startTime": 272.2000000476837,
-          "duration": 127
+          "startTime": 417.7999999523163,
+          "duration": 157
         }
       ],
-      "cls": 0,
-      "layoutShifts": [],
-      "requestCount": 140,
+      "cls": 0.06467384003526769,
+      "layoutShifts": [
+        {
+          "startTime": 751,
+          "value": 0.06467384003526769
+        }
+      ],
+      "requestCount": 119,
+      "browserRequestCount": 140,
+      "externalRequestCount": 21,
       "transferredBytes": 7142818,
       "encodedBytes": 7107118,
       "decodedBytes": 7107118,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 397.60000014305115,
-        "loadEventEnd": 523.2000000476837,
-        "responseEnd": 9.800000190734863
+        "domContentLoaded": 573.2999999523163,
+        "loadEventEnd": 689.7000000476837,
+        "responseEnd": 28.299999952316284
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -956,43 +1056,47 @@
     {
       "path": "/app/generate",
       "clickTime": null,
-      "firstSkeletonFrameMs": 548.7999999523163,
-      "firstRealContentFrameMs": 847.7999999523163,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 577,
+      "firstRealContentFrameMs": 928.5999999046326,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/GeneratePage.tsx",
-          "startTime": 529.4000000953674,
-          "endTime": 546.1000001430511,
-          "duration": 16.700000047683716,
+          "url": "http://127.0.0.1:42453/src/pages/GeneratePage.tsx",
+          "startTime": 551,
+          "endTime": 566.5999999046326,
+          "duration": 15.599999904632568,
           "transferSize": 78506,
           "decodedBodySize": 78206
         }
       ],
       "longTasks": [
         {
-          "startTime": 335.2000000476837,
-          "duration": 129
+          "startTime": 309.19999980926514,
+          "duration": 145
         },
         {
-          "startTime": 783.2999999523163,
-          "duration": 62
+          "startTime": 833.7999999523163,
+          "duration": 94
         }
       ],
       "cls": 0.11049724802234125,
       "layoutShifts": [
         {
-          "startTime": 867.5,
+          "startTime": 957.0999999046326,
           "value": 0.11049724802234125
         }
       ],
-      "requestCount": 184,
+      "requestCount": 162,
+      "browserRequestCount": 184,
+      "externalRequestCount": 22,
       "transferredBytes": 8770111,
       "encodedBytes": 8721511,
       "decodedBytes": 8721511,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 462.7000000476837,
-        "loadEventEnd": 565.2000000476837,
-        "responseEnd": 15.100000143051147
+        "domContentLoaded": 452,
+        "loadEventEnd": 594.5999999046326,
+        "responseEnd": 8.799999952316284
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1004,43 +1108,47 @@
     {
       "path": "/app/attack",
       "clickTime": null,
-      "firstSkeletonFrameMs": 583.1000001430511,
-      "firstRealContentFrameMs": 903,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 586.2999999523163,
+      "firstRealContentFrameMs": 909.2999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 554.6000001430511,
-          "endTime": 570.4000000953674,
-          "duration": 15.799999952316284,
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 565.9000000953674,
+          "endTime": 580.4000000953674,
+          "duration": 14.5,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
       "longTasks": [
         {
-          "startTime": 324.80000019073486,
-          "duration": 143
+          "startTime": 337.59999990463257,
+          "duration": 136
         },
         {
-          "startTime": 805,
-          "duration": 91
+          "startTime": 801.7999999523163,
+          "duration": 101
         }
       ],
       "cls": 0.11141678129298486,
       "layoutShifts": [
         {
-          "startTime": 902.8000001907349,
+          "startTime": 909,
           "value": 0.11141678129298486
         }
       ],
-      "requestCount": 185,
+      "requestCount": 163,
+      "browserRequestCount": 185,
+      "externalRequestCount": 22,
       "transferredBytes": 8366088,
       "encodedBytes": 8317188,
       "decodedBytes": 8317188,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 466,
-        "loadEventEnd": 605.2000000476837,
-        "responseEnd": 12.5
+        "domContentLoaded": 472,
+        "loadEventEnd": 528.7000000476837,
+        "responseEnd": 15.400000095367432
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1052,38 +1160,46 @@
     {
       "path": "/app/flowchart",
       "clickTime": null,
-      "firstSkeletonFrameMs": 589.5,
-      "firstRealContentFrameMs": 775,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 569.2999999523163,
+      "firstRealContentFrameMs": 758.9000000953674,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/FlowchartPage.tsx",
-          "startTime": 562.1999998092651,
-          "endTime": 580.8999998569489,
-          "duration": 18.700000047683716,
+          "url": "http://127.0.0.1:42453/src/pages/FlowchartPage.tsx",
+          "startTime": 550.4000000953674,
+          "endTime": 567.1000001430511,
+          "duration": 16.700000047683716,
           "transferSize": 205577,
           "decodedBodySize": 205277
         }
       ],
       "longTasks": [
         {
-          "startTime": 332.09999990463257,
-          "duration": 141
+          "startTime": 303.5,
+          "duration": 147
         },
         {
-          "startTime": 710.1999998092651,
-          "duration": 58
+          "startTime": 453.60000014305115,
+          "duration": 54
+        },
+        {
+          "startTime": 694.9000000953674,
+          "duration": 56
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 150,
+      "requestCount": 129,
+      "browserRequestCount": 150,
+      "externalRequestCount": 21,
       "transferredBytes": 7916321,
       "encodedBytes": 7877621,
       "decodedBytes": 7877621,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 471,
-        "loadEventEnd": 525.5,
-        "responseEnd": 11
+        "domContentLoaded": 447.90000009536743,
+        "loadEventEnd": 515.7999999523163,
+        "responseEnd": 14.200000047683716
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1095,34 +1211,42 @@
     {
       "path": "/app/history",
       "clickTime": null,
-      "firstSkeletonFrameMs": 520.7999999523163,
-      "firstRealContentFrameMs": 664.2999999523163,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 629.2999999523163,
+      "firstRealContentFrameMs": 767.6000001430511,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HistoryPage.tsx",
-          "startTime": 502.09999990463257,
-          "endTime": 517.9000000953674,
-          "duration": 15.800000190734863,
+          "url": "http://127.0.0.1:42453/src/pages/HistoryPage.tsx",
+          "startTime": 605.2000000476837,
+          "endTime": 621.2000000476837,
+          "duration": 16,
           "transferSize": 143448,
           "decodedBodySize": 143148
         }
       ],
       "longTasks": [
         {
-          "startTime": 260.59999990463257,
-          "duration": 156
+          "startTime": 327.60000014305115,
+          "duration": 167
+        },
+        {
+          "startTime": 497.40000009536743,
+          "duration": 60
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 149,
+      "requestCount": 128,
+      "browserRequestCount": 149,
+      "externalRequestCount": 21,
       "transferredBytes": 7374303,
       "encodedBytes": 7335903,
       "decodedBytes": 7335903,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 414.2999999523163,
-        "loadEventEnd": 534.9000000953674,
-        "responseEnd": 11.299999952316284
+        "domContentLoaded": 491.7999999523163,
+        "loadEventEnd": 565.4000000953674,
+        "responseEnd": 12.600000143051147
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1134,38 +1258,42 @@
     {
       "path": "/app/admin",
       "clickTime": null,
-      "firstSkeletonFrameMs": 600.2999999523163,
-      "firstRealContentFrameMs": 797.2999999523163,
+      "measurementBoundary": null,
+      "firstSkeletonFrameMs": 517.5,
+      "firstRealContentFrameMs": 723.6999998092651,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AdminPage.tsx",
-          "startTime": 576.6000001430511,
-          "endTime": 597.2000000476837,
-          "duration": 20.59999990463257,
+          "url": "http://127.0.0.1:42453/src/pages/AdminPage.tsx",
+          "startTime": 496.09999990463257,
+          "endTime": 520.2999999523163,
+          "duration": 24.200000047683716,
           "transferSize": 394470,
           "decodedBodySize": 394170
         }
       ],
       "longTasks": [
         {
-          "startTime": 310.40000009536743,
-          "duration": 166
+          "startTime": 278.5,
+          "duration": 125
         },
         {
-          "startTime": 701.4000000953674,
+          "startTime": 625.5,
           "duration": 61
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 160,
+      "requestCount": 134,
+      "browserRequestCount": 160,
+      "externalRequestCount": 26,
       "transferredBytes": 8980386,
       "encodedBytes": 8940186,
       "decodedBytes": 8940186,
+      "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 473.90000009536743,
-        "loadEventEnd": 538.2000000476837,
-        "responseEnd": 11.100000143051147
+        "domContentLoaded": 402,
+        "loadEventEnd": 453.2999999523163,
+        "responseEnd": 12.899999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1176,39 +1304,38 @@
     },
     {
       "path": "/app",
-      "clickTime": 658.2000000476837,
-      "firstSkeletonFrameMs": 246,
-      "firstRealContentFrameMs": 284.5,
+      "clickTime": 852.5,
+      "measurementBoundary": 852.5,
+      "firstSkeletonFrameMs": 78.5,
+      "firstRealContentFrameMs": 115.40000009536743,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HomePage.tsx",
-          "startTime": 890.9000000953674,
-          "endTime": 913.5,
-          "duration": 22.59999990463257,
+          "url": "http://127.0.0.1:42453/src/pages/HomePage.tsx",
+          "startTime": 900.7000000476837,
+          "endTime": 907.4000000953674,
+          "duration": 6.700000047683716,
           "transferSize": 25533,
           "decodedBodySize": 25233
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 253,
-          "duration": 127
-        },
-        {
-          "startTime": 557.6000001430511,
-          "duration": 62
-        }
-      ],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 156,
-      "transferredBytes": 7491624,
-      "encodedBytes": 7451124,
-      "decodedBytes": 7451124,
+      "requestCount": 2,
+      "browserRequestCount": 3,
+      "externalRequestCount": 1,
+      "transferredBytes": 35756,
+      "encodedBytes": 35156,
+      "decodedBytes": 35156,
+      "sourceWorkExcluded": {
+        "requestCount": 133,
+        "longTaskCount": 3,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 378.2999999523163,
-        "loadEventEnd": 428.5,
-        "responseEnd": 10
+        "domContentLoaded": 386.7999999523163,
+        "loadEventEnd": 452.90000009536743,
+        "responseEnd": 10.5
       },
       "shellDomIdentitySurvived": null,
       "kind": "first-visit-click",
@@ -1219,83 +1346,89 @@
     },
     {
       "path": "/app",
-      "clickTime": 583.2000000476837,
-      "firstSkeletonFrameMs": 329.60000014305115,
-      "firstRealContentFrameMs": 373.2000000476837,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/HomePage.tsx",
-          "startTime": 901.2000000476837,
-          "endTime": 917.9000000953674,
-          "duration": 16.700000047683716,
-          "transferSize": 25533,
-          "decodedBodySize": 25233
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 299.30000019073486,
-          "duration": 52
-        }
-      ],
+      "clickTime": 1378.2000000476837,
+      "measurementBoundary": 1378.2000000476837,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 62.40000009536743,
+      "routeChunkRequests": [],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 156,
-      "transferredBytes": 7491624,
-      "encodedBytes": 7451124,
-      "decodedBytes": 7451124,
+      "requestCount": 0,
+      "browserRequestCount": 10,
+      "externalRequestCount": 10,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 135,
+        "longTaskCount": 3,
+        "layoutShiftCount": 0
+      },
       "navigationTiming": {
-        "domContentLoaded": 349.30000019073486,
-        "loadEventEnd": 380.2000000476837,
-        "responseEnd": 18.700000047683716
+        "domContentLoaded": 462.90000009536743,
+        "loadEventEnd": 538.8000001907349,
+        "responseEnd": 11.900000095367432
       },
       "shellDomIdentitySurvived": null,
       "kind": "warm-click",
       "label": "Landing CTA -> /app",
       "profile": "pixel-5",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "HomePage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "HomePage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/HomePage.tsx",
+          "startTime": 1014.2000000476837,
+          "responseEnd": 1030.4000000953674,
+          "transferSize": 25533,
+          "encodedBodySize": 25233,
+          "decodedBodySize": 25233
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/generate",
-      "clickTime": 651.5999999046326,
-      "firstSkeletonFrameMs": 124.40000009536743,
-      "firstRealContentFrameMs": 382.2000000476837,
+      "clickTime": 717.4000000953674,
+      "measurementBoundary": 717.4000000953674,
+      "firstSkeletonFrameMs": 28.59999990463257,
+      "firstRealContentFrameMs": 302.2999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/GeneratePage.tsx",
-          "startTime": 758.8999998569489,
-          "endTime": 766.7999999523163,
-          "duration": 7.900000095367432,
+          "url": "http://127.0.0.1:42453/src/pages/GeneratePage.tsx",
+          "startTime": 737.2000000476837,
+          "endTime": 750.4000000953674,
+          "duration": 13.200000047683716,
           "transferSize": 78506,
           "decodedBodySize": 78206
         }
       ],
       "longTasks": [
         {
-          "startTime": 334.7000000476837,
-          "duration": 142
-        },
-        {
-          "startTime": 956.2000000476837,
-          "duration": 76
+          "startTime": 920.2999999523163,
+          "duration": 75
         }
       ],
-      "cls": 0.06467384003526769,
-      "layoutShifts": [
-        {
-          "startTime": 649,
-          "value": 0.06467384003526769
-        }
-      ],
-      "requestCount": 186,
-      "transferredBytes": 8795644,
-      "encodedBytes": 8746744,
-      "decodedBytes": 8746744,
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 44,
+      "browserRequestCount": 46,
+      "externalRequestCount": 2,
+      "transferredBytes": 1652826,
+      "encodedBytes": 1639626,
+      "decodedBytes": 1639626,
+      "sourceWorkExcluded": {
+        "requestCount": 119,
+        "longTaskCount": 1,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 474.5,
-        "loadEventEnd": 531,
-        "responseEnd": 11.399999856948853
+        "domContentLoaded": 448.2999999523163,
+        "loadEventEnd": 506,
+        "responseEnd": 11.599999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -1306,198 +1439,155 @@
     },
     {
       "path": "/app/generate",
-      "clickTime": 430.5,
-      "firstSkeletonFrameMs": 104.70000004768372,
-      "firstRealContentFrameMs": 302.10000014305115,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/GeneratePage.tsx",
-          "startTime": 525.1000001430511,
-          "endTime": 539.1000001430511,
-          "duration": 14,
-          "transferSize": 78506,
-          "decodedBodySize": 78206
-        }
-      ],
+      "clickTime": 1342.8999998569489,
+      "measurementBoundary": 1342.8999998569489,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 94.79999995231628,
+      "routeChunkRequests": [],
       "longTasks": [
         {
-          "startTime": 673.2000000476837,
+          "startTime": 1374.1999998092651,
           "duration": 58
         }
       ],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 186,
-      "transferredBytes": 8795644,
-      "encodedBytes": 8746744,
-      "decodedBytes": 8746744,
+      "requestCount": 0,
+      "browserRequestCount": 11,
+      "externalRequestCount": 11,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 163,
+        "longTaskCount": 2,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 320.2000000476837,
-        "loadEventEnd": 383.5,
-        "responseEnd": 25.5
+        "domContentLoaded": 468.39999985694885,
+        "loadEventEnd": 529.2999999523163,
+        "responseEnd": 12.599999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Home -> Generate",
       "profile": "pixel-5",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "GeneratePage"
-    },
-    {
-      "path": "/app/attack",
-      "clickTime": 861.0999999046326,
-      "firstSkeletonFrameMs": 1094.0999999046326,
-      "firstRealContentFrameMs": 1198.7999999523163,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 1939.3999998569489,
-          "endTime": 1946.0999999046326,
-          "duration": 6.700000047683716,
-          "transferSize": 33746,
-          "decodedBodySize": 33446
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 271.69999980926514,
-          "duration": 148
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "GeneratePage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/GeneratePage.tsx",
+          "startTime": 752.1999998092651,
+          "responseEnd": 767.6999998092651,
+          "transferSize": 78506,
+          "encodedBodySize": 78206,
+          "decodedBodySize": 78206
         },
-        {
-          "startTime": 737.0999999046326,
-          "duration": 76
-        }
-      ],
-      "cls": 0.11049724802234125,
-      "layoutShifts": [
-        {
-          "startTime": 836.3999998569489,
-          "value": 0.11049724802234125
-        }
-      ],
-      "requestCount": 204,
-      "transferredBytes": 8991932,
-      "encodedBytes": 8940932,
-      "decodedBytes": 8940932,
-      "navigationTiming": {
-        "domContentLoaded": 417.69999980926514,
-        "loadEventEnd": 475.89999985694885,
-        "responseEnd": 12.299999952316284
-      },
-      "shellDomIdentitySurvived": true,
-      "kind": "first-visit-click",
-      "label": "Generate -> Attack",
-      "profile": "pixel-5",
-      "cacheState": "new context, browser cache empty",
-      "routeModule": "AttackPage"
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/attack",
-      "clickTime": 691.9000000953674,
-      "firstSkeletonFrameMs": 1088.8999998569489,
-      "firstRealContentFrameMs": 1209.2999999523163,
+      "clickTime": 1927.4000000953674,
+      "measurementBoundary": 1927.4000000953674,
+      "firstSkeletonFrameMs": 40.799999952316284,
+      "firstRealContentFrameMs": 180.90000009536743,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 1766.2000000476837,
-          "endTime": 1786.2000000476837,
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 1953.2000000476837,
+          "endTime": 1973.2000000476837,
           "duration": 20,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 293.7999999523163,
-          "duration": 50
-        },
-        {
-          "startTime": 581.2000000476837,
-          "duration": 69
-        },
-        {
-          "startTime": 1834.7999999523163,
-          "duration": 60
-        }
-      ],
-      "cls": 0.11049724802234125,
-      "layoutShifts": [
-        {
-          "startTime": 667.2000000476837,
-          "value": 0.11049724802234125
-        }
-      ],
-      "requestCount": 204,
-      "transferredBytes": 8991932,
-      "encodedBytes": 8940932,
-      "decodedBytes": 8940932,
+      "longTasks": [],
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 8,
+      "browserRequestCount": 10,
+      "externalRequestCount": 2,
+      "transferredBytes": 221821,
+      "encodedBytes": 219421,
+      "decodedBytes": 219421,
+      "sourceWorkExcluded": {
+        "requestCount": 162,
+        "longTaskCount": 2,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 342,
-        "loadEventEnd": 370.2000000476837,
-        "responseEnd": 22.799999952316284
+        "domContentLoaded": 447.5,
+        "loadEventEnd": 572.8000001907349,
+        "responseEnd": 11.800000190734863
+      },
+      "shellDomIdentitySurvived": true,
+      "kind": "first-visit-click",
+      "label": "Generate -> Attack",
+      "profile": "pixel-5",
+      "cacheState": "new context, browser cache empty",
+      "routeModule": "AttackPage"
+    },
+    {
+      "path": "/app/attack",
+      "clickTime": 4455.099999904633,
+      "measurementBoundary": 4455.099999904633,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 76.79999995231628,
+      "routeChunkRequests": [],
+      "longTasks": [],
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 0,
+      "browserRequestCount": 2,
+      "externalRequestCount": 2,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 170,
+        "longTaskCount": 3,
+        "layoutShiftCount": 1
+      },
+      "navigationTiming": {
+        "domContentLoaded": 420.7999999523163,
+        "loadEventEnd": 545.1999998092651,
+        "responseEnd": 10.299999952316284
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Generate -> Attack",
       "profile": "pixel-5",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "AttackPage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "AttackPage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 1964.5999999046326,
+          "responseEnd": 1971.7999999523163,
+          "transferSize": 33746,
+          "encodedBodySize": 33446,
+          "decodedBodySize": 33446
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 647.2999999523163,
-      "firstSkeletonFrameMs": 130.89999985694885,
-      "firstRealContentFrameMs": 275.7999999523163,
+      "clickTime": 732.4000000953674,
+      "measurementBoundary": 732.4000000953674,
+      "firstSkeletonFrameMs": 29.59999990463257,
+      "firstRealContentFrameMs": 159.29999995231628,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/FlowchartPage.tsx",
-          "startTime": 769.1999998092651,
-          "endTime": 785.8999998569489,
-          "duration": 16.700000047683716,
-          "transferSize": 205577,
-          "decodedBodySize": 205277
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 318.59999990463257,
-          "duration": 156
-        }
-      ],
-      "cls": 0.06467384003526769,
-      "layoutShifts": [
-        {
-          "startTime": 644.3999998569489,
-          "value": 0.06467384003526769
-        }
-      ],
-      "requestCount": 152,
-      "transferredBytes": 7941854,
-      "encodedBytes": 7902854,
-      "decodedBytes": 7902854,
-      "navigationTiming": {
-        "domContentLoaded": 472.59999990463257,
-        "loadEventEnd": 527.3999998569489,
-        "responseEnd": 10.799999952316284
-      },
-      "shellDomIdentitySurvived": true,
-      "kind": "first-visit-click",
-      "label": "Home -> Flowchart",
-      "profile": "pixel-5",
-      "cacheState": "new context, browser cache empty",
-      "routeModule": "FlowchartPage"
-    },
-    {
-      "path": "/app/flowchart",
-      "clickTime": 459.40000009536743,
-      "firstSkeletonFrameMs": 107.29999995231628,
-      "firstRealContentFrameMs": 256.5,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/FlowchartPage.tsx",
-          "startTime": 558.2000000476837,
-          "endTime": 570.2000000476837,
-          "duration": 12,
+          "url": "http://127.0.0.1:42453/src/pages/FlowchartPage.tsx",
+          "startTime": 752.3000001907349,
+          "endTime": 768.7000000476837,
+          "duration": 16.399999856948853,
           "transferSize": 205577,
           "decodedBodySize": 205277
         }
@@ -1505,58 +1595,109 @@
       "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 152,
-      "transferredBytes": 7941854,
-      "encodedBytes": 7902854,
-      "decodedBytes": 7902854,
+      "requestCount": 11,
+      "browserRequestCount": 12,
+      "externalRequestCount": 1,
+      "transferredBytes": 799036,
+      "encodedBytes": 795736,
+      "decodedBytes": 795736,
+      "sourceWorkExcluded": {
+        "requestCount": 119,
+        "longTaskCount": 1,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 345.7000000476837,
-        "loadEventEnd": 411.2000000476837,
-        "responseEnd": 30.600000143051147
+        "domContentLoaded": 457.90000009536743,
+        "loadEventEnd": 580.4000000953674,
+        "responseEnd": 15.300000190734863
+      },
+      "shellDomIdentitySurvived": true,
+      "kind": "first-visit-click",
+      "label": "Home -> Flowchart",
+      "profile": "pixel-5",
+      "cacheState": "new context, browser cache empty",
+      "routeModule": "FlowchartPage"
+    },
+    {
+      "path": "/app/flowchart",
+      "clickTime": 1143.1999998092651,
+      "measurementBoundary": 1143.1999998092651,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 62.80000019073486,
+      "routeChunkRequests": [],
+      "longTasks": [],
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 0,
+      "browserRequestCount": 1,
+      "externalRequestCount": 1,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 130,
+        "longTaskCount": 1,
+        "layoutShiftCount": 1
+      },
+      "navigationTiming": {
+        "domContentLoaded": 430.5,
+        "loadEventEnd": 550,
+        "responseEnd": 15.799999952316284
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Home -> Flowchart",
       "profile": "pixel-5",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "FlowchartPage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "FlowchartPage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/FlowchartPage.tsx",
+          "startTime": 701.5999999046326,
+          "responseEnd": 718.8999998569489,
+          "transferSize": 205577,
+          "encodedBodySize": 205277,
+          "decodedBodySize": 205277
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     },
     {
       "path": "/app/history",
-      "clickTime": 641.2999999523163,
-      "firstSkeletonFrameMs": 111.29999995231628,
-      "firstRealContentFrameMs": 187.40000009536743,
+      "clickTime": 717.9000000953674,
+      "measurementBoundary": 717.9000000953674,
+      "firstSkeletonFrameMs": 39.700000047683716,
+      "firstRealContentFrameMs": 146.20000004768372,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/HistoryPage.tsx",
-          "startTime": 744.5,
-          "endTime": 757.5999999046326,
-          "duration": 13.099999904632568,
+          "url": "http://127.0.0.1:42453/src/pages/HistoryPage.tsx",
+          "startTime": 740.5,
+          "endTime": 758.3000001907349,
+          "duration": 17.800000190734863,
           "transferSize": 143448,
           "decodedBodySize": 143148
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 308.59999990463257,
-          "duration": 144
-        }
-      ],
-      "cls": 0.06467384003526769,
-      "layoutShifts": [
-        {
-          "startTime": 639,
-          "value": 0.06467384003526769
-        }
-      ],
-      "requestCount": 151,
-      "transferredBytes": 7399836,
-      "encodedBytes": 7361136,
-      "decodedBytes": 7361136,
+      "longTasks": [],
+      "cls": 0,
+      "layoutShifts": [],
+      "requestCount": 10,
+      "browserRequestCount": 11,
+      "externalRequestCount": 1,
+      "transferredBytes": 257018,
+      "encodedBytes": 254018,
+      "decodedBytes": 254018,
+      "sourceWorkExcluded": {
+        "requestCount": 119,
+        "longTaskCount": 1,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 450.89999985694885,
-        "loadEventEnd": 503.2000000476837,
-        "responseEnd": 9.399999856948853
+        "domContentLoaded": 432.30000019073486,
+        "loadEventEnd": 559.8000001907349,
+        "responseEnd": 10
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -1567,93 +1708,96 @@
     },
     {
       "path": "/app/history",
-      "clickTime": 455.90000009536743,
-      "firstSkeletonFrameMs": 103.40000009536743,
-      "firstRealContentFrameMs": 167.29999995231628,
-      "routeChunkRequests": [
-        {
-          "url": "http://127.0.0.1:39951/src/pages/HistoryPage.tsx",
-          "startTime": 549.6000001430511,
-          "endTime": 565.3000001907349,
-          "duration": 15.700000047683716,
-          "transferSize": 143448,
-          "decodedBodySize": 143148
-        }
-      ],
-      "longTasks": [
-        {
-          "startTime": 285.5,
-          "duration": 58
-        }
-      ],
+      "clickTime": 1080.2000000476837,
+      "measurementBoundary": 1080.2000000476837,
+      "firstSkeletonFrameMs": null,
+      "firstRealContentFrameMs": 41.700000047683716,
+      "routeChunkRequests": [],
+      "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
-      "requestCount": 151,
-      "transferredBytes": 7399836,
-      "encodedBytes": 7361136,
-      "decodedBytes": 7361136,
+      "requestCount": 0,
+      "browserRequestCount": 1,
+      "externalRequestCount": 1,
+      "transferredBytes": 0,
+      "encodedBytes": 0,
+      "decodedBytes": 0,
+      "sourceWorkExcluded": {
+        "requestCount": 129,
+        "longTaskCount": 1,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 342.2000000476837,
-        "loadEventEnd": 407.7000000476837,
-        "responseEnd": 14.900000095367432
+        "domContentLoaded": 406.2000000476837,
+        "loadEventEnd": 467.40000009536743,
+        "responseEnd": 9.900000095367432
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
       "label": "Home -> History",
       "profile": "pixel-5",
-      "cacheState": "browser cache warm after destination visit",
-      "routeModule": "HistoryPage"
+      "cacheState": "same-document destination visit, same-document return, module cache warm",
+      "routeModule": "HistoryPage",
+      "warmCacheProof": {
+        "sameDocumentNavigation": true,
+        "destinationWarmRequest": {
+          "url": "http://127.0.0.1:42453/src/pages/HistoryPage.tsx",
+          "startTime": 686.7999999523163,
+          "responseEnd": 704.5999999046326,
+          "transferSize": 143448,
+          "encodedBodySize": 143148,
+          "decodedBodySize": 143148
+        },
+        "measuredDestinationRequestCount": 0,
+        "semantics": "destination module remained resolved across same-document return; measured click issued no destination request"
+      }
     }
   ],
   "delayed": [
     {
       "path": "/app/attack",
-      "clickTime": 924.4000000953674,
-      "firstSkeletonFrameMs": 127.5,
-      "firstRealContentFrameMs": 1047.7999999523163,
+      "clickTime": 1172.8999998569489,
+      "measurementBoundary": 1172.8999998569489,
+      "firstSkeletonFrameMs": 39.40000009536743,
+      "firstRealContentFrameMs": 902,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 1035.7000000476837,
-          "endTime": 1856.3000001907349,
-          "duration": 820.6000001430511,
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 1197.5,
+          "endTime": 1958.3999998569489,
+          "duration": 760.8999998569489,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
       "longTasks": [
         {
-          "startTime": 288.2000000476837,
-          "duration": 129
-        },
-        {
-          "startTime": 812.6000001430511,
-          "duration": 69
-        },
-        {
-          "startTime": 1913.8000001907349,
-          "duration": 53
+          "startTime": 2012.7999999523163,
+          "duration": 55
         }
       ],
-      "cls": 0.01387109375,
+      "cls": 0.01097265625,
       "layoutShifts": [
         {
-          "startTime": 902.8000001907349,
-          "value": 0.0028984375
-        },
-        {
-          "startTime": 1972,
+          "startTime": 2074.5999999046326,
           "value": 0.01097265625
         }
       ],
-      "requestCount": 204,
-      "transferredBytes": 8991932,
-      "encodedBytes": 8940932,
-      "decodedBytes": 8940932,
+      "requestCount": 8,
+      "browserRequestCount": 20,
+      "externalRequestCount": 12,
+      "transferredBytes": 221821,
+      "encodedBytes": 219421,
+      "decodedBytes": 219421,
+      "sourceWorkExcluded": {
+        "requestCount": 162,
+        "longTaskCount": 2,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 414.90000009536743,
-        "loadEventEnd": 547.4000000953674,
-        "responseEnd": 10.5
+        "domContentLoaded": 535,
+        "loadEventEnd": 663.1999998092651,
+        "responseEnd": 22.399999856948853
       },
       "shellDomIdentitySurvived": true,
       "kind": "delayed-click",
@@ -1710,48 +1854,43 @@
     },
     {
       "path": "/app/attack",
-      "clickTime": 937.2000000476837,
-      "firstSkeletonFrameMs": 1129.3999998569489,
-      "firstRealContentFrameMs": 1899,
+      "clickTime": 2010.5999999046326,
+      "measurementBoundary": 2010.5999999046326,
+      "firstSkeletonFrameMs": 92.40000009536743,
+      "firstRealContentFrameMs": 953.5999999046326,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:39951/src/pages/AttackPage.tsx",
-          "startTime": 1980.2000000476837,
-          "endTime": 2737.9000000953674,
-          "duration": 757.7000000476837,
+          "url": "http://127.0.0.1:42453/src/pages/AttackPage.tsx",
+          "startTime": 2088.5,
+          "endTime": 2859.2999999523163,
+          "duration": 770.7999999523163,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
-      "longTasks": [
-        {
-          "startTime": 316.2999999523163,
-          "duration": 128
-        },
-        {
-          "startTime": 799,
-          "duration": 94
-        }
-      ],
-      "cls": 0.2219140293153261,
+      "longTasks": [],
+      "cls": 0.11141678129298486,
       "layoutShifts": [
         {
-          "startTime": 914.9000000953674,
-          "value": 0.11049724802234125
-        },
-        {
-          "startTime": 2835.2000000476837,
+          "startTime": 2963.399999856949,
           "value": 0.11141678129298486
         }
       ],
-      "requestCount": 215,
-      "transferredBytes": 8991932,
-      "encodedBytes": 8940932,
-      "decodedBytes": 8940932,
+      "requestCount": 8,
+      "browserRequestCount": 21,
+      "externalRequestCount": 13,
+      "transferredBytes": 221821,
+      "encodedBytes": 219421,
+      "decodedBytes": 219421,
+      "sourceWorkExcluded": {
+        "requestCount": 162,
+        "longTaskCount": 2,
+        "layoutShiftCount": 1
+      },
       "navigationTiming": {
-        "domContentLoaded": 442.40000009536743,
-        "loadEventEnd": 497.2000000476837,
-        "responseEnd": 12
+        "domContentLoaded": 458.89999985694885,
+        "loadEventEnd": 518.5999999046326,
+        "responseEnd": 14.699999809265137
       },
       "shellDomIdentitySurvived": true,
       "kind": "delayed-click",
@@ -1768,8 +1907,8 @@
           "shellVisible": true
         },
         {
-          "route": "/app/generate",
-          "fallbackVisible": false,
+          "route": "/app/attack",
+          "fallbackVisible": true,
           "shellVisible": true
         },
         {

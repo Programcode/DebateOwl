@@ -4,7 +4,7 @@ import { setLocale, stubSupabaseSession } from './helpers/auth';
 declare global {
   interface Window {
     __baselineShell?: Element | null;
-    __baselineClickAt?: number;
+    __baselineClickAt?: number | null;
   }
 }
 
@@ -67,7 +67,13 @@ test('a delayed destination chunk exposes the route fallback without replacing t
 
   await page.evaluate(() => {
     window.__baselineShell = document.querySelector('header');
-    window.__baselineClickAt = performance.now();
+    window.__baselineClickAt = null;
+    document.addEventListener('click', (event) => {
+      const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      if (anchor && new URL(anchor.href, window.location.href).pathname === '/app/attack') {
+        window.__baselineClickAt = performance.now();
+      }
+    }, true);
   });
   let destinationRequested = false;
   await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
@@ -86,12 +92,20 @@ test('a delayed destination chunk exposes the route fallback without replacing t
     clickTime: window.__baselineClickAt ?? null,
     route: location.pathname,
     shellDomIdentitySurvived: document.querySelector('header') === window.__baselineShell,
-    requestCount: performance.getEntriesByType('resource').length,
-    longTaskCount: performance.getEntriesByType('longtask').length,
+    allRequestCount: performance.getEntriesByType('resource').length,
+    measuredRequestCount: performance.getEntriesByType('resource')
+      .filter((entry) => window.__baselineClickAt !== null && entry.startTime >= window.__baselineClickAt).length,
+    sourceRequestCount: performance.getEntriesByType('resource')
+      .filter((entry) => window.__baselineClickAt !== null && entry.startTime < window.__baselineClickAt).length,
+    allLongTaskCount: performance.getEntriesByType('longtask').length,
+    measuredLongTaskCount: performance.getEntriesByType('longtask')
+      .filter((entry) => window.__baselineClickAt !== null && entry.startTime >= window.__baselineClickAt).length,
   }));
   expect(transitionMetrics.clickTime).not.toBeNull();
   expect(transitionMetrics.route).toBe('/app/attack');
   expect(transitionMetrics.shellDomIdentitySurvived).toBe(true);
-  expect(transitionMetrics.requestCount).toBeGreaterThan(0);
-  expect(transitionMetrics.longTaskCount).toBeGreaterThanOrEqual(0);
+  expect(transitionMetrics.sourceRequestCount).toBeGreaterThan(0);
+  expect(transitionMetrics.measuredRequestCount).toBeGreaterThan(0);
+  expect(transitionMetrics.measuredRequestCount).toBeLessThan(transitionMetrics.allRequestCount);
+  expect(transitionMetrics.measuredLongTaskCount).toBeLessThanOrEqual(transitionMetrics.allLongTaskCount);
 });
