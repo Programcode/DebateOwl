@@ -119,43 +119,52 @@ must reach an Error Boundary or the route is unusable.
 
 DebateLab implication: keep one stable loader function per page and pass that
 function to both `lazy` and an intent prefetch helper. Keep `RouteErrorBoundary`
-around the route. Use a route-level fallback only when there is no valid prior
-route; use smaller boundaries for independent panels. Do not preload all page
-modules at startup.
+around the route. Use an immediate destination-shaped route fallback for every
+route change; use smaller boundaries for independent panels. Do not preload all
+page modules at startup.
 
-### React transitions can retain a prior screen, but do not make it safe
+### React transitions can retain a prior screen, but DebateLab must not use that for route changes
 
 Sources:
 
 - <https://react.dev/reference/react/Suspense#preventing-already-revealed-content-from-hiding>
 - <https://react.dev/reference/react/startTransition>
 - <https://reactrouter.com/start/modes>
+- <https://reactrouter.com/api/declarative-routers/BrowserRouter>
+- <https://reactrouter.com/explanation/react-transitions>
 
 Accessed: 2026-09-19.
 
-Supported API: `startTransition` marks a state update as non-urgent. If that
+Supported API: installed `react-router-dom@7.18.3` exposes declarative
+`BrowserRouter` with `useTransitions`, while React's `startTransition` marks a
+state update as non-urgent. If that
 update suspends, React can keep already revealed content visible while the new
 tree loads. Newly rendered boundaries may still show their own fallbacks.
-React Router's BrowserRouter in the installed 7.18.3 build uses
-`React.startTransition` for history updates unless `useTransitions={false}`.
+React Router's declarative `BrowserRouter` accepts `useTransitions`; when it is
+undefined, router state updates use `React.startTransition`, and
+`useTransitions={false}` opts out. React Router v7 makes the transition-wrapped
+state-update behavior the default.
 
 Browser constraints: this is render scheduling, not a transaction across the
-URL, route data, effects, focus, and controls. It does not make a declarative
-router expose data-router pending state. A transition can be interrupted by a
-newer update.
+URL, route data, effects, focus, and controls. `BrowserRouter` uses the browser
+History API and Declarative Mode does not expose Data Mode's navigation state.
+The enhanced `useTransitions` behavior described for Data/Framework Mode
+requires React 19, while DebateLab is on React 18.3.1. A transition can be
+interrupted by a newer update.
 
 Failure mode: the browser history URL can change while the old route is still
 painted. Buttons, forms, and links in that old route remain interactive unless
 the app explicitly gates them. Route effects keyed from `location.pathname`
-can also observe the new URL before the destination content is visible. That is
-an avoidable URL/content and stale-control mismatch.
+can also observe the new URL before the destination content is visible. A
+status or control gate reduces harm, but it does not remove this URL/content
+mismatch.
 
-DebateLab implication: retaining the prior route is allowed only with an
-explicit pending status and an interaction policy. Keep the app shell visible,
-show a small polite "Opening ..." status, and either make the old route region
-non-interactive during the transition or use a local fallback for routes whose
-controls cannot safely remain live. Do not claim that `startTransition` alone
-solves stale controls or URL/content mismatch.
+DebateLab implication: reject prior-route retention for route changes in this
+BrowserRouter architecture. Set `useTransitions={false}` for the declarative
+router and show an immediate route-shaped skeleton beneath the persistent app
+shell. Keep `startTransition` available for non-route state where retaining
+content cannot create a URL/content mismatch. Do not claim that a pending
+status or stale-control gate makes route retention consistent.
 
 ### React Router 7.18 does not prefetch BrowserRouter route modules natively
 
@@ -378,8 +387,8 @@ Browser constraints: announcements vary by browser and assistive technology.
 itself. A skeleton with no text is silent to a screen reader.
 
 Failure mode: leaving `aria-busy` true silences later updates. Replacing a
-focused route subtree can destroy focus. Marking the whole retained route busy
-while it is still usable gives assistive technology an inaccurate state.
+focused route subtree can destroy focus. Marking the whole route busy while it
+is being replaced gives assistive technology an inaccurate state.
 
 DebateLab implication: keep a mounted polite status node for route transitions,
 for example "Opening Attack" and then "Attack ready" or an actionable error.
@@ -423,18 +432,20 @@ context. Keep the router and use stable dynamic-import functions directly.
 
 ### Transition decision
 
-Yes, React transitions can keep already revealed route content visible while a
-new lazy component suspends. They do not prevent the URL from changing first,
-disable stale controls, preserve focus, or expose a pending state in
-Declarative Mode. Retain the old route only with a visible pending status and a
-clear policy that prevents stale interactions.
+No, not safely in this architecture. React transitions can keep already
+revealed route content visible while a new lazy component suspends, but
+BrowserRouter updates History before the transition-wrapped state commit. The
+destination URL can therefore show the old route, and a status/control gate
+only reduces the harm. Reject prior-route retention for route changes. Use
+`useTransitions={false}` and an immediate route-shaped skeleton instead.
 
 ### Loading-state decision
 
 - No previous route content, or a full route failure: use the route fallback or
   skeleton. Reserve the layout's dimensions to protect CLS.
-- Previous route is valid while the next code loads: retain the shell and route
-  content, show inline/polite progress, and gate stale controls.
+- Route change with previous content: keep the app shell, replace the route
+  region immediately with a destination-shaped skeleton, and announce progress
+  with a polite status. Do not retain the old route under the new URL.
 - One panel or secondary query is loading: retain the surrounding page and use
   a local skeleton plus `aria-busy`/status on that region.
 - A request fails or the chunk is unavailable: use the existing Error Boundary
@@ -468,7 +479,7 @@ fetches to these code-intent signals.
 | Manual `manualChunks` | Hand-authored vendor graph | Reject | No measured need; graph can regress startup bytes |
 | Idle preload of every route | Browser idle callback or all-route imports | Reject | Wastes bandwidth and defeats code splitting |
 | Resource hints | Narrow, same-origin, optional intent hint | Limit | `preload` is too eager; `preconnect` is useless same-origin |
-| Route transition | `startTransition` plus pending status and stale-control gate | Use carefully | Retains content without accepting URL/content mismatch |
+| Route transition | `BrowserRouter useTransitions={false}` plus destination-shaped skeleton | Use | Removes prior-route URL/content mismatch while keeping the shell |
 | Loading animation | Static/short reduced-motion-safe state | Use | Animation cannot resolve or measure work |
 
 ## Verification contract for the implementation task
