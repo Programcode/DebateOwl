@@ -230,6 +230,48 @@ describe("settings-store", () => {
     });
   });
 
+  it("uses Sonnet when an active Pro user has no saved feature configs", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "trialing", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {},
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("anthropic/claude-sonnet-5");
+    expect(useSettingsStore.getState().featureConfigs.sparring.model).toBe("anthropic/claude-sonnet-5");
+  });
+
+  it("does not rewrite model settings when subscription access cannot be read", async () => {
+    setMockTableResponse("subscriptions", { error: { message: "subscription read failed" } });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "z-ai/glm-5.3-flash",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("openai/gpt-5.6-luna");
+    const settingsWrites = supabaseMock.from.mock.results.filter(({ value }) =>
+      value.upsert.mock.calls.length || value.update.mock.calls.length
+    );
+    expect(settingsWrites).toHaveLength(0);
+  });
+
   it("moves a former Pro user on a trial from GLM to Luna", async () => {
     setMockTableResponse("subscriptions", { select: [] });
     setMockTableResponse("user_settings", {

@@ -853,7 +853,7 @@
   },
   "pricingModal": {
     "title": "Frissítés Pro-ra",
-    "subtitle": "Oldd fel a magasabb használati keretet és a magas szintű érvelést a GLM 5.3 Flash modellel.",
+    "subtitle": "Oldd fel a magasabb használati keretet, mind a 10 modellt és a beállítható érvelést.",
     "free": "Ingyenes",
     "pro": "Pro",
     "current": "Jelenlegi",
@@ -1174,7 +1174,7 @@
     "s2": "Hogyan Használjuk az Információidat",
     "p2": "Az információidat szolgáltatásaink nyújtására és fejlesztésére, MI válaszok generálására, mentett tartalmad karbantartására és szolgáltatási frissítések kommunikálására használjuk.",
     "s3": "MI Feldolgozás",
-    "p3": "A bemeneteidet az OpenRouternek küldjük MI-feldolgozásra a GLM 5.3 Flash modellel. A tartalmadat nem használjuk MI-modellek betanítására.",
+    "p3": "A bemeneteidet az OpenRouternek küldjük MI-feldolgozásra az általad választott modellel. A tartalmadat nem használjuk MI-modellek betanítására.",
     "s4": "Adattárolás",
     "p4": "Adataidat biztonságosan, a Supabase infrastruktúráján tároljuk, nyugalmi és átvitel közbeni titkosítással.",
     "s5": "Adatmegosztás",

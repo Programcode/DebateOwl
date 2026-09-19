@@ -853,7 +853,7 @@
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
-    "subtitle": "Unlock higher usage limits and high reasoning with GLM 5.3 Flash.",
+    "subtitle": "Unlock higher usage limits, all 10 models, and configurable reasoning.",
     "free": "Free",
     "pro": "Pro",
     "current": "Current",
@@ -1174,7 +1174,7 @@
     "s2": "How We Use Your Information",
     "p2": "Your information is used to provide and improve our services, generate AI responses, maintain your saved content, and communicate service updates.",
     "s3": "AI Processing",
-    "p3": "Your inputs are sent to OpenRouter for AI processing using GLM 5.3 Flash. We do not use your content to train AI models.",
+    "p3": "Your inputs are sent to OpenRouter for AI processing using the model you select. We do not use your content to train AI models.",
     "s4": "Data Storage",
     "p4": "Your data is stored securely using Supabase infrastructure with encryption at rest and in transit.",
     "s5": "Data Sharing",

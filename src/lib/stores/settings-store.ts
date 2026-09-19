@@ -56,13 +56,13 @@ const defaultConfig: ProviderConfig = {
   reasoningEffort: 'low',
 };
 
-const getDefaultFeatureConfigs = (): Record<FeatureTab, ProviderConfig> => ({
-  generate: { ...defaultConfig },
-  attack: { ...defaultConfig },
-  brainstorm: { ...defaultConfig, temperature: 0.9 },
-  factoids: { ...defaultConfig, temperature: 0.3 },
-  ask: { ...defaultConfig },
-  sparring: { ...defaultConfig },
+const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
+  generate: { ...defaultConfig, model },
+  attack: { ...defaultConfig, model },
+  brainstorm: { ...defaultConfig, model, temperature: 0.9 },
+  factoids: { ...defaultConfig, model, temperature: 0.3 },
+  ask: { ...defaultConfig, model },
+  sparring: { ...defaultConfig, model },
 });
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -106,8 +106,9 @@ function normalizeFeatureConfigs(
   configs: unknown,
   preserveLocalMock = false,
   allowProModels = true,
+  fallbackModel: string = DEFAULT_MODEL,
 ): Record<FeatureTab, ProviderConfig> {
-  const defaults = getDefaultFeatureConfigs();
+  const defaults = getDefaultFeatureConfigs(fallbackModel);
   const saved = asRecord(configs);
   if (!saved) return defaults;
 
@@ -134,7 +135,7 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   });
 }
 
-async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean> {
+async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
   const tier = settings.subscription_tier;
   const graceEnd = typeof settings.grace_period_ends_at === 'string'
     ? new Date(settings.grace_period_ends_at)
@@ -143,11 +144,12 @@ async function canAccessProModels(settings: Record<string, unknown>): Promise<bo
   if (tier !== 'pro') return false;
 
   const userId = await getUserId();
-  if (!userId) return false;
-  const { data } = await supabase
+  if (!userId) return null;
+  const { data, error } = await supabase
     .from('subscriptions')
     .select('status, current_period_end')
     .eq('user_id', userId);
+  if (error) return null;
   return Boolean(data?.some((subscription) =>
     (subscription.status === 'active' || subscription.status === 'trialing')
     && subscription.current_period_end
@@ -280,7 +282,13 @@ export const useSettingsStore = create<SettingsState>()(
         if (error || !data) return;
 
         const allowProModels = await canAccessProModels(data);
-        const mergedConfigs = normalizeFeatureConfigs(data.feature_configs, false, allowProModels);
+        if (allowProModels === null) return;
+        const mergedConfigs = normalizeFeatureConfigs(
+          data.feature_configs,
+          false,
+          allowProModels,
+          allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL,
+        );
         const configsNeedMigration = !featureConfigsAreCanonical(data.feature_configs, mergedConfigs);
 
         const language = (data.language as 'en' | 'es' | 'hu') || 'en';

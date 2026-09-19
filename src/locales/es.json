@@ -853,7 +853,7 @@
   },
   "pricingModal": {
     "title": "Actualizar a Pro",
-    "subtitle": "Desbloquea límites de uso más altos y razonamiento alto con GLM 5.3 Flash.",
+    "subtitle": "Desbloquea límites de uso más altos, los 10 modelos y razonamiento configurable.",
     "free": "Gratis",
     "pro": "Pro",
     "current": "Actual",
@@ -1174,7 +1174,7 @@
     "s2": "Cómo Usamos Tu Información",
     "p2": "Tu información se usa para proporcionar y mejorar nuestros servicios, generar respuestas de IA, mantener tu contenido guardado y comunicar actualizaciones.",
     "s3": "Procesamiento de IA",
-    "p3": "Tus entradas se envían a OpenRouter para el procesamiento de IA con GLM 5.3 Flash. No usamos tu contenido para entrenar modelos de IA.",
+    "p3": "Tus entradas se envían a OpenRouter para el procesamiento de IA con el modelo que selecciones. No usamos tu contenido para entrenar modelos de IA.",
     "s4": "Almacenamiento de Datos",
     "p4": "Tus datos se almacenan de forma segura usando infraestructura de Supabase con cifrado en reposo y en tránsito.",
     "s5": "Compartir Datos",

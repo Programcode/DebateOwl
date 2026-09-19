@@ -8,6 +8,7 @@ type TableResponse = {
   order?: unknown[];
   in?: unknown[];
   update?: unknown;
+  error?: { message: string };
 };
 
 const tableResponses: Record<string, TableResponse> = {};
@@ -24,7 +25,7 @@ const createQuery = (table: string) => {
   const selectBuilder = {
     order: vi.fn(async () => ({ data: responses.order ?? responses.select ?? [], error: null })),
     single: vi.fn(async () => ({ data: responses.single ?? null, error: null })),
-    eq: vi.fn(async () => ({ data: responses.select ?? [], error: null })),
+    eq: vi.fn(async () => ({ data: responses.select ?? [], error: responses.error ?? null })),
     in: vi.fn(() => ({
       order: vi.fn(async () => ({ data: responses.in ?? [], error: null })),
     })),
