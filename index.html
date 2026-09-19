@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />
+    <link rel="stylesheet" href="/src/index.css" />
     <script src="/src/bootstrap.ts" type="module"></script>
     <title>DebateLab by Programcode | AI Debate Prep, Cases & Rebuttals</title>
     <meta name="title" content="DebateLab by Programcode | AI Debate Prep, Cases & Rebuttals" />
@@ -68,31 +69,20 @@
     </script>
     <script src="/theme-init.js"></script>
     <style>
-      #root > .app-startup-shell {
-        display: none;
-      }
-
-      html.app-shell body {
+      body {
         margin: 0;
         background: #f1f5f9;
         color: #0f172a;
       }
 
-      html.app-shell.dark body {
+      html.dark body {
         background: #0f172a;
         color: #f8fafc;
       }
 
-      html.app-shell #root > .seo-fallback {
-        display: none;
-      }
-
-      html.app-shell #root > .app-startup-shell {
-        display: grid;
-      }
-
-      html.app-shell #root > .app-startup-shell,
+      #root > .app-startup-shell,
       #root > .app-bootstrap-error {
+        display: grid;
         align-items: center;
         justify-content: center;
         min-height: 100dvh;
@@ -158,7 +148,15 @@
 
   <body>
     <div id="root">
-      <main class="seo-fallback" style="max-width: 1080px; margin: 0 auto; padding: 48px 20px; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #0f172a;">
+      <main class="app-startup-shell" data-startup-shell aria-busy="true" aria-label="DebateLab is loading">
+        <div class="app-startup-shell__card">
+          <span class="app-startup-shell__brand">DebateLab</span>
+          <p class="app-startup-shell__status" data-startup-status role="status">Loading DebateLab</p>
+        </div>
+      </main>
+    </div>
+    <noscript>
+      <main style="max-width: 1080px; margin: 0 auto; padding: 48px 20px; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #0f172a; background: #ffffff;">
         <h1 style="font-size: clamp(2.25rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -0.06em; margin: 0 0 18px;">DebateLab by Programcode</h1>
         <p style="font-size: 1.18rem; max-width: 760px; color: #334155;">DebateLab by Programcode is the official DebateLab AI debate prep platform at debate.pi-stack.org. It helps students and competitive debaters practice with AI opponents, generate debate cases, train rebuttals, find evidence leads, build argument flowcharts, and time practice speeches.</p>
         <nav aria-label="DebateLab public guides" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 28px;">
@@ -183,12 +181,6 @@
           <a href="/about-debatelab">About DebateLab</a>
         </nav>
       </main>
-      <main class="app-startup-shell" data-startup-shell aria-busy="true" aria-label="Loading DebateLab">
-        <div class="app-startup-shell__card">
-          <span class="app-startup-shell__brand">DebateLab</span>
-          <p class="app-startup-shell__status" data-startup-status role="status">Loading DebateLab</p>
-        </div>
-      </main>
-    </div>
+    </noscript>
   </body>
 </html>

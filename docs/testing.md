@@ -64,7 +64,7 @@ A browser-oriented Vitest pass does not replace native Deno tests. The stream ac
 npm run build
 ```
 
-This proves the Vite production bundle compiles. It does not prove authentication, database behavior, provider access, or production deployment.
+This proves the Vite production bundle compiles and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
 
 ## Credential-free browser gate
 

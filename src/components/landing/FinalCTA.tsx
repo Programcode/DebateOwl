@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const FinalCTA = () => {
     const { t } = useTranslation();
@@ -34,15 +35,16 @@ const FinalCTA = () => {
                         {t('finalCta.subtitle')}
                     </p>
 
-                    <motion.a
-                        href="/app"
+                    <motion.div
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="btn-primary-gradient shimmer mt-10 inline-flex items-center gap-3 px-10 py-5 text-lg"
+                        className="mt-10 inline-flex"
                     >
-                        <span className="relative z-10">{t('finalCta.cta')}</span>
-                        <ArrowRight className="relative z-10 h-5 w-5" />
-                    </motion.a>
+                        <Link to="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-3 px-10 py-5 text-lg">
+                            <span className="relative z-10">{t('finalCta.cta')}</span>
+                            <ArrowRight className="relative z-10 h-5 w-5" />
+                        </Link>
+                    </motion.div>
                 </motion.div>
             </div>
         </section>

@@ -18,20 +18,17 @@ describe('Jam recorder loader', () => {
     expect(jamScripts()).toHaveLength(0);
   });
 
-  it('loads recorder then capture before resolving startup', async () => {
+  it('loads recorder and capture in parallel without parser-blocking scripts', async () => {
     jamScripts().forEach((element) => element.remove());
 
     const loading = loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });
-    expect(jamScripts().map((script) => script.src)).toEqual(['https://js.jam.dev/recorder.js']);
-
-    jamScripts()[0].dispatchEvent(new Event('load'));
-    await Promise.resolve();
     expect(jamScripts().map((script) => script.src)).toEqual([
       'https://js.jam.dev/recorder.js',
       'https://js.jam.dev/capture.js',
     ]);
-    expect(jamScripts().every((script) => script.type === 'module' && !script.async)).toBe(true);
+    expect(jamScripts().every((script) => script.type === 'module' && script.async)).toBe(true);
 
+    jamScripts()[0].dispatchEvent(new Event('load'));
     jamScripts()[1].dispatchEvent(new Event('load'));
     await loading;
     await loadJamRecorder({ documentRef: document, mediaRecorderAvailable: true });

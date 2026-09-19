@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Check, Crown, Sparkles, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Pricing = () => {
     const { t } = useTranslation();
@@ -69,10 +70,10 @@ const Pricing = () => {
                             ))}
                         </ul>
 
-                        <a href="/app" className="btn-secondary-outline mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
+                        <Link to="/app" className="btn-secondary-outline mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
                             <Zap className="h-4 w-4" />
                             {t('pricing.startTrial')}
-                        </a>
+                        </Link>
                     </motion.div>
 
                     <motion.div
@@ -107,10 +108,10 @@ const Pricing = () => {
                             ))}
                         </ul>
 
-                        <a href="/app" className="btn-primary-gradient shimmer mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
+                        <Link to="/app" className="btn-primary-gradient shimmer mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
                             <Crown className="relative z-10 h-4 w-4" />
                             <span className="relative z-10">{t('pricing.subscribe')}</span>
-                        </a>
+                        </Link>
                     </motion.div>
                 </div>
 

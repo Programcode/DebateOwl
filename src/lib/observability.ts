@@ -1,8 +1,16 @@
-import * as Sentry from "@sentry/react";
-import posthog from "posthog-js";
 import { DEFAULT_PROVIDERS } from "@/lib/ai/providers/types";
 
-let initialized = false;
+type SentryModule = typeof import("@sentry/react");
+type PostHogClient = typeof import("posthog-js")["default"];
+
+let sentryModulePromise: Promise<SentryModule | null> | null = null;
+let posthogClientPromise: Promise<PostHogClient | null> | null = null;
+
+export function resetObservabilityForTests(): void {
+  if (import.meta.env.MODE !== "test") return;
+  sentryModulePromise = null;
+  posthogClientPromise = null;
+}
 
 interface ConsoleBreadcrumb {
   category?: string;
@@ -91,14 +99,12 @@ function safeProductProperties(properties?: Record<string, unknown>): Record<str
   return safeProperties;
 }
 
-/** Initializes configured observability SDKs once with explicit privacy controls. */
-export function initializeObservability(): void {
-  if (initialized) return;
-  initialized = true;
-
+async function loadSentry(): Promise<SentryModule | null> {
   const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
-  if (sentryDsn) {
-    Sentry.init({
+  if (!sentryDsn) return null;
+  if (!sentryModulePromise) {
+    sentryModulePromise = import("@sentry/react").then((Sentry) => {
+      Sentry.init({
       dsn: sentryDsn,
       environment: import.meta.env.MODE,
       ignoreErrors: [/^Synthetic observability verification$/],
@@ -128,22 +134,37 @@ export function initializeObservability(): void {
       tracesSampleRate: 0.1,
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1.0,
-    });
+      });
+      return Sentry;
+    }).catch((): null => null);
   }
+  return sentryModulePromise;
+}
 
+async function loadPostHog(): Promise<PostHogClient | null> {
   const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
-  if (posthogKey) {
-    posthog.init(posthogKey, {
-      api_host: import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com",
-      autocapture: false,
-      capture_pageview: false,
-      disable_session_recording: true,
-      disable_surveys: true,
-      disable_external_dependency_loading: true,
-      advanced_disable_flags: true,
-      persistence: "memory",
-    });
+  if (!posthogKey) return null;
+  if (!posthogClientPromise) {
+    posthogClientPromise = import("posthog-js").then(({ default: posthog }) => {
+      posthog.init(posthogKey, {
+        api_host: import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com",
+        autocapture: false,
+        capture_pageview: false,
+        disable_session_recording: true,
+        disable_surveys: true,
+        disable_external_dependency_loading: true,
+        advanced_disable_flags: true,
+        persistence: "memory",
+      });
+      return posthog;
+    }).catch((): null => null);
   }
+  return posthogClientPromise;
+}
+
+/** Initializes configured observability SDKs once with explicit privacy controls. */
+export async function initializeObservability(): Promise<void> {
+  await Promise.all([loadSentry(), loadPostHog()]);
 }
 
 /** Reports a named product event only when its name and properties match the closed schema. */
@@ -152,27 +173,31 @@ export function captureProductEvent(name: string, properties?: Record<string, un
   const safeProperties = safeProductProperties(properties);
 
   if (import.meta.env.VITE_POSTHOG_KEY) {
-    try {
-      posthog.capture(name, safeProperties);
-    } catch {
-      // Telemetry must not interrupt product behavior.
-    }
+    void loadPostHog().then((posthog) => {
+      try {
+        posthog?.capture(name, safeProperties);
+      } catch {
+        // Telemetry must not interrupt product behavior.
+      }
+    });
   }
 
   if (import.meta.env.VITE_SENTRY_DSN) {
     const attributes = { event_name: name, ...safeProperties };
-    try {
-      Sentry.logger.info("Product event", attributes);
-      Sentry.metrics.count("debatelab.product_event", 1, { attributes });
-      if (typeof safeProperties.durationMs === "number") {
-        Sentry.metrics.distribution("debatelab.product_event.duration", safeProperties.durationMs, {
-          unit: "millisecond",
-          attributes,
-        });
+    void loadSentry().then((Sentry) => {
+      try {
+        Sentry?.logger.info("Product event", attributes);
+        Sentry?.metrics.count("debatelab.product_event", 1, { attributes });
+        if (Sentry && typeof safeProperties.durationMs === "number") {
+          Sentry.metrics.distribution("debatelab.product_event.duration", safeProperties.durationMs, {
+            unit: "millisecond",
+            attributes,
+          });
+        }
+      } catch {
+        // Telemetry must not interrupt product behavior.
       }
-    } catch {
-      // Telemetry must not interrupt product behavior.
-    }
+    });
   }
 }
 
@@ -180,9 +205,11 @@ export function captureProductEvent(name: string, properties?: Record<string, un
 export function captureException(error: unknown, context?: Record<string, unknown>): void {
   if (!import.meta.env.VITE_SENTRY_DSN) return;
 
-  try {
-    Sentry.captureException(error, { extra: context });
-  } catch {
-    // Telemetry must not interrupt product behavior.
-  }
+  void loadSentry().then((Sentry) => {
+    try {
+      Sentry?.captureException(error, { extra: context });
+    } catch {
+      // Telemetry must not interrupt product behavior.
+    }
+  });
 }

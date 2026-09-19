@@ -42,6 +42,15 @@ export async function stubSupabaseSession(page: Page, opts: StubAuthOptions = {}
       /* ignore */
     }
   }, { key: `debate-auth-${env}`, value: session });
+
+  // Credential-free render checks must not call the production announcement
+  // function. Tests that exercise announcements register a more specific
+  // route after this default.
+  await page.route('**/functions/v1/announcements*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ announcements: [] }),
+  }));
 }
 
 /**

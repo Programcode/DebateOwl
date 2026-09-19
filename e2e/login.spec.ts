@@ -55,10 +55,12 @@ test.describe('login passwordless flows', () => {
 
   test('sends an email code and focuses the verification field', async ({ page }) => {
     let requestEmail: string | undefined;
+    let releaseOtpResponse: (() => void) | undefined;
+    const otpResponseReleased = new Promise<void>((resolve) => { releaseOtpResponse = resolve; });
     await page.route('**/auth/v1/otp', async (route) => {
       const body = route.request().postDataJSON() as { email?: unknown };
       requestEmail = typeof body.email === 'string' ? body.email : undefined;
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await otpResponseReleased;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -72,6 +74,7 @@ test.describe('login passwordless flows', () => {
     await page.getByRole('button', { name: 'Send code' }).click();
 
     await expect(page.getByRole('button', { name: 'Sending code...' })).toBeVisible();
+    releaseOtpResponse?.();
     await expect(page.getByText('Code sent', { exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Verification code' })).toBeFocused();
     expect(requestEmail).toBe('student@example.com');

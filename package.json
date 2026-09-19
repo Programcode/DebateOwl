@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "docs:check": "node scripts/check-docs.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-build-boundaries.mjs",
     "build:dev": "vite build --mode development",
     "ios:build": "vite build --mode capacitor && cap sync ios",
     "ios:open": "cap open ios",

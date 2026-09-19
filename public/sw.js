@@ -1,22 +1,9 @@
-const CACHE_VERSION = 'debate-lab-v1';
+const CACHE_VERSION = 'debate-lab-v2';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
 const APP_SHELL = [
   '/',
-  '/app',
-  '/app/generate',
-  '/app/attack',
-  '/app/brainstorm',
-  '/app/factoids',
-  '/app/ask',
-  '/app/crossfire',
-  '/app/library',
-  '/app/timer',
-  '/app/sparring',
-  '/app/flowchart',
-  '/app/history',
-  '/app/settings',
   '/index.html',
   '/theme-init.js',
   '/manifest.webmanifest',
@@ -42,8 +29,7 @@ self.addEventListener('install', (event) => {
           if (response.ok) await cache.put(url, response);
         }),
       ))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting()),
+      .catch(() => undefined),
   );
 });
 
@@ -58,12 +44,6 @@ self.addEventListener('activate', (event) => {
       ))
       .then(() => self.clients.claim()),
   );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
 });
 
 async function cacheFirst(request) {

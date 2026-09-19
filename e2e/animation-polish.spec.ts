@@ -55,8 +55,7 @@ test('keeps route and feature-state motion short and stable', async ({ page }, t
   await prepareMotionFixture(page, 'no-preference');
   const options = await openGenerateOptions(page);
 
-  const route = page.locator('[data-route-transition-ms="160"]');
-  await expect(route).toHaveAttribute('data-reduced-motion', 'false');
+  await expect(page.locator('[data-route-transition-ms]')).toHaveCount(0);
   const transitionMs = await options.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration) * 1000);
   expect(transitionMs).toBeGreaterThan(0);
   await page.screenshot({ path: testInfo.outputPath('normal-empty-options.png'), fullPage: true });
@@ -73,8 +72,7 @@ test('removes non-essential route and state movement for reduced motion', async 
   await prepareMotionFixture(page, 'reduce');
   const options = await openGenerateOptions(page);
 
-  const route = page.locator('[data-route-transition-ms="160"]');
-  await expect(route).toHaveAttribute('data-reduced-motion', 'true');
+  await expect(page.locator('[data-route-transition-ms]')).toHaveCount(0);
   await expect.poll(() => options.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s');
   await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => animation.playState === 'running').length)).toBe(0);
   await page.screenshot({ path: testInfo.outputPath('reduced-empty-options.png'), fullPage: true });
