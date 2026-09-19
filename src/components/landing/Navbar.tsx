@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const Navbar = () => {
@@ -25,14 +26,14 @@ const Navbar = () => {
         >
             <div className="section-container">
                 <div className="flex h-16 items-center justify-between md:h-20">
-                    <a href="/" className="group flex items-center gap-2">
+                    <Link to="/" className="group flex items-center gap-2">
                         <img
                             src="/favicon.png"
                             alt="DebateLab logo"
                             className="h-9 w-9 rounded-lg border border-primary/20 object-cover transition-colors group-hover:border-primary/40"
                         />
                         <span className="text-xl font-bold text-foreground">DebateLab</span>
-                    </a>
+                    </Link>
 
                     <div className="hidden items-center gap-7 md:flex">
                         {navLinks.map((link) => (
@@ -48,10 +49,10 @@ const Navbar = () => {
 
                     <div className="hidden items-center gap-3 md:flex">
                         <LanguageSwitcher />
-                        <a href="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
+                        <Link to="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
                             <ArrowRight className="relative z-10 h-4 w-4" />
-                        </a>
+                        </Link>
                     </div>
 
                     <button
@@ -85,14 +86,14 @@ const Navbar = () => {
                                     {link.label}
                                 </a>
                             ))}
-                            <a
-                                href="/app"
+                            <Link
+                                to="/app"
                                 onClick={() => setIsOpen(false)}
                                 className="btn-primary-gradient shimmer mt-2 inline-flex items-center justify-center gap-2"
                             >
                                 <span className="relative z-10">{t('nav.startTrial')}</span>
                                 <ArrowRight className="relative z-10 h-4 w-4" />
-                            </a>
+                            </Link>
                             <LanguageSwitcher />
                         </div>
                     </motion.div>

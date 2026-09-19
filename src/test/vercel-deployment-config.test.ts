@@ -86,6 +86,7 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).not.toContain('// Prevent flash of wrong theme');
     expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
     expect(themeBootstrap).toContain("pathname === '/login'");
+    expect(themeBootstrap).toContain('window.__showDebateBootstrapError = showBootstrapError');
     expect(nginxConfig).toMatch(/location = \/theme-init\.js \{[\s\S]*?Cache-Control/);
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
@@ -105,11 +106,15 @@ describe("Vercel frontend deployment configuration", () => {
     expect(csp).toContain("connect-src 'self' https://*.jam.dev");
     expect(nginxCsp).toBe(csp);
     expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
+    expect(indexHtml).toContain('<link rel="stylesheet" href="/src/index.css" />');
     expect(indexHtml).toContain('data-startup-shell');
-    expect(indexHtml).toContain('class="seo-fallback"');
     expect(indexHtml).not.toContain('<script type="module" src="/src/main.tsx"></script>');
-    expect(bootstrap).toContain('loadJamRecorder()');
-    expect(bootstrap).toContain("import('./main')");
+    expect(bootstrap).toContain("import { mountApp } from './main'");
+    expect(bootstrap).toContain('mountApp()');
+    expect(bootstrap).toContain('__showDebateBootstrapError');
+    expect(bootstrap).toContain('scheduleJamRecorder()');
+    expect(bootstrap.indexOf('mountApp()')).toBeLessThan(bootstrap.indexOf('scheduleJamRecorder()'));
+    expect(bootstrap).not.toContain("import('./main')");
     expect(bootstrap).not.toContain("then(() => import('./main'))");
     expect(jamLoader).toContain("typeof globalThis.MediaRecorder !== 'undefined'");
     expect(jamLoader).toContain("https://js.jam.dev/recorder.js");
@@ -117,11 +122,24 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).toContain('<meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />');
   });
 
-  it("refreshes the offline app shell and includes both debate practice routes", () => {
+  it("starts with a branded boot shell instead of visible crawl-only copy", () => {
+    const indexHtml = readProjectFile("index.html");
+    const mainSource = loadMainSource();
+    const rootMarkup = indexHtml.match(/<div id="root">([\s\S]*?)<\/div>/)?.[1] ?? "";
+
+    expect(indexHtml).toContain('aria-label="DebateLab is loading"');
+    expect(rootMarkup).not.toContain("DebateLab by Programcode is the official");
+    expect(indexHtml).toMatch(/<noscript>[\s\S]*DebateLab by Programcode is the official/);
+    expect(mainSource).not.toContain("preloadOfflineRoutes");
+  });
+
+  it("caches the offline shell and only caches feature assets after they are visited", () => {
     const serviceWorker = readProjectFile("public/sw.js");
     expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
-    expect(serviceWorker).toContain("'/app/crossfire'");
-    expect(serviceWorker).toContain("'/app/sparring'");
+    expect(serviceWorker).not.toContain("'/app/crossfire'");
+    expect(serviceWorker).not.toContain("'/app/sparring'");
+    expect(serviceWorker).toContain('cache.put(request, response.clone())');
+    expect(serviceWorker).not.toContain('self.skipWaiting()');
   });
 
   it.each(["/app", "/app/(.*)", "/login", "/share/(.*)"])(
@@ -155,12 +173,14 @@ describe("Vercel frontend deployment configuration", () => {
   it("includes Vercel Web Analytics and Speed Insights in the app root", () => {
     const packageJson = loadPackageJson();
     const mainSource = loadMainSource();
+    const telemetrySource = readProjectFile("src/components/WebTelemetry.tsx");
 
     expect(packageJson.dependencies).toHaveProperty("@vercel/analytics");
     expect(packageJson.dependencies).toHaveProperty("@vercel/speed-insights");
-    expect(mainSource).toContain('import { Analytics } from "@vercel/analytics/react"');
-    expect(mainSource).toContain('import { SpeedInsights } from "@vercel/speed-insights/react"');
-    expect(mainSource).toContain("<Analytics />");
-    expect(mainSource).toContain("<SpeedInsights />");
+    expect(mainSource).toContain("<WebTelemetry />");
+    expect(mainSource).toContain('window.requestIdleCallback(run)');
+    expect(telemetrySource).toContain('lazy(() => import("@vercel/analytics/react")');
+    expect(telemetrySource).toContain('lazy(() => import("@vercel/speed-insights/react")');
+    expect(telemetrySource).toContain('window.requestIdleCallback(() => setReady(true))');
   });
 });

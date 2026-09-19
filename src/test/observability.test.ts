@@ -46,10 +46,12 @@ import {
   captureProductEvent,
   filterObservabilityBreadcrumb,
   initializeObservability,
+  resetObservabilityForTests,
 } from "@/lib/observability";
 
 describe("observability primitives", () => {
   beforeEach(() => {
+    resetObservabilityForTests();
     vi.clearAllMocks();
     vi.stubEnv("VITE_POSTHOG_KEY", undefined);
     vi.stubEnv("VITE_POSTHOG_HOST", undefined);
@@ -68,7 +70,7 @@ describe("observability primitives", () => {
     expect(sentryMetricsCountMock).not.toHaveBeenCalled();
   });
 
-  it("passes structured product events through when PostHog is configured", () => {
+  it("passes structured product events through when PostHog is configured", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     const properties = {
       tool: "generate",
@@ -79,6 +81,7 @@ describe("observability primitives", () => {
 
     captureProductEvent("tool_opened", properties);
 
+    await vi.waitFor(() => expect(captureMock).toHaveBeenCalledOnce());
     expect(captureMock).toHaveBeenCalledOnce();
     expect(captureMock).toHaveBeenCalledWith("tool_opened", properties);
     expect(properties).not.toHaveProperty("motion");
@@ -86,16 +89,17 @@ describe("observability primitives", () => {
     expect(properties).not.toHaveProperty("message");
   });
 
-  it("does not let PostHog failures interrupt the product", () => {
+  it("does not let PostHog failures interrupt the product", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     captureMock.mockImplementationOnce(() => {
       throw new Error("synthetic PostHog failure");
     });
 
     expect(() => captureProductEvent("tool_opened", { tool: "generate" })).not.toThrow();
+    await vi.waitFor(() => expect(captureMock).toHaveBeenCalledOnce());
   });
 
-  it("sends safe product logs and metrics to Sentry while dropping unexpected properties", () => {
+  it("sends safe product logs and metrics to Sentry while dropping unexpected properties", async () => {
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
 
     captureProductEvent("ai_request_succeeded", {
@@ -111,6 +115,7 @@ describe("observability primitives", () => {
       feature: "ask",
       model: "openai/gpt-5.6-luna",
     };
+    await vi.waitFor(() => expect(sentryLoggerInfoMock).toHaveBeenCalledOnce());
     expect(sentryLoggerInfoMock).toHaveBeenCalledWith("Product event", attributes);
     expect(sentryMetricsCountMock).toHaveBeenCalledWith("debatelab.product_event", 1, { attributes });
     expect(sentryMetricsDistributionMock).toHaveBeenCalledWith(
@@ -125,7 +130,7 @@ describe("observability primitives", () => {
     ])).not.toContain("private debate content");
   });
 
-  it("rejects private strings in allowlisted fields and rejects unknown event names", () => {
+  it("rejects private strings in allowlisted fields and rejects unknown event names", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
 
@@ -136,6 +141,7 @@ describe("observability primitives", () => {
     });
     captureProductEvent("student@example.com", { feature: "ask" });
 
+    await vi.waitFor(() => expect(captureMock).toHaveBeenCalledOnce());
     expect(captureMock).toHaveBeenCalledOnce();
     expect(captureMock).toHaveBeenCalledWith("ai_request_succeeded", { provider: "openrouter" });
     expect(sentryLoggerInfoMock).toHaveBeenCalledOnce();
@@ -156,24 +162,26 @@ describe("observability primitives", () => {
     expect(sentryCaptureMock).not.toHaveBeenCalled();
   });
 
-  it("passes exceptions and structured context through when Sentry is configured", () => {
+  it("passes exceptions and structured context through when Sentry is configured", async () => {
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
     const error = new Error("synthetic test error");
     const context = { provider: "openrouter", category: "provider_error" };
 
     captureException(error, context);
 
+    await vi.waitFor(() => expect(sentryCaptureMock).toHaveBeenCalledOnce());
     expect(sentryCaptureMock).toHaveBeenCalledOnce();
     expect(sentryCaptureMock).toHaveBeenCalledWith(error, { extra: context });
   });
 
-  it("does not let Sentry failures interrupt the product", () => {
+  it("does not let Sentry failures interrupt the product", async () => {
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
     sentryCaptureMock.mockImplementationOnce(() => {
       throw new Error("synthetic Sentry failure");
     });
 
     expect(() => captureException(new Error("synthetic test error"))).not.toThrow();
+    await vi.waitFor(() => expect(sentryCaptureMock).toHaveBeenCalledOnce());
   });
 
   it("drops React error-boundary console breadcrumbs but preserves other console errors", () => {
@@ -198,13 +206,13 @@ describe("observability primitives", () => {
     expect(filterObservabilityBreadcrumb(ordinaryBreadcrumb)).toBe(ordinaryBreadcrumb);
   });
 
-  it("initializes selected observability capabilities and privacy controls once", () => {
+  it("initializes selected observability capabilities and privacy controls once", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "posthog-test-key");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://posthog.example");
     vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
 
-    initializeObservability();
-    initializeObservability();
+    await initializeObservability();
+    await initializeObservability();
 
     expect(sentryInitMock).toHaveBeenCalledOnce();
     expect(sentryInitMock).toHaveBeenCalledWith(expect.objectContaining({

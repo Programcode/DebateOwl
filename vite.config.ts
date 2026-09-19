@@ -1,6 +1,26 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+
+function bundleGraph(): Plugin {
+  return {
+    name: 'bundle-graph',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      const chunks = Object.fromEntries(Object.values(bundle)
+        .filter((output) => output.type === 'chunk')
+        .map((chunk) => [chunk.fileName, {
+          imports: chunk.imports,
+          modules: Object.keys(chunk.modules),
+        }]));
+      this.emitFile({
+        type: 'asset',
+        fileName: '.vite/bundle-graph.json',
+        source: JSON.stringify(chunks, null, 2),
+      });
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -12,7 +32,7 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react()],
+  plugins: [react(), bundleGraph()],
   optimizeDeps: {
     // Narrows dev prebundling to the SPA entry. Without this, Vite crawls all
     // 84 HTML files under the root, including the prerendered pages in public/.
@@ -24,29 +44,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Vendor chunks for large dependencies
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-radix': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-tooltip',
-          ],
-          'vendor-charts': ['recharts'],
-          'vendor-form': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-flow': ['reactflow'],
-          'vendor-export-pdf': ['jspdf', 'jspdf-autotable'],
-          'vendor-export-docx': ['docx'],
-        },
-      },
-    },
+    manifest: true,
     chunkSizeWarningLimit: 700,
   },
 }));

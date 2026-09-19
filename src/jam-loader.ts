@@ -18,7 +18,7 @@ function appendJamModule(documentRef: Document, source: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const script = documentRef.createElement('script');
     script.type = 'module';
-    script.async = false;
+    script.async = true;
     script.src = source;
     script.dataset.jamRecorder = 'true';
 
@@ -46,7 +46,26 @@ export async function loadJamRecorder(options: JamLoaderOptions = {}): Promise<v
     ?? typeof globalThis.MediaRecorder !== 'undefined';
   if (!mediaRecorderAvailable) return;
 
-  for (const source of JAM_SCRIPT_URLS) {
-    await appendJamModule(documentRef, source);
+  await Promise.all(JAM_SCRIPT_URLS.map((source) => appendJamModule(documentRef, source)));
+}
+
+export function scheduleJamRecorder(options: JamLoaderOptions = {}): void {
+  const documentRef = options.documentRef ?? document;
+  const windowRef = documentRef.defaultView ?? window;
+  const loadWhenIdle = (): void => {
+    const load = (): void => {
+      void loadJamRecorder(options).catch((): undefined => undefined);
+    };
+    if (typeof windowRef.requestIdleCallback === 'function') {
+      windowRef.requestIdleCallback(load);
+    } else {
+      windowRef.setTimeout(load, 0);
+    }
+  };
+
+  if (documentRef.readyState === 'complete') {
+    loadWhenIdle();
+  } else {
+    windowRef.addEventListener('load', loadWhenIdle, { once: true });
   }
 }

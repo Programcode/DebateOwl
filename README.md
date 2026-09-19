@@ -91,7 +91,7 @@ Browser or Capacitor shell
 
 Important boundaries:
 
-- [`src/main.tsx`](src/main.tsx) starts the client, observability, native runtime, service worker, and offline preloading.
+- [`src/main.tsx`](src/main.tsx) starts the client, deferred telemetry, native runtime, and service worker.
 - [`src/App.tsx`](src/App.tsx) defines public and authenticated routes.
 - [`src/lib/supabase/client.ts`](src/lib/supabase/client.ts) creates the environment-specific Supabase client.
 - [`src/lib/stores/`](src/lib/stores/) owns persisted client state and server hydration.

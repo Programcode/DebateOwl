@@ -10,8 +10,6 @@ import { Markdown } from '@/components/ui/markdown';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
 import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
-import { exportAttackToPdf } from '@/lib/pdf-export-utils';
-import { exportAttackToDocx, exportAttackToGoogleDocs } from '@/lib/export-utils';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
@@ -105,6 +103,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
 
   const handlePdfExport = async () => {
     try {
+      const { exportAttackToPdf } = await import('@/lib/pdf-export-utils');
       const success = await exportAttackToPdf(result);
       if (success) {
         toast.success(t('attackResults.exportedPdf'));
@@ -118,6 +117,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
 
   const handleDocxExport = async () => {
     try {
+      const { exportAttackToDocx } = await import('@/lib/export-utils');
       const success = await exportAttackToDocx(result);
       if (success) {
         toast.success(t('attackResults.exportedDocx'));
@@ -132,6 +132,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
     try {
+      const { exportAttackToGoogleDocs } = await import('@/lib/export-utils');
       const exportResult = await exportAttackToGoogleDocs(result);
       if (exportResult.success && exportResult.documentUrl) {
         const openDocument = (): void => void openExternalUrl(exportResult.documentUrl!, { newWindow: true })

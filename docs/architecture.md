@@ -15,7 +15,7 @@ Browser or Capacitor
 
 ## Client startup and routing
 
-[`src/main.tsx`](../src/main.tsx) mounts the application and starts native runtime handling, observability, native URL handling, service-worker registration, and offline route preloading. Vercel browser telemetry is disabled inside the native shell.
+[`src/bootstrap.ts`](../src/bootstrap.ts) imports the application entry immediately, then schedules Jam after window load and idle time. [`src/main.tsx`](../src/main.tsx) mounts the application before starting native runtime handling, observability, native URL handling, and service-worker registration. Vercel browser telemetry is disabled inside the native shell and loaded behind a separate Suspense boundary.
 
 [`src/App.tsx`](../src/App.tsx) owns routes and top-level providers. Pages are lazy loaded. Public routes cover marketing, legal pages, login, sources, and shared content. `/app/*` routes pass through `RequireAuth` and include the main tools, history, library, timer, sparring, flowchart, settings, and administration.
 
@@ -89,13 +89,13 @@ Historical provider pricing evidence is retained under [`docs/pricing-snapshots/
 
 ## Observability
 
-Client startup initializes Sentry and PostHog when configured. Product events and exceptions use [`src/lib/observability.ts`](../src/lib/observability.ts). Vercel Analytics and Speed Insights run only in the web build.
+Client startup loads Sentry and PostHog asynchronously when configured. Product events and exceptions use the privacy-filtering facade in [`src/lib/observability.ts`](../src/lib/observability.ts), so SDK loading or failure cannot block rendering. Vercel Analytics and Speed Insights run only in the web build and load outside the application render boundary.
 
 CI and staging must not upload authenticated browser captures. Logging must not expose tokens, provider keys, user content, or protected staging values.
 
 ## PWA and offline behavior
 
-The service worker and manifest provide installable web assets and an offline app shell. Client startup registers the service worker and preloads route chunks. Offline support does not make authenticated Supabase or AI operations available without a network.
+The service worker and manifest provide installable web assets and an offline app shell. It precaches only the navigation shell and static identity assets; route chunks enter the runtime cache when a user visits them. Updates wait for the normal service-worker lifecycle instead of reloading an active page. Offline support does not make unvisited routes, authenticated Supabase, or AI operations available without a network.
 
 ## iOS shell
 

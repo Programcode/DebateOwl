@@ -59,7 +59,7 @@ test('mounts the app before Jam recorder modules resolve', async ({ page }) => {
   })).toBe(true);
 });
 
-test('shows a recoverable message when the main entry fails', async ({ page }) => {
+test('shows a recoverable message when the static main entry fails', async ({ page }) => {
   await page.route('**/src/main.tsx*', (route) => route.fulfill({ status: 503, body: 'entry unavailable' }));
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
@@ -68,7 +68,7 @@ test('shows a recoverable message when the main entry fails', async ({ page }) =
   await expect(page.getByRole('button', { name: 'Reload' })).toBeEnabled();
 });
 
-test('keeps the public SEO root visible before a delayed entry module', async ({ page }) => {
+test('keeps the branded shell visible before a delayed public entry module', async ({ page }) => {
   await setLocale(page, 'en');
   await page.route('**/src/bootstrap.ts*', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -76,6 +76,6 @@ test('keeps the public SEO root visible before a delayed entry module', async ({
   });
 
   await page.goto('/', { waitUntil: 'commit' });
-  await expect(page.locator('#root > .seo-fallback')).toBeVisible();
-  await expect(page.locator('#root > .seo-fallback nav a')).toHaveCount(19);
+  await expect(page.locator('[data-startup-shell]')).toBeVisible();
+  await expect(page.getByText('DebateLab by Programcode is the official')).toHaveCount(0);
 });

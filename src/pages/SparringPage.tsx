@@ -11,8 +11,6 @@ import { SparringRound } from '@/components/features/sparring/SparringRound';
 import { SparringScorecard } from '@/components/features/sparring/SparringScorecard';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { exportSparringToDocx } from '@/lib/export-utils';
-import { exportSparringToPdf } from '@/lib/pdf-export-utils';
 
 function readableError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message;
@@ -220,11 +218,15 @@ export default function SparringPage() {
   };
 
   const handleExportDocx = () => {
-    if (session) void exportSparringToDocx(session);
+    if (session) void import('@/lib/export-utils')
+      .then(({ exportSparringToDocx }) => exportSparringToDocx(session))
+      .catch((): undefined => undefined);
   };
 
   const handleExportPdf = () => {
-    if (session) void exportSparringToPdf(session);
+    if (session) void import('@/lib/pdf-export-utils')
+      .then(({ exportSparringToPdf }) => exportSparringToPdf(session))
+      .catch((): undefined => undefined);
   };
 
   if (!session) {

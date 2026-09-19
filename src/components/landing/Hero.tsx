@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
     const { t } = useTranslation();
@@ -65,13 +66,13 @@ const Hero = () => {
                             transition={{ duration: 0.6, delay: 0.3 }}
                             className="mt-9 flex flex-col gap-3 sm:flex-row"
                         >
-                            <a
-                                href="/app"
+                            <Link
+                                to="/app"
                                 className="btn-primary-gradient shimmer inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
                             >
                                 <span className="relative z-10">{t('hero.cta')}</span>
                                 <ArrowRight className="relative z-10 h-5 w-5" />
-                            </a>
+                            </Link>
                             <a
                                 href="#pricing"
                                 className="btn-secondary-outline inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"

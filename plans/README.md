@@ -15,6 +15,7 @@ Before executing any plan, recheck its branch, commit, paths, assumptions, produ
 - [Rate-limit UI cleanup](rate-limit-ui-cleanup.md)
 - [Supabase staging](supabase-staging.md)
 - [System prompt improvement](system-prompt-improvement.md)
+- [Startup and navigation performance](startup-navigation-performance.md)
 
 ## Backlog
 

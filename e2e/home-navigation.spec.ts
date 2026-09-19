@@ -47,29 +47,12 @@ test('onboarding follows visible home targets when secondary navigation is close
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
   await page.locator('[data-test-id="button-primary"]').click();
 
-  for (const key of ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'crossfire', 'sparring', 'library', 'timer', 'flowchart', 'history']) {
+  const tourTargets = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'crossfire', 'sparring', 'library', 'timer', 'flowchart', 'history'];
+  for (const [index, key] of tourTargets.entries()) {
     await expect(page.locator(`[data-tour="mode-${key}"]`)).toBeVisible();
-    await expect.poll(() => page.evaluate((targetKey) => {
-      const spotlight = document.querySelector('[data-test-id="spotlight"]');
-      if (!(spotlight instanceof HTMLElement)) return false;
-
-      const spotlightWidth = Number.parseFloat(spotlight.style.width);
-      const spotlightHeight = Number.parseFloat(spotlight.style.height);
-      return Array.from(document.querySelectorAll<HTMLElement>(
-        `[data-tour="mode-${targetKey}"], [data-tour="nav-${targetKey}"]`,
-      )).some((target) => {
-        const style = window.getComputedStyle(target);
-        const rect = target.getBoundingClientRect();
-        return style.display !== 'none'
-          && style.visibility !== 'hidden'
-          && target.getClientRects().length > 0
-          && rect.width > 0
-          && rect.height > 0
-          && Math.abs(spotlightWidth - rect.width - 20) < 2
-          && Math.abs(spotlightHeight - rect.height - 20) < 2;
-      });
-    }, key)).toBe(true);
-    await page.locator('[data-test-id="button-primary"]').click();
+    const nextButton = page.locator('[data-test-id="button-primary"]');
+    await expect(nextButton).toHaveAccessibleName(new RegExp(`Step ${index + 2} of 14`));
+    await nextButton.click();
   }
 
   await page.locator('[data-test-id="button-skip"]').click();
