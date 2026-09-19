@@ -441,15 +441,35 @@ only reduces the harm. Reject prior-route retention for route changes. Use
 
 ### Loading-state decision
 
-- No previous route content, or a full route failure: use the route fallback or
-  skeleton. Reserve the layout's dimensions to protect CLS.
-- Route change with previous content: keep the app shell, replace the route
-  region immediately with a destination-shaped skeleton, and announce progress
-  with a polite status. Do not retain the old route under the new URL.
-- One panel or secondary query is loading: retain the surrounding page and use
-  a local skeleton plus `aria-busy`/status on that region.
-- A request fails or the chunk is unavailable: use the existing Error Boundary
-  and an actionable retry/reload path. Do not hide the failure behind motion.
+Use these four states. Keep the app shell and page chrome stable unless the
+failed region itself owns them.
+
+- **Route module pending.** Prefer a completed route-code intent prefetch. If
+  the module is still pending, retain the stable shell and replace the route
+  region immediately with a destination-shaped skeleton. With
+  `useTransitions={false}`, do not retain the previous route under the new URL.
+- **Initial page data pending.** Keep the page chrome and controls stable. Use a
+  skeleton only for the region whose data is unknown, with dimensions reserved
+  to protect CLS.
+- **Mutation or AI work pending.** Preserve the user's input and existing result
+  context. Use the existing inline progress or streaming states instead of
+  replacing the page with a skeleton.
+- **Recoverable error.** Replace only the failed region with its error state and
+  a retry action. Keep unrelated content available and do not hide the failure
+  behind motion.
+
+Use a small skeleton vocabulary with DebateLab's existing spacing, radius,
+color, and typography tokens: heading line, control row, form card, list row,
+result block, chat thread, and admin table. Every skeleton must reserve stable
+dimensions, contain no fake text or misleading clickable controls, set
+`aria-busy="true"` on the pending region, expose one polite status announcement
+for the operation, and remain correct with reduced-motion styling.
+
+Prototype timing decision: swap immediately to the appropriate skeleton for an
+unresolved route module or unknown data region. Preserve known page chrome,
+surrounding panel content, and mutation context only as required by the states
+above. Do not add a fixed delay; add one only if traces show that it shortens,
+rather than lengthens, user friction.
 
 ### Resource-hint decision
 
