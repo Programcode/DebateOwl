@@ -3,8 +3,11 @@ import { setLocale, stubSupabaseSession } from './helpers/auth';
 
 declare global {
   interface Window {
+    __baselineAppLayout?: Element | null;
     __baselineShell?: Element | null;
     __baselineClickAt?: number | null;
+    __genericLoaderObserver?: MutationObserver;
+    __genericLoaderSeen?: boolean;
   }
 }
 
@@ -29,6 +32,7 @@ const privateRoutes = [
 
 const attackContent: ContentMarker = { selector: 'main h1', text: 'Attack' };
 const attackChunk = /\/src\/pages\/AttackPage\.tsx(?:[?#]|$)/i;
+const INTENT_OBSERVATION_MS = 250;
 
 async function waitForContent(page: Page, marker: string | ContentMarker) {
   const locator = typeof marker === 'string'
@@ -82,6 +86,7 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   await waitForContent(page, { selector: 'main h1', text: 'Generate' });
 
   await page.evaluate(() => {
+    window.__baselineAppLayout = document.querySelector('header')?.parentElement;
     window.__baselineShell = document.querySelector('header');
     window.__baselineClickAt = null;
     document.addEventListener('click', (event) => {
@@ -98,15 +103,23 @@ test('a delayed destination chunk exposes the route fallback without replacing t
     await route.continue();
   });
 
+  await startGenericLoaderObservation(page);
   await openAppNav(page, 'Attack');
   await expect.poll(() => destinationRequested).toBe(true);
   const pendingStatus = page.locator('main').getByRole('status', { name: /Attack/i });
   await expect(pendingStatus).toHaveCount(1);
   await expect(pendingStatus).toHaveAttribute('aria-busy', 'true');
   await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
-  expect(await page.evaluate(() => document.querySelector('header') === window.__baselineShell)).toBe(true);
+  expect(await page.evaluate(() => ({
+    appLayout: document.querySelector('header')?.parentElement === window.__baselineAppLayout,
+    header: document.querySelector('header') === window.__baselineShell,
+  }))).toEqual({ appLayout: true, header: true });
   await waitForContent(page, attackContent);
-  expect(await page.evaluate(() => document.querySelector('header') === window.__baselineShell)).toBe(true);
+  expect(await stopGenericLoaderObservation(page)).toBe(false);
+  expect(await page.evaluate(() => ({
+    appLayout: document.querySelector('header')?.parentElement === window.__baselineAppLayout,
+    header: document.querySelector('header') === window.__baselineShell,
+  }))).toEqual({ appLayout: true, header: true });
 
   const transitionMetrics = await page.evaluate(() => ({
     clickTime: window.__baselineClickAt ?? null,
@@ -145,19 +158,25 @@ async function attackLink(page: Page) {
   return page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' });
 }
 
-async function waitForAnimationFrames(page: Page, count = 2) {
-  await page.evaluate((frameCount) => new Promise<void>((resolve) => {
-    let remaining = frameCount;
-    const nextFrame = () => {
-      remaining -= 1;
-      if (remaining <= 0) {
-        resolve();
-        return;
-      }
-      window.requestAnimationFrame(nextFrame);
-    };
-    window.requestAnimationFrame(nextFrame);
-  }), count);
+async function startGenericLoaderObservation(page: Page) {
+  await page.evaluate(() => {
+    window.__genericLoaderSeen = document.querySelector('.motion-loading-shell') !== null;
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('.motion-loading-shell')) window.__genericLoaderSeen = true;
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    window.__genericLoaderObserver = observer;
+  });
+}
+
+async function stopGenericLoaderObservation(page: Page) {
+  return page.evaluate(() => {
+    window.__genericLoaderObserver?.disconnect();
+    const seen = Boolean(window.__genericLoaderSeen || document.querySelector('.motion-loading-shell'));
+    delete window.__genericLoaderObserver;
+    delete window.__genericLoaderSeen;
+    return seen;
+  });
 }
 
 async function setConnection(page: Page, connection: { saveData?: boolean; effectiveType?: string }) {
@@ -189,15 +208,16 @@ test('hover intent fetches one destination chunk before click and keeps navigati
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
-  const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
 
   await link.hover();
-  await destinationRequest;
+  await page.waitForTimeout(INTENT_OBSERVATION_MS);
   expect(requestCount()).toBe(1);
 
   const navigationEntriesBeforeClick = await page.evaluate(() => performance.getEntriesByType('navigation').length);
+  await startGenericLoaderObservation(page);
   await link.click();
   await waitForContent(page, attackContent);
+  expect(await stopGenericLoaderObservation(page)).toBe(false);
   expect(requestCount()).toBe(1);
   expect(await page.evaluate(() => performance.getEntriesByType('navigation').length)).toBe(navigationEntriesBeforeClick);
   await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
@@ -207,15 +227,16 @@ test('keyboard focus fetches one destination chunk before click', async ({ page 
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
-  const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
 
   await link.focus();
   await expect(link).toBeFocused();
-  await destinationRequest;
+  await page.waitForTimeout(INTENT_OBSERVATION_MS);
   expect(requestCount()).toBe(1);
 
+  await startGenericLoaderObservation(page);
   await link.click();
   await waitForContent(page, attackContent);
+  expect(await stopGenericLoaderObservation(page)).toBe(false);
   expect(requestCount()).toBe(1);
   await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
 });
@@ -224,21 +245,23 @@ test('touch intent fetches one destination chunk before click', async ({ page })
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
-  const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
 
   await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
-  await destinationRequest;
+  await page.waitForTimeout(INTENT_OBSERVATION_MS);
   expect(requestCount()).toBe(1);
 
+  await startGenericLoaderObservation(page);
   await link.click();
   await waitForContent(page, attackContent);
+  expect(await stopGenericLoaderObservation(page)).toBe(false);
   expect(requestCount()).toBe(1);
   await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
 });
 
 for (const [label, connection] of [
   ['Save-Data', { saveData: true }],
-  ['slow connection', { effectiveType: '2g' }],
+  ['slow-2g connection', { effectiveType: 'slow-2g' }],
+  ['2g connection', { effectiveType: '2g' }],
 ] as const) {
   test(`${label} skips speculative route requests for the same intent`, async ({ page }) => {
     await setConnection(page, connection);
@@ -247,12 +270,10 @@ for (const [label, connection] of [
     const link = await attackLink(page);
 
     await signalAllowedIntent(page, link);
-    await waitForAnimationFrames(page);
+    await page.waitForTimeout(INTENT_OBSERVATION_MS);
     expect(requestCount()).toBe(0);
 
-    const destinationRequest = page.waitForRequest((request) => attackChunk.test(request.url()));
     await link.click();
-    await destinationRequest;
     await waitForContent(page, attackContent);
     expect(requestCount()).toBe(1);
   });

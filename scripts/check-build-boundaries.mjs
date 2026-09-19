@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve, sep } from 'node:path';
 
-const distDir = resolve(process.cwd(), 'dist');
+const projectRoot = resolve(process.cwd());
+const distDir = resolve(projectRoot, 'dist');
 const manifest = JSON.parse(readFileSync(resolve(distDir, '.vite/manifest.json'), 'utf8'));
 const bundleGraph = JSON.parse(readFileSync(resolve(distDir, '.vite/bundle-graph.json'), 'utf8'));
 const entryKey = Object.keys(manifest).find((key) => manifest[key].isEntry && manifest[key].src === 'index.html');
@@ -21,32 +22,47 @@ function staticGraphFrom(file) {
 }
 
 const forbiddenFeature = /(?:\/src\/pages\/AdminPage\.tsx$|\/src\/lib\/(?:pdf-export-utils|export-utils)\.ts$|\/node_modules\/(?:jspdf|jspdf-autotable|docx|recharts|reactflow)\/)/i;
-const initialPageModules = new Set([
-  'LandingPage.tsx',
-  'LoginPage.tsx',
-  'HomePage.tsx',
-  'GeneratePage.tsx',
-  'AttackPage.tsx',
-]);
 const initialRoutes = [
-  entryKey,
-  'src/pages/LandingPage.tsx',
-  'src/pages/LoginPage.tsx',
-  'src/pages/HomePage.tsx',
-  'src/pages/GeneratePage.tsx',
-  'src/pages/AttackPage.tsx',
+  { key: entryKey, pageModules: new Set() },
+  ...[
+    'src/pages/LandingPage.tsx',
+    'src/pages/LoginPage.tsx',
+    'src/pages/HomePage.tsx',
+    'src/pages/GeneratePage.tsx',
+    'src/pages/AttackPage.tsx',
+  ].map((key) => ({ key, pageModules: new Set([key]) })),
 ];
-const violations = initialRoutes.flatMap((routeKey) => {
+
+function canonicalModuleId(moduleId) {
+  const sourceId = moduleId.split(/[?#]/, 1)[0];
+  if (!sourceId.startsWith('/')) return sourceId.replaceAll('\\', '/');
+  const relativeId = relative(projectRoot, sourceId);
+  if (relativeId.startsWith('..') || relativeId.includes(':')) return null;
+  return relativeId.split(sep).join('/');
+}
+
+function pageModulesFrom(routeFile) {
+  return new Set([...staticGraphFrom(routeFile)].flatMap((file) => bundleGraph[file]?.modules ?? [])
+    .map(canonicalModuleId)
+    .filter((moduleId) => moduleId?.startsWith('src/pages/') && moduleId.endsWith('.tsx')));
+}
+
+const violations = initialRoutes.flatMap(({ key: routeKey, pageModules: expectedPageModules }) => {
   const routeFile = manifest[routeKey]?.file;
   if (!routeFile) throw new Error(`Vite manifest has no emitted chunk for ${routeKey}.`);
-  return [...staticGraphFrom(routeFile)].flatMap((file) => (bundleGraph[file]?.modules ?? [])
-    .flatMap((moduleId) => {
-      const pageName = moduleId.match(/\/src\/pages\/([^/]+\.tsx)$/i)?.[1];
-      if ((pageName && !initialPageModules.has(pageName)) || forbiddenFeature.test(moduleId)) {
-        return [`${routeKey} -> ${file} -> ${moduleId}`];
-      }
-      return [];
-    }));
+  const actualPageModules = pageModulesFrom(routeFile);
+  const pageViolations = [
+    ...[...actualPageModules]
+      .filter((moduleId) => !expectedPageModules.has(moduleId))
+      .map((moduleId) => `${routeKey} -> ${routeFile} -> unexpected page module ${moduleId}`),
+    ...[...expectedPageModules]
+      .filter((moduleId) => !actualPageModules.has(moduleId))
+      .map((moduleId) => `${routeKey} -> ${routeFile} -> missing page module ${moduleId}`),
+  ];
+  const featureViolations = [...staticGraphFrom(routeFile)].flatMap((file) => (bundleGraph[file]?.modules ?? [])
+    .filter((moduleId) => forbiddenFeature.test(moduleId))
+    .map((moduleId) => `${routeKey} -> ${file} -> ${moduleId}`));
+  return [...pageViolations, ...featureViolations];
 });
 
 if (violations.length > 0) {
