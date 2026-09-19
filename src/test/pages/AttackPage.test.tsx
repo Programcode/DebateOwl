@@ -114,7 +114,7 @@ describe('AttackPage Integration', () => {
             </BrowserRouter>
         );
 
-        expect(screen.getByText('Attack My Case')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Attack' })).toBeInTheDocument();
         expect(screen.getByTestId('attack-form')).toBeInTheDocument();
         expect(screen.queryByTestId('attack-results')).not.toBeInTheDocument();
     });
