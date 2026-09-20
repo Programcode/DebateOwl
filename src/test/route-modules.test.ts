@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { preloadRoute, routeLoaders } from "@/lib/route-modules";
 
-type RoutePath = keyof typeof routeLoaders;
-
-function replaceLoader(pathname: RoutePath, loader: () => Promise<unknown>) {
-  const original = routeLoaders[pathname];
-  Object.defineProperty(routeLoaders, pathname, { configurable: true, value: loader });
-  return () => Object.defineProperty(routeLoaders, pathname, { configurable: true, value: original });
-}
+const rejectionState = vi.hoisted(() => ({
+  failure: new Error("route import failed"),
+  attempts: 0,
+}));
 
 describe("route module preloading", () => {
   beforeEach(() => {
@@ -15,58 +12,63 @@ describe("route module preloading", () => {
   });
 
   it("invokes a known route loader once", async () => {
-    const loader = vi.fn(() => Promise.resolve({ default: (): null => null }));
-    const restore = replaceLoader("/app/generate", loader);
+    const loader = vi.spyOn(routeLoaders, "/app/generate");
 
-    try {
-      await preloadRoute("/app/generate");
-      expect(loader).toHaveBeenCalledTimes(1);
-    } finally {
-      restore();
-    }
+    await preloadRoute("/app/generate");
+    expect(loader).toHaveBeenCalledTimes(1);
   });
 
   it("returns the same promise for repeated calls", async () => {
-    const loader = vi.fn(() => Promise.resolve({ default: (): null => null }));
-    const restore = replaceLoader("/app/attack", loader);
+    const first = preloadRoute("/app/attack");
+    const second = preloadRoute("/app/attack");
 
-    try {
-      const first = preloadRoute("/app/attack");
-      const second = preloadRoute("/app/attack");
-
-      expect(second).toBe(first);
-      expect(loader).toHaveBeenCalledTimes(1);
-      await first;
-    } finally {
-      restore();
-    }
+    expect(second).toBe(first);
+    expect(routeLoaders["/app/attack"]()).toBe(first);
+    await first;
   });
 
-  it("removes a rejected promise so the next call retries", async () => {
-    const failure = new Error("route import failed");
-    let attempts = 0;
-    const loader = vi.fn(() => {
-      attempts += 1;
-      return attempts === 1
-        ? Promise.reject(failure)
-        : Promise.resolve({ default: (): null => null });
+  it("shares the preload promise when preload runs before the App loader", async () => {
+    const preload = preloadRoute("/app/flowchart");
+    const lazyLoad = routeLoaders["/app/flowchart"]();
+
+    expect(lazyLoad).toBe(preload);
+    await preload;
+  });
+
+  it("shares the preload promise when the App loader runs first", async () => {
+    const lazyLoad = routeLoaders["/app/settings"]();
+    const preload = preloadRoute("/app/settings");
+
+    expect(preload).toBe(lazyLoad);
+    await lazyLoad;
+  });
+
+  it("evicts a rejected shared import so the next call retries", async () => {
+    rejectionState.attempts = 0;
+    vi.doMock("@/pages/AdminPage", () => {
+      rejectionState.attempts += 1;
+      if (rejectionState.attempts === 1) throw rejectionState.failure;
+      return { default: (): null => null };
     });
-    const restore = replaceLoader("/app/admin", loader);
+    vi.resetModules();
 
     try {
-      const first = preloadRoute("/app/admin");
-      await expect(first).rejects.toBe(failure);
+      const isolated = await import("@/lib/route-modules");
+      const first = isolated.routeLoaders["/app/admin"]();
+      await expect(first).rejects.toThrow();
 
-      const second = preloadRoute("/app/admin");
+      const second = isolated.preloadRoute("/app/admin");
       expect(second).not.toBe(first);
       await expect(second).resolves.toBeDefined();
-      expect(loader).toHaveBeenCalledTimes(2);
+      expect(rejectionState.attempts).toBe(2);
     } finally {
-      restore();
+      vi.doUnmock("@/pages/AdminPage");
+      vi.resetModules();
     }
   });
 
   it("returns undefined for unknown paths", () => {
     expect(preloadRoute("/app/unknown")).toBeUndefined();
+    expect(preloadRoute("toString")).toBeUndefined();
   });
 });

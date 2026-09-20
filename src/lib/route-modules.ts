@@ -1,40 +1,47 @@
+function cacheLoader<T>(loader: () => Promise<T>): () => Promise<T> {
+  let pending: Promise<T> | undefined;
+
+  return () => {
+    if (pending) return pending;
+
+    pending = loader().catch((error) => {
+      pending = undefined;
+      throw error;
+    });
+    return pending;
+  };
+}
+
 export const routeLoaders = {
-  "/": () => import("@/pages/LandingPage"),
-  "/terms": () => import("@/pages/TermsPage"),
-  "/privacy": () => import("@/pages/PrivacyPage"),
-  "/expocit/sources": () => import("@/pages/SourcesPage"),
-  "/login": () => import("@/pages/LoginPage"),
-  "/share/:code": () => import("@/pages/SharedPage"),
-  "/app": () => import("@/pages/HomePage"),
-  "/app/generate": () => import("@/pages/GeneratePage"),
-  "/app/attack": () => import("@/pages/AttackPage"),
-  "/app/brainstorm": () => import("@/pages/BrainstormPage"),
-  "/app/factoids": () => import("@/pages/FactoidsPage"),
-  "/app/ask": () => import("@/pages/AskPage"),
-  "/app/crossfire": () => import("@/pages/CrossfirePage"),
-  "/app/history": () => import("@/pages/HistoryPage"),
-  "/app/library": () => import("@/pages/LibraryPage"),
-  "/app/timer": () => import("@/pages/TimerPage"),
-  "/app/sparring": () => import("@/pages/SparringPage"),
-  "/app/flowchart": () => import("@/pages/FlowchartPage"),
-  "/app/settings": () => import("@/pages/SettingsPage"),
-  "/app/admin": () => import("@/pages/AdminPage"),
-  "*": () => import("@/pages/NotFound"),
+  "/": cacheLoader(() => import("@/pages/LandingPage")),
+  "/terms": cacheLoader(() => import("@/pages/TermsPage")),
+  "/privacy": cacheLoader(() => import("@/pages/PrivacyPage")),
+  "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
+  "/login": cacheLoader(() => import("@/pages/LoginPage")),
+  "/share/:code": cacheLoader(() => import("@/pages/SharedPage")),
+  "/app": cacheLoader(() => import("@/pages/HomePage")),
+  "/app/generate": cacheLoader(() => import("@/pages/GeneratePage")),
+  "/app/attack": cacheLoader(() => import("@/pages/AttackPage")),
+  "/app/brainstorm": cacheLoader(() => import("@/pages/BrainstormPage")),
+  "/app/factoids": cacheLoader(() => import("@/pages/FactoidsPage")),
+  "/app/ask": cacheLoader(() => import("@/pages/AskPage")),
+  "/app/crossfire": cacheLoader(() => import("@/pages/CrossfirePage")),
+  "/app/history": cacheLoader(() => import("@/pages/HistoryPage")),
+  "/app/library": cacheLoader(() => import("@/pages/LibraryPage")),
+  "/app/timer": cacheLoader(() => import("@/pages/TimerPage")),
+  "/app/sparring": cacheLoader(() => import("@/pages/SparringPage")),
+  "/app/flowchart": cacheLoader(() => import("@/pages/FlowchartPage")),
+  "/app/settings": cacheLoader(() => import("@/pages/SettingsPage")),
+  "/app/admin": cacheLoader(() => import("@/pages/AdminPage")),
+  "*": cacheLoader(() => import("@/pages/NotFound")),
 } as const;
 
-const pending = new Map<string, Promise<unknown>>();
+type RoutePath = keyof typeof routeLoaders;
+
+function isRoutePath(pathname: string): pathname is RoutePath {
+  return Object.prototype.hasOwnProperty.call(routeLoaders, pathname);
+}
 
 export function preloadRoute(pathname: string): Promise<unknown> | undefined {
-  const loader = routeLoaders[pathname as keyof typeof routeLoaders];
-  if (!loader) return undefined;
-
-  const existing = pending.get(pathname);
-  if (existing) return existing;
-
-  const request = loader().catch((error) => {
-    pending.delete(pathname);
-    throw error;
-  });
-  pending.set(pathname, request);
-  return request;
+  return isRoutePath(pathname) ? routeLoaders[pathname]() : undefined;
 }
