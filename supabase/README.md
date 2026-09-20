@@ -39,6 +39,7 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 - `import-source`: authenticated public-URL import with SSRF protection on redirects, timeout, content-type and size limits, readable-text extraction, quota checks, and logging.
 - `share`: authenticated creation of expiring share codes for supported saved content.
+- `workspace-invites`: authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
 - `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
 
 ### Authentication and administration
@@ -135,11 +136,15 @@ Document names, never values. Depending on deployed features, server-side config
 - research provider keys;
 - Stripe secret, webhook secret, and price configuration;
 - demo-code hashing material;
+- `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
+- `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay;
 - sparring integrity material;
 - Google export configuration;
 - allowed origins and environment-specific application URLs.
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
+
+The invitation handler does not select an email provider. Its mail boundary sends `{ to, inviteUrl }` to the configured relay. Email creation fails before storing an invite when those three mailer values are absent. Local tests inject an in-memory sender and make no external mail request.
 
 Public browser configuration in [`../src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) is not a replacement for server authorization.
 
