@@ -1,12 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
 
-const { mockDismissAnnouncement, mockListActiveAnnouncements } = vi.hoisted(() => ({
+const { mockAuth, mockDismissAnnouncement, mockListActiveAnnouncements } = vi.hoisted(() => ({
+  mockAuth: { user: { id: 'user-a' } },
   mockDismissAnnouncement: vi.fn(),
   mockListActiveAnnouncements: vi.fn(),
+}));
+
+vi.mock('@/lib/supabase/AuthProvider', () => ({
+  useAuth: () => mockAuth,
 }));
 
 vi.mock('@/lib/announcements', async (importOriginal) => {
@@ -27,8 +32,8 @@ const announcement: UserAnnouncement = {
   createdAt: '2026-08-31T11:00:00.000Z',
 };
 
-function renderLayout() {
-  return render(
+function layout() {
+  return (
     <MemoryRouter initialEntries={['/app']}>
       <Routes>
         <Route path="/app" element={<AppLayout />}>
@@ -40,11 +45,20 @@ function renderLayout() {
   );
 }
 
+function renderLayout() {
+  return render(layout());
+}
+
 describe('AppLayout announcements', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    mockAuth.user = { id: 'user-a' };
     mockListActiveAnnouncements.mockResolvedValue([announcement]);
     mockDismissAnnouncement.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('shows the active announcement and persists dismissal', async () => {
@@ -57,72 +71,189 @@ describe('AppLayout announcements', () => {
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
   });
 
-  it('refreshes announcements on the next page change', async () => {
+  it('keeps announcements stable across sibling routes', async () => {
     renderLayout();
     await screen.findByText('Scheduled maintenance');
 
     fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
 
     await screen.findByText('Next page');
-    await waitFor(() => expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2));
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
   });
 
-  it('does not show a stale dismissal error under the next announcement', async () => {
-    const nextAnnouncement: UserAnnouncement = {
-      ...announcement,
-      id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
-      title: 'New announcement',
-      body: 'This message replaced the previous one.',
-    };
-    let rejectDismissal: (reason: Error) => void = () => undefined;
-    const pendingDismissal = new Promise<void>((_resolve, reject) => {
-      rejectDismissal = reject;
-    });
+  it('retries announcements on navigation after an active load failure', async () => {
+    const recoveredAnnouncement = { ...announcement, title: 'Recovered announcement' };
     mockListActiveAnnouncements
-      .mockResolvedValueOnce([announcement])
-      .mockResolvedValueOnce([nextAnnouncement]);
-    mockDismissAnnouncement.mockReturnValue(pendingDismissal);
+      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockResolvedValueOnce([recoveredAnnouncement]);
 
     renderLayout();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+
+    expect(await screen.findByText('Recovered announcement')).toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a dismissed announcement absent across sibling routes', async () => {
+    renderLayout();
+
     await screen.findByText('Scheduled maintenance');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
-    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
-    await screen.findByText('New announcement');
-
-    rejectDismissal(new Error('Could not dismiss the old announcement'));
 
     await waitFor(() => expect(mockDismissAnnouncement).toHaveBeenCalledWith(announcement.id));
-    expect(screen.queryByText('Could not dismiss the old announcement')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+
+    await screen.findByText('Next page');
+    expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
   });
 
-  it('does not restore a dismissed announcement from a stale route load', async () => {
-    let resolveDismissal: () => void = () => undefined;
-    let resolveStaleLoad: (announcements: UserAnnouncement[]) => void = () => undefined;
-    const pendingDismissal = new Promise<void>((resolve) => {
-      resolveDismissal = resolve;
-    });
-    const staleLoad = new Promise<UserAnnouncement[]>((resolve) => {
-      resolveStaleLoad = resolve;
-    });
-    mockListActiveAnnouncements
-      .mockResolvedValueOnce([announcement])
-      .mockReturnValueOnce(staleLoad);
-    mockDismissAnnouncement.mockReturnValue(pendingDismissal);
+  it('shows dismissal errors without dropping the announcement', async () => {
+    mockDismissAnnouncement.mockRejectedValue(new Error('Could not dismiss the announcement'));
 
     renderLayout();
     await screen.findByText('Scheduled maintenance');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
-    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
-    await waitFor(() => expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2));
 
-    resolveDismissal();
-    await waitFor(() => expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument());
+    expect(await screen.findByText('Could not dismiss the announcement')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
+  });
+
+  it('loads current announcements again after a deliberate remount', async () => {
+    const currentAnnouncement: UserAnnouncement = {
+      ...announcement,
+      id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+      title: 'Current announcement',
+      body: 'This message is current after refresh.',
+    };
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([announcement])
+      .mockResolvedValueOnce([currentAnnouncement]);
+
+    const firstRender = renderLayout();
+    await screen.findByText('Scheduled maintenance');
+    firstRender.unmount();
+    renderLayout();
+
+    expect(await screen.findByText('Current announcement')).toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
+  });
+
+  it('reloads announcements and clears dismissal state when the user changes', async () => {
+    const userAnnouncement = { ...announcement, title: 'User A announcement' };
+    const nextUserAnnouncement = { ...announcement, title: 'User B announcement' };
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([userAnnouncement])
+      .mockResolvedValueOnce([nextUserAnnouncement]);
+
+    const rendered = renderLayout();
+    await screen.findByText('User A announcement');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: User A announcement' }));
+    await waitFor(() => expect(mockDismissAnnouncement).toHaveBeenCalledWith(announcement.id));
+
+    mockAuth.user = { id: 'user-b' };
+    rendered.rerender(layout());
+
+    expect(await screen.findByText('User B announcement')).toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a late announcement response from the previous user', async () => {
+    let resolveUserA: (value: UserAnnouncement[]) => void = () => undefined;
+    const userAResponse = new Promise<UserAnnouncement[]>((resolve) => {
+      resolveUserA = resolve;
+    });
+    const userBAnnouncement = { ...announcement, title: 'User B announcement' };
+    mockListActiveAnnouncements
+      .mockReturnValueOnce(userAResponse)
+      .mockResolvedValueOnce([userBAnnouncement]);
+
+    const rendered = renderLayout();
+    mockAuth.user = { id: 'user-b' };
+    rendered.rerender(layout());
+
+    expect(await screen.findByText('User B announcement')).toBeInTheDocument();
     await act(async () => {
-      resolveStaleLoad([announcement]);
-      await staleLoad;
+      resolveUserA([{ ...announcement, title: 'User A announcement' }]);
+      await userAResponse;
+    });
+
+    expect(screen.queryByText('User A announcement')).not.toBeInTheDocument();
+    expect(screen.getByText('User B announcement')).toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not show the previous user announcement while the next user loads', async () => {
+    let resolveUserB: (value: UserAnnouncement[]) => void = () => undefined;
+    const userBResponse = new Promise<UserAnnouncement[]>((resolve) => {
+      resolveUserB = resolve;
+    });
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([{ ...announcement, title: 'User A announcement' }])
+      .mockReturnValueOnce(userBResponse);
+
+    const rendered = renderLayout();
+    await screen.findByText('User A announcement');
+    mockAuth.user = { id: 'user-b' };
+    rendered.rerender(layout());
+
+    expect(screen.queryByText('User A announcement')).not.toBeInTheDocument();
+    await act(async () => {
+      resolveUserB([{ ...announcement, title: 'User B announcement' }]);
+      await userBResponse;
+    });
+    expect(screen.getByText('User B announcement')).toBeInTheDocument();
+  });
+
+  it('hides an expired announcement while the user stays on the same route', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-20T12:00:00.000Z'));
+    const expiringAnnouncement = {
+      ...announcement,
+      expiresAt: '2026-09-20T12:00:10.000Z',
+    };
+    mockListActiveAnnouncements.mockResolvedValue([expiringAnnouncement]);
+
+    renderLayout();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(11_000);
     });
 
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches after the stale window and removes a deactivated announcement', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-20T12:00:00.000Z'));
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([announcement])
+      .mockResolvedValueOnce([]);
+
+    renderLayout();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
+
+    vi.setSystemTime(new Date('2026-09-20T12:01:01.000Z'));
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
   });
 
   it('keeps all tool destinations reachable across desktop and mobile navigation', async () => {

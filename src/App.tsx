@@ -1,5 +1,5 @@
 // src/App.tsx
-import { Component, Suspense, lazy, useEffect, type ErrorInfo, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,35 +9,39 @@ import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
-import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
-import { Loader2 } from "lucide-react";
+import { useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { captureException, captureProductEvent } from "@/lib/observability";
+import { routeLoaders } from "@/lib/route-modules";
+import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
+import { useTranslation } from "react-i18next";
 
 // Lazy load all pages for code splitting
-const LandingPage = lazy(() => import("./pages/LandingPage"));
-const TermsPage = lazy(() => import("./pages/TermsPage"));
-const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
-const HomePage = lazy(() => import("./pages/HomePage"));
-const GeneratePage = lazy(() => import("./pages/GeneratePage"));
-const AttackPage = lazy(() => import("./pages/AttackPage"));
-const BrainstormPage = lazy(() => import("./pages/BrainstormPage"));
-const FactoidsPage = lazy(() => import("./pages/FactoidsPage"));
-const AskPage = lazy(() => import("./pages/AskPage"));
-const CrossfirePage = lazy(() => import("./pages/CrossfirePage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const HistoryPage = lazy(() => import("./pages/HistoryPage"));
-const LibraryPage = lazy(() => import("./pages/LibraryPage"));
-const TimerPage = lazy(() => import("./pages/TimerPage"));
-const SparringPage = lazy(() => import("./pages/SparringPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
-const SharedPage = lazy(() => import("./pages/SharedPage"));
-const FlowchartPage = lazy(() => import("./pages/FlowchartPage"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const SourcesPage = lazy(() => import("./pages/SourcesPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const LandingPage = lazy(routeLoaders["/"]);
+const TermsPage = lazy(routeLoaders["/terms"]);
+const PrivacyPage = lazy(routeLoaders["/privacy"]);
+const HomePage = lazy(routeLoaders["/app"]);
+const GeneratePage = lazy(routeLoaders["/app/generate"]);
+const AttackPage = lazy(routeLoaders["/app/attack"]);
+const BrainstormPage = lazy(routeLoaders["/app/brainstorm"]);
+const FactoidsPage = lazy(routeLoaders["/app/factoids"]);
+const AskPage = lazy(routeLoaders["/app/ask"]);
+const CrossfirePage = lazy(routeLoaders["/app/crossfire"]);
+const SettingsPage = lazy(routeLoaders["/app/settings"]);
+const HistoryPage = lazy(routeLoaders["/app/history"]);
+const LibraryPage = lazy(routeLoaders["/app/library"]);
+const TimerPage = lazy(routeLoaders["/app/timer"]);
+const SparringPage = lazy(routeLoaders["/app/sparring"]);
+const AdminPage = lazy(routeLoaders["/app/admin"]);
+const SharedPage = lazy(routeLoaders["/share/:code"]);
+const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
+const LoginPage = lazy(routeLoaders["/login"]);
+const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
+const NotFound = lazy(routeLoaders["*"]);
+const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
+  .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
 const queryClient = new QueryClient();
 
@@ -71,24 +75,51 @@ const TOOL_BY_ROUTE = new Map<string, ToolName>([
 ]);
 
 function getToolForPathname(pathname: string): ToolName | undefined {
-  const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  return TOOL_BY_ROUTE.get(normalizedPathname);
+  return TOOL_BY_ROUTE.get(normalizePathname(pathname));
 }
 
-// Loading fallback component
-const PageLoader = () => (
-  <div className="motion-loading-shell flex min-h-[60vh] items-center justify-center">
-    <div className="flex flex-col items-center gap-4 rounded-lg border bg-card/80 px-8 py-7 shadow-lg">
-      <div className="relative flex h-12 w-12 items-center justify-center">
-        <span className="motion-ping-ring absolute h-full w-full rounded-full border border-primary/40" />
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-      <div className="h-1 w-44 overflow-hidden rounded-full bg-muted">
-        <div className="motion-loading-bar h-full rounded-full bg-primary" />
-      </div>
-    </div>
-  </div>
-);
+export type RouteFallback = {
+  variant: RouteSkeletonVariant;
+  label: string;
+  labelKey?: string;
+};
+
+const DEFAULT_ROUTE_FALLBACK: RouteFallback = { variant: "public", label: "Page", labelKey: "common.page" };
+
+const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
+  "/": { variant: "public", label: "DebateLab" },
+  "/terms": { variant: "public", label: "Terms", labelKey: "footer.terms" },
+  "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
+  "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
+  "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
+  "/app": { variant: "home-grid", label: "Home", labelKey: "nav.home" },
+  "/app/generate": { variant: "tool-form", label: "Generate", labelKey: "nav.generate" },
+  "/app/attack": { variant: "tool-form", label: "Attack", labelKey: "nav.attack" },
+  "/app/brainstorm": { variant: "tool-form", label: "Brainstorm", labelKey: "nav.brainstorm" },
+  "/app/factoids": { variant: "tool-form", label: "Factoids", labelKey: "nav.factoids" },
+  "/app/crossfire": { variant: "tool-form", label: "Crossfire", labelKey: "nav.crossfire" },
+  "/app/timer": { variant: "tool-form", label: "Timer", labelKey: "nav.timer" },
+  "/app/flowchart": { variant: "tool-form", label: "Flowchart", labelKey: "nav.flowchart" },
+  "/app/ask": { variant: "chat", label: "Ask", labelKey: "nav.ask" },
+  "/app/sparring": { variant: "chat", label: "Sparring", labelKey: "nav.sparring" },
+  "/app/history": { variant: "settings/list", label: "History", labelKey: "nav.history" },
+  "/app/library": { variant: "settings/list", label: "Library", labelKey: "nav.library" },
+  "/app/settings": { variant: "settings/list", label: "Settings", labelKey: "nav.settings" },
+  "/app/admin": { variant: "admin/table", label: "Admin", labelKey: "settings.admin" },
+};
+
+function normalizePathname(pathname: string): string {
+  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function getRouteFallback(pathname: string): RouteFallback {
+  const normalizedPathname = normalizePathname(pathname);
+  if (/^\/share\/[^/]+$/.test(normalizedPathname)) {
+    return { variant: "public", label: "Shared debate", labelKey: "sharedPage.title" };
+  }
+  return ROUTE_FALLBACKS[normalizedPathname] ?? DEFAULT_ROUTE_FALLBACK;
+}
 
 export class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -130,13 +161,38 @@ export function ToolRouteAnalytics(): null {
 
 function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const { t } = useTranslation();
+  const fallback = getRouteFallback(location.pathname);
+  const label = fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label;
+  const statusText = t("common.openingPage", { page: label });
 
   return (
     <RouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<RouteSkeleton variant={fallback.variant} label={label} statusText={statusText} />}>
         {children}
       </Suspense>
     </RouteErrorBoundary>
+  );
+}
+
+function OptionalOnboardingTour() {
+  const location = useLocation();
+  const hasCompletedOnboarding = useOnboardingStore((state) => state.hasCompletedOnboarding);
+  const isTourRunning = useOnboardingStore((state) => state.isTourRunning);
+  const shouldLoadTour = isTourRunning || (location.pathname === "/app" && !hasCompletedOnboarding);
+
+  if (!shouldLoadTour) return null;
+
+  return <TimedOnboardingTour />;
+}
+
+function TimedOnboardingTour() {
+  const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
+
+  return (
+    <Suspense fallback={null}>
+      <OnboardingTour eligibleAt={eligibleAt} />
+    </Suspense>
   );
 }
 
@@ -158,7 +214,7 @@ function AppRoutes() {
             element={
               <RequireAuth>
                 <ToolRouteAnalytics />
-                <OnboardingTour />
+                <OptionalOnboardingTour />
                 <AppLayout />
               </RequireAuth>
             }
@@ -192,7 +248,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <OfflineIndicator />
-            <BrowserRouter>
+            <BrowserRouter useTransitions={false}>
               <RouteErrorBoundary>
                 <AppRoutes />
               </RouteErrorBoundary>

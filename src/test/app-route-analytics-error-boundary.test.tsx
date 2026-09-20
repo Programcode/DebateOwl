@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RouteErrorBoundary, ToolRouteAnalytics } from "@/App";
+import { getRouteFallback, RouteErrorBoundary, ToolRouteAnalytics } from "@/App";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { filterObservabilityBreadcrumb } from "@/lib/observability";
 
@@ -42,6 +42,28 @@ const toolRoutes = [
   ["/app/flowchart", "flowchart"],
   ["/app/settings", "settings"],
 ] as const;
+
+const routeFallbacks = [
+  ["/", "public", "DebateLab"],
+  ["/app", "home-grid", "Home"],
+  ["/app/attack", "tool-form", "Attack"],
+  ["/app/ask", "chat", "Ask"],
+  ["/app/settings", "settings/list", "Settings"],
+  ["/app/admin", "admin/table", "Admin"],
+  ["/share/demo-code", "public", "Shared debate"],
+  ["/share/demo-code/", "public", "Shared debate"],
+  ["/share/demo-code//", "public", "Shared debate"],
+  ["/share/demo-code/extra", "public", "Page"],
+  ["/share/", "public", "Page"],
+  ["/share", "public", "Page"],
+  ["/missing", "public", "Page"],
+] as const;
+
+describe("route fallback selection", () => {
+  it.each(routeFallbacks)("maps %s to the %s skeleton with %s label", (pathname, variant, label) => {
+    expect(getRouteFallback(pathname)).toMatchObject({ variant, label });
+  });
+});
 
 describe("App route observability", () => {
   beforeEach(() => {

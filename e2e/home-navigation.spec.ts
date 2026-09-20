@@ -58,6 +58,65 @@ test('onboarding follows visible home targets when secondary navigation is close
   await page.locator('[data-test-id="button-skip"]').click();
 });
 
+test('onboarding keeps its original start schedule after a delayed lazy chunk', async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (key === 'debate-trainer-onboarding') {
+        try {
+          if (JSON.parse(value).state?.isTourRunning === true) {
+            originalSetItem.call(this, '__onboarding-tour-started-at', String(Date.now()));
+          }
+        } catch {
+          // Ignore malformed test-only storage writes.
+        }
+      }
+      originalSetItem.call(this, key, value);
+    };
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: false, isTourRunning: false },
+      version: 0,
+    }));
+  });
+  await page.route('**/src/components/features/onboarding/OnboardingTour.tsx*', async (route) => {
+    const response = await route.fetch();
+    const body = `${await response.text()}\nwindow.localStorage.setItem('__onboarding-module-evaluated-at', String(Date.now()));`;
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    await route.fulfill({ response, body });
+  });
+  await page.route('**/node_modules/.vite/deps/react-joyride.js*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.body();
+    await route.fulfill({ response, body });
+  });
+
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+
+  await expect.poll(async () => Number(await page.evaluate(() => window.localStorage.getItem('__onboarding-module-evaluated-at') ?? 0)), { timeout: 15_000 }).toBeGreaterThan(0);
+  await expect.poll(async () => Number(await page.evaluate(() => window.localStorage.getItem('__onboarding-tour-started-at') ?? 0)), { timeout: 15_000 }).toBeGreaterThan(0);
+  const moduleEvaluatedAt = await page.evaluate(() => Number(window.localStorage.getItem('__onboarding-module-evaluated-at')));
+  const startedAt = await page.evaluate(() => Number(window.localStorage.getItem('__onboarding-tour-started-at')));
+  expect(startedAt - moduleEvaluatedAt).toBeLessThan(450);
+  await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
+});
+
+test('onboarding starts a fresh delay when a protected route reaches home', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: false, isTourRunning: false },
+      version: 0,
+    }));
+  });
+  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Ready to Generate' })).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(650);
+
+  await page.locator('header a[href="/app"]').first().click();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.locator('.react-joyride__tooltip')).toHaveCount(0, { timeout: 100 });
+  await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
+});
+
 test('header keeps the brand and controls inside a 320px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });

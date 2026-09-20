@@ -4,11 +4,13 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
 
 const Navbar = () => {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const shouldReduceMotion = useReducedMotion();
+    const appPrefetch = useRoutePrefetch("/app");
 
     const navLinks = [
         { href: "#features", label: t('nav.features') },
@@ -49,7 +51,7 @@ const Navbar = () => {
 
                     <div className="hidden items-center gap-3 md:flex">
                         <LanguageSwitcher />
-                        <Link to="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
+                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
                             <ArrowRight className="relative z-10 h-4 w-4" />
                         </Link>
@@ -88,6 +90,7 @@ const Navbar = () => {
                             ))}
                             <Link
                                 to="/app"
+                                {...appPrefetch}
                                 onClick={() => setIsOpen(false)}
                                 className="btn-primary-gradient shimmer mt-2 inline-flex items-center justify-center gap-2"
                             >

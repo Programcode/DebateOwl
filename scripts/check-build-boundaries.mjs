@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve, sep } from 'node:path';
 
-const distDir = resolve(process.cwd(), 'dist');
+const projectRoot = resolve(process.cwd());
+const distDir = resolve(projectRoot, 'dist');
 const manifest = JSON.parse(readFileSync(resolve(distDir, '.vite/manifest.json'), 'utf8'));
 const bundleGraph = JSON.parse(readFileSync(resolve(distDir, '.vite/bundle-graph.json'), 'utf8'));
 const entryKey = Object.keys(manifest).find((key) => manifest[key].isEntry && manifest[key].src === 'index.html');
@@ -22,20 +23,87 @@ function staticGraphFrom(file) {
 
 const forbiddenFeature = /(?:\/src\/pages\/AdminPage\.tsx$|\/src\/lib\/(?:pdf-export-utils|export-utils)\.ts$|\/node_modules\/(?:jspdf|jspdf-autotable|docx|recharts|reactflow)\/)/i;
 const initialRoutes = [
-  entryKey,
-  'src/pages/LandingPage.tsx',
-  'src/pages/LoginPage.tsx',
-  'src/pages/HomePage.tsx',
-  'src/pages/GeneratePage.tsx',
-  'src/pages/AttackPage.tsx',
+  { key: entryKey, pageModules: new Set() },
+  ...[
+    'src/pages/LandingPage.tsx',
+    'src/pages/LoginPage.tsx',
+    'src/pages/HomePage.tsx',
+    'src/pages/GeneratePage.tsx',
+    'src/pages/AttackPage.tsx',
+  ].map((key) => ({ key, pageModules: new Set([key]) })),
 ];
-const violations = initialRoutes.flatMap((routeKey) => {
+
+function canonicalModuleId(moduleId) {
+  const sourceId = moduleId.split(/[?#]/, 1)[0];
+  if (!sourceId.startsWith('/')) return sourceId.replaceAll('\\', '/');
+  const relativeId = relative(projectRoot, sourceId);
+  if (relativeId.startsWith('..') || relativeId.includes(':')) return null;
+  return relativeId.split(sep).join('/');
+}
+
+function pageModulesFrom(routeFile) {
+  return new Set([...staticGraphFrom(routeFile)].flatMap((file) => bundleGraph[file]?.modules ?? [])
+    .map(canonicalModuleId)
+    .filter((moduleId) => moduleId?.startsWith('src/pages/') && moduleId.endsWith('.tsx')));
+}
+
+const onboardingModules = new Set([
+  'src/components/features/onboarding/OnboardingTour.tsx',
+  'node_modules/react-joyride/dist/index.mjs',
+]);
+
+const onboardingInitialRoutes = [
+  { key: entryKey },
+  ...Object.entries(manifest)
+    .filter(([, entry]) => entry.isDynamicEntry && entry.src?.startsWith('src/pages/') && entry.src.endsWith('.tsx'))
+    .map(([key]) => ({ key })),
+];
+
+function modulesFromFiles(files) {
+  return new Set([...files].flatMap((file) => bundleGraph[file]?.modules ?? [])
+    .map(canonicalModuleId)
+    .filter(Boolean));
+}
+
+const onboardingInitialGraphViolations = onboardingInitialRoutes.flatMap(({ key: routeKey }) => {
+  const routeFile = manifest[routeKey]?.file;
+  if (!routeFile) return [];
+  return [...modulesFromFiles(staticGraphFrom(routeFile))]
+    .filter((moduleId) => onboardingModules.has(moduleId))
+    .map((moduleId) => `${routeKey} -> ${routeFile} -> onboarding module ${moduleId}`);
+});
+
+const onboardingDynamicChunks = Object.entries(manifest)
+  .filter(([, entry]) => entry.isDynamicEntry)
+  .map(([key, entry]) => ({ key, file: entry.file }))
+  .filter(({ file }) => {
+    const modules = modulesFromFiles(staticGraphFrom(file));
+    return [...onboardingModules].every((moduleId) => modules.has(moduleId));
+  });
+
+const onboardingDynamicGraphViolations = onboardingDynamicChunks.length === 0
+  ? ['OnboardingTour and react-joyride are not present together in any dynamic chunk.']
+  : [];
+
+const violations = initialRoutes.flatMap(({ key: routeKey, pageModules: expectedPageModules }) => {
   const routeFile = manifest[routeKey]?.file;
   if (!routeFile) throw new Error(`Vite manifest has no emitted chunk for ${routeKey}.`);
-  return [...staticGraphFrom(routeFile)].flatMap((file) => (bundleGraph[file]?.modules ?? [])
+  const actualPageModules = pageModulesFrom(routeFile);
+  const pageViolations = [
+    ...[...actualPageModules]
+      .filter((moduleId) => !expectedPageModules.has(moduleId))
+      .map((moduleId) => `${routeKey} -> ${routeFile} -> unexpected page module ${moduleId}`),
+    ...[...expectedPageModules]
+      .filter((moduleId) => !actualPageModules.has(moduleId))
+      .map((moduleId) => `${routeKey} -> ${routeFile} -> missing page module ${moduleId}`),
+  ];
+  const featureViolations = [...staticGraphFrom(routeFile)].flatMap((file) => (bundleGraph[file]?.modules ?? [])
     .filter((moduleId) => forbiddenFeature.test(moduleId))
     .map((moduleId) => `${routeKey} -> ${file} -> ${moduleId}`));
+  return [...pageViolations, ...featureViolations];
 });
+
+violations.push(...onboardingInitialGraphViolations, ...onboardingDynamicGraphViolations);
 
 if (violations.length > 0) {
   throw new Error(`Feature-only modules entered the static application graph:\n${violations.join('\n')}`);

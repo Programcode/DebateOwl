@@ -24,6 +24,7 @@ function loadConfig(): VercelConfig {
 function loadPackageJson(): {
   engines?: { node?: string };
   dependencies?: Record<string, string>;
+  scripts?: Record<string, string>;
 } {
   return JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
 }
@@ -131,6 +132,14 @@ describe("Vercel frontend deployment configuration", () => {
     expect(rootMarkup).not.toContain("DebateLab by Programcode is the official");
     expect(indexHtml).toMatch(/<noscript>[\s\S]*DebateLab by Programcode is the official/);
     expect(mainSource).not.toContain("preloadOfflineRoutes");
+  });
+
+  it("keeps route chunks out of the initial document and runs the graph gate", () => {
+    const indexHtml = readProjectFile("index.html");
+    const packageJson = loadPackageJson();
+
+    expect(indexHtml).not.toMatch(/rel="(?:modulepreload|preload|prefetch)"[^>]*(?:pages|LandingPage|LoginPage|HomePage|GeneratePage|AttackPage)/i);
+    expect(packageJson.scripts?.build).toBe("vite build && node scripts/check-build-boundaries.mjs");
   });
 
   it("caches the offline shell and only caches feature assets after they are visited", () => {

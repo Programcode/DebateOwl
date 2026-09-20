@@ -5,7 +5,7 @@ import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
 import { useOnboardingStore } from '@/hooks/use-onboarding';
 
-export function OnboardingTour() {
+export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
     const { t } = useTranslation();
     const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
     const location = useLocation();
@@ -146,12 +146,15 @@ export function OnboardingTour() {
         if (hasCompletedOnboarding || location.pathname !== '/app') return;
 
         // Small delay to ensure DOM is ready on the mode overview.
+        const autoStartDelay = typeof performance === 'undefined' || eligibleAt === undefined
+            ? 500
+            : Math.max(0, 500 - (performance.now() - eligibleAt));
         const timer = setTimeout(() => {
             setTourSteps(resolveTourSteps());
             startTour();
-        }, 500);
+        }, autoStartDelay);
         return () => clearTimeout(timer);
-    }, [hasCompletedOnboarding, location.pathname, resolveTourSteps, startTour]);
+    }, [eligibleAt, hasCompletedOnboarding, location.pathname, resolveTourSteps, startTour]);
 
     useEffect(() => {
         if (isTourRunning) setTourSteps(resolveTourSteps());
