@@ -255,12 +255,12 @@ Each numbered slice is independently reviewable. Before implementation, write it
 
 **P0.1 Editor and durability spike.** Proposed new paths: `src/lib/workspace/editor-schema.ts`, `src/test/workspace/collaboration.test.ts`, `services/collaboration/package.json`, `services/collaboration/src/server.ts`, and `services/collaboration/src/server.test.ts`. Modify existing `package.json` and `package-lock.json` only after dependency/license review. Keep the spike isolated from production routes.
 
-- [ ] Resolve current compatible Tiptap/Yjs/Hocuspocus versions from official docs and package manifests, pin exact versions, inspect licenses, and verify React 18/Node 22 compatibility. Record rejected alternatives and extension licensing.
-- [ ] Write a two-client actual-Y.Doc test that edits the same paragraph, changes list formatting, inserts a link, disconnects, reconnects, and checks identical structured results. Write a local undo test proving a teammate's text survives.
-- [ ] Add a gateway test that forces database append failure, duplicates an update, and kills the process before and after durable ack. Assert no Saved acknowledgement before commit and no acknowledged loss after restart.
-- [ ] Prove the full update interception path, including sync handshake. Record hook order from the selected version and ensure rejected mutations never appear to other clients.
-- [ ] Add a restore-epoch test where an offline client's old tail returns. Assert the selected version remains current and old edits enter recovery.
-- [ ] Run `npx vitest run src/test/workspace/collaboration.test.ts`; add and run a proposed root `test:collaboration` npm script for the real Node-service tests. No spike is accepted on a mocked Yjs merge.
+- [x] Resolve current compatible Tiptap/Yjs/Hocuspocus versions from official docs and package manifests, pin exact versions, inspect licenses, and verify React 18/Node 22 compatibility. Record rejected alternatives and extension licensing.
+- [x] Write a two-client actual-Y.Doc test that edits the same paragraph, changes list formatting, inserts a link, disconnects, reconnects, and checks identical structured results. Write a local undo test proving a teammate's text survives.
+- [x] Add a gateway test that forces database append failure, duplicates an update, and kills the process before and after durable ack. Assert no Saved acknowledgement before commit and no acknowledged loss after restart.
+- [x] Prove the full update interception path, including sync handshake. Record hook order from the selected version and ensure rejected mutations never appear to other clients.
+- [x] Add a restore-epoch test where an offline client's old tail returns. Assert the selected version remains current and old edits enter recovery.
+- [x] Run `npx vitest run src/test/workspace/collaboration.test.ts`; add and run a proposed root `test:collaboration` npm script for the real Node-service tests. No spike is accepted on a mocked Yjs merge.
 
 **P0.2 Suggestions and import/export fidelity spike.** Proposed new paths: `src/test/workspace/review.test.ts`, `src/test/workspace/document-conversion.test.ts`, and small fixture files under `src/test/workspace/fixtures/` during implementation.
 
