@@ -106,7 +106,8 @@ export function AppLayout() {
         Date.now(),
       ));
     } catch (error) {
-      if (!controller.signal.aborted && activeUserIdRef.current === userId) {
+      if (!controller.signal.aborted && activeUserIdRef.current === userId && activeRequestRef.current === controller) {
+        lastRequestAtRef.current = null;
         console.warn('[Announcements] Unable to load', error instanceof Error ? error.message : 'Unknown error');
         setAnnouncements([]);
       }

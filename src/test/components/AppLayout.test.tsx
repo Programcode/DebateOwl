@@ -81,6 +81,24 @@ describe('AppLayout announcements', () => {
     expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
   });
 
+  it('retries announcements on navigation after an active load failure', async () => {
+    const recoveredAnnouncement = { ...announcement, title: 'Recovered announcement' };
+    mockListActiveAnnouncements
+      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockResolvedValueOnce([recoveredAnnouncement]);
+
+    renderLayout();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+
+    expect(await screen.findByText('Recovered announcement')).toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps a dismissed announcement absent across sibling routes', async () => {
     renderLayout();
 
