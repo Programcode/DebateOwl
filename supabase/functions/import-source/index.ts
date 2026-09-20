@@ -49,6 +49,7 @@ async function consumeDailyImportQuota(userId: string): Promise<{ allowed: boole
   const { data, error } = await supabase.rpc("consume_daily_quota", {
     p_user_id: userId,
     p_limit: DAILY_IMPORT_LIMIT,
+    p_quota_key: "import_source",
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
@@ -238,7 +239,7 @@ function normalizeText(text: string) {
     .slice(0, MAX_CONTENT_CHARS);
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   if (req.method === "OPTIONS") {
@@ -331,4 +332,8 @@ Deno.serve(async (req) => {
     await logImport(user.id, "error", "exception", Date.now() - startedAt);
     return jsonResponse({ error: message }, 400, corsHeaders);
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}
