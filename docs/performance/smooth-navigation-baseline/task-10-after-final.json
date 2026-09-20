@@ -1,9 +1,9 @@
 {
   "metadata": {
     "runLabel": "task-10-after-final",
-    "capturedAt": "2026-09-20T13:05:51.279Z",
+    "capturedAt": "2026-09-20T13:36:35.009Z",
     "sourceCommit": "b2ba178dee148d06d9bf89793f044add69d705b8",
-    "harnessCommit": "2e4076702bf769d3486863bc127c6add06558b69",
+    "harnessCommit": "30b13675fc5104f3a8c2862a832a678fba2c2ede",
     "nodeVersion": "v22.23.2",
     "npmVersion": "12.0.2",
     "browser": {
@@ -16,7 +16,7 @@
       "serverMode": "development",
       "productionGraphMode": "production",
       "version": "7.3.6",
-      "port": 42399,
+      "port": 41919,
       "cacheState": "cold routes disable HTTP cache through CDP and block service workers; clicks use a fresh or warmed browser cache"
     },
     "profiles": [
@@ -67,29 +67,29 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 2948.2999999523163,
+      "firstRealContentFrameMs": 2862.7999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/LandingPage.tsx",
-          "startTime": 2632,
-          "endTime": 2654.0999999046326,
-          "duration": 22.09999990463257,
+          "url": "http://127.0.0.1:41919/src/pages/LandingPage.tsx",
+          "startTime": 2601.2000000476837,
+          "endTime": 2621.2000000476837,
+          "duration": 20,
           "transferSize": 7643,
           "decodedBodySize": 7343
         }
       ],
       "longTasks": [
         {
-          "startTime": 2470.7000000476837,
-          "duration": 125
+          "startTime": 2467.600000143051,
+          "duration": 111
         },
         {
-          "startTime": 2849.899999856949,
-          "duration": 94
+          "startTime": 2785,
+          "duration": 74
         },
         {
-          "startTime": 3014.399999856949,
-          "duration": 61
+          "startTime": 2924.4000000953674,
+          "duration": 74
         }
       ],
       "cls": 0,
@@ -97,14 +97,14 @@
       "requestCount": 133,
       "browserRequestCount": 143,
       "externalRequestCount": 10,
-      "transferredBytes": 7270431,
-      "encodedBytes": 7230531,
-      "decodedBytes": 7230531,
+      "transferredBytes": 7272949,
+      "encodedBytes": 7233049,
+      "decodedBytes": 7233049,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 2593.5,
-        "loadEventEnd": 2650.899999856949,
-        "responseEnd": 1761.8999998569489
+        "domContentLoaded": 2577,
+        "loadEventEnd": 2619,
+        "responseEnd": 1764.6000001430511
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -118,21 +118,21 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 626.9000000953674,
+      "firstRealContentFrameMs": 613,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/LoginPage.tsx",
-          "startTime": 544.8000001907349,
-          "endTime": 570.5,
-          "duration": 25.699999809265137,
+          "url": "http://127.0.0.1:41919/src/pages/LoginPage.tsx",
+          "startTime": 509.90000009536743,
+          "endTime": 541.7999999523163,
+          "duration": 31.899999856948853,
           "transferSize": 63754,
           "decodedBodySize": 63454
         }
       ],
       "longTasks": [
         {
-          "startTime": 372.80000019073486,
-          "duration": 141
+          "startTime": 344.5,
+          "duration": 130
         }
       ],
       "cls": 0,
@@ -140,14 +140,14 @@
       "requestCount": 121,
       "browserRequestCount": 131,
       "externalRequestCount": 10,
-      "transferredBytes": 6746359,
-      "encodedBytes": 6710059,
-      "decodedBytes": 6710059,
+      "transferredBytes": 6748877,
+      "encodedBytes": 6712577,
+      "decodedBytes": 6712577,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 512.7000000476837,
-        "loadEventEnd": 565.9000000953674,
-        "responseEnd": 22.100000143051147
+        "domContentLoaded": 472.90000009536743,
+        "loadEventEnd": 531.9000000953674,
+        "responseEnd": 18
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -161,21 +161,21 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 693.8999998569489,
+      "firstRealContentFrameMs": 683.0999999046326,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/HomePage.tsx",
-          "startTime": 560.0999999046326,
-          "endTime": 581.7000000476837,
-          "duration": 21.600000143051147,
+          "url": "http://127.0.0.1:41919/src/pages/HomePage.tsx",
+          "startTime": 555.0999999046326,
+          "endTime": 577.3999998569489,
+          "duration": 22.299999952316284,
           "transferSize": 26673,
           "decodedBodySize": 26373
         }
       ],
       "longTasks": [
         {
-          "startTime": 347.2999999523163,
-          "duration": 132
+          "startTime": 355.59999990463257,
+          "duration": 123
         }
       ],
       "cls": 0,
@@ -183,14 +183,14 @@
       "requestCount": 119,
       "browserRequestCount": 140,
       "externalRequestCount": 21,
-      "transferredBytes": 6956110,
-      "encodedBytes": 6920410,
-      "decodedBytes": 6920410,
+      "transferredBytes": 6958628,
+      "encodedBytes": 6922928,
+      "decodedBytes": 6922928,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 477.59999990463257,
-        "loadEventEnd": 623,
-        "responseEnd": 16.399999856948853
+        "domContentLoaded": 477.09999990463257,
+        "loadEventEnd": 616,
+        "responseEnd": 16.299999952316284
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -204,45 +204,45 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 956.5,
+      "firstRealContentFrameMs": 959.8000001907349,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/GeneratePage.tsx",
-          "startTime": 536,
-          "endTime": 565.4000000953674,
-          "duration": 29.40000009536743,
+          "url": "http://127.0.0.1:41919/src/pages/GeneratePage.tsx",
+          "startTime": 550.4000000953674,
+          "endTime": 578.5,
+          "duration": 28.09999990463257,
           "transferSize": 78506,
           "decodedBodySize": 78206
         }
       ],
       "longTasks": [
         {
-          "startTime": 332.7000000476837,
-          "duration": 127
+          "startTime": 331.90000009536743,
+          "duration": 132
         },
         {
-          "startTime": 878.2999999523163,
-          "duration": 76
+          "startTime": 878.8000001907349,
+          "duration": 80
         }
       ],
       "cls": 0.0028984375,
       "layoutShifts": [
         {
-          "startTime": 984.7999999523163,
+          "startTime": 989.6000001430511,
           "value": 0.0028984375
         }
       ],
       "requestCount": 162,
       "browserRequestCount": 184,
       "externalRequestCount": 22,
-      "transferredBytes": 8582263,
-      "encodedBytes": 8533663,
-      "decodedBytes": 8533663,
+      "transferredBytes": 8584781,
+      "encodedBytes": 8536181,
+      "decodedBytes": 8536181,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 458.7000000476837,
-        "loadEventEnd": 616.6000001430511,
-        "responseEnd": 16.299999952316284
+        "domContentLoaded": 461.60000014305115,
+        "loadEventEnd": 516,
+        "responseEnd": 15.300000190734863
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -256,45 +256,45 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 875.0999999046326,
+      "firstRealContentFrameMs": 893.7000000476837,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/AttackPage.tsx",
-          "startTime": 550.4000000953674,
-          "endTime": 579.4000000953674,
-          "duration": 29,
+          "url": "http://127.0.0.1:41919/src/pages/AttackPage.tsx",
+          "startTime": 509.7999999523163,
+          "endTime": 533.2000000476837,
+          "duration": 23.40000009536743,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
       "longTasks": [
         {
-          "startTime": 331.2999999523163,
-          "duration": 134
+          "startTime": 291,
+          "duration": 130
         },
         {
-          "startTime": 786.7000000476837,
-          "duration": 82
+          "startTime": 785.5,
+          "duration": 102
         }
       ],
       "cls": 0.01097265625,
       "layoutShifts": [
         {
-          "startTime": 874.7999999523163,
+          "startTime": 893.4000000953674,
           "value": 0.01097265625
         }
       ],
       "requestCount": 163,
       "browserRequestCount": 185,
       "externalRequestCount": 22,
-      "transferredBytes": 8178240,
-      "encodedBytes": 8129340,
-      "decodedBytes": 8129340,
+      "transferredBytes": 8180758,
+      "encodedBytes": 8131858,
+      "decodedBytes": 8131858,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 464.09999990463257,
-        "loadEventEnd": 609.5999999046326,
-        "responseEnd": 12.700000047683716
+        "domContentLoaded": 419.10000014305115,
+        "loadEventEnd": 477.7999999523163,
+        "responseEnd": 11.600000143051147
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -308,25 +308,29 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 770.7999999523163,
+      "firstRealContentFrameMs": 837.2000000476837,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/FlowchartPage.tsx",
-          "startTime": 515,
-          "endTime": 550.5,
-          "duration": 35.5,
+          "url": "http://127.0.0.1:41919/src/pages/FlowchartPage.tsx",
+          "startTime": 596.9000000953674,
+          "endTime": 631.6000001430511,
+          "duration": 34.700000047683716,
           "transferSize": 205577,
           "decodedBodySize": 205277
         }
       ],
       "longTasks": [
         {
-          "startTime": 300.60000014305115,
-          "duration": 135
+          "startTime": 353,
+          "duration": 147
         },
         {
-          "startTime": 709.5,
-          "duration": 54
+          "startTime": 502,
+          "duration": 52
+        },
+        {
+          "startTime": 778.2000000476837,
+          "duration": 52
         }
       ],
       "cls": 0,
@@ -334,14 +338,14 @@
       "requestCount": 129,
       "browserRequestCount": 150,
       "externalRequestCount": 21,
-      "transferredBytes": 7728473,
-      "encodedBytes": 7689773,
-      "decodedBytes": 7689773,
+      "transferredBytes": 7730991,
+      "encodedBytes": 7692291,
+      "decodedBytes": 7692291,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 434.40000009536743,
-        "loadEventEnd": 580.2000000476837,
-        "responseEnd": 12.600000143051147
+        "domContentLoaded": 498.2000000476837,
+        "loadEventEnd": 661.9000000953674,
+        "responseEnd": 14.900000095367432
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -355,41 +359,41 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 753.1999998092651,
+      "firstRealContentFrameMs": 796.9000000953674,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/HistoryPage.tsx",
-          "startTime": 541,
-          "endTime": 574.3999998569489,
-          "duration": 33.39999985694885,
+          "url": "http://127.0.0.1:41919/src/pages/HistoryPage.tsx",
+          "startTime": 597.9000000953674,
+          "endTime": 631.8000001907349,
+          "duration": 33.90000009536743,
           "transferSize": 143448,
           "decodedBodySize": 143148
         }
       ],
       "longTasks": [
         {
-          "startTime": 300.89999985694885,
-          "duration": 149
+          "startTime": 366.30000019073486,
+          "duration": 138
         }
       ],
       "cls": 0.010455078125,
       "layoutShifts": [
         {
-          "startTime": 748.8999998569489,
+          "startTime": 791.8000001907349,
           "value": 0.010455078125
         }
       ],
       "requestCount": 128,
       "browserRequestCount": 149,
       "externalRequestCount": 21,
-      "transferredBytes": 7186455,
-      "encodedBytes": 7148055,
-      "decodedBytes": 7148055,
+      "transferredBytes": 7188973,
+      "encodedBytes": 7150573,
+      "decodedBytes": 7150573,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 448.09999990463257,
-        "loadEventEnd": 624,
-        "responseEnd": 12.799999952316284
+        "domContentLoaded": 503.2000000476837,
+        "loadEventEnd": 669.2000000476837,
+        "responseEnd": 13.100000143051147
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -403,29 +407,25 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 877.2000000476837,
+      "firstRealContentFrameMs": 929.2999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/AdminPage.tsx",
-          "startTime": 570.2000000476837,
-          "endTime": 622.6000001430511,
-          "duration": 52.40000009536743,
+          "url": "http://127.0.0.1:41919/src/pages/AdminPage.tsx",
+          "startTime": 630.7999999523163,
+          "endTime": 685,
+          "duration": 54.200000047683716,
           "transferSize": 394470,
           "decodedBodySize": 394170
         }
       ],
       "longTasks": [
         {
-          "startTime": 328.40000009536743,
-          "duration": 143
+          "startTime": 387.09999990463257,
+          "duration": 151
         },
         {
-          "startTime": 473.7999999523163,
-          "duration": 50
-        },
-        {
-          "startTime": 755.7000000476837,
-          "duration": 77
+          "startTime": 810.5999999046326,
+          "duration": 74
         }
       ],
       "cls": 0,
@@ -433,14 +433,14 @@
       "requestCount": 135,
       "browserRequestCount": 161,
       "externalRequestCount": 26,
-      "transferredBytes": 8826633,
-      "encodedBytes": 8786133,
-      "decodedBytes": 8786133,
+      "transferredBytes": 8829151,
+      "encodedBytes": 8788651,
+      "decodedBytes": 8788651,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 470,
-        "loadEventEnd": 648.1000001430511,
-        "responseEnd": 13
+        "domContentLoaded": 536.0999999046326,
+        "loadEventEnd": 702.2999999523163,
+        "responseEnd": 15.299999952316284
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -451,10 +451,10 @@
     },
     {
       "path": "/app",
-      "clickTime": 1531.5,
-      "measurementBoundary": 1531.5,
+      "clickTime": 1474,
+      "measurementBoundary": 1474,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 162.20000004768372,
+      "firstRealContentFrameMs": 120.39999985694885,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -471,9 +471,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 519.2000000476837,
-        "loadEventEnd": 584.9000000953674,
-        "responseEnd": 20.800000190734863
+        "domContentLoaded": 436.5,
+        "loadEventEnd": 499.5,
+        "responseEnd": 12.899999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "first-visit-click",
@@ -484,29 +484,29 @@
     },
     {
       "path": "/app",
-      "clickTime": 3126.2999999523163,
-      "measurementBoundary": 3126.2999999523163,
+      "clickTime": 3528.5,
+      "measurementBoundary": 3528.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 46.80000019073486,
+      "firstRealContentFrameMs": 43.700000047683716,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
       "requestCount": 0,
-      "browserRequestCount": 1,
-      "externalRequestCount": 1,
+      "browserRequestCount": 10,
+      "externalRequestCount": 10,
       "transferredBytes": 0,
       "encodedBytes": 0,
       "decodedBytes": 0,
       "sourceWorkExcluded": {
         "requestCount": 135,
-        "longTaskCount": 4,
+        "longTaskCount": 5,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 478.40000009536743,
-        "loadEventEnd": 541.2999999523163,
-        "responseEnd": 13.200000047683716
+        "domContentLoaded": 455.40000009536743,
+        "loadEventEnd": 521.2000000476837,
+        "responseEnd": 12.800000190734863
       },
       "shellDomIdentitySurvived": null,
       "kind": "warm-click",
@@ -517,9 +517,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/HomePage.tsx",
-          "startTime": 1622.7000000476837,
-          "responseEnd": 1641.7000000476837,
+          "url": "http://127.0.0.1:41919/src/pages/HomePage.tsx",
+          "startTime": 2038.7000000476837,
+          "responseEnd": 2046.7000000476837,
           "transferSize": 26673,
           "encodedBodySize": 26373,
           "decodedBodySize": 26373
@@ -530,15 +530,15 @@
     },
     {
       "path": "/app/generate",
-      "clickTime": 834.5,
-      "measurementBoundary": 834.5,
+      "clickTime": 945.0999999046326,
+      "measurementBoundary": 945.0999999046326,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 375.5,
+      "firstRealContentFrameMs": 333.7000000476837,
       "routeChunkRequests": [],
       "longTasks": [
         {
-          "startTime": 1114,
-          "duration": 74
+          "startTime": 1180.5999999046326,
+          "duration": 75
         }
       ],
       "cls": 0,
@@ -551,13 +551,13 @@
       "decodedBytes": 1561420,
       "sourceWorkExcluded": {
         "requestCount": 120,
-        "longTaskCount": 2,
+        "longTaskCount": 1,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 488.7999999523163,
-        "loadEventEnd": 552.3999998569489,
-        "responseEnd": 13.599999904632568
+        "domContentLoaded": 650.2999999523163,
+        "loadEventEnd": 705.5,
+        "responseEnd": 12
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -568,10 +568,10 @@
     },
     {
       "path": "/app/generate",
-      "clickTime": 1459,
-      "measurementBoundary": 1459,
+      "clickTime": 1402.0999999046326,
+      "measurementBoundary": 1402.0999999046326,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 97.70000004768372,
+      "firstRealContentFrameMs": 74.90000009536743,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -588,9 +588,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 480.2000000476837,
-        "loadEventEnd": 641,
-        "responseEnd": 14.599999904632568
+        "domContentLoaded": 442.7000000476837,
+        "loadEventEnd": 587.5999999046326,
+        "responseEnd": 12.5
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -601,9 +601,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/GeneratePage.tsx",
-          "startTime": 793.9000000953674,
-          "responseEnd": 802,
+          "url": "http://127.0.0.1:41919/src/pages/GeneratePage.tsx",
+          "startTime": 733,
+          "responseEnd": 742.5999999046326,
           "transferSize": 78506,
           "encodedBodySize": 78206,
           "decodedBodySize": 78206
@@ -614,10 +614,10 @@
     },
     {
       "path": "/app/attack",
-      "clickTime": 1091.1000001430511,
-      "measurementBoundary": 1091.1000001430511,
+      "clickTime": 1017.5,
+      "measurementBoundary": 1017.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 152.29999995231628,
+      "firstRealContentFrameMs": 163.90000009536743,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -634,9 +634,9 @@
         "layoutShiftCount": 1
       },
       "navigationTiming": {
-        "domContentLoaded": 438.60000014305115,
-        "loadEventEnd": 583.9000000953674,
-        "responseEnd": 16.5
+        "domContentLoaded": 417.7000000476837,
+        "loadEventEnd": 555.9000000953674,
+        "responseEnd": 11.800000190734863
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -647,10 +647,10 @@
     },
     {
       "path": "/app/attack",
-      "clickTime": 1790.7999999523163,
-      "measurementBoundary": 1790.7999999523163,
+      "clickTime": 1777.0999999046326,
+      "measurementBoundary": 1777.0999999046326,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 98,
+      "firstRealContentFrameMs": 65.70000004768372,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -663,13 +663,13 @@
       "decodedBytes": 0,
       "sourceWorkExcluded": {
         "requestCount": 170,
-        "longTaskCount": 5,
+        "longTaskCount": 4,
         "layoutShiftCount": 1
       },
       "navigationTiming": {
-        "domContentLoaded": 437.59999990463257,
-        "loadEventEnd": 507,
-        "responseEnd": 15.399999856948853
+        "domContentLoaded": 472,
+        "loadEventEnd": 615.3999998569489,
+        "responseEnd": 11.399999856948853
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -680,9 +680,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/AttackPage.tsx",
-          "startTime": 1062.7000000476837,
-          "responseEnd": 1075.2999999523163,
+          "url": "http://127.0.0.1:41919/src/pages/AttackPage.tsx",
+          "startTime": 1043.3999998569489,
+          "responseEnd": 1052.1999998092651,
           "transferSize": 33746,
           "encodedBodySize": 33446,
           "decodedBodySize": 33446
@@ -693,15 +693,15 @@
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 811.1000001430511,
-      "measurementBoundary": 811.1000001430511,
+      "clickTime": 772.4000000953674,
+      "measurementBoundary": 772.4000000953674,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 202.09999990463257,
+      "firstRealContentFrameMs": 188.70000004768372,
       "routeChunkRequests": [],
       "longTasks": [
         {
-          "startTime": 953,
-          "duration": 53
+          "startTime": 891.9000000953674,
+          "duration": 60
         }
       ],
       "cls": 0,
@@ -718,9 +718,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 453.5,
-        "loadEventEnd": 620.7000000476837,
-        "responseEnd": 19.100000143051147
+        "domContentLoaded": 464.10000014305115,
+        "loadEventEnd": 538.5,
+        "responseEnd": 13.200000047683716
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -731,10 +731,10 @@
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 1294.5,
-      "measurementBoundary": 1294.5,
+      "clickTime": 1151.2999999523163,
+      "measurementBoundary": 1151.2999999523163,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 52.200000047683716,
+      "firstRealContentFrameMs": 56.59999990463257,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -751,9 +751,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 456.09999990463257,
-        "loadEventEnd": 511.7000000476837,
-        "responseEnd": 13.799999952316284
+        "domContentLoaded": 409.2000000476837,
+        "loadEventEnd": 458.09999990463257,
+        "responseEnd": 10.5
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -764,9 +764,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/FlowchartPage.tsx",
-          "startTime": 778.5999999046326,
-          "responseEnd": 789.2000000476837,
+          "url": "http://127.0.0.1:41919/src/pages/FlowchartPage.tsx",
+          "startTime": 661.5,
+          "responseEnd": 671.3999998569489,
           "transferSize": 205577,
           "encodedBodySize": 205277,
           "decodedBodySize": 205277
@@ -777,10 +777,10 @@
     },
     {
       "path": "/app/history",
-      "clickTime": 692.5,
-      "measurementBoundary": 692.5,
+      "clickTime": 686.5,
+      "measurementBoundary": 686.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 118.89999985694885,
+      "firstRealContentFrameMs": 141.29999995231628,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -797,9 +797,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 421.09999990463257,
-        "loadEventEnd": 468.39999985694885,
-        "responseEnd": 12.599999904632568
+        "domContentLoaded": 404.89999985694885,
+        "loadEventEnd": 550.0999999046326,
+        "responseEnd": 10.699999809265137
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -810,10 +810,10 @@
     },
     {
       "path": "/app/history",
-      "clickTime": 1218.7999999523163,
-      "measurementBoundary": 1218.7999999523163,
+      "clickTime": 1174.5,
+      "measurementBoundary": 1174.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 26.59999990463257,
+      "firstRealContentFrameMs": 28,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -830,9 +830,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 454.69999980926514,
-        "loadEventEnd": 602.8999998569489,
-        "responseEnd": 13.299999952316284
+        "domContentLoaded": 414.10000014305115,
+        "loadEventEnd": 566,
+        "responseEnd": 11.299999952316284
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -843,9 +843,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/HistoryPage.tsx",
-          "startTime": 755.5999999046326,
-          "responseEnd": 765.7999999523163,
+          "url": "http://127.0.0.1:41919/src/pages/HistoryPage.tsx",
+          "startTime": 725.4000000953674,
+          "responseEnd": 735.4000000953674,
           "transferSize": 143448,
           "encodedBodySize": 143148,
           "decodedBodySize": 143148
@@ -859,33 +859,25 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 780,
+      "firstRealContentFrameMs": 776,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/LandingPage.tsx",
-          "startTime": 537.7999999523163,
-          "endTime": 555.8999998569489,
-          "duration": 18.09999990463257,
+          "url": "http://127.0.0.1:41919/src/pages/LandingPage.tsx",
+          "startTime": 498.7000000476837,
+          "endTime": 515.5,
+          "duration": 16.799999952316284,
           "transferSize": 7643,
           "decodedBodySize": 7343
         }
       ],
       "longTasks": [
         {
-          "startTime": 339.39999985694885,
-          "duration": 153
+          "startTime": 327.5,
+          "duration": 134
         },
         {
-          "startTime": 495.2999999523163,
-          "duration": 55
-        },
-        {
-          "startTime": 713.3999998569489,
-          "duration": 63
-        },
-        {
-          "startTime": 779.3999998569489,
-          "duration": 50
+          "startTime": 686.2000000476837,
+          "duration": 86
         }
       ],
       "cls": 0,
@@ -893,14 +885,14 @@
       "requestCount": 133,
       "browserRequestCount": 143,
       "externalRequestCount": 10,
-      "transferredBytes": 7270431,
-      "encodedBytes": 7230531,
-      "decodedBytes": 7230531,
+      "transferredBytes": 7272949,
+      "encodedBytes": 7233049,
+      "decodedBytes": 7233049,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 489.7999999523163,
-        "loadEventEnd": 559.3999998569489,
-        "responseEnd": 11.099999904632568
+        "domContentLoaded": 459.5,
+        "loadEventEnd": 517.7999999523163,
+        "responseEnd": 12
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -914,21 +906,25 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 972.3000001907349,
+      "firstRealContentFrameMs": 597.5,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/LoginPage.tsx",
-          "startTime": 841.8000001907349,
-          "endTime": 864.4000000953674,
-          "duration": 22.59999990463257,
+          "url": "http://127.0.0.1:41919/src/pages/LoginPage.tsx",
+          "startTime": 515.1000001430511,
+          "endTime": 535.5,
+          "duration": 20.399999856948853,
           "transferSize": 63754,
           "decodedBodySize": 63454
         }
       ],
       "longTasks": [
         {
-          "startTime": 640.3000001907349,
-          "duration": 164
+          "startTime": 331.2000000476837,
+          "duration": 143
+        },
+        {
+          "startTime": 476,
+          "duration": 55
         }
       ],
       "cls": 0,
@@ -936,14 +932,14 @@
       "requestCount": 121,
       "browserRequestCount": 131,
       "externalRequestCount": 10,
-      "transferredBytes": 6746359,
-      "encodedBytes": 6710059,
-      "decodedBytes": 6710059,
+      "transferredBytes": 6748877,
+      "encodedBytes": 6712577,
+      "decodedBytes": 6712577,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 802.7000000476837,
-        "loadEventEnd": 870.2000000476837,
-        "responseEnd": 22
+        "domContentLoaded": 471.90000009536743,
+        "loadEventEnd": 534.2000000476837,
+        "responseEnd": 13.300000190734863
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -957,21 +953,25 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 829.2999999523163,
+      "firstRealContentFrameMs": 779.7999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/HomePage.tsx",
-          "startTime": 734.3999998569489,
-          "endTime": 749.2999999523163,
-          "duration": 14.900000095367432,
+          "url": "http://127.0.0.1:41919/src/pages/HomePage.tsx",
+          "startTime": 631.5,
+          "endTime": 670.5999999046326,
+          "duration": 39.09999990463257,
           "transferSize": 26673,
           "decodedBodySize": 26373
         }
       ],
       "longTasks": [
         {
-          "startTime": 514.5999999046326,
-          "duration": 134
+          "startTime": 400.19999980926514,
+          "duration": 142
+        },
+        {
+          "startTime": 597.5,
+          "duration": 58
         }
       ],
       "cls": 0,
@@ -979,14 +979,14 @@
       "requestCount": 119,
       "browserRequestCount": 140,
       "externalRequestCount": 21,
-      "transferredBytes": 6956110,
-      "encodedBytes": 6920410,
-      "decodedBytes": 6920410,
+      "transferredBytes": 6958628,
+      "encodedBytes": 6922928,
+      "decodedBytes": 6922928,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 646.6999998092651,
-        "loadEventEnd": 781.5999999046326,
-        "responseEnd": 16.299999952316284
+        "domContentLoaded": 540.5999999046326,
+        "loadEventEnd": 724.6999998092651,
+        "responseEnd": 15.399999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1000,29 +1000,25 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 1015.5,
+      "firstRealContentFrameMs": 955.5999999046326,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/GeneratePage.tsx",
-          "startTime": 641.0999999046326,
-          "endTime": 659.9000000953674,
-          "duration": 18.800000190734863,
+          "url": "http://127.0.0.1:41919/src/pages/GeneratePage.tsx",
+          "startTime": 580.0999999046326,
+          "endTime": 598.3999998569489,
+          "duration": 18.299999952316284,
           "transferSize": 78506,
           "decodedBodySize": 78206
         }
       ],
       "longTasks": [
         {
-          "startTime": 377.09999990463257,
-          "duration": 169
+          "startTime": 349.09999990463257,
+          "duration": 141
         },
         {
-          "startTime": 549.0999999046326,
-          "duration": 51
-        },
-        {
-          "startTime": 917.9000000953674,
-          "duration": 97
+          "startTime": 881.2999999523163,
+          "duration": 73
         }
       ],
       "cls": 0,
@@ -1030,14 +1026,14 @@
       "requestCount": 162,
       "browserRequestCount": 184,
       "externalRequestCount": 22,
-      "transferredBytes": 8582263,
-      "encodedBytes": 8533663,
-      "decodedBytes": 8533663,
+      "transferredBytes": 8584781,
+      "encodedBytes": 8536181,
+      "decodedBytes": 8536181,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 543.5999999046326,
-        "loadEventEnd": 605.7999999523163,
-        "responseEnd": 11
+        "domContentLoaded": 488.89999985694885,
+        "loadEventEnd": 640.3999998569489,
+        "responseEnd": 13
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1051,29 +1047,25 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 864.5,
+      "firstRealContentFrameMs": 883.2999999523163,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/AttackPage.tsx",
-          "startTime": 548.7000000476837,
-          "endTime": 563.0999999046326,
-          "duration": 14.399999856948853,
+          "url": "http://127.0.0.1:41919/src/pages/AttackPage.tsx",
+          "startTime": 524.8999998569489,
+          "endTime": 539.0999999046326,
+          "duration": 14.200000047683716,
           "transferSize": 33746,
           "decodedBodySize": 33446
         }
       ],
       "longTasks": [
         {
-          "startTime": 306.7999999523163,
-          "duration": 141
+          "startTime": 316.69999980926514,
+          "duration": 123
         },
         {
-          "startTime": 505.59999990463257,
-          "duration": 51
-        },
-        {
-          "startTime": 783.2000000476837,
-          "duration": 76
+          "startTime": 808,
+          "duration": 71
         }
       ],
       "cls": 0,
@@ -1081,14 +1073,14 @@
       "requestCount": 163,
       "browserRequestCount": 185,
       "externalRequestCount": 22,
-      "transferredBytes": 8178240,
-      "encodedBytes": 8129340,
-      "decodedBytes": 8129340,
+      "transferredBytes": 8180758,
+      "encodedBytes": 8131858,
+      "decodedBytes": 8131858,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 446.2999999523163,
-        "loadEventEnd": 604.5,
-        "responseEnd": 9.899999856948853
+        "domContentLoaded": 438.39999985694885,
+        "loadEventEnd": 582.5999999046326,
+        "responseEnd": 12.099999904632568
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1102,25 +1094,21 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 703,
+      "firstRealContentFrameMs": 773.3999998569489,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/FlowchartPage.tsx",
-          "startTime": 480.5,
-          "endTime": 496.40000009536743,
-          "duration": 15.900000095367432,
+          "url": "http://127.0.0.1:41919/src/pages/FlowchartPage.tsx",
+          "startTime": 544.2999999523163,
+          "endTime": 563.5999999046326,
+          "duration": 19.299999952316284,
           "transferSize": 205577,
           "decodedBodySize": 205277
         }
       ],
       "longTasks": [
         {
-          "startTime": 268,
-          "duration": 140
-        },
-        {
-          "startTime": 645.7000000476837,
-          "duration": 50
+          "startTime": 303.7999999523163,
+          "duration": 149
         }
       ],
       "cls": 0,
@@ -1128,14 +1116,14 @@
       "requestCount": 129,
       "browserRequestCount": 150,
       "externalRequestCount": 21,
-      "transferredBytes": 7728473,
-      "encodedBytes": 7689773,
-      "decodedBytes": 7689773,
+      "transferredBytes": 7730991,
+      "encodedBytes": 7692291,
+      "decodedBytes": 7692291,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 406.5,
-        "loadEventEnd": 543.6000001430511,
-        "responseEnd": 9.700000047683716
+        "domContentLoaded": 450.7000000476837,
+        "loadEventEnd": 599.8999998569489,
+        "responseEnd": 12.399999856948853
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1149,45 +1137,41 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 713.5,
+      "firstRealContentFrameMs": 767.3999998569489,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/HistoryPage.tsx",
-          "startTime": 548.1000001430511,
-          "endTime": 569.2000000476837,
-          "duration": 21.09999990463257,
+          "url": "http://127.0.0.1:41919/src/pages/HistoryPage.tsx",
+          "startTime": 616.7000000476837,
+          "endTime": 634.7000000476837,
+          "duration": 18,
           "transferSize": 143448,
           "decodedBodySize": 143148
         }
       ],
       "longTasks": [
         {
-          "startTime": 315.5,
-          "duration": 136
-        },
-        {
-          "startTime": 454.10000014305115,
-          "duration": 54
+          "startTime": 378.7000000476837,
+          "duration": 150
         }
       ],
       "cls": 0.04643643016750263,
       "layoutShifts": [
         {
-          "startTime": 718.1000001430511,
+          "startTime": 771.3999998569489,
           "value": 0.04643643016750263
         }
       ],
       "requestCount": 128,
       "browserRequestCount": 149,
       "externalRequestCount": 21,
-      "transferredBytes": 7186455,
-      "encodedBytes": 7148055,
-      "decodedBytes": 7148055,
+      "transferredBytes": 7188973,
+      "encodedBytes": 7150573,
+      "decodedBytes": 7150573,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 449.5,
-        "loadEventEnd": 515.1000001430511,
-        "responseEnd": 11.400000095367432
+        "domContentLoaded": 527.0999999046326,
+        "loadEventEnd": 585.5999999046326,
+        "responseEnd": 13.599999904632568
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1201,45 +1185,45 @@
       "clickTime": null,
       "measurementBoundary": null,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 839.2000000476837,
+      "firstRealContentFrameMs": 794,
       "routeChunkRequests": [
         {
-          "url": "http://127.0.0.1:42399/src/pages/AdminPage.tsx",
-          "startTime": 542.2000000476837,
-          "endTime": 568.5999999046326,
-          "duration": 26.399999856948853,
+          "url": "http://127.0.0.1:41919/src/pages/AdminPage.tsx",
+          "startTime": 531.3999998569489,
+          "endTime": 555.7999999523163,
+          "duration": 24.40000009536743,
           "transferSize": 394470,
           "decodedBodySize": 394170
         }
       ],
       "longTasks": [
         {
-          "startTime": 314,
-          "duration": 146
+          "startTime": 322.19999980926514,
+          "duration": 131
         },
         {
-          "startTime": 704.7000000476837,
-          "duration": 86
+          "startTime": 685.7999999523163,
+          "duration": 70
         }
       ],
       "cls": 0.08245148326771094,
       "layoutShifts": [
         {
-          "startTime": 806.7000000476837,
+          "startTime": 770.7999999523163,
           "value": 0.08245148326771094
         }
       ],
       "requestCount": 135,
       "browserRequestCount": 161,
       "externalRequestCount": 26,
-      "transferredBytes": 8826633,
-      "encodedBytes": 8786133,
-      "decodedBytes": 8786133,
+      "transferredBytes": 8829151,
+      "encodedBytes": 8788651,
+      "decodedBytes": 8788651,
       "sourceWorkExcluded": null,
       "navigationTiming": {
-        "domContentLoaded": 458.39999985694885,
-        "loadEventEnd": 511.59999990463257,
-        "responseEnd": 14.200000047683716
+        "domContentLoaded": 451.69999980926514,
+        "loadEventEnd": 586.0999999046326,
+        "responseEnd": 10.699999809265137
       },
       "shellDomIdentitySurvived": null,
       "kind": "cold-refresh",
@@ -1250,10 +1234,10 @@
     },
     {
       "path": "/app",
-      "clickTime": 891.1000001430511,
-      "measurementBoundary": 891.1000001430511,
+      "clickTime": 939.7000000476837,
+      "measurementBoundary": 939.7000000476837,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 63.39999985694885,
+      "firstRealContentFrameMs": 80.59999990463257,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -1270,9 +1254,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 463.10000014305115,
-        "loadEventEnd": 528,
-        "responseEnd": 15.5
+        "domContentLoaded": 444.2999999523163,
+        "loadEventEnd": 514.5,
+        "responseEnd": 12.299999952316284
       },
       "shellDomIdentitySurvived": null,
       "kind": "first-visit-click",
@@ -1283,29 +1267,29 @@
     },
     {
       "path": "/app",
-      "clickTime": 1295.7999999523163,
-      "measurementBoundary": 1295.7999999523163,
+      "clickTime": 1336.7000000476837,
+      "measurementBoundary": 1336.7000000476837,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 29.799999952316284,
+      "firstRealContentFrameMs": 46.700000047683716,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
       "requestCount": 0,
-      "browserRequestCount": 1,
-      "externalRequestCount": 1,
+      "browserRequestCount": 10,
+      "externalRequestCount": 10,
       "transferredBytes": 0,
       "encodedBytes": 0,
       "decodedBytes": 0,
       "sourceWorkExcluded": {
         "requestCount": 146,
-        "longTaskCount": 3,
+        "longTaskCount": 4,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 466.59999990463257,
-        "loadEventEnd": 523.7999999523163,
-        "responseEnd": 10.299999952316284
+        "domContentLoaded": 446,
+        "loadEventEnd": 515.8000001907349,
+        "responseEnd": 10.100000143051147
       },
       "shellDomIdentitySurvived": null,
       "kind": "warm-click",
@@ -1316,9 +1300,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/HomePage.tsx",
-          "startTime": 916.7999999523163,
-          "responseEnd": 924.2999999523163,
+          "url": "http://127.0.0.1:41919/src/pages/HomePage.tsx",
+          "startTime": 939.1000001430511,
+          "responseEnd": 948,
           "transferSize": 26673,
           "encodedBodySize": 26373,
           "decodedBodySize": 26373
@@ -1329,15 +1313,15 @@
     },
     {
       "path": "/app/generate",
-      "clickTime": 922.4000000953674,
-      "measurementBoundary": 922.4000000953674,
+      "clickTime": 777.5,
+      "measurementBoundary": 777.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 299.59999990463257,
+      "firstRealContentFrameMs": 356.19999980926514,
       "routeChunkRequests": [],
       "longTasks": [
         {
-          "startTime": 1133.0999999046326,
-          "duration": 69
+          "startTime": 1015.6999998092651,
+          "duration": 88
         }
       ],
       "cls": 0,
@@ -1350,13 +1334,13 @@
       "decodedBytes": 1561420,
       "sourceWorkExcluded": {
         "requestCount": 120,
-        "longTaskCount": 3,
+        "longTaskCount": 1,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 560.0999999046326,
-        "loadEventEnd": 632.2999999523163,
-        "responseEnd": 19.799999952316284
+        "domContentLoaded": 485.5,
+        "loadEventEnd": 616.1999998092651,
+        "responseEnd": 12.899999856948853
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -1367,17 +1351,17 @@
     },
     {
       "path": "/app/generate",
-      "clickTime": 1426.5999999046326,
-      "measurementBoundary": 1426.5999999046326,
+      "clickTime": 1301.1999998092651,
+      "measurementBoundary": 1301.1999998092651,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 78.60000014305115,
+      "firstRealContentFrameMs": 67.10000014305115,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
       "requestCount": 0,
-      "browserRequestCount": 11,
-      "externalRequestCount": 11,
+      "browserRequestCount": 2,
+      "externalRequestCount": 2,
       "transferredBytes": 0,
       "encodedBytes": 0,
       "decodedBytes": 0,
@@ -1387,9 +1371,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 475.09999990463257,
-        "loadEventEnd": 600.0999999046326,
-        "responseEnd": 13.599999904632568
+        "domContentLoaded": 470.69999980926514,
+        "loadEventEnd": 532.8999998569489,
+        "responseEnd": 10.699999809265137
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -1400,9 +1384,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/GeneratePage.tsx",
-          "startTime": 748,
-          "responseEnd": 757.0999999046326,
+          "url": "http://127.0.0.1:41919/src/pages/GeneratePage.tsx",
+          "startTime": 742.1999998092651,
+          "responseEnd": 751.7999999523163,
           "transferSize": 78506,
           "encodedBodySize": 78206,
           "decodedBodySize": 78206
@@ -1413,12 +1397,17 @@
     },
     {
       "path": "/app/attack",
-      "clickTime": 1766.4000000953674,
-      "measurementBoundary": 1766.4000000953674,
+      "clickTime": 1901.8999998569489,
+      "measurementBoundary": 1901.8999998569489,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 195.09999990463257,
+      "firstRealContentFrameMs": 159,
       "routeChunkRequests": [],
-      "longTasks": [],
+      "longTasks": [
+        {
+          "startTime": 2000.0999999046326,
+          "duration": 55
+        }
+      ],
       "cls": 0,
       "layoutShifts": [],
       "requestCount": 7,
@@ -1429,13 +1418,13 @@
       "decodedBytes": 185975,
       "sourceWorkExcluded": {
         "requestCount": 163,
-        "longTaskCount": 3,
+        "longTaskCount": 2,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 544,
-        "loadEventEnd": 692.3000001907349,
-        "responseEnd": 15.900000095367432
+        "domContentLoaded": 420,
+        "loadEventEnd": 467,
+        "responseEnd": 12
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -1446,10 +1435,10 @@
     },
     {
       "path": "/app/attack",
-      "clickTime": 4812.700000047684,
-      "measurementBoundary": 4812.700000047684,
+      "clickTime": 4583.5,
+      "measurementBoundary": 4583.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 54.59999990463257,
+      "firstRealContentFrameMs": 71.29999995231628,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -1462,13 +1451,13 @@
       "decodedBytes": 0,
       "sourceWorkExcluded": {
         "requestCount": 170,
-        "longTaskCount": 6,
+        "longTaskCount": 4,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 579.7999999523163,
-        "loadEventEnd": 648.9000000953674,
-        "responseEnd": 19.600000143051147
+        "domContentLoaded": 455.90000009536743,
+        "loadEventEnd": 606.9000000953674,
+        "responseEnd": 18
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -1479,9 +1468,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/AttackPage.tsx",
-          "startTime": 2198.600000143051,
-          "responseEnd": 2207.2999999523163,
+          "url": "http://127.0.0.1:41919/src/pages/AttackPage.tsx",
+          "startTime": 2036.2000000476837,
+          "responseEnd": 2046.2999999523163,
           "transferSize": 33746,
           "encodedBodySize": 33446,
           "decodedBodySize": 33446
@@ -1492,10 +1481,10 @@
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 801.2999999523163,
-      "measurementBoundary": 801.2999999523163,
+      "clickTime": 738.4000000953674,
+      "measurementBoundary": 738.4000000953674,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 163.70000004768372,
+      "firstRealContentFrameMs": 170.89999985694885,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -1512,9 +1501,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 460.2999999523163,
-        "loadEventEnd": 510.5,
-        "responseEnd": 9.199999809265137
+        "domContentLoaded": 446.10000014305115,
+        "loadEventEnd": 502.2000000476837,
+        "responseEnd": 15.100000143051147
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -1525,10 +1514,10 @@
     },
     {
       "path": "/app/flowchart",
-      "clickTime": 1272.5,
-      "measurementBoundary": 1272.5,
+      "clickTime": 1060.5,
+      "measurementBoundary": 1060.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 45.5,
+      "firstRealContentFrameMs": 44.39999985694885,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -1541,13 +1530,13 @@
       "decodedBytes": 0,
       "sourceWorkExcluded": {
         "requestCount": 130,
-        "longTaskCount": 3,
+        "longTaskCount": 1,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 495.89999985694885,
-        "loadEventEnd": 564.8999998569489,
-        "responseEnd": 15.399999856948853
+        "domContentLoaded": 393.09999990463257,
+        "loadEventEnd": 443.39999985694885,
+        "responseEnd": 11.599999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -1558,9 +1547,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/FlowchartPage.tsx",
-          "startTime": 830.5999999046326,
-          "responseEnd": 840.6999998092651,
+          "url": "http://127.0.0.1:41919/src/pages/FlowchartPage.tsx",
+          "startTime": 632.2999999523163,
+          "responseEnd": 641.7999999523163,
           "transferSize": 205577,
           "encodedBodySize": 205277,
           "decodedBodySize": 205277
@@ -1571,10 +1560,10 @@
     },
     {
       "path": "/app/history",
-      "clickTime": 821.7999999523163,
-      "measurementBoundary": 821.7999999523163,
+      "clickTime": 703.5,
+      "measurementBoundary": 703.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 122.5,
+      "firstRealContentFrameMs": 108.59999990463257,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -1587,13 +1576,13 @@
       "decodedBytes": 110870,
       "sourceWorkExcluded": {
         "requestCount": 120,
-        "longTaskCount": 2,
+        "longTaskCount": 1,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 494.60000014305115,
-        "loadEventEnd": 660.2000000476837,
-        "responseEnd": 11.900000095367432
+        "domContentLoaded": 424.59999990463257,
+        "loadEventEnd": 553,
+        "responseEnd": 12.099999904632568
       },
       "shellDomIdentitySurvived": true,
       "kind": "first-visit-click",
@@ -1604,10 +1593,10 @@
     },
     {
       "path": "/app/history",
-      "clickTime": 1321.8000001907349,
-      "measurementBoundary": 1321.8000001907349,
+      "clickTime": 1159.7999999523163,
+      "measurementBoundary": 1159.7999999523163,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 30,
+      "firstRealContentFrameMs": 22,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
@@ -1624,9 +1613,9 @@
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 589.8000001907349,
-        "loadEventEnd": 750.3000001907349,
-        "responseEnd": 10.600000143051147
+        "domContentLoaded": 466.7999999523163,
+        "loadEventEnd": 516.2999999523163,
+        "responseEnd": 13.700000047683716
       },
       "shellDomIdentitySurvived": true,
       "kind": "warm-click",
@@ -1637,9 +1626,9 @@
       "warmCacheProof": {
         "sameDocumentNavigation": true,
         "destinationWarmRequest": {
-          "url": "http://127.0.0.1:42399/src/pages/HistoryPage.tsx",
-          "startTime": 894.6000001430511,
-          "responseEnd": 904.7000000476837,
+          "url": "http://127.0.0.1:41919/src/pages/HistoryPage.tsx",
+          "startTime": 748.6000001430511,
+          "responseEnd": 757.9000000953674,
           "transferSize": 143448,
           "encodedBodySize": 143148,
           "decodedBodySize": 143148
@@ -1652,16 +1641,21 @@
   "delayed": [
     {
       "path": "/app/attack",
-      "clickTime": 1211.5,
-      "measurementBoundary": 1211.5,
+      "clickTime": 1215.5,
+      "measurementBoundary": 1215.5,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 867.5999999046326,
+      "firstRealContentFrameMs": 903.3000001907349,
       "routeChunkRequests": [],
-      "longTasks": [],
+      "longTasks": [
+        {
+          "startTime": 2058.300000190735,
+          "duration": 55
+        }
+      ],
       "cls": 0.01097265625,
       "layoutShifts": [
         {
-          "startTime": 2078.9000000953674,
+          "startTime": 2118.600000143051,
           "value": 0.01097265625
         }
       ],
@@ -1677,9 +1671,9 @@
         "layoutShiftCount": 1
       },
       "navigationTiming": {
-        "domContentLoaded": 458.2000000476837,
-        "loadEventEnd": 615,
-        "responseEnd": 15.099999904632568
+        "domContentLoaded": 496.2000000476837,
+        "loadEventEnd": 553.6000001430511,
+        "responseEnd": 12.600000143051147
       },
       "shellDomIdentitySurvived": true,
       "kind": "delayed-click",
@@ -1736,29 +1730,29 @@
     },
     {
       "path": "/app/attack",
-      "clickTime": 2092.4000000953674,
-      "measurementBoundary": 2092.4000000953674,
+      "clickTime": 1229.6000001430511,
+      "measurementBoundary": 1229.6000001430511,
       "firstSkeletonFrameMs": null,
-      "firstRealContentFrameMs": 854.7000000476837,
+      "firstRealContentFrameMs": 878.5999999046326,
       "routeChunkRequests": [],
       "longTasks": [],
       "cls": 0,
       "layoutShifts": [],
       "requestCount": 7,
-      "browserRequestCount": 21,
-      "externalRequestCount": 14,
+      "browserRequestCount": 20,
+      "externalRequestCount": 13,
       "transferredBytes": 188075,
       "encodedBytes": 185975,
       "decodedBytes": 185975,
       "sourceWorkExcluded": {
         "requestCount": 163,
-        "longTaskCount": 3,
+        "longTaskCount": 2,
         "layoutShiftCount": 0
       },
       "navigationTiming": {
-        "domContentLoaded": 622.4000000953674,
-        "loadEventEnd": 794.7000000476837,
-        "responseEnd": 9.300000190734863
+        "domContentLoaded": 463.2000000476837,
+        "loadEventEnd": 519.6000001430511,
+        "responseEnd": 12.300000190734863
       },
       "shellDomIdentitySurvived": true,
       "kind": "delayed-click",
@@ -1775,7 +1769,7 @@
           "shellVisible": true
         },
         {
-          "route": "/app/generate",
+          "route": "/app/attack",
           "fallbackVisible": false,
           "shellVisible": true
         },
@@ -1817,8 +1811,8 @@
   "bundleGraph": {
     "manifestEntries": [
       {
-        "key": "_FileSaver.min-D5hiFjRu.js",
-        "file": "assets/FileSaver.min-D5hiFjRu.js",
+        "key": "_FileSaver.min-D_JFMesj.js",
+        "file": "assets/FileSaver.min-D_JFMesj.js",
         "name": "FileSaver.min",
         "isDynamicEntry": true,
         "imports": [
@@ -1826,148 +1820,148 @@
         ]
       },
       {
-        "key": "_ModelRestrictedModal-Dvw-yPIC.js",
-        "file": "assets/ModelRestrictedModal-Dvw-yPIC.js",
+        "key": "_ModelRestrictedModal-C3fyEORB.js",
+        "file": "assets/ModelRestrictedModal-C3fyEORB.js",
         "name": "ModelRestrictedModal",
         "imports": [
           "index.html",
-          "_client-7AP--ukW.js",
-          "_triangle-alert-xVQMqJFN.js",
-          "_zap-Br8Yxf1I.js",
-          "_PricingModal-CSHgEmzC.js"
+          "_client-DEwlmyst.js",
+          "_triangle-alert-BgYzclSC.js",
+          "_zap-DRG34D0x.js",
+          "_PricingModal-D8mLWjDu.js"
         ]
       },
       {
-        "key": "_ModelSelector-DlkZ5y5U.js",
-        "file": "assets/ModelSelector-DlkZ5y5U.js",
+        "key": "_ModelSelector--btGoe1p.js",
+        "file": "assets/ModelSelector--btGoe1p.js",
         "name": "ModelSelector",
         "imports": [
           "index.html",
-          "_badge-nHj14g2K.js",
-          "_use-subscription-BqTp0Vss.js"
+          "_badge-BC-6QS26.js",
+          "_use-subscription-DPxqRAbU.js"
         ]
       },
       {
-        "key": "_PricingModal-CSHgEmzC.js",
-        "file": "assets/PricingModal-CSHgEmzC.js",
+        "key": "_PricingModal-D8mLWjDu.js",
+        "file": "assets/PricingModal-D8mLWjDu.js",
         "name": "PricingModal",
         "imports": [
           "index.html",
-          "_input-8rX023Lp.js",
-          "_badge-nHj14g2K.js",
+          "_input-BjDrRHtx.js",
+          "_badge-BC-6QS26.js",
           "_edge-function-error-dlcwXP30.js",
-          "_crown-CSAL0Uwb.js",
-          "_zap-Br8Yxf1I.js"
+          "_crown-BzZHpcif.js",
+          "_zap-DRG34D0x.js"
         ]
       },
       {
-        "key": "_alert-dialog-CqBO3mfQ.js",
-        "file": "assets/alert-dialog-CqBO3mfQ.js",
+        "key": "_alert-dialog-chuiBWTg.js",
+        "file": "assets/alert-dialog-chuiBWTg.js",
         "name": "alert-dialog",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_arrow-right-6vwWG1uk.js",
-        "file": "assets/arrow-right-6vwWG1uk.js",
+        "key": "_arrow-right-_GA5t6Ff.js",
+        "file": "assets/arrow-right-_GA5t6Ff.js",
         "name": "arrow-right",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_badge-nHj14g2K.js",
-        "file": "assets/badge-nHj14g2K.js",
+        "key": "_badge-BC-6QS26.js",
+        "file": "assets/badge-BC-6QS26.js",
         "name": "badge",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_bookmark-BYaAW2wV.js",
-        "file": "assets/bookmark-BYaAW2wV.js",
+        "key": "_bookmark-B9VbbzBD.js",
+        "file": "assets/bookmark-B9VbbzBD.js",
         "name": "bookmark",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_brain-DdyusTg0.js",
-        "file": "assets/brain-DdyusTg0.js",
+        "key": "_brain-M0E5BVtS.js",
+        "file": "assets/brain-M0E5BVtS.js",
         "name": "brain",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_card-KQczJDLQ.js",
-        "file": "assets/card-KQczJDLQ.js",
+        "key": "_card-BnT411OX.js",
+        "file": "assets/card-BnT411OX.js",
         "name": "card",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_checkbox-NPaqaug-.js",
-        "file": "assets/checkbox-NPaqaug-.js",
+        "key": "_checkbox-CPn-6Pk1.js",
+        "file": "assets/checkbox-CPn-6Pk1.js",
         "name": "checkbox",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_circle-alert-DpUayguU.js",
-        "file": "assets/circle-alert-DpUayguU.js",
+        "key": "_circle-alert-EvFEdfwm.js",
+        "file": "assets/circle-alert-EvFEdfwm.js",
         "name": "circle-alert",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_circle-help-DQt7G_9u.js",
-        "file": "assets/circle-help-DQt7G_9u.js",
+        "key": "_circle-help-B0oPixm9.js",
+        "file": "assets/circle-help-B0oPixm9.js",
         "name": "circle-help",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_client-7AP--ukW.js",
-        "file": "assets/client-7AP--ukW.js",
+        "key": "_client-DEwlmyst.js",
+        "file": "assets/client-DEwlmyst.js",
         "name": "client",
         "imports": [
           "index.html",
-          "_url-CchqeGdk.js"
+          "_url-CeZm_C1D.js"
         ]
       },
       {
-        "key": "_clock-3-M0IAIYb6.js",
-        "file": "assets/clock-3-M0IAIYb6.js",
+        "key": "_clock-3-cVu-fg4P.js",
+        "file": "assets/clock-3-cVu-fg4P.js",
         "name": "clock-3",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_copy-D2fGLc-5.js",
-        "file": "assets/copy-D2fGLc-5.js",
+        "key": "_copy-L_02rmZ3.js",
+        "file": "assets/copy-L_02rmZ3.js",
         "name": "copy",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_credit-card-DJ5X1r1l.js",
-        "file": "assets/credit-card-DJ5X1r1l.js",
+        "key": "_credit-card-DxReFz7h.js",
+        "file": "assets/credit-card-DxReFz7h.js",
         "name": "credit-card",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_crown-CSAL0Uwb.js",
-        "file": "assets/crown-CSAL0Uwb.js",
+        "key": "_crown-BzZHpcif.js",
+        "file": "assets/crown-BzZHpcif.js",
         "name": "crown",
         "imports": [
           "index.html"
@@ -1979,8 +1973,8 @@
         "name": "date-format"
       },
       {
-        "key": "_download-B3oRXuVT.js",
-        "file": "assets/download-B3oRXuVT.js",
+        "key": "_download-B6rLXL5_.js",
+        "file": "assets/download-B6rLXL5_.js",
         "name": "download",
         "imports": [
           "index.html"
@@ -1992,67 +1986,58 @@
         "name": "edge-function-error"
       },
       {
-        "key": "_empty-state-CsLvpD--.js",
-        "file": "assets/empty-state-CsLvpD--.js",
+        "key": "_empty-state-DM7N_Xh_.js",
+        "file": "assets/empty-state-DM7N_Xh_.js",
         "name": "empty-state",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_error-display-ChjuG8qj.js",
-        "file": "assets/error-display-ChjuG8qj.js",
+        "key": "_error-display-CfPmd3wN.js",
+        "file": "assets/error-display-CfPmd3wN.js",
         "name": "error-display",
         "imports": [
-          "_client-7AP--ukW.js"
+          "_client-DEwlmyst.js"
         ]
       },
       {
-        "key": "_external-link-4Qm-J_pW.js",
-        "file": "assets/external-link-4Qm-J_pW.js",
+        "key": "_external-link-CeL3t6Kr.js",
+        "file": "assets/external-link-CeL3t6Kr.js",
         "name": "external-link",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_file-text-DJr5GWEk.js",
-        "file": "assets/file-text-DJr5GWEk.js",
+        "key": "_file-text-B6nrM_aa.js",
+        "file": "assets/file-text-B6nrM_aa.js",
         "name": "file-text",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_flame-Czv5xoyh.js",
-        "file": "assets/flame-Czv5xoyh.js",
+        "key": "_flame-LxH7SUbA.js",
+        "file": "assets/flame-LxH7SUbA.js",
         "name": "flame",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_generateCategoricalChart-C12mRN5t.js",
-        "file": "assets/generateCategoricalChart-C12mRN5t.js",
+        "key": "_generateCategoricalChart-tQpM_2Ey.js",
+        "file": "assets/generateCategoricalChart-tQpM_2Ey.js",
         "name": "generateCategoricalChart",
         "imports": [
           "index.html",
-          "_index-Bv_cGurf.js",
+          "_index-DCbKzI_r.js",
           "_string-cKWu9XK9.js"
         ]
       },
       {
-        "key": "_index-BO3TwXUP.js",
-        "file": "assets/index-BO3TwXUP.js",
-        "name": "index",
-        "imports": [
-          "index.html",
-          "_string-cKWu9XK9.js"
-        ]
-      },
-      {
-        "key": "_index-BiDsgf0K.js",
-        "file": "assets/index-BiDsgf0K.js",
+        "key": "_index-CUklgy1x.js",
+        "file": "assets/index-CUklgy1x.js",
         "name": "index",
         "isDynamicEntry": true,
         "imports": [
@@ -2060,24 +2045,33 @@
         ]
       },
       {
-        "key": "_index-Bv_cGurf.js",
-        "file": "assets/index-Bv_cGurf.js",
+        "key": "_index-CzRyuAKe.js",
+        "file": "assets/index-CzRyuAKe.js",
+        "name": "index",
+        "imports": [
+          "index.html",
+          "_string-cKWu9XK9.js"
+        ]
+      },
+      {
+        "key": "_index-DCbKzI_r.js",
+        "file": "assets/index-DCbKzI_r.js",
         "name": "index",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_input-8rX023Lp.js",
-        "file": "assets/input-8rX023Lp.js",
+        "key": "_input-BjDrRHtx.js",
+        "file": "assets/input-BjDrRHtx.js",
         "name": "input",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_jspdf.es.min-D7JnGG90.js",
-        "file": "assets/jspdf.es.min-D7JnGG90.js",
+        "key": "_jspdf.es.min-rPht-yMH.js",
+        "file": "assets/jspdf.es.min-rPht-yMH.js",
         "name": "jspdf.es.min",
         "isDynamicEntry": true,
         "imports": [
@@ -2090,129 +2084,129 @@
         ]
       },
       {
-        "key": "_markdown-Sm0t_tMl.js",
-        "file": "assets/markdown-Sm0t_tMl.js",
+        "key": "_markdown-BFkXmfLC.js",
+        "file": "assets/markdown-BFkXmfLC.js",
         "name": "markdown",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_plus-BYgsCk8s.js",
-        "file": "assets/plus-BYgsCk8s.js",
+        "key": "_plus-CuZTkh8c.js",
+        "file": "assets/plus-CuZTkh8c.js",
         "name": "plus",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_prefill-CrfOM3DK.js",
-        "file": "assets/prefill-CrfOM3DK.js",
+        "key": "_prefill-Bt9XeRbC.js",
+        "file": "assets/prefill-Bt9XeRbC.js",
         "name": "prefill",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_progress-bSnotB5B.js",
-        "file": "assets/progress-bSnotB5B.js",
+        "key": "_progress-Eyz1T4LG.js",
+        "file": "assets/progress-Eyz1T4LG.js",
         "name": "progress",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_proxy-DczR7eym.js",
-        "file": "assets/proxy-DczR7eym.js",
+        "key": "_proxy-CZ59rzDR.js",
+        "file": "assets/proxy-CZ59rzDR.js",
         "name": "proxy",
         "imports": [
           "index.html",
-          "_use-reduced-motion-CWYDwmo6.js"
+          "_use-reduced-motion-v_1o4Ngt.js"
         ]
       },
       {
-        "key": "_refresh-cw-DA-0BQ12.js",
-        "file": "assets/refresh-cw-DA-0BQ12.js",
+        "key": "_refresh-cw-BeTvwxHO.js",
+        "file": "assets/refresh-cw-BeTvwxHO.js",
         "name": "refresh-cw",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_rotate-ccw-C75qCzYm.js",
-        "file": "assets/rotate-ccw-C75qCzYm.js",
+        "key": "_rotate-ccw-v2tcH4l7.js",
+        "file": "assets/rotate-ccw-v2tcH4l7.js",
         "name": "rotate-ccw",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_save-UVDNgRNX.js",
-        "file": "assets/save-UVDNgRNX.js",
+        "key": "_save--EOuaVhR.js",
+        "file": "assets/save--EOuaVhR.js",
         "name": "save",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_scroll-area-ByvjHX4Q.js",
-        "file": "assets/scroll-area-ByvjHX4Q.js",
+        "key": "_scroll-area-BTGx2PB1.js",
+        "file": "assets/scroll-area-BTGx2PB1.js",
         "name": "scroll-area",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_search-BGhB3V3-.js",
-        "file": "assets/search-BGhB3V3-.js",
+        "key": "_search-D72Br97G.js",
+        "file": "assets/search-D72Br97G.js",
         "name": "search",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_send-DPXosOuu.js",
-        "file": "assets/send-DPXosOuu.js",
+        "key": "_send-DyAEqj-V.js",
+        "file": "assets/send-DyAEqj-V.js",
         "name": "send",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_sheet-DaYpJRvT.js",
-        "file": "assets/sheet-DaYpJRvT.js",
+        "key": "_sheet-Dfq5h2d1.js",
+        "file": "assets/sheet-Dfq5h2d1.js",
         "name": "sheet",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_shield-Bze4pdXW.js",
-        "file": "assets/shield-Bze4pdXW.js",
+        "key": "_shield-C8ZFNTgi.js",
+        "file": "assets/shield-C8ZFNTgi.js",
         "name": "shield",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_shield-check-DYnOiWee.js",
-        "file": "assets/shield-check-DYnOiWee.js",
+        "key": "_shield-check-DU5mFNut.js",
+        "file": "assets/shield-check-DU5mFNut.js",
         "name": "shield-check",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_streaming-indicator-Bhi-dA7V.js",
-        "file": "assets/streaming-indicator-Bhi-dA7V.js",
+        "key": "_streaming-indicator-Ckj0qTTQ.js",
+        "file": "assets/streaming-indicator-Ckj0qTTQ.js",
         "name": "streaming-indicator",
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_refresh-cw-DA-0BQ12.js",
-          "_file-text-DJr5GWEk.js",
-          "_external-link-4Qm-J_pW.js",
-          "_badge-nHj14g2K.js"
+          "_card-BnT411OX.js",
+          "_refresh-cw-BeTvwxHO.js",
+          "_file-text-B6nrM_aa.js",
+          "_external-link-CeL3t6Kr.js",
+          "_badge-BC-6QS26.js"
         ]
       },
       {
@@ -2221,96 +2215,96 @@
         "name": "string"
       },
       {
-        "key": "_switch-BVCWb5Lf.js",
-        "file": "assets/switch-BVCWb5Lf.js",
+        "key": "_switch-CHK59itA.js",
+        "file": "assets/switch-CHK59itA.js",
         "name": "switch",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_tabs-MRQ3288m.js",
-        "file": "assets/tabs-MRQ3288m.js",
+        "key": "_tabs-Dc13bJ4B.js",
+        "file": "assets/tabs-Dc13bJ4B.js",
         "name": "tabs",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_target-D3jVY9-N.js",
-        "file": "assets/target-D3jVY9-N.js",
+        "key": "_target-BtiUsRv7.js",
+        "file": "assets/target-BtiUsRv7.js",
         "name": "target",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_textarea-Cbcs_Kkm.js",
-        "file": "assets/textarea-Cbcs_Kkm.js",
+        "key": "_textarea-BQ0Vj88K.js",
+        "file": "assets/textarea-BQ0Vj88K.js",
         "name": "textarea",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_trash-2-D3f6TJLq.js",
-        "file": "assets/trash-2-D3f6TJLq.js",
+        "key": "_trash-2-F2gcUNIU.js",
+        "file": "assets/trash-2-F2gcUNIU.js",
         "name": "trash-2",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_triangle-alert-xVQMqJFN.js",
-        "file": "assets/triangle-alert-xVQMqJFN.js",
+        "key": "_triangle-alert-BgYzclSC.js",
+        "file": "assets/triangle-alert-BgYzclSC.js",
         "name": "triangle-alert",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_url-CchqeGdk.js",
-        "file": "assets/url-CchqeGdk.js",
+        "key": "_url-CeZm_C1D.js",
+        "file": "assets/url-CeZm_C1D.js",
         "name": "url",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_use-reduced-motion-CWYDwmo6.js",
-        "file": "assets/use-reduced-motion-CWYDwmo6.js",
+        "key": "_use-reduced-motion-v_1o4Ngt.js",
+        "file": "assets/use-reduced-motion-v_1o4Ngt.js",
         "name": "use-reduced-motion",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_use-speech-to-text-QtyVHro3.js",
-        "file": "assets/use-speech-to-text-QtyVHro3.js",
+        "key": "_use-speech-to-text-BwciQCuH.js",
+        "file": "assets/use-speech-to-text-BwciQCuH.js",
         "name": "use-speech-to-text",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_use-subscription-BqTp0Vss.js",
-        "file": "assets/use-subscription-BqTp0Vss.js",
+        "key": "_use-subscription-DPxqRAbU.js",
+        "file": "assets/use-subscription-DPxqRAbU.js",
         "name": "use-subscription",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_users-C9kQKqTg.js",
-        "file": "assets/users-C9kQKqTg.js",
+        "key": "_users-BM5mL8hE.js",
+        "file": "assets/users-BM5mL8hE.js",
         "name": "users",
         "imports": [
           "index.html"
         ]
       },
       {
-        "key": "_zap-Br8Yxf1I.js",
-        "file": "assets/zap-Br8Yxf1I.js",
+        "key": "_zap-DRG34D0x.js",
+        "file": "assets/zap-DRG34D0x.js",
         "name": "zap",
         "imports": [
           "index.html"
@@ -2318,7 +2312,7 @@
       },
       {
         "key": "index.html",
-        "file": "assets/index-q7XbFcUA.js",
+        "file": "assets/index-BXPLmGRM.js",
         "name": "index",
         "src": "index.html",
         "isEntry": true,
@@ -2358,7 +2352,7 @@
       },
       {
         "key": "node_modules/@capacitor/app/dist/esm/web.js",
-        "file": "assets/web-BynEw2Qq.js",
+        "file": "assets/web-D9KG4rKC.js",
         "name": "web",
         "src": "node_modules/@capacitor/app/dist/esm/web.js",
         "isDynamicEntry": true,
@@ -2368,7 +2362,7 @@
       },
       {
         "key": "node_modules/@capacitor/browser/dist/esm/web.js",
-        "file": "assets/web-Cv6hO8mk.js",
+        "file": "assets/web-XsvGzZYP.js",
         "name": "web",
         "src": "node_modules/@capacitor/browser/dist/esm/web.js",
         "isDynamicEntry": true,
@@ -2378,7 +2372,7 @@
       },
       {
         "key": "node_modules/@capacitor/haptics/dist/esm/web.js",
-        "file": "assets/web-DG6Gg_bK.js",
+        "file": "assets/web-WxmaVhoc.js",
         "name": "web",
         "src": "node_modules/@capacitor/haptics/dist/esm/web.js",
         "isDynamicEntry": true,
@@ -2388,7 +2382,7 @@
       },
       {
         "key": "node_modules/@vercel/analytics/dist/react/index.mjs",
-        "file": "assets/index-Drm248ae.js",
+        "file": "assets/index-D_w_W2TW.js",
         "name": "index",
         "src": "node_modules/@vercel/analytics/dist/react/index.mjs",
         "isDynamicEntry": true,
@@ -2398,7 +2392,7 @@
       },
       {
         "key": "node_modules/@vercel/speed-insights/dist/react/index.mjs",
-        "file": "assets/index-G86aoU7n.js",
+        "file": "assets/index-BOmRsjz8.js",
         "name": "index",
         "src": "node_modules/@vercel/speed-insights/dist/react/index.mjs",
         "isDynamicEntry": true,
@@ -2408,13 +2402,13 @@
       },
       {
         "key": "node_modules/canvg/lib/index.es.js",
-        "file": "assets/index.es-CgqVT0Uv.js",
+        "file": "assets/index.es-_IyzbuIU.js",
         "name": "index.es",
         "src": "node_modules/canvg/lib/index.es.js",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_jspdf.es.min-D7JnGG90.js"
+          "_jspdf.es.min-rPht-yMH.js"
         ]
       },
       {
@@ -2459,18 +2453,18 @@
       },
       {
         "key": "src/components/features/onboarding/OnboardingTour.tsx",
-        "file": "assets/OnboardingTour-CidKS6R0.js",
+        "file": "assets/OnboardingTour-D3HRgV01.js",
         "name": "OnboardingTour",
         "src": "src/components/features/onboarding/OnboardingTour.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_index-Bv_cGurf.js"
+          "_index-DCbKzI_r.js"
         ]
       },
       {
         "key": "src/lib/export-utils.ts",
-        "file": "assets/export-utils-18pMdbox.js",
+        "file": "assets/export-utils-C_AAuxR6.js",
         "name": "export-utils",
         "src": "src/lib/export-utils.ts",
         "isDynamicEntry": true,
@@ -2480,21 +2474,21 @@
         ],
         "dynamicImports": [
           "node_modules/docx/dist/index.mjs",
-          "_FileSaver.min-D5hiFjRu.js",
+          "_FileSaver.min-D_JFMesj.js",
           "node_modules/docx/dist/index.mjs",
-          "_FileSaver.min-D5hiFjRu.js",
+          "_FileSaver.min-D_JFMesj.js",
           "node_modules/docx/dist/index.mjs",
-          "_FileSaver.min-D5hiFjRu.js",
+          "_FileSaver.min-D_JFMesj.js",
           "node_modules/docx/dist/index.mjs",
-          "_FileSaver.min-D5hiFjRu.js",
+          "_FileSaver.min-D_JFMesj.js",
           "index.html",
           "node_modules/docx/dist/index.mjs",
-          "_FileSaver.min-D5hiFjRu.js"
+          "_FileSaver.min-D_JFMesj.js"
         ]
       },
       {
         "key": "src/lib/pdf-export-utils.ts",
-        "file": "assets/pdf-export-utils-DMTsvhPn.js",
+        "file": "assets/pdf-export-utils-DIHHR01V.js",
         "name": "pdf-export-utils",
         "src": "src/lib/pdf-export-utils.ts",
         "isDynamicEntry": true,
@@ -2503,111 +2497,111 @@
           "_date-format-CfassM9h.js"
         ],
         "dynamicImports": [
-          "_jspdf.es.min-D7JnGG90.js",
+          "_jspdf.es.min-rPht-yMH.js",
           "node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.mjs"
         ]
       },
       {
         "key": "src/pages/AdminPage.tsx",
-        "file": "assets/AdminPage-DAZYToit.js",
+        "file": "assets/AdminPage-DxOnwRAE.js",
         "name": "AdminPage",
         "src": "src/pages/AdminPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_input-8rX023Lp.js",
-          "_badge-nHj14g2K.js",
-          "_tabs-MRQ3288m.js",
-          "_scroll-area-ByvjHX4Q.js",
+          "_card-BnT411OX.js",
+          "_input-BjDrRHtx.js",
+          "_badge-BC-6QS26.js",
+          "_tabs-Dc13bJ4B.js",
+          "_scroll-area-BTGx2PB1.js",
           "_date-format-CfassM9h.js",
-          "_checkbox-NPaqaug-.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_alert-dialog-CqBO3mfQ.js",
-          "_search-BGhB3V3-.js",
-          "_trash-2-D3f6TJLq.js",
-          "_shield-Bze4pdXW.js",
-          "_circle-alert-DpUayguU.js",
-          "_users-C9kQKqTg.js",
-          "_credit-card-DJ5X1r1l.js",
-          "_generateCategoricalChart-C12mRN5t.js",
-          "_copy-D2fGLc-5.js",
-          "_rotate-ccw-C75qCzYm.js",
-          "_index-Bv_cGurf.js",
+          "_checkbox-CPn-6Pk1.js",
+          "_textarea-BQ0Vj88K.js",
+          "_alert-dialog-chuiBWTg.js",
+          "_search-D72Br97G.js",
+          "_trash-2-F2gcUNIU.js",
+          "_shield-C8ZFNTgi.js",
+          "_circle-alert-EvFEdfwm.js",
+          "_users-BM5mL8hE.js",
+          "_credit-card-DxReFz7h.js",
+          "_generateCategoricalChart-tQpM_2Ey.js",
+          "_copy-L_02rmZ3.js",
+          "_rotate-ccw-v2tcH4l7.js",
+          "_index-DCbKzI_r.js",
           "_string-cKWu9XK9.js"
         ]
       },
       {
         "key": "src/pages/AskPage.tsx",
-        "file": "assets/AskPage-DfHYYW_H.js",
+        "file": "assets/AskPage-D3eVFOW4.js",
         "name": "AskPage",
         "src": "src/pages/AskPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_input-8rX023Lp.js",
-          "_markdown-Sm0t_tMl.js",
-          "_card-KQczJDLQ.js",
-          "_switch-BVCWb5Lf.js",
-          "_scroll-area-ByvjHX4Q.js",
-          "_use-speech-to-text-QtyVHro3.js",
+          "_input-BjDrRHtx.js",
+          "_markdown-BFkXmfLC.js",
+          "_card-BnT411OX.js",
+          "_switch-CHK59itA.js",
+          "_scroll-area-BTGx2PB1.js",
+          "_use-speech-to-text-BwciQCuH.js",
           "_date-format-CfassM9h.js",
-          "_ModelSelector-DlkZ5y5U.js",
-          "_sheet-DaYpJRvT.js",
-          "_use-reduced-motion-CWYDwmo6.js",
-          "_save-UVDNgRNX.js",
-          "_rotate-ccw-C75qCzYm.js",
-          "_circle-help-DQt7G_9u.js",
-          "_search-BGhB3V3-.js",
-          "_send-DPXosOuu.js",
-          "_bookmark-BYaAW2wV.js",
-          "_client-7AP--ukW.js",
-          "_ModelRestrictedModal-Dvw-yPIC.js",
-          "_error-display-ChjuG8qj.js",
-          "_PricingModal-CSHgEmzC.js",
-          "_badge-nHj14g2K.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_url-CchqeGdk.js",
-          "_triangle-alert-xVQMqJFN.js",
-          "_zap-Br8Yxf1I.js",
+          "_ModelSelector--btGoe1p.js",
+          "_sheet-Dfq5h2d1.js",
+          "_use-reduced-motion-v_1o4Ngt.js",
+          "_save--EOuaVhR.js",
+          "_rotate-ccw-v2tcH4l7.js",
+          "_circle-help-B0oPixm9.js",
+          "_search-D72Br97G.js",
+          "_send-DyAEqj-V.js",
+          "_bookmark-B9VbbzBD.js",
+          "_client-DEwlmyst.js",
+          "_ModelRestrictedModal-C3fyEORB.js",
+          "_error-display-CfPmd3wN.js",
+          "_PricingModal-D8mLWjDu.js",
+          "_badge-BC-6QS26.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_url-CeZm_C1D.js",
+          "_triangle-alert-BgYzclSC.js",
+          "_zap-DRG34D0x.js",
           "_edge-function-error-dlcwXP30.js",
-          "_crown-CSAL0Uwb.js"
+          "_crown-BzZHpcif.js"
         ]
       },
       {
         "key": "src/pages/AttackPage.tsx",
-        "file": "assets/AttackPage-h6F8PCcy.js",
+        "file": "assets/AttackPage-DjMYLo0u.js",
         "name": "AttackPage",
         "src": "src/pages/AttackPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_streaming-indicator-Bhi-dA7V.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_switch-BVCWb5Lf.js",
-          "_card-KQczJDLQ.js",
-          "_client-7AP--ukW.js",
-          "_ModelSelector-DlkZ5y5U.js",
-          "_prefill-CrfOM3DK.js",
-          "_search-BGhB3V3-.js",
-          "_badge-nHj14g2K.js",
-          "_progress-bSnotB5B.js",
-          "_markdown-Sm0t_tMl.js",
-          "_ModelRestrictedModal-Dvw-yPIC.js",
-          "_flame-Czv5xoyh.js",
-          "_circle-alert-DpUayguU.js",
-          "_refresh-cw-DA-0BQ12.js",
-          "_triangle-alert-xVQMqJFN.js",
-          "_error-display-ChjuG8qj.js",
-          "_PricingModal-CSHgEmzC.js",
-          "_file-text-DJr5GWEk.js",
-          "_external-link-4Qm-J_pW.js",
-          "_url-CchqeGdk.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_zap-Br8Yxf1I.js",
-          "_input-8rX023Lp.js",
+          "_streaming-indicator-Ckj0qTTQ.js",
+          "_textarea-BQ0Vj88K.js",
+          "_switch-CHK59itA.js",
+          "_card-BnT411OX.js",
+          "_client-DEwlmyst.js",
+          "_ModelSelector--btGoe1p.js",
+          "_prefill-Bt9XeRbC.js",
+          "_search-D72Br97G.js",
+          "_badge-BC-6QS26.js",
+          "_progress-Eyz1T4LG.js",
+          "_markdown-BFkXmfLC.js",
+          "_ModelRestrictedModal-C3fyEORB.js",
+          "_flame-LxH7SUbA.js",
+          "_circle-alert-EvFEdfwm.js",
+          "_refresh-cw-BeTvwxHO.js",
+          "_triangle-alert-BgYzclSC.js",
+          "_error-display-CfPmd3wN.js",
+          "_PricingModal-D8mLWjDu.js",
+          "_file-text-B6nrM_aa.js",
+          "_external-link-CeL3t6Kr.js",
+          "_url-CeZm_C1D.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_zap-DRG34D0x.js",
+          "_input-BjDrRHtx.js",
           "_edge-function-error-dlcwXP30.js",
-          "_crown-CSAL0Uwb.js"
+          "_crown-BzZHpcif.js"
         ],
         "dynamicImports": [
           "src/lib/pdf-export-utils.ts",
@@ -2617,34 +2611,34 @@
       },
       {
         "key": "src/pages/BrainstormPage.tsx",
-        "file": "assets/BrainstormPage-BijngCxi.js",
+        "file": "assets/BrainstormPage-CzulC9rz.js",
         "name": "BrainstormPage",
         "src": "src/pages/BrainstormPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_streaming-indicator-Bhi-dA7V.js",
-          "_input-8rX023Lp.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_card-KQczJDLQ.js",
-          "_ModelSelector-DlkZ5y5U.js",
-          "_brain-DdyusTg0.js",
-          "_badge-nHj14g2K.js",
-          "_ModelRestrictedModal-Dvw-yPIC.js",
-          "_empty-state-CsLvpD--.js",
-          "_triangle-alert-xVQMqJFN.js",
-          "_arrow-right-6vwWG1uk.js",
-          "_client-7AP--ukW.js",
-          "_error-display-ChjuG8qj.js",
-          "_PricingModal-CSHgEmzC.js",
-          "_refresh-cw-DA-0BQ12.js",
-          "_file-text-DJr5GWEk.js",
-          "_external-link-4Qm-J_pW.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_zap-Br8Yxf1I.js",
-          "_url-CchqeGdk.js",
+          "_streaming-indicator-Ckj0qTTQ.js",
+          "_input-BjDrRHtx.js",
+          "_textarea-BQ0Vj88K.js",
+          "_card-BnT411OX.js",
+          "_ModelSelector--btGoe1p.js",
+          "_brain-M0E5BVtS.js",
+          "_badge-BC-6QS26.js",
+          "_ModelRestrictedModal-C3fyEORB.js",
+          "_empty-state-DM7N_Xh_.js",
+          "_triangle-alert-BgYzclSC.js",
+          "_arrow-right-_GA5t6Ff.js",
+          "_client-DEwlmyst.js",
+          "_error-display-CfPmd3wN.js",
+          "_PricingModal-D8mLWjDu.js",
+          "_refresh-cw-BeTvwxHO.js",
+          "_file-text-B6nrM_aa.js",
+          "_external-link-CeL3t6Kr.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_zap-DRG34D0x.js",
+          "_url-CeZm_C1D.js",
           "_edge-function-error-dlcwXP30.js",
-          "_crown-CSAL0Uwb.js"
+          "_crown-BzZHpcif.js"
         ],
         "dynamicImports": [
           "src/lib/export-utils.ts",
@@ -2654,59 +2648,59 @@
       },
       {
         "key": "src/pages/CrossfirePage.tsx",
-        "file": "assets/CrossfirePage-fpXRe2Jy.js",
+        "file": "assets/CrossfirePage-6-RlWW8P.js",
         "name": "CrossfirePage",
         "src": "src/pages/CrossfirePage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_badge-nHj14g2K.js",
-          "_card-KQczJDLQ.js",
-          "_checkbox-NPaqaug-.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_client-7AP--ukW.js",
-          "_error-display-ChjuG8qj.js",
-          "_use-reduced-motion-CWYDwmo6.js",
-          "_flame-Czv5xoyh.js",
-          "_circle-alert-DpUayguU.js",
-          "_refresh-cw-DA-0BQ12.js",
-          "_clock-3-M0IAIYb6.js",
-          "_send-DPXosOuu.js",
-          "_rotate-ccw-C75qCzYm.js",
-          "_shield-check-DYnOiWee.js",
-          "_proxy-DczR7eym.js",
-          "_url-CchqeGdk.js"
+          "_badge-BC-6QS26.js",
+          "_card-BnT411OX.js",
+          "_checkbox-CPn-6Pk1.js",
+          "_textarea-BQ0Vj88K.js",
+          "_client-DEwlmyst.js",
+          "_error-display-CfPmd3wN.js",
+          "_use-reduced-motion-v_1o4Ngt.js",
+          "_flame-LxH7SUbA.js",
+          "_circle-alert-EvFEdfwm.js",
+          "_refresh-cw-BeTvwxHO.js",
+          "_clock-3-cVu-fg4P.js",
+          "_send-DyAEqj-V.js",
+          "_rotate-ccw-v2tcH4l7.js",
+          "_shield-check-DU5mFNut.js",
+          "_proxy-CZ59rzDR.js",
+          "_url-CeZm_C1D.js"
         ]
       },
       {
         "key": "src/pages/FactoidsPage.tsx",
-        "file": "assets/FactoidsPage-DjQzwQXq.js",
+        "file": "assets/FactoidsPage-Desc9OHj.js",
         "name": "FactoidsPage",
         "src": "src/pages/FactoidsPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_streaming-indicator-Bhi-dA7V.js",
-          "_input-8rX023Lp.js",
-          "_card-KQczJDLQ.js",
-          "_client-7AP--ukW.js",
-          "_ModelSelector-DlkZ5y5U.js",
-          "_search-BGhB3V3-.js",
-          "_badge-nHj14g2K.js",
-          "_progress-bSnotB5B.js",
-          "_ModelRestrictedModal-Dvw-yPIC.js",
-          "_triangle-alert-xVQMqJFN.js",
-          "_external-link-4Qm-J_pW.js",
-          "_bookmark-BYaAW2wV.js",
-          "_error-display-ChjuG8qj.js",
-          "_PricingModal-CSHgEmzC.js",
-          "_refresh-cw-DA-0BQ12.js",
-          "_file-text-DJr5GWEk.js",
-          "_url-CchqeGdk.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_zap-Br8Yxf1I.js",
+          "_streaming-indicator-Ckj0qTTQ.js",
+          "_input-BjDrRHtx.js",
+          "_card-BnT411OX.js",
+          "_client-DEwlmyst.js",
+          "_ModelSelector--btGoe1p.js",
+          "_search-D72Br97G.js",
+          "_badge-BC-6QS26.js",
+          "_progress-Eyz1T4LG.js",
+          "_ModelRestrictedModal-C3fyEORB.js",
+          "_triangle-alert-BgYzclSC.js",
+          "_external-link-CeL3t6Kr.js",
+          "_bookmark-B9VbbzBD.js",
+          "_error-display-CfPmd3wN.js",
+          "_PricingModal-D8mLWjDu.js",
+          "_refresh-cw-BeTvwxHO.js",
+          "_file-text-B6nrM_aa.js",
+          "_url-CeZm_C1D.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_zap-DRG34D0x.js",
           "_edge-function-error-dlcwXP30.js",
-          "_crown-CSAL0Uwb.js"
+          "_crown-BzZHpcif.js"
         ],
         "dynamicImports": [
           "src/lib/export-utils.ts",
@@ -2716,25 +2710,25 @@
       },
       {
         "key": "src/pages/FlowchartPage.tsx",
-        "file": "assets/FlowchartPage-CJxI0fuF.js",
+        "file": "assets/FlowchartPage-hnm2Idlk.js",
         "name": "FlowchartPage",
         "src": "src/pages/FlowchartPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_badge-nHj14g2K.js",
-          "_input-8rX023Lp.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_alert-dialog-CqBO3mfQ.js",
-          "_index-BO3TwXUP.js",
-          "_trash-2-D3f6TJLq.js",
-          "_save-UVDNgRNX.js",
-          "_plus-BYgsCk8s.js",
-          "_download-B3oRXuVT.js",
-          "_target-D3jVY9-N.js",
-          "_shield-Bze4pdXW.js",
-          "_triangle-alert-xVQMqJFN.js",
+          "_card-BnT411OX.js",
+          "_badge-BC-6QS26.js",
+          "_input-BjDrRHtx.js",
+          "_textarea-BQ0Vj88K.js",
+          "_alert-dialog-chuiBWTg.js",
+          "_index-CzRyuAKe.js",
+          "_trash-2-F2gcUNIU.js",
+          "_save--EOuaVhR.js",
+          "_plus-CuZTkh8c.js",
+          "_download-B6rLXL5_.js",
+          "_target-BtiUsRv7.js",
+          "_shield-C8ZFNTgi.js",
+          "_triangle-alert-BgYzclSC.js",
           "_string-cKWu9XK9.js"
         ],
         "css": [
@@ -2743,40 +2737,40 @@
       },
       {
         "key": "src/pages/GeneratePage.tsx",
-        "file": "assets/GeneratePage-Df7s3ZzA.js",
+        "file": "assets/GeneratePage-Chk9sB1m.js",
         "name": "GeneratePage",
         "src": "src/pages/GeneratePage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_streaming-indicator-Bhi-dA7V.js",
-          "_input-8rX023Lp.js",
-          "_card-KQczJDLQ.js",
-          "_client-7AP--ukW.js",
-          "_use-speech-to-text-QtyVHro3.js",
-          "_ModelSelector-DlkZ5y5U.js",
-          "_prefill-CrfOM3DK.js",
-          "_badge-nHj14g2K.js",
-          "_markdown-Sm0t_tMl.js",
-          "_ModelRestrictedModal-Dvw-yPIC.js",
+          "_streaming-indicator-Ckj0qTTQ.js",
+          "_input-BjDrRHtx.js",
+          "_card-BnT411OX.js",
+          "_client-DEwlmyst.js",
+          "_use-speech-to-text-BwciQCuH.js",
+          "_ModelSelector--btGoe1p.js",
+          "_prefill-Bt9XeRbC.js",
+          "_badge-BC-6QS26.js",
+          "_markdown-BFkXmfLC.js",
+          "_ModelRestrictedModal-C3fyEORB.js",
           "_date-format-CfassM9h.js",
-          "_flame-Czv5xoyh.js",
-          "_save-UVDNgRNX.js",
-          "_refresh-cw-DA-0BQ12.js",
-          "_target-D3jVY9-N.js",
-          "_shield-Bze4pdXW.js",
-          "_triangle-alert-xVQMqJFN.js",
-          "_error-display-ChjuG8qj.js",
-          "_PricingModal-CSHgEmzC.js",
-          "_use-reduced-motion-CWYDwmo6.js",
-          "_index-BO3TwXUP.js",
-          "_file-text-DJr5GWEk.js",
-          "_external-link-4Qm-J_pW.js",
-          "_url-CchqeGdk.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_zap-Br8Yxf1I.js",
+          "_flame-LxH7SUbA.js",
+          "_save--EOuaVhR.js",
+          "_refresh-cw-BeTvwxHO.js",
+          "_target-BtiUsRv7.js",
+          "_shield-C8ZFNTgi.js",
+          "_triangle-alert-BgYzclSC.js",
+          "_error-display-CfPmd3wN.js",
+          "_PricingModal-D8mLWjDu.js",
+          "_use-reduced-motion-v_1o4Ngt.js",
+          "_index-CzRyuAKe.js",
+          "_file-text-B6nrM_aa.js",
+          "_external-link-CeL3t6Kr.js",
+          "_url-CeZm_C1D.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_zap-DRG34D0x.js",
           "_edge-function-error-dlcwXP30.js",
-          "_crown-CSAL0Uwb.js",
+          "_crown-BzZHpcif.js",
           "_string-cKWu9XK9.js"
         ],
         "dynamicImports": [
@@ -2787,84 +2781,84 @@
       },
       {
         "key": "src/pages/HistoryPage.tsx",
-        "file": "assets/HistoryPage-CZNU6V55.js",
+        "file": "assets/HistoryPage-B6Fqkfa7.js",
         "name": "HistoryPage",
         "src": "src/pages/HistoryPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_tabs-MRQ3288m.js",
-          "_badge-nHj14g2K.js",
-          "_scroll-area-ByvjHX4Q.js",
+          "_card-BnT411OX.js",
+          "_tabs-Dc13bJ4B.js",
+          "_badge-BC-6QS26.js",
+          "_scroll-area-BTGx2PB1.js",
           "_date-format-CfassM9h.js",
-          "_alert-dialog-CqBO3mfQ.js",
-          "_empty-state-CsLvpD--.js",
-          "_file-text-DJr5GWEk.js",
-          "_zap-Br8Yxf1I.js",
-          "_brain-DdyusTg0.js",
-          "_trash-2-D3f6TJLq.js"
+          "_alert-dialog-chuiBWTg.js",
+          "_empty-state-DM7N_Xh_.js",
+          "_file-text-B6nrM_aa.js",
+          "_zap-DRG34D0x.js",
+          "_brain-M0E5BVtS.js",
+          "_trash-2-F2gcUNIU.js"
         ]
       },
       {
         "key": "src/pages/HomePage.tsx",
-        "file": "assets/HomePage-DPgIP-fI.js",
+        "file": "assets/HomePage-BcLTnuQ3.js",
         "name": "HomePage",
         "src": "src/pages/HomePage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_arrow-right-6vwWG1uk.js"
+          "_card-BnT411OX.js",
+          "_arrow-right-_GA5t6Ff.js"
         ]
       },
       {
         "key": "src/pages/LandingPage.tsx",
-        "file": "assets/LandingPage-DaERERPw.js",
+        "file": "assets/LandingPage-BEJhBS06.js",
         "name": "LandingPage",
         "src": "src/pages/LandingPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_use-reduced-motion-CWYDwmo6.js",
-          "_proxy-DczR7eym.js",
-          "_arrow-right-6vwWG1uk.js",
-          "_crown-CSAL0Uwb.js",
-          "_zap-Br8Yxf1I.js",
-          "_brain-DdyusTg0.js",
-          "_search-BGhB3V3-.js",
-          "_users-C9kQKqTg.js"
+          "_use-reduced-motion-v_1o4Ngt.js",
+          "_proxy-CZ59rzDR.js",
+          "_arrow-right-_GA5t6Ff.js",
+          "_crown-BzZHpcif.js",
+          "_zap-DRG34D0x.js",
+          "_brain-M0E5BVtS.js",
+          "_search-D72Br97G.js",
+          "_users-BM5mL8hE.js"
         ]
       },
       {
         "key": "src/pages/LibraryPage.tsx",
-        "file": "assets/LibraryPage-CunJtoC_.js",
+        "file": "assets/LibraryPage-TQP69FJp.js",
         "name": "LibraryPage",
         "src": "src/pages/LibraryPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_input-8rX023Lp.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_badge-nHj14g2K.js",
-          "_switch-BVCWb5Lf.js",
+          "_card-BnT411OX.js",
+          "_input-BjDrRHtx.js",
+          "_textarea-BQ0Vj88K.js",
+          "_badge-BC-6QS26.js",
+          "_switch-CHK59itA.js",
           "_date-format-CfassM9h.js",
-          "_url-CchqeGdk.js",
+          "_url-CeZm_C1D.js",
           "_edge-function-error-dlcwXP30.js",
-          "_alert-dialog-CqBO3mfQ.js",
-          "_sheet-DaYpJRvT.js",
-          "_plus-BYgsCk8s.js",
-          "_trash-2-D3f6TJLq.js",
-          "_search-BGhB3V3-.js",
-          "_shield-check-DYnOiWee.js",
-          "_file-text-DJr5GWEk.js",
-          "_copy-D2fGLc-5.js",
-          "_save-UVDNgRNX.js",
-          "_external-link-4Qm-J_pW.js"
+          "_alert-dialog-chuiBWTg.js",
+          "_sheet-Dfq5h2d1.js",
+          "_plus-CuZTkh8c.js",
+          "_trash-2-F2gcUNIU.js",
+          "_search-D72Br97G.js",
+          "_shield-check-DU5mFNut.js",
+          "_file-text-B6nrM_aa.js",
+          "_copy-L_02rmZ3.js",
+          "_save--EOuaVhR.js",
+          "_external-link-CeL3t6Kr.js"
         ],
         "dynamicImports": [
-          "_index-BiDsgf0K.js",
+          "_index-CUklgy1x.js",
           "node_modules/pdfjs-dist/legacy/build/pdf.mjs"
         ],
         "assets": [
@@ -2873,20 +2867,20 @@
       },
       {
         "key": "src/pages/LoginPage.tsx",
-        "file": "assets/LoginPage-Ce53SzDq.js",
+        "file": "assets/LoginPage-CD0NVSxt.js",
         "name": "LoginPage",
         "src": "src/pages/LoginPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_input-8rX023Lp.js",
-          "_tabs-MRQ3288m.js"
+          "_card-BnT411OX.js",
+          "_input-BjDrRHtx.js",
+          "_tabs-Dc13bJ4B.js"
         ]
       },
       {
         "key": "src/pages/NotFound.tsx",
-        "file": "assets/NotFound-CFdy2fVm.js",
+        "file": "assets/NotFound-DvGZAJP6.js",
         "name": "NotFound",
         "src": "src/pages/NotFound.tsx",
         "isDynamicEntry": true,
@@ -2896,7 +2890,7 @@
       },
       {
         "key": "src/pages/PrivacyPage.tsx",
-        "file": "assets/PrivacyPage-Brh0nBca.js",
+        "file": "assets/PrivacyPage-D9Cozr5T.js",
         "name": "PrivacyPage",
         "src": "src/pages/PrivacyPage.tsx",
         "isDynamicEntry": true,
@@ -2906,44 +2900,44 @@
       },
       {
         "key": "src/pages/SettingsPage.tsx",
-        "file": "assets/SettingsPage-_XMuA3Sz.js",
+        "file": "assets/SettingsPage-BUk754vw.js",
         "name": "SettingsPage",
         "src": "src/pages/SettingsPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_badge-nHj14g2K.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_PricingModal-CSHgEmzC.js",
+          "_card-BnT411OX.js",
+          "_badge-BC-6QS26.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_PricingModal-D8mLWjDu.js",
           "_date-format-CfassM9h.js",
-          "_input-8rX023Lp.js",
-          "_crown-CSAL0Uwb.js",
-          "_credit-card-DJ5X1r1l.js",
-          "_zap-Br8Yxf1I.js",
-          "_shield-Bze4pdXW.js",
-          "_trash-2-D3f6TJLq.js",
+          "_input-BjDrRHtx.js",
+          "_crown-BzZHpcif.js",
+          "_credit-card-DxReFz7h.js",
+          "_zap-DRG34D0x.js",
+          "_shield-C8ZFNTgi.js",
+          "_trash-2-F2gcUNIU.js",
           "_edge-function-error-dlcwXP30.js"
         ]
       },
       {
         "key": "src/pages/SharedPage.tsx",
-        "file": "assets/SharedPage-CyainLjk.js",
+        "file": "assets/SharedPage-TMNbj13C.js",
         "name": "SharedPage",
         "src": "src/pages/SharedPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_badge-nHj14g2K.js",
+          "_card-BnT411OX.js",
+          "_badge-BC-6QS26.js",
           "_date-format-CfassM9h.js",
-          "_download-B3oRXuVT.js",
-          "_external-link-4Qm-J_pW.js"
+          "_download-B6rLXL5_.js",
+          "_external-link-CeL3t6Kr.js"
         ]
       },
       {
         "key": "src/pages/SourcesPage.tsx",
-        "file": "assets/SourcesPage-wZYBqeEW.js",
+        "file": "assets/SourcesPage-CNyFodT6.js",
         "name": "SourcesPage",
         "src": "src/pages/SourcesPage.tsx",
         "isDynamicEntry": true,
@@ -2953,32 +2947,32 @@
       },
       {
         "key": "src/pages/SparringPage.tsx",
-        "file": "assets/SparringPage-BPTbF4UU.js",
+        "file": "assets/SparringPage-ChpAbP_j.js",
         "name": "SparringPage",
         "src": "src/pages/SparringPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_client-7AP--ukW.js",
-          "_card-KQczJDLQ.js",
-          "_textarea-Cbcs_Kkm.js",
-          "_badge-nHj14g2K.js",
-          "_ModelSelector-DlkZ5y5U.js",
-          "_arrow-right-6vwWG1uk.js",
-          "_progress-bSnotB5B.js",
-          "_markdown-Sm0t_tMl.js",
-          "_clock-3-M0IAIYb6.js",
-          "_rotate-ccw-C75qCzYm.js",
-          "_circle-alert-DpUayguU.js",
-          "_send-DPXosOuu.js",
-          "_download-B3oRXuVT.js",
-          "_generateCategoricalChart-C12mRN5t.js",
-          "_target-D3jVY9-N.js",
-          "_file-text-DJr5GWEk.js",
-          "_circle-help-DQt7G_9u.js",
-          "_url-CchqeGdk.js",
-          "_use-subscription-BqTp0Vss.js",
-          "_index-Bv_cGurf.js",
+          "_client-DEwlmyst.js",
+          "_card-BnT411OX.js",
+          "_textarea-BQ0Vj88K.js",
+          "_badge-BC-6QS26.js",
+          "_ModelSelector--btGoe1p.js",
+          "_arrow-right-_GA5t6Ff.js",
+          "_progress-Eyz1T4LG.js",
+          "_markdown-BFkXmfLC.js",
+          "_clock-3-cVu-fg4P.js",
+          "_rotate-ccw-v2tcH4l7.js",
+          "_circle-alert-EvFEdfwm.js",
+          "_send-DyAEqj-V.js",
+          "_download-B6rLXL5_.js",
+          "_generateCategoricalChart-tQpM_2Ey.js",
+          "_target-BtiUsRv7.js",
+          "_file-text-B6nrM_aa.js",
+          "_circle-help-B0oPixm9.js",
+          "_url-CeZm_C1D.js",
+          "_use-subscription-DPxqRAbU.js",
+          "_index-DCbKzI_r.js",
           "_string-cKWu9XK9.js"
         ],
         "dynamicImports": [
@@ -2988,7 +2982,7 @@
       },
       {
         "key": "src/pages/TermsPage.tsx",
-        "file": "assets/TermsPage-CmASZz3J.js",
+        "file": "assets/TermsPage-BOTALLMN.js",
         "name": "TermsPage",
         "src": "src/pages/TermsPage.tsx",
         "isDynamicEntry": true,
@@ -2998,210 +2992,210 @@
       },
       {
         "key": "src/pages/TimerPage.tsx",
-        "file": "assets/TimerPage-DBzSCjtR.js",
+        "file": "assets/TimerPage-DD2LToSI.js",
         "name": "TimerPage",
         "src": "src/pages/TimerPage.tsx",
         "isDynamicEntry": true,
         "imports": [
           "index.html",
-          "_card-KQczJDLQ.js",
-          "_badge-nHj14g2K.js",
-          "_progress-bSnotB5B.js",
-          "_rotate-ccw-C75qCzYm.js"
+          "_card-BnT411OX.js",
+          "_badge-BC-6QS26.js",
+          "_progress-Eyz1T4LG.js",
+          "_rotate-ccw-v2tcH4l7.js"
         ]
       }
     ],
     "routeStaticGraphs": [
       {
         "route": "index.html",
-        "file": "assets/index-q7XbFcUA.js",
+        "file": "assets/index-BXPLmGRM.js",
         "files": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ]
       },
       {
         "route": "/",
-        "file": "assets/LandingPage-DaERERPw.js",
+        "file": "assets/LandingPage-BEJhBS06.js",
         "files": [
-          "assets/LandingPage-DaERERPw.js",
-          "assets/users-C9kQKqTg.js",
-          "assets/index-q7XbFcUA.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/brain-DdyusTg0.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/crown-CSAL0Uwb.js",
-          "assets/arrow-right-6vwWG1uk.js",
-          "assets/proxy-DczR7eym.js",
-          "assets/use-reduced-motion-CWYDwmo6.js"
+          "assets/LandingPage-BEJhBS06.js",
+          "assets/users-BM5mL8hE.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/search-D72Br97G.js",
+          "assets/brain-M0E5BVtS.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/crown-BzZHpcif.js",
+          "assets/arrow-right-_GA5t6Ff.js",
+          "assets/proxy-CZ59rzDR.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js"
         ]
       },
       {
         "route": "/login",
-        "file": "assets/LoginPage-Ce53SzDq.js",
+        "file": "assets/LoginPage-CD0NVSxt.js",
         "files": [
-          "assets/LoginPage-Ce53SzDq.js",
-          "assets/tabs-MRQ3288m.js",
-          "assets/index-q7XbFcUA.js",
-          "assets/input-8rX023Lp.js",
-          "assets/card-KQczJDLQ.js"
+          "assets/LoginPage-CD0NVSxt.js",
+          "assets/tabs-Dc13bJ4B.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/card-BnT411OX.js"
         ]
       },
       {
         "route": "/app",
-        "file": "assets/HomePage-DPgIP-fI.js",
+        "file": "assets/HomePage-BcLTnuQ3.js",
         "files": [
-          "assets/HomePage-DPgIP-fI.js",
-          "assets/arrow-right-6vwWG1uk.js",
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js"
+          "assets/HomePage-BcLTnuQ3.js",
+          "assets/arrow-right-_GA5t6Ff.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js"
         ]
       },
       {
         "route": "/app/generate",
-        "file": "assets/GeneratePage-Df7s3ZzA.js",
+        "file": "assets/GeneratePage-Chk9sB1m.js",
         "files": [
-          "assets/GeneratePage-Df7s3ZzA.js",
+          "assets/GeneratePage-Chk9sB1m.js",
           "assets/string-cKWu9XK9.js",
-          "assets/crown-CSAL0Uwb.js",
-          "assets/index-q7XbFcUA.js",
+          "assets/crown-BzZHpcif.js",
+          "assets/index-BXPLmGRM.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/url-CchqeGdk.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/index-BO3TwXUP.js",
-          "assets/use-reduced-motion-CWYDwmo6.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/input-8rX023Lp.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/client-7AP--ukW.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/target-D3jVY9-N.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/save-UVDNgRNX.js",
-          "assets/flame-Czv5xoyh.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/index-CzRyuAKe.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/client-DEwlmyst.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/target-BtiUsRv7.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/save--EOuaVhR.js",
+          "assets/flame-LxH7SUbA.js",
           "assets/date-format-CfassM9h.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
-          "assets/markdown-Sm0t_tMl.js",
-          "assets/prefill-CrfOM3DK.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/use-speech-to-text-QtyVHro3.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/streaming-indicator-Bhi-dA7V.js"
+          "assets/ModelRestrictedModal-C3fyEORB.js",
+          "assets/markdown-BFkXmfLC.js",
+          "assets/prefill-Bt9XeRbC.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/use-speech-to-text-BwciQCuH.js",
+          "assets/card-BnT411OX.js",
+          "assets/streaming-indicator-Ckj0qTTQ.js"
         ]
       },
       {
         "route": "/app/attack",
-        "file": "assets/AttackPage-h6F8PCcy.js",
+        "file": "assets/AttackPage-DjMYLo0u.js",
         "files": [
-          "assets/AttackPage-h6F8PCcy.js",
-          "assets/crown-CSAL0Uwb.js",
-          "assets/index-q7XbFcUA.js",
+          "assets/AttackPage-DjMYLo0u.js",
+          "assets/crown-BzZHpcif.js",
+          "assets/index-BXPLmGRM.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/input-8rX023Lp.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/url-CchqeGdk.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/client-7AP--ukW.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/circle-alert-DpUayguU.js",
-          "assets/flame-Czv5xoyh.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
-          "assets/markdown-Sm0t_tMl.js",
-          "assets/progress-bSnotB5B.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/prefill-CrfOM3DK.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/switch-BVCWb5Lf.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/streaming-indicator-Bhi-dA7V.js"
+          "assets/input-BjDrRHtx.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/client-DEwlmyst.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/circle-alert-EvFEdfwm.js",
+          "assets/flame-LxH7SUbA.js",
+          "assets/ModelRestrictedModal-C3fyEORB.js",
+          "assets/markdown-BFkXmfLC.js",
+          "assets/progress-Eyz1T4LG.js",
+          "assets/search-D72Br97G.js",
+          "assets/prefill-Bt9XeRbC.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/card-BnT411OX.js",
+          "assets/switch-CHK59itA.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/streaming-indicator-Ckj0qTTQ.js"
         ]
       },
       {
         "route": "/app/flowchart",
-        "file": "assets/FlowchartPage-CJxI0fuF.js",
+        "file": "assets/FlowchartPage-hnm2Idlk.js",
         "files": [
-          "assets/FlowchartPage-CJxI0fuF.js",
+          "assets/FlowchartPage-hnm2Idlk.js",
           "assets/string-cKWu9XK9.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/index-q7XbFcUA.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/target-D3jVY9-N.js",
-          "assets/download-B3oRXuVT.js",
-          "assets/plus-BYgsCk8s.js",
-          "assets/save-UVDNgRNX.js",
-          "assets/trash-2-D3f6TJLq.js",
-          "assets/index-BO3TwXUP.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/input-8rX023Lp.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/card-KQczJDLQ.js"
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/target-BtiUsRv7.js",
+          "assets/download-B6rLXL5_.js",
+          "assets/plus-CuZTkh8c.js",
+          "assets/save--EOuaVhR.js",
+          "assets/trash-2-F2gcUNIU.js",
+          "assets/index-CzRyuAKe.js",
+          "assets/alert-dialog-chuiBWTg.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/card-BnT411OX.js"
         ]
       },
       {
         "route": "/app/history",
-        "file": "assets/HistoryPage-CZNU6V55.js",
+        "file": "assets/HistoryPage-B6Fqkfa7.js",
         "files": [
-          "assets/HistoryPage-CZNU6V55.js",
-          "assets/trash-2-D3f6TJLq.js",
-          "assets/index-q7XbFcUA.js",
-          "assets/brain-DdyusTg0.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/empty-state-CsLvpD--.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
+          "assets/HistoryPage-B6Fqkfa7.js",
+          "assets/trash-2-F2gcUNIU.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/brain-M0E5BVtS.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/empty-state-DM7N_Xh_.js",
+          "assets/alert-dialog-chuiBWTg.js",
           "assets/date-format-CfassM9h.js",
-          "assets/scroll-area-ByvjHX4Q.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/tabs-MRQ3288m.js",
-          "assets/card-KQczJDLQ.js"
+          "assets/scroll-area-BTGx2PB1.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/tabs-Dc13bJ4B.js",
+          "assets/card-BnT411OX.js"
         ]
       },
       {
         "route": "/app/admin",
-        "file": "assets/AdminPage-DAZYToit.js",
+        "file": "assets/AdminPage-DxOnwRAE.js",
         "files": [
-          "assets/AdminPage-DAZYToit.js",
+          "assets/AdminPage-DxOnwRAE.js",
           "assets/string-cKWu9XK9.js",
-          "assets/index-Bv_cGurf.js",
-          "assets/index-q7XbFcUA.js",
-          "assets/rotate-ccw-C75qCzYm.js",
-          "assets/copy-D2fGLc-5.js",
-          "assets/generateCategoricalChart-C12mRN5t.js",
-          "assets/credit-card-DJ5X1r1l.js",
-          "assets/users-C9kQKqTg.js",
-          "assets/circle-alert-DpUayguU.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/trash-2-D3f6TJLq.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/checkbox-NPaqaug-.js",
+          "assets/index-DCbKzI_r.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/rotate-ccw-v2tcH4l7.js",
+          "assets/copy-L_02rmZ3.js",
+          "assets/generateCategoricalChart-tQpM_2Ey.js",
+          "assets/credit-card-DxReFz7h.js",
+          "assets/users-BM5mL8hE.js",
+          "assets/circle-alert-EvFEdfwm.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/trash-2-F2gcUNIU.js",
+          "assets/search-D72Br97G.js",
+          "assets/alert-dialog-chuiBWTg.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/checkbox-CPn-6Pk1.js",
           "assets/date-format-CfassM9h.js",
-          "assets/scroll-area-ByvjHX4Q.js",
-          "assets/tabs-MRQ3288m.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/input-8rX023Lp.js",
-          "assets/card-KQczJDLQ.js"
+          "assets/scroll-area-BTGx2PB1.js",
+          "assets/tabs-Dc13bJ4B.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/card-BnT411OX.js"
         ]
       }
     ],
     "chunks": [
       {
-        "file": "assets/index-q7XbFcUA.js",
-        "bytes": 1043703,
-        "gzipBytes": 322028,
+        "file": "assets/index-BXPLmGRM.js",
+        "bytes": 1043946,
+        "gzipBytes": 322114,
         "imports": [],
         "modules": [
           "\u0000vite/modulepreload-polyfill.js",
@@ -3487,12 +3481,12 @@
         "dynamicEntry": "index.html"
       },
       {
-        "file": "assets/OnboardingTour-CidKS6R0.js",
-        "bytes": 103039,
-        "gzipBytes": 31727,
+        "file": "assets/OnboardingTour-D3HRgV01.js",
+        "bytes": 103062,
+        "gzipBytes": 31750,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/index-Bv_cGurf.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/index-DCbKzI_r.js"
         ],
         "modules": [
           "node_modules/@gilbarbara/deep-equal/dist/index.mjs",
@@ -3521,11 +3515,11 @@
         "dynamicEntry": "src/components/features/onboarding/OnboardingTour.tsx"
       },
       {
-        "file": "assets/index-Drm248ae.js",
+        "file": "assets/index-D_w_W2TW.js",
         "bytes": 2665,
-        "gzipBytes": 1243,
+        "gzipBytes": 1242,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@vercel/analytics/dist/react/index.mjs"
@@ -3534,11 +3528,11 @@
         "dynamicEntry": "node_modules/@vercel/analytics/dist/react/index.mjs"
       },
       {
-        "file": "assets/index-G86aoU7n.js",
+        "file": "assets/index-BOmRsjz8.js",
         "bytes": 2350,
-        "gzipBytes": 1109,
+        "gzipBytes": 1107,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@vercel/speed-insights/dist/react/index.mjs"
@@ -3547,19 +3541,19 @@
         "dynamicEntry": "node_modules/@vercel/speed-insights/dist/react/index.mjs"
       },
       {
-        "file": "assets/LandingPage-DaERERPw.js",
+        "file": "assets/LandingPage-BEJhBS06.js",
         "bytes": 45814,
-        "gzipBytes": 11163,
+        "gzipBytes": 11162,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/use-reduced-motion-CWYDwmo6.js",
-          "assets/proxy-DczR7eym.js",
-          "assets/arrow-right-6vwWG1uk.js",
-          "assets/crown-CSAL0Uwb.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/brain-DdyusTg0.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/users-C9kQKqTg.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js",
+          "assets/proxy-CZ59rzDR.js",
+          "assets/arrow-right-_GA5t6Ff.js",
+          "assets/crown-BzZHpcif.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/brain-M0E5BVtS.js",
+          "assets/search-D72Br97G.js",
+          "assets/users-BM5mL8hE.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/circle-check.js",
@@ -3598,11 +3592,11 @@
         "dynamicEntry": "src/pages/LandingPage.tsx"
       },
       {
-        "file": "assets/TermsPage-CmASZz3J.js",
+        "file": "assets/TermsPage-BOTALLMN.js",
         "bytes": 772,
-        "gzipBytes": 419,
+        "gzipBytes": 421,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/pages/TermsPage.tsx"
@@ -3611,11 +3605,11 @@
         "dynamicEntry": "src/pages/TermsPage.tsx"
       },
       {
-        "file": "assets/PrivacyPage-Brh0nBca.js",
+        "file": "assets/PrivacyPage-D9Cozr5T.js",
         "bytes": 782,
-        "gzipBytes": 421,
+        "gzipBytes": 423,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/pages/PrivacyPage.tsx"
@@ -3624,11 +3618,11 @@
         "dynamicEntry": "src/pages/PrivacyPage.tsx"
       },
       {
-        "file": "assets/SourcesPage-wZYBqeEW.js",
+        "file": "assets/SourcesPage-CNyFodT6.js",
         "bytes": 4766,
-        "gzipBytes": 2081,
+        "gzipBytes": 2080,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/pages/SourcesPage.tsx"
@@ -3637,14 +3631,14 @@
         "dynamicEntry": "src/pages/SourcesPage.tsx"
       },
       {
-        "file": "assets/LoginPage-Ce53SzDq.js",
+        "file": "assets/LoginPage-CD0NVSxt.js",
         "bytes": 6794,
-        "gzipBytes": 2207,
+        "gzipBytes": 2206,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/input-8rX023Lp.js",
-          "assets/tabs-MRQ3288m.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/tabs-Dc13bJ4B.js"
         ],
         "modules": [
           "src/pages/LoginPage.tsx"
@@ -3655,16 +3649,16 @@
         "dynamicEntry": "src/pages/LoginPage.tsx"
       },
       {
-        "file": "assets/SharedPage-CyainLjk.js",
+        "file": "assets/SharedPage-TMNbj13C.js",
         "bytes": 3249,
-        "gzipBytes": 1304,
+        "gzipBytes": 1303,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/badge-nHj14g2K.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/badge-BC-6QS26.js",
           "assets/date-format-CfassM9h.js",
-          "assets/download-B3oRXuVT.js",
-          "assets/external-link-4Qm-J_pW.js"
+          "assets/download-B6rLXL5_.js",
+          "assets/external-link-CeL3t6Kr.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/share-2.js",
@@ -3674,13 +3668,13 @@
         "dynamicEntry": "src/pages/SharedPage.tsx"
       },
       {
-        "file": "assets/HomePage-DPgIP-fI.js",
+        "file": "assets/HomePage-BcLTnuQ3.js",
         "bytes": 3439,
         "gzipBytes": 1261,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/arrow-right-6vwWG1uk.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/arrow-right-_GA5t6Ff.js"
         ],
         "modules": [
           "src/pages/HomePage.tsx"
@@ -3691,39 +3685,39 @@
         "dynamicEntry": "src/pages/HomePage.tsx"
       },
       {
-        "file": "assets/GeneratePage-Df7s3ZzA.js",
+        "file": "assets/GeneratePage-Chk9sB1m.js",
         "bytes": 28562,
-        "gzipBytes": 8180,
+        "gzipBytes": 8173,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/streaming-indicator-Bhi-dA7V.js",
-          "assets/input-8rX023Lp.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/client-7AP--ukW.js",
-          "assets/use-speech-to-text-QtyVHro3.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/prefill-CrfOM3DK.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/markdown-Sm0t_tMl.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/streaming-indicator-Ckj0qTTQ.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/card-BnT411OX.js",
+          "assets/client-DEwlmyst.js",
+          "assets/use-speech-to-text-BwciQCuH.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/prefill-Bt9XeRbC.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/markdown-BFkXmfLC.js",
+          "assets/ModelRestrictedModal-C3fyEORB.js",
           "assets/date-format-CfassM9h.js",
-          "assets/flame-Czv5xoyh.js",
-          "assets/save-UVDNgRNX.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/target-D3jVY9-N.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/use-reduced-motion-CWYDwmo6.js",
-          "assets/index-BO3TwXUP.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/url-CchqeGdk.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/zap-Br8Yxf1I.js",
+          "assets/flame-LxH7SUbA.js",
+          "assets/save--EOuaVhR.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/target-BtiUsRv7.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js",
+          "assets/index-CzRyuAKe.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/zap-DRG34D0x.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/crown-CSAL0Uwb.js",
+          "assets/crown-BzZHpcif.js",
           "assets/string-cKWu9XK9.js"
         ],
         "modules": [
@@ -3739,37 +3733,37 @@
         "dynamicEntry": "src/pages/GeneratePage.tsx"
       },
       {
-        "file": "assets/AttackPage-h6F8PCcy.js",
+        "file": "assets/AttackPage-DjMYLo0u.js",
         "bytes": 19042,
-        "gzipBytes": 5375,
+        "gzipBytes": 5376,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/streaming-indicator-Bhi-dA7V.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/switch-BVCWb5Lf.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/client-7AP--ukW.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/prefill-CrfOM3DK.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/progress-bSnotB5B.js",
-          "assets/markdown-Sm0t_tMl.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
-          "assets/flame-Czv5xoyh.js",
-          "assets/circle-alert-DpUayguU.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/url-CchqeGdk.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/input-8rX023Lp.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/streaming-indicator-Ckj0qTTQ.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/switch-CHK59itA.js",
+          "assets/card-BnT411OX.js",
+          "assets/client-DEwlmyst.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/prefill-Bt9XeRbC.js",
+          "assets/search-D72Br97G.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/progress-Eyz1T4LG.js",
+          "assets/markdown-BFkXmfLC.js",
+          "assets/ModelRestrictedModal-C3fyEORB.js",
+          "assets/flame-LxH7SUbA.js",
+          "assets/circle-alert-EvFEdfwm.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/input-BjDrRHtx.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/crown-CSAL0Uwb.js"
+          "assets/crown-BzZHpcif.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/info.js",
@@ -3784,11 +3778,11 @@
         "dynamicEntry": "src/pages/AttackPage.tsx"
       },
       {
-        "file": "assets/prefill-CrfOM3DK.js",
+        "file": "assets/prefill-Bt9XeRbC.js",
         "bytes": 1983,
-        "gzipBytes": 959,
+        "gzipBytes": 960,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/sliders-horizontal.js",
@@ -3800,36 +3794,36 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_prefill-CrfOM3DK.js"
+        "dynamicEntry": "_prefill-Bt9XeRbC.js"
       },
       {
-        "file": "assets/BrainstormPage-BijngCxi.js",
+        "file": "assets/BrainstormPage-CzulC9rz.js",
         "bytes": 15091,
-        "gzipBytes": 4726,
+        "gzipBytes": 4728,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/streaming-indicator-Bhi-dA7V.js",
-          "assets/input-8rX023Lp.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/brain-DdyusTg0.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
-          "assets/empty-state-CsLvpD--.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/arrow-right-6vwWG1uk.js",
-          "assets/client-7AP--ukW.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/url-CchqeGdk.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/streaming-indicator-Ckj0qTTQ.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/card-BnT411OX.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/brain-M0E5BVtS.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/ModelRestrictedModal-C3fyEORB.js",
+          "assets/empty-state-DM7N_Xh_.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/arrow-right-_GA5t6Ff.js",
+          "assets/client-DEwlmyst.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/url-CeZm_C1D.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/crown-CSAL0Uwb.js"
+          "assets/crown-BzZHpcif.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/trending-up.js",
@@ -3842,32 +3836,32 @@
         "dynamicEntry": "src/pages/BrainstormPage.tsx"
       },
       {
-        "file": "assets/FactoidsPage-DjQzwQXq.js",
+        "file": "assets/FactoidsPage-Desc9OHj.js",
         "bytes": 27493,
-        "gzipBytes": 9073,
+        "gzipBytes": 9075,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/streaming-indicator-Bhi-dA7V.js",
-          "assets/input-8rX023Lp.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/client-7AP--ukW.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/progress-bSnotB5B.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/bookmark-BYaAW2wV.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/url-CchqeGdk.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/zap-Br8Yxf1I.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/streaming-indicator-Ckj0qTTQ.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/card-BnT411OX.js",
+          "assets/client-DEwlmyst.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/search-D72Br97G.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/progress-Eyz1T4LG.js",
+          "assets/ModelRestrictedModal-C3fyEORB.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/bookmark-B9VbbzBD.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/zap-DRG34D0x.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/crown-CSAL0Uwb.js"
+          "assets/crown-BzZHpcif.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/circle-check-big.js",
@@ -3881,16 +3875,16 @@
         "dynamicEntry": "src/pages/FactoidsPage.tsx"
       },
       {
-        "file": "assets/streaming-indicator-Bhi-dA7V.js",
+        "file": "assets/streaming-indicator-Ckj0qTTQ.js",
         "bytes": 40952,
-        "gzipBytes": 14995,
+        "gzipBytes": 14991,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/external-link-4Qm-J_pW.js",
-          "assets/badge-nHj14g2K.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/external-link-CeL3t6Kr.js",
+          "assets/badge-BC-6QS26.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/file-down.js",
@@ -3911,41 +3905,41 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_streaming-indicator-Bhi-dA7V.js"
+        "dynamicEntry": "_streaming-indicator-Ckj0qTTQ.js"
       },
       {
-        "file": "assets/AskPage-DfHYYW_H.js",
+        "file": "assets/AskPage-D3eVFOW4.js",
         "bytes": 30936,
-        "gzipBytes": 9849,
+        "gzipBytes": 9847,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/input-8rX023Lp.js",
-          "assets/markdown-Sm0t_tMl.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/switch-BVCWb5Lf.js",
-          "assets/scroll-area-ByvjHX4Q.js",
-          "assets/use-speech-to-text-QtyVHro3.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/markdown-BFkXmfLC.js",
+          "assets/card-BnT411OX.js",
+          "assets/switch-CHK59itA.js",
+          "assets/scroll-area-BTGx2PB1.js",
+          "assets/use-speech-to-text-BwciQCuH.js",
           "assets/date-format-CfassM9h.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/sheet-DaYpJRvT.js",
-          "assets/use-reduced-motion-CWYDwmo6.js",
-          "assets/save-UVDNgRNX.js",
-          "assets/rotate-ccw-C75qCzYm.js",
-          "assets/circle-help-DQt7G_9u.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/send-DPXosOuu.js",
-          "assets/bookmark-BYaAW2wV.js",
-          "assets/client-7AP--ukW.js",
-          "assets/ModelRestrictedModal-Dvw-yPIC.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/PricingModal-CSHgEmzC.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/url-CchqeGdk.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/zap-Br8Yxf1I.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/sheet-Dfq5h2d1.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js",
+          "assets/save--EOuaVhR.js",
+          "assets/rotate-ccw-v2tcH4l7.js",
+          "assets/circle-help-B0oPixm9.js",
+          "assets/search-D72Br97G.js",
+          "assets/send-DyAEqj-V.js",
+          "assets/bookmark-B9VbbzBD.js",
+          "assets/client-DEwlmyst.js",
+          "assets/ModelRestrictedModal-C3fyEORB.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/PricingModal-D8mLWjDu.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/zap-DRG34D0x.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/crown-CSAL0Uwb.js"
+          "assets/crown-BzZHpcif.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/circle-plus.js",
@@ -3963,11 +3957,11 @@
         "dynamicEntry": "src/pages/AskPage.tsx"
       },
       {
-        "file": "assets/use-speech-to-text-QtyVHro3.js",
+        "file": "assets/use-speech-to-text-BwciQCuH.js",
         "bytes": 1930,
-        "gzipBytes": 950,
+        "gzipBytes": 951,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/mic-off.js",
@@ -3977,31 +3971,31 @@
         "staticMembership": [
           "/app/generate"
         ],
-        "dynamicEntry": "_use-speech-to-text-QtyVHro3.js"
+        "dynamicEntry": "_use-speech-to-text-BwciQCuH.js"
       },
       {
-        "file": "assets/bookmark-BYaAW2wV.js",
+        "file": "assets/bookmark-B9VbbzBD.js",
         "bytes": 160,
-        "gzipBytes": 158,
+        "gzipBytes": 159,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/bookmark.js"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_bookmark-BYaAW2wV.js"
+        "dynamicEntry": "_bookmark-B9VbbzBD.js"
       },
       {
-        "file": "assets/ModelRestrictedModal-Dvw-yPIC.js",
+        "file": "assets/ModelRestrictedModal-C3fyEORB.js",
         "bytes": 3984,
-        "gzipBytes": 1467,
+        "gzipBytes": 1464,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/client-7AP--ukW.js",
-          "assets/triangle-alert-xVQMqJFN.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/PricingModal-CSHgEmzC.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/client-DEwlmyst.js",
+          "assets/triangle-alert-BgYzclSC.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/PricingModal-D8mLWjDu.js"
         ],
         "modules": [
           "src/components/ui/animated-section.tsx",
@@ -4013,30 +4007,30 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_ModelRestrictedModal-Dvw-yPIC.js"
+        "dynamicEntry": "_ModelRestrictedModal-C3fyEORB.js"
       },
       {
-        "file": "assets/CrossfirePage-fpXRe2Jy.js",
+        "file": "assets/CrossfirePage-6-RlWW8P.js",
         "bytes": 26182,
-        "gzipBytes": 6859,
+        "gzipBytes": 6863,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/checkbox-NPaqaug-.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/client-7AP--ukW.js",
-          "assets/error-display-ChjuG8qj.js",
-          "assets/use-reduced-motion-CWYDwmo6.js",
-          "assets/flame-Czv5xoyh.js",
-          "assets/circle-alert-DpUayguU.js",
-          "assets/refresh-cw-DA-0BQ12.js",
-          "assets/clock-3-M0IAIYb6.js",
-          "assets/send-DPXosOuu.js",
-          "assets/rotate-ccw-C75qCzYm.js",
-          "assets/shield-check-DYnOiWee.js",
-          "assets/proxy-DczR7eym.js",
-          "assets/url-CchqeGdk.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/card-BnT411OX.js",
+          "assets/checkbox-CPn-6Pk1.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/client-DEwlmyst.js",
+          "assets/error-display-CfPmd3wN.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js",
+          "assets/flame-LxH7SUbA.js",
+          "assets/circle-alert-EvFEdfwm.js",
+          "assets/refresh-cw-BeTvwxHO.js",
+          "assets/clock-3-cVu-fg4P.js",
+          "assets/send-DyAEqj-V.js",
+          "assets/rotate-ccw-v2tcH4l7.js",
+          "assets/shield-check-DU5mFNut.js",
+          "assets/proxy-CZ59rzDR.js",
+          "assets/url-CeZm_C1D.js"
         ],
         "modules": [
           "src/components/ui/alert.tsx",
@@ -4047,12 +4041,12 @@
         "dynamicEntry": "src/pages/CrossfirePage.tsx"
       },
       {
-        "file": "assets/proxy-DczR7eym.js",
+        "file": "assets/proxy-CZ59rzDR.js",
         "bytes": 121276,
-        "gzipBytes": 39639,
+        "gzipBytes": 39636,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/use-reduced-motion-CWYDwmo6.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/use-reduced-motion-v_1o4Ngt.js"
         ],
         "modules": [
           "node_modules/framer-motion/dist/es/context/LayoutGroupContext.mjs",
@@ -4309,14 +4303,14 @@
         "staticMembership": [
           "/"
         ],
-        "dynamicEntry": "_proxy-DczR7eym.js"
+        "dynamicEntry": "_proxy-CZ59rzDR.js"
       },
       {
-        "file": "assets/flame-Czv5xoyh.js",
+        "file": "assets/flame-LxH7SUbA.js",
         "bytes": 275,
-        "gzipBytes": 226,
+        "gzipBytes": 228,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/flame.js"
@@ -4325,14 +4319,14 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_flame-Czv5xoyh.js"
+        "dynamicEntry": "_flame-LxH7SUbA.js"
       },
       {
-        "file": "assets/refresh-cw-DA-0BQ12.js",
+        "file": "assets/refresh-cw-BeTvwxHO.js",
         "bytes": 438,
         "gzipBytes": 277,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/message-square.js",
@@ -4342,14 +4336,14 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_refresh-cw-DA-0BQ12.js"
+        "dynamicEntry": "_refresh-cw-BeTvwxHO.js"
       },
       {
-        "file": "assets/use-reduced-motion-CWYDwmo6.js",
+        "file": "assets/use-reduced-motion-v_1o4Ngt.js",
         "bytes": 387,
         "gzipBytes": 271,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/motion-dom/dist/es/render/utils/reduced-motion/state.mjs",
@@ -4360,14 +4354,14 @@
           "/",
           "/app/generate"
         ],
-        "dynamicEntry": "_use-reduced-motion-CWYDwmo6.js"
+        "dynamicEntry": "_use-reduced-motion-v_1o4Ngt.js"
       },
       {
-        "file": "assets/error-display-ChjuG8qj.js",
+        "file": "assets/error-display-CfPmd3wN.js",
         "bytes": 1464,
-        "gzipBytes": 628,
+        "gzipBytes": 627,
         "imports": [
-          "assets/client-7AP--ukW.js"
+          "assets/client-DEwlmyst.js"
         ],
         "modules": [
           "src/lib/ai/error-display.ts"
@@ -4376,25 +4370,25 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_error-display-ChjuG8qj.js"
+        "dynamicEntry": "_error-display-CfPmd3wN.js"
       },
       {
-        "file": "assets/HistoryPage-CZNU6V55.js",
+        "file": "assets/HistoryPage-B6Fqkfa7.js",
         "bytes": 11679,
-        "gzipBytes": 2622,
+        "gzipBytes": 2623,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/tabs-MRQ3288m.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/scroll-area-ByvjHX4Q.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/tabs-Dc13bJ4B.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/scroll-area-BTGx2PB1.js",
           "assets/date-format-CfassM9h.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
-          "assets/empty-state-CsLvpD--.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/brain-DdyusTg0.js",
-          "assets/trash-2-D3f6TJLq.js"
+          "assets/alert-dialog-chuiBWTg.js",
+          "assets/empty-state-DM7N_Xh_.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/brain-M0E5BVtS.js",
+          "assets/trash-2-F2gcUNIU.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/eye.js",
@@ -4406,11 +4400,11 @@
         "dynamicEntry": "src/pages/HistoryPage.tsx"
       },
       {
-        "file": "assets/empty-state-CsLvpD--.js",
+        "file": "assets/empty-state-DM7N_Xh_.js",
         "bytes": 609,
-        "gzipBytes": 374,
+        "gzipBytes": 375,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/components/ui/empty-state.tsx"
@@ -4418,14 +4412,14 @@
         "staticMembership": [
           "/app/history"
         ],
-        "dynamicEntry": "_empty-state-CsLvpD--.js"
+        "dynamicEntry": "_empty-state-DM7N_Xh_.js"
       },
       {
-        "file": "assets/brain-DdyusTg0.js",
+        "file": "assets/brain-M0E5BVtS.js",
         "bytes": 731,
-        "gzipBytes": 353,
+        "gzipBytes": 354,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/brain.js"
@@ -4434,32 +4428,32 @@
           "/",
           "/app/history"
         ],
-        "dynamicEntry": "_brain-DdyusTg0.js"
+        "dynamicEntry": "_brain-M0E5BVtS.js"
       },
       {
-        "file": "assets/LibraryPage-CunJtoC_.js",
+        "file": "assets/LibraryPage-TQP69FJp.js",
         "bytes": 45623,
-        "gzipBytes": 13547,
+        "gzipBytes": 13546,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/input-8rX023Lp.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/switch-BVCWb5Lf.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/switch-CHK59itA.js",
           "assets/date-format-CfassM9h.js",
-          "assets/url-CchqeGdk.js",
+          "assets/url-CeZm_C1D.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
-          "assets/sheet-DaYpJRvT.js",
-          "assets/plus-BYgsCk8s.js",
-          "assets/trash-2-D3f6TJLq.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/shield-check-DYnOiWee.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/copy-D2fGLc-5.js",
-          "assets/save-UVDNgRNX.js",
-          "assets/external-link-4Qm-J_pW.js"
+          "assets/alert-dialog-chuiBWTg.js",
+          "assets/sheet-Dfq5h2d1.js",
+          "assets/plus-CuZTkh8c.js",
+          "assets/trash-2-F2gcUNIU.js",
+          "assets/search-D72Br97G.js",
+          "assets/shield-check-DU5mFNut.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/copy-L_02rmZ3.js",
+          "assets/save--EOuaVhR.js",
+          "assets/external-link-CeL3t6Kr.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/folder-minus.js",
@@ -4482,11 +4476,11 @@
         "dynamicEntry": "src/pages/LibraryPage.tsx"
       },
       {
-        "file": "assets/external-link-4Qm-J_pW.js",
+        "file": "assets/external-link-CeL3t6Kr.js",
         "bytes": 247,
         "gzipBytes": 197,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/external-link.js"
@@ -4495,27 +4489,27 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_external-link-4Qm-J_pW.js"
+        "dynamicEntry": "_external-link-CeL3t6Kr.js"
       },
       {
-        "file": "assets/sheet-DaYpJRvT.js",
+        "file": "assets/sheet-Dfq5h2d1.js",
         "bytes": 2335,
-        "gzipBytes": 896,
+        "gzipBytes": 898,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/components/ui/sheet.tsx"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_sheet-DaYpJRvT.js"
+        "dynamicEntry": "_sheet-Dfq5h2d1.js"
       },
       {
-        "file": "assets/switch-BVCWb5Lf.js",
+        "file": "assets/switch-CHK59itA.js",
         "bytes": 4150,
-        "gzipBytes": 1791,
+        "gzipBytes": 1792,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@radix-ui/react-switch/dist/index.mjs",
@@ -4524,31 +4518,31 @@
         "staticMembership": [
           "/app/attack"
         ],
-        "dynamicEntry": "_switch-BVCWb5Lf.js"
+        "dynamicEntry": "_switch-CHK59itA.js"
       },
       {
-        "file": "assets/shield-check-DYnOiWee.js",
+        "file": "assets/shield-check-DU5mFNut.js",
         "bytes": 311,
-        "gzipBytes": 246,
+        "gzipBytes": 247,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/shield-check.js"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_shield-check-DYnOiWee.js"
+        "dynamicEntry": "_shield-check-DU5mFNut.js"
       },
       {
-        "file": "assets/TimerPage-DBzSCjtR.js",
+        "file": "assets/TimerPage-DD2LToSI.js",
         "bytes": 10969,
-        "gzipBytes": 3561,
+        "gzipBytes": 3559,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/progress-bSnotB5B.js",
-          "assets/rotate-ccw-C75qCzYm.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/progress-Eyz1T4LG.js",
+          "assets/rotate-ccw-v2tcH4l7.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/bell.js",
@@ -4563,31 +4557,31 @@
         "dynamicEntry": "src/pages/TimerPage.tsx"
       },
       {
-        "file": "assets/SparringPage-BPTbF4UU.js",
+        "file": "assets/SparringPage-ChpAbP_j.js",
         "bytes": 55909,
-        "gzipBytes": 15412,
+        "gzipBytes": 15414,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/client-7AP--ukW.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/ModelSelector-DlkZ5y5U.js",
-          "assets/arrow-right-6vwWG1uk.js",
-          "assets/progress-bSnotB5B.js",
-          "assets/markdown-Sm0t_tMl.js",
-          "assets/clock-3-M0IAIYb6.js",
-          "assets/rotate-ccw-C75qCzYm.js",
-          "assets/circle-alert-DpUayguU.js",
-          "assets/send-DPXosOuu.js",
-          "assets/download-B3oRXuVT.js",
-          "assets/generateCategoricalChart-C12mRN5t.js",
-          "assets/target-D3jVY9-N.js",
-          "assets/file-text-DJr5GWEk.js",
-          "assets/circle-help-DQt7G_9u.js",
-          "assets/url-CchqeGdk.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/index-Bv_cGurf.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/client-DEwlmyst.js",
+          "assets/card-BnT411OX.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/ModelSelector--btGoe1p.js",
+          "assets/arrow-right-_GA5t6Ff.js",
+          "assets/progress-Eyz1T4LG.js",
+          "assets/markdown-BFkXmfLC.js",
+          "assets/clock-3-cVu-fg4P.js",
+          "assets/rotate-ccw-v2tcH4l7.js",
+          "assets/circle-alert-EvFEdfwm.js",
+          "assets/send-DyAEqj-V.js",
+          "assets/download-B6rLXL5_.js",
+          "assets/generateCategoricalChart-tQpM_2Ey.js",
+          "assets/target-BtiUsRv7.js",
+          "assets/file-text-B6nrM_aa.js",
+          "assets/circle-help-B0oPixm9.js",
+          "assets/url-CeZm_C1D.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/index-DCbKzI_r.js",
           "assets/string-cKWu9XK9.js"
         ],
         "modules": [
@@ -4617,11 +4611,11 @@
         "dynamicEntry": "src/pages/SparringPage.tsx"
       },
       {
-        "file": "assets/arrow-right-6vwWG1uk.js",
+        "file": "assets/arrow-right-_GA5t6Ff.js",
         "bytes": 161,
         "gzipBytes": 158,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/arrow-right.js"
@@ -4630,27 +4624,27 @@
           "/",
           "/app"
         ],
-        "dynamicEntry": "_arrow-right-6vwWG1uk.js"
+        "dynamicEntry": "_arrow-right-_GA5t6Ff.js"
       },
       {
-        "file": "assets/circle-help-DQt7G_9u.js",
+        "file": "assets/circle-help-B0oPixm9.js",
         "bytes": 230,
-        "gzipBytes": 198,
+        "gzipBytes": 199,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/circle-help.js"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_circle-help-DQt7G_9u.js"
+        "dynamicEntry": "_circle-help-B0oPixm9.js"
       },
       {
-        "file": "assets/markdown-Sm0t_tMl.js",
+        "file": "assets/markdown-BFkXmfLC.js",
         "bytes": 119378,
         "gzipBytes": 36771,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/devlop/lib/default.js",
@@ -4797,16 +4791,16 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_markdown-Sm0t_tMl.js"
+        "dynamicEntry": "_markdown-BFkXmfLC.js"
       },
       {
-        "file": "assets/ModelSelector-DlkZ5y5U.js",
+        "file": "assets/ModelSelector--btGoe1p.js",
         "bytes": 2514,
-        "gzipBytes": 1082,
+        "gzipBytes": 1084,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/use-subscription-BqTp0Vss.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/use-subscription-DPxqRAbU.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/cpu.js",
@@ -4816,41 +4810,41 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_ModelSelector-DlkZ5y5U.js"
+        "dynamicEntry": "_ModelSelector--btGoe1p.js"
       },
       {
-        "file": "assets/clock-3-M0IAIYb6.js",
+        "file": "assets/clock-3-cVu-fg4P.js",
         "bytes": 183,
-        "gzipBytes": 171,
+        "gzipBytes": 173,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/clock-3.js"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_clock-3-M0IAIYb6.js"
+        "dynamicEntry": "_clock-3-cVu-fg4P.js"
       },
       {
-        "file": "assets/send-DPXosOuu.js",
+        "file": "assets/send-DyAEqj-V.js",
         "bytes": 287,
-        "gzipBytes": 229,
+        "gzipBytes": 230,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/send.js"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_send-DPXosOuu.js"
+        "dynamicEntry": "_send-DyAEqj-V.js"
       },
       {
-        "file": "assets/client-7AP--ukW.js",
+        "file": "assets/client-DEwlmyst.js",
         "bytes": 39898,
-        "gzipBytes": 13785,
+        "gzipBytes": 13787,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/url-CchqeGdk.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/url-CeZm_C1D.js"
         ],
         "modules": [
           "node_modules/zod/v4/classic/coerce.js",
@@ -4866,14 +4860,14 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_client-7AP--ukW.js"
+        "dynamicEntry": "_client-DEwlmyst.js"
       },
       {
-        "file": "assets/url-CchqeGdk.js",
+        "file": "assets/url-CeZm_C1D.js",
         "bytes": 179,
         "gzipBytes": 166,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/lib/ai/schemas/url.ts"
@@ -4882,14 +4876,14 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_url-CchqeGdk.js"
+        "dynamicEntry": "_url-CeZm_C1D.js"
       },
       {
-        "file": "assets/file-text-DJr5GWEk.js",
+        "file": "assets/file-text-B6nrM_aa.js",
         "bytes": 324,
-        "gzipBytes": 212,
+        "gzipBytes": 214,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/file-text.js"
@@ -4899,14 +4893,14 @@
           "/app/attack",
           "/app/history"
         ],
-        "dynamicEntry": "_file-text-DJr5GWEk.js"
+        "dynamicEntry": "_file-text-B6nrM_aa.js"
       },
       {
-        "file": "assets/progress-bSnotB5B.js",
+        "file": "assets/progress-Eyz1T4LG.js",
         "bytes": 2198,
-        "gzipBytes": 1095,
+        "gzipBytes": 1094,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@radix-ui/react-progress/dist/index.mjs",
@@ -4915,27 +4909,27 @@
         "staticMembership": [
           "/app/attack"
         ],
-        "dynamicEntry": "_progress-bSnotB5B.js"
+        "dynamicEntry": "_progress-Eyz1T4LG.js"
       },
       {
-        "file": "assets/FlowchartPage-CJxI0fuF.js",
+        "file": "assets/FlowchartPage-hnm2Idlk.js",
         "bytes": 50510,
-        "gzipBytes": 16787,
+        "gzipBytes": 16785,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/input-8rX023Lp.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
-          "assets/index-BO3TwXUP.js",
-          "assets/trash-2-D3f6TJLq.js",
-          "assets/save-UVDNgRNX.js",
-          "assets/plus-BYgsCk8s.js",
-          "assets/download-B3oRXuVT.js",
-          "assets/target-D3jVY9-N.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/triangle-alert-xVQMqJFN.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/alert-dialog-chuiBWTg.js",
+          "assets/index-CzRyuAKe.js",
+          "assets/trash-2-F2gcUNIU.js",
+          "assets/save--EOuaVhR.js",
+          "assets/plus-CuZTkh8c.js",
+          "assets/download-B6rLXL5_.js",
+          "assets/target-BtiUsRv7.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/triangle-alert-BgYzclSC.js",
           "assets/string-cKWu9XK9.js"
         ],
         "modules": [
@@ -4993,11 +4987,11 @@
         "dynamicEntry": "src/pages/FlowchartPage.tsx"
       },
       {
-        "file": "assets/index-BO3TwXUP.js",
+        "file": "assets/index-CzRyuAKe.js",
         "bytes": 127877,
-        "gzipBytes": 41138,
+        "gzipBytes": 41137,
         "imports": [
-          "assets/index-q7XbFcUA.js",
+          "assets/index-BXPLmGRM.js",
           "assets/string-cKWu9XK9.js"
         ],
         "modules": [
@@ -5113,14 +5107,14 @@
           "/app/generate",
           "/app/flowchart"
         ],
-        "dynamicEntry": "_index-BO3TwXUP.js"
+        "dynamicEntry": "_index-CzRyuAKe.js"
       },
       {
-        "file": "assets/triangle-alert-xVQMqJFN.js",
+        "file": "assets/triangle-alert-BgYzclSC.js",
         "bytes": 256,
-        "gzipBytes": 207,
+        "gzipBytes": 209,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/triangle-alert.js"
@@ -5130,14 +5124,14 @@
           "/app/attack",
           "/app/flowchart"
         ],
-        "dynamicEntry": "_triangle-alert-xVQMqJFN.js"
+        "dynamicEntry": "_triangle-alert-BgYzclSC.js"
       },
       {
-        "file": "assets/plus-BYgsCk8s.js",
+        "file": "assets/plus-CuZTkh8c.js",
         "bytes": 145,
         "gzipBytes": 144,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/plus.js"
@@ -5145,14 +5139,14 @@
         "staticMembership": [
           "/app/flowchart"
         ],
-        "dynamicEntry": "_plus-BYgsCk8s.js"
+        "dynamicEntry": "_plus-CuZTkh8c.js"
       },
       {
-        "file": "assets/save-UVDNgRNX.js",
+        "file": "assets/save--EOuaVhR.js",
         "bytes": 324,
         "gzipBytes": 227,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/save.js"
@@ -5161,14 +5155,14 @@
           "/app/generate",
           "/app/flowchart"
         ],
-        "dynamicEntry": "_save-UVDNgRNX.js"
+        "dynamicEntry": "_save--EOuaVhR.js"
       },
       {
-        "file": "assets/download-B3oRXuVT.js",
+        "file": "assets/download-B6rLXL5_.js",
         "bytes": 254,
-        "gzipBytes": 216,
+        "gzipBytes": 217,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/download.js"
@@ -5176,14 +5170,14 @@
         "staticMembership": [
           "/app/flowchart"
         ],
-        "dynamicEntry": "_download-B3oRXuVT.js"
+        "dynamicEntry": "_download-B6rLXL5_.js"
       },
       {
-        "file": "assets/target-D3jVY9-N.js",
+        "file": "assets/target-BtiUsRv7.js",
         "bytes": 223,
         "gzipBytes": 160,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/target.js"
@@ -5192,25 +5186,25 @@
           "/app/generate",
           "/app/flowchart"
         ],
-        "dynamicEntry": "_target-D3jVY9-N.js"
+        "dynamicEntry": "_target-BtiUsRv7.js"
       },
       {
-        "file": "assets/SettingsPage-_XMuA3Sz.js",
+        "file": "assets/SettingsPage-BUk754vw.js",
         "bytes": 16456,
         "gzipBytes": 5490,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/use-subscription-BqTp0Vss.js",
-          "assets/PricingModal-CSHgEmzC.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/use-subscription-DPxqRAbU.js",
+          "assets/PricingModal-D8mLWjDu.js",
           "assets/date-format-CfassM9h.js",
-          "assets/input-8rX023Lp.js",
-          "assets/crown-CSAL0Uwb.js",
-          "assets/credit-card-DJ5X1r1l.js",
-          "assets/zap-Br8Yxf1I.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/trash-2-D3f6TJLq.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/crown-BzZHpcif.js",
+          "assets/credit-card-DxReFz7h.js",
+          "assets/zap-DRG34D0x.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/trash-2-F2gcUNIU.js",
           "assets/edge-function-error-dlcwXP30.js"
         ],
         "modules": [
@@ -5227,16 +5221,16 @@
         "dynamicEntry": "src/pages/SettingsPage.tsx"
       },
       {
-        "file": "assets/PricingModal-CSHgEmzC.js",
+        "file": "assets/PricingModal-D8mLWjDu.js",
         "bytes": 5548,
         "gzipBytes": 1895,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/input-8rX023Lp.js",
-          "assets/badge-nHj14g2K.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/badge-BC-6QS26.js",
           "assets/edge-function-error-dlcwXP30.js",
-          "assets/crown-CSAL0Uwb.js",
-          "assets/zap-Br8Yxf1I.js"
+          "assets/crown-BzZHpcif.js",
+          "assets/zap-DRG34D0x.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/lock.js",
@@ -5247,14 +5241,14 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_PricingModal-CSHgEmzC.js"
+        "dynamicEntry": "_PricingModal-D8mLWjDu.js"
       },
       {
-        "file": "assets/crown-CSAL0Uwb.js",
+        "file": "assets/crown-BzZHpcif.js",
         "bytes": 359,
         "gzipBytes": 257,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/crown.js"
@@ -5264,14 +5258,14 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_crown-CSAL0Uwb.js"
+        "dynamicEntry": "_crown-BzZHpcif.js"
       },
       {
-        "file": "assets/zap-Br8Yxf1I.js",
+        "file": "assets/zap-DRG34D0x.js",
         "bytes": 259,
-        "gzipBytes": 205,
+        "gzipBytes": 209,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/zap.js"
@@ -5282,7 +5276,7 @@
           "/app/attack",
           "/app/history"
         ],
-        "dynamicEntry": "_zap-Br8Yxf1I.js"
+        "dynamicEntry": "_zap-DRG34D0x.js"
       },
       {
         "file": "assets/edge-function-error-dlcwXP30.js",
@@ -5299,11 +5293,11 @@
         "dynamicEntry": "_edge-function-error-dlcwXP30.js"
       },
       {
-        "file": "assets/use-subscription-BqTp0Vss.js",
+        "file": "assets/use-subscription-DPxqRAbU.js",
         "bytes": 2232,
-        "gzipBytes": 1000,
+        "gzipBytes": 1002,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/hooks/use-subscription.ts"
@@ -5312,33 +5306,33 @@
           "/app/generate",
           "/app/attack"
         ],
-        "dynamicEntry": "_use-subscription-BqTp0Vss.js"
+        "dynamicEntry": "_use-subscription-DPxqRAbU.js"
       },
       {
-        "file": "assets/AdminPage-DAZYToit.js",
+        "file": "assets/AdminPage-DxOnwRAE.js",
         "bytes": 77457,
-        "gzipBytes": 20348,
+        "gzipBytes": 20347,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/card-KQczJDLQ.js",
-          "assets/input-8rX023Lp.js",
-          "assets/badge-nHj14g2K.js",
-          "assets/tabs-MRQ3288m.js",
-          "assets/scroll-area-ByvjHX4Q.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/card-BnT411OX.js",
+          "assets/input-BjDrRHtx.js",
+          "assets/badge-BC-6QS26.js",
+          "assets/tabs-Dc13bJ4B.js",
+          "assets/scroll-area-BTGx2PB1.js",
           "assets/date-format-CfassM9h.js",
-          "assets/checkbox-NPaqaug-.js",
-          "assets/textarea-Cbcs_Kkm.js",
-          "assets/alert-dialog-CqBO3mfQ.js",
-          "assets/search-BGhB3V3-.js",
-          "assets/trash-2-D3f6TJLq.js",
-          "assets/shield-Bze4pdXW.js",
-          "assets/circle-alert-DpUayguU.js",
-          "assets/users-C9kQKqTg.js",
-          "assets/credit-card-DJ5X1r1l.js",
-          "assets/generateCategoricalChart-C12mRN5t.js",
-          "assets/copy-D2fGLc-5.js",
-          "assets/rotate-ccw-C75qCzYm.js",
-          "assets/index-Bv_cGurf.js",
+          "assets/checkbox-CPn-6Pk1.js",
+          "assets/textarea-BQ0Vj88K.js",
+          "assets/alert-dialog-chuiBWTg.js",
+          "assets/search-D72Br97G.js",
+          "assets/trash-2-F2gcUNIU.js",
+          "assets/shield-C8ZFNTgi.js",
+          "assets/circle-alert-EvFEdfwm.js",
+          "assets/users-BM5mL8hE.js",
+          "assets/credit-card-DxReFz7h.js",
+          "assets/generateCategoricalChart-tQpM_2Ey.js",
+          "assets/copy-L_02rmZ3.js",
+          "assets/rotate-ccw-v2tcH4l7.js",
+          "assets/index-DCbKzI_r.js",
           "assets/string-cKWu9XK9.js"
         ],
         "modules": [
@@ -5370,11 +5364,11 @@
         "dynamicEntry": "src/pages/AdminPage.tsx"
       },
       {
-        "file": "assets/users-C9kQKqTg.js",
+        "file": "assets/users-BM5mL8hE.js",
         "bytes": 296,
-        "gzipBytes": 224,
+        "gzipBytes": 225,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/users.js"
@@ -5383,14 +5377,14 @@
           "/",
           "/app/admin"
         ],
-        "dynamicEntry": "_users-C9kQKqTg.js"
+        "dynamicEntry": "_users-BM5mL8hE.js"
       },
       {
-        "file": "assets/checkbox-NPaqaug-.js",
+        "file": "assets/checkbox-CPn-6Pk1.js",
         "bytes": 4315,
-        "gzipBytes": 1874,
+        "gzipBytes": 1872,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@radix-ui/react-checkbox/dist/index.mjs",
@@ -5399,14 +5393,14 @@
         "staticMembership": [
           "/app/admin"
         ],
-        "dynamicEntry": "_checkbox-NPaqaug-.js"
+        "dynamicEntry": "_checkbox-CPn-6Pk1.js"
       },
       {
-        "file": "assets/tabs-MRQ3288m.js",
+        "file": "assets/tabs-Dc13bJ4B.js",
         "bytes": 7555,
         "gzipBytes": 2988,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@radix-ui/react-use-is-hydrated/dist/index.mjs",
@@ -5419,14 +5413,14 @@
           "/app/history",
           "/app/admin"
         ],
-        "dynamicEntry": "_tabs-MRQ3288m.js"
+        "dynamicEntry": "_tabs-Dc13bJ4B.js"
       },
       {
-        "file": "assets/scroll-area-ByvjHX4Q.js",
+        "file": "assets/scroll-area-BTGx2PB1.js",
         "bytes": 13530,
-        "gzipBytes": 4252,
+        "gzipBytes": 4251,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@radix-ui/react-scroll-area/dist/index.mjs",
@@ -5436,14 +5430,14 @@
           "/app/history",
           "/app/admin"
         ],
-        "dynamicEntry": "_scroll-area-ByvjHX4Q.js"
+        "dynamicEntry": "_scroll-area-BTGx2PB1.js"
       },
       {
-        "file": "assets/copy-D2fGLc-5.js",
+        "file": "assets/copy-L_02rmZ3.js",
         "bytes": 228,
-        "gzipBytes": 205,
+        "gzipBytes": 206,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/copy.js"
@@ -5451,14 +5445,14 @@
         "staticMembership": [
           "/app/admin"
         ],
-        "dynamicEntry": "_copy-D2fGLc-5.js"
+        "dynamicEntry": "_copy-L_02rmZ3.js"
       },
       {
-        "file": "assets/search-BGhB3V3-.js",
+        "file": "assets/search-D72Br97G.js",
         "bytes": 164,
-        "gzipBytes": 164,
+        "gzipBytes": 166,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/search.js"
@@ -5468,15 +5462,15 @@
           "/app/attack",
           "/app/admin"
         ],
-        "dynamicEntry": "_search-BGhB3V3-.js"
+        "dynamicEntry": "_search-D72Br97G.js"
       },
       {
-        "file": "assets/generateCategoricalChart-C12mRN5t.js",
+        "file": "assets/generateCategoricalChart-tQpM_2Ey.js",
         "bytes": 364572,
-        "gzipBytes": 99164,
+        "gzipBytes": 99165,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/index-Bv_cGurf.js",
+          "assets/index-BXPLmGRM.js",
+          "assets/index-DCbKzI_r.js",
           "assets/string-cKWu9XK9.js"
         ],
         "modules": [
@@ -5885,14 +5879,14 @@
         "staticMembership": [
           "/app/admin"
         ],
-        "dynamicEntry": "_generateCategoricalChart-C12mRN5t.js"
+        "dynamicEntry": "_generateCategoricalChart-tQpM_2Ey.js"
       },
       {
-        "file": "assets/index-Bv_cGurf.js",
+        "file": "assets/index-DCbKzI_r.js",
         "bytes": 928,
-        "gzipBytes": 563,
+        "gzipBytes": 562,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "\u0000/home/codex/.t3/worktrees/DebateLab/t3code-bc808474/node_modules/prop-types/index.js?commonjs-module",
@@ -5904,14 +5898,14 @@
         "staticMembership": [
           "/app/admin"
         ],
-        "dynamicEntry": "_index-Bv_cGurf.js"
+        "dynamicEntry": "_index-DCbKzI_r.js"
       },
       {
-        "file": "assets/circle-alert-DpUayguU.js",
+        "file": "assets/circle-alert-EvFEdfwm.js",
         "bytes": 241,
-        "gzipBytes": 183,
+        "gzipBytes": 184,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/circle-alert.js"
@@ -5920,14 +5914,14 @@
           "/app/attack",
           "/app/admin"
         ],
-        "dynamicEntry": "_circle-alert-DpUayguU.js"
+        "dynamicEntry": "_circle-alert-EvFEdfwm.js"
       },
       {
-        "file": "assets/rotate-ccw-C75qCzYm.js",
+        "file": "assets/rotate-ccw-v2tcH4l7.js",
         "bytes": 191,
-        "gzipBytes": 180,
+        "gzipBytes": 179,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/rotate-ccw.js"
@@ -5935,14 +5929,14 @@
         "staticMembership": [
           "/app/admin"
         ],
-        "dynamicEntry": "_rotate-ccw-C75qCzYm.js"
+        "dynamicEntry": "_rotate-ccw-v2tcH4l7.js"
       },
       {
-        "file": "assets/alert-dialog-CqBO3mfQ.js",
+        "file": "assets/alert-dialog-chuiBWTg.js",
         "bytes": 3698,
-        "gzipBytes": 1236,
+        "gzipBytes": 1237,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@radix-ui/react-alert-dialog/dist/index.mjs",
@@ -5953,7 +5947,7 @@
           "/app/history",
           "/app/admin"
         ],
-        "dynamicEntry": "_alert-dialog-CqBO3mfQ.js"
+        "dynamicEntry": "_alert-dialog-chuiBWTg.js"
       },
       {
         "file": "assets/string-cKWu9XK9.js",
@@ -5977,11 +5971,11 @@
         "dynamicEntry": "_string-cKWu9XK9.js"
       },
       {
-        "file": "assets/textarea-Cbcs_Kkm.js",
+        "file": "assets/textarea-BQ0Vj88K.js",
         "bytes": 508,
-        "gzipBytes": 334,
+        "gzipBytes": 335,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/components/ui/textarea.tsx"
@@ -5991,14 +5985,14 @@
           "/app/flowchart",
           "/app/admin"
         ],
-        "dynamicEntry": "_textarea-Cbcs_Kkm.js"
+        "dynamicEntry": "_textarea-BQ0Vj88K.js"
       },
       {
-        "file": "assets/credit-card-DJ5X1r1l.js",
+        "file": "assets/credit-card-DxReFz7h.js",
         "bytes": 198,
-        "gzipBytes": 182,
+        "gzipBytes": 184,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/credit-card.js"
@@ -6006,14 +6000,14 @@
         "staticMembership": [
           "/app/admin"
         ],
-        "dynamicEntry": "_credit-card-DJ5X1r1l.js"
+        "dynamicEntry": "_credit-card-DxReFz7h.js"
       },
       {
-        "file": "assets/shield-Bze4pdXW.js",
+        "file": "assets/shield-C8ZFNTgi.js",
         "bytes": 264,
-        "gzipBytes": 222,
+        "gzipBytes": 224,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/shield.js"
@@ -6023,14 +6017,14 @@
           "/app/flowchart",
           "/app/admin"
         ],
-        "dynamicEntry": "_shield-Bze4pdXW.js"
+        "dynamicEntry": "_shield-C8ZFNTgi.js"
       },
       {
-        "file": "assets/input-8rX023Lp.js",
+        "file": "assets/input-BjDrRHtx.js",
         "bytes": 593,
         "gzipBytes": 365,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/components/ui/input.tsx"
@@ -6042,14 +6036,14 @@
           "/app/flowchart",
           "/app/admin"
         ],
-        "dynamicEntry": "_input-8rX023Lp.js"
+        "dynamicEntry": "_input-BjDrRHtx.js"
       },
       {
-        "file": "assets/trash-2-D3f6TJLq.js",
+        "file": "assets/trash-2-F2gcUNIU.js",
         "bytes": 349,
-        "gzipBytes": 245,
+        "gzipBytes": 246,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/lucide-react/dist/esm/icons/trash-2.js"
@@ -6059,14 +6053,14 @@
           "/app/history",
           "/app/admin"
         ],
-        "dynamicEntry": "_trash-2-D3f6TJLq.js"
+        "dynamicEntry": "_trash-2-F2gcUNIU.js"
       },
       {
-        "file": "assets/badge-nHj14g2K.js",
+        "file": "assets/badge-BC-6QS26.js",
         "bytes": 796,
-        "gzipBytes": 406,
+        "gzipBytes": 409,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/components/ui/badge.tsx"
@@ -6078,14 +6072,14 @@
           "/app/history",
           "/app/admin"
         ],
-        "dynamicEntry": "_badge-nHj14g2K.js"
+        "dynamicEntry": "_badge-BC-6QS26.js"
       },
       {
-        "file": "assets/card-KQczJDLQ.js",
+        "file": "assets/card-BnT411OX.js",
         "bytes": 1004,
-        "gzipBytes": 388,
+        "gzipBytes": 390,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/components/ui/card.tsx"
@@ -6099,14 +6093,14 @@
           "/app/history",
           "/app/admin"
         ],
-        "dynamicEntry": "_card-KQczJDLQ.js"
+        "dynamicEntry": "_card-BnT411OX.js"
       },
       {
-        "file": "assets/NotFound-CFdy2fVm.js",
+        "file": "assets/NotFound-DvGZAJP6.js",
         "bytes": 659,
-        "gzipBytes": 381,
+        "gzipBytes": 384,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "src/pages/NotFound.tsx"
@@ -6115,11 +6109,11 @@
         "dynamicEntry": "src/pages/NotFound.tsx"
       },
       {
-        "file": "assets/web-BynEw2Qq.js",
+        "file": "assets/web-D9KG4rKC.js",
         "bytes": 843,
         "gzipBytes": 400,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@capacitor/app/dist/esm/web.js"
@@ -6128,11 +6122,11 @@
         "dynamicEntry": "node_modules/@capacitor/app/dist/esm/web.js"
       },
       {
-        "file": "assets/web-DG6Gg_bK.js",
+        "file": "assets/web-WxmaVhoc.js",
         "bytes": 899,
-        "gzipBytes": 457,
+        "gzipBytes": 458,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@capacitor/haptics/dist/esm/web.js"
@@ -6141,11 +6135,11 @@
         "dynamicEntry": "node_modules/@capacitor/haptics/dist/esm/web.js"
       },
       {
-        "file": "assets/web-Cv6hO8mk.js",
+        "file": "assets/web-XsvGzZYP.js",
         "bytes": 380,
-        "gzipBytes": 254,
+        "gzipBytes": 253,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@capacitor/browser/dist/esm/web.js"
@@ -6154,11 +6148,11 @@
         "dynamicEntry": "node_modules/@capacitor/browser/dist/esm/web.js"
       },
       {
-        "file": "assets/export-utils-18pMdbox.js",
+        "file": "assets/export-utils-C_AAuxR6.js",
         "bytes": 17958,
         "gzipBytes": 4367,
         "imports": [
-          "assets/index-q7XbFcUA.js",
+          "assets/index-BXPLmGRM.js",
           "assets/date-format-CfassM9h.js"
         ],
         "modules": [
@@ -6168,11 +6162,11 @@
         "dynamicEntry": "src/lib/export-utils.ts"
       },
       {
-        "file": "assets/pdf-export-utils-DMTsvhPn.js",
+        "file": "assets/pdf-export-utils-DIHHR01V.js",
         "bytes": 13433,
-        "gzipBytes": 4522,
+        "gzipBytes": 4521,
         "imports": [
-          "assets/index-q7XbFcUA.js",
+          "assets/index-BXPLmGRM.js",
           "assets/date-format-CfassM9h.js"
         ],
         "modules": [
@@ -6197,11 +6191,11 @@
         "dynamicEntry": "_date-format-CfassM9h.js"
       },
       {
-        "file": "assets/index-BiDsgf0K.js",
+        "file": "assets/index-CUklgy1x.js",
         "bytes": 504095,
         "gzipBytes": 131453,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "\u0000/home/codex/.t3/worktrees/DebateLab/t3code-bc808474/node_modules/mammoth/lib/index.js?commonjs-exports",
@@ -6575,7 +6569,7 @@
           "\u0000/home/codex/.t3/worktrees/DebateLab/t3code-bc808474/node_modules/mammoth/lib/index.js?commonjs-es-import"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_index-BiDsgf0K.js"
+        "dynamicEntry": "_index-CUklgy1x.js"
       },
       {
         "file": "assets/pdf-ClZ_1Nv1.js",
@@ -6600,11 +6594,11 @@
         "dynamicEntry": "node_modules/docx/dist/index.mjs"
       },
       {
-        "file": "assets/FileSaver.min-D5hiFjRu.js",
+        "file": "assets/FileSaver.min-D_JFMesj.js",
         "bytes": 3036,
-        "gzipBytes": 1486,
+        "gzipBytes": 1485,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "\u0000/home/codex/.t3/worktrees/DebateLab/t3code-bc808474/node_modules/file-saver/dist/FileSaver.min.js?commonjs-module",
@@ -6612,14 +6606,14 @@
           "\u0000/home/codex/.t3/worktrees/DebateLab/t3code-bc808474/node_modules/file-saver/dist/FileSaver.min.js?commonjs-es-import"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_FileSaver.min-D5hiFjRu.js"
+        "dynamicEntry": "_FileSaver.min-D_JFMesj.js"
       },
       {
-        "file": "assets/jspdf.es.min-D7JnGG90.js",
+        "file": "assets/jspdf.es.min-rPht-yMH.js",
         "bytes": 386192,
-        "gzipBytes": 126390,
+        "gzipBytes": 126391,
         "imports": [
-          "assets/index-q7XbFcUA.js"
+          "assets/index-BXPLmGRM.js"
         ],
         "modules": [
           "node_modules/@babel/runtime/helpers/esm/typeof.js",
@@ -6647,7 +6641,7 @@
           "node_modules/jspdf/dist/jspdf.es.min.js"
         ],
         "staticMembership": [],
-        "dynamicEntry": "_jspdf.es.min-D7JnGG90.js"
+        "dynamicEntry": "_jspdf.es.min-rPht-yMH.js"
       },
       {
         "file": "assets/jspdf.plugin.autotable-BBLUVd7n.js",
@@ -6683,12 +6677,12 @@
         "dynamicEntry": "node_modules/dompurify/dist/purify.es.mjs"
       },
       {
-        "file": "assets/index.es-CgqVT0Uv.js",
+        "file": "assets/index.es-_IyzbuIU.js",
         "bytes": 158949,
-        "gzipBytes": 53059,
+        "gzipBytes": 53058,
         "imports": [
-          "assets/index-q7XbFcUA.js",
-          "assets/jspdf.es.min-D7JnGG90.js"
+          "assets/index-BXPLmGRM.js",
+          "assets/jspdf.es.min-rPht-yMH.js"
         ],
         "modules": [
           "\u0000/home/codex/.t3/worktrees/DebateLab/t3code-bc808474/node_modules/core-js/modules/es.promise.js?commonjs-exports",

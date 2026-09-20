@@ -286,3 +286,104 @@ Rejected candidates:
 This remains local lab evidence, not Lighthouse, field Core Web Vitals,
 staging, production, or authenticated backend proof. The repeatability limits
 and the historical baseline above still apply.
+
+## Task 10 fix-round evidence (2026-09-20)
+
+This section supersedes the preceding Task 10 measurements. The code fix is
+committed at `30b13675fc5104f3a8c2862a832a678fba2c2ede`. The clean recapture is
+[`task-10-after-final.json`](task-10-after-final.json), whose
+`metadata.harnessCommit` matches that hash. The older
+[`task-10-before.json`](task-10-before.json) remains the clean pre-split
+comparison from `2e40767`. The harness `sourceCommit` field records
+`origin/main` by design and is not the worktree revision.
+
+The timing fix keeps the original 500 ms deadline. `TimedOnboardingTour`
+records eligibility with a state initializer outside its Suspense boundary;
+the retrying lazy subtree computes `max(0, 500 - elapsed)` when the chunk is
+actually ready. A protected direct route does not consume that deadline before
+the user reaches `/app`.
+
+The graph gate now checks `index.html` plus every emitted `src/pages/*.tsx`
+manifest entry for both onboarding modules. It still uses the existing
+`initialRoutes` list for the separate feature-only page rule. The pre-split
+gate RED output named both onboarding modules in `index-D4jHDNYl.js`; the clean
+code commit build is GREEN and finds both modules together in the natural
+dynamic chunk.
+
+Current production graph totals:
+
+```text
+                         before             after                 delta
+index entry raw         1,147,759          1,043,946             -103,813
+index entry gzip          354,128            322,114              -32,014
+/ static graph raw      1,317,211          1,213,393             -103,818
+/ static graph gzip       406,561            374,552              -32,009
+/app static graph raw   1,152,363          1,048,550             -103,813
+/app static graph gzip    355,933            323,923              -32,010
+```
+
+The dynamic onboarding chunk is `103,062` raw and `31,750` gzip. Its module
+membership includes both `src/components/features/onboarding/OnboardingTour.tsx`
+and `node_modules/react-joyride/dist/index.mjs`. No initial route graph
+contains either module.
+
+The complete clean recapture reports same-origin requests, transferred bytes,
+and first real-content timing as follows:
+
+```text
+route/profile       before requests/bytes/ms       after requests/bytes/ms
+desktop /           136 / 7,553,487 / 2,796.9      133 / 7,272,949 / 2,862.8
+desktop /app        122 / 7,239,166 /   729.7      119 / 6,958,628 /   683.1
+Pixel 5 /           136 / 7,553,487 /   803.1      133 / 7,272,949 /   776.0
+Pixel 5 /app        122 / 7,239,166 /   601.6      119 / 6,958,628 /   779.8
+```
+
+The Pixel 5 result remains noisy local lab evidence. Request count and bytes
+drop on every route. Three focused post-build `/app` probes measured the
+completed-user path without a tour request; the delayed-chunk E2E covers the
+incomplete-user path instead.
+
+The delayed-chunk regression delays the onboarding source by 750 ms and waits
+for the source plus the Joyride dependency to finish. Desktop and Pixel 5 both
+pass the no-extra-500-ms assertion. The protected-route-to-home regression and
+the existing tour flow also pass. The focused run was 4/4, and the full serial
+home-navigation run was 15 passed, 1 skipped.
+
+Rejected candidates have reproducible evidence below. Source gzip is a
+comparison aid. The emitted graph records membership in a chunk, but this
+harness cannot isolate parse/evaluation time for one module, so no per-module
+evaluation claim is made.
+
+```text
+candidate                         source raw/gzip       emitted membership / chunk evidence
+en.json                           71,079 / 20,779       initial entry, no dynamic chunk
+es.json                           78,317 / 22,985       initial entry, no dynamic chunk
+hu.json                           80,645 / 24,288       initial entry, no dynamic chunk
+src/i18n.ts                           414 / 224          initial entry, no dynamic chunk
+WebTelemetry.tsx                       991 / 457         initial entry wrapper
+Vercel Analytics vendor              2,665 / 1,242       existing dynamic vendor chunk
+Vercel Speed Insights vendor         2,350 / 1,107       existing dynamic vendor chunk
+native-app-url-listener.ts          2,118 / 744          initial entry
+native-runtime.ts                   3,339 / 1,054        initial entry
+register-service-worker.ts            460 / 300          initial entry
+Capacitor modules (source sum)     29,267 / 8,410        initial entry dependencies
+```
+
+Locale splitting stayed rejected. `src/i18n.ts` initializes all three
+resources synchronously with English as the initial language, while the
+persisted settings store applies a saved language during hydration. Dynamic
+locale imports would need a startup gate to avoid an English flash. The i18n
+unit tests passed `14` tests covering `changeLanguage('es')`,
+`changeLanguage('hu')`, fallback English, and key parity. The existing locale
+navigation E2E passed `6/6` on desktop and mobile.
+
+WebTelemetry stayed rejected. The `991`-byte wrapper already lazy-loads both
+vendors after `load` and `requestIdleCallback`; splitting that wrapper would
+not remove the existing vendor requests from their natural dynamic boundary.
+
+Native-only adapters stayed rejected. `main.tsx` calls the URL listener,
+Capacitor runtime setup, and service-worker registration at startup. The
+native source modules and Capacitor dependency sizes are listed above. Native
+unit coverage passed `12` tests across URL handling, runtime link policy,
+service-worker registration, and native helpers. Deferring lifecycle setup
+would need a native runtime proof that this task does not have.
