@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { stubSupabaseSession } from './helpers/auth';
 
 const ANNOUNCEMENT_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
@@ -13,6 +13,29 @@ test.beforeEach(async ({ page }) => {
     }));
   });
 });
+
+async function openAppNav(page: Page, label: string) {
+  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await page.getByRole('navigation', { name: 'Mobile navigation' })
+      .getByRole('link', { name: new RegExp(`^${label}`) })
+      .click();
+    return;
+  }
+
+  await page.getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: label })
+    .click();
+}
+
+function countAnnouncementListRequests(page: Page) {
+  let count = 0;
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (request.method() === 'GET' && url.pathname.endsWith('/functions/v1/announcements')) count += 1;
+  });
+  return () => count;
+}
 
 test('user sees and permanently dismisses an active announcement', async ({ page }) => {
   let dismissBody: Record<string, unknown> | null = null;
@@ -46,6 +69,59 @@ test('user sees and permanently dismisses an active announcement', async ({ page
 
   await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toHaveCount(0);
   expect(dismissBody).toEqual({ announcementId: ANNOUNCEMENT_ID });
+});
+
+test('keeps announcements stable across routes and refreshes on a full reload', async ({ page }) => {
+  // The auth session is a browser-only stub. This verifies client request sequencing, not backend auth.
+  const listRequestCount = countAnnouncementListRequests(page);
+  let listResponseCount = 0;
+  await page.route('**/functions/v1/announcements*', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fulfill({ json: { success: true } });
+      return;
+    }
+
+    listResponseCount += 1;
+    const current = listResponseCount === 1
+      ? {
+        id: ANNOUNCEMENT_ID,
+        title: 'Scheduled maintenance',
+        body: 'DebateLab will be unavailable for ten minutes.',
+        starts_at: '2026-08-31T12:00:00.000Z',
+        expires_at: null,
+        created_at: '2026-08-31T11:00:00.000Z',
+      }
+      : {
+        id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+        title: 'Current announcement',
+        body: 'This message is current after refresh.',
+        starts_at: '2026-08-31T12:00:00.000Z',
+        expires_at: null,
+        created_at: '2026-08-31T11:00:00.000Z',
+      };
+    await route.fulfill({ json: { announcements: [current] } });
+  });
+
+  await page.goto('/app/generate');
+  await expect(page.getByRole('heading', { name: 'Generate', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toBeVisible();
+  expect(listRequestCount()).toBe(1);
+
+  await page.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }).click();
+  await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toHaveCount(0);
+
+  await openAppNav(page, 'Attack');
+  await expect(page.getByRole('heading', { name: 'Attack', exact: true })).toBeVisible();
+  await openAppNav(page, 'Home');
+  await expect(page.getByRole('main').getByRole('heading', { name: 'DebateLab', exact: true })).toBeVisible();
+  expect(listRequestCount()).toBe(1);
+  expect(listResponseCount).toBe(1);
+  await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Current announcement' })).toBeVisible();
+  await expect.poll(() => listRequestCount()).toBe(2);
+  expect(listResponseCount).toBe(2);
 });
 
 test('admin can deactivate without losing history, then explicitly delete', async ({ page }) => {

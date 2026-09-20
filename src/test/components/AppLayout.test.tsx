@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
@@ -57,72 +57,59 @@ describe('AppLayout announcements', () => {
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
   });
 
-  it('refreshes announcements on the next page change', async () => {
+  it('keeps announcements stable across sibling routes', async () => {
     renderLayout();
     await screen.findByText('Scheduled maintenance');
 
     fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
 
     await screen.findByText('Next page');
-    await waitFor(() => expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2));
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
   });
 
-  it('does not show a stale dismissal error under the next announcement', async () => {
-    const nextAnnouncement: UserAnnouncement = {
-      ...announcement,
-      id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
-      title: 'New announcement',
-      body: 'This message replaced the previous one.',
-    };
-    let rejectDismissal: (reason: Error) => void = () => undefined;
-    const pendingDismissal = new Promise<void>((_resolve, reject) => {
-      rejectDismissal = reject;
-    });
-    mockListActiveAnnouncements
-      .mockResolvedValueOnce([announcement])
-      .mockResolvedValueOnce([nextAnnouncement]);
-    mockDismissAnnouncement.mockReturnValue(pendingDismissal);
-
+  it('keeps a dismissed announcement absent across sibling routes', async () => {
     renderLayout();
+
     await screen.findByText('Scheduled maintenance');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
-    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
-    await screen.findByText('New announcement');
-
-    rejectDismissal(new Error('Could not dismiss the old announcement'));
 
     await waitFor(() => expect(mockDismissAnnouncement).toHaveBeenCalledWith(announcement.id));
-    expect(screen.queryByText('Could not dismiss the old announcement')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
+
+    await screen.findByText('Next page');
+    expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(1);
   });
 
-  it('does not restore a dismissed announcement from a stale route load', async () => {
-    let resolveDismissal: () => void = () => undefined;
-    let resolveStaleLoad: (announcements: UserAnnouncement[]) => void = () => undefined;
-    const pendingDismissal = new Promise<void>((resolve) => {
-      resolveDismissal = resolve;
-    });
-    const staleLoad = new Promise<UserAnnouncement[]>((resolve) => {
-      resolveStaleLoad = resolve;
-    });
-    mockListActiveAnnouncements
-      .mockResolvedValueOnce([announcement])
-      .mockReturnValueOnce(staleLoad);
-    mockDismissAnnouncement.mockReturnValue(pendingDismissal);
+  it('shows dismissal errors without dropping the announcement', async () => {
+    mockDismissAnnouncement.mockRejectedValue(new Error('Could not dismiss the announcement'));
 
     renderLayout();
     await screen.findByText('Scheduled maintenance');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
-    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
-    await waitFor(() => expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2));
 
-    resolveDismissal();
-    await waitFor(() => expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument());
-    await act(async () => {
-      resolveStaleLoad([announcement]);
-      await staleLoad;
-    });
+    expect(await screen.findByText('Could not dismiss the announcement')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
+  });
 
-    expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
+  it('loads current announcements again after a deliberate remount', async () => {
+    const currentAnnouncement: UserAnnouncement = {
+      ...announcement,
+      id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+      title: 'Current announcement',
+      body: 'This message is current after refresh.',
+    };
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([announcement])
+      .mockResolvedValueOnce([currentAnnouncement]);
+
+    const firstRender = renderLayout();
+    await screen.findByText('Scheduled maintenance');
+    firstRender.unmount();
+    renderLayout();
+
+    expect(await screen.findByText('Current announcement')).toBeInTheDocument();
+    expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
   });
 
   it('keeps all tool destinations reachable across desktop and mobile navigation', async () => {

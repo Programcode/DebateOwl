@@ -88,7 +88,7 @@ export function AppLayout() {
     setDismissError(null);
     void loadAnnouncements();
     return () => controller.abort();
-  }, [location.pathname]);
+  }, []);
 
   useEffect(() => {
     setMobileMenuOpen(false);
