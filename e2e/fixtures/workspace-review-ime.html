@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workspace IME review gate</title>
+  </head>
+  <body>
+    <div id="suggestion-editor"></div>
+    <script type="module">
+      import * as Y from "yjs";
+      import { createWorkspaceEditor } from "/src/lib/workspace/editor-schema.ts";
+      import * as review from "/src/lib/workspace/review.ts";
+
+      const canonicalDocument = new Y.Doc();
+      const suggestionDocument = new Y.Doc();
+      const canonical = createWorkspaceEditor(canonicalDocument);
+      const suggestion = createWorkspaceEditor(suggestionDocument);
+      canonical.commands.setContent("<p>Accepted:</p>");
+      suggestion.commands.setContent("<p></p>");
+      document.querySelector("#suggestion-editor").append(suggestion.view.dom);
+
+      let phase = "idle";
+      let proposal = null;
+      let canonicalUpdates = 0;
+      const events = [];
+      canonicalDocument.on("update", () => canonicalUpdates += 1);
+
+      for (const type of ["compositionstart", "beforeinput", "input", "compositionend"]) {
+        suggestion.view.dom.addEventListener(type, (event) => {
+          if (type === "compositionstart") phase = "composing";
+          if (type === "compositionend") phase = "settled";
+          events.push({
+            type,
+            data: event.data ?? null,
+            inputType: event.inputType ?? null,
+            isComposing: event.isComposing ?? null,
+          });
+        });
+      }
+
+      const snapshot = () => ({
+        canonical: canonical.getText(),
+        canonicalUpdates,
+        suggestion: suggestion.getText(),
+        editorComposing: suggestion.view.composing,
+        phase,
+        events: [...events],
+        proposal: proposal && {
+          status: proposal.hunks[0].status,
+          replacement: proposal.hunks[0].replacement,
+        },
+      });
+
+      window.workspaceIme = {
+        snapshot,
+        capture(id) {
+          const at = canonical.state.doc.content.size - 1;
+          proposal = review.createProposalAfterComposition({
+            compositionState: phase,
+            proposal: {
+              id,
+              authorId: "ime-member",
+              documentEpoch: 1,
+              editor: canonical,
+              hunks: [{
+                id: `${id}-insert`,
+                kind: "insert",
+                at,
+                content: [{ type: "text", text: suggestion.getText() }],
+              }],
+            },
+          });
+          return snapshot();
+        },
+        accept() {
+          proposal = review.acceptProposalHunks({
+            editor: canonical,
+            documentEpoch: 1,
+            proposal,
+            hunkIds: [proposal.hunks[0].id],
+          });
+          return snapshot();
+        },
+        reject() {
+          proposal = review.rejectProposalHunks({
+            proposal,
+            hunkIds: [proposal.hunks[0].id],
+          });
+          return snapshot();
+        },
+        resetSuggestion() {
+          suggestion.commands.clearContent();
+          phase = "idle";
+          proposal = null;
+          events.length = 0;
+          return snapshot();
+        },
+      };
+    </script>
+  </body>
+</html>

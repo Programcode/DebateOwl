@@ -22,6 +22,33 @@ describe("workspace review model", () => {
     return editor;
   }
 
+  function createSyncedEditors() {
+    const leftDocument = new Y.Doc();
+    const rightDocument = new Y.Doc();
+    const fromLeft = Symbol("from-left");
+    const fromRight = Symbol("from-right");
+    const syncLeft = (update: Uint8Array, origin: unknown) => {
+      if (origin !== fromRight) Y.applyUpdate(rightDocument, update, fromLeft);
+    };
+    const syncRight = (update: Uint8Array, origin: unknown) => {
+      if (origin !== fromLeft) Y.applyUpdate(leftDocument, update, fromRight);
+    };
+    leftDocument.on("update", syncLeft);
+    rightDocument.on("update", syncRight);
+    cleanup.push(
+      () => leftDocument.off("update", syncLeft),
+      () => rightDocument.off("update", syncRight),
+      () => leftDocument.destroy(),
+      () => rightDocument.destroy(),
+    );
+    return {
+      left: createEditor(leftDocument),
+      leftDocument,
+      right: createEditor(rightDocument),
+      rightDocument,
+    };
+  }
+
   it("keeps the representative multilingual document structured", () => {
     const editor = createEditor();
 
@@ -88,26 +115,7 @@ describe("workspace review model", () => {
     expect(review.acceptProposalHunks).toBeTypeOf("function");
     expect(review.rejectProposalHunks).toBeTypeOf("function");
 
-    const leftDocument = new Y.Doc();
-    const rightDocument = new Y.Doc();
-    const fromLeft = Symbol("from-left");
-    const fromRight = Symbol("from-right");
-    const syncLeft = (update: Uint8Array, origin: unknown) => {
-      if (origin !== fromRight) Y.applyUpdate(rightDocument, update, fromLeft);
-    };
-    const syncRight = (update: Uint8Array, origin: unknown) => {
-      if (origin !== fromLeft) Y.applyUpdate(leftDocument, update, fromRight);
-    };
-    leftDocument.on("update", syncLeft);
-    rightDocument.on("update", syncRight);
-    cleanup.push(
-      () => leftDocument.off("update", syncLeft),
-      () => rightDocument.off("update", syncRight),
-      () => leftDocument.destroy(),
-      () => rightDocument.destroy(),
-    );
-    const left = createEditor(leftDocument);
-    const right = createEditor(rightDocument);
+    const { left, right } = createSyncedEditors();
     left.commands.setContent("<p>Alpha Beta Gamma</p>");
     expect(right.getJSON()).toEqual(left.getJSON());
 
@@ -173,6 +181,105 @@ describe("workspace review model", () => {
     expect(left.commands.redo()).toBe(true);
     expect(left.getText()).toBe("Remote Alpha Beta Gamma Local");
     expect(JSON.stringify(left.getJSON())).toContain('"type":"bold"');
+  });
+
+  it("stales a remotely deleted and reinserted identical target", () => {
+    const { left, right, rightDocument } = createSyncedEditors();
+    left.commands.setContent("<p>Alpha Beta Gamma</p>");
+    const proposal = review.createProposal({
+      id: "proposal-identity",
+      authorId: "member-1",
+      documentEpoch: 1,
+      editor: left,
+      hunks: [
+        {
+          id: "format-beta",
+          kind: "format",
+          from: 7,
+          to: 11,
+          content: [
+            { type: "text", text: "Beta", marks: [{ type: "bold" }] },
+          ],
+        },
+      ],
+    });
+
+    right.commands.insertContentAt(1, "Remote ");
+    const paragraph = rightDocument.getXmlFragment("content").get(0);
+    if (!(paragraph instanceof Y.XmlElement)) throw new Error("Expected paragraph element");
+    const text = paragraph.get(0);
+    if (!(text instanceof Y.XmlText)) throw new Error("Expected paragraph text");
+    rightDocument.transact(() => {
+      text.delete(13, 4);
+      text.insert(13, "Beta");
+    });
+    const beforeAcceptance = left.getJSON();
+
+    let stale: unknown;
+    try {
+      review.acceptProposalHunks({
+        editor: left,
+        documentEpoch: 1,
+        proposal,
+        hunkIds: ["format-beta"],
+      });
+    } catch (error) {
+      stale = error;
+    }
+
+    expect(stale).toBeInstanceOf(review.StaleProposalError);
+    if (!(stale instanceof review.StaleProposalError)) throw stale;
+    expect(stale.proposal.hunks[0].status).toBe("stale");
+    expect(left.getJSON()).toEqual(beforeAcceptance);
+    expect(right.getJSON()).toEqual(beforeAcceptance);
+    expect(left.getText()).toBe("Remote Alpha Beta Gamma");
+    expect(JSON.stringify(left.getJSON())).not.toContain('"type":"bold"');
+  });
+
+  it("stales a remotely overlapped target and preserves unrelated remote text", () => {
+    const { left, right } = createSyncedEditors();
+    left.commands.setContent("<p>Alpha Beta Gamma</p>");
+    const proposal = review.createProposal({
+      id: "proposal-overlap",
+      authorId: "member-1",
+      documentEpoch: 1,
+      editor: left,
+      hunks: [
+        {
+          id: "format-beta",
+          kind: "format",
+          from: 7,
+          to: 11,
+          content: [
+            { type: "text", text: "Beta", marks: [{ type: "bold" }] },
+          ],
+        },
+      ],
+    });
+
+    right.commands.insertContentAt(1, "Remote ");
+    right.commands.insertContentAt(16, "X");
+    const beforeAcceptance = left.getJSON();
+
+    let stale: unknown;
+    try {
+      review.acceptProposalHunks({
+        editor: left,
+        documentEpoch: 1,
+        proposal,
+        hunkIds: ["format-beta"],
+      });
+    } catch (error) {
+      stale = error;
+    }
+
+    expect(stale).toBeInstanceOf(review.StaleProposalError);
+    if (!(stale instanceof review.StaleProposalError)) throw stale;
+    expect(stale.proposal.hunks[0].status).toBe("stale");
+    expect(left.getJSON()).toEqual(beforeAcceptance);
+    expect(right.getJSON()).toEqual(beforeAcceptance);
+    expect(left.getText()).toBe("Remote Alpha BeXta Gamma");
+    expect(JSON.stringify(left.getJSON())).not.toContain('"type":"bold"');
   });
 
   it("marks changed and overlapping exact targets stale without fuzzy replacement", async () => {

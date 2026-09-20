@@ -184,6 +184,16 @@ export function createProposal({
   };
 }
 
+export function createProposalAfterComposition({
+  compositionState,
+  proposal,
+}: {
+  compositionState: "idle" | "composing" | "settled";
+  proposal: Parameters<typeof createProposal>[0];
+}): WorkspaceProposal | null {
+  return compositionState === "settled" ? createProposal(proposal) : null;
+}
+
 export function acceptProposalHunks({
   editor,
   documentEpoch,
