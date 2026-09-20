@@ -9,9 +9,9 @@ import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
-import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
+import { useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { captureException, captureProductEvent } from "@/lib/observability";
 import { routeLoaders } from "@/lib/route-modules";
@@ -40,6 +40,8 @@ const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
 const LoginPage = lazy(routeLoaders["/login"]);
 const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
 const NotFound = lazy(routeLoaders["*"]);
+const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
+  .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
 const queryClient = new QueryClient();
 
@@ -173,6 +175,20 @@ function RouteContent({ children }: { children: ReactNode }) {
   );
 }
 
+function OptionalOnboardingTour() {
+  const location = useLocation();
+  const hasCompletedOnboarding = useOnboardingStore((state) => state.hasCompletedOnboarding);
+  const isTourRunning = useOnboardingStore((state) => state.isTourRunning);
+
+  if ((hasCompletedOnboarding && !isTourRunning) || (location.pathname !== "/app" && !isTourRunning)) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <OnboardingTour />
+    </Suspense>
+  );
+}
+
 function AppRoutes() {
   useSessionStorageSync();
 
@@ -191,7 +207,7 @@ function AppRoutes() {
             element={
               <RequireAuth>
                 <ToolRouteAnalytics />
-                <OnboardingTour />
+                <OptionalOnboardingTour />
                 <AppLayout />
               </RequireAuth>
             }

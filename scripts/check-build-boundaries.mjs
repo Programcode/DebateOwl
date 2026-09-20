@@ -47,6 +47,37 @@ function pageModulesFrom(routeFile) {
     .filter((moduleId) => moduleId?.startsWith('src/pages/') && moduleId.endsWith('.tsx')));
 }
 
+const onboardingModules = new Set([
+  'src/components/features/onboarding/OnboardingTour.tsx',
+  'node_modules/react-joyride/dist/index.mjs',
+]);
+
+function modulesFromFiles(files) {
+  return new Set([...files].flatMap((file) => bundleGraph[file]?.modules ?? [])
+    .map(canonicalModuleId)
+    .filter(Boolean));
+}
+
+const onboardingInitialGraphViolations = initialRoutes.flatMap(({ key: routeKey }) => {
+  const routeFile = manifest[routeKey]?.file;
+  if (!routeFile) return [];
+  return [...modulesFromFiles(staticGraphFrom(routeFile))]
+    .filter((moduleId) => onboardingModules.has(moduleId))
+    .map((moduleId) => `${routeKey} -> ${routeFile} -> onboarding module ${moduleId}`);
+});
+
+const onboardingDynamicChunks = Object.entries(manifest)
+  .filter(([, entry]) => entry.isDynamicEntry)
+  .map(([key, entry]) => ({ key, file: entry.file }))
+  .filter(({ file }) => {
+    const modules = modulesFromFiles(staticGraphFrom(file));
+    return [...onboardingModules].every((moduleId) => modules.has(moduleId));
+  });
+
+const onboardingDynamicGraphViolations = onboardingDynamicChunks.length === 0
+  ? ['OnboardingTour and react-joyride are not present together in any dynamic chunk.']
+  : [];
+
 const violations = initialRoutes.flatMap(({ key: routeKey, pageModules: expectedPageModules }) => {
   const routeFile = manifest[routeKey]?.file;
   if (!routeFile) throw new Error(`Vite manifest has no emitted chunk for ${routeKey}.`);
@@ -64,6 +95,8 @@ const violations = initialRoutes.flatMap(({ key: routeKey, pageModules: expected
     .map((moduleId) => `${routeKey} -> ${file} -> ${moduleId}`));
   return [...pageViolations, ...featureViolations];
 });
+
+violations.push(...onboardingInitialGraphViolations, ...onboardingDynamicGraphViolations);
 
 if (violations.length > 0) {
   throw new Error(`Feature-only modules entered the static application graph:\n${violations.join('\n')}`);

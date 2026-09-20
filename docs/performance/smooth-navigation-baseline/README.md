@@ -206,3 +206,83 @@ snapshots. The committed JSON, videos, and filmstrips contain no credentials.
   field percentile behavior.
 - `npm ci` emitted existing package deprecation and install-script warnings;
   the lockfile and package manifest remained unchanged.
+
+## Task 10 current-branch audit (2026-09-20)
+
+This audit ran in the `t3code/smooth-performance` worktree at `2e40767`
+before the Task 10 edits. The harness metadata records `origin/main` as
+`sourceCommit` (`b2ba178`) even though the invocation ran from this current
+branch. Node was `22.23.2`, npm was `12.0.2`, Vite was `7.3.6`, and Chromium
+was `151.0.7922.34`. These are local, unthrottled Chromium runs. The
+authenticated route harness seeds a completed onboarding state, so the cold
+`/app` comparison measures the completed-user path that should not request the
+tour chunk.
+
+The accepted boundary is onboarding. `App.tsx` now reads the small persisted
+store and lazy-loads `OnboardingTour` only for an incomplete `/app` user or an
+already-running tour. The existing 500 ms start delay remains in
+`OnboardingTour.tsx`. The build gate checks normalized module membership, not
+chunk filenames. It requires both onboarding modules to be absent from the
+initial static graph and present in a dynamic graph.
+
+The new gate was run RED before the import change. `npm run build` failed with
+the initial `index-D4jHDNYl.js` membership for both
+`src/components/features/onboarding/OnboardingTour.tsx` and
+`node_modules/react-joyride/dist/index.mjs`. After the change, the same build
+and gate completed GREEN.
+
+Build graph evidence:
+
+```text
+                         before             after                 delta
+index entry raw         1,147,759          1,043,703             -104,056
+index entry gzip          354,128            322,028              -32,100
+/ static graph raw      1,317,211          1,213,150             -104,061
+/ static graph gzip       406,561            374,462              -32,099
+/app static graph raw   1,152,363          1,048,307             -104,056
+/app static graph gzip    355,933            323,835              -32,098
+```
+
+The natural `OnboardingTour` dynamic chunk is `103,039` raw and `31,727`
+gzip. It contains both `src/components/features/onboarding/OnboardingTour.tsx`
+and `node_modules/react-joyride/dist/index.mjs`. The initial entry retains the
+small `use-onboarding` store but no tour component or Joyride module.
+
+Cold route evidence from the complete runs is in
+[`task-10-before.json`](task-10-before.json) and
+[`task-10-after-final.json`](task-10-after-final.json). Same-origin request and transferred
+byte totals, followed by first real-content timing, were:
+
+```text
+route/profile       before requests/bytes/ms       after requests/bytes/ms
+desktop /           136 / 7,553,487 / 2,796.9      133 / 7,270,431 / 2,948.3
+desktop /app        122 / 7,239,166 /   729.7      119 / 6,956,110 /   693.9
+Pixel 5 /           136 / 7,553,487 /   803.1      133 / 7,270,431 /   780.0
+Pixel 5 /app        122 / 7,239,166 /   601.6      119 / 6,956,110 /   829.3
+```
+
+Desktop `/app` improved by `35.8 ms` and three requests in the complete final
+run. The final Pixel 5 `/app` result was `227.7 ms` slower (`37.8%` relative),
+but three focused cold `/app` probes after the first Vite transform measured
+`673.4-738.9 ms` on Pixel 5 and `676.5-713.8 ms` on desktop, with the same
+117-119 request range and no tour request for the completed-user state. This
+is not a field-performance claim. A separate full-matrix follow-up stopped at
+`scripts/measure-navigation-performance.mjs:474` after a 30-second timeout
+waiting for `button[aria-label="Open menu"]`; it wrote no artifact. The split
+remains accepted because it removes a measured 32 KB gzip from every initial
+route, creates no required tour request for completed users, and the
+desktop/mobile onboarding E2E passes for incomplete users.
+
+Rejected candidates:
+
+- Noncurrent locale JSON stays synchronous in `src/i18n.ts`. No persisted-locale
+  startup proof showed that dynamic loading would avoid an English flash or
+  produce a net win.
+- `WebTelemetry` stays in the entry. Its vendor integrations are already lazy,
+  and the small wrapper had no measured material saving at a natural boundary.
+- Native URL/runtime adapters stay in `main.tsx`. They run startup lifecycle
+  work and deferring them could break Capacitor behavior without a safe proof.
+
+This remains local lab evidence, not Lighthouse, field Core Web Vitals,
+staging, production, or authenticated backend proof. The repeatability limits
+and the historical baseline above still apply.
