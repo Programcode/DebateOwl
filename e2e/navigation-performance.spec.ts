@@ -99,16 +99,37 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   let destinationRequested = false;
   await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
     destinationRequested = true;
-    await new Promise((resolve) => setTimeout(resolve, 750));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
   });
 
   await startGenericLoaderObservation(page);
   await openAppNav(page, 'Attack');
   await expect.poll(() => destinationRequested).toBe(true);
-  const pendingStatus = page.locator('main').getByRole('status', { name: /Attack/i });
+  const pendingStatus = page.locator('main').getByRole('status', { name: 'Opening Attack', exact: true });
   await expect(pendingStatus).toHaveCount(1);
-  await expect(pendingStatus).toHaveAttribute('aria-busy', 'true');
+  await expect(pendingStatus).toHaveAttribute('aria-live', 'polite');
+  await expect(pendingStatus).not.toHaveAttribute('aria-busy');
+  const pendingSkeleton = page.locator('[data-route-skeleton="tool-form"][aria-busy="true"]');
+  await expect(pendingSkeleton).toHaveCount(1);
+  await expect(pendingSkeleton).toBeVisible();
+  expect(await pendingStatus.evaluate((status) => status.nextElementSibling?.matches('[data-route-skeleton="tool-form"][aria-busy="true"]'))).toBe(true);
+  await expect(page.locator('[data-route-skeleton-shape]').first()).toBeVisible();
+  const pendingGeometry = await pendingSkeleton.evaluate((region) => {
+    const shape = region.querySelector('[data-route-skeleton-shape]');
+    const regionRect = region.getBoundingClientRect();
+    const shapeRect = shape?.getBoundingClientRect();
+    return {
+      regionHeight: regionRect.height,
+      shapeWidth: shapeRect?.width ?? 0,
+      shapeHeight: shapeRect?.height ?? 0,
+      shapeBackground: shape ? getComputedStyle(shape).backgroundColor : '',
+    };
+  });
+  expect(pendingGeometry.regionHeight).toBeGreaterThan(0);
+  expect(pendingGeometry.shapeWidth).toBeGreaterThan(0);
+  expect(pendingGeometry.shapeHeight).toBeGreaterThan(0);
+  expect(pendingGeometry.shapeBackground).not.toBe('rgba(0, 0, 0, 0)');
   await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
   expect(await page.evaluate(() => ({
     appLayout: document.querySelector('header')?.parentElement === window.__baselineAppLayout,

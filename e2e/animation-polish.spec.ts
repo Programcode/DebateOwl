@@ -85,6 +85,42 @@ test('removes non-essential route and state movement for reduced motion', async 
   await page.screenshot({ path: testInfo.outputPath('reduced-result.png'), fullPage: true });
 });
 
+test('keeps a delayed route skeleton static under reduced motion', async ({ page }, testInfo) => {
+  await prepareMotionFixture(page, 'reduce');
+  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Generate', exact: true })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await page.screenshot({ path: testInfo.outputPath('reduced-route-before.png'), fullPage: true });
+
+  let destinationRequested = false;
+  await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
+    destinationRequested = true;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+
+  const attackLink = (page.viewportSize()?.width ?? 1280) < 1024
+    ? await (async () => {
+      await page.getByRole('button', { name: 'Open menu' }).click();
+      return page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Attack/ });
+    })()
+    : page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' });
+  await attackLink.click();
+  await expect.poll(() => destinationRequested).toBe(true);
+
+  const pendingStatus = page.getByRole('status', { name: 'Opening Attack', exact: true });
+  const pendingSkeleton = page.locator('[data-route-skeleton="tool-form"][aria-busy="true"]');
+  await expect(pendingStatus).toHaveCount(1);
+  await expect(pendingStatus).toHaveAttribute('aria-live', 'polite');
+  await expect(pendingStatus).toHaveText('Opening Attack');
+  await expect(pendingSkeleton).toBeVisible();
+  await expect(page.locator('.motion-loading-shell')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => animation.playState === 'running').length)).toBe(0);
+  await page.screenshot({ path: testInfo.outputPath('reduced-route-pending.png'), fullPage: true });
+
+  await expect(page.getByRole('heading', { name: 'Attack', exact: true })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await page.screenshot({ path: testInfo.outputPath('reduced-route-ready.png'), fullPage: true });
+});
+
 test('audits applicable empty, loading, result, and option states across feature routes', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   await prepareMotionFixture(page, 'no-preference');

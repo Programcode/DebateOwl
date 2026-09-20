@@ -12,10 +12,10 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
-import { Loader2 } from "lucide-react";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { captureException, captureProductEvent } from "@/lib/observability";
 import { routeLoaders } from "@/lib/route-modules";
+import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(routeLoaders["/"]);
@@ -72,24 +72,47 @@ const TOOL_BY_ROUTE = new Map<string, ToolName>([
 ]);
 
 function getToolForPathname(pathname: string): ToolName | undefined {
-  const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  return TOOL_BY_ROUTE.get(normalizedPathname);
+  return TOOL_BY_ROUTE.get(normalizePathname(pathname));
 }
 
-// Loading fallback component
-const PageLoader = () => (
-  <div className="motion-loading-shell flex min-h-[60vh] items-center justify-center">
-    <div className="flex flex-col items-center gap-4 rounded-lg border bg-card/80 px-8 py-7 shadow-lg">
-      <div className="relative flex h-12 w-12 items-center justify-center">
-        <span className="motion-ping-ring absolute h-full w-full rounded-full border border-primary/40" />
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-      <div className="h-1 w-44 overflow-hidden rounded-full bg-muted">
-        <div className="motion-loading-bar h-full rounded-full bg-primary" />
-      </div>
-    </div>
-  </div>
-);
+type RouteFallback = {
+  variant: RouteSkeletonVariant;
+  label: string;
+};
+
+const DEFAULT_ROUTE_FALLBACK: RouteFallback = { variant: "public", label: "Page" };
+
+const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
+  "/": { variant: "public", label: "DebateLab" },
+  "/terms": { variant: "public", label: "Terms" },
+  "/privacy": { variant: "public", label: "Privacy" },
+  "/expocit/sources": { variant: "public", label: "Sources" },
+  "/login": { variant: "public", label: "Sign in" },
+  "/app": { variant: "home-grid", label: "Home" },
+  "/app/generate": { variant: "tool-form", label: "Generate" },
+  "/app/attack": { variant: "tool-form", label: "Attack" },
+  "/app/brainstorm": { variant: "tool-form", label: "Brainstorm" },
+  "/app/factoids": { variant: "tool-form", label: "Factoids" },
+  "/app/crossfire": { variant: "tool-form", label: "Crossfire" },
+  "/app/timer": { variant: "tool-form", label: "Timer" },
+  "/app/flowchart": { variant: "tool-form", label: "Flowchart" },
+  "/app/ask": { variant: "chat", label: "Ask" },
+  "/app/sparring": { variant: "chat", label: "Sparring" },
+  "/app/history": { variant: "settings/list", label: "History" },
+  "/app/library": { variant: "settings/list", label: "Library" },
+  "/app/settings": { variant: "settings/list", label: "Settings" },
+  "/app/admin": { variant: "admin/table", label: "Admin" },
+};
+
+function normalizePathname(pathname: string): string {
+  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+}
+
+function getRouteFallback(pathname: string): RouteFallback {
+  const normalizedPathname = normalizePathname(pathname);
+  if (normalizedPathname.startsWith("/share/")) return { variant: "public", label: "Shared debate" };
+  return ROUTE_FALLBACKS[normalizedPathname] ?? DEFAULT_ROUTE_FALLBACK;
+}
 
 export class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -131,10 +154,11 @@ export function ToolRouteAnalytics(): null {
 
 function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const fallback = getRouteFallback(location.pathname);
 
   return (
     <RouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<RouteSkeleton {...fallback} />}>
         {children}
       </Suspense>
     </RouteErrorBoundary>
@@ -193,7 +217,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <OfflineIndicator />
-            <BrowserRouter>
+            <BrowserRouter useTransitions={false}>
               <RouteErrorBoundary>
                 <AppRoutes />
               </RouteErrorBoundary>
