@@ -16,6 +16,7 @@ import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { captureException, captureProductEvent } from "@/lib/observability";
 import { routeLoaders } from "@/lib/route-modules";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
+import { useTranslation } from "react-i18next";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(routeLoaders["/"]);
@@ -75,42 +76,47 @@ function getToolForPathname(pathname: string): ToolName | undefined {
   return TOOL_BY_ROUTE.get(normalizePathname(pathname));
 }
 
-type RouteFallback = {
+export type RouteFallback = {
   variant: RouteSkeletonVariant;
   label: string;
+  labelKey?: string;
 };
 
-const DEFAULT_ROUTE_FALLBACK: RouteFallback = { variant: "public", label: "Page" };
+const DEFAULT_ROUTE_FALLBACK: RouteFallback = { variant: "public", label: "Page", labelKey: "common.page" };
 
 const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/": { variant: "public", label: "DebateLab" },
-  "/terms": { variant: "public", label: "Terms" },
-  "/privacy": { variant: "public", label: "Privacy" },
-  "/expocit/sources": { variant: "public", label: "Sources" },
-  "/login": { variant: "public", label: "Sign in" },
-  "/app": { variant: "home-grid", label: "Home" },
-  "/app/generate": { variant: "tool-form", label: "Generate" },
-  "/app/attack": { variant: "tool-form", label: "Attack" },
-  "/app/brainstorm": { variant: "tool-form", label: "Brainstorm" },
-  "/app/factoids": { variant: "tool-form", label: "Factoids" },
-  "/app/crossfire": { variant: "tool-form", label: "Crossfire" },
-  "/app/timer": { variant: "tool-form", label: "Timer" },
-  "/app/flowchart": { variant: "tool-form", label: "Flowchart" },
-  "/app/ask": { variant: "chat", label: "Ask" },
-  "/app/sparring": { variant: "chat", label: "Sparring" },
-  "/app/history": { variant: "settings/list", label: "History" },
-  "/app/library": { variant: "settings/list", label: "Library" },
-  "/app/settings": { variant: "settings/list", label: "Settings" },
-  "/app/admin": { variant: "admin/table", label: "Admin" },
+  "/terms": { variant: "public", label: "Terms", labelKey: "footer.terms" },
+  "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
+  "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
+  "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
+  "/app": { variant: "home-grid", label: "Home", labelKey: "nav.home" },
+  "/app/generate": { variant: "tool-form", label: "Generate", labelKey: "nav.generate" },
+  "/app/attack": { variant: "tool-form", label: "Attack", labelKey: "nav.attack" },
+  "/app/brainstorm": { variant: "tool-form", label: "Brainstorm", labelKey: "nav.brainstorm" },
+  "/app/factoids": { variant: "tool-form", label: "Factoids", labelKey: "nav.factoids" },
+  "/app/crossfire": { variant: "tool-form", label: "Crossfire", labelKey: "nav.crossfire" },
+  "/app/timer": { variant: "tool-form", label: "Timer", labelKey: "nav.timer" },
+  "/app/flowchart": { variant: "tool-form", label: "Flowchart", labelKey: "nav.flowchart" },
+  "/app/ask": { variant: "chat", label: "Ask", labelKey: "nav.ask" },
+  "/app/sparring": { variant: "chat", label: "Sparring", labelKey: "nav.sparring" },
+  "/app/history": { variant: "settings/list", label: "History", labelKey: "nav.history" },
+  "/app/library": { variant: "settings/list", label: "Library", labelKey: "nav.library" },
+  "/app/settings": { variant: "settings/list", label: "Settings", labelKey: "nav.settings" },
+  "/app/admin": { variant: "admin/table", label: "Admin", labelKey: "settings.admin" },
 };
 
 function normalizePathname(pathname: string): string {
   return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 }
 
-function getRouteFallback(pathname: string): RouteFallback {
+// eslint-disable-next-line react-refresh/only-export-components
+export function getRouteFallback(pathname: string): RouteFallback {
   const normalizedPathname = normalizePathname(pathname);
-  if (normalizedPathname.startsWith("/share/")) return { variant: "public", label: "Shared debate" };
+  const sharePathname = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  if (/^\/share\/[^/]+$/.test(sharePathname)) {
+    return { variant: "public", label: "Shared debate", labelKey: "sharedPage.title" };
+  }
   return ROUTE_FALLBACKS[normalizedPathname] ?? DEFAULT_ROUTE_FALLBACK;
 }
 
@@ -154,11 +160,14 @@ export function ToolRouteAnalytics(): null {
 
 function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const { t } = useTranslation();
   const fallback = getRouteFallback(location.pathname);
+  const label = fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label;
+  const statusText = t("common.openingPage", { page: label });
 
   return (
     <RouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<RouteSkeleton {...fallback} />}>
+      <Suspense fallback={<RouteSkeleton variant={fallback.variant} label={label} statusText={statusText} />}>
         {children}
       </Suspense>
     </RouteErrorBoundary>

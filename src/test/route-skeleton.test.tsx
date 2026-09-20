@@ -60,4 +60,16 @@ describe("RouteSkeleton", () => {
     expect(status).toHaveTextContent("Opening Attack");
     expect(container.querySelector('[data-route-skeleton="tool-form"]')).toHaveTextContent(/^$/);
   });
+
+  it.each([
+    ["es", "Atacar", "Abriendo Atacar"],
+    ["hu", "Támadás", "Támadás megnyitása"],
+  ])("accepts the %s localized route announcement", (_locale, label, statusText) => {
+    render(<RouteSkeleton variant="tool-form" label={label} statusText={statusText} />);
+
+    const status = screen.getByRole("status", { name: statusText });
+    expect(status).toHaveTextContent(statusText);
+    expect(status).not.toHaveTextContent("Opening");
+    expect(status).not.toHaveTextContent("Attack");
+  });
 });

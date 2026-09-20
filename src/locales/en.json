@@ -41,7 +41,9 @@
     "pdf": "PDF",
     "docx": "DOCX",
     "googleDocs": "Google Docs",
-    "regenerate": "Regenerate {{title}}"
+    "regenerate": "Regenerate {{title}}",
+    "openingPage": "Opening {{page}}",
+    "page": "Page"
   },
   "modelSelector": {
     "reasoning": "Reasoning",

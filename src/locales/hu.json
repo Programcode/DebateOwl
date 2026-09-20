@@ -41,7 +41,9 @@
     "pdf": "PDF",
     "docx": "DOCX",
     "googleDocs": "Google Docs",
-    "regenerate": "{{title}} újragenerálása"
+    "regenerate": "{{title}} újragenerálása",
+    "openingPage": "{{page}} megnyitása",
+    "page": "Oldal"
   },
   "modelSelector": {
     "reasoning": "Érvelés",

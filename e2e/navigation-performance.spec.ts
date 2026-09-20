@@ -164,6 +164,39 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   expect(transitionMetrics.measuredLongTaskCount).toBeLessThanOrEqual(transitionMetrics.allLongTaskCount);
 });
 
+for (const [locale, attackLabel, menuLabel, openingLabel] of [
+  ['es', 'Atacar', 'Abrir menú', 'Abriendo Atacar'],
+  ['hu', 'Támadás', 'Menü megnyitása', 'Támadás megnyitása'],
+] as const) {
+  test(`${locale} delayed route announces the localized destination`, async ({ page }) => {
+    await setLocale(page, locale);
+    await stubSupabaseSession(page);
+    await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('header')).toBeVisible();
+
+    let destinationRequested = false;
+    await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
+      destinationRequested = true;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
+
+    if ((page.viewportSize()?.width ?? 1280) < 1024) {
+      await page.getByRole('button', { name: menuLabel }).click();
+      await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: new RegExp(`^${attackLabel}`) }).click();
+    } else {
+      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: attackLabel }).click();
+    }
+
+    await expect.poll(() => destinationRequested).toBe(true);
+    const status = page.getByRole('status', { name: openingLabel, exact: true });
+    await expect(status).toHaveCount(1);
+    await expect(status).toHaveText(openingLabel);
+    await expect(status).not.toHaveText('Opening Attack');
+    await expect(page.locator('[data-route-skeleton="tool-form"][aria-busy="true"]')).toBeVisible();
+  });
+}
+
 async function gotoGenerate(page: Page) {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
