@@ -2,24 +2,14 @@
 
 **Status:** Plan index. Plans describe proposed work, not current implementation truth.
 
-Last reconciled against `origin/main` at `c7d3437` on 2026-09-06.
+Last reconciled against `origin/main` at `b2ba178` on 2026-09-20.
 
 Before executing any plan, recheck its branch, commit, paths, assumptions, product decisions, and verification commands against current source. Do not treat an old line number or completed review as fresh evidence.
 
 ## Active plans
 
-- [Email and demo-code sign-in](auth-email-and-demo-code-sign-in.plan)
-- [Control honesty and deterministic toggles](control-honesty.md)
-- [Model cost accounting](model-cost-accounting.md)
 - [PR 11 salvage work](pr11-salvage.md)
-- [Rate-limit UI cleanup](rate-limit-ui-cleanup.md)
 - [Supabase staging](supabase-staging.md)
-- [System prompt improvement](system-prompt-improvement.md)
-- [Startup and navigation performance](startup-navigation-performance.md)
-
-## Backlog
-
-- [Bug and polish cleanup](bugs.md), four items reverified on 2026-09-06.
 
 ## Shipped reference
 
@@ -30,5 +20,12 @@ The following work was removed from active plans after merged implementation was
 - Analytics and error tracking, PRs 16, 18, 22, 23, 24, 25, and 28.
 - Animation polish, PR 20.
 - Ask and sitewide search quality, PR 17.
+- Control honesty and deterministic toggles, PR 32, with prompt-contract alignment in PR 42.
+- Email OTP and secure demo-code sign-in, PRs 40 and 41.
+- Retained bug and polish cleanup, PR 45.
+- Model cost accounting, PR 46.
+- UI cleanup and the expanded OpenRouter model catalog, PR 47.
+- Rate-limit UI cleanup, PR 48.
+- Startup and navigation performance, PR 49.
 
 These entries are historical pointers. Inspect current source and GitHub before relying on their behavior or status.
