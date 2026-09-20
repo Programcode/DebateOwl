@@ -13,20 +13,28 @@ const variants: RouteSkeletonVariant[] = [
 
 describe("RouteSkeleton", () => {
   it.each(variants)("renders the %s route shape as one polite busy region", (variant) => {
-    const { container } = render(<RouteSkeleton variant={variant} />);
-    const status = screen.getByRole("status", { name: "Loading" });
+    const { container } = render(<RouteSkeleton variant={variant} label={variant} />);
+    const status = screen.getByRole("status", { name: `Opening ${variant}` });
+    const busyRegions = container.querySelectorAll("[data-route-skeleton]");
+    const busyRegion = busyRegions[0];
 
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(status).toHaveAttribute("aria-live", "polite");
-    expect(status).toHaveAttribute("aria-busy", "true");
-    expect(status).toHaveAttribute("data-route-skeleton", variant);
-    expect(status).toHaveClass("min-h-[60vh]");
-    expect(status).toHaveTextContent(/^$/);
+    expect(status).toHaveClass("sr-only");
+    expect(status).toHaveTextContent(`Opening ${variant}`);
+    expect(status).not.toHaveAttribute("aria-busy");
+    expect(status.closest('[aria-busy="true"]')).toBeNull();
+    expect(busyRegions).toHaveLength(1);
+    expect(busyRegion).toHaveAttribute("aria-busy", "true");
+    expect(busyRegion).toHaveAttribute("data-route-skeleton", variant);
+    expect(busyRegion).not.toHaveAttribute("role", "status");
+    expect(busyRegion).toHaveClass("min-h-[60vh]");
+    expect(busyRegion).toHaveTextContent(/^$/);
     expect(container.querySelectorAll("[data-route-skeleton-shape]").length).toBeGreaterThan(0);
   });
 
   it.each(variants)("keeps %s decorative shapes hidden and inert", (variant) => {
-    const { container } = render(<RouteSkeleton variant={variant} />);
+    const { container } = render(<RouteSkeleton variant={variant} label={variant} />);
 
     expect(container.querySelectorAll("a, button, input, select, textarea")).toHaveLength(0);
     expect(container.querySelectorAll('[tabindex]:not([tabindex="-1"])')).toHaveLength(0);
@@ -38,7 +46,7 @@ describe("RouteSkeleton", () => {
   });
 
   it.each(variants)("keeps %s static without animation hooks", (variant) => {
-    const { container } = render(<RouteSkeleton variant={variant} />);
+    const { container } = render(<RouteSkeleton variant={variant} label={variant} />);
 
     expect(container.querySelector('[class*="animate-"]')).toBeNull();
     expect(container.querySelector('[class*="motion-"]')).toBeNull();
@@ -48,7 +56,8 @@ describe("RouteSkeleton", () => {
   it("includes a destination label without adding visible fake text", () => {
     const { container } = render(<RouteSkeleton variant="tool-form" label="Attack" />);
 
-    expect(screen.getByRole("status", { name: "Loading Attack" })).toBeInTheDocument();
-    expect(container.textContent).toBe("");
+    const status = screen.getByRole("status", { name: "Opening Attack" });
+    expect(status).toHaveTextContent("Opening Attack");
+    expect(container.querySelector('[data-route-skeleton="tool-form"]')).toHaveTextContent(/^$/);
   });
 });

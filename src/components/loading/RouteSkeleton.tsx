@@ -190,19 +190,17 @@ const variants: Record<RouteSkeletonVariant, () => ReactNode> = {
   "admin/table": AdminTableSkeleton,
 };
 
-export function RouteSkeleton({ variant, label }: { variant: RouteSkeletonVariant; label?: string }) {
+export function RouteSkeleton({ variant, label }: { variant: RouteSkeletonVariant; label: string }) {
   const Skeleton = variants[variant];
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label={label ? `Loading ${label}` : "Loading"}
-      data-route-skeleton={variant}
-      className="min-h-[60vh] w-full"
-    >
-      {Skeleton()}
-    </div>
+    <>
+      <div role="status" aria-live="polite" aria-atomic="true" aria-label={`Opening ${label}`} className="sr-only">
+        Opening {label}
+      </div>
+      <div aria-busy="true" data-route-skeleton={variant} className="min-h-[60vh] w-full">
+        {Skeleton()}
+      </div>
+    </>
   );
 }
