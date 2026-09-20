@@ -51,14 +51,14 @@ SELECT ok(
 
 SELECT ok(
   has_function_privilege('authenticated', 'public.create_workspace(text,text,text,uuid)', 'EXECUTE')
-    AND has_function_privilege('authenticated', 'public.update_workspace_document(uuid,uuid,text,text,uuid[],uuid,text,bigint,uuid)', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'public.update_workspace_document(uuid,uuid,text,text,uuid[],uuid,boolean,text,bigint,uuid)', 'EXECUTE')
     AND has_function_privilege('authenticated', 'public.change_workspace_access(uuid,text,uuid,bigint,uuid)', 'EXECUTE')
     AND has_function_privilege('authenticated', 'public.change_workspace_state(uuid,text,bigint,uuid)', 'EXECUTE'),
   'authenticated callers can execute the four named workspace RPCs'
 );
 SELECT ok(
   NOT has_function_privilege('anon', 'public.create_workspace(text,text,text,uuid)', 'EXECUTE')
-    AND NOT has_function_privilege('anon', 'public.update_workspace_document(uuid,uuid,text,text,uuid[],uuid,text,bigint,uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.update_workspace_document(uuid,uuid,text,text,uuid[],uuid,boolean,text,bigint,uuid)', 'EXECUTE')
     AND NOT has_function_privilege('anon', 'public.change_workspace_access(uuid,text,uuid,bigint,uuid)', 'EXECUTE')
     AND NOT has_function_privilege('anon', 'public.change_workspace_state(uuid,text,bigint,uuid)', 'EXECUTE'),
   'anonymous callers cannot execute workspace RPCs'
@@ -70,7 +70,7 @@ SELECT ok(
       LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
     WHERE p.oid = ANY (ARRAY[
       'public.create_workspace(text,text,text,uuid)'::regprocedure,
-      'public.update_workspace_document(uuid,uuid,text,text,uuid[],uuid,text,bigint,uuid)'::regprocedure,
+      'public.update_workspace_document(uuid,uuid,text,text,uuid[],uuid,boolean,text,bigint,uuid)'::regprocedure,
       'public.change_workspace_access(uuid,text,uuid,bigint,uuid)'::regprocedure,
       'public.change_workspace_state(uuid,text,bigint,uuid)'::regprocedure
     ])
@@ -172,7 +172,7 @@ SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     (SELECT id FROM public.workspaces LIMIT 1),
     'ffffffff-ffff-4fff-8fff-ffffffffffff',
-    'Forged', NULL, NULL, NULL, NULL, 0,
+    'Forged', NULL, NULL, NULL, false, NULL, 0,
     'aaaaaaaa-0000-4000-8000-000000000003'
   )$$,
   'P0001',
@@ -183,7 +183,7 @@ SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     'ffffffff-ffff-4fff-8fff-ffffffffffff',
     'ffffffff-ffff-4fff-8fff-ffffffffffff',
-    'Forged', NULL, NULL, NULL, NULL, 0,
+    'Forged', NULL, NULL, NULL, false, NULL, 0,
     'aaaaaaaa-0000-4000-8000-000000000004'
   )$$,
   'P0001',

@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(71);
+SELECT plan(82);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -134,6 +134,23 @@ SELECT id, '52222222-2222-4222-8222-222222222222'
 FROM public.workspaces
 WHERE initial_language = 'hu';
 
+UPDATE public.workspace_documents AS d
+SET assignee_id = '55555555-5555-4555-8555-555555555555'
+FROM public.workspaces AS w
+WHERE w.id = d.workspace_id
+  AND w.initial_language = 'en'
+  AND d.side = 'con'
+  AND d.position = 1;
+
+SELECT set_config(
+  'test.clear_assignment_document_id',
+  (SELECT d.id::text
+    FROM public.workspace_documents d
+    JOIN public.workspaces w ON w.id = d.workspace_id
+    WHERE w.initial_language = 'en' AND d.side = 'con' AND d.position = 1),
+  true
+);
+
 SELECT set_config(
   'test.foreign_document_id',
   (SELECT d.id::text
@@ -200,7 +217,7 @@ SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
-    'Opening', NULL, NULL, '52222222-2222-4222-8222-222222222222', NULL,
+    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', true, NULL,
     0, 'baaaaaaa-0000-4000-8000-000000000010'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
@@ -212,14 +229,14 @@ SELECT results_eq(
     FROM public.workspace_documents d
     JOIN public.workspaces w ON w.id = d.workspace_id
     WHERE w.initial_language = 'en' AND d.side = 'pro' AND d.position = 0$$,
-  $$VALUES ('Opening'::text, '52222222-2222-4222-8222-222222222222'::uuid)$$,
-  'the document update persists its metadata'
+  $$VALUES ('Intro'::text, '52222222-2222-4222-8222-222222222222'::uuid)$$,
+  'the document update assigns the member without changing unrelated metadata'
 );
 SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
-    'Opening', NULL, NULL, '52222222-2222-4222-8222-222222222222', NULL,
+    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', true, NULL,
     0, 'baaaaaaa-0000-4000-8000-000000000010'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
@@ -230,18 +247,18 @@ SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
-    'Changed replay', NULL, NULL, '52222222-2222-4222-8222-222222222222', NULL,
-    1, 'baaaaaaa-0000-4000-8000-000000000010'
+    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', false, NULL,
+    0, 'baaaaaaa-0000-4000-8000-000000000010'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
   'P0001', 'operation ID conflict',
-  'a document operation ID cannot be reused with different arguments'
+  'the assignment-presence flag participates in the request fingerprint'
 );
 SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
-    'Stale', NULL, NULL, NULL, NULL,
+    'Stale', NULL, NULL, NULL, false, NULL,
     0, 'baaaaaaa-0000-4000-8000-000000000011'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
@@ -253,14 +270,14 @@ SELECT results_eq(
     FROM public.workspace_documents d
     JOIN public.workspaces w ON w.id = d.workspace_id
     WHERE w.initial_language = 'en' AND d.side = 'pro' AND d.position = 0$$,
-  $$VALUES ('Opening'::text, 1::bigint)$$,
+  $$VALUES ('Intro'::text, 1::bigint)$$,
   'the stale document update leaves metadata and revision unchanged'
 );
 SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
     current_setting('test.foreign_document_id')::uuid,
-    'Cross workspace', NULL, NULL, NULL, NULL,
+    'Cross workspace', NULL, NULL, NULL, false, NULL,
     1, 'baaaaaaa-0000-4000-8000-000000000012'
   )$$,
   'P0001', 'workspace unavailable',
@@ -270,7 +287,7 @@ SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
-    NULL, NULL, NULL, '54444444-4444-4444-8444-444444444444', NULL,
+    NULL, NULL, NULL, '54444444-4444-4444-8444-444444444444', true, NULL,
     1, 'baaaaaaa-0000-4000-8000-000000000013'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
@@ -281,12 +298,31 @@ SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
-    NULL, NULL,
-    (SELECT array_agg(id ORDER BY position DESC) FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND state = 'active'),
-    NULL, NULL, 1, 'baaaaaaa-0000-4000-8000-000000000014'
+    'Opening', NULL, NULL, NULL, false, NULL,
+    1, 'baaaaaaa-0000-4000-8000-000000000038'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
   ARRAY[2::bigint],
+  'an unrelated rename increments the workspace revision once'
+);
+SELECT results_eq(
+  $$SELECT d.title, d.assignee_id, w.revision
+    FROM public.workspace_documents d
+    JOIN public.workspaces w ON w.id = d.workspace_id
+    WHERE w.initial_language = 'en' AND d.side = 'pro' AND d.position = 0$$,
+  $$VALUES ('Opening'::text, '52222222-2222-4222-8222-222222222222'::uuid, 2::bigint)$$,
+  'an unrelated rename preserves assignment'
+);
+SELECT results_eq(
+  $$SELECT public.update_workspace_document(
+    w.id,
+    (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND position = 0),
+    NULL, NULL,
+    (SELECT array_agg(id ORDER BY position DESC) FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND state = 'active'),
+    NULL, false, NULL, 2, 'baaaaaaa-0000-4000-8000-000000000014'
+  )
+  FROM public.workspaces w WHERE initial_language = 'en'$$,
+  ARRAY[3::bigint],
   'an exact side list reorders documents and increments one revision'
 );
 SELECT results_eq(
@@ -297,6 +333,11 @@ SELECT results_eq(
   ARRAY['Conclusion,R2,R1,Opening'::text],
   'the exact reorder persists every supplied position'
 );
+SELECT results_eq(
+  $$SELECT assignee_id FROM public.workspace_documents WHERE title = 'Opening'$$,
+  ARRAY['52222222-2222-4222-8222-222222222222'::uuid],
+  'an unrelated reorder preserves assignment'
+);
 SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     w.id,
@@ -304,7 +345,7 @@ SELECT throws_ok(
     NULL, NULL,
     ARRAY[(SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' LIMIT 1),
           (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' LIMIT 1)],
-    NULL, NULL, 2, 'baaaaaaa-0000-4000-8000-000000000015'
+    NULL, false, NULL, 3, 'baaaaaaa-0000-4000-8000-000000000015'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
   'P0001', 'invalid document order',
@@ -318,7 +359,7 @@ SELECT throws_ok(
     ARRAY(SELECT id FROM public.workspace_documents
       WHERE workspace_id = w.id AND side = 'pro' ORDER BY position LIMIT 3)
       || ARRAY[current_setting('test.foreign_document_id')::uuid],
-    NULL, NULL, 2, 'baaaaaaa-0000-4000-8000-000000000034'
+    NULL, false, NULL, 3, 'baaaaaaa-0000-4000-8000-000000000034'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
   'P0001', 'invalid document order',
@@ -329,28 +370,61 @@ SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening'),
-    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', 'trashed',
-    2, 'baaaaaaa-0000-4000-8000-000000000016'
+    NULL, NULL, NULL, NULL, false, 'trashed',
+    3, 'baaaaaaa-0000-4000-8000-000000000016'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
-  ARRAY[3::bigint],
+  ARRAY[4::bigint],
   'a member can trash a document through the metadata RPC'
 );
 SELECT ok(
   (SELECT trashed_at IS NOT NULL
       AND trash_expires_at BETWEEN now() + interval '29 days' AND now() + interval '31 days'
+      AND assignee_id = '52222222-2222-4222-8222-222222222222'
     FROM public.workspace_documents WHERE title = 'Opening'),
-  'trash records a 30-day recovery deadline'
+  'trash records a 30-day recovery deadline and preserves assignment'
+);
+SELECT throws_ok(
+  $$SELECT public.update_workspace_document(
+    w.id,
+    (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening'),
+    NULL, NULL, NULL, NULL, false, 'active',
+    4, 'baaaaaaa-0000-4000-8000-000000000039'
+  )
+  FROM public.workspaces w WHERE initial_language = 'en'$$,
+  'P0001', 'invalid document order',
+  'restoring an inactive document without an exact side order fails atomically'
+);
+SELECT results_eq(
+  $$SELECT d.state, d.position, d.assignee_id, w.revision,
+      (SELECT string_agg(active.title || ':' || active.position, ',' ORDER BY active.position)
+       FROM public.workspace_documents active
+       WHERE active.workspace_id = w.id AND active.side = 'pro' AND active.state = 'active')
+    FROM public.workspace_documents d
+    JOIN public.workspaces w ON w.id = d.workspace_id
+    WHERE d.title = 'Opening'$$,
+  $$VALUES (
+    'trashed'::text,
+    3,
+    '52222222-2222-4222-8222-222222222222'::uuid,
+    4::bigint,
+    'Conclusion:0,R2:1,R1:2'::text
+  )$$,
+  'failed restore preserves document state, assignment, side order, and revision'
 );
 SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening'),
-    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', 'active',
-    3, 'baaaaaaa-0000-4000-8000-000000000017'
+    NULL, NULL,
+    (SELECT array_agg(id ORDER BY position)
+      FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND state = 'active')
+      || ARRAY[(SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening')],
+    NULL, false, 'active',
+    4, 'baaaaaaa-0000-4000-8000-000000000017'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
-  ARRAY[4::bigint],
+  ARRAY[5::bigint],
   'a trashed document can be restored'
 );
 SELECT results_eq(
@@ -363,23 +437,55 @@ SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening'),
-    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', 'archived',
-    4, 'baaaaaaa-0000-4000-8000-000000000029'
+    NULL, NULL, NULL, NULL, false, 'archived',
+    5, 'baaaaaaa-0000-4000-8000-000000000029'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
-  ARRAY[5::bigint],
+  ARRAY[6::bigint],
   'a document can be archived through the metadata RPC'
 );
 SELECT results_eq(
   $$SELECT public.update_workspace_document(
     w.id,
     (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening'),
-    NULL, NULL, NULL, '52222222-2222-4222-8222-222222222222', 'active',
-    5, 'baaaaaaa-0000-4000-8000-000000000030'
+    NULL, NULL,
+    (SELECT array_agg(id ORDER BY position)
+      FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'pro' AND state = 'active')
+      || ARRAY[(SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening')],
+    NULL, false, 'active',
+    6, 'baaaaaaa-0000-4000-8000-000000000030'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
-  ARRAY[6::bigint],
+  ARRAY[7::bigint],
   'an archived document can be restored with its current assignment'
+);
+SELECT throws_ok(
+  $$SELECT public.update_workspace_document(
+    w.id,
+    (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening'),
+    NULL, 'con', NULL, NULL, false, NULL,
+    7, 'baaaaaaa-0000-4000-8000-000000000040'
+  )
+  FROM public.workspaces w WHERE initial_language = 'en'$$,
+  'P0001', 'invalid document order',
+  'moving an active document without an exact destination order fails atomically'
+);
+SELECT results_eq(
+  $$SELECT d.side, d.position, d.assignee_id, w.revision,
+      (SELECT string_agg(active.title || ':' || active.position, ',' ORDER BY active.position)
+       FROM public.workspace_documents active
+       WHERE active.workspace_id = w.id AND active.side = 'con' AND active.state = 'active')
+    FROM public.workspace_documents d
+    JOIN public.workspaces w ON w.id = d.workspace_id
+    WHERE d.title = 'Opening'$$,
+  $$VALUES (
+    'pro'::text,
+    3,
+    '52222222-2222-4222-8222-222222222222'::uuid,
+    7::bigint,
+    'Intro:0,R1:1,R2:2,Conclusion:3'::text
+  )$$,
+  'failed side move preserves document metadata, destination order, and revision'
 );
 SELECT results_eq(
   $$SELECT public.update_workspace_document(
@@ -389,17 +495,17 @@ SELECT results_eq(
     (SELECT array_agg(id ORDER BY position) FROM public.workspace_documents
       WHERE workspace_id = w.id AND side = 'con' AND state = 'active')
       || ARRAY[(SELECT id FROM public.workspace_documents WHERE workspace_id = w.id AND title = 'Opening')],
-    '52222222-2222-4222-8222-222222222222', NULL,
-    6, 'baaaaaaa-0000-4000-8000-000000000035'
+    NULL, false, NULL,
+    7, 'baaaaaaa-0000-4000-8000-000000000035'
   )
   FROM public.workspaces w WHERE initial_language = 'en'$$,
-  ARRAY[7::bigint],
+  ARRAY[8::bigint],
   'a document moves sides with an exact destination order'
 );
 SELECT results_eq(
-  $$SELECT side, position FROM public.workspace_documents WHERE title = 'Opening'$$,
-  $$VALUES ('con'::text, 4)$$,
-  'the side move persists the requested destination position'
+  $$SELECT side, position, assignee_id FROM public.workspace_documents WHERE title = 'Opening'$$,
+  $$VALUES ('con'::text, 4, '52222222-2222-4222-8222-222222222222'::uuid)$$,
+  'the side move persists destination position and assignment'
 );
 SELECT set_config(
   'test.english_workspace_id',
@@ -411,23 +517,128 @@ SELECT set_config(
   (SELECT id::text FROM public.workspace_documents WHERE title = 'Opening'),
   true
 );
+SELECT results_eq(
+  $$SELECT public.update_workspace_document(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    current_setting('test.clear_assignment_document_id')::uuid,
+    NULL, NULL, NULL, NULL, true, NULL,
+    8, 'baaaaaaa-0000-4000-8000-000000000041'
+  )$$,
+  ARRAY[9::bigint],
+  'an explicit assignment change can clear an assignee'
+);
+SELECT results_eq(
+  $$SELECT d.assignee_id, w.revision
+    FROM public.workspace_documents d
+    JOIN public.workspaces w ON w.id = d.workspace_id
+    WHERE d.id = current_setting('test.clear_assignment_document_id')::uuid$$,
+  $$VALUES (NULL::uuid, 9::bigint)$$,
+  'explicit clear stores NULL without affecting another document assignment'
+);
+SELECT results_eq(
+  $$SELECT public.update_workspace_document(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    current_setting('test.english_document_id')::uuid,
+    NULL, NULL, NULL, NULL, false, 'trashed',
+    9, 'baaaaaaa-0000-4000-8000-000000000042'
+  )$$,
+  ARRAY[10::bigint],
+  'trash after a side move preserves assignment and records a recovery deadline'
+);
 
+RESET ROLE;
+UPDATE public.workspace_documents
+SET trash_expires_at = now() - interval '1 second'
+WHERE id = current_setting('test.english_document_id')::uuid;
+SELECT set_config(
+  'test.expired_document_trashed_at',
+  (SELECT trashed_at::text FROM public.workspace_documents
+    WHERE id = current_setting('test.english_document_id')::uuid),
+  true
+);
+SELECT set_config(
+  'test.expired_document_expires_at',
+  (SELECT trash_expires_at::text FROM public.workspace_documents
+    WHERE id = current_setting('test.english_document_id')::uuid),
+  true
+);
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '51111111-1111-4111-8111-111111111111', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT throws_ok(
+  $$SELECT public.update_workspace_document(
+    w.id,
+    current_setting('test.english_document_id')::uuid,
+    NULL, NULL,
+    (SELECT array_agg(id ORDER BY position)
+      FROM public.workspace_documents WHERE workspace_id = w.id AND side = 'con' AND state = 'active')
+      || ARRAY[current_setting('test.english_document_id')::uuid],
+    NULL, false, 'active',
+    10, 'baaaaaaa-0000-4000-8000-000000000043'
+  )
+  FROM public.workspaces w WHERE initial_language = 'en'$$,
+  'P0001', 'workspace unavailable',
+  'expired trash cannot be restored even with an exact destination order'
+);
+SELECT results_eq(
+  $$SELECT d.state, d.trashed_at, d.trash_expires_at, d.assignee_id, w.revision,
+      (SELECT string_agg(active.title || ':' || active.position, ',' ORDER BY active.position)
+       FROM public.workspace_documents active
+       WHERE active.workspace_id = w.id AND active.side = 'con' AND active.state = 'active')
+    FROM public.workspace_documents d
+    JOIN public.workspaces w ON w.id = d.workspace_id
+    WHERE d.id = current_setting('test.english_document_id')::uuid$$,
+  $$VALUES (
+    'trashed'::text,
+    current_setting('test.expired_document_trashed_at')::timestamptz,
+    current_setting('test.expired_document_expires_at')::timestamptz,
+    '52222222-2222-4222-8222-222222222222'::uuid,
+    10::bigint,
+    'Intro:0,R1:1,R2:2,Conclusion:3'::text
+  )$$,
+  'expired restore failure preserves state, timestamps, assignment, order, and revision'
+);
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '52222222-2222-4222-8222-222222222222', true);
 SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT results_eq(
+  $$SELECT public.change_workspace_state(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    'archive', 10, 'baaaaaaa-0000-4000-8000-000000000020'
+  )$$,
+  ARRAY[11::bigint],
+  'a current member can archive a workspace'
+);
+SELECT results_eq(
+  $$SELECT public.change_workspace_state(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    'archive', 10, 'baaaaaaa-0000-4000-8000-000000000020'
+  )$$,
+  ARRAY[11::bigint],
+  'an identical member archive replay returns its original outcome'
+);
 SELECT throws_ok(
   $$SELECT public.change_workspace_state(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'archive', 7, 'baaaaaaa-0000-4000-8000-000000000018'
+    'reopen', 11, 'baaaaaaa-0000-4000-8000-000000000020'
   )$$,
-  'P0001', 'workspace unavailable',
-  'a non-owner cannot archive a workspace'
+  'P0001', 'operation ID conflict',
+  'a workspace state operation ID cannot be reused with different arguments'
+);
+SELECT results_eq(
+  $$SELECT public.change_workspace_state(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    'reopen', 11, 'baaaaaaa-0000-4000-8000-000000000021'
+  )$$,
+  ARRAY[12::bigint],
+  'a current member can reopen an archived workspace'
 );
 SELECT throws_ok(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'remove', '51111111-1111-4111-8111-111111111111', 7,
+    'remove', '51111111-1111-4111-8111-111111111111', 12,
     'baaaaaaa-0000-4000-8000-000000000019'
   )$$,
   'P0001', 'workspace unavailable',
@@ -439,44 +650,12 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '51111111-1111-4111-8111-111111111111', true);
 SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT results_eq(
-  $$SELECT public.change_workspace_state(
-    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'archive', 7, 'baaaaaaa-0000-4000-8000-000000000020'
-  )$$,
-  ARRAY[8::bigint],
-  'the owner can archive a workspace'
-);
-SELECT results_eq(
-  $$SELECT public.change_workspace_state(
-    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'archive', 7, 'baaaaaaa-0000-4000-8000-000000000020'
-  )$$,
-  ARRAY[8::bigint],
-  'an identical workspace state replay returns its original outcome'
-);
-SELECT throws_ok(
-  $$SELECT public.change_workspace_state(
-    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'reopen', 8, 'baaaaaaa-0000-4000-8000-000000000020'
-  )$$,
-  'P0001', 'operation ID conflict',
-  'a workspace state operation ID cannot be reused with different arguments'
-);
-SELECT results_eq(
-  $$SELECT public.change_workspace_state(
-    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'reopen', 8, 'baaaaaaa-0000-4000-8000-000000000021'
-  )$$,
-  ARRAY[9::bigint],
-  'the owner can reopen an archived workspace'
-);
-SELECT results_eq(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'remove', '52222222-2222-4222-8222-222222222222', 9,
+    'remove', '52222222-2222-4222-8222-222222222222', 12,
     'baaaaaaa-0000-4000-8000-000000000022'
   )$$,
-  ARRAY[10::bigint],
+  ARRAY[13::bigint],
   'member removal increments revision and returns the committed outcome'
 );
 SELECT results_eq(
@@ -493,22 +672,22 @@ SELECT results_eq(
 );
 SELECT results_eq(
   $$SELECT revision, access_epoch FROM public.workspaces WHERE initial_language = 'en'$$,
-  $$VALUES (10::bigint, 1::bigint)$$,
+  $$VALUES (13::bigint, 1::bigint)$$,
   'member removal increments the metadata revision and access epoch'
 );
 SELECT results_eq(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'remove', '52222222-2222-4222-8222-222222222222', 9,
+    'remove', '52222222-2222-4222-8222-222222222222', 12,
     'baaaaaaa-0000-4000-8000-000000000022'
   )$$,
-  ARRAY[10::bigint],
+  ARRAY[13::bigint],
   'an identical removal replay returns its original outcome'
 );
 SELECT throws_ok(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'remove', '53333333-3333-4333-8333-333333333333', 10,
+    'remove', '53333333-3333-4333-8333-333333333333', 13,
     'baaaaaaa-0000-4000-8000-000000000022'
   )$$,
   'P0001', 'operation ID conflict',
@@ -528,7 +707,7 @@ SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     current_setting('test.english_workspace_id')::uuid,
     current_setting('test.english_document_id')::uuid,
-    'Removed write', NULL, NULL, NULL, NULL, 10,
+    'Removed write', NULL, NULL, NULL, false, NULL, 13,
     'baaaaaaa-0000-4000-8000-000000000036'
   )$$,
   'P0001', 'workspace unavailable',
@@ -542,7 +721,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'propose_transfer', '54444444-4444-4444-8444-444444444444', 10,
+    'propose_transfer', '54444444-4444-4444-8444-444444444444', 13,
     'baaaaaaa-0000-4000-8000-000000000037'
   )$$,
   'P0001', 'workspace unavailable',
@@ -552,10 +731,10 @@ SELECT throws_ok(
 SELECT results_eq(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'propose_transfer', '53333333-3333-4333-8333-333333333333', 10,
+    'propose_transfer', '53333333-3333-4333-8333-333333333333', 13,
     'baaaaaaa-0000-4000-8000-000000000023'
   )$$,
-  ARRAY[11::bigint],
+  ARRAY[14::bigint],
   'the owner can nominate an existing member for ownership'
 );
 SELECT results_eq(
@@ -571,7 +750,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'accept_transfer', '55555555-5555-4555-8555-555555555555', 11,
+    'accept_transfer', '55555555-5555-4555-8555-555555555555', 14,
     'baaaaaaa-0000-4000-8000-000000000024'
   )$$,
   'P0001', 'workspace unavailable',
@@ -585,16 +764,16 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT results_eq(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'accept_transfer', '53333333-3333-4333-8333-333333333333', 11,
+    'accept_transfer', '53333333-3333-4333-8333-333333333333', 14,
     'baaaaaaa-0000-4000-8000-000000000025'
   )$$,
-  ARRAY[12::bigint],
+  ARRAY[15::bigint],
   'the nominated member accepts ownership atomically'
 );
 SELECT results_eq(
   $$SELECT owner_id, pending_owner_id, revision, access_epoch
     FROM public.workspaces WHERE initial_language = 'en'$$,
-  $$VALUES ('53333333-3333-4333-8333-333333333333'::uuid, NULL::uuid, 12::bigint, 2::bigint)$$,
+  $$VALUES ('53333333-3333-4333-8333-333333333333'::uuid, NULL::uuid, 15::bigint, 2::bigint)$$,
   'accepted transfer changes one owner, clears pending state, and increments epochs'
 );
 SELECT results_eq(
@@ -610,10 +789,10 @@ SELECT results_eq(
 SELECT results_eq(
   $$SELECT public.change_workspace_access(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'accept_transfer', '53333333-3333-4333-8333-333333333333', 11,
+    'accept_transfer', '53333333-3333-4333-8333-333333333333', 14,
     'baaaaaaa-0000-4000-8000-000000000025'
   )$$,
-  ARRAY[12::bigint],
+  ARRAY[15::bigint],
   'an identical transfer acceptance replay returns its original outcome'
 );
 
@@ -624,7 +803,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.change_workspace_state(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'delete', 12, 'baaaaaaa-0000-4000-8000-000000000031'
+    'delete', 15, 'baaaaaaa-0000-4000-8000-000000000031'
   )$$,
   'P0001', 'workspace unavailable',
   'a non-owner cannot delete a workspace'
@@ -654,9 +833,9 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT results_eq(
   $$SELECT public.change_workspace_state(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'delete', 12, 'baaaaaaa-0000-4000-8000-000000000026'
+    'delete', 15, 'baaaaaaa-0000-4000-8000-000000000026'
   )$$,
-  ARRAY[13::bigint],
+  ARRAY[16::bigint],
   'the current owner can soft-delete the workspace'
 );
 SELECT ok(
@@ -667,7 +846,7 @@ SELECT ok(
 SELECT throws_ok(
   $$SELECT public.update_workspace_document(
     w.id, (SELECT id FROM public.workspace_documents WHERE workspace_id = w.id LIMIT 1),
-    'Blocked', NULL, NULL, NULL, NULL, 13,
+    'Blocked', NULL, NULL, NULL, false, NULL, 16,
     'baaaaaaa-0000-4000-8000-000000000027'
   ) FROM public.workspaces w WHERE initial_language = 'en'$$,
   'P0001', 'workspace unavailable',
@@ -681,7 +860,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.change_workspace_state(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'restore', 13, 'baaaaaaa-0000-4000-8000-000000000032'
+    'restore', 16, 'baaaaaaa-0000-4000-8000-000000000032'
   )$$,
   'P0001', 'workspace unavailable',
   'a non-owner cannot restore a deleted workspace'
@@ -697,7 +876,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.change_workspace_state(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'restore', 13, 'baaaaaaa-0000-4000-8000-000000000033'
+    'restore', 16, 'baaaaaaa-0000-4000-8000-000000000033'
   )$$,
   'P0001', 'workspace unavailable',
   'a workspace cannot be restored after the recovery window'
@@ -711,9 +890,9 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT results_eq(
   $$SELECT public.change_workspace_state(
     (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
-    'restore', 13, 'baaaaaaa-0000-4000-8000-000000000028'
+    'restore', 16, 'baaaaaaa-0000-4000-8000-000000000028'
   )$$,
-  ARRAY[14::bigint],
+  ARRAY[17::bigint],
   'the current owner can restore within the recovery window'
 );
 SELECT results_eq(
@@ -731,7 +910,7 @@ SELECT results_eq(
       (SELECT count(*) FROM public.workspace_members WHERE workspace_id = (SELECT id FROM public.workspaces WHERE initial_language = 'en'))::bigint,
       (SELECT count(*) FROM public.workspace_documents WHERE workspace_id = (SELECT id FROM public.workspaces WHERE initial_language = 'en'))::bigint,
       (SELECT count(*) FROM public.workspace_audit_events WHERE workspace_id = (SELECT id FROM public.workspaces WHERE initial_language = 'en'))::bigint$$,
-  $$VALUES (1::bigint, 2::bigint, 8::bigint, 15::bigint)$$,
+  $$VALUES (1::bigint, 2::bigint, 8::bigint, 18::bigint)$$,
   'personal data clearing preserves shared workspace rows and audit history'
 );
 

@@ -254,6 +254,7 @@ CREATE FUNCTION public.update_workspace_document(
   p_side text,
   p_ordered_ids uuid[],
   p_assignee_id uuid,
+  p_assignee_changed boolean,
   p_state text,
   p_expected_revision bigint,
   p_request_id uuid
@@ -287,6 +288,7 @@ BEGIN
     'side', p_side,
     'ordered_ids', to_jsonb(p_ordered_ids),
     'assignee', p_assignee_id,
+    'assignee_changed', p_assignee_changed,
     'state', p_state,
     'expected_revision', p_expected_revision
   ));
@@ -304,6 +306,8 @@ BEGIN
   END IF;
 
   IF p_workspace_id IS NULL OR p_document_id IS NULL OR p_expected_revision < 0
+    OR p_assignee_changed IS NULL
+    OR (NOT p_assignee_changed AND p_assignee_id IS NOT NULL)
     OR (p_title IS NOT NULL AND (v_title = '' OR length(v_title) > 200))
     OR (p_side IS NOT NULL AND p_side NOT IN ('pro', 'con'))
     OR (p_state IS NOT NULL AND p_state NOT IN ('active', 'archived', 'trashed')) THEN
@@ -335,7 +339,7 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'workspace unavailable';
   END IF;
-  IF p_assignee_id IS NOT NULL AND NOT EXISTS (
+  IF p_assignee_changed AND p_assignee_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.workspace_members
     WHERE workspace_id = p_workspace_id AND user_id = p_assignee_id
   ) THEN
@@ -345,10 +349,23 @@ BEGIN
   v_side := coalesce(p_side, v_document.side);
   v_state := coalesce(p_state, v_document.state);
 
+  IF v_document.state = 'trashed' AND v_state <> 'trashed'
+    AND v_document.trash_expires_at <= now() THEN
+    RAISE EXCEPTION 'workspace unavailable';
+  END IF;
+  IF v_state = 'active'
+    AND (v_document.state <> 'active' OR v_side <> v_document.side)
+    AND p_ordered_ids IS NULL THEN
+    RAISE EXCEPTION 'invalid document order';
+  END IF;
+
   UPDATE public.workspace_documents
   SET title = coalesce(v_title, v_document.title),
       side = v_side,
-      assignee_id = p_assignee_id,
+      assignee_id = CASE
+        WHEN p_assignee_changed THEN p_assignee_id
+        ELSE v_document.assignee_id
+      END,
       state = v_state,
       trashed_at = CASE
         WHEN v_state = 'trashed' AND v_document.state <> 'trashed' THEN now()
@@ -403,7 +420,8 @@ BEGIN
   )
   VALUES (
     p_request_id, v_fingerprint, p_workspace_id, p_document_id, v_user_id,
-    'document_update', v_workspace.revision, v_new_revision, p_assignee_id
+    'document_update', v_workspace.revision, v_new_revision,
+    CASE WHEN p_assignee_changed THEN p_assignee_id ELSE NULL END
   );
 
   RETURN v_new_revision;
@@ -606,7 +624,10 @@ BEGIN
     )
   FOR UPDATE;
 
-  IF NOT FOUND OR v_workspace.owner_id <> v_user_id THEN
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'workspace unavailable';
+  END IF;
+  IF p_action IN ('delete', 'restore') AND v_workspace.owner_id <> v_user_id THEN
     RAISE EXCEPTION 'workspace unavailable';
   END IF;
   IF v_workspace.revision <> p_expected_revision THEN
@@ -651,7 +672,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.create_workspace(text, text, text, uuid)
   FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.update_workspace_document(uuid, uuid, text, text, uuid[], uuid, text, bigint, uuid)
+REVOKE ALL ON FUNCTION public.update_workspace_document(uuid, uuid, text, text, uuid[], uuid, boolean, text, bigint, uuid)
   FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.change_workspace_access(uuid, text, uuid, bigint, uuid)
   FROM PUBLIC, anon;
@@ -659,6 +680,6 @@ REVOKE ALL ON FUNCTION public.change_workspace_state(uuid, text, bigint, uuid)
   FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION public.create_workspace(text, text, text, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.update_workspace_document(uuid, uuid, text, text, uuid[], uuid, text, bigint, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_workspace_document(uuid, uuid, text, text, uuid[], uuid, boolean, text, bigint, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.change_workspace_access(uuid, text, uuid, bigint, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.change_workspace_state(uuid, text, bigint, uuid) TO authenticated;
