@@ -1,5 +1,5 @@
 // src/components/layout/AppLayout.tsx
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -27,6 +27,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
+import { useAuth } from '@/lib/supabase/AuthProvider';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -53,6 +54,15 @@ const primaryNavItems = navItems.filter((item) =>
 );
 
 const moreNavItems = navItems.filter((item) => !primaryNavItems.includes(item));
+const ANNOUNCEMENTS_STALE_MS = 60_000;
+
+function filterVisibleAnnouncements(announcements: UserAnnouncement[], now: number) {
+  return announcements.filter((announcement) => {
+    const startsAt = new Date(announcement.startsAt).getTime();
+    const expiresAt = announcement.expiresAt ? new Date(announcement.expiresAt).getTime() : Infinity;
+    return startsAt <= now && expiresAt > now;
+  });
+}
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -62,38 +72,70 @@ export function AppLayout() {
   const dismissedAnnouncementIds = useRef(new Set<string>());
   const moreMenuRef = useRef<HTMLDetailsElement>(null);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const lastRequestAtRef = useRef<number | null>(null);
+  const activeUserIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const location = useLocation();
   const homePrefetch = useRoutePrefetch('/app');
   const termsPrefetch = useRoutePrefetch('/terms');
   const privacyPrefetch = useRoutePrefetch('/privacy');
 
-  useEffect(() => {
+  const loadAnnouncements = useCallback(async (force = false) => {
+    if (!userId) return;
+
+    const requestedAt = Date.now();
+    const lastRequestedAt = lastRequestAtRef.current;
+    if (!force && lastRequestedAt !== null && requestedAt - lastRequestedAt < ANNOUNCEMENTS_STALE_MS) {
+      setAnnouncements((current) => filterVisibleAnnouncements(current, requestedAt));
+      return;
+    }
+
+    activeRequestRef.current?.abort();
     const controller = new AbortController();
-    const loadAnnouncements = async () => {
-      try {
-        const active = await listActiveAnnouncements(controller.signal);
-        if (!controller.signal.aborted) {
-          setAnnouncements(active.filter(
-            (announcement) => !dismissedAnnouncementIds.current.has(announcement.id),
-          ));
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.warn('[Announcements] Unable to load', error instanceof Error ? error.message : 'Unknown error');
-          setAnnouncements([]);
-        }
+    activeRequestRef.current = controller;
+    lastRequestAtRef.current = requestedAt;
+
+    try {
+      const active = await listActiveAnnouncements(controller.signal);
+      if (controller.signal.aborted || activeUserIdRef.current !== userId) return;
+      setAnnouncements(filterVisibleAnnouncements(
+        active.filter((announcement) => !dismissedAnnouncementIds.current.has(announcement.id)),
+        Date.now(),
+      ));
+    } catch (error) {
+      if (!controller.signal.aborted && activeUserIdRef.current === userId) {
+        console.warn('[Announcements] Unable to load', error instanceof Error ? error.message : 'Unknown error');
+        setAnnouncements([]);
       }
-    };
+    } finally {
+      if (activeRequestRef.current === controller) activeRequestRef.current = null;
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    activeUserIdRef.current = userId;
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
+    lastRequestAtRef.current = null;
+    dismissedAnnouncementIds.current.clear();
+    setAnnouncements([]);
+    setDismissingId(null);
     setDismissError(null);
-    void loadAnnouncements();
-    return () => controller.abort();
-  }, []);
+    if (userId) void loadAnnouncements(true);
+
+    return () => activeRequestRef.current?.abort();
+  }, [loadAnnouncements, userId]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
     moreMenuRef.current?.removeAttribute('open');
-  }, [location.pathname]);
+    setDismissError(null);
+    setAnnouncements((current) => filterVisibleAnnouncements(current, Date.now()));
+    void loadAnnouncements();
+  }, [loadAnnouncements, location.pathname]);
 
   useEffect(() => {
     const closeMenus = (event: KeyboardEvent) => {
@@ -110,19 +152,22 @@ export function AppLayout() {
   }, [mobileMenuOpen]);
 
   const handleDismissAnnouncement = async (announcementId: string) => {
+    const requestUserId = userId;
     try {
       setDismissingId(announcementId);
       setDismissError(null);
       await dismissAnnouncement(announcementId);
+      if (activeUserIdRef.current !== requestUserId) return;
       dismissedAnnouncementIds.current.add(announcementId);
       setAnnouncements((current) => current.filter((announcement) => announcement.id !== announcementId));
     } catch (error) {
+      if (activeUserIdRef.current !== requestUserId) return;
       setDismissError({
         announcementId,
         message: error instanceof Error ? error.message : t('announcements.dismissError'),
       });
     } finally {
-      setDismissingId(null);
+      if (activeUserIdRef.current === requestUserId) setDismissingId(null);
     }
   };
 
