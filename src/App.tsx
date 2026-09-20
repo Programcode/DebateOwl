@@ -191,17 +191,9 @@ function TimedOnboardingTour() {
 
   return (
     <Suspense fallback={null}>
-      <LazyOnboardingTour eligibleAt={eligibleAt} />
+      <OnboardingTour eligibleAt={eligibleAt} />
     </Suspense>
   );
-}
-
-function LazyOnboardingTour({ eligibleAt }: { eligibleAt: number }) {
-  const autoStartDelay = typeof performance === "undefined"
-    ? 500
-    : Math.max(0, 500 - (performance.now() - eligibleAt));
-
-  return <OnboardingTour autoStartDelay={autoStartDelay} />;
 }
 
 function AppRoutes() {
