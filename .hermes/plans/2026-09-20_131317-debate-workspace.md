@@ -264,10 +264,10 @@ Each numbered slice is independently reviewable. Before implementation, write it
 
 **P0.2 Suggestions and import/export fidelity spike.** Proposed new paths: `src/test/workspace/review.test.ts`, `src/test/workspace/document-conversion.test.ts`, and small fixture files under `src/test/workspace/fixtures/` during implementation.
 
-- [ ] Build one representative bilingual/hungarian speech fixture with headings, nested lists, links, a table, citation, and Unicode/IME edits.
-- [ ] Test human suggested insert/delete/format, overlapping real edits, accepting one hunk, rejecting all, and undo/redo. Prove quote/comment anchors survive unrelated insertions and detach on deletion.
-- [ ] Round-trip the fixture through supported Markdown, DOCX, and the PDF renderer. Compare structured semantics and extracted visible text, not binary file equality.
-- [ ] Decide whether the open-source suggestion implementation is maintainable before committing the UI architecture. Record the tested ceiling and package choices in the implementation PR.
+- [x] Build one representative bilingual/hungarian speech fixture with headings, nested lists, links, a table, citation, and Unicode/IME edits.
+- [x] Test human suggested insert/delete/format, overlapping real edits, accepting one hunk, rejecting all, and undo/redo. Prove quote/comment anchors survive unrelated insertions and detach on deletion.
+- [x] Round-trip the fixture through supported Markdown, DOCX, and the PDF renderer. Compare structured semantics and extracted visible text, not binary file equality.
+- [x] Decide whether the open-source suggestion implementation is maintainable before committing the UI architecture. Record the tested ceiling and package choices in the implementation PR.
 
 **Exit:** Architecture is selected using runnable evidence. A failed gate stops dependent work, not the entire vision. No live rollout yet.
 
