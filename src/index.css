@@ -283,6 +283,16 @@ All colors MUST be HSL.
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
+  .route-skeleton-surface {
+    background-color: hsl(var(--card) / 0.72);
+    border-color: hsl(var(--border));
+  }
+
+  .route-skeleton-shape {
+    background-color: hsl(var(--muted) / 0.58);
+    border-radius: calc(var(--radius) - 2px);
+  }
+
   .nav-blur {
     @apply backdrop-blur-xl bg-background/90 border-b border-border shadow-sm;
   }
