@@ -58,6 +58,56 @@ test('onboarding follows visible home targets when secondary navigation is close
   await page.locator('[data-test-id="button-skip"]').click();
 });
 
+test('onboarding keeps its original start schedule after a delayed lazy chunk', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: false, isTourRunning: false },
+      version: 0,
+    }));
+  });
+  let chunkReadyAt = 0;
+  const finishedChunks = new Set<string>();
+  page.on('requestfinished', (request) => {
+    if (request.url().includes('/src/components/features/onboarding/OnboardingTour.tsx')) finishedChunks.add('tour');
+    if (request.url().includes('/node_modules/.vite/deps/react-joyride.js')) finishedChunks.add('joyride');
+    if (finishedChunks.size === 2) chunkReadyAt = Date.now();
+  });
+  await page.route('**/src/components/features/onboarding/OnboardingTour.tsx*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.body();
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    await route.fulfill({ response, body });
+  });
+  await page.route('**/node_modules/.vite/deps/react-joyride.js*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.body();
+    await route.fulfill({ response, body });
+  });
+
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
+  expect(chunkReadyAt).toBeGreaterThan(0);
+  expect(Date.now() - chunkReadyAt).toBeLessThan(700);
+});
+
+test('onboarding starts a fresh delay when a protected route reaches home', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: false, isTourRunning: false },
+      version: 0,
+    }));
+  });
+  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Ready to Generate' })).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(650);
+
+  await page.locator('header a[href="/app"]').first().click();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.locator('.react-joyride__tooltip')).toHaveCount(0, { timeout: 250 });
+  await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
+});
+
 test('header keeps the brand and controls inside a 320px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });

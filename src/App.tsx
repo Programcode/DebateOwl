@@ -1,5 +1,5 @@
 // src/App.tsx
-import { Component, Suspense, lazy, useEffect, type ErrorInfo, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -179,14 +179,29 @@ function OptionalOnboardingTour() {
   const location = useLocation();
   const hasCompletedOnboarding = useOnboardingStore((state) => state.hasCompletedOnboarding);
   const isTourRunning = useOnboardingStore((state) => state.isTourRunning);
+  const shouldLoadTour = isTourRunning || (location.pathname === "/app" && !hasCompletedOnboarding);
 
-  if ((hasCompletedOnboarding && !isTourRunning) || (location.pathname !== "/app" && !isTourRunning)) return null;
+  if (!shouldLoadTour) return null;
+
+  return <TimedOnboardingTour />;
+}
+
+function TimedOnboardingTour() {
+  const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
 
   return (
     <Suspense fallback={null}>
-      <OnboardingTour />
+      <LazyOnboardingTour eligibleAt={eligibleAt} />
     </Suspense>
   );
+}
+
+function LazyOnboardingTour({ eligibleAt }: { eligibleAt: number }) {
+  const autoStartDelay = typeof performance === "undefined"
+    ? 500
+    : Math.max(0, 500 - (performance.now() - eligibleAt));
+
+  return <OnboardingTour autoStartDelay={autoStartDelay} />;
 }
 
 function AppRoutes() {

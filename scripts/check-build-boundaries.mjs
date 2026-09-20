@@ -52,13 +52,20 @@ const onboardingModules = new Set([
   'node_modules/react-joyride/dist/index.mjs',
 ]);
 
+const onboardingInitialRoutes = [
+  { key: entryKey },
+  ...Object.entries(manifest)
+    .filter(([, entry]) => entry.isDynamicEntry && entry.src?.startsWith('src/pages/') && entry.src.endsWith('.tsx'))
+    .map(([key]) => ({ key })),
+];
+
 function modulesFromFiles(files) {
   return new Set([...files].flatMap((file) => bundleGraph[file]?.modules ?? [])
     .map(canonicalModuleId)
     .filter(Boolean));
 }
 
-const onboardingInitialGraphViolations = initialRoutes.flatMap(({ key: routeKey }) => {
+const onboardingInitialGraphViolations = onboardingInitialRoutes.flatMap(({ key: routeKey }) => {
   const routeFile = manifest[routeKey]?.file;
   if (!routeFile) return [];
   return [...modulesFromFiles(staticGraphFrom(routeFile))]
