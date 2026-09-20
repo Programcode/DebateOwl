@@ -483,9 +483,9 @@ only after deliberate intent and network gating prove it useful.
 Keyboard `focus`, desktop hover/pointer intent, and touch `pointerdown`/
 `touchstart` are all valid signals for route-code intent. Debounce desktop
 intent briefly, skip speculative work for `saveData` and `slow-2g`/`2g`, and
-allow navigation to proceed without waiting. Unsupported Network Information
-must degrade to no prefetch, not block navigation. Never attach private data
-fetches to these code-intent signals.
+allow navigation to proceed without waiting. When Network Information is
+unsupported, keep intent prefetching but do not block navigation. Never attach
+private data fetches to these code-intent signals.
 
 ## Decision matrix
 
