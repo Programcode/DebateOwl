@@ -135,7 +135,7 @@ if [ "$first_result" -ne 0 ] || [ "$second_result" -ne 0 ]; then
   exit 1
 fi
 
-actual_results="$(rg '^[tf]\|[0-9]+$' "$result_dir" | sed 's/^[^:]*://' | sort)"
+actual_results="$(grep -hE '^[tf]\|[0-9]+$' "$result_dir/first" "$result_dir/second" | sort)"
 expected_results=$'f|1\nt|1'
 if [ "$actual_results" != "$expected_results" ]; then
   echo "unexpected concurrent quota results:"
