@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { cn } from '@/lib/utils';
 
 type Tool = {
@@ -47,9 +48,11 @@ const utilityTools = [
 
 function ToolRow({ tool, t }: { tool: Tool; t: TFunction }) {
   const Icon = tool.icon;
+  const prefetchHandlers = useRoutePrefetch(tool.href);
   return (
     <Link
       to={tool.href}
+      {...prefetchHandlers}
       data-tour={`mode-${tool.key}`}
       className="motion-press group flex items-center gap-3 rounded-md border-b border-border/60 px-3 py-3 last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
@@ -61,6 +64,25 @@ function ToolRow({ tool, t }: { tool: Tool; t: TFunction }) {
         <span className="block text-xs leading-5 text-muted-foreground sm:text-sm">{t(`home.${tool.key}Desc`, '')}</span>
       </span>
       <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:group-hover:translate-x-0" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function UtilityToolLink({ tool, t }: { tool: Tool; t: TFunction }) {
+  const Icon = tool.icon;
+  const prefetchHandlers = useRoutePrefetch(tool.href);
+  return (
+    <Link
+      to={tool.href}
+      {...prefetchHandlers}
+      data-tour={`mode-${tool.key}`}
+      className={cn(
+        'motion-press inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-muted-foreground',
+        'hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      )}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {t(`home.${tool.key}`, tool.key)}
     </Link>
   );
 }
@@ -96,23 +118,7 @@ export default function HomePage() {
         <section className="mt-8 border-t border-border pt-6" aria-labelledby="home-utilities-title">
           <h2 id="home-utilities-title" className="text-lg font-semibold tracking-tight">{t('home.utilities', 'Utilities')}</h2>
           <div className="mt-3 flex flex-wrap gap-3">
-            {utilityTools.map((tool) => {
-              const Icon = tool.icon;
-              return (
-                <Link
-                  key={tool.key}
-                  to={tool.href}
-                  data-tour={`mode-${tool.key}`}
-                  className={cn(
-                    'motion-press inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-muted-foreground',
-                    'hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {t(`home.${tool.key}`, tool.key)}
-                </Link>
-              );
-            })}
+            {utilityTools.map((tool) => <UtilityToolLink key={tool.key} tool={tool} t={t} />)}
           </div>
         </section>
       </div>

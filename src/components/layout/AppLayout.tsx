@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
+import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -63,6 +64,9 @@ export function AppLayout() {
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const { t } = useTranslation();
   const location = useLocation();
+  const homePrefetch = useRoutePrefetch('/app');
+  const termsPrefetch = useRoutePrefetch('/terms');
+  const privacyPrefetch = useRoutePrefetch('/privacy');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -127,7 +131,7 @@ export function AppLayout() {
       {/* Header */}
       <header className="native-safe-top sticky top-0 z-50 border-b border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]">
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
-          <Link to="/app" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
+          <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
               <img src="/favicon.png" alt="DebateLab" className="h-full w-full object-cover" />
             </div>
@@ -263,8 +267,8 @@ export function AppLayout() {
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">
-            <Link to="/terms" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.terms')}</Link>
-            <Link to="/privacy" className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.privacy')}</Link>
+            <Link to="/terms" {...termsPrefetch} className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.terms')}</Link>
+            <Link to="/privacy" {...privacyPrefetch} className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.privacy')}</Link>
           </div>
         </div>
       </footer>

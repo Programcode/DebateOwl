@@ -3,9 +3,11 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
 
 const Hero = () => {
     const { t } = useTranslation();
+    const appPrefetch = useRoutePrefetch("/app");
 
     const planHighlights = [
         { label: t('hero.trialBadge'), value: t('hero.trialBadgeValue') },
@@ -68,6 +70,7 @@ const Hero = () => {
                         >
                             <Link
                                 to="/app"
+                                {...appPrefetch}
                                 className="btn-primary-gradient shimmer inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
                             >
                                 <span className="relative z-10">{t('hero.cta')}</span>

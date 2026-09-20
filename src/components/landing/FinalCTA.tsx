@@ -2,9 +2,11 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
 
 const FinalCTA = () => {
     const { t } = useTranslation();
+    const appPrefetch = useRoutePrefetch("/app");
 
     return (
         <section className="relative overflow-hidden py-24">
@@ -40,7 +42,7 @@ const FinalCTA = () => {
                         whileTap={{ scale: 0.98 }}
                         className="mt-10 inline-flex"
                     >
-                        <Link to="/app" className="btn-primary-gradient shimmer inline-flex items-center gap-3 px-10 py-5 text-lg">
+                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient shimmer inline-flex items-center gap-3 px-10 py-5 text-lg">
                             <span className="relative z-10">{t('finalCta.cta')}</span>
                             <ArrowRight className="relative z-10 h-5 w-5" />
                         </Link>
