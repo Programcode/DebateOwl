@@ -11,15 +11,24 @@ CREATE TABLE private.workspace_invites (
   max_uses integer NOT NULL CHECK (max_uses BETWEEN 1 AND 30),
   use_count integer NOT NULL DEFAULT 0 CHECK (use_count BETWEEN 0 AND max_uses),
   revoked_at timestamptz,
+  email_delivered_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT workspace_invites_target_check CHECK (
-    (kind = 'code' AND target_email_ciphertext IS NULL AND target_email_hash IS NULL)
+    (
+      kind = 'code'
+      AND target_email_ciphertext IS NULL
+      AND target_email_hash IS NULL
+      AND email_delivered_at IS NULL
+    )
     OR (
       kind = 'email'
       AND length(target_email_ciphertext) > 0
       AND octet_length(target_email_hash) = 32
       AND max_uses = 1
     )
+  ),
+  CONSTRAINT workspace_invites_delivery_time_check CHECK (
+    email_delivered_at IS NULL OR email_delivered_at >= created_at
   )
 );
 
@@ -100,7 +109,8 @@ RETURNS TABLE (
   expires_at timestamptz,
   max_uses integer,
   replayed boolean,
-  revoked boolean
+  revoked boolean,
+  email_delivered boolean
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -173,7 +183,7 @@ BEGIN
 
     RETURN QUERY SELECT
       v_invite.id, v_invite.expires_at, v_invite.max_uses, true,
-      v_invite.revoked_at IS NOT NULL;
+      v_invite.revoked_at IS NOT NULL, v_invite.email_delivered_at IS NOT NULL;
     RETURN;
   END IF;
 
@@ -259,7 +269,39 @@ BEGIN
   );
 
   RETURN QUERY SELECT
-    v_invite.id, v_invite.expires_at, v_invite.max_uses, false, false;
+    v_invite.id, v_invite.expires_at, v_invite.max_uses, false, false,
+    v_invite.email_delivered_at IS NOT NULL;
+END;
+$$;
+
+CREATE FUNCTION public.mark_workspace_invite_email_delivered(
+  p_actor_id uuid,
+  p_invite_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  PERFORM private.require_workspace_invite_service_role();
+  IF p_actor_id IS NULL OR p_invite_id IS NULL THEN
+    RAISE EXCEPTION 'invalid invite request';
+  END IF;
+
+  UPDATE private.workspace_invites
+  SET email_delivered_at = coalesce(email_delivered_at, now())
+  WHERE id = p_invite_id
+    AND kind = 'email'
+    AND issued_by = p_actor_id
+    AND revoked_at IS NULL
+    AND expires_at > now();
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'workspace unavailable';
+  END IF;
+
+  RETURN true;
 END;
 $$;
 
@@ -531,10 +573,14 @@ REVOKE ALL ON FUNCTION public.revoke_workspace_invite(uuid, uuid, uuid, uuid)
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.redeem_workspace_invite(uuid, bytea, bytea, bytea, uuid)
   FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.mark_workspace_invite_email_delivered(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.create_workspace_invite(uuid, uuid, text, bytea, text, bytea, integer, uuid, uuid)
   TO service_role;
 GRANT EXECUTE ON FUNCTION public.revoke_workspace_invite(uuid, uuid, uuid, uuid)
   TO service_role;
 GRANT EXECUTE ON FUNCTION public.redeem_workspace_invite(uuid, bytea, bytea, bytea, uuid)
+  TO service_role;
+GRANT EXECUTE ON FUNCTION public.mark_workspace_invite_email_delivered(uuid, uuid)
   TO service_role;

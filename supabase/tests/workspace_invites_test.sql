@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(38);
+SELECT plan(46);
 
 INSERT INTO auth.users (id, email, email_confirmed_at)
 VALUES
@@ -56,8 +56,25 @@ SELECT ok(
     )
     AND has_function_privilege(
       'service_role', 'public.revoke_workspace_invite(uuid,uuid,uuid,uuid)', 'EXECUTE'
+    )
+    AND NOT has_function_privilege(
+      'anon', 'public.mark_workspace_invite_email_delivered(uuid,uuid)', 'EXECUTE'
+    )
+    AND NOT has_function_privilege(
+      'authenticated', 'public.mark_workspace_invite_email_delivered(uuid,uuid)', 'EXECUTE'
+    )
+    AND has_function_privilege(
+      'service_role', 'public.mark_workspace_invite_email_delivered(uuid,uuid)', 'EXECUTE'
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM pg_proc p,
+        LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+      WHERE p.oid = 'public.mark_workspace_invite_email_delivered(uuid,uuid)'::regprocedure
+        AND acl.grantee = 0
+        AND acl.privilege_type = 'EXECUTE'
     ),
-  'only service_role can execute all three invite RPCs'
+  'only service_role can execute all four invite RPCs'
 );
 
 SELECT throws_ok(
@@ -240,14 +257,96 @@ SELECT lives_ok(
   'a member can create a single-use email invitation'
 );
 RESET ROLE;
+SELECT set_config(
+  'test.email_invite_id',
+  (SELECT id::text FROM private.workspace_invites WHERE secret_digest = decode(repeat('05', 32), 'hex')),
+  true
+);
 SELECT results_eq(
   $$SELECT expires_at > now() + interval '6 days 23 hours 59 minutes'
       AND expires_at <= now() + interval '7 days 1 minute'
       AND max_uses = 1
+      AND email_delivered_at IS NULL
     FROM private.workspace_invites WHERE secret_digest = decode(repeat('05', 32), 'hex')$$,
   ARRAY[true],
-  'email invitations are single-use and expire in seven days'
+  'email invitations begin pending, are single-use, and expire in seven days'
 );
+UPDATE private.workspace_invites
+SET expires_at = now() - interval '1 second'
+WHERE id = current_setting('test.email_invite_id')::uuid;
+SET LOCAL ROLE service_role;
+SELECT set_config('request.jwt.claim.role', 'service_role', true);
+SELECT throws_ok(
+  $$SELECT public.mark_workspace_invite_email_delivered(
+    '61111111-1111-4111-8111-111111111111', current_setting('test.email_invite_id')::uuid
+  )$$,
+  'P0001', 'workspace unavailable',
+  'the delivery marker rejects an expired pending invitation'
+);
+RESET ROLE;
+SELECT results_eq(
+  $$SELECT email_delivered_at IS NULL FROM private.workspace_invites
+    WHERE id = current_setting('test.email_invite_id')::uuid$$,
+  ARRAY[true],
+  'expired delivery rejection keeps the invitation pending'
+);
+UPDATE private.workspace_invites
+SET expires_at = now() + interval '7 days'
+WHERE id = current_setting('test.email_invite_id')::uuid;
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT throws_ok(
+  $$SELECT public.mark_workspace_invite_email_delivered(
+    '61111111-1111-4111-8111-111111111111', current_setting('test.email_invite_id')::uuid
+  )$$,
+  '42501', 'service role required',
+  'the delivery marker independently rejects a missing service-role claim'
+);
+SET LOCAL ROLE service_role;
+SELECT set_config('request.jwt.claim.role', 'service_role', true);
+SELECT throws_ok(
+  $$SELECT public.mark_workspace_invite_email_delivered(
+    '62222222-2222-4222-8222-222222222222', current_setting('test.email_invite_id')::uuid
+  )$$,
+  'P0001', 'workspace unavailable',
+  'the delivery marker rejects an actor who did not issue the invitation'
+);
+SELECT throws_ok(
+  $$SELECT public.mark_workspace_invite_email_delivered(
+    '61111111-1111-4111-8111-111111111111', 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  )$$,
+  'P0001', 'workspace unavailable',
+  'the delivery marker rejects an unknown invitation'
+);
+SELECT results_eq(
+  $$SELECT public.mark_workspace_invite_email_delivered(
+    '61111111-1111-4111-8111-111111111111', current_setting('test.email_invite_id')::uuid
+  )$$,
+  ARRAY[true],
+  'the service role marks the issuing actor email invitation delivered'
+);
+RESET ROLE;
+SELECT set_config(
+  'test.email_delivered_at',
+  (SELECT email_delivered_at::text FROM private.workspace_invites
+    WHERE id = current_setting('test.email_invite_id')::uuid),
+  true
+);
+SELECT ok(
+  current_setting('test.email_delivered_at') <> '',
+  'accepted relay delivery persists a delivered timestamp'
+);
+SELECT set_config('request.jwt.claim.role', 'service_role', true);
+SELECT results_eq(
+  $$SELECT public.mark_workspace_invite_email_delivered(
+      '61111111-1111-4111-8111-111111111111', current_setting('test.email_invite_id')::uuid
+    ),
+    (SELECT email_delivered_at::text = current_setting('test.email_delivered_at')
+      FROM private.workspace_invites
+      WHERE id = current_setting('test.email_invite_id')::uuid)$$,
+  $$VALUES (true, true)$$,
+  'delivered marking is idempotent and keeps the original timestamp'
+);
+RESET ROLE;
 SET LOCAL ROLE service_role;
 SELECT set_config('request.jwt.claim.role', 'service_role', true);
 SELECT results_eq(

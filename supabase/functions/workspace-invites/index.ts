@@ -15,7 +15,7 @@ const UUID =
 const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 export type InviteSender = (
-  message: { to: string; inviteUrl: string },
+  message: { to: string; inviteUrl: string; idempotencyKey: string },
 ) => Promise<void>;
 
 type Dependencies = {
@@ -329,7 +329,13 @@ export async function handleRequest(req: Request, dependencies?: Dependencies) {
         throw new HttpError(503, "Invitation email is unavailable");
       }
 
-      if (result.replayed !== true) {
+      if (result.email_delivered !== true) {
+        const expiresAt = typeof result.expires_at === "string"
+          ? Date.parse(result.expires_at)
+          : NaN;
+        if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+          throw new HttpError(503, "Invitation email is unavailable");
+        }
         const baseUrl = (delivery.baseUrl || "https://debate.pi-stack.org")
           .replace(/\/$/, "");
         try {
@@ -338,25 +344,19 @@ export async function handleRequest(req: Request, dependencies?: Dependencies) {
             inviteUrl: `${baseUrl}/app/workspaces/invite?token=${
               encodeURIComponent(token)
             }`,
+            idempotencyKey: `workspace-invite:${result.invite_id}`,
           });
         } catch {
-          const rollbackBytes = await hmac("email-rollback", requestId);
-          rollbackBytes[6] = (rollbackBytes[6] & 0x0f) | 0x40;
-          rollbackBytes[8] = (rollbackBytes[8] & 0x3f) | 0x80;
-          const rollbackId = [
-            hex(rollbackBytes.slice(0, 4)),
-            hex(rollbackBytes.slice(4, 6)),
-            hex(rollbackBytes.slice(6, 8)),
-            hex(rollbackBytes.slice(8, 10)),
-            hex(rollbackBytes.slice(10, 16)),
-          ].join("-");
-          await auth.adminClient.rpc("revoke_workspace_invite", {
-            p_actor_id: auth.user.id,
-            p_workspace_id: workspaceId,
-            p_invite_id: result.invite_id,
-            p_request_id: rollbackId,
-          });
           throw new HttpError(503, "Invitation email is unavailable");
+        }
+
+        const { data: delivered, error: deliveryError } = await auth.adminClient
+          .rpc("mark_workspace_invite_email_delivered", {
+            p_actor_id: auth.user.id,
+            p_invite_id: result.invite_id,
+          });
+        if (deliveryError || delivered !== true) {
+          throw new Error("Invitation delivery state update failed");
         }
       }
       return json({ accepted: true }, 202, cors);

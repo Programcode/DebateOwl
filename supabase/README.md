@@ -144,7 +144,7 @@ Document names, never values. Depending on deployed features, server-side config
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
 
-The invitation handler does not select an email provider. Its mail boundary sends `{ to, inviteUrl }` to the configured relay. Email creation fails before storing an invite when those three mailer values are absent. Local tests inject an in-memory sender and make no external mail request.
+The invitation handler does not select an email provider. Its mail boundary sends `{ to, inviteUrl, idempotencyKey }` to the configured relay. The relay must deduplicate repeated acceptance of the same key, which stays stable across pending-delivery retries. The handler marks delivery only after relay acceptance and suppresses later sends only after that mark commits. Email creation fails before storing an invite when the three mailer values are absent. Local tests inject an in-memory sender and make no external mail request.
 
 Public browser configuration in [`../src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) is not a replacement for server authorization.
 

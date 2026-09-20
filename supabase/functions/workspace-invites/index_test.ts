@@ -45,7 +45,13 @@ const workspaceId = "22222222-2222-4222-8222-222222222222";
 const inviteId = "33333333-3333-4333-8333-333333333333";
 const requestId = "44444444-4444-4444-8444-444444444444";
 
-type RpcResult = Record<string, unknown> | Record<string, unknown>[];
+type RpcResult = Record<string, unknown> | Record<string, unknown>[] | boolean;
+
+type SentMessage = {
+  to: string;
+  inviteUrl: string;
+  idempotencyKey?: string;
+};
 
 type Scenario = {
   rpc?: Record<string, RpcResult | { error: string }>;
@@ -55,7 +61,7 @@ type Scenario = {
 async function runScenario(
   body: Record<string, unknown>,
   scenario: Scenario = {},
-  sender?: (message: { to: string; inviteUrl: string }) => Promise<void>,
+  sender?: (message: SentMessage) => Promise<void>,
   baseUrl?: string,
 ) {
   const calls: Array<
@@ -82,7 +88,10 @@ async function runScenario(
       const rpcName = url.pathname.split("/rest/v1/rpc/")[1];
       if (rpcName) {
         const result = scenario.rpc?.[rpcName];
-        if (result && "error" in result) {
+        if (
+          typeof result === "object" && result !== null &&
+          !Array.isArray(result) && "error" in result
+        ) {
           return jsonResponse({ message: result.error }, 500);
         }
         if (result !== undefined) return jsonResponse(result);
@@ -215,7 +224,7 @@ Deno.test("code revocation routes to the dedicated service RPC", async () => {
 });
 
 Deno.test("email creation has one uniform response and sends through the injected boundary", async () => {
-  const sent: Array<{ to: string; inviteUrl: string }> = [];
+  const sent: SentMessage[] = [];
   const { calls, response } = await runScenario({
     action: "create_email",
     workspaceId,
@@ -228,7 +237,9 @@ Deno.test("email creation has one uniform response and sends through the injecte
         expires_at: "2026-09-27T12:00:00.000Z",
         max_uses: 1,
         replayed: false,
+        email_delivered: false,
       }],
+      mark_workspace_invite_email_delivered: true,
     },
   }, (message) => {
     sent.push(message);
@@ -255,6 +266,9 @@ Deno.test("email creation has one uniform response and sends through the injecte
   ) {
     throw new Error("email sender did not receive the resolved invite URL");
   }
+  if (sent[0].idempotencyKey !== `workspace-invite:${inviteId}`) {
+    throw new Error("email sender did not receive the stable invite key");
+  }
   if (calls.some((call) => call.pathname.includes("/auth/v1/admin/users"))) {
     throw new Error("email creation performed an Auth-account lookup");
   }
@@ -266,10 +280,28 @@ Deno.test("email creation has one uniform response and sends through the injecte
   ) {
     throw new Error("plaintext email or token reached Postgres");
   }
+  const deliveredCall = rpcCall(
+    calls,
+    "mark_workspace_invite_email_delivered",
+  );
+  if (
+    deliveredCall?.body?.p_invite_id !== inviteId ||
+    deliveredCall.body.p_actor_id !== actor.id
+  ) {
+    throw new Error("accepted delivery was not marked for the exact invite");
+  }
+  const deliveredBody = JSON.stringify(deliveredCall.body);
+  if (
+    deliveredBody.includes("student@example.com") ||
+    deliveredBody.includes("wi_") ||
+    deliveredBody.includes("198.51.100.20")
+  ) {
+    throw new Error("delivery marking received private invite material");
+  }
 });
 
-Deno.test("email replay does not send a second message after delivery", async () => {
-  let sendCount = 0;
+Deno.test("commit-before-send replay retries pending email delivery", async () => {
+  const sent: SentMessage[] = [];
   const { response } = await runScenario({
     action: "create_email",
     workspaceId,
@@ -282,6 +314,114 @@ Deno.test("email replay does not send a second message after delivery", async ()
         expires_at: "2026-09-27T12:00:00.000Z",
         max_uses: 1,
         replayed: true,
+        email_delivered: false,
+      }],
+      mark_workspace_invite_email_delivered: true,
+    },
+  }, (message) => {
+    sent.push(message);
+    return Promise.resolve();
+  });
+
+  if (response.status !== 202 || sent.length !== 1) {
+    throw new Error("pending replay did not retry delivery");
+  }
+});
+
+Deno.test("expired pending replay does not send or mark delivery", async () => {
+  let sendCount = 0;
+  const { calls, response } = await runScenario({
+    action: "create_email",
+    workspaceId,
+    requestId,
+    email: "student@example.com",
+  }, {
+    rpc: {
+      create_workspace_invite: [{
+        invite_id: inviteId,
+        expires_at: "2020-01-01T00:00:00.000Z",
+        max_uses: 1,
+        replayed: true,
+        email_delivered: false,
+      }],
+    },
+  }, () => {
+    sendCount += 1;
+    return Promise.resolve();
+  });
+
+  if (response.status !== 503 || sendCount !== 0) {
+    throw new Error("expired pending invite attempted delivery");
+  }
+  if (rpcCall(calls, "mark_workspace_invite_email_delivered")) {
+    throw new Error("expired pending invite was marked delivered");
+  }
+});
+
+Deno.test("sender acceptance with mark failure retries the same relay key", async () => {
+  const sent: SentMessage[] = [];
+  const pendingInvite = {
+    invite_id: inviteId,
+    expires_at: "2026-09-27T12:00:00.000Z",
+    max_uses: 1,
+    replayed: true,
+    email_delivered: false,
+  };
+  const first = await runScenario({
+    action: "create_email",
+    workspaceId,
+    requestId,
+    email: "student@example.com",
+  }, {
+    rpc: {
+      create_workspace_invite: [pendingInvite],
+      mark_workspace_invite_email_delivered: { error: "mark failed" },
+    },
+  }, (message) => {
+    sent.push(message);
+    return Promise.resolve();
+  });
+  const second = await runScenario({
+    action: "create_email",
+    workspaceId,
+    requestId,
+    email: "student@example.com",
+  }, {
+    rpc: {
+      create_workspace_invite: [pendingInvite],
+      mark_workspace_invite_email_delivered: true,
+    },
+  }, (message) => {
+    sent.push(message);
+    return Promise.resolve();
+  });
+
+  if (first.response.status !== 500 || second.response.status !== 202) {
+    throw new Error("mark failure did not fail generically then recover");
+  }
+  if (
+    sent.length !== 2 || sent[0].idempotencyKey !== sent[1].idempotencyKey ||
+    sent[0].idempotencyKey !== `workspace-invite:${inviteId}`
+  ) {
+    throw new Error("mark retry changed the relay idempotency key");
+  }
+});
+
+Deno.test("already-delivered replay suppresses email delivery", async () => {
+  let sendCount = 0;
+  const { calls, response } = await runScenario({
+    action: "create_email",
+    workspaceId,
+    requestId,
+    email: "student@example.com",
+  }, {
+    rpc: {
+      create_workspace_invite: [{
+        invite_id: inviteId,
+        expires_at: "2026-09-27T12:00:00.000Z",
+        max_uses: 1,
+        replayed: true,
+        email_delivered: true,
       }],
     },
   }, () => {
@@ -291,6 +431,67 @@ Deno.test("email replay does not send a second message after delivery", async ()
 
   if (response.status !== 202 || sendCount !== 0) {
     throw new Error("delivered replay sent another email");
+  }
+  if (rpcCall(calls, "mark_workspace_invite_email_delivered")) {
+    throw new Error("delivered replay marked delivery again");
+  }
+});
+
+Deno.test("sender failure leaves delivery pending and retryable", async () => {
+  const sent: SentMessage[] = [];
+  const first = await runScenario({
+    action: "create_email",
+    workspaceId,
+    requestId,
+    email: "student@example.com",
+  }, {
+    rpc: {
+      create_workspace_invite: [{
+        invite_id: inviteId,
+        expires_at: "2026-09-27T12:00:00.000Z",
+        max_uses: 1,
+        replayed: false,
+        email_delivered: false,
+      }],
+    },
+  }, (message) => {
+    sent.push(message);
+    return Promise.reject(new Error("relay unavailable"));
+  });
+  const second = await runScenario({
+    action: "create_email",
+    workspaceId,
+    requestId,
+    email: "student@example.com",
+  }, {
+    rpc: {
+      create_workspace_invite: [{
+        invite_id: inviteId,
+        expires_at: "2026-09-27T12:00:00.000Z",
+        max_uses: 1,
+        replayed: true,
+        email_delivered: false,
+      }],
+      mark_workspace_invite_email_delivered: true,
+    },
+  }, (message) => {
+    sent.push(message);
+    return Promise.resolve();
+  });
+
+  if (first.response.status !== 503 || second.response.status !== 202) {
+    throw new Error("sender failure was not retried from pending state");
+  }
+  if (
+    rpcCall(first.calls, "revoke_workspace_invite") ||
+    rpcCall(first.calls, "mark_workspace_invite_email_delivered")
+  ) {
+    throw new Error("sender failure revoked or delivered the pending invite");
+  }
+  if (
+    sent.length !== 2 || sent[0].idempotencyKey !== sent[1].idempotencyKey
+  ) {
+    throw new Error("sender retry changed the relay idempotency key");
   }
 });
 
