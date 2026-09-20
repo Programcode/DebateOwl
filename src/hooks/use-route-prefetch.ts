@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { FocusEventHandler, PointerEventHandler, TouchEventHandler } from 'react';
-import type { To } from 'react-router-dom';
+import { useResolvedPath, type To } from 'react-router-dom';
 import { preloadRoute, routeLoaders } from '@/lib/route-modules';
 
 const INTENT_DELAY_MS = 100;
 
-function routePathname(to: To): string | undefined {
+function routePathname(to: To, resolvedPathname: string): string | undefined {
   if (typeof window === 'undefined') return undefined;
 
   const href = typeof to === 'string' ? to : to.pathname;
@@ -13,7 +13,7 @@ function routePathname(to: To): string | undefined {
 
   try {
     const url = new URL(href, window.location.href);
-    return url.origin === window.location.origin ? url.pathname : undefined;
+    return url.origin === window.location.origin ? resolvedPathname : undefined;
   } catch {
     return undefined;
   }
@@ -36,7 +36,7 @@ export type RoutePrefetchHandlers = {
 };
 
 export function useRoutePrefetch(to: To): RoutePrefetchHandlers {
-  const pathname = routePathname(to);
+  const pathname = routePathname(to, useResolvedPath(to).pathname);
   const timerRef = useRef<number | undefined>(undefined);
   const prefetchedRef = useRef(false);
 

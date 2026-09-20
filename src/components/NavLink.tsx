@@ -34,28 +34,28 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
         }
         {...props}
         onPointerEnter={(event: PointerEvent<HTMLAnchorElement>) => {
-          intentHandlers.onPointerEnter(event);
           onPointerEnter?.(event);
+          if (!event.defaultPrevented) intentHandlers.onPointerEnter(event);
         }}
         onPointerLeave={(event: PointerEvent<HTMLAnchorElement>) => {
-          intentHandlers.onPointerLeave(event);
           onPointerLeave?.(event);
+          if (!event.defaultPrevented) intentHandlers.onPointerLeave(event);
         }}
         onFocus={(event: FocusEvent<HTMLAnchorElement>) => {
-          intentHandlers.onFocus(event);
           onFocus?.(event);
+          if (!event.defaultPrevented) intentHandlers.onFocus(event);
         }}
         onBlur={(event: FocusEvent<HTMLAnchorElement>) => {
-          intentHandlers.onBlur(event);
           onBlur?.(event);
+          if (!event.defaultPrevented) intentHandlers.onBlur(event);
         }}
         onPointerDown={(event: PointerEvent<HTMLAnchorElement>) => {
-          intentHandlers.onPointerDown(event);
           onPointerDown?.(event);
+          if (!event.defaultPrevented) intentHandlers.onPointerDown(event);
         }}
         onTouchStart={(event: TouchEvent<HTMLAnchorElement>) => {
-          intentHandlers.onTouchStart(event);
           onTouchStart?.(event);
+          if (!event.defaultPrevented) intentHandlers.onTouchStart(event);
         }}
       />
     );

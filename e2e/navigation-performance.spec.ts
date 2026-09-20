@@ -208,6 +208,7 @@ test('hover intent fetches one destination chunk before click and keeps navigati
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
+  expect(requestCount()).toBe(0);
 
   await link.hover();
   await page.waitForTimeout(INTENT_OBSERVATION_MS);
@@ -227,6 +228,7 @@ test('keyboard focus fetches one destination chunk before click', async ({ page 
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
+  expect(requestCount()).toBe(0);
 
   await link.focus();
   await expect(link).toBeFocused();
@@ -245,6 +247,7 @@ test('touch intent fetches one destination chunk before click', async ({ page })
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
+  expect(requestCount()).toBe(0);
 
   await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
   await page.waitForTimeout(INTENT_OBSERVATION_MS);
@@ -268,6 +271,7 @@ for (const [label, connection] of [
     const requestCount = countAttackRequests(page);
     await gotoGenerate(page);
     const link = await attackLink(page);
+    expect(requestCount()).toBe(0);
 
     await signalAllowedIntent(page, link);
     await page.waitForTimeout(INTENT_OBSERVATION_MS);

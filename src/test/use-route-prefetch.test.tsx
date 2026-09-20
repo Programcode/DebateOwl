@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { To } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NavLink } from '@/components/NavLink';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 
 const { mockPreloadRoute } = vi.hoisted(() => ({
@@ -14,12 +17,35 @@ vi.mock('@/lib/route-modules', () => ({
   },
 }));
 
-function TestLink({ to }: { to: To }) {
+function IntentLink({ to }: { to: To }) {
   const intentHandlers = useRoutePrefetch(to);
   return (
     <a href={typeof to === 'string' ? to : '#'} {...intentHandlers}>
       Destination
     </a>
+  );
+}
+
+function TestLink({ to }: { to: To }) {
+  return (
+    <MemoryRouter initialEntries={['/app']}>
+      <Routes>
+        <Route path="/app" element={<IntentLink to={to} />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+function TestNavLink({ onPointerDown }: { onPointerDown?: ComponentProps<typeof NavLink>['onPointerDown'] }) {
+  return (
+    <MemoryRouter initialEntries={['/app']}>
+      <Routes>
+        <Route
+          path="/app"
+          element={<NavLink to="/app/attack" onPointerDown={onPointerDown}>Destination</NavLink>}
+        />
+      </Routes>
+    </MemoryRouter>
   );
 }
 
@@ -88,6 +114,22 @@ describe('useRoutePrefetch', () => {
     expect(mockPreloadRoute).toHaveBeenCalledWith('/app/attack');
   });
 
+  it('resolves relative string destinations against the current route', () => {
+    render(<TestLink to="attack" />);
+
+    fireEvent.pointerDown(screen.getByRole('link'));
+
+    expect(mockPreloadRoute).toHaveBeenCalledWith('/app/attack');
+  });
+
+  it('resolves relative object destinations against the current route', () => {
+    render(<TestLink to={{ pathname: 'attack' }} />);
+
+    fireEvent.pointerDown(screen.getByRole('link'));
+
+    expect(mockPreloadRoute).toHaveBeenCalledWith('/app/attack');
+  });
+
   it('deduplicates repeated intent signals for one destination', () => {
     render(<TestLink to="/app/attack" />);
     const link = screen.getByRole('link');
@@ -142,6 +184,14 @@ describe('useRoutePrefetch', () => {
 
     unmount();
     act(() => vi.advanceTimersByTime(100));
+
+    expect(mockPreloadRoute).not.toHaveBeenCalled();
+  });
+
+  it('lets a consumer prevent pointer-down prefetch', () => {
+    render(<TestNavLink onPointerDown={(event) => event.preventDefault()} />);
+
+    fireEvent.pointerDown(screen.getByRole('link'));
 
     expect(mockPreloadRoute).not.toHaveBeenCalled();
   });
