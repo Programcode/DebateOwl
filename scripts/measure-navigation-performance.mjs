@@ -210,7 +210,7 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
     const element = document.querySelector(marker.selector);
     return visible(element) && (!marker.text || marker.text.split('|').some((text) => element.textContent?.includes(text)));
   };
-  const skeleton = () => visible(document.querySelector('.motion-loading-shell'));
+  const skeleton = () => visible(document.querySelector('[data-route-skeleton]'));
 
   const normalizePath = (value) => {
     const path = value.replace(/\/+$/, '');
@@ -578,7 +578,7 @@ async function captureDelayedTransition(browser, profile, baseURL, outputDir) {
       await sleep(index === 0 ? 50 : 100);
       frameStates.push(await page.evaluate(() => ({
         route: window.location.pathname,
-        fallbackVisible: Boolean(document.querySelector('.motion-loading-shell')),
+        fallbackVisible: Boolean(document.querySelector('[data-route-skeleton]')),
         shellVisible: Boolean(document.querySelector('header')),
       })));
       await page.screenshot({ path: join(frameDir, `frame-${String(index).padStart(2, '0')}.png`) });
