@@ -33,6 +33,7 @@
     }
   },
   "include": [
-    "src"
+    "src",
+    "services/collaboration/src"
   ]
 }

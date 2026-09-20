@@ -48,6 +48,9 @@ jobs:
       - name: Test
         run: npm test -- --coverage
 
+      - name: Collaboration service tests
+        run: npm run test:collaboration
+
       - name: Edge function tests
         run: npm run test:edge
 

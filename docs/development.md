@@ -77,6 +77,16 @@ Follow existing functional React, Zustand, Zod, and shadcn/Radix patterns. Reuse
 
 Run the closest unit or component test while changing behavior. Run lint, type checking, and build before handing work off.
 
+## Collaboration service spike
+
+The Phase 0 service evidence lives under `services/collaboration/`. Run:
+
+```bash
+npm run test:collaboration
+```
+
+The spike is not a deployed service. Its in-memory writer lock is single-process evidence; the database-backed service and advisory-lock lifecycle belong to P2.1.
+
 ## Edge Function workflow
 
 Edge Functions live under [`supabase/functions/`](../supabase/functions/). Shared server code belongs in `_shared` only when at least two functions use the same boundary or policy.

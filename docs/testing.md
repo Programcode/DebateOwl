@@ -48,6 +48,14 @@ npx vitest run src/test/security/url-validation.test.ts
 
 For a bug, watch the reproduction fail for the expected reason before implementing the fix.
 
+## Collaboration service tests
+
+```bash
+npm run test:collaboration
+```
+
+This runs the isolated Node service spike with real Hocuspocus providers and Yjs documents. It covers durable acknowledgement ordering, reconnect sync, duplicate delivery, schema and size rejection, writer serialization, stale epochs, and process-kill recovery. It does not prove PostgreSQL advisory locks or a deployed collaboration service.
+
 ## Edge Function tests
 
 ```bash
@@ -91,9 +99,10 @@ The gate runs, in order:
 2. lint
 3. type checking
 4. selected-scope coverage
-5. native Edge Function tests
-6. production build
-7. desktop and mobile Chromium
+5. collaboration service tests
+6. native Edge Function tests
+7. production build
+8. desktop and mobile Chromium
 
 It does not start local Supabase, run pgTAP, run WebKit, or use protected staging.
 
