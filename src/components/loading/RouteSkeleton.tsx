@@ -201,15 +201,16 @@ export function RouteSkeleton({
 }) {
   const Skeleton = variants[variant];
   const announcement = statusText ?? `Opening ${label}`;
+  const BusyRegion = variant === "public" ? "main" : "div";
 
   return (
     <>
       <div role="status" aria-live="polite" aria-atomic="true" aria-label={announcement} className="sr-only">
         {announcement}
       </div>
-      <div aria-busy="true" data-route-skeleton={variant} className="min-h-[60vh] w-full">
+      <BusyRegion aria-busy="true" data-route-skeleton={variant} className="min-h-[60vh] w-full">
         {Skeleton()}
-      </div>
+      </BusyRegion>
     </>
   );
 }

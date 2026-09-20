@@ -188,7 +188,29 @@ describe('AppLayout announcements', () => {
     expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
   });
 
-  it('hides an expired announcement after time advances and navigation occurs', async () => {
+  it('does not show the previous user announcement while the next user loads', async () => {
+    let resolveUserB: (value: UserAnnouncement[]) => void = () => undefined;
+    const userBResponse = new Promise<UserAnnouncement[]>((resolve) => {
+      resolveUserB = resolve;
+    });
+    mockListActiveAnnouncements
+      .mockResolvedValueOnce([{ ...announcement, title: 'User A announcement' }])
+      .mockReturnValueOnce(userBResponse);
+
+    const rendered = renderLayout();
+    await screen.findByText('User A announcement');
+    mockAuth.user = { id: 'user-b' };
+    rendered.rerender(layout());
+
+    expect(screen.queryByText('User A announcement')).not.toBeInTheDocument();
+    await act(async () => {
+      resolveUserB([{ ...announcement, title: 'User B announcement' }]);
+      await userBResponse;
+    });
+    expect(screen.getByText('User B announcement')).toBeInTheDocument();
+  });
+
+  it('hides an expired announcement while the user stays on the same route', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-20T12:00:00.000Z'));
     const expiringAnnouncement = {
@@ -203,10 +225,8 @@ describe('AppLayout announcements', () => {
     });
     expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
 
-    vi.setSystemTime(new Date('2026-09-20T12:00:11.000Z'));
-    fireEvent.click(screen.getByRole('link', { name: 'Open next page' }));
     await act(async () => {
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(11_000);
     });
 
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();

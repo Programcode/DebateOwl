@@ -225,7 +225,6 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
     if (normalizePath(destination.pathname) !== normalizePath(baseline.transition.target)) return;
     const clickTime = performance.now();
     baseline.transition.clickTime = clickTime;
-    baseline.transition.resourceBoundary = clickTime;
   }, true);
 
   const sample = () => {
@@ -257,10 +256,11 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
 
   window.__navigationBaseline = {
     startTransition(target) {
+      const resourceBoundary = performance.now();
       baseline.transition = {
         target,
         clickTime: null,
-        resourceBoundary: null,
+        resourceBoundary,
         firstSkeletonFrame: null,
         firstRealContentFrame: null,
         shellBefore: document.querySelector('header'),

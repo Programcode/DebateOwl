@@ -297,6 +297,13 @@ committed at `30b13675fc5104f3a8c2862a832a678fba2c2ede`. The clean recapture is
 comparison from `2e40767`. The harness `sourceCommit` field records
 `origin/main` by design and is not the worktree revision.
 
+Release correction: the saved transition request counts and byte totals in
+this artifact exclude route work started by `pointerdown` before the recorded
+`click` boundary, so they must not be used as first-visit network evidence. The
+current harness starts its resource boundary before pointer intent; a later
+full-plan recapture will replace those transition values. Cold-refresh and
+production bundle-graph results are unaffected.
+
 The timing fix keeps the original 500 ms deadline. `TimedOnboardingTour`
 records eligibility with a state initializer outside its Suspense boundary;
 the retrying lazy subtree computes `max(0, 500 - elapsed)` when the chunk is

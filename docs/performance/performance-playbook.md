@@ -455,8 +455,9 @@ failed region itself owns them.
   context. Use the existing inline progress or streaming states instead of
   replacing the page with a skeleton.
 - **Recoverable error.** Replace only the failed region with its error state and
-  a retry action. Keep unrelated content available and do not hide the failure
-  behind motion.
+  a reload action. Prefetch failures can retry inside the current runtime, but
+  a rejected `React.lazy` module requires a page reload to clear the browser's
+  module map. Do not hide the failure behind motion.
 
 Use a small skeleton vocabulary with DebateLab's existing spacing, radius,
 color, and typography tokens: heading line, control row, form card, list row,

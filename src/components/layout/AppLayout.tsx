@@ -67,6 +67,7 @@ function filterVisibleAnnouncements(announcements: UserAnnouncement[], now: numb
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<UserAnnouncement[]>([]);
+  const [announcementsUserId, setAnnouncementsUserId] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
   const dismissedAnnouncementIds = useRef(new Set<string>());
@@ -101,6 +102,7 @@ export function AppLayout() {
     try {
       const active = await listActiveAnnouncements(controller.signal);
       if (controller.signal.aborted || activeUserIdRef.current !== userId) return;
+      setAnnouncementsUserId(userId);
       setAnnouncements(filterVisibleAnnouncements(
         active.filter((announcement) => !dismissedAnnouncementIds.current.has(announcement.id)),
         Date.now(),
@@ -122,6 +124,7 @@ export function AppLayout() {
     activeRequestRef.current = null;
     lastRequestAtRef.current = null;
     dismissedAnnouncementIds.current.clear();
+    setAnnouncementsUserId(userId);
     setAnnouncements([]);
     setDismissingId(null);
     setDismissError(null);
@@ -137,6 +140,18 @@ export function AppLayout() {
     setAnnouncements((current) => filterVisibleAnnouncements(current, Date.now()));
     void loadAnnouncements();
   }, [loadAnnouncements, location.pathname]);
+
+  useEffect(() => {
+    if (announcementsUserId !== userId) return;
+    const nextExpiry = Math.min(...announcements
+      .map((announcement) => announcement.expiresAt ? new Date(announcement.expiresAt).getTime() : Infinity));
+    if (!Number.isFinite(nextExpiry)) return;
+
+    const timer = window.setTimeout(() => {
+      setAnnouncements((current) => filterVisibleAnnouncements(current, Date.now()));
+    }, Math.min(Math.max(0, nextExpiry - Date.now()), 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [announcements, announcementsUserId, userId]);
 
   useEffect(() => {
     const closeMenus = (event: KeyboardEvent) => {
@@ -292,7 +307,7 @@ export function AppLayout() {
         )}
       </header>
 
-      {announcements[0] && (
+      {announcementsUserId === userId && announcements[0] && (
         <AnnouncementBanner
           announcement={announcements[0]}
           position={1}

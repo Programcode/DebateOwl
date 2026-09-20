@@ -79,6 +79,22 @@ test('cold routes expose real content on both browser profiles', async ({ page }
   await appPage.close();
 });
 
+test('a delayed public route keeps the main landmark', async ({ page }) => {
+  await setLocale(page, 'en');
+  let releaseTerms: (() => void) | undefined;
+  const termsReleased = new Promise<void>((resolve) => { releaseTerms = resolve; });
+  await page.route('**/src/pages/TermsPage.tsx*', async (route) => {
+    await termsReleased;
+    await route.continue();
+  });
+
+  await page.goto('/terms', { waitUntil: 'domcontentloaded' });
+  const fallback = page.getByRole('main').filter({ has: page.locator('[data-route-skeleton-shape]') });
+  await expect(fallback).toHaveAttribute('data-route-skeleton', 'public');
+  releaseTerms?.();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Terms of Service' })).toBeVisible();
+});
+
 test('a delayed destination chunk exposes the route fallback without replacing the shell', async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
@@ -162,6 +178,30 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   expect(transitionMetrics.measuredRequestCount).toBeGreaterThan(0);
   expect(transitionMetrics.measuredRequestCount).toBeLessThan(transitionMetrics.allRequestCount);
   expect(transitionMetrics.measuredLongTaskCount).toBeLessThanOrEqual(transitionMetrics.allLongTaskCount);
+});
+
+test('a failed route chunk recovers after the offered reload', async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  let attempts = 0;
+  await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await route.fulfill({ status: 503, contentType: 'text/plain', body: 'chunk unavailable' });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
+  await openAppNav(page, 'Attack');
+
+  await expect(page.getByRole('heading', { name: 'Unable to load this page' })).toBeVisible();
+  await page.getByRole('button', { name: 'Reload' }).click();
+  await expect.poll(() => attempts).toBe(2);
+  await waitForContent(page, attackContent);
+  await expect(page.locator('header')).toBeVisible();
 });
 
 for (const [locale, attackLabel, menuLabel, openingLabel] of [

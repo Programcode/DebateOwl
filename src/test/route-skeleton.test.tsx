@@ -45,6 +45,12 @@ describe("RouteSkeleton", () => {
     }
   });
 
+  it("keeps the main landmark while a public route loads", () => {
+    render(<RouteSkeleton variant="public" label="Terms" />);
+
+    expect(screen.getByRole("main")).toHaveAttribute("data-route-skeleton", "public");
+  });
+
   it.each(variants)("keeps %s static without animation hooks", (variant) => {
     const { container } = render(<RouteSkeleton variant={variant} label={variant} />);
 
