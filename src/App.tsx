@@ -113,8 +113,7 @@ function normalizePathname(pathname: string): string {
 // eslint-disable-next-line react-refresh/only-export-components
 export function getRouteFallback(pathname: string): RouteFallback {
   const normalizedPathname = normalizePathname(pathname);
-  const sharePathname = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  if (/^\/share\/[^/]+$/.test(sharePathname)) {
+  if (/^\/share\/[^/]+$/.test(normalizedPathname)) {
     return { variant: "public", label: "Shared debate", labelKey: "sharedPage.title" };
   }
   return ROUTE_FALLBACKS[normalizedPathname] ?? DEFAULT_ROUTE_FALLBACK;

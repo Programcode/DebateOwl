@@ -52,6 +52,7 @@ const routeFallbacks = [
   ["/app/admin", "admin/table", "Admin"],
   ["/share/demo-code", "public", "Shared debate"],
   ["/share/demo-code/", "public", "Shared debate"],
+  ["/share/demo-code//", "public", "Shared debate"],
   ["/share/demo-code/extra", "public", "Page"],
   ["/share/", "public", "Page"],
   ["/share", "public", "Page"],
