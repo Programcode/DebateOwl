@@ -36,13 +36,24 @@ function TestLink({ to }: { to: To }) {
   );
 }
 
-function TestNavLink({ onPointerDown }: { onPointerDown?: ComponentProps<typeof NavLink>['onPointerDown'] }) {
+type TestNavLinkHandlers = Pick<ComponentProps<typeof NavLink>, 'onPointerDown' | 'onPointerLeave' | 'onBlur'>;
+
+function TestNavLink({ onPointerDown, onPointerLeave, onBlur }: TestNavLinkHandlers) {
   return (
     <MemoryRouter initialEntries={['/app']}>
       <Routes>
         <Route
           path="/app"
-          element={<NavLink to="/app/attack" onPointerDown={onPointerDown}>Destination</NavLink>}
+          element={(
+            <NavLink
+              to="/app/attack"
+              onPointerDown={onPointerDown}
+              onPointerLeave={onPointerLeave}
+              onBlur={onBlur}
+            >
+              Destination
+            </NavLink>
+          )}
         />
       </Routes>
     </MemoryRouter>
@@ -130,6 +141,14 @@ describe('useRoutePrefetch', () => {
     expect(mockPreloadRoute).toHaveBeenCalledWith('/app/attack');
   });
 
+  it('uses the pathname for same-origin absolute destinations', () => {
+    render(<TestLink to={`${window.location.origin}/app/attack`} />);
+
+    fireEvent.pointerDown(screen.getByRole('link'));
+
+    expect(mockPreloadRoute).toHaveBeenCalledWith('/app/attack');
+  });
+
   it('deduplicates repeated intent signals for one destination', () => {
     render(<TestLink to="/app/attack" />);
     const link = screen.getByRole('link');
@@ -192,6 +211,28 @@ describe('useRoutePrefetch', () => {
     render(<TestNavLink onPointerDown={(event) => event.preventDefault()} />);
 
     fireEvent.pointerDown(screen.getByRole('link'));
+
+    expect(mockPreloadRoute).not.toHaveBeenCalled();
+  });
+
+  it('always cancels a pointer timer when the consumer prevents default', () => {
+    render(<TestNavLink onPointerLeave={(event) => event.preventDefault()} />);
+    const link = screen.getByRole('link');
+
+    fireEvent.pointerEnter(link);
+    fireEvent.pointerLeave(link);
+    act(() => vi.advanceTimersByTime(100));
+
+    expect(mockPreloadRoute).not.toHaveBeenCalled();
+  });
+
+  it('always cancels a focus timer when the consumer prevents default', () => {
+    render(<TestNavLink onBlur={(event) => event.preventDefault()} />);
+    const link = screen.getByRole('link');
+
+    fireEvent.focus(link);
+    fireEvent.blur(link);
+    act(() => vi.advanceTimersByTime(100));
 
     expect(mockPreloadRoute).not.toHaveBeenCalled();
   });

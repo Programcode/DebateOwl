@@ -13,7 +13,10 @@ function routePathname(to: To, resolvedPathname: string): string | undefined {
 
   try {
     const url = new URL(href, window.location.href);
-    return url.origin === window.location.origin ? resolvedPathname : undefined;
+    const isAbsoluteOrRootPath = href.startsWith('/') || /^[a-z][a-z\d+.-]*:/i.test(href);
+    return url.origin === window.location.origin
+      ? isAbsoluteOrRootPath ? url.pathname : resolvedPathname
+      : undefined;
   } catch {
     return undefined;
   }

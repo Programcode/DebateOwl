@@ -39,7 +39,7 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
         }}
         onPointerLeave={(event: PointerEvent<HTMLAnchorElement>) => {
           onPointerLeave?.(event);
-          if (!event.defaultPrevented) intentHandlers.onPointerLeave(event);
+          intentHandlers.onPointerLeave(event);
         }}
         onFocus={(event: FocusEvent<HTMLAnchorElement>) => {
           onFocus?.(event);
@@ -47,7 +47,7 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
         }}
         onBlur={(event: FocusEvent<HTMLAnchorElement>) => {
           onBlur?.(event);
-          if (!event.defaultPrevented) intentHandlers.onBlur(event);
+          intentHandlers.onBlur(event);
         }}
         onPointerDown={(event: PointerEvent<HTMLAnchorElement>) => {
           onPointerDown?.(event);
