@@ -58,8 +58,11 @@ class BlockingStore implements DurableUpdateStore {
 class MemoryStore implements DurableUpdateStore {
   readonly updates: DurableUpdate[] = [];
 
-  async load() {
-    return this.updates;
+  async load(documentId: string, epoch: number) {
+    return this.updates.filter(
+      (update) =>
+        update.documentId === documentId && update.epoch === epoch,
+    );
   }
 
   async find(documentId: string, epoch: number, mutationId: string) {
@@ -80,7 +83,17 @@ class MemoryStore implements DurableUpdateStore {
     );
     if (existing) return existing;
 
-    const durable = { ...update, sequence: this.updates.length + 1 };
+    const sequence = Math.max(
+      0,
+      ...this.updates
+        .filter(
+          (existingUpdate) =>
+            existingUpdate.documentId === update.documentId &&
+            existingUpdate.epoch === update.epoch,
+        )
+        .map(({ sequence }) => sequence),
+    );
+    const durable = { ...update, sequence: sequence + 1 };
     this.updates.push(durable);
     return durable;
   }
@@ -185,7 +198,7 @@ describe("collaboration durability", () => {
     expect(store.updates[1].syncType).toBe(2);
   });
 
-  it("returns the original sequence when the same update is delivered twice", async () => {
+  it("deduplicates identical update bytes within each document and epoch scope", async () => {
     const store = new MemoryStore();
     const server = createCollaborationServer({
       authenticate: async ({ documentName, token }) => ({
@@ -198,35 +211,61 @@ describe("collaboration durability", () => {
     await server.listen();
     cleanup.push(() => server.destroy());
 
-    const document = new Y.Doc();
-    const acknowledgements: string[] = [];
-    let updateMessage: Uint8Array | undefined;
-    const provider = new HocuspocusProvider({
-      document,
-      name: "speech-3@1",
-      onOutgoingMessage: ({ message }) => {
-        if (message.description === "A document update") {
-          updateMessage = message.toUint8Array();
-        }
-      },
-      onStateless: ({ payload }) => acknowledgements.push(payload),
-      token: "author",
-      url: `ws://127.0.0.1:${server.address.port}`,
-    });
-    cleanup.push(() => provider.destroy());
+    for (const [scopeIndex, name] of [
+      "speech-a@1",
+      "speech-b@1",
+      "speech-a@2",
+    ].entries()) {
+      const document = new Y.Doc();
+      const acknowledgements: string[] = [];
+      let updateMessage: Uint8Array | undefined;
+      const provider = new HocuspocusProvider({
+        document,
+        name,
+        onOutgoingMessage: ({ message }) => {
+          if (message.description === "A document update") {
+            updateMessage = message.toUint8Array();
+          }
+        },
+        onStateless: ({ payload }) => acknowledgements.push(payload),
+        token: "author",
+        url: `ws://127.0.0.1:${server.address.port}`,
+      });
+      cleanup.push(() => provider.destroy(), () => document.destroy());
 
-    await vi.waitFor(() => expect(provider.isSynced).toBe(true));
-    insertParagraph(document, "One append");
-    await vi.waitFor(() => expect(acknowledgements).toHaveLength(1));
-    if (!updateMessage) throw new Error("Expected an outbound update message");
+      await vi.waitFor(() => expect(provider.isSynced).toBe(true));
+      document.clientID = 1_234_567;
+      insertParagraph(document, "Identical update");
+      await vi.waitFor(() => expect(updateMessage).toBeDefined());
+      await vi.waitFor(() =>
+        expect(store.updates).toHaveLength(scopeIndex + 1),
+      );
+      await vi.waitFor(() => expect(acknowledgements).toHaveLength(1));
+      if (!updateMessage) {
+        throw new Error("Expected an outbound update message");
+      }
+      expect(store.updates[scopeIndex].bytes).toEqual(store.updates[0].bytes);
 
-    provider.configuration.websocketProvider.send(updateMessage);
+      provider.configuration.websocketProvider.send(updateMessage);
+      await vi.waitFor(() => expect(acknowledgements).toHaveLength(2));
 
-    await vi.waitFor(() => expect(acknowledgements).toHaveLength(2));
-    expect(store.updates).toHaveLength(1);
-    expect(JSON.parse(acknowledgements[1]).sequence).toBe(
-      JSON.parse(acknowledgements[0]).sequence,
-    );
+      const original = JSON.parse(acknowledgements[0]);
+      const retry = JSON.parse(acknowledgements[1]);
+      expect(original.sequence).toBe(1);
+      expect(retry.sequence).toBe(original.sequence);
+    }
+
+    expect(
+      store.updates.map(({ documentId, epoch, sequence }) => ({
+        documentId,
+        epoch,
+        sequence,
+      })),
+    ).toEqual([
+      { documentId: "speech-a", epoch: 1, sequence: 1 },
+      { documentId: "speech-b", epoch: 1, sequence: 1 },
+      { documentId: "speech-a", epoch: 2, sequence: 1 },
+    ]);
   });
 
   it("does not apply, broadcast, or acknowledge an update when append fails", async () => {

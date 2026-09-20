@@ -10,7 +10,7 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { z } from "zod";
-import { documentText, insertParagraph } from "./test/document";
+import { appendText, documentText, insertParagraph } from "./test/document";
 
 const childMessage = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("ready"), port: z.number().int().positive() }),
@@ -128,6 +128,13 @@ describe("collaboration crash recovery", () => {
       );
       await vi.waitFor(() => expect(secondAcks).toHaveLength(1));
       expect(JSON.parse(secondAcks[0]).sequence).toBe(persisted.sequence);
+
+      appendText(document, " After acknowledgement");
+      await vi.waitFor(() => expect(secondAcks).toHaveLength(2));
+      expect(JSON.parse(secondAcks[1])).toMatchObject({
+        kind: "durable-ack",
+        sequence: persisted.sequence + 1,
+      });
       await kill(second.child);
       reconnected.destroy();
 
@@ -147,6 +154,7 @@ describe("collaboration crash recovery", () => {
       await vi.waitFor(() => {
         expect(fresh.isSynced).toBe(true);
         expect(documentText(freshDocument)).toContain("Survives restart");
+        expect(documentText(freshDocument)).toContain("After acknowledgement");
       });
     },
     15_000,
