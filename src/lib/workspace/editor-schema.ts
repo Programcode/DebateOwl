@@ -55,9 +55,9 @@ export function createWorkspaceEditor(
           },
           props: {
             handleDOMEvents: {
-              compositionend: () => {
+              compositionend: (_view, rawEvent) => {
                 composing = false;
-                const text = compositionText.normalize("NFC");
+                const text = (compositionText || (rawEvent as CompositionEvent).data).normalize("NFC");
                 const hunk: ProposalHunkInput | undefined = text
                   ? compositionFrom === compositionTo
                     ? { at: compositionFrom, content: [{ type: "text", text }], id: crypto.randomUUID(), kind: "insert" }
