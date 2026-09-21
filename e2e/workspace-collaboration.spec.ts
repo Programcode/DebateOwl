@@ -278,7 +278,9 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     const cdp = await owner.context.newCDPSession(owner.page);
     await cdp.send("Input.imeSetComposition", { text: " t", selectionStart: 2, selectionEnd: 2 });
     await cdp.send("Input.imeSetComposition", { text: " tűrő", selectionStart: 5, selectionEnd: 5 });
-    await cdp.send("Input.imeSetComposition", { text: "", selectionStart: 0, selectionEnd: 0 });
+    await owner.page.locator(".ProseMirror").evaluate((element) => {
+      element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: " tűrő" }));
+    });
     await expect(member.page.getByRole("button", { name: "Reject" })).toHaveCount(1);
     await expect(member.page.getByLabel("Proposed change preview").last()).toContainText("tűrő");
     await member.page.getByRole("button", { name: "Reject" }).click();
