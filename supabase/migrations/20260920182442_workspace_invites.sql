@@ -545,7 +545,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION private.revoke_workspace_codes_after_member_removal()
+CREATE FUNCTION private.revoke_workspace_invites_after_member_removal()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -555,17 +555,16 @@ BEGIN
   UPDATE private.workspace_invites
   SET revoked_at = coalesce(revoked_at, now())
   WHERE workspace_id = OLD.workspace_id
-    AND kind = 'code'
     AND revoked_at IS NULL;
   RETURN OLD;
 END;
 $$;
 
-CREATE TRIGGER workspace_members_revoke_codes_after_delete
+CREATE TRIGGER workspace_members_revoke_invites_after_delete
 AFTER DELETE ON public.workspace_members
-FOR EACH ROW EXECUTE FUNCTION private.revoke_workspace_codes_after_member_removal();
+FOR EACH ROW EXECUTE FUNCTION private.revoke_workspace_invites_after_member_removal();
 
-REVOKE ALL ON FUNCTION private.revoke_workspace_codes_after_member_removal()
+REVOKE ALL ON FUNCTION private.revoke_workspace_invites_after_member_removal()
   FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.create_workspace_invite(uuid, uuid, text, bytea, text, bytea, integer, uuid, uuid)
   FROM PUBLIC, anon, authenticated;

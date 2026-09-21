@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(46);
+SELECT plan(48);
 
 INSERT INTO auth.users (id, email, email_confirmed_at)
 VALUES
@@ -382,6 +382,19 @@ SELECT results_eq(
 );
 
 RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT set_config('request.jwt.claim.role', 'service_role', true);
+SELECT lives_ok(
+  $$SELECT * FROM public.create_workspace_invite(
+    '61111111-1111-4111-8111-111111111111', current_setting('test.workspace_id')::uuid,
+    'email', decode(repeat('0c', 32), 'hex'), 'removed-member-ciphertext',
+    decode(repeat('13', 32), 'hex'), 1,
+    '60000000-0000-4000-8000-000000000026', NULL
+  )$$,
+  'a live email invitation can target the member before removal'
+);
+
+RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '61111111-1111-4111-8111-111111111111', true);
 SELECT set_config('request.jwt.claim.role', 'authenticated', true);
@@ -395,9 +408,9 @@ RESET ROLE;
 SELECT results_eq(
   $$SELECT count(*)::bigint FROM private.workspace_invites
     WHERE workspace_id = current_setting('test.workspace_id')::uuid
-      AND kind = 'code' AND revoked_at IS NULL$$,
+      AND revoked_at IS NULL$$,
   ARRAY[0::bigint],
-  'member removal revokes every live shareable code'
+  'member removal revokes every live invitation'
 );
 
 SET LOCAL ROLE service_role;
@@ -410,6 +423,16 @@ SELECT results_eq(
   )$$,
   ARRAY['unavailable'::text],
   'a removed user cannot rejoin with an old code'
+);
+
+SELECT results_eq(
+  $$SELECT status FROM public.redeem_workspace_invite(
+    '63333333-3333-4333-8333-333333333333', decode(repeat('0c', 32), 'hex'),
+    decode(repeat('13', 32), 'hex'), decode(repeat('23', 32), 'hex'),
+    '60000000-0000-4000-8000-000000000027'
+  )$$,
+  ARRAY['unavailable'::text],
+  'a removed user cannot rejoin with an old email invitation'
 );
 
 SELECT lives_ok(
