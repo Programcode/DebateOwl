@@ -54,7 +54,7 @@ For a bug, watch the reproduction fail for the expected reason before implementi
 npm run test:collaboration
 ```
 
-This runs the isolated Node service spike with real Hocuspocus providers and Yjs documents. It covers durable acknowledgement ordering, reconnect sync, duplicate delivery, schema and size rejection, writer serialization, stale epochs, and process-kill recovery. It does not prove PostgreSQL advisory locks or a deployed collaboration service.
+This runs the Node collaboration service with real Hocuspocus providers and Yjs documents. It covers durable acknowledgement ordering, reconnect sync, duplicate delivery, schema and size rejection, PostgreSQL adapter behavior, proposal decision rollback, writer serialization, stale epochs, and process-kill recovery. It does not prove a deployed service.
 
 ## Edge Function tests
 
@@ -136,7 +136,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts the stack, runs `npm run test:db`, and stops the stack on exit, including after a test failure. Outside Superset, run:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, and Vite client run the real-Auth desktop/mobile workspace journey. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
 
 ```bash
 supabase db start
@@ -144,7 +144,7 @@ npm run test:db
 supabase stop --no-backup
 ```
 
-The stack replays migrations and runs pgTAP tests. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.
+The stack replays migrations and runs pgTAP tests. The browser portion creates isolated local users and deletes them, captures mail only in local Mailpit, restarts the collaboration process, and proves recovery and revocation. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 

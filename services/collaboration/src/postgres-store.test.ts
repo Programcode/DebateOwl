@@ -2,7 +2,11 @@
 
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
+import * as Y from "yjs";
+import { prosemirrorJSONToYDoc, yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
 import { PostgresDurableUpdateStore } from "./postgres-store";
+import { serializeProposal, type WorkspaceProposal } from "../../../src/lib/workspace/review";
+import { WORKSPACE_CONTENT_FIELD, workspaceSchema } from "../../../src/lib/workspace/schema";
 
 class FakeClient extends EventEmitter {
   readonly query = vi.fn().mockResolvedValue({ rows: [] });
@@ -10,6 +14,34 @@ class FakeClient extends EventEmitter {
 }
 
 describe("Postgres collaboration writer locks", () => {
+  function proposalFixture() {
+    const document = prosemirrorJSONToYDoc(workspaceSchema, {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Hello world" }] }],
+    }, WORKSPACE_CONTENT_FIELD);
+    const proposal: WorkspaceProposal = {
+      authorId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      documentEpoch: 3,
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      baseStateVector: new Uint8Array(),
+      hunks: [{
+        absoluteFrom: 7,
+        absoluteTo: 12,
+        contextAfter: [{ type: "paragraph" }],
+        contextBefore: [{ type: "text", text: " " }],
+        from: new Uint8Array(),
+        id: "replace",
+        kind: "format",
+        original: [{ type: "text", text: "world" }],
+        replacement: [{ type: "text", text: "team" }],
+        status: "pending",
+        to: new Uint8Array(),
+      }],
+    };
+    const snapshot = Y.encodeStateAsUpdate(document);
+    document.destroy();
+    return { proposal, snapshot };
+  }
   it("holds one session advisory lock and fences writers when that session dies", async () => {
     const client = new FakeClient();
     const pool = { connect: vi.fn().mockResolvedValue(client) };
@@ -149,6 +181,25 @@ describe("Postgres collaboration writer locks", () => {
     await release();
   });
 
+  it("stores one automatic version for the durable sequence after the idle window", async () => {
+    const client = new FakeClient();
+    const store = new PostgresDurableUpdateStore({ connect: vi.fn().mockResolvedValue(client) });
+    const release = await store.acquireWriter(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      3,
+      vi.fn(),
+    );
+    client.query.mockClear();
+
+    await store.snapshotVersion("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", 3);
+
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO public.workspace_versions"),
+      ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", 3],
+    );
+    await release();
+  });
+
   it("checks current membership and epoch on a fresh database session", async () => {
     const client = new FakeClient();
     client.query.mockResolvedValueOnce({ rows: [{ allowed: true }] });
@@ -161,5 +212,67 @@ describe("Postgres collaboration writer locks", () => {
       epoch: 3,
     })).resolves.toBe(true);
     expect(client.release).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists accepted content, its pre-decision version, and the decision in one transaction", async () => {
+    const { proposal, snapshot } = proposalFixture();
+    const client = new FakeClient();
+    client.query.mockImplementation(async (text: string) => {
+      if (text.includes("SELECT proposal.payload")) {
+        return { rows: [{
+          durable_sequence: 4,
+          payload: serializeProposal(proposal),
+          proposal_sequence: 4,
+          snapshot,
+          workspace_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        }] };
+      }
+      return { rows: [] };
+    });
+    const store = new PostgresDurableUpdateStore({ connect: vi.fn().mockResolvedValue(client) });
+
+    const result = await store.decideProposal({
+      authorId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      decision: "accepted",
+      documentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      epoch: 3,
+      hunkId: "replace",
+      proposalId: proposal.id,
+    });
+
+    expect(result.proposal.hunks[0].status).toBe("accepted");
+    expect(result.sequence).toBe(5);
+    const accepted = new Y.Doc();
+    Y.applyUpdate(accepted, snapshot);
+    Y.applyUpdate(accepted, result.update!);
+    expect(JSON.stringify(yXmlFragmentToProsemirrorJSON(accepted.getXmlFragment(WORKSPACE_CONTENT_FIELD)))).toContain("Hello team");
+    accepted.destroy();
+    expect(client.query.mock.calls.some(([text]) => String(text).includes("INSERT INTO public.workspace_versions"))).toBe(true);
+    expect(client.query.mock.calls.some(([text]) => String(text).includes("INSERT INTO private.workspace_document_updates"))).toBe(true);
+    expect(client.query.mock.calls.some(([text]) => String(text).includes("UPDATE public.workspace_proposals"))).toBe(true);
+    expect(client.query).toHaveBeenCalledWith("COMMIT");
+  });
+
+  it("rolls back accepted content when persisting the decision fails", async () => {
+    const { proposal, snapshot } = proposalFixture();
+    const client = new FakeClient();
+    client.query.mockImplementation(async (text: string) => {
+      if (text.includes("SELECT proposal.payload")) {
+        return { rows: [{ durable_sequence: 4, payload: serializeProposal(proposal), proposal_sequence: 4, snapshot, workspace_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }] };
+      }
+      if (text.includes("UPDATE public.workspace_proposals")) throw new Error("decision write failed");
+      return { rows: [] };
+    });
+    const store = new PostgresDurableUpdateStore({ connect: vi.fn().mockResolvedValue(client) });
+
+    await expect(store.decideProposal({
+      authorId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      decision: "accepted",
+      documentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      epoch: 3,
+      hunkId: "replace",
+      proposalId: proposal.id,
+    })).rejects.toThrow("decision write failed");
+    expect(client.query).toHaveBeenCalledWith("ROLLBACK");
   });
 });

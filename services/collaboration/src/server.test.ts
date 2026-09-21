@@ -164,6 +164,64 @@ describe("collaboration durability", () => {
     });
   });
 
+  it("acknowledges member removal only after queued writes are fenced and sockets close", async () => {
+    const store = new BlockingStore();
+    const changeAccess = vi.fn().mockResolvedValue(4);
+    const server = createCollaborationServer({
+      authenticate: async ({ documentName, token }) => ({
+        authorId: token,
+        documentId: documentName.split("@")[0],
+        epoch: Number(documentName.split("@")[1]),
+      }),
+      changeAccess,
+      store,
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const document = new Y.Doc();
+    let closed = 0;
+    const provider = new HocuspocusProvider({
+      document,
+      name: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa@1",
+      onClose: () => { closed += 1; },
+      token: "author",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    cleanup.push(() => provider.destroy(), () => document.destroy());
+    await vi.waitFor(() => expect(provider.isSynced).toBe(true));
+
+    insertParagraph(document, "Queued claim");
+    await store.appendStarted.promise;
+    const removal = fetch(`http://127.0.0.1:${server.address.port}/access/remove`, {
+      body: JSON.stringify({
+        expectedRevision: 3,
+        targetUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        workspaceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      }),
+      headers: {
+        Authorization: "Bearer owner-token",
+        "Content-Type": "application/json",
+        Origin: "https://trial.test",
+      },
+      method: "POST",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(changeAccess).not.toHaveBeenCalled();
+
+    store.releaseAppend.resolve();
+    const response = await removal;
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ revision: 4 });
+    expect(changeAccess).toHaveBeenCalledWith({
+      expectedRevision: 3,
+      targetUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      token: "owner-token",
+      workspaceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    });
+    await vi.waitFor(() => expect(closed).toBeGreaterThan(0));
+  });
+
   it("persists reconnect SyncStep2 and live Update messages through one gate", async () => {
     const store = new MemoryStore();
     const server = createCollaborationServer({

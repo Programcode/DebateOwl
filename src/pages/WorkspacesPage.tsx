@@ -17,8 +17,10 @@ export default function WorkspacesPage() {
   const [motion, setMotion] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"active" | "archived" | "all">("active");
   const requestId = useRef<string | null>(null);
   const workspaces = useQuery({ queryKey: ["workspaces"], queryFn: listWorkspaces });
+  const visibleWorkspaces = workspaces.data?.filter((workspace) => view === "all" || workspace.status === view);
 
   const createWorkspace = async (event: FormEvent) => {
     event.preventDefault();
@@ -86,6 +88,13 @@ export default function WorkspacesPage() {
           <h2 id="workspace-list-title" className="text-xl font-semibold tracking-tight">
             {t("workspaces.yours", "Your workspaces")}
           </h2>
+          <div className="mt-3 flex gap-1" aria-label={t("workspaces.workspaceView", "Workspace view")}>
+            {(["active", "archived", "all"] as const).map((option) => (
+              <Button key={option} type="button" size="sm" variant={view === option ? "secondary" : "ghost"} onClick={() => setView(option)}>
+                {t(`workspaces.${option}`, option)}
+              </Button>
+            ))}
+          </div>
           {workspaces.isLoading && (
             <p role="status" className="mt-3 text-sm text-muted-foreground">
               {t("workspaces.loading", "Loading workspaces...")}
@@ -96,13 +105,13 @@ export default function WorkspacesPage() {
               {t("workspaces.loadFailed", "Workspaces could not be loaded.")}
             </p>
           )}
-          {workspaces.data?.length === 0 && (
+          {visibleWorkspaces?.length === 0 && (
             <p className="mt-3 text-sm text-muted-foreground">
               {t("workspaces.empty", "Create your first workspace above.")}
             </p>
           )}
           <div className="mt-3 grid gap-3">
-            {workspaces.data?.map((workspace) => (
+            {visibleWorkspaces?.map((workspace) => (
               <Link
                 key={workspace.id}
                 to={`/app/workspaces/${workspace.id}`}
@@ -119,9 +128,7 @@ export default function WorkspacesPage() {
                   )}
                 </span>
                 <Badge variant={workspace.status === "active" ? "secondary" : "outline"}>
-                  {workspace.status === "active"
-                    ? t("workspaces.active", "Active")
-                    : t("workspaces.archived", "Archived")}
+                  {t(`workspaces.${workspace.status}`, workspace.status)}
                 </Badge>
               </Link>
             ))}

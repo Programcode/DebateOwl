@@ -122,8 +122,9 @@ describe("workspace navigation", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole("link", { name: /Schools should ban phones/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /AI tutors should grade homework/ })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /AI tutors should grade homework/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByRole("link", { name: /Schools should ban phones/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("link", { name: /Schools should ban phones/ }));
 
     expect(screen.getByRole("status", { name: "Current path" })).toHaveTextContent(
@@ -141,6 +142,7 @@ describe("workspace navigation", () => {
               id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
               motion: "Schools should ban phones",
               owner_id: "11111111-1111-4111-8111-111111111111",
+              pending_owner_id: null as string | null,
               revision: 0,
               status: "active",
               title: null as string | null,
@@ -157,6 +159,7 @@ describe("workspace navigation", () => {
                 {
                   assignee_id: "22222222-2222-4222-8222-222222222222",
                   document_epoch: 0,
+                  durable_sequence: 0,
                   id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
                   position: 1,
                   side: "pro",
@@ -166,6 +169,7 @@ describe("workspace navigation", () => {
                 {
                   assignee_id: null,
                   document_epoch: 0,
+                  durable_sequence: 0,
                   id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
                   position: 1,
                   side: "con",

@@ -24,6 +24,7 @@ const TermsPage = lazy(routeLoaders["/terms"]);
 const PrivacyPage = lazy(routeLoaders["/privacy"]);
 const HomePage = lazy(routeLoaders["/app"]);
 const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
+const WorkspaceInvitePage = lazy(routeLoaders["/app/workspaces/invite"]);
 const WorkspacePage = lazy(routeLoaders["/app/workspaces/:workspaceId"]);
 const GeneratePage = lazy(routeLoaders["/app/generate"]);
 const AttackPage = lazy(routeLoaders["/app/attack"]);
@@ -239,6 +240,7 @@ function AppRoutes() {
           >
             <Route path="/app" element={<RouteContent><HomePage /></RouteContent>} />
             <Route path="/app/workspaces" element={<RouteContent><WorkspacesPage /></RouteContent>} />
+            <Route path="/app/workspaces/invite" element={<RouteContent><WorkspaceInvitePage /></RouteContent>} />
             <Route path="/app/workspaces/:workspaceId" element={<RouteContent><WorkspacePage /></RouteContent>} />
             <Route path="/app/generate" element={<RouteContent><GeneratePage /></RouteContent>} />
             <Route path="/app/attack" element={<RouteContent><AttackPage /></RouteContent>} />

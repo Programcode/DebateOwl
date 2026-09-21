@@ -1,4 +1,13 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
+import * as Y from "yjs";
+import {
+  acceptProposalHunkInDocument,
+  deserializeProposal,
+  rejectProposalHunks,
+  serializeProposal,
+} from "../../../src/lib/workspace/review";
+import { validateWorkspaceDocument } from "../../../src/lib/workspace/schema";
 import type { DurableAppend, DurableUpdate, DurableUpdateStore } from "./server";
 
 export interface PgClient {
@@ -34,6 +43,13 @@ const durableRowSchema = z.object({
 const storedUpdateRowSchema = durableRowSchema.extend({ mutation_id: z.string() });
 const snapshotRowSchema = z.object({ snapshot: z.instanceof(Uint8Array) });
 const authorizationRowSchema = z.object({ allowed: z.boolean() });
+const proposalRowSchema = z.object({
+  durable_sequence: bigintSchema,
+  payload: z.unknown(),
+  proposal_sequence: bigintSchema,
+  snapshot: z.instanceof(Uint8Array),
+  workspace_id: z.string().uuid(),
+});
 
 export class PostgresDurableUpdateStore implements DurableUpdateStore {
   private readonly writers = new Map<string, Writer>();
@@ -181,11 +197,171 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
          WHERE document_id = $1`,
         [update.documentId, sequence, Buffer.from(update.snapshot)],
       );
+      await client.query(
+        `UPDATE public.workspace_documents
+         SET durable_sequence = $2, updated_at = now()
+         WHERE id = $1`,
+        [update.documentId, sequence],
+      );
       await client.query("COMMIT");
       return { ...update, sequence };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
+    }
+  }
+
+  async snapshotVersion(documentId: string, epoch: number) {
+    await this.getWriter(documentId, epoch).query(
+      `WITH version AS (
+         INSERT INTO public.workspace_versions (
+           workspace_id, document_id, kind, document_epoch, durable_sequence
+         )
+         SELECT state.workspace_id, state.document_id, 'automatic', state.epoch,
+           state.durable_sequence
+         FROM private.workspace_document_state AS state
+         WHERE state.document_id = $1
+           AND state.epoch = $2
+           AND state.durable_sequence > 0
+           AND NOT EXISTS (
+             SELECT 1 FROM public.workspace_versions AS existing
+             WHERE existing.document_id = state.document_id
+               AND existing.document_epoch = state.epoch
+               AND existing.durable_sequence = state.durable_sequence
+           )
+         RETURNING id, document_id
+       )
+       INSERT INTO private.workspace_version_data (version_id, snapshot)
+       SELECT version.id, state.snapshot
+       FROM version
+       JOIN private.workspace_document_state AS state
+         ON state.document_id = version.document_id`,
+      [documentId, epoch],
+    );
+  }
+
+  async decideProposal(input: {
+    authorId: string;
+    decision: "accepted" | "rejected";
+    documentId: string;
+    epoch: number;
+    hunkId: string;
+    proposalId: string;
+  }) {
+    const key = `${input.documentId}@${input.epoch}`;
+    const temporaryRelease = this.writers.has(key)
+      ? undefined
+      : await this.acquireWriter(input.documentId, input.epoch, () => undefined);
+    const client = this.getWriter(input.documentId, input.epoch);
+    await client.query("BEGIN");
+    try {
+      const result = await client.query(
+        `SELECT proposal.payload, proposal.durable_sequence AS proposal_sequence,
+           state.durable_sequence, state.snapshot, state.workspace_id
+         FROM public.workspace_proposals AS proposal
+         JOIN private.workspace_document_state AS state
+           ON state.workspace_id = proposal.workspace_id
+          AND state.document_id = proposal.document_id
+          AND state.epoch = proposal.document_epoch
+         JOIN public.workspaces AS workspace ON workspace.id = proposal.workspace_id
+         JOIN public.workspace_members AS member
+           ON member.workspace_id = proposal.workspace_id AND member.user_id = $4
+         WHERE proposal.id = $1 AND proposal.document_id = $2
+           AND proposal.document_epoch = $3 AND workspace.status = 'active'
+         FOR UPDATE OF proposal, state`,
+        [input.proposalId, input.documentId, input.epoch, input.authorId],
+      );
+      if (!result.rows[0]) throw new Error("Workspace unavailable");
+      const row = proposalRowSchema.parse(result.rows[0]);
+      let proposal = deserializeProposal(row.payload);
+      const hunk = proposal.hunks.find(({ id }) => id === input.hunkId);
+      if (!hunk) throw new Error("Proposal unavailable");
+      if (hunk.status !== "pending") {
+        if (hunk.status !== input.decision) throw new Error("Proposal already decided");
+        await client.query("COMMIT");
+        return { proposal: serializeProposal(proposal), sequence: row.durable_sequence };
+      }
+
+      let update: Uint8Array | undefined;
+      if (input.decision === "rejected") {
+        proposal = rejectProposalHunks({ proposal, hunkIds: [input.hunkId] });
+      } else {
+        const document = new Y.Doc();
+        try {
+          if (row.snapshot.byteLength) Y.applyUpdate(document, row.snapshot);
+          const before = Y.encodeStateVector(document);
+          proposal = row.proposal_sequence === row.durable_sequence
+            ? acceptProposalHunkInDocument({
+              document,
+              documentEpoch: input.epoch,
+              hunkId: input.hunkId,
+              proposal,
+            })
+            : {
+              ...proposal,
+              hunks: proposal.hunks.map((candidate) =>
+                candidate.id === input.hunkId ? { ...candidate, status: "stale" as const } : candidate,
+              ),
+            };
+          if (proposal.hunks.find(({ id }) => id === input.hunkId)?.status === "accepted") {
+            update = Y.encodeStateAsUpdate(document, before);
+            const snapshot = Y.encodeStateAsUpdate(document);
+            validateWorkspaceDocument(document);
+            if (!update.byteLength || update.byteLength > 2 * 1024 * 1024 || snapshot.byteLength > 2 * 1024 * 1024) {
+              throw new Error("Collaboration document exceeds 2 MiB");
+            }
+            const sequence = row.durable_sequence + 1;
+            const mutationId = createHash("sha256").update(update).digest("base64url");
+            await client.query(
+              `WITH version AS (
+                 INSERT INTO public.workspace_versions (
+                   workspace_id, document_id, created_by, kind, document_epoch, durable_sequence
+                 ) VALUES ($1, $2, $3, 'automatic', $4, $5)
+                 RETURNING id
+               )
+               INSERT INTO private.workspace_version_data (version_id, snapshot)
+               SELECT id, $6 FROM version`,
+              [row.workspace_id, input.documentId, input.authorId, input.epoch, row.durable_sequence, Buffer.from(row.snapshot)],
+            );
+            await client.query(
+              `INSERT INTO private.workspace_document_updates (
+                 workspace_id, document_id, epoch, sequence, mutation_id, author_id, sync_type, bytes
+               ) VALUES ($1, $2, $3, $4, $5, $6, 2, $7)`,
+              [row.workspace_id, input.documentId, input.epoch, sequence, mutationId, input.authorId, Buffer.from(update)],
+            );
+            await client.query(
+              `UPDATE private.workspace_document_state
+               SET durable_sequence = $2, snapshot = $3, updated_at = now()
+               WHERE document_id = $1`,
+              [input.documentId, sequence, Buffer.from(snapshot)],
+            );
+            await client.query(
+              `UPDATE public.workspace_documents
+               SET durable_sequence = $2, updated_at = now()
+               WHERE id = $1`,
+              [input.documentId, sequence],
+            );
+          }
+        } finally {
+          document.destroy();
+        }
+      }
+
+      await client.query(
+        `UPDATE public.workspace_proposals SET payload = $2, updated_at = now() WHERE id = $1`,
+        [input.proposalId, JSON.stringify(serializeProposal(proposal))],
+      );
+      await client.query("COMMIT");
+      return {
+        proposal: serializeProposal(proposal),
+        sequence: row.durable_sequence + (update ? 1 : 0),
+        update,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      await temporaryRelease?.();
     }
   }
 

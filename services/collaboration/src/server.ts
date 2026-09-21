@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { Server, type Connection } from "@hocuspocus/server";
 import { Mutex } from "async-mutex";
 import {
@@ -45,6 +46,7 @@ export interface DurableUpdateStore {
     onLost: () => void,
   ): Promise<() => void | Promise<void>>;
   loadSnapshot?(documentId: string, epoch: number): Promise<Uint8Array | undefined>;
+  snapshotVersion?(documentId: string, epoch: number): Promise<void>;
 }
 
 interface AuthenticatedDocument {
@@ -55,6 +57,20 @@ interface AuthenticatedDocument {
 }
 
 interface CollaborationServerOptions {
+  changeAccess?(input: {
+    expectedRevision: number;
+    targetUserId: string;
+    token: string;
+    workspaceId: string;
+  }): Promise<number>;
+  decideProposal?(input: {
+    decision: "accepted" | "rejected";
+    documentId: string;
+    epoch: number;
+    hunkId: string;
+    proposalId: string;
+    token: string;
+  }): Promise<{ proposal: unknown; sequence: number; update?: Uint8Array }>;
   authenticate(input: {
     documentName: string;
     token: string;
@@ -65,6 +81,41 @@ interface CollaborationServerOptions {
     operation: "awareness" | "read" | "write",
   ): Promise<boolean>;
   store: DurableUpdateStore;
+}
+
+const accessChangeSchema = z.object({
+  expectedRevision: z.number().int().nonnegative(),
+  targetUserId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+});
+const proposalDecisionSchema = z.object({
+  decision: z.enum(["accepted", "rejected"]),
+  documentId: z.string().uuid(),
+  epoch: z.number().int().nonnegative(),
+  hunkId: z.string().min(1).max(100),
+  proposalId: z.string().uuid(),
+});
+
+async function requestBody(request: IncomingMessage) {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += bytes.byteLength;
+    if (size > 16 * 1024) throw new Error("Request too large");
+    chunks.push(bytes);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+function json(response: ServerResponse, status: number, body: unknown, origin?: string) {
+  response.writeHead(status, {
+    ...(origin ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+  });
+  response.end(JSON.stringify(body));
 }
 
 function sendAcknowledgement(
@@ -90,11 +141,15 @@ export function createCollaborationServer(
   >();
   const locks = new Map<string, Mutex>();
   const writerReleases = new Map<string, () => void | Promise<void>>();
+  // ponytail: one process-wide fence keeps removal ordering obvious; scope per workspace if trial traffic warrants it.
+  const accessFence = new Mutex();
   const authorize = options.authorize ?? (async () => true);
 
   const server = new Server<AuthenticatedDocument>({
     address: "127.0.0.1",
+    debounce: 3_000,
     flushDelay: false,
+    maxDebounce: 30_000,
     port: 0,
     quiet: true,
     stopOnSignals: false,
@@ -193,6 +248,7 @@ export function createCollaborationServer(
       const decoded = Y.decodeUpdate(payload);
       if (decoded.structs.length === 0 && decoded.ds.clients.size === 0) return;
 
+      const releaseAccess = await accessFence.acquire();
       const key = `${context.documentId}@${context.epoch}`;
       const mutex = locks.get(key) ?? new Mutex();
       locks.set(key, mutex);
@@ -224,9 +280,13 @@ export function createCollaborationServer(
           snapshot,
           syncType: type,
         });
-        pending.set(connection, { durable, release });
+        pending.set(connection, { durable, release: () => {
+          release();
+          releaseAccess();
+        } });
       } catch (error) {
         release();
+        releaseAccess();
         if (!mutex.isLocked()) locks.delete(key);
         throw error;
       }
@@ -250,6 +310,63 @@ export function createCollaborationServer(
         const mutex = locks.get(key);
         if (mutex && !mutex.isLocked()) locks.delete(key);
       }
+    },
+    async onStoreDocument({ documentName }) {
+      const [documentId, epoch] = documentName.split("@");
+      await options.store.snapshotVersion?.(documentId, Number(epoch));
+    },
+    async onRequest({ instance, request, response }) {
+      const url = new URL(request.url ?? "/", "http://127.0.0.1");
+      if (url.pathname !== "/access/remove" && url.pathname !== "/review/decide") return;
+      const origin = request.headers.origin;
+      if (options.allowedOrigins?.size && (!origin || !options.allowedOrigins.has(origin))) {
+        json(response, 403, { error: "Origin unavailable" });
+        throw null;
+      }
+      if (request.method === "OPTIONS") {
+        json(response, 204, null, origin);
+        throw null;
+      }
+      if (request.method !== "POST") {
+        json(response, 405, { error: "Method unavailable" }, origin);
+        throw null;
+      }
+      const authorization = request.headers.authorization;
+      const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
+      try {
+        if (!token) throw new Error("Authentication required");
+        const body = await requestBody(request);
+        const release = await accessFence.acquire();
+        try {
+          if (url.pathname === "/access/remove") {
+            if (!options.changeAccess) throw new Error("Method unavailable");
+            const revision = await options.changeAccess({ ...accessChangeSchema.parse(body), token });
+            instance.closeConnections();
+            json(response, 200, { revision }, origin);
+          } else {
+            if (!options.decideProposal) throw new Error("Method unavailable");
+            const input = proposalDecisionSchema.parse(body);
+            const result = await options.decideProposal({ ...input, token });
+            if (result.update) {
+              const documentName = `${input.documentId}@${input.epoch}`;
+              const direct = await instance.openDirectConnection(documentName);
+              try {
+                await direct.transact((document) => Y.applyUpdate(document, result.update!));
+              } catch {
+                instance.closeConnections(documentName);
+              } finally {
+                await direct.disconnect();
+              }
+            }
+            json(response, 200, { proposal: result.proposal, sequence: result.sequence }, origin);
+          }
+        } finally {
+          release();
+        }
+      } catch {
+        json(response, 403, { error: "Workspace unavailable" }, origin);
+      }
+      throw null;
     },
     async onDisconnect({ clientsCount, documentName }) {
       if (clientsCount > 0) return;

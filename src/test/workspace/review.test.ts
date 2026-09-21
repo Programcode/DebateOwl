@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { yUndoPluginKey } from "@tiptap/y-tiptap";
 import * as Y from "yjs";
 import { createWorkspaceEditor } from "@/lib/workspace/editor-schema";
@@ -111,6 +111,27 @@ describe("workspace review model", () => {
     ]);
   });
 
+  it("intercepts paste and settled composition transactions without changing accepted text", async () => {
+    const document = new Y.Doc();
+    const onSuggestion = vi.fn();
+    let suggesting = false;
+    const editor = createWorkspaceEditor(document, {
+      isSuggesting: () => suggesting,
+      onSuggestion,
+    });
+    cleanup.push(() => editor.destroy(), () => document.destroy());
+    editor.commands.setContent("<p>Alpha</p>");
+    const accepted = editor.getJSON();
+    suggesting = true;
+
+    editor.view.dispatch(editor.state.tr.insertText(" pasted", 6).setMeta("uiEvent", "paste"));
+    editor.view.dispatch(editor.state.tr.insertText(" tűrő", 6).setMeta("composition", 1));
+
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(2));
+    expect(editor.getJSON()).toEqual(accepted);
+    expect(onSuggestion.mock.calls.map(([hunk]) => hunk.kind)).toEqual(["insert", "insert"]);
+  });
+
   it("accepts one independent hunk and keeps teammate text outside local undo", async () => {
     expect(review.acceptProposalHunks).toBeTypeOf("function");
     expect(review.rejectProposalHunks).toBeTypeOf("function");
@@ -137,6 +158,7 @@ describe("workspace review model", () => {
         { id: "delete-gamma", kind: "delete", from: 12, to: 17 },
       ],
     });
+    proposal.hunks[0].original = [{ text: "Beta", type: "text" }];
 
     yUndoPluginKey.getState(left.state).undoManager.clear();
     yUndoPluginKey.getState(right.state).undoManager.clear();

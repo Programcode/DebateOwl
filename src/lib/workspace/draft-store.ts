@@ -56,6 +56,26 @@ export async function saveWorkspaceDraft(draft: WorkspaceDraft) {
   }
 }
 
+export async function listWorkspaceDrafts(
+  identity: Pick<WorkspaceDraft, "documentId" | "userId" | "workspaceId">,
+) {
+  const database = await openDraftDatabase();
+  try {
+    const drafts = await new Promise<WorkspaceDraft[]>((resolve, reject) => {
+      const request = database.transaction(STORE).objectStore(STORE).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("Draft storage unavailable"));
+    });
+    return drafts.filter((draft) =>
+      draft.userId === identity.userId &&
+      draft.workspaceId === identity.workspaceId &&
+      draft.documentId === identity.documentId
+    );
+  } finally {
+    database.close();
+  }
+}
+
 export async function deleteWorkspaceDraft(
   identity: Pick<WorkspaceDraft, "documentId" | "epoch" | "userId" | "workspaceId">,
 ) {

@@ -21,6 +21,7 @@ export const routeLoaders = {
   "/share/:code": cacheLoader(() => import("@/pages/SharedPage")),
   "/app": cacheLoader(() => import("@/pages/HomePage")),
   "/app/workspaces": cacheLoader(() => import("@/pages/WorkspacesPage")),
+  "/app/workspaces/invite": cacheLoader(() => import("@/pages/WorkspaceInvitePage")),
   "/app/workspaces/:workspaceId": cacheLoader(() => import("@/pages/WorkspacePage")),
   "/app/generate": cacheLoader(() => import("@/pages/GeneratePage")),
   "/app/attack": cacheLoader(() => import("@/pages/AttackPage")),

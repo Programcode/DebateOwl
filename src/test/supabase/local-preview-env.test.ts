@@ -32,5 +32,13 @@ describe("local preview Supabase boundary", () => {
       VITE_COLLABORATION_URL: "wss://trial.example.ts.net:18443/collaboration",
       VITE_LOCAL_PREVIEW: "true",
     })).toBe("wss://trial.example.ts.net:18443/collaboration");
+    expect(resolveCollaborationUrl({
+      VITE_COLLABORATION_URL: "ws://127.0.0.1:12345",
+      VITE_LOCAL_PREVIEW: "true",
+    })).toBe("ws://127.0.0.1:12345");
+    expect(() => resolveCollaborationUrl({
+      VITE_COLLABORATION_URL: "ws://trial.example.ts.net:18443/collaboration",
+      VITE_LOCAL_PREVIEW: "true",
+    })).toThrow("Local collaboration URL must use WSS outside loopback");
   });
 });
