@@ -33,10 +33,12 @@ vi.mock('reactflow', async () => {
   const React = await import('react');
   return {
     default: ({ nodes, onNodeClick }: {
-      nodes: Array<{ id: string; data: { label: string } }>;
+      nodes: Array<{ id: string; data: { label: string; description?: string } }>;
       onNodeClick: (event: React.MouseEvent, node: { id: string }) => void;
     }) => <div>{nodes.map((node) => (
-      <button key={node.id} onClick={(event) => onNodeClick(event, node)}>{node.data.label}</button>
+      <button key={node.id} onClick={(event) => onNodeClick(event, node)}>
+        {node.data.label}{node.data.description && <span aria-hidden="true">{node.data.description}</span>}
+      </button>
     ))}</div>,
     useNodesState: (initial: unknown[]) => {
       const [nodes, setNodes] = React.useState(initial);
@@ -127,4 +129,14 @@ test('formats saved-flowchart relative time in Hungarian', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Betöltés' }));
   expect(screen.getByText('körülbelül 1 órával ezelőtt')).toBeInTheDocument();
+});
+
+test('localizes starter flowchart nodes in Hungarian', async () => {
+  await i18n.changeLanguage('hu');
+  render(<FlowchartPage />);
+
+  expect(screen.getByRole('button', { name: '1. érv' })).toBeInTheDocument();
+  expect(screen.getByText('Az első érved')).toBeInTheDocument();
+  expect(screen.getByText('Így válaszolhatnak')).toBeInTheDocument();
+  expect(screen.getByText('Így válaszolsz a támadásukra')).toBeInTheDocument();
 });

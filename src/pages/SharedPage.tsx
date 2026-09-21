@@ -81,7 +81,7 @@ export default function SharedPage() {
             });
         } catch (err) {
             toast({
-                title: 'Error',
+                title: t('common.error'),
                 description: t('sharedPage.importFailed'),
                 variant: 'destructive',
             });

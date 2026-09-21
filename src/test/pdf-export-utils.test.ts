@@ -91,6 +91,7 @@ describe('PDF export utilities', () => {
   beforeEach(() => {
     pdfMocks.docs.length = 0;
     pdfMocks.autoTableCalls.length = 0;
+    return i18n.changeLanguage('en');
   });
 
   it('draws contention accent bars on every page segment', async () => {
@@ -114,5 +115,16 @@ describe('PDF export utilities', () => {
 
     expect(pdfMocks.docs[0].save).toHaveBeenCalledWith('DebateCase_pro.pdf');
     await i18n.changeLanguage('en');
+  });
+
+  it('localizes PDF footer boilerplate and date for Hungarian exports', async () => {
+    await i18n.changeLanguage('hu');
+    await expect(exportCaseToPdf(caseWithLongContention)).resolves.toBe(true);
+
+    const footerText = (pdfMocks.docs[0].text as ReturnType<typeof vi.fn>).mock.calls
+      .map(([text]) => text)
+      .filter((text): text is string => typeof text === 'string');
+    expect(footerText).toContainEqual(expect.stringContaining('A DebateLab készítette'));
+    expect(footerText).toContainEqual(expect.stringMatching(/Oldal 1 \/ \d+/));
   });
 });

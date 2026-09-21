@@ -30,6 +30,7 @@ import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { validateUrl } from '@/lib/validation/url';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
+import i18n from '@/i18n';
 import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
@@ -511,8 +512,8 @@ async function callSupabaseAI<T = unknown>(
 
     if (data.meta && typeof data.meta === 'object' && (data.meta as { truncated?: unknown }).truncated === true) {
       toast({
-        title: 'Input was shortened',
-        description: 'The request was too large, so only the portion that fit was sent to the AI.',
+        title: i18n.t('aiClient.inputShortened'),
+        description: i18n.t('aiClient.inputShortenedDesc'),
       });
     }
 
@@ -1047,7 +1048,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
         content: source.content ?? '',
         type: 'url',
         origin: source.url,
-        folder: 'Auto-saved',
+        folder: i18n.t('aiClient.autoSavedFolder'),
         isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
         metadata: {
           url: source.url,
@@ -1060,8 +1061,8 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
       });
     } catch {
       toast({
-        title: 'Source save failed',
-        description: `Could not save "${source.title}" to your library.`,
+        title: i18n.t('aiClient.sourceSaveFailed'),
+        description: i18n.t('aiClient.sourceSaveFailedDesc', { title: source.title }),
         variant: 'destructive',
       });
     }

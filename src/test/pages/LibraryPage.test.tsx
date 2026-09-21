@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18n from '@/i18n';
+
+const { mockToast } = vi.hoisted(() => ({ mockToast: vi.fn() }));
 
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({ toast: mockToast }),
 }));
 
 const mockStore = {
@@ -33,8 +36,9 @@ vi.mock('@/lib/source-import', () => ({
 import LibraryPage from '@/pages/LibraryPage';
 
 describe('LibraryPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage('en');
     mockStore.sourceLibrary = [];
     mockStore.sourceFolders = ['General'];
     mockStore.addSource.mockResolvedValue(undefined);
@@ -126,6 +130,16 @@ describe('LibraryPage', () => {
     render(<LibraryPage />);
     fireEvent.click(screen.getByText('Add Source'));
     expect(screen.getByText('Save to Library')).toBeDefined();
+  });
+
+  it('localizes validation errors in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    render(<LibraryPage />);
+
+    fireEvent.click(screen.getByText('Forrás Hozzáadása'));
+    fireEvent.click(screen.getByText('Mentés a Könyvtárba'));
+
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Hiba' }));
   });
 
   it('imports a URL into a preview and saves it', async () => {

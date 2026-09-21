@@ -48,8 +48,20 @@
     "page": "Página",
     "close": "Cerrar",
     "loading": "Cargando",
+    "error": "Error",
     "logoAlt": "Logotipo de DebateLab",
     "or": "o"
+  },
+  "aiClient": {
+    "inputShortened": "La entrada se acortó",
+    "inputShortenedDesc": "La solicitud era demasiado grande, así que solo se envió a la IA la parte que cabía.",
+    "autoSavedFolder": "Guardado automáticamente",
+    "sourceSaveFailed": "No se pudo guardar la fuente",
+    "sourceSaveFailedDesc": "No se pudo guardar “{{title}}” en tu biblioteca."
+  },
+  "generatedArtifacts": {
+    "brainstormTitle": "Lluvia de ideas",
+    "factoidsTitle": "Datos"
   },
   "modelSelector": {
     "reasoning": "Razonamiento",
@@ -1236,7 +1248,21 @@
     "deleteNodeDescription": "Se eliminarán «{{label}}» y todas sus conexiones. Esta acción no se puede deshacer.",
     "deleteNodeConfirm": "Eliminar nodo",
     "deleteNodeCancel": "Cancelar",
-    "nodeDeletedToast": "Nodo eliminado"
+    "nodeDeletedToast": "Nodo eliminado",
+    "starter": {
+      "thesisLabel": "Tu tesis",
+      "thesisDesc": "Haz clic para editar o añadir nuevos nodos",
+      "argument1Label": "Argumento 1",
+      "argument1Desc": "Tu primer argumento",
+      "argument2Label": "Argumento 2",
+      "argument2Desc": "Tu segundo argumento",
+      "argument3Label": "Argumento 3",
+      "argument3Desc": "Tu tercer argumento",
+      "opponentAttackLabel": "Ataque del oponente",
+      "opponentAttackDesc": "Cómo podría responder",
+      "rebuttalLabel": "Tu refutación",
+      "rebuttalDesc": "Cómo respondes a su ataque"
+    }
   },
   "historyPage": {
     "title": "Historial",
@@ -1431,6 +1457,9 @@
     "p10": "Estos términos se rigen por la ley aplicable. Las disputas se resolverán mediante arbitraje vinculante."
   },
   "export": {
+    "generatedBy": "Generado por DebateLab",
+    "page": "Página",
+    "of": "de",
     "reasoning": "Razonamiento",
     "evidence": "Evidencia",
     "impact": "Impacto",

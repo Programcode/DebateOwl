@@ -188,7 +188,7 @@ export default function LibraryPage() {
 
   const handleAdd = async () => {
     if (!newSource.title || !newSource.content) {
-      toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
+      toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
     await addSource(newSource);
@@ -285,7 +285,7 @@ export default function LibraryPage() {
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.clearSuccess', 'Library cleared.') });
     } catch (error) {
       console.error('Failed to clear library:', error);
-      toast({ title: "Error", description: t('libraryPage.clearFailed'), variant: "destructive" });
+      toast({ title: t('common.error'), description: t('libraryPage.clearFailed'), variant: "destructive" });
     } finally {
       setIsClearing(false);
     }
@@ -388,7 +388,7 @@ export default function LibraryPage() {
   const handleSaveSourceDraft = async () => {
     if (!selectedSource) return;
     if (!sourceDraft.title.trim() || !sourceDraft.content.trim()) {
-      toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
+      toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
 

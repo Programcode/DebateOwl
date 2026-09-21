@@ -9,9 +9,12 @@ import {
 vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from "@/lib/stores/session-store";
+import i18n from "@/i18n";
 
 import type { GenerateOutput } from "@/lib/ai/schemas/generate";
 import type { AttackOutput } from "@/lib/ai/schemas/attack";
+import type { BrainstormOutput } from "@/lib/ai/schemas/brainstorm";
+import type { FactoidsOutput } from "@/lib/ai/schemas/factoids";
 
 const sampleGenerate: GenerateOutput = {
   caseStructure: {
@@ -35,9 +38,10 @@ const sampleAttack: AttackOutput = {
 };
 
 describe("session-store", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetMockState();
     localStorage.clear();
+    await i18n.changeLanguage('en');
     useSessionStore.setState({
       generateResult: null,
       generateLoading: false,
@@ -54,6 +58,8 @@ describe("session-store", () => {
       savedBrainstorms: [],
       savedFactoids: [],
       savedChats: [],
+      autosavedBrainstorms: [],
+      autosavedFactoids: [],
       sourceLibrary: [],
     });
   });
@@ -65,6 +71,28 @@ describe("session-store", () => {
     expect(messages).toHaveLength(1);
     expect(messages[0].id).toBeTruthy();
     expect(messages[0].timestamp).toBeGreaterThan(0);
+  });
+
+  it("localizes automatic Brainstorm and Factoids titles", async () => {
+    const brainstorm: BrainstormOutput = {
+      needsMoreInfo: false,
+      buckets: [],
+      nextSteps: [],
+      warningsAndTradeoffs: [],
+    };
+    const factoids: FactoidsOutput = {
+      factoids: [],
+      searchSuggestions: [],
+      warnings: [],
+      verificationStatus: 'complete',
+    };
+
+    await i18n.changeLanguage('hu');
+    useSessionStore.getState().setBrainstormResult(brainstorm);
+    useSessionStore.getState().setFactoidsResult(factoids);
+
+    expect(useSessionStore.getState().autosavedBrainstorms[0].title).toBe('Ötletelés');
+    expect(useSessionStore.getState().autosavedFactoids[0].title).toBe('Tények');
   });
 
   it("saves and loads a case with server id replacement", async () => {
