@@ -67,6 +67,7 @@ Other shared modules own:
 - model pricing and normalized cost calculations;
 - control enforcement;
 - crossfire response validation;
+- the pinned OpenRouter Jev Decisions client, automatic model routing, semantic source decisions, and Crossfire signals;
 - announcement input validation.
 
 Move code into `_shared` only when multiple functions use the same boundary or policy. Feature-specific behavior stays with its handler.
@@ -143,6 +144,8 @@ Document names, never values. Depending on deployed features, server-side config
 - allowed origins and environment-specific application URLs.
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
+
+Jev uses the same `OPENROUTER_API_KEY` as every other model request; there is no separate TypeSafe credential. `npm run smoke:jev` exercises one fixed, sanitized typed decision against the live Decisions endpoint and incurs a negligible provider charge.
 
 The invitation handler does not select an email provider. Its mail boundary sends `{ to, inviteUrl, idempotencyKey }` to the configured relay. The relay must deduplicate repeated acceptance of the same key, which stays stable across pending-delivery retries. The handler marks delivery only after relay acceptance and suppresses later sends only after that mark commits. Email creation fails before storing an invite when the three mailer values are absent. Local tests inject an in-memory sender and make no external mail request.
 

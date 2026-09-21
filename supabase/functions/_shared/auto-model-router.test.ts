@@ -176,7 +176,7 @@ Deno.test("router bounds state and propagates caller cancellation", async () => 
   try {
     await pending;
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("User cancelled routing")) throw error;
+    if (!error || typeof error !== "object" || !("message" in error) || !String(error.message).includes("User cancelled routing")) throw error;
     if (JSON.stringify(observed.state).length > 8_200) throw new Error("routing state exceeded its bound");
     return;
   }

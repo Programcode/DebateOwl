@@ -111,7 +111,7 @@ Deno.test("Crossfire signal does not start work after caller cancellation", asyn
       },
     });
   } catch (error) {
-    if (!(error instanceof Error) || error.name !== "AbortError" || calls !== 0) throw error;
+    if (!error || typeof error !== "object" || !("name" in error) || error.name !== "AbortError" || calls !== 0) throw error;
     return;
   }
   throw new Error("pre-aborted signal was ignored");

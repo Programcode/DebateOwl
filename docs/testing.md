@@ -66,6 +66,14 @@ This uses Deno directly for `supabase/functions/`, including tests that import d
 
 A browser-oriented Vitest pass does not replace native Deno tests. The stream accounting handler tests use synthetic OpenRouter responses and inspect audit inserts for complete, interrupted, and truncated streams. The permission list includes the OpenRouter key name because the handler reads it, but these tests require no real provider credentials.
 
+### Live Jev contract smoke
+
+```bash
+OPENROUTER_API_KEY=... npm run smoke:jev
+```
+
+This sends one tiny typed choice to OpenRouter's Decisions endpoint using the pinned `typesafe/jev-1.13` model. It prints only the returned model, answer labels, latency, and token counts; it never prints the key or submitted state. The command makes a negligible billable live request and is separate from the credential-free `verify` gate.
+
 ## Production build
 
 ```bash
