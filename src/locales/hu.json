@@ -57,7 +57,8 @@
     "inputShortenedDesc": "A kérés túl nagy volt, ezért csak az elküldhető rész került az MI-hez.",
     "autoSavedFolder": "Automatikusan mentett",
     "sourceSaveFailed": "A forrás mentése sikertelen",
-    "sourceSaveFailedDesc": "Nem sikerült a(z) „{{title}}” forrást a könyvtárba menteni."
+    "sourceSaveFailedDesc": "Nem sikerült a(z) „{{title}}” forrást a könyvtárba menteni.",
+    "sourceAssessmentSaveFailed": "A forrásrangsor mentése nem sikerült."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Ötletelés",
@@ -1342,6 +1343,10 @@
     "newFolderHint": "Új mappára van szükség? Használd a felső „Új mappa” gombot.",
     "createFolder": "Mappa létrehozása",
     "sortBy": "Rendezés",
+    "sortSmart": "Intelligens",
+    "sortMostUsed": "Legtöbbet használt",
+    "sortImportance": "Fontosság",
+    "sortStrength": "Bizonyíték ereje",
     "sortNewest": "Hozzáadás dátuma (legújabb)",
     "sortOldest": "Hozzáadás dátuma (legrégebbi)",
     "sortTitle": "Név (A–Z)",
@@ -1915,6 +1920,12 @@
     "researchedSources": "Kutatási források",
     "fallbackOnly": "csak háttérkontextus",
     "fallbackNote": "A gyenge források csak háttérkontextusok, soha nem támasztanak alá idézeteket.",
+    "usedInCase": "Felhasználva ebben az esetben",
+    "semanticAssessment": "Szemantikus forrásértékelés",
+    "importance": "{{level}} fontosság",
+    "strength": "{{level}} erősség",
+    "usageExplanation": "Felhasználva {{count}} mentett esetben. Fontosság: {{importance}}. Bizonyíték ereje: {{strength}}.",
+    "levels": { "0": "Nincs", "1": "Alacsony", "2": "Közepes", "3": "Magas" },
     "types": {
       "academic": "Tudományos",
       "government": "Kormányzati",

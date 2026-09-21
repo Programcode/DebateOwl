@@ -24,7 +24,11 @@ import {
 } from './schemas/sparring';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
-import type { SourceProvenance } from '../stores/session-store';
+import {
+  type SourceAssessmentUpdate,
+  type SourceProvenance,
+  type SourceSemanticMetadata,
+} from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
@@ -76,10 +80,12 @@ function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSigna
 }
 
 interface AIRequestSource {
+  id?: string;
   title: string;
   content: string;
   origin?: string;
   type: string;
+  metadata?: SourceProvenance;
 }
 
 function boundCrossfireRequestSources(sources: AIRequestSource[]): AIRequestSource[] {
@@ -107,6 +113,30 @@ export interface DiscoveredSource extends Omit<SourceProvenance, 'url'> {
 export interface ResultWithSources<T> {
   result: T;
   discoveredSources: DiscoveredSource[];
+}
+
+function parseSourceSemanticMetadata(value: unknown): SourceSemanticMetadata | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const semantic = value as Record<string, unknown>;
+  const { relevance, importance, strength, evaluatedAt, useCount, caseUseCount } = semantic;
+  if (typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
+    typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
+    typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
+    typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) ||
+    typeof useCount !== 'number' || !Number.isInteger(useCount) || useCount < 0 ||
+    typeof caseUseCount !== 'number' || !Number.isInteger(caseUseCount) || caseUseCount < 0 ||
+    (semantic.lastUsedAt !== undefined && typeof semantic.lastUsedAt !== 'string') ||
+    (semantic.lastUsedInCase !== undefined && typeof semantic.lastUsedInCase !== 'boolean')) return undefined;
+  return {
+    relevance,
+    importance: importance as 0 | 1 | 2 | 3,
+    strength: strength as 0 | 1 | 2 | 3,
+    evaluatedAt,
+    useCount,
+    caseUseCount,
+    ...(typeof semantic.lastUsedAt === 'string' ? { lastUsedAt: semantic.lastUsedAt } : {}),
+    ...(typeof semantic.lastUsedInCase === 'boolean' ? { lastUsedInCase: semantic.lastUsedInCase } : {}),
+  };
 }
 
 /**
@@ -147,7 +177,34 @@ function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
       source.query = candidate.query.trim();
     }
 
+    const semantic = parseSourceSemanticMetadata(candidate.semantic);
+    if (semantic) source.semantic = semantic;
+
     return [source];
+  });
+}
+
+function parseSourceAssessments(value: unknown): SourceAssessmentUpdate[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 10).flatMap((item): SourceAssessmentUpdate[] => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    const candidate = item as Record<string, unknown>;
+    const key = typeof candidate.key === 'string' ? candidate.key.trim() : '';
+    const { relevance, importance, strength, evaluatedAt } = candidate;
+    if (!key || typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
+      typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
+      typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
+      typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) || typeof candidate.retained !== 'boolean') return [];
+    return [{
+      key,
+      ...(typeof candidate.id === 'string' && candidate.id.trim() ? { id: candidate.id.trim() } : {}),
+      relevance,
+      importance: importance as 0 | 1 | 2 | 3,
+      strength: strength as 0 | 1 | 2 | 3,
+      evaluatedAt,
+      retained: candidate.retained,
+      ...(typeof candidate.usedInCase === 'boolean' ? { usedInCase: candidate.usedInCase } : {}),
+    }];
   });
 }
 
@@ -375,7 +432,14 @@ async function callSupabaseAI<T = unknown>(
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
-      .map((s) => ({ title: s.title, content: s.content, origin: s.origin, type: s.type }));
+      .map((s) => ({
+        ...(s.id ? { id: s.id } : {}),
+        title: s.title,
+        content: s.content,
+        ...(s.origin ? { origin: s.origin } : {}),
+        type: s.type,
+        ...(s.metadata ? { metadata: s.metadata } : {}),
+      }));
   const activeSources = feature === 'crossfire'
     ? boundCrossfireRequestSources(selectedSources)
     : selectedSources;
@@ -508,6 +572,19 @@ async function callSupabaseAI<T = unknown>(
     // Validate response has expected output
     if (!data?.output) {
       throw new AIResponseError('AI response missing output field', { requestId, details: { data } });
+    }
+
+    const sourceAssessments = parseSourceAssessments(data.sourceAssessments);
+    if (sourceAssessments.length > 0) {
+      try {
+        await session.applySourceAssessments(sourceAssessments);
+      } catch {
+        toast({
+          title: i18n.t('aiClient.sourceSaveFailed'),
+          description: i18n.t('aiClient.sourceAssessmentSaveFailed'),
+          variant: 'destructive',
+        });
+      }
     }
 
     if (data.meta && typeof data.meta === 'object' && (data.meta as { truncated?: unknown }).truncated === true) {
@@ -1045,10 +1122,13 @@ function validateGenerateOutput(output: unknown): GenerateOutput {
 type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
 async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
-  if (sources.length === 0) return;
+  const retainedSources = sources.filter((source) => !source.semantic ||
+    (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
+    source.semantic.lastUsedInCase === true);
+  if (retainedSources.length === 0) return;
 
   const session = useSessionStore.getState();
-  for (const source of sources) {
+  for (const source of retainedSources) {
     try {
       await session.addSource({
         title: source.title,
@@ -1063,6 +1143,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
           ...(source.qualityScore !== undefined ? { qualityScore: source.qualityScore } : {}),
           ...(source.qualityLabel !== undefined ? { qualityLabel: source.qualityLabel } : {}),
           ...(source.query !== undefined ? { query: source.query } : {}),
+          ...(source.semantic !== undefined ? { semantic: source.semantic } : {}),
           capturedVia,
         },
       });
@@ -1074,7 +1155,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
       });
     }
   }
-  console.log(`[AI Client] Saved ${sources.length} sources to library`);
+  console.log(`[AI Client] Saved ${retainedSources.length} sources to library`);
 }
 
 function expectedContentionCount(length: GenerateInput['length']): number {

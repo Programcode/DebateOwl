@@ -57,7 +57,8 @@
     "inputShortenedDesc": "The request was too large, so only the portion that fit was sent to the AI.",
     "autoSavedFolder": "Auto-saved",
     "sourceSaveFailed": "Source save failed",
-    "sourceSaveFailedDesc": "Could not save “{{title}}” to your library."
+    "sourceSaveFailedDesc": "Could not save “{{title}}” to your library.",
+    "sourceAssessmentSaveFailed": "The source ranking could not be saved."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Brainstorm",
@@ -1345,6 +1346,10 @@
     "newFolderHint": "Need a new folder? Use the \"New folder\" button up top.",
     "createFolder": "Create folder",
     "sortBy": "Sort by",
+    "sortSmart": "Smart",
+    "sortMostUsed": "Most used",
+    "sortImportance": "Importance",
+    "sortStrength": "Evidence strength",
     "sortNewest": "Date added (newest)",
     "sortOldest": "Date added (oldest)",
     "sortTitle": "Name (A–Z)",
@@ -1915,6 +1920,12 @@
     "researchedSources": "Researched sources",
     "fallbackOnly": "fallback context only",
     "fallbackNote": "Weak sources are fallback context only and never support citations.",
+    "usedInCase": "Used in this case",
+    "semanticAssessment": "Semantic source assessment",
+    "importance": "{{level}} importance",
+    "strength": "{{level}} strength",
+    "usageExplanation": "Used in {{count}} saved case(s). Importance: {{importance}}. Evidence strength: {{strength}}.",
+    "levels": { "0": "No", "1": "Low", "2": "Medium", "3": "High" },
     "types": {
       "academic": "Academic",
       "government": "Government",

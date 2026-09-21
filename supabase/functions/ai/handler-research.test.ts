@@ -385,6 +385,69 @@ function askRequest(model: string, reasoningEffort?: string): Request {
   });
 }
 
+Deno.test("AI handler ranks stable library sources and returns bounded assessments", async () => {
+  const originalFetch = globalThis.fetch;
+  const providerBodies: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      const body = JSON.parse(String(init?.body)) as { questions: Record<string, { type: string; criteria?: readonly string[] }> };
+      const answers: Record<string, unknown> = {};
+      for (const [id, question] of Object.entries(body.questions)) {
+        const second = id.startsWith("source_1_");
+        if (question.type === "noul") {
+          answers[id] = { type: "noul", noul: second ? 0.95 : 0.7 };
+        } else {
+          const criteria = question.criteria ?? ["None", "Low", "Medium", "High"];
+          const score = second ? 3 : 1;
+          answers[id] = {
+            type: "score",
+            score,
+            confidence: 0.9,
+            probabilities: Object.fromEntries(criteria.map((_, index) => [String(index), index === score ? 0.9 : 0.03])),
+            legend: Object.fromEntries(criteria.map((label, index) => [String(index), label])),
+          };
+        }
+      }
+      return jsonResponse({ model: "typesafe/jev-1.13", answers, usage: { input_tokens: 10, output_tokens: 0, cost: 0.000001 } });
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      providerBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify({ response: "ok", followUpQuestions: [], uncertainties: [] }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.000001 },
+      });
+    }
+    throw new Error(`Unhandled request: ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        feature: "ask",
+        model: "openai/gpt-5.6-luna",
+        input: { message: "Compare the evidence", mode: "general", webSearch: false },
+        sources: [
+          { id: "source-a", title: "Source A", content: "Evidence A", type: "text", metadata: { qualityLabel: "strong", qualityScore: 90 } },
+          { id: "source-b", title: "Source B", content: "Evidence B", type: "text", metadata: { qualityLabel: "strong", qualityScore: 80 } },
+        ],
+      }),
+    }));
+    if (response.status !== 200) throw new Error(`source-ranking request returned ${response.status}: ${await response.text()}`);
+    const payload = await response.json() as { sourceAssessments?: Array<{ id?: string; importance?: number }> };
+    if (payload.sourceAssessments?.map((item) => item.id).join(",") !== "source-a,source-b") throw new Error("stable source IDs were not returned");
+    if (payload.sourceAssessments?.[1]?.importance !== 3) throw new Error("semantic assessment was not returned");
+    const providerText = JSON.stringify(providerBodies);
+    if (providerText.indexOf("Source B") > providerText.indexOf("Source A")) throw new Error("semantic source order did not reach the provider prompt");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning tiers", async () => {
   const originalFetch = globalThis.fetch;
   const originalTier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier;

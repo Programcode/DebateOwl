@@ -57,7 +57,8 @@
     "inputShortenedDesc": "La solicitud era demasiado grande, así que solo se envió a la IA la parte que cabía.",
     "autoSavedFolder": "Guardado automáticamente",
     "sourceSaveFailed": "No se pudo guardar la fuente",
-    "sourceSaveFailedDesc": "No se pudo guardar “{{title}}” en tu biblioteca."
+    "sourceSaveFailedDesc": "No se pudo guardar “{{title}}” en tu biblioteca.",
+    "sourceAssessmentSaveFailed": "No se pudo guardar la clasificación de fuentes."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Lluvia de ideas",
@@ -1342,6 +1343,10 @@
     "newFolderHint": "¿Necesitas una carpeta nueva? Usa el botón \"Nueva carpeta\" arriba.",
     "createFolder": "Crear carpeta",
     "sortBy": "Ordenar por",
+    "sortSmart": "Inteligente",
+    "sortMostUsed": "Más usadas",
+    "sortImportance": "Importancia",
+    "sortStrength": "Fuerza de la evidencia",
     "sortNewest": "Fecha de adición (más reciente)",
     "sortOldest": "Fecha de adición (más antigua)",
     "sortTitle": "Nombre (A–Z)",
@@ -1915,6 +1920,12 @@
     "researchedSources": "Fuentes investigadas",
     "fallbackOnly": "solo contexto de respaldo",
     "fallbackNote": "Las fuentes débiles son solo contexto de respaldo y nunca sostienen citas.",
+    "usedInCase": "Usada en este caso",
+    "semanticAssessment": "Evaluación semántica de la fuente",
+    "importance": "Importancia {{level}}",
+    "strength": "Fuerza {{level}}",
+    "usageExplanation": "Usada en {{count}} caso(s) guardado(s). Importancia: {{importance}}. Fuerza de la evidencia: {{strength}}.",
+    "levels": { "0": "Nula", "1": "Baja", "2": "Media", "3": "Alta" },
     "types": {
       "academic": "Académica",
       "government": "Gubernamental",

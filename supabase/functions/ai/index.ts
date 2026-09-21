@@ -110,6 +110,12 @@ import {
 import { resolveModelSelection } from "../_shared/auto-model-router.ts";
 import { JEV_MODEL } from "../_shared/jev.ts";
 import {
+  identifyCaseSourceUsage,
+  rankSourcesForRequest,
+  type SourceAssessment,
+  type SourceDecisionCandidate,
+} from "../_shared/source-decisions.ts";
+import {
   ASK_RESEARCH,
   applyFactoidsVerification,
   buildDiscoveredSources,
@@ -1087,7 +1093,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return badRequest(controlError, corsHeaders);
   }
   let responseTruncated = sanitizeResult.truncated || crossfireSourcesTruncated;
-  const sources: PromptSource[] = feature === "crossfire"
+  let sources: PromptSource[] = feature === "crossfire"
     ? crossfireSources
     : Array.isArray(rawSources) ? rawSources as PromptSource[] : [];
   if (customSystemPrompt) {
@@ -1107,12 +1113,14 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     validatedSparringRequest = sparringResult.request;
   }
+  let sourceAssessments: SourceAssessment[] = [];
   const successBody = (payload: Record<string, unknown>) => {
     const meta = {
       ...(responseTruncated ? { truncated: true } : {}),
       ...(resolvedModelMeta ? { requestedModel, resolvedModel: resolvedModelMeta } : {}),
     };
-    return Object.keys(meta).length > 0 ? { ...payload, meta } : payload;
+    const enriched = sourceAssessments.length > 0 ? { ...payload, sourceAssessments } : payload;
+    return Object.keys(meta).length > 0 ? { ...enriched, meta } : enriched;
   };
 
   // Require a valid user session for all AI requests.
@@ -1251,6 +1259,42 @@ export async function handleRequest(req: Request): Promise<Response> {
     const message = error instanceof Error ? error.message : "Model routing failed";
     log(requestId, "ERROR", "Model routing failed", { error: message });
     return badRequest(message.includes("Pro") ? message : "Unable to route this request", corsHeaders, message.includes("Pro") ? 403 : 500);
+  }
+
+  const sourceDecisionCandidates = Array.isArray(rawSources)
+    ? rawSources.slice(0, MAX_PROMPT_SOURCE_COUNT).flatMap((value, index): SourceDecisionCandidate[] => {
+      if (!isRecord(value) || typeof value.title !== "string" || typeof value.content !== "string" || typeof value.type !== "string") return [];
+      const metadata = isRecord(value.metadata) ? value.metadata : {};
+      const id = typeof value.id === "string" && value.id.trim() ? value.id.trim().slice(0, 128) : undefined;
+      const origin = typeof value.origin === "string" && value.origin.trim() ? value.origin.trim().slice(0, 500) : undefined;
+      const qualityLabel = metadata.qualityLabel === "strong" || metadata.qualityLabel === "moderate" || metadata.qualityLabel === "weak"
+        ? metadata.qualityLabel
+        : undefined;
+      const qualityScore = typeof metadata.qualityScore === "number" && Number.isFinite(metadata.qualityScore)
+        ? metadata.qualityScore
+        : undefined;
+      return [{
+        key: id ?? origin ?? `source-${index}`,
+        ...(id ? { id } : {}),
+        title: value.title,
+        content: value.content,
+        ...(origin ? { origin } : {}),
+        type: value.type,
+        ...(qualityLabel ? { qualityLabel } : {}),
+        ...(qualityScore !== undefined ? { qualityScore } : {}),
+      }];
+    })
+    : [];
+  if (feature !== "sparring" && feature !== "crossfire" && sourceDecisionCandidates.length > 0) {
+    const ranked = await rankSourcesForRequest({
+      feature,
+      requestText: JSON.stringify(sanitizedInput),
+      sources: sourceDecisionCandidates,
+      signal: req.signal,
+    });
+    sourceAssessments = ranked.assessments;
+    sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
+    if (ranked.jev?.usage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, ranked.jev.usage);
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -1618,6 +1662,42 @@ export async function handleRequest(req: Request): Promise<Response> {
       const research = await deepResearch(motion, "", researchDeps, withResearchPreferences(DEEP_RESEARCH, {
         preferredSourceType: "any",
       }));
+      const discoveredSources = buildDiscoveredSources(research);
+      const discoveredCandidates: SourceDecisionCandidate[] = discoveredSources.map((source) => ({
+        key: source.url,
+        title: source.title,
+        content: source.content,
+        origin: source.url,
+        type: source.sourceType ?? "url",
+        qualityScore: source.qualityScore,
+        qualityLabel: source.qualityLabel,
+      }));
+      const discoveredRanking = await rankSourcesForRequest({
+        feature,
+        requestText: JSON.stringify(sanitizedInput),
+        sources: discoveredCandidates,
+        signal: req.signal,
+      });
+      if (discoveredRanking.jev?.usage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, discoveredRanking.jev.usage);
+      const discoveredAssessmentByKey = new Map(discoveredRanking.assessments.map((assessment) => [assessment.key, assessment]));
+      const rankedDiscoveredSources = discoveredRanking.sources.map((candidate) => {
+        const source = discoveredSources.find((item) => item.url === candidate.key)!;
+        const assessment = discoveredAssessmentByKey.get(candidate.key);
+        if (!assessment) return source;
+        const semantic: {
+          relevance: number;
+          importance: 0 | 1 | 2 | 3;
+          strength: 0 | 1 | 2 | 3;
+          evaluatedAt: string;
+          useCount: number;
+          caseUseCount: number;
+          lastUsedInCase?: boolean;
+          lastUsedAt?: string;
+        } = { relevance: assessment.relevance, importance: assessment.importance, strength: assessment.strength, evaluatedAt: assessment.evaluatedAt, useCount: 1, caseUseCount: 0 };
+        return { ...source, semantic };
+      });
+      const discoveredOrder = new Map(discoveredRanking.sources.map((source, index) => [source.key, index]));
+      research.readContent.sort((a, b) => (discoveredOrder.get(a.url) ?? Number.MAX_SAFE_INTEGER) - (discoveredOrder.get(b.url) ?? Number.MAX_SAFE_INTEGER));
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
@@ -1656,7 +1736,41 @@ export async function handleRequest(req: Request): Promise<Response> {
       enforceGenerateControls(output, side, format, length, role);
 
       // Build discovered sources from research
-      const discoveredSources = buildDiscoveredSources(research);
+      const activeAssessmentByKey = new Map(sourceAssessments.map((assessment) => [assessment.key, assessment]));
+      const usageCandidates = [
+        ...sourceDecisionCandidates.filter((source) => activeAssessmentByKey.get(source.key)?.retained).map((source) => ({
+          ...source,
+          importance: activeAssessmentByKey.get(source.key)?.importance ?? 0,
+          strength: activeAssessmentByKey.get(source.key)?.strength ?? 0,
+        })),
+        ...discoveredRanking.sources.filter((source) => discoveredAssessmentByKey.get(source.key)?.retained).map((source) => ({
+          ...source,
+          importance: discoveredAssessmentByKey.get(source.key)?.importance ?? 0,
+          strength: discoveredAssessmentByKey.get(source.key)?.strength ?? 0,
+        })),
+      ].slice(0, 10);
+      const caseUsage = await identifyCaseSourceUsage({
+        caseText: JSON.stringify(output),
+        sources: usageCandidates,
+        signal: req.signal,
+      });
+      if (caseUsage.jev?.usage) await logUsage(userId, "jev_source_usage", provider, JEV_MODEL, caseUsage.jev.usage);
+      const usedByKey = new Map(caseUsage.sourceUsage.map((usage) => [usage.key, usage]));
+      for (const assessment of sourceAssessments) {
+        (assessment as SourceAssessment & { usedInCase?: boolean }).usedInCase = usedByKey.get(assessment.key)?.judgment === "used";
+      }
+      for (const source of rankedDiscoveredSources) {
+        const semantic = "semantic" in source ? source.semantic : undefined;
+        if (semantic) {
+          const used = usedByKey.get(source.url)?.judgment === "used";
+          semantic.lastUsedInCase = used;
+          semantic.caseUseCount = used ? 1 : 0;
+          if (used) semantic.lastUsedAt = new Date().toISOString();
+        }
+      }
+      if (output && typeof output === "object" && "metadata" in output && isRecord((output as { metadata?: unknown }).metadata)) {
+        (output as { metadata: Record<string, unknown> }).metadata.sourceUsage = caseUsage.sourceUsage;
+      }
       console.log(`[GENERATE] Found ${discoveredSources.length} sources`);
 
       // Log usage and return with sources
@@ -1666,7 +1780,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         metadata.durationMs = latencyMs;
       }
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output, discoveredSources: rankedDiscoveredSources, sourceAssessments })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // BRAINSTORM: Use research to inform argument angles

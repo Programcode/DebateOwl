@@ -111,6 +111,21 @@ function SourceRow({
                 <Folder className="mr-1 h-3 w-3 shrink-0" />
                 <span className="truncate">{sourceFolderLabel}</span>
               </Badge>
+              {source.metadata?.semantic?.lastUsedInCase && (
+                <Badge variant="outline" className="shrink-0 border-primary/30 bg-primary/10 py-0 text-[10px] text-primary">
+                  {t('sourceQuality.usedInCase')}
+                </Badge>
+              )}
+              {source.metadata?.semantic && (
+                <Badge variant="outline" className="shrink-0 py-0 text-[10px]">
+                  {t('sourceQuality.importance', { level: t(`sourceQuality.levels.${source.metadata.semantic.importance}`) })}
+                </Badge>
+              )}
+              {source.metadata?.semantic && (
+                <Badge variant="outline" className="shrink-0 py-0 text-[10px]">
+                  {t('sourceQuality.strength', { level: t(`sourceQuality.levels.${source.metadata.semantic.strength}`) })}
+                </Badge>
+              )}
               <span className="truncate text-[11px] text-muted-foreground">{source.content}</span>
             </div>
           </div>
@@ -176,7 +191,7 @@ export default function LibraryPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [folderRenameValue, setFolderRenameValue] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'folder'>('newest');
+  const [sortBy, setSortBy] = useState<'smart' | 'mostUsed' | 'importance' | 'strength' | 'newest' | 'oldest' | 'title' | 'folder'>('smart');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -325,7 +340,21 @@ export default function LibraryPage() {
     })
     .slice()
     .sort((a, b) => {
+      const aSemantic = a.metadata?.semantic;
+      const bSemantic = b.metadata?.semantic;
       switch (sortBy) {
+        case 'smart':
+          return Number(Boolean(bSemantic?.lastUsedInCase)) - Number(Boolean(aSemantic?.lastUsedInCase)) ||
+            (bSemantic?.importance ?? 0) - (aSemantic?.importance ?? 0) ||
+            (bSemantic?.strength ?? 0) - (aSemantic?.strength ?? 0) ||
+            (b.metadata?.qualityScore ?? 0) - (a.metadata?.qualityScore ?? 0) ||
+            b.createdAt - a.createdAt;
+        case 'mostUsed':
+          return (bSemantic?.useCount ?? 0) - (aSemantic?.useCount ?? 0) || b.createdAt - a.createdAt;
+        case 'importance':
+          return (bSemantic?.importance ?? 0) - (aSemantic?.importance ?? 0) || b.createdAt - a.createdAt;
+        case 'strength':
+          return (bSemantic?.strength ?? 0) - (aSemantic?.strength ?? 0) || b.createdAt - a.createdAt;
         case 'oldest':
           return a.createdAt - b.createdAt;
         case 'title':
@@ -497,6 +526,10 @@ export default function LibraryPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="smart">{t('libraryPage.sortSmart', 'Smart')}</SelectItem>
+                  <SelectItem value="mostUsed">{t('libraryPage.sortMostUsed', 'Most used')}</SelectItem>
+                  <SelectItem value="importance">{t('libraryPage.sortImportance', 'Importance')}</SelectItem>
+                  <SelectItem value="strength">{t('libraryPage.sortStrength', 'Evidence strength')}</SelectItem>
                   <SelectItem value="newest">{t('libraryPage.sortNewest', 'Date added (newest)')}</SelectItem>
                   <SelectItem value="oldest">{t('libraryPage.sortOldest', 'Date added (oldest)')}</SelectItem>
                   <SelectItem value="title">{t('libraryPage.sortTitle', 'Name (A–Z)')}</SelectItem>
@@ -883,6 +916,22 @@ export default function LibraryPage() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-5 py-5">
                 <div className="grid gap-4">
+                  {selectedSource.metadata?.semantic && (
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                      <p className="font-medium">
+                        {selectedSource.metadata.semantic.lastUsedInCase
+                          ? t('sourceQuality.usedInCase')
+                          : t('sourceQuality.semanticAssessment')}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t('sourceQuality.usageExplanation', {
+                          count: selectedSource.metadata.semantic.caseUseCount,
+                          importance: t(`sourceQuality.levels.${selectedSource.metadata.semantic.importance}`),
+                          strength: t(`sourceQuality.levels.${selectedSource.metadata.semantic.strength}`),
+                        })}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid gap-2">
                     <Label htmlFor="source-detail-title">{t('libraryPage.titleLabel')}</Label>
                     <Input

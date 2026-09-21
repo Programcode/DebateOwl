@@ -66,6 +66,8 @@ Shared research, source ranking, URL validation, and prompt construction live un
 
 The import endpoint validates public HTTP URLs, resolves redirect targets, blocks private networks, and enforces response timeout, content type, and size limits. Research paths bound source count and content before prompt construction.
 
+Authenticated AI requests carry stable source IDs only for user-scoped assessment updates; prompt construction still receives bounded title, content, origin, and type fields. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
+
 ## Database boundary
 
 [`supabase/migrations/`](../supabase/migrations/) owns schema history, RLS policies, functions, triggers, subscriptions, usage accounting, sharing, sparring, announcements, and demo access.
