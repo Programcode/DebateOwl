@@ -30,8 +30,10 @@ const Navbar = () => {
                 <div className="flex h-16 items-center justify-between md:h-20">
                     <Link to="/" className="group flex items-center gap-2">
                         <img
-                            src="/favicon.png"
+                            src="/favicon-72.png"
                             alt="DebateLab logo"
+                            width={36}
+                            height={36}
                             className="h-9 w-9 rounded-lg border border-primary/20 object-cover transition-colors group-hover:border-primary/40"
                         />
                         <span className="text-xl font-bold text-foreground">DebateLab</span>
