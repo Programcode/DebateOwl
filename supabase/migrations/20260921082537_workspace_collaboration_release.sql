@@ -1,3 +1,6 @@
+ALTER TABLE public.workspace_documents
+  ADD COLUMN document_epoch bigint NOT NULL DEFAULT 0 CHECK (document_epoch >= 0);
+
 CREATE TABLE private.workspace_document_state (
   workspace_id uuid NOT NULL,
   document_id uuid PRIMARY KEY,
@@ -46,8 +49,8 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  INSERT INTO private.workspace_document_state (workspace_id, document_id)
-  VALUES (NEW.workspace_id, NEW.id)
+  INSERT INTO private.workspace_document_state (workspace_id, document_id, epoch)
+  VALUES (NEW.workspace_id, NEW.id, NEW.document_epoch)
   ON CONFLICT (document_id) DO NOTHING;
   RETURN NEW;
 END;
@@ -60,8 +63,8 @@ FOR EACH ROW EXECUTE FUNCTION private.initialize_workspace_document_state();
 REVOKE ALL ON FUNCTION private.initialize_workspace_document_state()
   FROM PUBLIC, anon, authenticated, service_role;
 
-INSERT INTO private.workspace_document_state (workspace_id, document_id)
-SELECT workspace_id, id
+INSERT INTO private.workspace_document_state (workspace_id, document_id, epoch)
+SELECT workspace_id, id, document_epoch
 FROM public.workspace_documents
 ON CONFLICT (document_id) DO NOTHING;
 

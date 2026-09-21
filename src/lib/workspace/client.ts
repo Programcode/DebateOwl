@@ -28,6 +28,7 @@ const workspaceMemberSchema = z.object({
 
 const workspaceDocumentSchema = z.object({
   assignee_id: z.string().uuid().nullable(),
+  document_epoch: z.number().int().nonnegative(),
   id: z.string().uuid(),
   position: z.number().int().nonnegative(),
   side: z.enum(["pro", "con"]),
@@ -63,7 +64,7 @@ export async function getWorkspaceBundle(workspaceId: string): Promise<Workspace
       .eq("workspace_id", workspaceId),
     supabase
       .from("workspace_documents")
-      .select("assignee_id,id,position,side,state,title")
+      .select("assignee_id,document_epoch,id,position,side,state,title")
       .eq("workspace_id", workspaceId),
   ]);
 

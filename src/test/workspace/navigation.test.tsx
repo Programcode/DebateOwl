@@ -16,7 +16,16 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("@/lib/supabase/AuthProvider", () => ({
-  useAuth: () => ({ user: { id: "11111111-1111-4111-8111-111111111111" } }),
+  useAuth: () => ({
+    session: { access_token: "signed-token" },
+    user: { id: "11111111-1111-4111-8111-111111111111" },
+  }),
+}));
+
+vi.mock("@/components/features/workspace/WorkspaceEditor", () => ({
+  WorkspaceEditor: ({ editable }: { editable: boolean }) => (
+    <div role="textbox" aria-label="Document editor" contentEditable={editable} />
+  ),
 }));
 
 function LocationProbe() {
@@ -147,6 +156,7 @@ describe("workspace navigation", () => {
               : [
                 {
                   assignee_id: "22222222-2222-4222-8222-222222222222",
+                  document_epoch: 0,
                   id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
                   position: 1,
                   side: "pro",
@@ -155,6 +165,7 @@ describe("workspace navigation", () => {
                 },
                 {
                   assignee_id: null,
+                  document_epoch: 0,
                   id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
                   position: 1,
                   side: "con",

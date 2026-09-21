@@ -4,10 +4,13 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { WorkspaceEditor } from "@/components/features/workspace/WorkspaceEditor";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 import { getWorkspaceBundle } from "@/lib/workspace/client";
 
 export default function WorkspacePage() {
   const { t } = useTranslation();
+  const { session, user } = useAuth();
   const { workspaceId = "" } = useParams();
   const [side, setSide] = useState<"pro" | "con">("pro");
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
@@ -78,13 +81,25 @@ export default function WorkspacePage() {
               <h2 className="text-xl font-semibold">{selectedDocument?.title}</h2>
               {selectedDocument?.assignee_id && <Badge variant="outline">{t("workspaces.assigned", "Assigned")}</Badge>}
             </div>
-            <div
-              role="textbox"
-              aria-label={t("workspaces.documentEditor", "Document editor")}
-              contentEditable={workspace.data.workspace.status === "active"}
-              suppressContentEditableWarning
-              className="mt-4 min-h-64 rounded-md border border-input bg-background p-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+            {selectedDocument && session && user ? (
+              <WorkspaceEditor
+                documentId={selectedDocument.id}
+                editable={workspace.data.workspace.status === "active"}
+                epoch={selectedDocument.document_epoch}
+                token={session.access_token}
+                userId={user.id}
+                userName={
+                  typeof user.user_metadata?.full_name === "string"
+                    ? user.user_metadata.full_name
+                    : user.email ?? `Member ${user.id.slice(0, 4)}`
+                }
+                workspaceId={workspace.data.workspace.id}
+              />
+            ) : (
+              <p role="alert" className="p-4 text-sm text-destructive">
+                {t("workspaces.unavailable", "Workspace unavailable.")}
+              </p>
+            )}
           </section>
         </div>
       </div>

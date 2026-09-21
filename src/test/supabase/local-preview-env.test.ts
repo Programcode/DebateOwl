@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveSupabaseConfig } from "@/lib/supabase/env";
+import { resolveCollaborationUrl } from "@/lib/workspace/collaboration-config";
 
 describe("local preview Supabase boundary", () => {
   it("fails closed when local preview configuration is incomplete", () => {
@@ -22,5 +23,14 @@ describe("local preview Supabase boundary", () => {
       env: "local",
       url: "https://trial.example.ts.net:18443/supabase",
     });
+  });
+
+  it("requires an encrypted collaboration URL in local preview mode", () => {
+    expect(() => resolveCollaborationUrl({ VITE_LOCAL_PREVIEW: "true" }))
+      .toThrow("Local collaboration configuration is incomplete");
+    expect(resolveCollaborationUrl({
+      VITE_COLLABORATION_URL: "wss://trial.example.ts.net:18443/collaboration",
+      VITE_LOCAL_PREVIEW: "true",
+    })).toBe("wss://trial.example.ts.net:18443/collaboration");
   });
 });
