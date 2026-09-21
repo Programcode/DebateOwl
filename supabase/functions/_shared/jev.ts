@@ -64,7 +64,7 @@ export interface JevDecisionResult {
   usage?: NormalizedUsage;
 }
 
-interface CallJevArgs {
+export interface CallJevArgs {
   state: JevState;
   questions: Record<string, JevQuestion>;
   signal?: AbortSignal;

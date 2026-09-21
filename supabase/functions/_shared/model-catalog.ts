@@ -28,6 +28,16 @@ export const MODEL_CATALOG = [
   { id: "meta/muse-spark-1.3", name: "Muse Spark 1.3", maxTokens: 943_718, isProOnly: true, supportsTemperature: true, supportedEfforts: ["low", "medium", "high"] },
 ] as const satisfies readonly ModelCatalogEntry[];
 
+export type ModelId = (typeof MODEL_CATALOG)[number]["id"];
+export const AUTO_FAST = "auto-fast" as const;
+export const AUTO_PRO = "auto-pro" as const;
+export const AUTO_MODEL_SELECTIONS = [
+  { id: AUTO_FAST, name: "Auto Fast", isProOnly: false },
+  { id: AUTO_PRO, name: "Auto Pro", isProOnly: true },
+] as const;
+export type AutoModelSelection = (typeof AUTO_MODEL_SELECTIONS)[number]["id"];
+export type ModelSelection = ModelId | AutoModelSelection;
+
 export const DEFAULT_MODEL = "openai/gpt-5.6-luna" as const;
 export const DEFAULT_PRO_MODEL = "anthropic/claude-sonnet-5" as const;
 
@@ -35,6 +45,14 @@ const MODEL_BY_ID = new Map<string, ModelCatalogEntry>(MODEL_CATALOG.map((entry)
 
 export function getModelCatalogEntry(model: string): ModelCatalogEntry | undefined {
   return MODEL_BY_ID.get(model);
+}
+
+export function isAutoModelSelection(value: unknown): value is AutoModelSelection {
+  return value === AUTO_FAST || value === AUTO_PRO;
+}
+
+export function isModelSelection(value: unknown): value is ModelSelection {
+  return typeof value === "string" && (isAutoModelSelection(value) || MODEL_BY_ID.has(value));
 }
 
 export function isReasoningEffort(value: unknown): value is ReasoningEffort {

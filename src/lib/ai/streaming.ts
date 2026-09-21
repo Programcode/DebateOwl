@@ -220,6 +220,7 @@ export async function streamAskChat(
     const decoder = new TextDecoder();
     let buffer = '';
     let finalOutput: AskOutput | null = null;
+    let resolvedModel = config.model;
 
     const consumeEvents = (events: ParsedSSEEvent[]): void => {
       for (const event of events) {
@@ -229,7 +230,15 @@ export async function streamAskChat(
         }
 
         if (event.event === 'final' && typeof event.data === 'object' && event.data !== null && 'output' in event.data) {
-          finalOutput = acceptFinal((event.data as { output: unknown }).output, finalOutput);
+          const finalEvent = event.data as { output: unknown; meta?: unknown };
+          const meta = finalEvent.meta && typeof finalEvent.meta === 'object' && !Array.isArray(finalEvent.meta)
+            ? finalEvent.meta as Record<string, unknown>
+            : undefined;
+          if (typeof meta?.resolvedModel === 'string') resolvedModel = meta.resolvedModel;
+          const enrichedOutput = finalEvent.output && typeof finalEvent.output === 'object' && !Array.isArray(finalEvent.output)
+            ? { ...finalEvent.output, model: resolvedModel, provider }
+            : finalEvent.output;
+          finalOutput = acceptFinal(enrichedOutput, finalOutput);
         }
 
         if (event.event === 'error') {
@@ -265,7 +274,8 @@ export async function streamAskChat(
       feature: 'ask',
       streaming: true,
       provider,
-      model: config.model,
+      model: resolvedModel,
+      ...(resolvedModel !== config.model ? { requestedModel: config.model } : {}),
       durationMs: Math.round(performance.now() - startTime),
     });
 

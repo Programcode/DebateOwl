@@ -33,14 +33,20 @@ import {
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
+  AUTO_PRO,
   DEFAULT_MODEL,
   effectiveReasoningEffort,
   getModelCatalogEntry,
+  isAutoModelSelection,
+  isModelSelection,
   isReasoningEffort,
   MAX_REQUEST_OUTPUT_TOKENS,
   type ModelCatalogEntry,
+  type ModelSelection,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
+import { resolveModelSelection } from "../_shared/auto-model-router.ts";
+import { JEV_MODEL } from "../_shared/jev.ts";
 
 type ChatRole = "user" | "assistant";
 
@@ -72,10 +78,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const MAX_INPUT_LENGTH = 50000;
 const MAX_HISTORY_ITEMS = 8;
 const OPENROUTER_PROVIDER = "openrouter" as const;
-
-function modelForRequest(model: string): ModelCatalogEntry | undefined {
-  return getModelCatalogEntry(model);
-}
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
   return Response.json(body, { status, headers: corsHeaders });
@@ -198,7 +200,7 @@ async function getConfiguredDailyLimit(userId: string, fallbackLimit: number): P
   return typeof globalLimit?.limit_value === "number" ? globalLimit.limit_value : fallbackLimit;
 }
 
-async function checkRateLimit(userId: string, model: string): Promise<RateLimitResult> {
+async function checkRateLimit(userId: string, model: ModelSelection): Promise<RateLimitResult> {
   try {
     if (await checkUserBanned(userId)) {
       return { allowed: false, reason: "Your account has been suspended. Please contact support.", code: "banned", statusCode: 403 };
@@ -213,7 +215,7 @@ async function checkRateLimit(userId: string, model: string): Promise<RateLimitR
       return { allowed: false, reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.", code: "trial_expired", limit: 0, current: 0, statusCode: 402 };
     }
 
-    if (getModelCatalogEntry(model)?.isProOnly && !sub.canAccessProModels) {
+    if ((model === AUTO_PRO || (!isAutoModelSelection(model) && getModelCatalogEntry(model)?.isProOnly)) && !sub.canAccessProModels) {
       return { allowed: false, reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.", code: "upgrade_required", statusCode: 403 };
     }
 
@@ -254,6 +256,7 @@ async function logUsage(
   latencyMs?: number,
   status = "success",
   errorCode?: string,
+  feature = "ask",
 ) {
   try {
     const cost: CostResult = usage
@@ -262,7 +265,7 @@ async function logUsage(
 
     const row: Record<string, unknown> = {
       user_id: userId,
-      feature: "ask",
+      feature,
       provider,
       model,
       input_tokens: cost.inputTokens,
@@ -324,9 +327,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
-  const model = sanitizeText(body.model, 80) || DEFAULT_MODEL;
-  const modelEntry = modelForRequest(model);
-  if (!modelEntry) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
+  const rawModel = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  if (!isModelSelection(rawModel)) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
+  const requestedModel: ModelSelection = rawModel;
   const requestedReasoningEffort = body.reasoningEffort === undefined
     ? undefined
     : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
@@ -354,7 +357,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   const userMessage = sanitizeText(input.message, MAX_INPUT_LENGTH);
   if (!userMessage.trim()) return jsonResponse({ error: "Message is required" }, 400, corsHeaders);
 
-  const rateLimit = await checkRateLimit(user.id, model);
+  const rateLimit = await checkRateLimit(user.id, requestedModel);
   if (!rateLimit.allowed) {
     return jsonResponse({
       error: rateLimit.reason,
@@ -362,6 +365,37 @@ export async function handleRequest(req: Request): Promise<Response> {
       limit: rateLimit.limit,
       current: rateLimit.current,
     }, rateLimit.statusCode || 402, corsHeaders);
+  }
+
+  const routingStartedAt = Date.now();
+  let model: string;
+  let modelEntry: ModelCatalogEntry;
+  try {
+    const resolution = await resolveModelSelection({
+      requestedModel,
+      feature: "ask",
+      input,
+      canAccessProModels: Boolean(rateLimit.canAccessProModels),
+      reasoningEffort: requestedReasoningEffort,
+      signal: req.signal,
+    });
+    model = resolution.resolvedModel;
+    modelEntry = resolution.modelEntry;
+    if (resolution.jev?.usage) {
+      await logUsage(
+        user.id,
+        OPENROUTER_PROVIDER,
+        JEV_MODEL,
+        resolution.jev.usage,
+        Date.now() - routingStartedAt,
+        "success",
+        undefined,
+        "jev_model_router",
+      );
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Model routing failed";
+    return jsonResponse({ error: message.includes("Pro") ? message : "Unable to route this request" }, message.includes("Pro") ? 403 : 500, corsHeaders);
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -495,7 +529,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         };
 
         if (!req.signal.aborted) {
-          try { emit("final", { output }); } catch { /* client disconnected after provider completion */ }
+          try { emit("final", { output, meta: { requestedModel, resolvedModel: model } }); } catch { /* client disconnected after provider completion */ }
         }
         await logUsage(user.id, OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {

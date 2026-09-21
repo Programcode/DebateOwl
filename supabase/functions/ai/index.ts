@@ -95,14 +95,20 @@ import {
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
+  AUTO_PRO,
   DEFAULT_MODEL,
   effectiveReasoningEffort,
   getModelCatalogEntry,
+  isAutoModelSelection,
+  isModelSelection,
   isReasoningEffort,
   MAX_REQUEST_OUTPUT_TOKENS,
   type ModelCatalogEntry,
+  type ModelSelection,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
+import { resolveModelSelection } from "../_shared/auto-model-router.ts";
+import { JEV_MODEL } from "../_shared/jev.ts";
 import {
   ASK_RESEARCH,
   applyFactoidsVerification,
@@ -310,7 +316,7 @@ async function getConfiguredDailyLimit(userId: string, fallbackLimit: number): P
   return fallbackLimit;
 }
 
-async function checkRateLimit(userId: string | null, model?: string): Promise<RateLimitResult> {
+async function checkRateLimit(userId: string | null, model?: ModelSelection): Promise<RateLimitResult> {
   if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
 
   try {
@@ -339,7 +345,7 @@ async function checkRateLimit(userId: string | null, model?: string): Promise<Ra
     }
 
     // Check model access
-    if (model && getModelCatalogEntry(model)?.isProOnly && !sub.canAccessProModels) {
+    if (model && (model === AUTO_PRO || (!isAutoModelSelection(model) && getModelCatalogEntry(model)?.isProOnly)) && !sub.canAccessProModels) {
       return {
         allowed: false,
         reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.",
@@ -1021,14 +1027,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
   const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
   const rawInput = body.input;
-  const model = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
-  let modelEntry: ModelCatalogEntry;
-  try {
-    modelEntry = modelForRequest(model);
-  } catch (err) {
-    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model });
-    return badRequest(err instanceof Error ? err.message : "Unsupported model or provider combination", corsHeaders);
+  const rawModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  if (!isModelSelection(rawModel)) {
+    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model: rawModel });
+    return badRequest("Unsupported model or provider combination", corsHeaders);
   }
+  const requestedModel: ModelSelection = rawModel;
+  let model = DEFAULT_MODEL as string;
+  let modelEntry: ModelCatalogEntry = modelForRequest(DEFAULT_MODEL);
+  let resolvedModelMeta: string | undefined;
   const provider: Provider = OPENROUTER_PROVIDER;
   const requestedReasoningEffort = body.reasoningEffort === undefined
     ? undefined
@@ -1043,7 +1050,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   const rawSources = body.sources;
 
   // Log incoming request
-  log(requestId, "INFO", "Request received", { feature, provider, model, sourcesCount: Array.isArray(rawSources) ? rawSources.length : 0 });
+  log(requestId, "INFO", "Request received", { feature, provider, model: requestedModel, sourcesCount: Array.isArray(rawSources) ? rawSources.length : 0 });
 
   if (!feature) return badRequest("Missing feature", corsHeaders);
   if (!isRecord(rawInput)) return badRequest("Missing input", corsHeaders);
@@ -1100,9 +1107,13 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     validatedSparringRequest = sparringResult.request;
   }
-  const successBody = (payload: Record<string, unknown>) => responseTruncated
-    ? { ...payload, meta: { truncated: true } }
-    : payload;
+  const successBody = (payload: Record<string, unknown>) => {
+    const meta = {
+      ...(responseTruncated ? { truncated: true } : {}),
+      ...(resolvedModelMeta ? { requestedModel, resolvedModel: resolvedModelMeta } : {}),
+    };
+    return Object.keys(meta).length > 0 ? { ...payload, meta } : payload;
+  };
 
   // Require a valid user session for all AI requests.
   // The frontend already enforces auth; this protects the endpoint even when
@@ -1186,7 +1197,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Check rate limits (includes subscription gating and model access)
   let rateLimit: RateLimitResult;
   try {
-    rateLimit = await checkRateLimit(userId, model);
+    rateLimit = await checkRateLimit(userId, requestedModel);
   } catch (error) {
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
@@ -1203,7 +1214,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
       sparringScoreClaimed = false;
     }
-    await logUsage(userId, feature, provider, model, undefined, undefined, "rate_limited", rateLimit.code);
+    await logUsage(userId, feature, provider, requestedModel, undefined, undefined, "rate_limited", rateLimit.code);
     return new Response(JSON.stringify({
       error: rateLimit.reason,
       code: rateLimit.code,
@@ -1213,6 +1224,33 @@ export async function handleRequest(req: Request): Promise<Response> {
       status: rateLimit.statusCode || 429,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
+  }
+
+  const routingStartedAt = Date.now();
+  try {
+    const resolution = await resolveModelSelection({
+      requestedModel,
+      feature,
+      input: sanitizedInput,
+      canAccessProModels: Boolean(rateLimit.canAccessProModels),
+      reasoningEffort: requestedReasoningEffort,
+      sourceCount: Array.isArray(rawSources) ? rawSources.length : 0,
+      signal: req.signal,
+    });
+    model = resolution.resolvedModel;
+    modelEntry = resolution.modelEntry;
+    resolvedModelMeta = model;
+    if (resolution.jev?.usage) {
+      await logUsage(userId, "jev_model_router", provider, JEV_MODEL, resolution.jev.usage, Date.now() - routingStartedAt);
+    }
+  } catch (error) {
+    if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
+      await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
+      sparringScoreClaimed = false;
+    }
+    const message = error instanceof Error ? error.message : "Model routing failed";
+    log(requestId, "ERROR", "Model routing failed", { error: message });
+    return badRequest(message.includes("Pro") ? message : "Unable to route this request", corsHeaders, message.includes("Pro") ? 403 : 500);
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));

@@ -64,6 +64,8 @@
     "factoidsTitle": "Datos"
   },
   "modelSelector": {
+    "autoFastDescription": "Enrutamiento rápido, normalmente con GLM",
+    "autoProDescription": "Elige entre los modelos más capaces",
     "reasoning": "Razonamiento",
     "reasoningLow": "Bajo",
     "reasoningMedium": "Medio",

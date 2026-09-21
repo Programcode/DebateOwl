@@ -64,6 +64,8 @@
     "factoidsTitle": "Factoids"
   },
   "modelSelector": {
+    "autoFastDescription": "Fast routing, usually GLM",
+    "autoProDescription": "Routes among the strongest models",
     "reasoning": "Reasoning",
     "reasoningLow": "Low",
     "reasoningMedium": "Medium",

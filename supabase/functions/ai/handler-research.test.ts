@@ -389,6 +389,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
   const originalFetch = globalThis.fetch;
   const originalTier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier;
   const openRouterBodies: Array<Record<string, unknown>> = [];
+  const decisionBodies: Array<Record<string, unknown>> = [];
   const testState = globalThis as typeof globalThis & { __testTier?: string };
   const requestForModel = (model: string, tier: "trial" | "pro", effort = "high") => {
     testState.__testTier = tier;
@@ -399,6 +400,25 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const url = new URL(input instanceof Request ? input.url : String(input));
     const supabaseResponse = supabaseTestResponse(url);
     if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      decisionBodies.push(body);
+      const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
+      const labels = Object.keys(questions.model.criteria);
+      const choice = labels.includes("z-ai/glm-5.3-flash") ? "z-ai/glm-5.3-flash" : "openai/gpt-5.6-sol";
+      return jsonResponse({
+        model: "typesafe/jev-1.13",
+        answers: {
+          model: {
+            type: "choice",
+            choice,
+            confidence: 0.97,
+            probabilities: Object.fromEntries(labels.map((label) => [label, label === choice ? 0.97 : 0.01])),
+          },
+        },
+        usage: { input_tokens: 20, output_tokens: 0, cost: 0.00000084 },
+      });
+    }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       openRouterBodies.push(body);
@@ -427,7 +447,25 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (response.status !== 200) throw new Error(`Pro medium ${model} returned ${response.status}: ${await response.text()}`);
     }
 
-    if (openRouterBodies.length !== MODEL_CATALOG.length + 6) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
+    const manualGlmBasic = await requestForModel("z-ai/glm-5.3-flash", "trial");
+    if (manualGlmBasic.status !== 403) throw new Error("manual GLM unexpectedly bypassed the Basic gate");
+    const autoFastBasic = await requestForModel("auto-fast", "trial");
+    if (autoFastBasic.status !== 200) throw new Error(`Basic Auto Fast returned ${autoFastBasic.status}: ${await autoFastBasic.text()}`);
+    const autoFastPayload = await autoFastBasic.json();
+    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "z-ai/glm-5.3-flash") {
+      throw new Error(`Auto Fast metadata was wrong: ${JSON.stringify(autoFastPayload.meta)}`);
+    }
+    const autoProBasic = await requestForModel("auto-pro", "trial");
+    if (autoProBasic.status !== 403) throw new Error("Basic Auto Pro was accepted");
+    const autoPro = await requestForModel("auto-pro", "pro");
+    if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
+    const autoProPayload = await autoPro.json();
+    if (autoProPayload.meta?.resolvedModel !== "openai/gpt-5.6-sol") {
+      throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
+    }
+
+    if (openRouterBodies.length !== MODEL_CATALOG.length + 8) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
+    if (decisionBodies.length !== 2) throw new Error(`unexpected Decisions call count: ${decisionBodies.length}`);
     for (let index = 0; index < MODEL_CATALOG.length; index += 1) {
       const entry = MODEL_CATALOG[index];
       const body = openRouterBodies[index];
@@ -448,6 +486,8 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
+    if (openRouterBodies.at(-2)?.model !== "z-ai/glm-5.3-flash") throw new Error("Auto Fast did not call GLM");
+    if (openRouterBodies.at(-1)?.model !== "openai/gpt-5.6-sol") throw new Error("Auto Pro did not call Sol");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;

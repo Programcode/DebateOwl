@@ -64,6 +64,8 @@
     "factoidsTitle": "Tények"
   },
   "modelSelector": {
+    "autoFastDescription": "Gyors útválasztás, általában GLM-mel",
+    "autoProDescription": "A legerősebb modellek közül választ",
     "reasoning": "Érvelés",
     "reasoningLow": "Alacsony",
     "reasoningMedium": "Közepes",

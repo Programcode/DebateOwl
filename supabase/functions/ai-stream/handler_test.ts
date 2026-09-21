@@ -96,6 +96,26 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
       });
     }
 
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      return new Response(JSON.stringify({
+        model: "typesafe/jev-1.13",
+        answers: {
+          model: {
+            type: "choice",
+            choice: "z-ai/glm-5.3-flash",
+            confidence: 0.96,
+            probabilities: {
+              "z-ai/glm-5.3-flash": 0.96,
+              "openai/gpt-5.6-luna": 0.02,
+              "google/gemini-3.8-flash": 0.01,
+              "deepseek/deepseek-v4-flash-0731": 0.01,
+            },
+          },
+        },
+        usage: { input_tokens: 15, output_tokens: 0, cost: 0.00000063 },
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
 
@@ -109,7 +129,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
         },
         body: JSON.stringify({
           feature: "ask",
-          model: "openai/gpt-5.6-luna",
+          model: "auto-fast",
           input: {
             message: "¿Cómo respondo a este argumento?",
             history: [],
@@ -132,9 +152,11 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     assertIncludes(body, 'event: delta\ndata: {"text":" Adam"}');
     assertIncludes(body, "event: final");
     assertIncludes(body, '"response":"Szia Adam"');
+    assertIncludes(body, '"requestedModel":"auto-fast"');
+    assertIncludes(body, '"resolvedModel":"z-ai/glm-5.3-flash"');
 
     const messages = providerRequest?.messages as Array<{ role: string; content: string }> | undefined;
-    if (providerRequest?.model !== "openai/gpt-5.6-luna") {
+    if (providerRequest?.model !== "z-ai/glm-5.3-flash") {
       throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
     }
     const streamOptions = providerRequest?.stream_options as { include_usage?: unknown } | undefined;

@@ -517,11 +517,18 @@ async function callSupabaseAI<T = unknown>(
       });
     }
 
+    const responseMeta = data.meta && typeof data.meta === 'object' && !Array.isArray(data.meta)
+      ? data.meta as Record<string, unknown>
+      : undefined;
+    const resolvedModel = typeof responseMeta?.resolvedModel === 'string'
+      ? responseMeta.resolvedModel
+      : config.model;
     const response = options.transformResponse ? options.transformResponse(data) : data as T;
     captureProductEvent('ai_request_succeeded', {
       feature,
       provider,
-      model: config.model,
+      model: resolvedModel,
+      ...(resolvedModel !== config.model ? { requestedModel: config.model } : {}),
       durationMs: Math.round(performance.now() - startTime),
     });
     return response;

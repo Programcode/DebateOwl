@@ -91,6 +91,8 @@ Checkout and portal functions create Stripe sessions after authenticated ownersh
 
 All model requests use the single OpenRouter backend route and `OPENROUTER_API_KEY`. The shared ten-model catalog, Luna Basic default, Pro-only entries, and request controls live in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts). OpenRouter usage remains raw in the audit row, and the reported charge is unknown when the provider does not return a complete cost.
 
+`Auto Fast` and `Auto Pro` are virtual selections, not provider model IDs. The Edge Functions resolve them through TypeSafe Jev on OpenRouter before calling the concrete writing model. Auto Fast is available to Basic accounts and normally resolves to GLM 5.3 Flash; manual GLM selection keeps its Pro restriction. Auto Pro remains Pro-only. Provider calls, usage rows, and response metadata record the concrete resolved model, while response metadata also retains the requested automatic selection. A Jev router call uses the same OpenRouter key and does not consume a second daily quota unit.
+
 Historical provider pricing evidence is retained under [`docs/pricing-snapshots/`](pricing-snapshots/). Those snapshots support legacy calculator records and are evidence, not runtime configuration for the OpenRouter route.
 
 ## Observability
