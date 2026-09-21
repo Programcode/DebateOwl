@@ -10,6 +10,10 @@ const ai = read('supabase/functions/ai/index.ts');
 const stream = read('supabase/functions/ai-stream/index.ts');
 const modelCatalog = read('supabase/functions/_shared/model-catalog.ts');
 const importer = read('supabase/functions/import-source/index.ts');
+// Entitlement and rate-limit logic is shared by ai/ and ai-stream/ since the
+// two copies drifted. Behaviour is covered by _shared/entitlements.test.ts;
+// these assertions only pin the fail-closed shape at its single source.
+const entitlements = read('supabase/functions/_shared/entitlements.ts');
 const share = read('supabase/functions/share/index.ts');
 const promo = read('supabase/functions/redeem-promo/index.ts');
 const demoLogin = read('supabase/functions/demo-code-login/index.ts');
@@ -19,18 +23,17 @@ describe('security hardening regressions', () => {
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.user_settings');
     expect(migration).toContain('GRANT UPDATE (language, theme, feature_configs, custom_system_prompt, updated_at)');
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.ai_requests');
-    expect(ai).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
-    expect(stream).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
+    expect(entitlements).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
+    for (const source of [ai, stream]) expect(source).toContain('from "../_shared/entitlements.ts"');
   });
 
   it('uses one server-only atomic quota reservation from every billable entrypoint', () => {
     expect(migration).toContain('ON CONFLICT (user_id, usage_date) DO UPDATE');
     expect(migration).toContain("auth.role() <> 'service_role'");
-    for (const source of [ai, stream, importer]) expect(source).toContain('consume_daily_quota');
-    expect(ai).toContain('Unable to verify your quota');
-    expect(stream).toContain('Unable to verify your quota');
-    expect(ai).not.toContain('return { allowed: true }; // Fail open');
-    expect(stream).not.toContain('return { allowed: true };\n  } catch');
+    for (const source of [entitlements, importer]) expect(source).toContain('consume_daily_quota');
+    expect(entitlements).toContain('Unable to verify your quota');
+    expect(entitlements).not.toContain('return { allowed: true }; // Fail open');
+    expect(entitlements).not.toContain('return { allowed: true };\n  } catch');
   });
 
   it('uses code-scoped sharing and disallows anonymous share creation', () => {
@@ -72,6 +75,8 @@ describe('security hardening regressions', () => {
     expect(stream).toContain('function modelForRequest');
     expect(ai).toContain('const provider: Provider = OPENROUTER_PROVIDER');
     expect(stream).toContain('const OPENROUTER_PROVIDER = "openrouter"');
+    expect(entitlements).not.toContain('api.anthropic.com');
+    expect(entitlements).not.toContain('api.openai.com');
     expect(ai).toContain('https://openrouter.ai/api/v1/chat/completions');
     expect(stream).toContain('https://openrouter.ai/api/v1/chat/completions');
     expect(ai).not.toContain('api.anthropic.com');

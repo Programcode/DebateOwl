@@ -93,7 +93,7 @@ describe('settings-store branch coverage', () => {
     expect(partialState.featureConfigs.generate).not.toHaveProperty('baseUrl');
   });
 
-  it('preserves the local mock fixture during local rehydration', () => {
+  it('normalizes a stored local mock fixture back to the real provider on rehydration', () => {
     const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
     const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
     if (!afterRehydrate) throw new Error('Expected a rehydration callback');
@@ -106,11 +106,13 @@ describe('settings-store branch coverage', () => {
 
     afterRehydrate(partialState);
 
+    // The in-app mock provider is gone; e2e specs stub the network instead, so
+    // a leftover 'mock'/'local' pair must not survive into a live config.
     expect(partialState.featureConfigs.generate).toMatchObject({
-      provider: 'mock',
-      model: 'local',
+      provider: 'openrouter',
       reasoningEffort: 'low',
     });
+    expect(partialState.featureConfigs.generate.model).not.toBe('local');
   });
 
   it('durably migrates legacy local credentials to the default OpenRouter config', async () => {

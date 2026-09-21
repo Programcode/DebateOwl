@@ -169,12 +169,4 @@ describe('sparring AI client', () => {
       .rejects.toMatchObject({ name: 'AIResponseError' });
   });
 
-  it('uses the local provider adapter while preserving the same response contract', async () => {
-    const mockConfig: ProviderConfig = { ...CONFIG, provider: 'mock' };
-    const response = await generateSparringTurn(RESPOND_INPUT, mockConfig);
-
-    expect(response.action).toBe('respond');
-    expect(response.speech.content).toContain(SESSION.motion);
-    expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
-  });
 });

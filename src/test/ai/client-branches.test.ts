@@ -879,19 +879,4 @@ describe('AI client branch coverage', () => {
     expect(result.mindmap?.[0].category).toBe('Uncategorized');
     expect(result.buckets?.[0].name).toBe('Unnamed Bucket');
   });
-
-  it('returns local mock-provider outputs for all public feature helpers', async () => {
-    const mockConfig = { ...config, provider: 'mock' as const };
-
-    const { result: attack } = await attackCase({ caseText: 'Case text' } as any, mockConfig);
-    const { result: ideas } = await brainstorm({ motion: 'Motion', side: 'both', outputMode: 'topfive' } as any, mockConfig);
-    const facts = await factoids({ claim: 'Claim' } as any, mockConfig);
-    const chat = await askChat('hello', [], 'general', mockConfig);
-
-    expect(attack.overallAssessment.score).toBeTypeOf('number');
-    expect(ideas.nextSteps).toBeInstanceOf(Array);
-    expect(facts.result.factoids).toBeInstanceOf(Array);
-    expect(chat.response).toContain('hello');
-    expect(invokeMock).not.toHaveBeenCalled();
-  }, 15000);
 });

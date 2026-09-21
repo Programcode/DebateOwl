@@ -114,7 +114,7 @@ export async function streamAskChat(
   options: AskStreamOptions,
   handlers: AskStreamHandlers
 ): Promise<AskOutput> {
-  const provider = config.provider === 'mock' ? 'mock' : 'openrouter';
+  const provider = 'openrouter';
   const requestId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const startTime = performance.now();
   captureProductEvent('ai_request_started', {

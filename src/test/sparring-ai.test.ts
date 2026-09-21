@@ -6,7 +6,6 @@ import {
   SparringTurnResponseSchema,
   type SparringSpeech,
 } from '@/lib/ai/schemas/sparring';
-import { mockGenerateSparringTurn, mockJudgeSparringSession } from '@/lib/ai/providers/mock-provider';
 
 const session = {
   sessionId: '00000000-0000-4000-8000-000000000001',
@@ -69,37 +68,5 @@ describe('Sparring AI contract', () => {
     expect(SparringScorecardSchema.safeParse({ ...scorecard, categories: [category('Logic'), category('Logic'), category('Delivery'), category('Strategy')] }).success).toBe(false);
     expect(SparringScorecardSchema.safeParse({ ...scorecard, userScore: 79 }).success).toBe(false);
     expect(SparringScorecardSchema.safeParse({ ...scorecard, winner: 'ai' }).success).toBe(false);
-  });
-
-  it('produces deterministic, schema-valid mock turn and score responses', async () => {
-    const respondInput = {
-      ...session,
-      action: 'respond' as const,
-      currentTurn: { id: 'pf-2', label: 'Con constructive', side: 'con' as const, kind: 'constructive' as const, timeLimitSeconds: 240 },
-      speeches: [{
-        id: 'speech-1', turnId: 'pf-1', speaker: 'user' as const, side: 'pro' as const, role: 'Pro constructive',
-        content: 'The policy improves accountability through transparent reporting.', createdAt: 1, timeLimitSeconds: 240, timeUsedSeconds: 30,
-      }],
-    };
-    const firstTurn = await mockGenerateSparringTurn(respondInput);
-    const secondTurn = await mockGenerateSparringTurn(respondInput);
-    expect(firstTurn).toEqual(secondTurn);
-    expect(SparringTurnResponseSchema.safeParse(firstTurn).success).toBe(true);
-
-    const scoreInput = { ...session, action: 'score' as const, speeches: respondInput.speeches };
-    const score = await mockJudgeSparringSession(scoreInput);
-    expect(SparringScoreResponseSchema.safeParse(score).success).toBe(true);
-    expect(score.scorecard.categories.map((category) => category.name)).toEqual(['Logic', 'Evidence', 'Delivery', 'Strategy']);
-  });
-
-  it('makes the mock opponent perform the assigned school role', async () => {
-    const response = await mockGenerateSparringTurn({
-      ...session,
-      format: 'standard',
-      action: 'respond',
-      currentTurn: { id: 'standard-8', label: 'Con Conclusor', side: 'con', kind: 'conclusor', timeLimitSeconds: 180 },
-    });
-    expect(response.speech.strategy).toContain('Add no new argument');
-    expect(response.speech.content).toContain('As Con Conclusor');
   });
 });

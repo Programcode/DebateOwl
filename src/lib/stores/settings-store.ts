@@ -81,11 +81,9 @@ function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): str
 function normalizeFeatureConfig(
   value: unknown,
   fallback: ProviderConfig,
-  preserveLocalMock = false,
   allowProModels = true,
 ): ProviderConfig {
   const candidate = asRecord(value);
-  const isLocalMock = preserveLocalMock && candidate?.provider === 'mock' && candidate?.model === 'local';
   const model = normalizeModelId(candidate?.model, fallback.model);
   const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
     ? candidate.temperature
@@ -95,8 +93,8 @@ function normalizeFeatureConfig(
     : fallback.reasoningEffort ?? 'low';
 
   return {
-    provider: isLocalMock ? 'mock' : DEFAULT_PROVIDER,
-    model: isLocalMock ? 'local' : (!allowProModels && getModelCatalogEntry(model)?.isProOnly ? DEFAULT_MODEL : model),
+    provider: DEFAULT_PROVIDER,
+    model: !allowProModels && getModelCatalogEntry(model)?.isProOnly ? DEFAULT_MODEL : model,
     temperature,
     reasoningEffort,
   };
@@ -104,7 +102,6 @@ function normalizeFeatureConfig(
 
 function normalizeFeatureConfigs(
   configs: unknown,
-  preserveLocalMock = false,
   allowProModels = true,
   fallbackModel: string = DEFAULT_MODEL,
 ): Record<FeatureTab, ProviderConfig> {
@@ -113,7 +110,7 @@ function normalizeFeatureConfigs(
   if (!saved) return defaults;
 
   return Object.fromEntries((Object.keys(defaults) as FeatureTab[]).map((feature) => {
-    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], preserveLocalMock, allowProModels)];
+    return [feature, normalizeFeatureConfig(saved[feature], defaults[feature], allowProModels)];
   })) as Record<FeatureTab, ProviderConfig>;
 }
 
@@ -285,7 +282,6 @@ export const useSettingsStore = create<SettingsState>()(
         if (allowProModels === null) return;
         const mergedConfigs = normalizeFeatureConfigs(
           data.feature_configs,
-          false,
           allowProModels,
           allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL,
         );
@@ -325,7 +321,7 @@ export const useSettingsStore = create<SettingsState>()(
       migrate: (persistedState: unknown, version) => {
         const saved = asRecord(persistedState);
         if (!saved) return persistedState;
-        const featureConfigs = normalizeFeatureConfigs(saved.featureConfigs, true);
+        const featureConfigs = normalizeFeatureConfigs(saved.featureConfigs);
         if (version < 2) {
           for (const config of Object.values(featureConfigs)) {
             if (config.model === 'z-ai/glm-5.3-flash') config.model = DEFAULT_MODEL;
@@ -338,7 +334,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs, true);
+        state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs);
         if (!state.language) state.language = 'en';
         if (!state.outputLanguage) state.outputLanguage = 'en';
         if (!state.theme) state.theme = 'system';
