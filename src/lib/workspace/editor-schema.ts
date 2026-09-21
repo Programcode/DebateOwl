@@ -76,6 +76,10 @@ export function createWorkspaceEditor(
                 compositionText = "";
                 return false;
               },
+              compositionupdate: (_view, rawEvent) => {
+                compositionText = (rawEvent as CompositionEvent).data || compositionText;
+                return false;
+              },
               beforeinput: (_view, rawEvent) => {
                 const event = rawEvent as InputEvent;
                 if (!options.isSuggesting?.() || !composing || event.inputType !== "insertCompositionText") return false;

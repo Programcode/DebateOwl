@@ -141,6 +141,12 @@ describe("workspace review model", () => {
     editor.view.dom.dispatchEvent(new CompositionEvent("compositionend", { data: " vég" }));
     await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(3));
     expect(onSuggestion.mock.calls[2][0].content).toEqual([{ type: "text", text: " vég" }]);
+
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: " ősz" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(4));
+    expect(onSuggestion.mock.calls[3][0].content).toEqual([{ type: "text", text: " ősz" }]);
   });
 
   it("accepts one independent hunk and keeps teammate text outside local undo", async () => {
