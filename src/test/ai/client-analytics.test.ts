@@ -131,6 +131,26 @@ describe('non-streaming AI request analytics', () => {
     }
   });
 
+  it('reports the concrete model selected by an automatic route', async () => {
+    mocks.invoke.mockResolvedValueOnce({
+      data: {
+        output,
+        meta: { requestedModel: 'auto-fast', resolvedModel: 'z-ai/glm-5.3-flash' },
+      },
+      error: null,
+    });
+
+    await generateCase(input, { ...config, model: 'auto-fast' });
+
+    expect(mocks.captureProductEvent).toHaveBeenNthCalledWith(2, 'ai_request_succeeded', {
+      feature: 'generate',
+      provider: 'openrouter',
+      model: 'z-ai/glm-5.3-flash',
+      requestedModel: 'auto-fast',
+      durationMs: expect.any(Number),
+    });
+  });
+
   it('emits a classified failure and captures provider exceptions without user content', async () => {
     mocks.invoke.mockResolvedValueOnce({ data: { error: 'OpenAI API unavailable' }, error: null });
 

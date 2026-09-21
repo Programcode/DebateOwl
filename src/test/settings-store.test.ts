@@ -230,6 +230,74 @@ describe("settings-store", () => {
     });
   });
 
+  it("keeps Auto Fast for trial users", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-fast",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate).toMatchObject({
+      model: "auto-fast",
+      reasoningEffort: "high",
+    });
+  });
+
+  it("moves an inaccessible Auto Pro selection to Auto Fast", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-pro",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("auto-fast");
+  });
+
+  it("keeps Auto Pro for active Pro users", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-pro",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("auto-pro");
+  });
+
   it("uses Sonnet when an active Pro user has no saved feature configs", async () => {
     setMockTableResponse("subscriptions", {
       select: [{ status: "trialing", current_period_end: "2099-01-01T00:00:00.000Z" }],

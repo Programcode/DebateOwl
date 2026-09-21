@@ -58,6 +58,8 @@ Client-side environment selection is a developer convenience, not authorization.
 
 [`supabase/functions/ai/index.ts`](../supabase/functions/ai/index.ts) serves non-streaming structured tools and practice modes. [`supabase/functions/ai-stream/index.ts`](../supabase/functions/ai-stream/index.ts) serves Ask over server-sent events.
 
+For a validated Crossfire next turn, the server returns the reply first with a short-lived signed sidecar token. The client then requests a Jev classification of only the newest completed question-answer exchange. The token is atomically claimed through its own one-use counter, separate from the product's daily AI quota. The optional directness, concession, and follow-up signal is attached by turn ID to the answer; a missing, slow, replayed, forged, or failed sidecar never delays or invalidates the main reply. Draft version 1 remains compatible because turn signals are optional.
+
 A configured mock provider bypasses Supabase for local and test behavior. It is not authenticated backend evidence.
 
 ## Research and source import
@@ -65,6 +67,8 @@ A configured mock provider bypasses Supabase for local and test behavior. It is 
 Shared research, source ranking, URL validation, and prompt construction live under [`supabase/functions/_shared/`](../supabase/functions/_shared/).
 
 The import endpoint validates public HTTP URLs, resolves redirect targets, blocks private networks, and enforces response timeout, content type, and size limits. Research paths bound source count and content before prompt construction.
+
+Authenticated AI requests carry stable source IDs only for user-scoped assessment updates; prompt construction still receives bounded title, content, origin, and type fields. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
 
 ## Database boundary
 
@@ -90,6 +94,8 @@ Supabase Auth owns user sessions. Protected routes provide a client navigation b
 Checkout and portal functions create Stripe sessions after authenticated ownership and redirect validation. The webhook updates subscription state and records event processing for idempotency. AI handlers record provider usage and calculated cost using shared pricing logic.
 
 All model requests use the single OpenRouter backend route and `OPENROUTER_API_KEY`. The shared ten-model catalog, Luna Basic default, Pro-only entries, and request controls live in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts). OpenRouter usage remains raw in the audit row, and the reported charge is unknown when the provider does not return a complete cost.
+
+`Auto Fast` and `Auto Pro` are virtual selections, not provider model IDs. The Edge Functions resolve them through TypeSafe Jev on OpenRouter before calling the concrete writing model. Auto Fast is available to Basic accounts and normally resolves to GLM 5.3 Flash; manual GLM selection keeps its Pro restriction. Auto Pro remains Pro-only. Provider calls, usage rows, and response metadata record the concrete resolved model, while response metadata also retains the requested automatic selection. A Jev router call uses the same OpenRouter key and does not consume a second daily quota unit.
 
 Historical provider pricing evidence is retained under [`docs/pricing-snapshots/`](pricing-snapshots/). Those snapshots support legacy calculator records and are evidence, not runtime configuration for the OpenRouter route.
 

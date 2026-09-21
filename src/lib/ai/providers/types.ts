@@ -3,8 +3,19 @@
 import { MODEL_CATALOG } from '../../../../supabase/functions/_shared/model-catalog';
 import type { ReasoningEffort } from '../../../../supabase/functions/_shared/model-catalog';
 
-export { DEFAULT_MODEL, DEFAULT_PRO_MODEL, isReasoningEffort } from '../../../../supabase/functions/_shared/model-catalog';
-export type { ReasoningEffort } from '../../../../supabase/functions/_shared/model-catalog';
+export {
+  AUTO_MODEL_SELECTIONS,
+  DEFAULT_MODEL,
+  DEFAULT_PRO_MODEL,
+  isAutoModelSelection,
+  isModelSelection,
+  isReasoningEffort,
+} from '../../../../supabase/functions/_shared/model-catalog';
+export type {
+  AutoModelSelection,
+  ModelSelection,
+  ReasoningEffort,
+} from '../../../../supabase/functions/_shared/model-catalog';
 
 export interface AIProvider {
   id: string;

@@ -24,7 +24,11 @@ import {
 } from './schemas/sparring';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
-import type { SourceProvenance } from '../stores/session-store';
+import {
+  type SourceAssessmentUpdate,
+  type SourceProvenance,
+  type SourceSemanticMetadata,
+} from '../stores/session-store';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
@@ -35,10 +39,14 @@ import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
   CrossfireReplySchema,
+  CrossfireSignalInputSchema,
+  CrossfireTurnSignalSchema,
   collectDebriefTurnIds,
   type CrossfireAIInput,
   type CrossfireDebrief,
   type CrossfireReply,
+  type CrossfireSignalInput,
+  type CrossfireTurnSignal,
 } from '@/lib/crossfire/schemas';
 
 // Request timeout in milliseconds (200 seconds)
@@ -76,10 +84,12 @@ function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSigna
 }
 
 interface AIRequestSource {
+  id?: string;
   title: string;
   content: string;
   origin?: string;
   type: string;
+  metadata?: SourceProvenance;
 }
 
 function boundCrossfireRequestSources(sources: AIRequestSource[]): AIRequestSource[] {
@@ -107,6 +117,30 @@ export interface DiscoveredSource extends Omit<SourceProvenance, 'url'> {
 export interface ResultWithSources<T> {
   result: T;
   discoveredSources: DiscoveredSource[];
+}
+
+function parseSourceSemanticMetadata(value: unknown): SourceSemanticMetadata | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const semantic = value as Record<string, unknown>;
+  const { relevance, importance, strength, evaluatedAt, useCount, caseUseCount } = semantic;
+  if (typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
+    typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
+    typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
+    typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) ||
+    typeof useCount !== 'number' || !Number.isInteger(useCount) || useCount < 0 ||
+    typeof caseUseCount !== 'number' || !Number.isInteger(caseUseCount) || caseUseCount < 0 ||
+    (semantic.lastUsedAt !== undefined && typeof semantic.lastUsedAt !== 'string') ||
+    (semantic.lastUsedInCase !== undefined && typeof semantic.lastUsedInCase !== 'boolean')) return undefined;
+  return {
+    relevance,
+    importance: importance as 0 | 1 | 2 | 3,
+    strength: strength as 0 | 1 | 2 | 3,
+    evaluatedAt,
+    useCount,
+    caseUseCount,
+    ...(typeof semantic.lastUsedAt === 'string' ? { lastUsedAt: semantic.lastUsedAt } : {}),
+    ...(typeof semantic.lastUsedInCase === 'boolean' ? { lastUsedInCase: semantic.lastUsedInCase } : {}),
+  };
 }
 
 /**
@@ -147,7 +181,34 @@ function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
       source.query = candidate.query.trim();
     }
 
+    const semantic = parseSourceSemanticMetadata(candidate.semantic);
+    if (semantic) source.semantic = semantic;
+
     return [source];
+  });
+}
+
+function parseSourceAssessments(value: unknown): SourceAssessmentUpdate[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 10).flatMap((item): SourceAssessmentUpdate[] => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    const candidate = item as Record<string, unknown>;
+    const key = typeof candidate.key === 'string' ? candidate.key.trim() : '';
+    const { relevance, importance, strength, evaluatedAt } = candidate;
+    if (!key || typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
+      typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
+      typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
+      typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) || typeof candidate.retained !== 'boolean') return [];
+    return [{
+      key,
+      ...(typeof candidate.id === 'string' && candidate.id.trim() ? { id: candidate.id.trim() } : {}),
+      relevance,
+      importance: importance as 0 | 1 | 2 | 3,
+      strength: strength as 0 | 1 | 2 | 3,
+      evaluatedAt,
+      retained: candidate.retained,
+      ...(typeof candidate.usedInCase === 'boolean' ? { usedInCase: candidate.usedInCase } : {}),
+    }];
   });
 }
 
@@ -375,7 +436,14 @@ async function callSupabaseAI<T = unknown>(
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
-      .map((s) => ({ title: s.title, content: s.content, origin: s.origin, type: s.type }));
+      .map((s) => ({
+        ...(s.id ? { id: s.id } : {}),
+        title: s.title,
+        content: s.content,
+        ...(s.origin ? { origin: s.origin } : {}),
+        type: s.type,
+        ...(s.metadata ? { metadata: s.metadata } : {}),
+      }));
   const activeSources = feature === 'crossfire'
     ? boundCrossfireRequestSources(selectedSources)
     : selectedSources;
@@ -510,6 +578,19 @@ async function callSupabaseAI<T = unknown>(
       throw new AIResponseError('AI response missing output field', { requestId, details: { data } });
     }
 
+    const sourceAssessments = parseSourceAssessments(data.sourceAssessments);
+    if (sourceAssessments.length > 0) {
+      try {
+        await session.applySourceAssessments(sourceAssessments);
+      } catch {
+        toast({
+          title: i18n.t('aiClient.sourceSaveFailed'),
+          description: i18n.t('aiClient.sourceAssessmentSaveFailed'),
+          variant: 'destructive',
+        });
+      }
+    }
+
     if (data.meta && typeof data.meta === 'object' && (data.meta as { truncated?: unknown }).truncated === true) {
       toast({
         title: i18n.t('aiClient.inputShortened'),
@@ -517,11 +598,18 @@ async function callSupabaseAI<T = unknown>(
       });
     }
 
+    const responseMeta = data.meta && typeof data.meta === 'object' && !Array.isArray(data.meta)
+      ? data.meta as Record<string, unknown>
+      : undefined;
+    const resolvedModel = typeof responseMeta?.resolvedModel === 'string'
+      ? responseMeta.resolvedModel
+      : config.model;
     const response = options.transformResponse ? options.transformResponse(data) : data as T;
     captureProductEvent('ai_request_succeeded', {
       feature,
       provider,
-      model: config.model,
+      model: resolvedModel,
+      ...(resolvedModel !== config.model ? { requestedModel: config.model } : {}),
       durationMs: Math.round(performance.now() - startTime),
     });
     return response;
@@ -653,7 +741,7 @@ export async function crossfire(
   rawInput: CrossfireAIInput,
   config: ProviderConfig,
   options: Pick<AIRequestOptions, 'signal'> = {},
-): Promise<CrossfireReply | CrossfireDebrief> {
+): Promise<(CrossfireReply & { signalToken?: string }) | CrossfireDebrief> {
   const input = CrossfireAIInputSchema.safeParse(rawInput);
   if (!input.success) {
     throw new AIResponseError('Crossfire request did not match the expected schema.', {
@@ -671,7 +759,7 @@ export async function crossfire(
       timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
       signal: options.signal,
       transformResponse: (rawData) => {
-        const data = rawData as { output: unknown };
+        const data = rawData as { output: unknown; signalToken?: unknown };
         if (input.data.operation === 'next-turn') {
           const reply = CrossfireReplySchema.safeParse(data.output);
           if (!reply.success || reply.data.type !== input.data.expectedReply) {
@@ -681,7 +769,11 @@ export async function crossfire(
                 : { issues: reply.error.issues },
             });
           }
-          return reply.data;
+          if (data.signalToken === undefined) return reply.data;
+          if (typeof data.signalToken !== 'string' || !data.signalToken.trim() || data.signalToken.length > 128) {
+            throw new AIResponseError('Crossfire signal token was invalid.');
+          }
+          return { ...reply.data, signalToken: data.signalToken };
         }
 
         const debrief = CrossfireDebriefSchema.safeParse(data.output);
@@ -692,6 +784,41 @@ export async function crossfire(
         }
         validateCrossfireTurnReferences(input.data, debrief.data);
         return debrief.data;
+      },
+    },
+  );
+}
+
+export async function crossfireSignal(
+  rawInput: CrossfireSignalInput,
+  config: ProviderConfig,
+  options: Pick<AIRequestOptions, 'signal'> = {},
+): Promise<CrossfireTurnSignal | undefined> {
+  const input = CrossfireSignalInputSchema.safeParse(rawInput);
+  if (!input.success) {
+    throw new AIResponseError('Crossfire signal request did not match the expected schema.', { details: { issues: input.error.issues } });
+  }
+  return await callSupabaseAI<CrossfireTurnSignal | undefined>(
+    'crossfire',
+    withOutputLanguage({ operation: 'signal', ...input.data }),
+    config,
+    {
+      includeActiveSources: false,
+      includeCustomSystemPrompt: false,
+      timeoutMs: 5_000,
+      signal: options.signal,
+      transformResponse: (rawData) => {
+        const output = (rawData as { output?: unknown }).output;
+        if (!output || typeof output !== 'object' || Array.isArray(output) || !('signal' in output)) return undefined;
+        const parsed = CrossfireTurnSignalSchema.safeParse((output as { signal: unknown }).signal);
+        if (!parsed.success) throw new AIResponseError('Crossfire signal did not match the expected schema.', { details: { issues: parsed.error.issues } });
+        const turns = [
+          ...input.data.transcript,
+          { id: `T${input.data.transcript.length + 1}`, kind: input.data.reply.type },
+        ];
+        const target = turns.find((turn) => turn.id === parsed.data.answerTurnId);
+        if (!target || target.kind !== 'answer') throw new AIResponseError('Crossfire signal referenced an unknown or non-answer turn.');
+        return parsed.data;
       },
     },
   );
@@ -1038,10 +1165,13 @@ function validateGenerateOutput(output: unknown): GenerateOutput {
 type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
 async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
-  if (sources.length === 0) return;
+  const retainedSources = sources.filter((source) => !source.semantic ||
+    (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
+    source.semantic.lastUsedInCase === true);
+  if (retainedSources.length === 0) return;
 
   const session = useSessionStore.getState();
-  for (const source of sources) {
+  for (const source of retainedSources) {
     try {
       await session.addSource({
         title: source.title,
@@ -1056,6 +1186,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
           ...(source.qualityScore !== undefined ? { qualityScore: source.qualityScore } : {}),
           ...(source.qualityLabel !== undefined ? { qualityLabel: source.qualityLabel } : {}),
           ...(source.query !== undefined ? { query: source.query } : {}),
+          ...(source.semantic !== undefined ? { semantic: source.semantic } : {}),
           capturedVia,
         },
       });
@@ -1067,7 +1198,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
       });
     }
   }
-  console.log(`[AI Client] Saved ${sources.length} sources to library`);
+  console.log(`[AI Client] Saved ${retainedSources.length} sources to library`);
 }
 
 function expectedContentionCount(length: GenerateInput['length']): number {

@@ -66,6 +66,24 @@ describe('streamAskChat (integration with mocked fetch)', () => {
     expect(result.response).toBe('Hello world');
   });
 
+  it('accepts automatic route metadata from the final event', async () => {
+    const chunks = [
+      'event: final\ndata: {"output":{"response":"Routed","followUpQuestions":[],"uncertainties":[]},"meta":{"requestedModel":"auto-fast","resolvedModel":"z-ai/glm-5.3-flash"}}\n\n',
+    ];
+    mockFetchOnce(streamFromChunks(chunks));
+
+    const result = await streamAskChat(
+      'hi',
+      [],
+      'general',
+      { ...config, model: 'auto-fast' },
+      options,
+      { onDelta: () => undefined },
+    );
+
+    expect(result.model).toBe('z-ai/glm-5.3-flash');
+  });
+
   it('sends the configured reasoning effort in the SSE request', async () => {
     const fetchMock = mockFetchOnce(streamFromChunks([
       'event: final\ndata: {"output":{"response":"answer","followUpQuestions":[],"uncertainties":[]}}\n\n',

@@ -73,4 +73,25 @@ describe('SourceQualityList', () => {
     expect(screen.getByText('Kormányzati')).toBeInTheDocument();
     expect(screen.getByText('Erős')).toBeInTheDocument();
   });
+
+  it('shows case use before semantic importance and strength', () => {
+    render(<SourceQualityList sources={[{
+      title: 'Case evidence',
+      url: 'https://example.com/evidence',
+      qualityLabel: 'strong',
+      semantic: {
+        relevance: 0.94,
+        importance: 3,
+        strength: 2,
+        evaluatedAt: '2026-09-21T00:00:00.000Z',
+        useCount: 2,
+        caseUseCount: 1,
+        lastUsedInCase: true,
+      },
+    }]} />);
+
+    expect(screen.getByText('Used in this case')).toBeInTheDocument();
+    expect(screen.getByText('High importance')).toBeInTheDocument();
+    expect(screen.getByText('Medium strength')).toBeInTheDocument();
+  });
 });

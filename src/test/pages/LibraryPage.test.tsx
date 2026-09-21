@@ -110,6 +110,19 @@ describe('LibraryPage', () => {
     expect(screen.getByText('Source B')).toBeDefined();
   });
 
+  it('defaults to Smart ordering and puts case-used evidence first', () => {
+    mockStore.sourceLibrary = [
+      { id: 'new', title: 'New source', content: 'A', type: 'text', isActive: true, createdAt: 2 },
+      { id: 'used', title: 'Used source', content: 'B', type: 'text', isActive: true, createdAt: 1, metadata: { semantic: { relevance: 0.8, importance: 2, strength: 3, evaluatedAt: '2026-09-21T00:00:00.000Z', useCount: 4, caseUseCount: 1, lastUsedInCase: true } } },
+    ];
+    render(<LibraryPage />);
+
+    expect(screen.getByRole('combobox', { name: 'Sort by' })).toHaveTextContent('Smart');
+    const labels = screen.getAllByText(/source$/i).map((element) => element.textContent);
+    expect(labels.indexOf('Used source')).toBeLessThan(labels.indexOf('New source'));
+    expect(screen.getByText('Used in this case')).toBeInTheDocument();
+  });
+
   it('shows grounding status', () => {
     mockStore.sourceLibrary = [
       { id: '1', title: 'Active Source', content: 'C', type: 'text', isActive: true, createdAt: Date.now() },

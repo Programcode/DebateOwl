@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview",
+    "smoke:jev": "node scripts/smoke-jev.mjs",
     "test": "vitest run",
     "test:collaboration": "vitest run --config services/collaboration/vitest.config.ts",
     "test:watch": "vitest",

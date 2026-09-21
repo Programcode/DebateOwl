@@ -13,12 +13,14 @@ const {
   const getSessionMock = vi.fn();
   const invokeMock = vi.fn();
   const addSourceMock = vi.fn();
+  const applySourceAssessmentsMock = vi.fn();
   const sessionState = {
     sourceLibrary: [
       { title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
       { title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
     ],
     addSource: addSourceMock,
+    applySourceAssessments: applySourceAssessmentsMock,
   };
   const settingsState = {
     customSystemPrompt: 'custom-system-prompt',
@@ -115,6 +117,10 @@ const validGenerateOutput: GenerateOutput = {
 describe('AI client branch coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionState.sourceLibrary = [
+      { title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
+      { title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+    ];
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'token-123' } },
     });
@@ -264,6 +270,33 @@ describe('AI client branch coverage', () => {
       isActive: true,
       metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com/' }),
     });
+  });
+
+  it('sends stable source IDs and applies returned semantic assessments', async () => {
+    sessionState.sourceLibrary[0] = { ...sessionState.sourceLibrary[0], id: 'source-active', metadata: { qualityLabel: 'strong' } } as any;
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: validGenerateOutput,
+        sourceAssessments: [{ key: 'source-active', id: 'source-active', relevance: 0.9, importance: 3, strength: 2, evaluatedAt: '2026-09-21T00:00:00.000Z', retained: true, usedInCase: true }],
+      },
+      error: null,
+    });
+
+    await generateCase(validGenerateInput, config);
+    expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({ body: expect.objectContaining({ sources: [expect.objectContaining({ id: 'source-active' })] }) }));
+    expect(sessionState.applySourceAssessments).toHaveBeenCalledWith([expect.objectContaining({ id: 'source-active', usedInCase: true })]);
+  });
+
+  it('does not autosave a semantically irrelevant discovered source', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: {
+        output: validGenerateOutput,
+        discoveredSources: [{ title: 'Irrelevant', url: 'https://example.com/irrelevant', qualityLabel: 'strong', semantic: { relevance: 0.2, importance: 0, strength: 2, evaluatedAt: '2026-09-21T00:00:00.000Z', useCount: 1, caseUseCount: 0, lastUsedInCase: false } }],
+      },
+      error: null,
+    });
+    await generateCase(validGenerateInput, config);
+    expect(addSourceMock).not.toHaveBeenCalled();
   });
 
   it('rejects malformed nested direct-format generate output before saving sources', async () => {

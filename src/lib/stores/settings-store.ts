@@ -2,12 +2,16 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
-import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '../ai/providers/types';
-import type { ProviderConfig } from '../ai/providers/types';
 import {
+  AUTO_FAST,
+  AUTO_PRO,
+  DEFAULT_MODEL,
+  DEFAULT_PRO_MODEL,
   getModelCatalogEntry,
+  isAutoModelSelection,
   isReasoningEffort,
 } from '../../../supabase/functions/_shared/model-catalog';
+import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
@@ -75,6 +79,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): string {
   if (typeof value !== 'string' || !value.trim()) return fallback;
   const model = value.trim();
+  if (isAutoModelSelection(model)) return model;
   if (getModelCatalogEntry(model)) return model;
   return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
 }
@@ -97,7 +102,13 @@ function normalizeFeatureConfig(
 
   return {
     provider: isLocalMock ? 'mock' : DEFAULT_PROVIDER,
-    model: isLocalMock ? 'local' : (!allowProModels && getModelCatalogEntry(model)?.isProOnly ? DEFAULT_MODEL : model),
+    model: isLocalMock
+      ? 'local'
+      : !allowProModels && model === AUTO_PRO
+        ? AUTO_FAST
+        : !allowProModels && getModelCatalogEntry(model)?.isProOnly
+          ? DEFAULT_MODEL
+          : model,
     temperature,
     reasoningEffort,
   };
