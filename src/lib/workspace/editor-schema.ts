@@ -77,7 +77,7 @@ export function createWorkspaceEditor(
                 return false;
               },
               compositionupdate: (_view, rawEvent) => {
-                compositionText = (rawEvent as CompositionEvent).data || compositionText;
+                compositionText = (rawEvent as CompositionEvent).data ?? compositionText;
                 return false;
               },
               beforeinput: (_view, rawEvent) => {

@@ -147,6 +147,13 @@ describe("workspace review model", () => {
     editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
     await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(4));
     expect(onSuggestion.mock.calls[3][0].content).toEqual([{ type: "text", text: " ősz" }]);
+
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: " cancelled" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: "" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSuggestion).toHaveBeenCalledTimes(4);
   });
 
   it("accepts one independent hunk and keeps teammate text outside local undo", async () => {
