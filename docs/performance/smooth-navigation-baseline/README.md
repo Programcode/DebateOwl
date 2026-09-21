@@ -12,6 +12,12 @@ requests, so they prove rendering and browser timing only.
 
 ## Reproduce
 
+The harness `scripts/measure-navigation-performance.mjs` was a single-use
+baseline tool and was removed once this evidence was captured. Recover it with
+`git show 9127589:scripts/measure-navigation-performance.mjs` if the matrix ever
+needs re-running. The commands below are the ones that produced `run-1.json`
+and `run-2.json`.
+
 ```text
 export PATH=/home/codex/.nvm/versions/node/v22.23.2/bin:$PATH
 node --version                         # v22.23.2
