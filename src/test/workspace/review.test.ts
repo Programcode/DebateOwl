@@ -127,8 +127,8 @@ describe("workspace review model", () => {
     editor.view.dispatch(editor.state.tr.insertText(" pasted", 6).setMeta("uiEvent", "paste"));
     await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(1));
     editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
-    editor.view.dispatch(editor.state.tr.insertText(" t", 6).setMeta("composition", 1));
-    editor.view.dispatch(editor.state.tr.insertText(" tűrő", 6).setMeta("composition", 1));
+    editor.view.dom.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: " t", inputType: "insertCompositionText" }));
+    editor.view.dom.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: " tűrő", inputType: "insertCompositionText" }));
     expect(onSuggestion).toHaveBeenCalledTimes(1);
     editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
 

@@ -30,13 +30,9 @@ export function createWorkspaceEditor(
       name: "workspaceSuggestionInterceptor",
       addProseMirrorPlugins() {
         let composing = false;
-        let compositionHunk: ProposalHunkInput | undefined;
-        let compositionTimer: ReturnType<typeof setTimeout> | undefined;
-        const finishComposition = () => {
-          if (compositionHunk) options.onSuggestion?.(compositionHunk);
-          compositionHunk = undefined;
-          compositionTimer = undefined;
-        };
+        let compositionFrom = 0;
+        let compositionTo = 0;
+        let compositionText = "";
         return [new Plugin({
           filterTransaction: (transaction, state) => {
             if (!options.isSuggesting?.() || !transaction.docChanged || transaction.getMeta(ySyncPluginKey)) {
@@ -53,10 +49,7 @@ export function createWorkspaceEditor(
               : kind === "delete"
                 ? { from, id: crypto.randomUUID(), kind, to }
                 : { content: transaction.doc.slice(from, replacementTo).content.toJSON(), from, id: crypto.randomUUID(), kind, to };
-            if (composing || transaction.getMeta("composition") !== undefined || compositionTimer) {
-              compositionHunk = hunk;
-              return false;
-            }
+            if (composing || transaction.getMeta("composition") !== undefined) return false;
             queueMicrotask(() => options.onSuggestion?.(hunk));
             return false;
           },
@@ -64,16 +57,31 @@ export function createWorkspaceEditor(
             handleDOMEvents: {
               compositionend: () => {
                 composing = false;
-                if (compositionTimer) clearTimeout(compositionTimer);
-                compositionTimer = setTimeout(finishComposition, 0);
+                const text = compositionText.normalize("NFC");
+                const hunk: ProposalHunkInput | undefined = text
+                  ? compositionFrom === compositionTo
+                    ? { at: compositionFrom, content: [{ type: "text", text }], id: crypto.randomUUID(), kind: "insert" }
+                    : { content: [{ type: "text", text }], from: compositionFrom, id: crypto.randomUUID(), kind: "format", to: compositionTo }
+                  : compositionFrom === compositionTo
+                    ? undefined
+                    : { from: compositionFrom, id: crypto.randomUUID(), kind: "delete", to: compositionTo };
+                compositionText = "";
+                if (hunk) queueMicrotask(() => options.onSuggestion?.(hunk));
                 return false;
               },
-              compositionstart: () => {
+              compositionstart: (view) => {
                 composing = true;
-                compositionHunk = undefined;
-                if (compositionTimer) clearTimeout(compositionTimer);
-                compositionTimer = undefined;
+                compositionFrom = view.state.selection.from;
+                compositionTo = view.state.selection.to;
+                compositionText = "";
                 return false;
+              },
+              beforeinput: (_view, rawEvent) => {
+                const event = rawEvent as InputEvent;
+                if (!options.isSuggesting?.() || !composing || event.inputType !== "insertCompositionText") return false;
+                compositionText = event.data ?? compositionText;
+                event.preventDefault();
+                return true;
               },
             },
           },
