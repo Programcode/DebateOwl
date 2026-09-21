@@ -168,6 +168,11 @@ describe("Vercel frontend deployment configuration", () => {
     },
   );
 
+  it.each(["index.html", "sw.js"])("prevents stale Nginx caching for /%s", (file) => {
+    const nginxConfig = readProjectFile("nginx.conf");
+    expect(nginxConfig).toMatch(new RegExp(`location = \\/${file.replace('.', '\\.') } \\{[\\s\\S]*?Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"`));
+  });
+
   it("caches hashed Vite assets immutably", () => {
     const config = loadConfig();
     expect(headersFor(config, "/assets/(.*)")["Cache-Control"]).toBe(

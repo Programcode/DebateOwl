@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'debate-lab-v2';
+const CACHE_VERSION = 'debate-lab-v3';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -47,14 +47,14 @@ self.addEventListener('activate', (event) => {
 });
 
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cached = await caches.match(request, { ignoreVary: true });
   if (cached) return cached;
 
   try {
     const response = await fetch(request);
     if (response.ok) {
       const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, response.clone());
+      await cache.put(request, response.clone());
     }
     return response;
   } catch {
@@ -80,6 +80,21 @@ async function navigationFallback(request) {
       });
   }
 }
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'CACHE_VISITED_ASSETS' || !Array.isArray(event.data.urls)) return;
+
+  const urls = event.data.urls.slice(0, 200).filter((value) => {
+    if (typeof value !== 'string') return false;
+    try {
+      const url = new URL(value, self.location.origin);
+      return url.origin === self.location.origin && url.pathname.startsWith('/assets/');
+    } catch {
+      return false;
+    }
+  });
+  event.waitUntil(Promise.allSettled(urls.map((url) => cacheFirst(new Request(url)))));
+});
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
