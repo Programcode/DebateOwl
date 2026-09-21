@@ -17,6 +17,7 @@ export type AuthorizedWorkspaceContext = {
   documentText: string;
   documentTitle: string;
   motion: string;
+  requestId: string;
   side: "pro" | "con";
   sourceIds: string[];
   threadId: string | null;
@@ -31,7 +32,7 @@ function record(value: unknown): Record<string, unknown> | null {
 
 export function parseWorkspaceContext(value: unknown): AuthorizedWorkspaceContext | null {
   const input = record(value);
-  if (!input || !UUID.test(String(input.workspaceId)) || !UUID.test(String(input.documentId))) return null;
+  if (!input || !UUID.test(String(input.workspaceId)) || !UUID.test(String(input.documentId)) || !UUID.test(String(input.requestId))) return null;
   const sourceIds = Array.isArray(input.sourceIds) ? input.sourceIds.filter((id): id is string => typeof id === "string" && UUID.test(id)).slice(0, 20) : [];
   const documentIds = Array.isArray(input.documentIds) ? input.documentIds.filter((id): id is string => typeof id === "string" && UUID.test(id)).slice(0, 12) : [];
   const threadId = input.threadId === null || input.threadId === undefined ? null : String(input.threadId);
@@ -43,6 +44,7 @@ export function parseWorkspaceContext(value: unknown): AuthorizedWorkspaceContex
     documentText: String(input.documentText ?? "").slice(0, 24000),
     documentTitle: String(input.documentTitle ?? "").slice(0, 300),
     motion: String(input.motion ?? "").slice(0, 1200),
+    requestId: String(input.requestId),
     side: input.side,
     sourceIds,
     threadId,

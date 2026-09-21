@@ -1200,10 +1200,25 @@ export async function handleRequest(req: Request): Promise<Response> {
     validatedSparringRequest = sparringResult.request;
   }
   let sourceAssessments: SourceAssessment[] = [];
-  let workspaceAccess: { meta: Record<string, unknown>; workspaceId: string } | null = null;
+  let workspaceAccess: { meta: Record<string, unknown>; requestId: string; threadId: string | null; workspaceId: string } | null = null;
+  let workspaceThreadSettled = false;
   const successBody = async (payload: Record<string, unknown>) => {
     if (workspaceAccess && !await isWorkspaceMember(workspaceDatabase, userId, workspaceAccess.workspaceId)) {
       throw new Error("Workspace access revoked");
+    }
+    if (workspaceAccess?.threadId) {
+      const output = payload.output && typeof payload.output === "object" ? payload.output as Record<string, unknown> : null;
+      if (typeof output?.response !== "string") throw new Error("Workspace thread response unavailable");
+      const settled = await supabase.rpc("complete_workspace_thread_generation", {
+        p_content: output.response,
+        p_request_id: workspaceAccess.requestId,
+        p_status: "complete",
+        p_thread_id: workspaceAccess.threadId,
+        p_user_id: userId,
+        p_workspace_id: workspaceAccess.workspaceId,
+      });
+      if (settled.error) throw new Error("Workspace thread response unavailable");
+      workspaceThreadSettled = true;
     }
     const meta = {
       ...(responseTruncated ? { truncated: true } : {}),
@@ -1265,8 +1280,13 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (body.workspaceContext !== undefined) {
     try {
       const loaded = await loadAuthorizedWorkspaceContext(workspaceDatabase, userId, body.workspaceContext);
-      workspaceAccess = { meta: loaded.meta, workspaceId: loaded.input.workspaceId };
-      sources = boundPromptSources([...sources, {
+      workspaceAccess = {
+        meta: loaded.meta,
+        requestId: loaded.input.requestId,
+        threadId: loaded.input.threadId,
+        workspaceId: loaded.input.workspaceId,
+      };
+      sources = boundPromptSources([{
         title: "Authorized workspace context",
         content: loaded.context,
         type: "workspace",
@@ -1491,7 +1511,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       customPrompt: feature === "sparring" ? null : customSystemPrompt ?? null,
       // Sparring is transcript-only. Do not let unrelated saved evidence alter
       // an opponent response or a judge's scorecard.
-      sources: feature === "sparring" ? [] : promptSources,
+      sources: feature === "sparring" && !workspaceAccess ? [] : promptSources,
       researchContext: hasResearch(research)
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
@@ -1561,7 +1581,9 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = buildSystemPrompt({
         feature: "crossfire",
         dateContext: getCurrentDateContext(),
-        sources: crossfireSources,
+        sources: workspaceAccess
+          ? sources.map((source) => ({ ...source, content: source.content.slice(0, 8_000) }))
+          : crossfireSources,
       });
       if (systemPrompt.length + userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
         throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
@@ -1993,6 +2015,18 @@ export async function handleRequest(req: Request): Promise<Response> {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);
+
+    if (workspaceAccess?.threadId && !workspaceThreadSettled) {
+      await supabase.rpc("complete_workspace_thread_generation", {
+        p_content: "Generation interrupted",
+        p_request_id: workspaceAccess.requestId,
+        p_status: "interrupted",
+        p_thread_id: workspaceAccess.threadId,
+        p_user_id: userId,
+        p_workspace_id: workspaceAccess.workspaceId,
+      });
+      workspaceThreadSettled = true;
+    }
 
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);

@@ -14,7 +14,7 @@ import {
   listWorkspacePractice,
   saveWorkspaceArtifact,
   saveWorkspaceSource,
-  saveWorkspaceThreadMessage,
+  startWorkspaceThreadGeneration,
   type WorkspaceSource,
 } from "@/lib/workspace/practice-client";
 import { workspaceRouteState, type WorkspaceTool, type WorkspaceToolContext } from "@/lib/workspace/tool-context";
@@ -169,31 +169,17 @@ export function WorkspacePracticePanel({
     if (!selectedThread || !content) return;
     const requestId = crypto.randomUUID();
     const assistantMessageId = crypto.randomUUID();
+    const userMessageId = crypto.randomUUID();
     setMessage("");
     void run(async () => {
-      await saveWorkspaceThreadMessage({ content, requestId, role: "user", status: "complete", threadId: selectedThread, workspaceId });
-      await saveWorkspaceThreadMessage({ content: "Thinking…", messageId: assistantMessageId, requestId, role: "assistant", status: "progress", threadId: selectedThread, workspaceId });
-      try {
-        const result = await askChat(
-          content,
-          threadMessages.filter(({ status }) => status === "complete").map(({ role, content: item }) => ({ role, content: item })),
-          "general",
-          askConfig,
-          { workspaceContext: context(requestId) },
-        );
-        await saveWorkspaceThreadMessage({ content: result.response, messageId: assistantMessageId, requestId, role: "assistant", status: "complete", threadId: selectedThread, workspaceId });
-      } catch (cause) {
-        await saveWorkspaceThreadMessage({
-          content: cause instanceof Error ? cause.message : "Interrupted",
-          messageId: assistantMessageId,
-          requestId,
-          role: "assistant",
-          status: "interrupted",
-          threadId: selectedThread,
-          workspaceId,
-        });
-        throw cause;
-      }
+      await startWorkspaceThreadGeneration({ assistantMessageId, content, requestId, threadId: selectedThread, userMessageId, workspaceId });
+      await askChat(
+        content,
+        threadMessages.filter(({ status }) => status === "complete").map(({ role, content: item }) => ({ role, content: item })),
+        "general",
+        askConfig,
+        { workspaceContext: context(requestId) },
+      );
     });
   };
   const suggestRewrite = () => {

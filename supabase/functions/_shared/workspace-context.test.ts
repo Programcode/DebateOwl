@@ -5,6 +5,7 @@ const workspaceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const documentId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const sourceId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const userId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const requestId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 class Query {
   constructor(private readonly value: () => { data: unknown; error: null }) {}
@@ -55,6 +56,7 @@ function input() {
     documentText: "FORGED CLIENT TEXT",
     documentTitle: "R1",
     motion: "Motion",
+    requestId,
     side: "pro",
     sourceIds: [sourceId],
     threadId: null,

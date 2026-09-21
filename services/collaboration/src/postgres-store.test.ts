@@ -81,6 +81,7 @@ describe("Postgres collaboration writer locks", () => {
   });
 
   it("appends and snapshots only while author membership and epoch are current", async () => {
+    const { snapshot } = proposalFixture();
     const client = new FakeClient();
     const pool = { connect: vi.fn().mockResolvedValue(client) };
     const store = new PostgresDurableUpdateStore(pool);
@@ -104,7 +105,7 @@ describe("Postgres collaboration writer locks", () => {
       documentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       epoch: 3,
       mutationId: "a".repeat(43),
-      snapshot: new Uint8Array([3, 4]),
+      snapshot,
       syncType: 2,
     });
 
@@ -114,6 +115,8 @@ describe("Postgres collaboration writer locks", () => {
       .toBeLessThan(appendQueries.findIndex((text) => text.includes("SELECT state.workspace_id, state.durable_sequence")));
     expect(client.query.mock.calls.some(([text]) => String(text).startsWith("INSERT INTO private.workspace_document_updates"))).toBe(true);
     expect(client.query.mock.calls.some(([text]) => String(text).startsWith("UPDATE private.workspace_document_state"))).toBe(true);
+    const projectionWrite = client.query.mock.calls.find(([text]) => String(text).startsWith("UPDATE private.workspace_document_state"));
+    expect(projectionWrite?.[1]?.[3]).toBe("Hello world");
     expect(client.query).toHaveBeenCalledWith("COMMIT");
     await release();
   });
@@ -145,6 +148,7 @@ describe("Postgres collaboration writer locks", () => {
   });
 
   it("loads the current snapshot and durable acknowledgement from the writer session", async () => {
+    const { snapshot } = proposalFixture();
     const client = new FakeClient();
     const pool = { connect: vi.fn().mockResolvedValue(client) };
     const store = new PostgresDurableUpdateStore(pool);
@@ -156,7 +160,7 @@ describe("Postgres collaboration writer locks", () => {
     client.query.mockReset();
     client.query.mockImplementation(async (text: string) => {
       if (text.includes("SELECT snapshot")) {
-        return { rows: [{ snapshot: new Uint8Array([9, 8]) }] };
+        return { rows: [{ snapshot, text_projection: "" }] };
       }
       return {
         rows: [{
@@ -171,7 +175,8 @@ describe("Postgres collaboration writer locks", () => {
     await expect(store.loadSnapshot(
       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       3,
-    )).resolves.toEqual(new Uint8Array([9, 8]));
+    )).resolves.toEqual(snapshot);
+    expect(client.query.mock.calls.some(([text]) => String(text).includes("SET text_projection"))).toBe(true);
     await expect(store.find(
       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       3,

@@ -434,7 +434,7 @@ async function callSupabaseAI<T = unknown>(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const selectedSources = options.includeActiveSources === false || feature === 'sparring'
+  const selectedSources = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
@@ -502,7 +502,7 @@ async function callSupabaseAI<T = unknown>(
       model: config.model,
       temperature: config.temperature,
       reasoningEffort: config.reasoningEffort ?? 'low',
-      customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
+      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
       sources: activeSources,
       workspaceContext: options.workspaceContext,
     };

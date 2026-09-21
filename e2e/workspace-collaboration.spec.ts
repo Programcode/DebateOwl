@@ -406,6 +406,24 @@ test("workspace evidence, team AI review, and practice survive a teammate reload
     await owner.page.getByRole("button", { name: "Create", exact: true }).click();
     await owner.page.getByLabel("Team message").fill("Compare both sides");
     await owner.page.getByRole("button", { name: "Send", exact: true }).click();
+    let pendingMessage: { request_id: string; thread_id: string } | null = null;
+    await expect.poll(async () => {
+      const result = await admin.from("workspace_thread_messages")
+        .select("request_id,thread_id").eq("workspace_id", workspaceId).eq("role", "assistant").eq("status", "progress").maybeSingle();
+      if (result.error) throw result.error;
+      pendingMessage = result.data;
+      return Boolean(pendingMessage);
+    }).toBe(true);
+    if (!pendingMessage) throw new Error("Thread progress was not stored");
+    const completed = await admin.rpc("complete_workspace_thread_generation", {
+      p_content: "Phones should be limited with a clear enforcement mechanism.",
+      p_request_id: pendingMessage.request_id,
+      p_status: "complete",
+      p_thread_id: pendingMessage.thread_id,
+      p_user_id: ids[0],
+      p_workspace_id: workspaceId,
+    });
+    if (completed.error) throw completed.error;
     await expect(owner.page.getByText(/clear enforcement mechanism/)).toBeVisible();
 
     await openPanel(owner.page, "Practice");

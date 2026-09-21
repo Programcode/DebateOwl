@@ -216,44 +216,112 @@ DECLARE
   v_thread_updated_at timestamptz;
 BEGIN
   IF auth.uid() IS NULL OR p_message_id IS NULL OR p_request_id IS NULL
-    OR p_role NOT IN ('user', 'assistant') OR p_status NOT IN ('progress', 'interrupted', 'complete')
+    OR p_role <> 'user' OR p_status <> 'complete'
     OR length(p_content) NOT BETWEEN 1 AND 50000 THEN RAISE EXCEPTION 'invalid message'; END IF;
   PERFORM private.require_active_workspace_member(p_workspace_id);
   SELECT active_request_id, updated_at INTO v_active_request_id, v_thread_updated_at FROM public.workspace_threads
   WHERE id = p_thread_id AND workspace_id = p_workspace_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
-  IF p_role = 'user' THEN
-    IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id
-      AND v_thread_updated_at > now() - interval '5 minutes' THEN
-      RAISE EXCEPTION 'thread generation in progress';
-    END IF;
-    IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id THEN
-      UPDATE public.workspace_thread_messages SET status = 'interrupted', updated_at = now()
-      WHERE thread_id = p_thread_id AND request_id = v_active_request_id AND status = 'progress';
-    END IF;
-    UPDATE public.workspace_threads SET active_request_id = p_request_id, updated_at = now() WHERE id = p_thread_id;
-  ELSIF v_active_request_id IS DISTINCT FROM p_request_id THEN
-    RAISE EXCEPTION 'workspace unavailable';
+  IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id
+    AND v_thread_updated_at > now() - interval '5 minutes' THEN
+    RAISE EXCEPTION 'thread generation in progress';
   END IF;
+  IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id THEN
+    UPDATE public.workspace_thread_messages SET status = 'interrupted', updated_at = now()
+    WHERE thread_id = p_thread_id AND request_id = v_active_request_id AND status = 'progress';
+  END IF;
+  UPDATE public.workspace_threads SET active_request_id = p_request_id, updated_at = now() WHERE id = p_thread_id;
   SELECT * INTO v_existing FROM public.workspace_thread_messages
   WHERE thread_id = p_thread_id AND request_id = p_request_id AND role = p_role;
   IF FOUND THEN
     UPDATE public.workspace_thread_messages SET content = p_content, status = p_status, updated_at = now()
     WHERE id = v_existing.id AND author_id = auth.uid();
     IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
-    IF p_role = 'assistant' AND p_status <> 'progress' THEN
-      UPDATE public.workspace_threads SET active_request_id = NULL, updated_at = now() WHERE id = p_thread_id;
-    END IF;
     RETURN v_existing.id;
   END IF;
   INSERT INTO public.workspace_thread_messages (
     id, workspace_id, thread_id, author_id, request_id, role, content, status
   ) VALUES (p_message_id, p_workspace_id, p_thread_id, auth.uid(), p_request_id, p_role, p_content, p_status);
-  UPDATE public.workspace_threads
-  SET active_request_id = CASE WHEN p_role = 'assistant' AND p_status <> 'progress' THEN NULL ELSE active_request_id END,
-      updated_at = now()
-  WHERE id = p_thread_id;
   RETURN p_message_id;
+END;
+$$;
+
+CREATE FUNCTION public.start_workspace_thread_generation(
+  p_workspace_id uuid, p_thread_id uuid, p_user_message_id uuid,
+  p_assistant_message_id uuid, p_request_id uuid, p_content text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_active_request_id uuid;
+  v_thread_updated_at timestamptz;
+BEGIN
+  IF auth.uid() IS NULL OR p_user_message_id IS NULL OR p_assistant_message_id IS NULL
+    OR p_request_id IS NULL OR length(p_content) NOT BETWEEN 1 AND 50000
+  THEN RAISE EXCEPTION 'invalid message'; END IF;
+  PERFORM private.require_active_workspace_member(p_workspace_id);
+  SELECT active_request_id, updated_at INTO v_active_request_id, v_thread_updated_at
+  FROM public.workspace_threads
+  WHERE id = p_thread_id AND workspace_id = p_workspace_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id
+    AND v_thread_updated_at > now() - interval '5 minutes'
+  THEN RAISE EXCEPTION 'thread generation in progress'; END IF;
+  IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id THEN
+    UPDATE public.workspace_thread_messages SET status = 'interrupted', updated_at = now()
+    WHERE thread_id = p_thread_id AND request_id = v_active_request_id AND status = 'progress';
+  END IF;
+  INSERT INTO public.workspace_thread_messages (
+    id, workspace_id, thread_id, author_id, request_id, role, content, status
+  ) VALUES (
+    p_user_message_id, p_workspace_id, p_thread_id, auth.uid(), p_request_id, 'user', p_content, 'complete'
+  ) ON CONFLICT (thread_id, request_id, role) DO NOTHING;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.workspace_thread_messages
+    WHERE thread_id = p_thread_id AND request_id = p_request_id
+      AND role = 'user' AND author_id = auth.uid() AND content = p_content
+  ) THEN RAISE EXCEPTION 'operation ID conflict'; END IF;
+  INSERT INTO public.workspace_thread_messages (
+    id, workspace_id, thread_id, author_id, request_id, role, content, status
+  ) VALUES (
+    p_assistant_message_id, p_workspace_id, p_thread_id, auth.uid(), p_request_id, 'assistant', 'Thinking…', 'progress'
+  ) ON CONFLICT (thread_id, request_id, role) DO NOTHING;
+  UPDATE public.workspace_threads SET active_request_id = p_request_id, updated_at = now() WHERE id = p_thread_id;
+  RETURN (SELECT id FROM public.workspace_thread_messages
+    WHERE thread_id = p_thread_id AND request_id = p_request_id AND role = 'assistant');
+END;
+$$;
+
+CREATE FUNCTION public.complete_workspace_thread_generation(
+  p_user_id uuid, p_workspace_id uuid, p_thread_id uuid,
+  p_request_id uuid, p_content text, p_status text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_user_id IS NULL OR p_request_id IS NULL OR p_status NOT IN ('complete', 'interrupted')
+    OR length(p_content) NOT BETWEEN 1 AND 50000
+    OR NOT EXISTS (
+      SELECT 1 FROM public.workspaces AS workspace
+      JOIN public.workspace_members AS member ON member.workspace_id = workspace.id
+      WHERE workspace.id = p_workspace_id AND workspace.status = 'active' AND member.user_id = p_user_id
+    ) THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  PERFORM 1 FROM public.workspace_threads
+  WHERE id = p_thread_id AND workspace_id = p_workspace_id AND active_request_id = p_request_id
+  FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  UPDATE public.workspace_thread_messages
+  SET content = p_content, status = p_status, updated_at = now()
+  WHERE workspace_id = p_workspace_id AND thread_id = p_thread_id
+    AND request_id = p_request_id AND role = 'assistant' AND author_id = p_user_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  UPDATE public.workspace_threads SET active_request_id = NULL, updated_at = now() WHERE id = p_thread_id;
 END;
 $$;
 
@@ -309,13 +377,18 @@ $$;
 REVOKE ALL ON FUNCTION public.save_workspace_source(uuid, uuid, text, text, text, jsonb, jsonb),
   public.create_workspace_thread(uuid, uuid, text),
   public.save_workspace_thread_message(uuid, uuid, uuid, uuid, text, text, text),
+  public.start_workspace_thread_generation(uuid, uuid, uuid, uuid, uuid, text),
+  public.complete_workspace_thread_generation(uuid, uuid, uuid, uuid, text, text),
   public.save_workspace_artifact(uuid, uuid, uuid, uuid, bigint, text, text, jsonb, jsonb, jsonb)
 FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.save_workspace_source(uuid, uuid, text, text, text, jsonb, jsonb),
   public.create_workspace_thread(uuid, uuid, text),
   public.save_workspace_thread_message(uuid, uuid, uuid, uuid, text, text, text),
+  public.start_workspace_thread_generation(uuid, uuid, uuid, uuid, uuid, text),
   public.save_workspace_artifact(uuid, uuid, uuid, uuid, bigint, text, text, jsonb, jsonb, jsonb)
 TO authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_workspace_thread_generation(uuid, uuid, uuid, uuid, text, text)
+TO service_role;
 
 CREATE FUNCTION public.get_workspace_ai_context(
   p_user_id uuid,
