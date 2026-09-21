@@ -348,3 +348,104 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await Promise.allSettled(ids.map((id) => admin.auth.admin.deleteUser(id)));
   }
 });
+
+test("workspace evidence, team AI review, and practice survive a teammate reload", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile-chromium", "The core mobile collaboration journey runs above");
+  test.setTimeout(120_000);
+  const admin = createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } });
+  const password = `Local-${crypto.randomUUID()}!`;
+  const ids: string[] = [];
+  const contexts: BrowserContext[] = [];
+  let collaboration: ChildProcess | undefined;
+
+  try {
+    const sessions: Session[] = [];
+    for (const prefix of ["practice-owner", "practice-member"]) {
+      const email = `${prefix}-${Date.now()}-${crypto.randomUUID()}@workspace.test`;
+      const created = await admin.auth.admin.createUser({ email, email_confirm: true, password });
+      if (created.error || !created.data.user) throw created.error ?? new Error("User creation failed");
+      ids.push(created.data.user.id);
+      const client = createClient(supabaseUrl!, anonKey!, { auth: { persistSession: false } });
+      const signedIn = await client.auth.signInWithPassword({ email, password });
+      if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Sign in failed");
+      sessions.push(signedIn.data.session);
+    }
+
+    collaboration = await startCollaboration();
+    const owner = await authenticatedPage(browser, sessions[0]);
+    const member = await authenticatedPage(browser, sessions[1]);
+    contexts.push(owner.context, member.context);
+    await owner.page.route("**/functions/v1/ai", (route) => route.fulfill({
+      body: JSON.stringify({ output: { response: "Phones should be limited with a clear enforcement mechanism.", followUpQuestions: [], uncertainties: [] } }),
+      contentType: "application/json",
+      status: 200,
+    }));
+
+    await owner.page.goto("/app/workspaces");
+    await owner.page.getByRole("textbox", { name: "Motion" }).fill("Schools should limit phones");
+    await owner.page.getByRole("button", { name: "Create workspace" }).click();
+    const workspaceUrl = owner.page.url();
+    const workspaceId = workspaceUrl.split("/").at(-1)!;
+    const membership = await admin.from("workspace_members").insert({ workspace_id: workspaceId, user_id: ids[1] });
+    if (membership.error) throw membership.error;
+
+    await owner.page.getByRole("button", { name: "R1" }).click();
+    await owner.page.locator(".ProseMirror").fill("Phones interrupt learning");
+    await expect(owner.page.getByText("Saved", { exact: true })).toBeVisible();
+
+    await openPanel(owner.page, "Evidence");
+    await owner.page.getByLabel("Source title").fill("Attention study");
+    await owner.page.getByLabel("Quoted evidence").fill("Notifications reduce sustained attention.");
+    await owner.page.getByRole("button", { name: "Add evidence" }).click();
+    await expect(owner.page.getByText("Attention study", { exact: true })).toBeVisible();
+    await owner.page.getByRole("button", { name: "Insert citation" }).click();
+    await expect(owner.page.locator(".ProseMirror")).toContainText("Attention study");
+
+    await openPanel(owner.page, "Team threads");
+    await owner.page.getByLabel("Thread name").fill("Both sides");
+    await owner.page.getByRole("button", { name: "Create", exact: true }).click();
+    await owner.page.getByLabel("Team message").fill("Compare both sides");
+    await owner.page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(owner.page.getByText(/clear enforcement mechanism/)).toBeVisible();
+
+    await openPanel(owner.page, "Practice");
+    await owner.page.getByRole("button", { name: "Suggest AI rewrite" }).click();
+    await openPanel(owner.page, "Review");
+    await expect(owner.page.getByRole("button", { name: "Reject" })).toHaveCount(1);
+    await owner.page.getByRole("button", { name: "Reject" }).click();
+    await expect(owner.page.locator(".ProseMirror")).toContainText("Phones interrupt learning");
+    await openPanel(owner.page, "Practice");
+    await owner.page.getByRole("button", { name: "Suggest AI rewrite" }).click();
+    await openPanel(owner.page, "Review");
+    await expect(owner.page.getByRole("button", { name: "Accept" })).toHaveCount(1);
+    await owner.page.getByRole("button", { name: "Accept" }).click();
+    await expect(owner.page.locator(".ProseMirror")).toContainText("clear enforcement mechanism");
+
+    await openPanel(owner.page, "Practice");
+    await owner.page.getByRole("button", { name: "Crossfire", exact: true }).click();
+    await expect(owner.page).toHaveURL(/\/app\/crossfire$/);
+    await expect(owner.page.getByTestId("crossfire-resolution")).toHaveValue("Schools should limit phones");
+    await expect(owner.page.getByText(/Shared workspace session/)).toBeVisible();
+    await expect.poll(async () => {
+      const result = await admin.from("workspace_artifacts").select("id").eq("workspace_id", workspaceId).eq("tool", "crossfire");
+      if (result.error) throw result.error;
+      return result.data.length;
+    }).toBe(1);
+    await owner.page.getByRole("link", { name: "Return to workspace" }).click();
+
+    await member.page.goto(workspaceUrl);
+    await member.page.getByRole("button", { name: "R1" }).click();
+    await openPanel(member.page, "Practice");
+    await expect(member.page.locator("summary").filter({ hasText: /Crossfire.*progress/i })).toBeVisible();
+    await member.page.reload();
+    await openPanel(member.page, "Practice");
+    await expect(member.page.locator("summary").filter({ hasText: /Crossfire.*progress/i })).toBeVisible();
+
+    await owner.page.goto("/app/ask");
+    await expect(owner.page.getByText(/Shared workspace session/)).toHaveCount(0);
+  } finally {
+    await stop(collaboration);
+    await Promise.allSettled(contexts.map((context) => context.close()));
+    await Promise.allSettled(ids.map((id) => admin.auth.admin.deleteUser(id)));
+  }
+});
