@@ -192,10 +192,6 @@ All colors MUST be HSL.
     background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(217 32% 20%) 100%);
   }
 
-  .gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(169 72% 40%) 100%);
-  }
 
   .btn-primary-gradient {
     @apply relative px-6 py-3 font-semibold text-primary-foreground rounded-xl overflow-hidden transition-all duration-300 shadow-lg;
@@ -354,9 +350,6 @@ All colors MUST be HSL.
     animation: motion-swap var(--motion-duration-normal) var(--motion-ease-fluid) both;
   }
 
-  .motion-loading-shell {
-    animation: motion-fade-in var(--motion-duration-fast) var(--motion-ease-fluid) both;
-  }
 
   .motion-loading-bar {
     animation: motion-loading-bar 1.35s var(--motion-ease-fluid) infinite;
@@ -683,21 +676,6 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
-/* Scroll-triggered fade-in (used with IntersectionObserver or just on mount) */
-.fade-in-up {
-  animation: fade-in-up 0.5s var(--motion-ease-fluid) both;
-}
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @keyframes shimmer {
   0% {
@@ -732,16 +710,6 @@ input:focus, textarea:focus, select:focus {
   to { stroke-dashoffset: 0; opacity: 1; }
 }
 
-/* Badge pulse on appear */
-.badge-pulse {
-  animation: badge-pop 0.3s var(--motion-ease-fluid) both;
-}
-
-@keyframes badge-pop {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
 
 /* Tooltip entrance */
 [data-state="delayed-open"][data-side] {
@@ -883,25 +851,6 @@ button:active > svg.lucide-heart {
   100% { transform: scale(1.8); opacity: 0; }
 }
 
-/* Ripple effect on button click */
-.button-ripple:not(:disabled) {
-  position: relative;
-}
-
-.button-ripple:not(:disabled)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), hsl(var(--primary) / 0.15), transparent 60%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-
-.button-ripple:not(:disabled):active::after {
-  opacity: 1;
-}
 
 /* Smooth counter/number transitions */
 .tabular-nums {
@@ -909,20 +858,6 @@ button:active > svg.lucide-heart {
   transition: transform 0.2s var(--motion-ease-fluid);
 }
 
-/* Hover lift for cards */
-.hover-lift {
-  transition: transform 0.2s var(--motion-ease-fluid), box-shadow 0.2s var(--motion-ease-fluid);
-}
-
-.hover-lift:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px hsl(var(--foreground) / 0.08);
-}
-
-/* Glow text on hover */
-.glow-text:hover {
-  text-shadow: 0 0 12px hsl(var(--primary) / 0.4);
-}
 
 /* Subtle parallax tilt on card hover */
 .tilt-card {
@@ -1135,33 +1070,6 @@ button:active > svg.lucide-heart {
   }
 }
 
-/* Scroll-triggered reveal for sections */
-.scroll-reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s var(--motion-ease-fluid), transform 0.6s var(--motion-ease-fluid);
-}
-
-.scroll-reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Subtle pulse for empty state icons */
-.motion-breathe {
-  animation: motion-breathe 3s ease-in-out infinite;
-}
-
-@keyframes motion-breathe {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.05);
-  }
-}
 
 /* Icon spin on hover for interactive elements */
 .hover-icon-spin:hover > svg {
@@ -1169,10 +1077,6 @@ button:active > svg.lucide-heart {
   transition: transform 0.3s var(--motion-ease-fluid);
 }
 
-/* Smooth color transition for text elements */
-.text-transition {
-  transition: color 0.2s var(--motion-ease-fluid);
-}
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -1199,8 +1103,7 @@ button:active > svg.lucide-heart {
   .motion-ping-ring,
   .motion-shimmer::after,
   .card-hover-glow:hover,
-  .feature-card:hover,
-  .hover-lift:hover {
+  .feature-card:hover {
     transform: none !important;
   }
 }

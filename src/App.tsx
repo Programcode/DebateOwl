@@ -1,7 +1,6 @@
 // src/App.tsx
 import { Component, Suspense, lazy, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
@@ -246,7 +245,6 @@ const App = () => (
         <MotionConfig reducedMotion="user">
           <TooltipProvider delayDuration={200}>
             <Toaster />
-            <Sonner />
             <OfflineIndicator />
             <BrowserRouter useTransitions={false}>
               <RouteErrorBoundary>

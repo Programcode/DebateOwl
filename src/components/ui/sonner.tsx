@@ -1,15 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
+import { useSettingsStore } from "@/lib/stores/settings-store";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  const theme = useSettingsStore((state) => state.theme);
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme}
       className="toaster group"
       toastOptions={{
         classNames: {
