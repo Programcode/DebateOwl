@@ -20,7 +20,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate, formatEuropeanDateTime } from '@/lib/date-format';
+import { formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -726,7 +726,7 @@ export default function AdminPage() {
                             <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats?.totals.requests.toLocaleString() || 0}</div>
+                            <div className="text-2xl font-bold">{stats ? formatNumber(stats.totals.requests) : 0}</div>
                             <p className="text-xs text-muted-foreground">{t('admin.dashboard.lastSevenDays')}</p>
                         </CardContent>
                     </Card>

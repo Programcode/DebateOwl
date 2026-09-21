@@ -65,7 +65,7 @@ import {
     LayoutGrid
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeDate } from '@/lib/date-format';
 import { toast } from 'sonner';
 
 // Custom node types
@@ -465,7 +465,7 @@ export default function FlowchartPage() {
                                                         <div className="font-medium">{item.title}</div>
                                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
-                                                            {formatDistanceToNow(item.createdAt, { addSuffix: true })}
+                                                            {formatRelativeDate(item.createdAt)}
                                                         </div>
                                                     </div>
                                                     <Button

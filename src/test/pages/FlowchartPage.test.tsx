@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import FlowchartPage from '@/pages/FlowchartPage';
+import i18n from '@/i18n';
 
 const { mockSavedFlowcharts, mockToastSuccess } = vi.hoisted(() => ({
   mockSavedFlowcharts: [] as Array<{
@@ -56,9 +57,11 @@ vi.mock('reactflow', async () => {
   };
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   mockSavedFlowcharts.length = 0;
   mockToastSuccess.mockClear();
+  vi.useRealTimers();
+  await i18n.changeLanguage('en');
 });
 
 test('keeps a selected node when deletion is cancelled', () => {
@@ -107,4 +110,21 @@ test('clears a stale node selection when a saved flowchart is loaded', () => {
 
   expect(screen.getByRole('button', { name: 'Loaded argument' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+});
+
+test('formats saved-flowchart relative time in Hungarian', async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 4, 19, 13, 45));
+  await i18n.changeLanguage('hu');
+  mockSavedFlowcharts.push({
+    id: 'saved-hu',
+    title: 'Mentett ábra',
+    createdAt: new Date(2026, 4, 19, 12, 45).getTime(),
+    data: { nodes: [], edges: [] },
+  });
+
+  render(<FlowchartPage />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Betöltés' }));
+  expect(screen.getByText('körülbelül 1 órával ezelőtt')).toBeInTheDocument();
 });
