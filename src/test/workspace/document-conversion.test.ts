@@ -86,6 +86,22 @@ describe("workspace document conversion", () => {
     }
   });
 
+  it("preserves numbered lists, nested marks, links, tables, and Hungarian text", () => {
+    const imported = fromWorkspaceMarkdown(`1. ***Első tűrő***
+2. [Második](https://example.com/hungarian)
+
+| Név | Érték |
+| --- | --- |
+| Ősz | árvíztűrő |`);
+    const serialized = JSON.stringify(imported);
+
+    expect(serialized).toContain('"type":"orderedList"');
+    expect(serialized).toContain('"type":"bold"');
+    expect(serialized).toContain('"type":"italic"');
+    expect(serialized).toContain("https://example.com/hungarian");
+    expect(toWorkspaceMarkdown(imported)).toContain("árvíztűrő");
+  });
+
   it("round-trips supported semantics and multilingual text through DOCX", async () => {
     expect(toWorkspaceDocx).toBeTypeOf("function");
     expect(fromWorkspaceDocx).toBeTypeOf("function");

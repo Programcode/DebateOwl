@@ -35,6 +35,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { deletePrivateWritingItem, listPrivateWritingItems } from '@/lib/workspace/portability-client';
 
 const SOURCE_ROW_HEIGHT = 92;
 const SOURCE_LIST_HEIGHT = 600;
@@ -162,6 +163,10 @@ export default function LibraryPage() {
     : folder === 'Auto-saved'
       ? t('aiClient.autoSavedFolder')
       : folder;
+  const [writingItems, setWritingItems] = useState<Awaited<ReturnType<typeof listPrivateWritingItems>>>([]);
+  useEffect(() => {
+    void listPrivateWritingItems().then(setWritingItems).catch(() => setWritingItems([]));
+  }, []);
   const {
     sourceLibrary,
     sourceFolders,
@@ -716,6 +721,22 @@ export default function LibraryPage() {
         )}
 
         <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">{t('libraryPage.privateWriting', 'Private snippets and speech templates')}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              {writingItems.length ? writingItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                  <Badge variant="outline">{item.kind}</Badge>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span>
+                  <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => void deletePrivateWritingItem(item.id).then(() => setWritingItems((current) => current.filter(({ id }) => id !== item.id)))}>
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />{t('common.delete', 'Delete')}
+                  </Button>
+                </div>
+              )) : <p className="text-sm text-muted-foreground">{t('libraryPage.privateWritingEmpty', 'Save selected workspace text as a snippet, or a whole speech as a template.')}</p>}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="space-y-4">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">

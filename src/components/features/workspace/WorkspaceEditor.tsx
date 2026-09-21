@@ -21,6 +21,8 @@ import { createProposal, createQuoteAnchor, type ProposalHunkInput } from "@/lib
 import { createWorkspaceComment, saveWorkspaceProposal } from "@/lib/workspace/client";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import type { WorkspaceSource } from "@/lib/workspace/practice-client";
+import type { JSONContent } from "@tiptap/core";
+import { savePrivateWritingItem } from "@/lib/workspace/portability-client";
 
 const acknowledgementSchema = z.object({
   epoch: z.number().int().nonnegative(),
@@ -34,6 +36,7 @@ export type SaveStatus = "Offline" | "Saved" | "Saving";
 export function WorkspaceEditor({
   documentId,
   citationToInsert,
+  contentToInsert,
   aiSuggestion,
   editable,
   epoch,
@@ -44,12 +47,15 @@ export function WorkspaceEditor({
   workspaceId,
   onDurableSequence,
   onCitationInserted,
+  onContentInserted,
   onAiSuggestionConsumed,
   onSaveStatus,
   onTextChange,
+  onDocumentChange,
 }: {
   documentId: string;
   citationToInsert?: WorkspaceSource | null;
+  contentToInsert?: { content: JSONContent; id: string; mode: "insert" | "replace" } | null;
   aiSuggestion?: { id: string; text: string } | null;
   editable: boolean;
   epoch: number;
@@ -60,9 +66,11 @@ export function WorkspaceEditor({
   workspaceId: string;
   onDurableSequence?: (sequence: number) => void;
   onCitationInserted?: () => void;
+  onContentInserted?: () => void;
   onAiSuggestionConsumed?: () => void;
   onSaveStatus?: (status: SaveStatus) => void;
   onTextChange?: (text: string) => void;
+  onDocumentChange?: (content: JSONContent) => void;
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
@@ -243,7 +251,10 @@ export function WorkspaceEditor({
         provider,
         user: { color: `hsl(${Math.abs(userId.charCodeAt(0) * 47) % 360} 70% 45%)`, name: userName },
       });
-      reportText = () => onTextChange?.(activeEditor?.getText() ?? "");
+      reportText = () => {
+        onTextChange?.(activeEditor?.getText() ?? "");
+        if (activeEditor) onDocumentChange?.(activeEditor.getJSON());
+      };
       activeEditor.on("update", reportText);
       reportText();
       document.on("update", (_update, origin) => {
@@ -268,7 +279,7 @@ export function WorkspaceEditor({
       provider?.destroy();
       document.destroy();
     };
-  }, [documentId, editable, epoch, identity, onDurableSequence, onTextChange, online, queryClient, t, token, userId, userName, workspaceId]);
+  }, [documentId, editable, epoch, identity, onDocumentChange, onDurableSequence, onTextChange, online, queryClient, t, token, userId, userName, workspaceId]);
 
   useEffect(() => {
     if (!editor || !citationToInsert) return;
@@ -285,6 +296,30 @@ export function WorkspaceEditor({
     }).run();
     onCitationInserted?.();
   }, [citationToInsert, editor, onCitationInserted]);
+
+  useEffect(() => {
+    if (!editor || !contentToInsert || status !== "Saved") return;
+    if (contentToInsert.mode === "replace") editor.commands.setContent(contentToInsert.content);
+    else editor.chain().focus().insertContent(contentToInsert.content.content ?? []).run();
+    onContentInserted?.();
+  }, [contentToInsert, editor, onContentInserted, status]);
+
+  const saveWriting = async (kind: "snippet" | "template") => {
+    if (!editor) return;
+    const content = kind === "snippet"
+      ? { type: "doc", content: editor.state.selection.content().content.toJSON() }
+      : editor.getJSON();
+    if (kind === "snippet" && !content.content.length) return;
+    const title = window.prompt(t(kind === "snippet" ? "workspaces.snippetTitlePrompt" : "workspaces.templateTitlePrompt"));
+    if (!title?.trim()) return;
+    await savePrivateWritingItem({
+      content,
+      kind,
+      provenance: { documentEpoch: epoch, documentId, workspaceId },
+      title: title.trim(),
+    });
+    await queryClient.invalidateQueries({ queryKey: ["private-writing-items"] });
+  };
 
   useEffect(() => {
     if (!editor || !aiSuggestion || status !== "Saved") return;
@@ -326,6 +361,8 @@ export function WorkspaceEditor({
         <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().insertTable({ cols: 2, rows: 2, withHeaderRow: true }).run()}>{t("workspaces.table", "Table")}</Button>
         <Input className="h-9 w-48" aria-label={t("workspaces.linkUrl", "Link URL")} value={link} onChange={(event) => setLink(event.target.value)} />
         <Button type="button" size="sm" variant="outline" onClick={() => editor.chain().focus().setLink({ href: link }).run()}>{t("workspaces.link", "Link")}</Button>
+        <Button type="button" size="sm" variant="outline" disabled={editor.state.selection.empty} onClick={() => void saveWriting("snippet")}>{t("workspaces.saveSnippet", "Save snippet")}</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => void saveWriting("template")}>{t("workspaces.saveTemplate", "Save template")}</Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => editor.commands.undo()}>{t("workspaces.undo", "Undo")}</Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => editor.commands.redo()}>{t("workspaces.redo", "Redo")}</Button>
         <Button type="button" size="sm" variant="ghost" disabled={!online} onClick={() => setCommentOpen((current) => !current)}>{t("workspaces.comment", "Comment")}</Button>

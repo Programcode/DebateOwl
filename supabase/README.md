@@ -40,6 +40,8 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 - `import-source`: authenticated public-URL import with SSRF protection on redirects, timeout, content-type and size limits, readable-text extraction, quota checks, and logging.
 - `share`: authenticated creation of expiring share codes for supported saved content.
 - `workspace-invites`: authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
+- `google-connections`: separate multi-account Google OAuth connection, callback, Picker-token and disconnect boundary.
+- `workspace-google-docs`: connection-owned Google Doc import and idempotent new-document export for workspaces.
 - `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
 
 ### Authentication and administration
@@ -140,7 +142,8 @@ Document names, never values. Depending on deployed features, server-side config
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;
 - sparring integrity material;
-- Google export configuration;
+- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, `GOOGLE_CONNECTION_ENCRYPTION_KEY`, and `APP_ORIGIN` for separate Google connections;
+- `VITE_GOOGLE_PICKER_API_KEY` as the public Picker developer key;
 - allowed origins and environment-specific application URLs.
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.

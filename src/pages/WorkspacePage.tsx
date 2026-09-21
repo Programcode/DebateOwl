@@ -11,6 +11,8 @@ import { WorkspaceAccessPanel } from "@/components/features/workspace/WorkspaceA
 import { WorkspaceReviewPanel } from "@/components/features/workspace/WorkspaceReviewPanel";
 import { WorkspaceVersions } from "@/components/features/workspace/WorkspaceVersions";
 import { WorkspacePracticePanel } from "@/components/features/workspace/WorkspacePracticePanel";
+import { WorkspacePortabilityPanel } from "@/components/features/workspace/WorkspacePortabilityPanel";
+import type { JSONContent } from "@tiptap/core";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import {
   changeWorkspaceState,
@@ -39,7 +41,9 @@ export default function WorkspacePage() {
   const [busy, setBusy] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [documentText, setDocumentText] = useState("");
+  const [documentContent, setDocumentContent] = useState<JSONContent>({ type: "doc", content: [] });
   const [citationToInsert, setCitationToInsert] = useState<WorkspaceSource | null>(null);
+  const [contentToInsert, setContentToInsert] = useState<{ content: JSONContent; id: string; mode: "insert" | "replace" } | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<{ id: string; text: string } | null>(null);
   const [preferenceLoaded, setPreferenceLoaded] = useState(false);
   const workspace = useQuery({
@@ -85,7 +89,9 @@ export default function WorkspacePage() {
   useEffect(() => {
     setEditorStatus("Saving");
     setDocumentText("");
+    setDocumentContent({ type: "doc", content: [] });
     setCitationToInsert(null);
+    setContentToInsert(null);
     setAiSuggestion(null);
   }, [selectedDocument?.id]);
 
@@ -353,6 +359,7 @@ export default function WorkspacePage() {
               <WorkspaceEditor
                 aiSuggestion={aiSuggestion}
                 citationToInsert={citationToInsert}
+                contentToInsert={contentToInsert}
                 documentId={selectedDocument.id}
                 editable={workspace.data.workspace.status === "active" && view === "active"}
                 epoch={selectedDocument.document_epoch}
@@ -367,8 +374,10 @@ export default function WorkspacePage() {
                 workspaceId={workspace.data.workspace.id}
                 onDurableSequence={setDurableSequence}
                 onCitationInserted={() => setCitationToInsert(null)}
+                onContentInserted={() => setContentToInsert(null)}
                 onAiSuggestionConsumed={() => setAiSuggestion(null)}
                 onSaveStatus={setEditorStatus}
+                onDocumentChange={setDocumentContent}
                 onTextChange={setDocumentText}
               />
             ) : (
@@ -405,6 +414,16 @@ export default function WorkspacePage() {
                       onInsertCitation={setCitationToInsert}
                       onSuggestRewrite={setAiSuggestion}
                       side={selectedDocument.side}
+                      userId={user.id}
+                      workspaceId={workspace.data.workspace.id}
+                    />
+                  )}
+                  {user && (
+                    <WorkspacePortabilityPanel
+                      content={documentContent}
+                      documentId={selectedDocument.id}
+                      documentTitle={selectedDocument.title}
+                      onInsertContent={(content, mode) => setContentToInsert({ content, id: crypto.randomUUID(), mode })}
                       userId={user.id}
                       workspaceId={workspace.data.workspace.id}
                     />
