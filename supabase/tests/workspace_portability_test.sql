@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(16);
+SELECT plan(18);
 
 SELECT has_table('public', 'private_writing_items', 'private writing library exists');
 SELECT has_table('public', 'workspace_document_provenance', 'workspace import provenance exists');
@@ -40,7 +40,7 @@ SELECT results_eq($$SELECT count(*)::bigint FROM public.private_writing_items$$,
 SELECT lives_ok(
   $$SELECT public.save_workspace_document_provenance(
     (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid() LIMIT 1),
-    (SELECT document_id FROM private.workspace_document_state WHERE workspace_id = (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid() LIMIT 1) LIMIT 1),
+    (SELECT id FROM public.workspace_documents WHERE workspace_id = (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid() LIMIT 1) LIMIT 1),
     'markdown', '{"fileName":"speech.md"}'
   )$$,
   'member records independent-copy provenance'
@@ -59,7 +59,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.save_workspace_document_provenance(
     (SELECT id FROM public.workspaces LIMIT 1),
-    (SELECT document_id FROM private.workspace_document_state LIMIT 1),
+    (SELECT id FROM public.workspace_documents LIMIT 1),
     'docx', '{}'
   )$$,
   'P0001', 'workspace unavailable',

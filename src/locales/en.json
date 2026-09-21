@@ -206,6 +206,7 @@
     "templateTitlePrompt": "Template name",
     "portability": "Import, reuse & export",
     "privateWriting": "Private snippets and templates",
+    "privateWritingFailed": "Private writing could not be saved.",
     "insertCopy": "Insert copy",
     "useTemplate": "Use template",
     "importSpeech": "Import Markdown or DOCX",

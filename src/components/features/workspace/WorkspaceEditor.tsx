@@ -312,13 +312,17 @@ export function WorkspaceEditor({
     if (kind === "snippet" && !content.content.length) return;
     const title = window.prompt(t(kind === "snippet" ? "workspaces.snippetTitlePrompt" : "workspaces.templateTitlePrompt"));
     if (!title?.trim()) return;
-    await savePrivateWritingItem({
-      content,
-      kind,
-      provenance: { documentEpoch: epoch, documentId, workspaceId },
-      title: title.trim(),
-    });
-    await queryClient.invalidateQueries({ queryKey: ["private-writing-items"] });
+    try {
+      await savePrivateWritingItem({
+        content,
+        kind,
+        provenance: { documentEpoch: epoch, documentId, workspaceId },
+        title: title.trim(),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["private-writing-items"] });
+    } catch {
+      setReviewError(t("workspaces.privateWritingFailed", "Private writing could not be saved."));
+    }
   };
 
   useEffect(() => {

@@ -206,6 +206,7 @@
     "templateTitlePrompt": "Nombre de la plantilla",
     "portability": "Importar, reutilizar y exportar",
     "privateWriting": "Fragmentos y plantillas privados",
+    "privateWritingFailed": "No se pudo guardar el texto privado.",
     "insertCopy": "Insertar copia",
     "useTemplate": "Usar plantilla",
     "importSpeech": "Importar Markdown o DOCX",

@@ -206,6 +206,7 @@
     "templateTitlePrompt": "Sablon neve",
     "portability": "Importálás, újrahasználat és export",
     "privateWriting": "Privát részletek és sablonok",
+    "privateWritingFailed": "A privát írás nem menthető.",
     "insertCopy": "Másolat beszúrása",
     "useTemplate": "Sablon használata",
     "importSpeech": "Markdown vagy DOCX importálása",

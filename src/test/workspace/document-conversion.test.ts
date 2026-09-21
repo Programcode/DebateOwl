@@ -9,7 +9,10 @@ import {
   fromWorkspaceMarkdown,
   toWorkspaceDocx,
   toWorkspaceMarkdown,
+  toWorkspacePacketDocx,
+  toWorkspacePacketPdf,
   toWorkspacePdf,
+  type WorkspacePacketManifest,
 } from "@/lib/workspace/document-conversion";
 import {
   STRUCTURED_SPEECH,
@@ -139,6 +142,29 @@ describe("workspace document conversion", () => {
       expect(extracted).toContain(text);
     }
     expect(extracted).toContain("[Public evidence, p. 7]");
+  });
+
+  it("exports a captured multi-document packet with real page boundaries", async () => {
+    const manifest: WorkspacePacketManifest = {
+      artifacts: [],
+      capturedAt: "2026-09-21T00:00:00.000Z",
+      documents: [
+        { assigneeId: null, content: STRUCTURED_SPEECH, side: "pro" as const, title: "R1" },
+        { assigneeId: null, content: STRUCTURED_SPEECH, side: "con" as const, title: "O1" },
+      ],
+      excluded: { archived: 1, trashed: 1 },
+      sources: [{ citationSnapshot: { url: "https://example.com/evidence" }, title: "Evidence" }],
+      workspace: { motion: "A fair transition", title: "Packet" },
+    };
+    const docx = await toWorkspacePacketDocx(manifest);
+    expect(Array.from(docx.slice(0, 2))).toEqual([0x50, 0x4b]);
+
+    const fontData = await readFile(resolve(process.cwd(), "node_modules/pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf"));
+    const pdfBytes = await toWorkspacePacketPdf(manifest, { fontData });
+    const loadingTask = getDocument({ data: pdfBytes, useWorkerFetch: false });
+    const pdf = await loadingTask.promise;
+    expect(pdf.numPages).toBeGreaterThanOrEqual(4);
+    await loadingTask.destroy();
   });
 
   it("keeps malformed citations, scripts, and unsafe links outside imported schema", () => {
