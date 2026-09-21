@@ -1309,6 +1309,7 @@
     "deleteSparringDesc": "This removes the scorecard and transcript from your history.",
     "sparringDeleted": "Sparring round deleted.",
     "sparringDeleteFailed": "Could not delete sparring round.",
+    "deleteCaseLabel": "Delete {{title}}",
     "load": "Load",
     "resume": "Resume",
     "messages": "messages"
@@ -1332,6 +1333,9 @@
     "words": "words",
     "folder": "Folder",
     "generalFolder": "General",
+    "textSource": "Text",
+    "fileSource": "File",
+    "urlSource": "URL",
     "deleteSourceLabel": "Delete {{title}}",
     "toggleSourceLabel": "Toggle {{title}}",
     "newFolder": "New folder",

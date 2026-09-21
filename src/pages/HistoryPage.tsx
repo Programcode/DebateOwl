@@ -152,7 +152,7 @@ export default function HistoryPage() {
                             <Button variant="outline" size="sm" onClick={() => handleLoadCase(item.id)}>
                               <Eye className="h-4 w-4 mr-2" /> {t('historyPage.load')}
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setCaseToDelete({ id: item.id, title: item.title })} aria-label={`Delete ${item.title}`}>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setCaseToDelete({ id: item.id, title: item.title })} aria-label={t('historyPage.deleteCaseLabel', { title: item.title })}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

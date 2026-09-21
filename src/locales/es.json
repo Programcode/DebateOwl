@@ -1309,6 +1309,7 @@
     "deleteSparringDesc": "Esto elimina la tarjeta de puntuación y la transcripción de tu historial.",
     "sparringDeleted": "Ronda de sparring eliminada.",
     "sparringDeleteFailed": "No se pudo eliminar la ronda de sparring.",
+    "deleteCaseLabel": "Eliminar {{title}}",
     "load": "Cargar",
     "resume": "Reanudar",
     "messages": "mensajes"
@@ -1329,6 +1330,9 @@
     "words": "palabras",
     "folder": "Carpeta",
     "generalFolder": "General",
+    "textSource": "Texto",
+    "fileSource": "Archivo",
+    "urlSource": "URL",
     "deleteSourceLabel": "Eliminar {{title}}",
     "toggleSourceLabel": "Activar o desactivar {{title}}",
     "newFolder": "Nueva carpeta",

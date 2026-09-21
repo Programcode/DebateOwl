@@ -1309,6 +1309,7 @@
     "deleteSparringDesc": "Ez eltávolítja az értékelőlapot és az átiratot az előzményeidből.",
     "sparringDeleted": "A vitapárbaj forduló törölve.",
     "sparringDeleteFailed": "Nem sikerült törölni a vitapárbaj fordulót.",
+    "deleteCaseLabel": "{{title}} törlése",
     "load": "Betöltés",
     "resume": "Folytatás",
     "messages": "üzenet"
@@ -1329,6 +1330,9 @@
     "words": "szó",
     "folder": "Mappa",
     "generalFolder": "Általános",
+    "textSource": "Szöveg",
+    "fileSource": "Fájl",
+    "urlSource": "URL",
     "deleteSourceLabel": "{{title}} törlése",
     "toggleSourceLabel": "{{title}} be- vagy kikapcsolása",
     "newFolder": "Új mappa",

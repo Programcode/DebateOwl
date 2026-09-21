@@ -51,6 +51,7 @@ const HU_IDENTICAL_VALUE_ALLOWLIST = new Set([
   'sparring.turns.standard-1', 'sparring.turns.standard-3',
   'sparring.turns.standard-5', 'sparring.turns.standard-7',
   'sparring.scorecard.exportPdf',
+  'libraryPage.urlSource',
   'langSwitcher.en', 'langSwitcher.es', 'langSwitcher.hu',
 ]);
 

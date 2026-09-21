@@ -214,19 +214,18 @@ describe('LibraryPage', () => {
 
   it('localizes the canonical General folder and source controls in Hungarian', async () => {
     await i18n.changeLanguage('hu');
-    mockStore.sourceLibrary = [{
-      id: '1',
-      title: 'Forrás',
-      content: 'Bizonyíték',
-      type: 'text',
-      folder: 'General',
-      isActive: true,
-      createdAt: Date.now(),
-    }];
+    mockStore.sourceLibrary = [
+      { id: '1', title: 'Forrás', content: 'Bizonyíték', type: 'text', folder: 'General', isActive: true, createdAt: Date.now() },
+      { id: '2', title: 'Fájlforrás', content: 'Bizonyíték', type: 'file', folder: 'General', isActive: true, createdAt: Date.now() },
+      { id: '3', title: 'Webforrás', content: 'Bizonyíték', type: 'url', folder: 'General', isActive: true, createdAt: Date.now() },
+    ];
 
     render(<LibraryPage />);
 
     expect(screen.getAllByText('Általános').length).toBeGreaterThan(0);
+    expect(screen.getByText('Szöveg')).toBeInTheDocument();
+    expect(screen.getByText('Fájl')).toBeInTheDocument();
+    expect(screen.getByText('URL')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Forrás törlése' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Forrás be- vagy kikapcsolása' })).toBeInTheDocument();
   });
