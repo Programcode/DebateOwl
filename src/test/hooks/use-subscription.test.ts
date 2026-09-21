@@ -365,7 +365,7 @@ describe('useSubscription', () => {
     });
 
     expect(result.current.tier).toBe('expired');
-    expect(result.current.dailyLimit).toBe(10);
+    expect(result.current.dailyLimit).toBe(0);
     expect(result.current.hasStripeBilling).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       '[useSubscription] Failed to load Stripe billing state:',
@@ -394,6 +394,33 @@ describe('useSubscription', () => {
       '[useSubscription] Failed to load:',
       expect.any(Error)
     );
+
+    warnSpy.mockRestore();
+  });
+
+  it('retries a transient entitlement failure when the hook remounts inside the stale window', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'recovering-user' };
+    mockResponses.throwOnUserSettings = true;
+
+    const first = renderSubscriptionHook();
+    await waitFor(() => expect(first.result.current.loading).toBe(false));
+    expect(first.result.current.tier).toBe('expired');
+    first.unmount();
+
+    mockResponses.throwOnUserSettings = false;
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_recovered',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const second = renderSubscriptionHook();
+    await waitFor(() => expect(second.result.current.tier).toBe('pro'));
 
     warnSpy.mockRestore();
   });

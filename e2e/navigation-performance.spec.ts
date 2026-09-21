@@ -298,7 +298,7 @@ async function signalAllowedIntent(page: Page, link: Awaited<ReturnType<typeof a
   await link.hover();
 }
 
-test('hover intent fetches one destination chunk before click and keeps navigation in-document', async ({ page }) => {
+test('hover intent is limited to fine pointers and click stays in-document', async ({ page }) => {
   const requestCount = countAttackRequests(page);
   await gotoGenerate(page);
   const link = await attackLink(page);
@@ -306,7 +306,8 @@ test('hover intent fetches one destination chunk before click and keeps navigati
 
   await link.hover();
   await page.waitForTimeout(INTENT_OBSERVATION_MS);
-  expect(requestCount()).toBe(1);
+  const supportsHover = await page.evaluate(() => window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  expect(requestCount()).toBe(supportsHover ? 1 : 0);
 
   const navigationEntriesBeforeClick = await page.evaluate(() => performance.getEntriesByType('navigation').length);
   await startGenericLoaderObservation(page);

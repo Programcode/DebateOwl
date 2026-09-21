@@ -9,6 +9,7 @@ const APP_SHELL = [
   '/manifest.webmanifest',
   '/favicon.ico',
   '/favicon.png',
+  '/favicon-72.png',
   '/hero-visual.png',
 ];
 

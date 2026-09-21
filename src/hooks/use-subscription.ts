@@ -56,6 +56,7 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
 
     if (settingsError) {
       console.warn('[useSubscription] Failed to load user settings:', settingsError.message);
+      throw new Error(settingsError.message);
     }
 
     if (data) {
@@ -73,6 +74,7 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
 
       if (billingError) {
         console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
+        throw new Error(billingError.message);
       } else {
         billingRows = billingData || [];
       }
@@ -112,16 +114,17 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
 
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
-    const { count } = await supabase
+    const { count, error: usageError } = await supabase
       .from('ai_requests')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gte('created_at', todayStart.toISOString());
+    if (usageError) throw new Error(usageError.message);
 
     return { ...snapshot, dailyUsed: count || 0 };
   } catch (error) {
     console.warn('[useSubscription] Failed to load:', error);
-    return snapshot;
+    throw error;
   }
 }
 

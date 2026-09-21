@@ -23,8 +23,9 @@
     "test:db": "supabase test db && bash scripts/test-daily-quota.sh && bash scripts/test-workspace-invite-concurrency.sh",
     "test:e2e": "playwright test --project=desktop-chromium --project=mobile-chromium",
     "test:e2e:webkit": "playwright test --project=webkit",
+    "test:sw": "node scripts/test-service-worker-offline.mjs",
     "test:e2e:staging": "playwright test --project=staging",
-    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm test -- --coverage && npm run test:collaboration && npm run test:edge && npm run build && CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e"
+    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm test -- --coverage && npm run test:collaboration && npm run test:edge && npm run build && npm run test:sw && CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

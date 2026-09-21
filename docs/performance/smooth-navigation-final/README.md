@@ -86,7 +86,9 @@ for five seconds after registration. The worker validates and caps that list,
 then backfills those already visited assets into the runtime cache. It still
 does not call `skipWaiting`, listen for `controllerchange`, or reload the page.
 
-Direct production-build browser proof:
+The committed production-build smoke in
+[`scripts/test-service-worker-offline.mjs`](../../../scripts/test-service-worker-offline.mjs)
+provides direct browser proof:
 
 - first-visited Generate reloads offline;
 - an unvisited Attack route shows the existing route error offline;
