@@ -452,8 +452,17 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
   const originalFetch = globalThis.fetch;
   let decisionFails = false;
   let decisionCalls = 0;
+  const claimedSignalKeys = new Set<string>();
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.origin === "https://supabase.test" && url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { p_quota_key?: string };
+      if (body.p_quota_key?.startsWith("crossfire_signal:")) {
+        const allowed = !claimedSignalKeys.has(body.p_quota_key);
+        claimedSignalKeys.add(body.p_quota_key);
+        return jsonResponse([{ allowed, current_count: 1 }]);
+      }
+    }
     const supabaseResponse = supabaseTestResponse(url);
     if (supabaseResponse) return supabaseResponse;
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
@@ -512,6 +521,8 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
     const questionSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
     const questionSignalPayload = await questionSignal.json() as { output?: { signal?: { answerTurnId?: string; answerQuality?: string } } };
     if (questionSignalPayload.output?.signal?.answerTurnId !== "T2" || questionSignalPayload.output.signal.answerQuality !== "direct") throw new Error(`question-ai signal missing: ${JSON.stringify(questionSignalPayload)}`);
+    const replayedSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
+    if (replayedSignal.status !== 409 || Number(decisionCalls) !== 1) throw new Error("replayed Crossfire signal token reached Jev");
     const forgedSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, "forged-token");
     if (forgedSignal.status !== 403) throw new Error("forged Crossfire signal token was accepted");
 
@@ -522,12 +533,21 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
     const aiQuestionsUser = await request("ai-questions-user", answerTranscript, "question");
     const aiQuestionsPayload = await aiQuestionsUser.json() as { output?: { type?: string; text?: string }; signalToken?: string };
     if (aiQuestionsUser.status !== 200 || aiQuestionsPayload.output?.type !== "question" || !aiQuestionsPayload.signalToken) throw new Error(`ai-questions-user reply missing: ${JSON.stringify(aiQuestionsPayload)}`);
-    const answerSignal = await requestSignal("ai-questions-user", answerTranscript, aiQuestionsPayload.output as { type: "question"; text: string }, aiQuestionsPayload.signalToken);
-    const answerSignalPayload = await answerSignal.json() as { output?: { signal?: { answerTurnId?: string; concession?: string } } };
+    const decisionCallsBeforeReplayRace = decisionCalls;
+    const racedSignals = await Promise.all(Array.from({ length: 4 }, () => requestSignal("ai-questions-user", answerTranscript, aiQuestionsPayload.output as { type: "question"; text: string }, aiQuestionsPayload.signalToken!)));
+    if (racedSignals.filter((response) => response.status === 200).length !== 1 || racedSignals.filter((response) => response.status === 409).length !== 3) {
+      throw new Error(`concurrent signal token claim was not atomic: ${racedSignals.map((response) => response.status).join(",")}`);
+    }
+    if (decisionCalls !== decisionCallsBeforeReplayRace + 1) throw new Error("concurrent Crossfire signal replays reached Jev");
+    const answerSignalPayload = await racedSignals.find((response) => response.status === 200)!.json() as { output?: { signal?: { answerTurnId?: string; concession?: string } } };
     if (answerSignalPayload.output?.signal?.answerTurnId !== "T2" || answerSignalPayload.output.signal.concession !== "implicit") throw new Error(`ai-questions-user signal missing: ${JSON.stringify(answerSignalPayload)}`);
 
     decisionFails = true;
-    const fallback = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
+    const fallbackTranscript = [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What is the fallback evidence?", createdAt: 3 }];
+    const fallbackReply = await request("question-ai", fallbackTranscript, "answer");
+    const fallbackReplyPayload = await fallbackReply.json() as { output?: { type: "answer"; text: string }; signalToken?: string };
+    if (!fallbackReplyPayload.output || !fallbackReplyPayload.signalToken) throw new Error("fallback Crossfire reply token missing");
+    const fallback = await requestSignal("question-ai", fallbackTranscript, fallbackReplyPayload.output, fallbackReplyPayload.signalToken);
     const fallbackPayload = await fallback.json() as { output?: { signal?: unknown } };
     if (fallback.status !== 200 || fallbackPayload.output?.signal !== undefined) throw new Error(`failed optional signal returned invalid output: ${JSON.stringify(fallbackPayload)}`);
   } finally {

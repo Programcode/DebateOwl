@@ -769,6 +769,18 @@ async function verifyCrossfireSignalToken(userId: string, input: CrossfireSignal
   return mismatch === 0;
 }
 
+async function claimCrossfireSignalToken(userId: string, input: CrossfireSignalInput): Promise<boolean> {
+  const tokenMac = input.signalToken.split(".")[1];
+  const { data, error } = await supabase.rpc("consume_daily_quota", {
+    p_user_id: userId,
+    p_limit: 1,
+    p_quota_key: `crossfire_signal:${tokenMac}`,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return Boolean(row?.allowed);
+}
+
 function boundCrossfireSources(value: unknown, enabled: boolean): { value: PromptSource[]; truncated: boolean } | { error: string } {
   if (!enabled || value === undefined || value === null) return { value: [], truncated: false };
   if (!Array.isArray(value)) return { error: "sources must be an array when Source Library is enabled" };
@@ -1223,6 +1235,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (crossfireInput?.operation === "signal") {
     if (await checkUserBanned(userId)) return badRequest("Your account has been suspended. Please contact support.", corsHeaders, 403);
     if (!(await verifyCrossfireSignalToken(userId, crossfireInput))) return badRequest("Invalid or expired Crossfire signal token", corsHeaders, 403);
+    try {
+      // A token-specific counter atomically bounds replays without consuming the product's AI quota.
+      if (!(await claimCrossfireSignalToken(userId, crossfireInput))) {
+        return badRequest("Crossfire signal token has already been used", corsHeaders, 409);
+      }
+    } catch (error) {
+      log(requestId, "ERROR", "Crossfire signal token claim failed", { error: error instanceof Error ? error.message : "Unknown error" });
+      return badRequest("Unable to verify Crossfire signal token", corsHeaders, 500);
+    }
     const evaluated = await evaluateCrossfireExchange({
       transcript: crossfireInput.transcript,
       reply: crossfireInput.reply,

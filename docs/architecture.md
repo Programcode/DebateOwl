@@ -58,7 +58,7 @@ Client-side environment selection is a developer convenience, not authorization.
 
 [`supabase/functions/ai/index.ts`](../supabase/functions/ai/index.ts) serves non-streaming structured tools and practice modes. [`supabase/functions/ai-stream/index.ts`](../supabase/functions/ai-stream/index.ts) serves Ask over server-sent events.
 
-For a validated Crossfire next turn, the server returns the reply first with a short-lived signed sidecar token. The client then requests a Jev classification of only the newest completed question-answer exchange, without reserving a second daily quota unit. The optional directness, concession, and follow-up signal is attached by turn ID to the answer; a missing, slow, forged, or failed sidecar never delays or invalidates the main reply. Draft version 1 remains compatible because turn signals are optional.
+For a validated Crossfire next turn, the server returns the reply first with a short-lived signed sidecar token. The client then requests a Jev classification of only the newest completed question-answer exchange. The token is atomically claimed through its own one-use counter, separate from the product's daily AI quota. The optional directness, concession, and follow-up signal is attached by turn ID to the answer; a missing, slow, replayed, forged, or failed sidecar never delays or invalidates the main reply. Draft version 1 remains compatible because turn signals are optional.
 
 A configured mock provider bypasses Supabase for local and test behavior. It is not authenticated backend evidence.
 

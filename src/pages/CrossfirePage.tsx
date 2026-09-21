@@ -263,21 +263,31 @@ export default function CrossfirePage() {
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
+  const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
   const activeSourceCount = useSessionStore((session) => session.sourceLibrary.filter((source) => source.isActive).length);
   const { getFeatureConfig } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  const abortSignalRequests = useCallback(() => {
+    signalRequestsRef.current.forEach((controller) => controller.abort());
+    signalRequestsRef.current.clear();
+  }, []);
+
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    abortSignalRequests();
+  }, [abortSignalRequests]);
 
   useEffect(() => {
     if (stateOwnerId === user?.id) return;
     requestRef.current?.abort();
+    abortSignalRequests();
     dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
     setStateOwnerId(user?.id);
     setDraftTurn('');
     setFormError('');
-  }, [stateOwnerId, user?.id]);
+  }, [abortSignalRequests, stateOwnerId, user?.id]);
 
   useEffect(() => {
     if (!user?.id || stateOwnerId !== user.id) return;
@@ -322,16 +332,19 @@ export default function CrossfirePage() {
         turn: nextTurn(snapshot.turns.length + 1, 'ai', result.type, result.text),
       });
       if (result.signalToken) {
+        const signalController = new AbortController();
+        signalRequestsRef.current.add(signalController);
         void crossfireSignal({
           config: snapshot.config,
           transcript: snapshot.turns,
           reply,
           signalToken: result.signalToken,
-        }, modelConfig, { signal: controller.signal })
+        }, modelConfig, { signal: signalController.signal })
           .then((signal) => {
-            if (signal && !controller.signal.aborted) dispatch({ type: 'signal-received', signal });
+            if (signal && !signalController.signal.aborted) dispatch({ type: 'signal-received', signal });
           })
-          .catch((): void => {});
+          .catch((): void => {})
+          .finally(() => signalRequestsRef.current.delete(signalController));
       }
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -445,6 +458,7 @@ export default function CrossfirePage() {
 
   const restart = () => {
     requestRef.current?.abort();
+    abortSignalRequests();
     if (user?.id) clearCrossfireDraft(user.id);
     dispatch({ type: 'session-reset' });
     setDraftTurn('');
