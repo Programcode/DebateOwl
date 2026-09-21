@@ -136,7 +136,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, and Vite client run the real-Auth desktop/mobile workspace journey. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, and Vite client run the real-Auth desktop/mobile workspace journey. Pull requests run this same gate in the `database-tests` job and retain its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
 
 ```bash
 supabase db start

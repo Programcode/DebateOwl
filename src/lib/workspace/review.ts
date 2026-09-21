@@ -279,7 +279,18 @@ export function acceptProposalHunkInDocument({
     transaction.doc.toJSON(),
     document.getXmlFragment(WORKSPACE_CONTENT_FIELD),
   );
-  return withStatuses(proposal, new Set([hunkId]), "accepted");
+  return {
+    ...proposal,
+    hunks: proposal.hunks.map((candidate) => candidate.id === hunkId
+      ? { ...candidate, status: "accepted" as const }
+      : candidate.status === "pending"
+        ? {
+            ...candidate,
+            absoluteFrom: transaction.mapping.map(candidate.absoluteFrom, -1),
+            absoluteTo: transaction.mapping.map(candidate.absoluteTo, 1),
+          }
+        : candidate),
+  };
 }
 
 export function createProposalAfterComposition({

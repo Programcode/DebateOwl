@@ -10,16 +10,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase/client";
 import { listWorkspaces } from "@/lib/workspace/client";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 export default function WorkspacesPage() {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [motion, setMotion] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archived" | "all">("active");
   const requestId = useRef<string | null>(null);
-  const workspaces = useQuery({ queryKey: ["workspaces"], queryFn: listWorkspaces });
+  const workspaces = useQuery({ queryKey: ["workspaces", user?.id], queryFn: listWorkspaces, enabled: Boolean(user) });
   const visibleWorkspaces = workspaces.data?.filter((workspace) => view === "all" || workspace.status === view);
 
   const createWorkspace = async (event: FormEvent) => {

@@ -172,6 +172,10 @@
     "filesPane": "Archivos",
     "documentPane": "Documento",
     "workingPane": "Panel",
+    "changePreview": "Vista previa del cambio propuesto",
+    "original": "Original",
+    "proposed": "Propuesto",
+    "emptyChange": "Vacío",
     "proposal": {
       "insert": "Inserción propuesta",
       "delete": "Eliminación propuesta",

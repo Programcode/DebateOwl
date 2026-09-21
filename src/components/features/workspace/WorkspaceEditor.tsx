@@ -32,7 +32,6 @@ export type SaveStatus = "Offline" | "Saved" | "Saving";
 
 export function WorkspaceEditor({
   documentId,
-  durableSequence,
   editable,
   epoch,
   members,
@@ -44,7 +43,6 @@ export function WorkspaceEditor({
   onSaveStatus,
 }: {
   documentId: string;
-  durableSequence: number;
   editable: boolean;
   epoch: number;
   members: Array<{ user_id: string }>;
@@ -72,17 +70,11 @@ export function WorkspaceEditor({
   const [commentBody, setCommentBody] = useState("");
   const [mentionId, setMentionId] = useState("");
   const [recoveryDrafts, setRecoveryDrafts] = useState<WorkspaceDraft[]>([]);
-  const pending = useRef(new Set<string>());
   const suggestingRef = useRef(false);
-  const sequenceRef = useRef(durableSequence);
 
   useEffect(() => {
     suggestingRef.current = suggesting;
   }, [suggesting]);
-
-  useEffect(() => {
-    sequenceRef.current = durableSequence;
-  }, [durableSequence]);
 
   useEffect(() => {
     onSaveStatus?.(status);
@@ -90,9 +82,13 @@ export function WorkspaceEditor({
 
   useEffect(() => {
     let disposed = false;
+    setEditor(null);
+    setRecoveryDrafts([]);
     setStatus(navigator.onLine ? "Saving" : "Offline");
     let provider: HocuspocusProvider | undefined;
     let activeEditor: ReturnType<typeof createWorkspaceEditor> | undefined;
+    const pending = new Set<string>();
+    const loadedPending = new Set<string>();
     let bufferedHunk: ProposalHunkInput | undefined;
     let suggestionTimer: ReturnType<typeof setTimeout> | undefined;
     const flushSuggestion = () => {
@@ -101,7 +97,7 @@ export function WorkspaceEditor({
       bufferedHunk = undefined;
       if (suggestionTimer) clearTimeout(suggestionTimer);
       suggestionTimer = undefined;
-      if (!online || pending.current.size > 0) {
+      if (!online || pending.size > 0) {
         if (!disposed) setReviewError(t("workspaces.saveBeforeSuggesting", "Wait for Saved before suggesting a change."));
         return;
       }
@@ -114,13 +110,12 @@ export function WorkspaceEditor({
       });
       void saveWorkspaceProposal({
         documentId,
-        expectedSequence: sequenceRef.current,
         proposal,
         workspaceId,
       }).then(() => {
         if (disposed) return;
         setReviewError(null);
-        void queryClient.invalidateQueries({ queryKey: ["workspace-proposals", documentId] });
+        void queryClient.invalidateQueries({ queryKey: ["workspace-proposals", userId, documentId] });
       }).catch(() => {
         if (!disposed) setReviewError(t("workspaces.suggestionFailed", "Suggestion could not be saved."));
       });
@@ -154,7 +149,7 @@ export function WorkspaceEditor({
       try {
         await saveWorkspaceDraft({
           ...identity,
-          pendingMutationIds: [...pending.current],
+          pendingMutationIds: [...pending],
           snapshot: Y.encodeStateAsUpdate(document),
           updatedAt: Date.now(),
         });
@@ -169,7 +164,10 @@ export function WorkspaceEditor({
         if (!disposed) setRecoveryDrafts(drafts.filter((draft) => draft.epoch !== epoch));
         const draft = await loadWorkspaceDraft(identity);
         if (draft?.snapshot.byteLength) Y.applyUpdate(document, draft.snapshot);
-        draft?.pendingMutationIds.forEach((mutationId) => pending.current.add(mutationId));
+        draft?.pendingMutationIds.forEach((mutationId) => {
+          loadedPending.add(mutationId);
+          pending.add(mutationId);
+        });
       } catch {
         if (!disposed) setStorageWarning(true);
       }
@@ -181,12 +179,13 @@ export function WorkspaceEditor({
         onOutgoingMessage: ({ message }) => {
           void durableMutationFromMessage(message.toUint8Array()).then((mutation) => {
             if (!mutation || disposed) return;
-            pending.current.add(mutation.mutationId);
+            pending.add(mutation.mutationId);
             setStatus("Saving");
             void persist();
           });
         },
         onStateless: ({ payload }) => {
+          if (disposed) return;
           let input: unknown;
           try {
             input = JSON.parse(payload);
@@ -195,22 +194,27 @@ export function WorkspaceEditor({
           }
           const acknowledgement = acknowledgementSchema.safeParse(input);
           if (!acknowledgement.success || acknowledgement.data.epoch !== epoch) return;
-          pending.current.delete(acknowledgement.data.mutationId);
-          sequenceRef.current = acknowledgement.data.sequence;
+          if (loadedPending.size > 0 && !loadedPending.has(acknowledgement.data.mutationId)) {
+            loadedPending.forEach((mutationId) => pending.delete(mutationId));
+            loadedPending.clear();
+          }
+          loadedPending.delete(acknowledgement.data.mutationId);
+          pending.delete(acknowledgement.data.mutationId);
           onDurableSequence?.(acknowledgement.data.sequence);
-          setStatus(pending.current.size === 0 ? "Saved" : "Saving");
-          if (pending.current.size === 0) void deleteWorkspaceDraft(identity);
+          setStatus(pending.size === 0 ? "Saved" : "Saving");
+          if (pending.size === 0) void deleteWorkspaceDraft(identity);
           else void persist();
         },
         onStatus: ({ status: nextStatus }) => {
-          if (nextStatus === "disconnected") setStatus("Offline");
+          if (!disposed && nextStatus === "disconnected") setStatus("Offline");
         },
         onSynced: () => {
-          if (pending.current.size > 0) {
+          if (disposed) return;
+          if (pending.size > 0) {
             provider?.sendStateless(JSON.stringify({
               epoch,
               kind: "durable-ack-query",
-              mutationIds: [...pending.current].slice(0, 100),
+              mutationIds: [...pending].slice(0, 100),
             }));
           } else {
             setStatus("Saved");
@@ -302,7 +306,7 @@ export function WorkspaceEditor({
             setMentionId("");
             setCommentOpen(false);
             setReviewError(null);
-            void queryClient.invalidateQueries({ queryKey: ["workspace-comments", documentId] });
+            void queryClient.invalidateQueries({ queryKey: ["workspace-comments", userId, documentId] });
           }).catch(() => setReviewError(t("workspaces.commentFailed", "Comment could not be saved.")));
         }}>
           <Input aria-label={t("workspaces.commentText", "Comment text")} value={commentBody} onChange={(event) => setCommentBody(event.target.value)} />

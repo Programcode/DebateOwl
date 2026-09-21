@@ -111,7 +111,7 @@ describe("workspace review model", () => {
     ]);
   });
 
-  it("intercepts paste and settled composition transactions without changing accepted text", async () => {
+  it("intercepts paste and emits only settled native composition without changing accepted text", async () => {
     const document = new Y.Doc();
     const onSuggestion = vi.fn();
     let suggesting = false;
@@ -125,11 +125,17 @@ describe("workspace review model", () => {
     suggesting = true;
 
     editor.view.dispatch(editor.state.tr.insertText(" pasted", 6).setMeta("uiEvent", "paste"));
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(1));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dispatch(editor.state.tr.insertText(" t", 6).setMeta("composition", 1));
     editor.view.dispatch(editor.state.tr.insertText(" tűrő", 6).setMeta("composition", 1));
+    expect(onSuggestion).toHaveBeenCalledTimes(1);
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
 
     await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(2));
     expect(editor.getJSON()).toEqual(accepted);
     expect(onSuggestion.mock.calls.map(([hunk]) => hunk.kind)).toEqual(["insert", "insert"]);
+    expect(onSuggestion.mock.calls[1][0].content).toEqual([{ type: "text", text: " tűrő" }]);
   });
 
   it("accepts one independent hunk and keeps teammate text outside local undo", async () => {
@@ -203,6 +209,29 @@ describe("workspace review model", () => {
     expect(left.commands.redo()).toBe(true);
     expect(left.getText()).toBe("Remote Alpha Beta Gamma Local");
     expect(JSON.stringify(left.getJSON())).toContain('"type":"bold"');
+  });
+
+  it("accepts independent hunks sequentially after the first shifts the document", () => {
+    const document = new Y.Doc();
+    const editor = createEditor(document);
+    editor.commands.setContent("<p>Alpha Beta</p>");
+    let proposal = review.createProposal({
+      id: "proposal-sequential",
+      authorId: "member-1",
+      documentEpoch: 1,
+      editor,
+      hunks: [
+        { id: "prefix", kind: "insert", at: 1, content: [{ type: "text", text: "Remote " }] },
+        { id: "beta", kind: "format", from: 7, to: 11, content: [{ type: "text", text: "Beta", marks: [{ type: "bold" }] }] },
+      ],
+    });
+
+    proposal = review.acceptProposalHunkInDocument({ document, documentEpoch: 1, hunkId: "prefix", proposal });
+    proposal = review.acceptProposalHunkInDocument({ document, documentEpoch: 1, hunkId: "beta", proposal });
+
+    expect(proposal.hunks.map(({ status }) => status)).toEqual(["accepted", "accepted"]);
+    expect(editor.getText()).toBe("Remote Alpha Beta");
+    expect(JSON.stringify(editor.getJSON())).toContain('"type":"bold"');
   });
 
   it("stales a remotely deleted and reinserted identical target", () => {

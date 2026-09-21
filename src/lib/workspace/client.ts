@@ -265,6 +265,7 @@ export async function changeWorkspaceAccess(input: {
 
 export async function removeWorkspaceMember(input: {
   expectedRevision: number;
+  requestId?: string;
   targetUserId: string;
   token: string;
   workspaceId: string;
@@ -274,9 +275,11 @@ export async function removeWorkspaceMember(input: {
   url.protocol = url.protocol === "wss:" ? "https:" : "http:";
   url.pathname = "/access/remove";
   url.search = "";
-  const response = await fetch(url, {
+  const requestId = input.requestId ?? crypto.randomUUID();
+  const request = () => fetch(url, {
     body: JSON.stringify({
       expectedRevision: input.expectedRevision,
+      requestId,
       targetUserId: input.targetUserId,
       workspaceId: input.workspaceId,
     }),
@@ -286,6 +289,12 @@ export async function removeWorkspaceMember(input: {
     },
     method: "POST",
   });
+  let response: Response;
+  try {
+    response = await request();
+  } catch {
+    response = await request();
+  }
   if (!response.ok) throw new Error("Workspace unavailable");
   return z.object({ revision: z.number().int().nonnegative() }).parse(await response.json()).revision;
 }
@@ -304,14 +313,21 @@ export async function listWorkspaceProposals(documentId: string) {
 
 export async function saveWorkspaceProposal(input: {
   documentId: string;
-  expectedSequence: number;
   proposal: WorkspaceProposal;
   workspaceId: string;
 }) {
+  const current = await supabase
+    .from("workspace_documents")
+    .select("durable_sequence")
+    .eq("id", input.documentId)
+    .single();
+  if (current.error) throw current.error;
+  const sequence = z.object({ durable_sequence: z.number().int().nonnegative() })
+    .parse(current.data).durable_sequence;
   const { data, error } = await supabase.rpc("create_workspace_proposal", {
     p_document_epoch: input.proposal.documentEpoch,
     p_document_id: input.documentId,
-    p_expected_sequence: input.expectedSequence,
+    p_expected_sequence: sequence,
     p_payload: serializeProposal(input.proposal),
     p_proposal_id: input.proposal.id,
     p_workspace_id: input.workspaceId,

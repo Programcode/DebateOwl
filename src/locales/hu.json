@@ -172,6 +172,10 @@
     "filesPane": "Fájlok",
     "documentPane": "Dokumentum",
     "workingPane": "Munkapanel",
+    "changePreview": "A javasolt módosítás előnézete",
+    "original": "Eredeti",
+    "proposed": "Javasolt",
+    "emptyChange": "Üres",
     "proposal": {
       "insert": "Javasolt beszúrás",
       "delete": "Javasolt törlés",

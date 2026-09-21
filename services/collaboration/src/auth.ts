@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const roomSchema = z.string().regex(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}@[0-9]+$/i,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}@(0|[1-9][0-9]*)$/,
 );
 const userSchema = z.object({
   email: z.string().email().nullable().optional(),
@@ -26,11 +26,13 @@ export function createWorkspaceAuthenticator({
     const room = roomSchema.safeParse(documentName);
     if (!room.success || !token) throw new Error("Workspace unavailable");
     const separator = room.data.lastIndexOf("@");
+    const epoch = Number(room.data.slice(separator + 1));
+    if (!Number.isSafeInteger(epoch)) throw new Error("Workspace unavailable");
     const user = userSchema.parse(await verifyToken(token));
     const context = {
       authorId: user.id,
       documentId: room.data.slice(0, separator),
-      epoch: Number(room.data.slice(separator + 1)),
+      epoch,
     };
     if (!await isAuthorized(context)) throw new Error("Workspace unavailable");
 

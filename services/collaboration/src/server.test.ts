@@ -8,6 +8,7 @@ import {
   type DurableUpdate,
   type DurableUpdateStore,
 } from "./server";
+import { createWorkspaceAuthenticator } from "./auth";
 import { appendText, documentText, insertParagraph } from "./test/document";
 
 function deferred<T = void>() {
@@ -106,6 +107,42 @@ describe("collaboration durability", () => {
     await Promise.all(cleanup.splice(0).map((dispose) => dispose()));
   });
 
+  it("rejects a second provider using a noncanonical alias for an open room", async () => {
+    const server = createCollaborationServer({
+      authenticate: createWorkspaceAuthenticator({
+        isAuthorized: async () => true,
+        verifyToken: async (token) => ({
+          id: token === "author"
+            ? "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+            : "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        }),
+      }),
+      store: new MemoryStore(),
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const canonical = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa@1",
+      token: "author",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    let aliasRejected = false;
+    const alias = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA@01",
+      onAuthenticationFailed: () => { aliasRejected = true; },
+      token: "peer",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    cleanup.push(() => canonical.destroy(), () => alias.destroy());
+
+    await vi.waitFor(() => expect(canonical.isSynced).toBe(true));
+    await vi.waitFor(() => expect(aliasRejected).toBe(true));
+    expect(alias.isSynced).toBe(false);
+  });
+
   it("does not broadcast or acknowledge an update before append commits", async () => {
     const store = new BlockingStore();
     const server = createCollaborationServer({
@@ -196,6 +233,7 @@ describe("collaboration durability", () => {
     const removal = fetch(`http://127.0.0.1:${server.address.port}/access/remove`, {
       body: JSON.stringify({
         expectedRevision: 3,
+        requestId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
         targetUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
         workspaceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       }),
@@ -215,6 +253,7 @@ describe("collaboration durability", () => {
     await expect(response.json()).resolves.toEqual({ revision: 4 });
     expect(changeAccess).toHaveBeenCalledWith({
       expectedRevision: 3,
+      requestId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       targetUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       token: "owner-token",
       workspaceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",

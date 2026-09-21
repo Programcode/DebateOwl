@@ -59,6 +59,7 @@ interface AuthenticatedDocument {
 interface CollaborationServerOptions {
   changeAccess?(input: {
     expectedRevision: number;
+    requestId: string;
     targetUserId: string;
     token: string;
     workspaceId: string;
@@ -85,6 +86,7 @@ interface CollaborationServerOptions {
 
 const accessChangeSchema = z.object({
   expectedRevision: z.number().int().nonnegative(),
+  requestId: z.string().uuid(),
   targetUserId: z.string().uuid(),
   workspaceId: z.string().uuid(),
 });

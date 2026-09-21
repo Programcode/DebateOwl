@@ -34,10 +34,12 @@ function VersionPreview({ ariaLabel, preview }: { ariaLabel: string; preview: Wo
 export function WorkspaceVersions({
   canWrite,
   documentId,
+  userId,
   workspaceId,
 }: {
   canWrite: boolean;
   documentId: string;
+  userId: string;
   workspaceId: string;
 }) {
   const { t } = useTranslation();
@@ -46,7 +48,7 @@ export function WorkspaceVersions({
   const [error, setError] = useState<string | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const versions = useQuery({
-    queryKey: ["workspace-versions", documentId],
+    queryKey: ["workspace-versions", userId, documentId],
     queryFn: () => listWorkspaceVersions(documentId),
   });
   const save = useMutation({
@@ -55,11 +57,11 @@ export function WorkspaceVersions({
     onSuccess: () => {
       setError(null);
       setName("");
-      void queryClient.invalidateQueries({ queryKey: ["workspace-versions", documentId] });
+      void queryClient.invalidateQueries({ queryKey: ["workspace-versions", userId, documentId] });
     },
   });
   const preview = useQuery({
-    queryKey: ["workspace-version-preview", documentId, selectedVersionId],
+    queryKey: ["workspace-version-preview", userId, documentId, selectedVersionId],
     queryFn: () => getWorkspaceVersionPreview({
       documentId,
       versionId: selectedVersionId!,

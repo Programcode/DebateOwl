@@ -9,6 +9,7 @@ import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { useOnboardingStore } from "@/hooks/use-onboarding";
@@ -264,6 +265,7 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <AccountQueryCache />
       <ThemeProvider>
         <MotionConfig reducedMotion="user">
           <TooltipProvider delayDuration={200}>

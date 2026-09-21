@@ -38,9 +38,9 @@ export default function WorkspacePage() {
   const [operationError, setOperationError] = useState<string | null>(null);
   const [preferenceLoaded, setPreferenceLoaded] = useState(false);
   const workspace = useQuery({
-    queryKey: ["workspace", workspaceId],
+    queryKey: ["workspace", user?.id, workspaceId],
     queryFn: () => getWorkspaceBundle(workspaceId),
-    enabled: Boolean(workspaceId),
+    enabled: Boolean(user && workspaceId),
     refetchInterval: 5_000,
   });
   const documents = useMemo(
@@ -87,8 +87,8 @@ export default function WorkspacePage() {
 
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId] }),
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+      queryClient.invalidateQueries({ queryKey: ["workspace", user?.id, workspaceId] }),
+      queryClient.invalidateQueries({ queryKey: ["workspaces", user?.id] }),
     ]);
   };
 
@@ -344,7 +344,6 @@ export default function WorkspacePage() {
             {selectedDocument && session && user ? (
               <WorkspaceEditor
                 documentId={selectedDocument.id}
-                durableSequence={durableSequence}
                 editable={workspace.data.workspace.status === "active" && view === "active"}
                 epoch={selectedDocument.document_epoch}
                 members={workspace.data.members}
@@ -386,15 +385,18 @@ export default function WorkspacePage() {
                       key={`review:${selectedDocument.id}`}
                       documentId={selectedDocument.id}
                       epoch={selectedDocument.document_epoch}
+                      editable={workspace.data.workspace.status === "active" && view === "active"}
                       onDurableSequence={setDurableSequence}
                       token={session.access_token}
+                      userId={user!.id}
                       workspaceId={workspace.data.workspace.id}
                     />
                   )}
                   <WorkspaceVersions
                     key={`versions:${selectedDocument.id}`}
-                    canWrite={editorStatus === "Saved"}
+                    canWrite={workspace.data.workspace.status === "active" && view === "active" && editorStatus === "Saved"}
                     documentId={selectedDocument.id}
+                    userId={user!.id}
                     workspaceId={workspace.data.workspace.id}
                   />
                 </>

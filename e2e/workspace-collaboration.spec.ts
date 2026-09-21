@@ -45,7 +45,7 @@ async function startCollaboration() {
     cwd: process.cwd(),
     detached: true,
     env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["ignore", "inherit", "inherit"],
   });
   await waitForPort(collaborationPort);
   return child;
@@ -56,6 +56,17 @@ async function authenticatedPage(browser: Browser, session: Session) {
   await context.addInitScript((value) => {
     localStorage.setItem("debate-auth-local", JSON.stringify(value));
   }, session);
+  const page = await context.newPage();
+  await page.route("**/functions/v1/announcements*", (route) => route.fulfill({
+    body: JSON.stringify({ announcements: [] }),
+    contentType: "application/json",
+    status: 200,
+  }));
+  return { context, page };
+}
+
+async function signedOutPage(browser: Browser) {
+  const context = await browser.newContext();
   const page = await context.newPage();
   await page.route("**/functions/v1/announcements*", (route) => route.fulfill({
     body: JSON.stringify({ announcements: [] }),
@@ -183,10 +194,31 @@ test("real local users collaborate, recover, review, restore, and revoke access"
       }
       return inviteUrl;
     }).toMatch(/token=/);
-    const emailMember = await authenticatedPage(browser, sessions[2]);
+    const emailMember = await signedOutPage(browser);
     contexts.push(emailMember.context);
     const invitation = new URL(inviteUrl);
     await emailMember.page.goto(`${invitation.pathname}${invitation.search}`);
+    await expect(emailMember.page).toHaveURL(/\/login$/);
+    await expect(emailMember.page).not.toHaveURL(/token=/);
+    await emailMember.page.getByLabel("Email address").fill(emails[2]);
+    await emailMember.page.getByRole("button", { name: "Send code" }).click();
+    let otp = "";
+    await expect.poll(async () => {
+      const response = await request.get(`${mailerUrl}/api/v1/messages`);
+      const payload = await response.json() as { messages?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
+      const messages = Array.isArray(payload) ? payload : payload.messages ?? [];
+      for (const message of [...messages].reverse()) {
+        if (!JSON.stringify(message).includes(emails[2])) continue;
+        const id = message.ID ?? message.Id ?? message.id;
+        if (typeof id !== "string") continue;
+        const detail = await (await request.get(`${mailerUrl}/api/v1/message/${id}`)).text();
+        otp = detail.match(/\b(\d{6})\b/)?.[1] ?? "";
+        if (otp) break;
+      }
+      return otp;
+    }).toMatch(/^\d{6}$/);
+    await emailMember.page.getByRole("textbox", { name: "Verification code" }).fill(otp);
+    await emailMember.page.getByRole("button", { name: "Verify code" }).click();
     await expect(emailMember.page).toHaveURL(workspaceUrl);
     await expect(emailMember.page).not.toHaveURL(/token=/);
 
@@ -200,15 +232,56 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await owner.page.getByRole("complementary", { name: "Files" }).getByRole("button", { name: "Trash" }).click();
     await owner.page.getByRole("region", { name: "Rebuttal notes" }).getByRole("button", { name: "Restore" }).click();
 
+    const beforeScopedDraft = await admin.from("workspace_documents")
+      .select("durable_sequence,id")
+      .eq("workspace_id", workspaceId)
+      .eq("side", "pro")
+      .eq("title", "R1")
+      .single();
+    if (beforeScopedDraft.error) throw beforeScopedDraft.error;
+    await member.context.setOffline(true);
+    await member.page.locator(".ProseMirror").click();
+    await member.page.locator(".ProseMirror").press("End");
+    await member.page.locator(".ProseMirror").pressSequentially(" scoped draft");
+    await member.page.getByRole("button", { name: "Intro" }).click();
+    await member.context.setOffline(false);
+    await expect(member.page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(member.page.locator(".ProseMirror")).not.toContainText("scoped draft");
+    await member.page.getByRole("button", { name: "R1" }).click();
+    await expect(member.page.locator(".ProseMirror")).toContainText("scoped draft");
+    await expect.poll(async () => {
+      const current = await admin.from("workspace_documents")
+        .select("durable_sequence")
+        .eq("id", beforeScopedDraft.data.id)
+        .single();
+      if (current.error) throw current.error;
+      return current.data.durable_sequence;
+    }).toBeGreaterThan(beforeScopedDraft.data.durable_sequence);
+    await expect(member.page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 15_000 });
+
     await owner.page.getByRole("button", { name: "R1" }).click();
     await owner.page.getByRole("button", { name: "Editing" }).click();
     await owner.page.locator(".ProseMirror").click();
     await owner.page.locator(".ProseMirror").press("ControlOrMeta+A");
     await owner.page.keyboard.insertText("Phones reduce attention");
     await openPanel(member.page, "Review");
+    await expect(member.page.getByLabel("Proposed change preview")).toContainText("Phones reduce attention");
+    await expect(member.page.getByText("Original", { exact: true })).toBeVisible();
+    await expect(member.page.getByText("Proposed", { exact: true })).toBeVisible();
     await expect(member.page.getByRole("button", { name: "Accept" })).toHaveCount(1);
     await member.page.getByRole("button", { name: "Accept" }).click();
     await expect(member.page.locator(".ProseMirror")).toContainText("Phones reduce attention");
+
+    await owner.page.locator(".ProseMirror").click();
+    await owner.page.locator(".ProseMirror").press("End");
+    const cdp = await owner.context.newCDPSession(owner.page);
+    await cdp.send("Input.imeSetComposition", { text: " t", selectionStart: 2, selectionEnd: 2 });
+    await cdp.send("Input.imeSetComposition", { text: " tűrő", selectionStart: 5, selectionEnd: 5 });
+    await cdp.send("Input.insertText", { text: " tűrő" });
+    await expect(member.page.getByRole("button", { name: "Reject" })).toHaveCount(1);
+    await expect(member.page.getByLabel("Proposed change preview").last()).toContainText("tűrő");
+    await member.page.getByRole("button", { name: "Reject" }).click();
+    await expect(owner.page.locator(".ProseMirror")).not.toContainText("tűrő");
 
     await owner.page.getByRole("button", { name: "Suggesting" }).click();
     await owner.page.locator(".ProseMirror").click();
@@ -252,6 +325,7 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await member.page.reload();
     await expect(member.page.getByRole("alert").filter({ hasText: "Recovery" })).toBeVisible();
     await expect(member.page.locator(".ProseMirror")).not.toContainText("offline draft");
+    await expect(member.page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 15_000 });
 
     await openPanel(owner.page, "Invite people");
     const memberRow = owner.page.getByText(`Member ${ids[1].slice(0, 4)}`, { exact: false }).last().locator("..");

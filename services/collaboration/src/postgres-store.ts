@@ -33,6 +33,7 @@ const stateRowSchema = z.object({
   durable_sequence: bigintSchema,
   workspace_id: z.string().uuid(),
 });
+const workspaceRowSchema = z.object({ workspace_id: z.string().uuid() });
 const durableRowSchema = z.object({
   author_id: z.string().uuid().nullable(),
   bytes: z.instanceof(Uint8Array),
@@ -138,17 +139,27 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
 
     await client.query("BEGIN");
     try {
-      const stateResult = await client.query(
-        `SELECT state.workspace_id, state.durable_sequence
+      const workspaceResult = await client.query(
+        `SELECT workspace.id AS workspace_id
          FROM private.workspace_document_state AS state
          JOIN public.workspaces AS workspace ON workspace.id = state.workspace_id
-         JOIN public.workspace_members AS member
-           ON member.workspace_id = state.workspace_id AND member.user_id = $3
          WHERE state.document_id = $1
            AND state.epoch = $2
            AND workspace.status = 'active'
+         FOR UPDATE OF workspace`,
+        [update.documentId, update.epoch],
+      );
+      const workspaceInput = workspaceResult.rows[0];
+      if (!workspaceInput) throw new Error("Workspace access revoked");
+      const workspace = workspaceRowSchema.parse(workspaceInput);
+      const stateResult = await client.query(
+        `SELECT state.workspace_id, state.durable_sequence
+         FROM private.workspace_document_state AS state
+         JOIN public.workspace_members AS member
+           ON member.workspace_id = state.workspace_id AND member.user_id = $4
+         WHERE state.document_id = $1 AND state.epoch = $2 AND state.workspace_id = $3
          FOR UPDATE OF state`,
-        [update.documentId, update.epoch, update.authorId],
+        [update.documentId, update.epoch, workspace.workspace_id, update.authorId],
       );
       const stateInput = stateResult.rows[0];
       if (!stateInput) throw new Error("Workspace access revoked");
@@ -212,8 +223,24 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
   }
 
   async snapshotVersion(documentId: string, epoch: number) {
-    await this.getWriter(documentId, epoch).query(
-      `WITH version AS (
+    const client = this.getWriter(documentId, epoch);
+    await client.query("BEGIN");
+    try {
+      const workspaceResult = await client.query(
+        `SELECT workspace.id AS workspace_id
+         FROM private.workspace_document_state AS state
+         JOIN public.workspaces AS workspace ON workspace.id = state.workspace_id
+         WHERE state.document_id = $1 AND state.epoch = $2
+           AND workspace.status = 'active'
+         FOR UPDATE OF workspace`,
+        [documentId, epoch],
+      );
+      if (!workspaceResult.rows[0]) {
+        await client.query("COMMIT");
+        return;
+      }
+      await client.query(
+        `WITH version AS (
          INSERT INTO public.workspace_versions (
            workspace_id, document_id, kind, document_epoch, durable_sequence
          )
@@ -236,8 +263,13 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
        FROM version
        JOIN private.workspace_document_state AS state
          ON state.document_id = version.document_id`,
-      [documentId, epoch],
-    );
+        [documentId, epoch],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
   }
 
   async decideProposal(input: {
@@ -255,6 +287,18 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
     const client = this.getWriter(input.documentId, input.epoch);
     await client.query("BEGIN");
     try {
+      const workspaceResult = await client.query(
+        `SELECT workspace.id AS workspace_id
+         FROM public.workspace_proposals AS proposal
+         JOIN public.workspaces AS workspace ON workspace.id = proposal.workspace_id
+         WHERE proposal.id = $1 AND proposal.document_id = $2
+           AND proposal.document_epoch = $3 AND workspace.status = 'active'
+         FOR UPDATE OF workspace`,
+        [input.proposalId, input.documentId, input.epoch],
+      );
+      const workspaceInput = workspaceResult.rows[0];
+      if (!workspaceInput) throw new Error("Workspace unavailable");
+      const workspace = workspaceRowSchema.parse(workspaceInput);
       const result = await client.query(
         `SELECT proposal.payload, proposal.durable_sequence AS proposal_sequence,
            state.durable_sequence, state.snapshot, state.workspace_id
@@ -263,13 +307,12 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
            ON state.workspace_id = proposal.workspace_id
           AND state.document_id = proposal.document_id
           AND state.epoch = proposal.document_epoch
-         JOIN public.workspaces AS workspace ON workspace.id = proposal.workspace_id
          JOIN public.workspace_members AS member
-           ON member.workspace_id = proposal.workspace_id AND member.user_id = $4
+           ON member.workspace_id = proposal.workspace_id AND member.user_id = $5
          WHERE proposal.id = $1 AND proposal.document_id = $2
-           AND proposal.document_epoch = $3 AND workspace.status = 'active'
+           AND proposal.document_epoch = $3 AND proposal.workspace_id = $4
          FOR UPDATE OF proposal, state`,
-        [input.proposalId, input.documentId, input.epoch, input.authorId],
+        [input.proposalId, input.documentId, input.epoch, workspace.workspace_id, input.authorId],
       );
       if (!result.rows[0]) throw new Error("Workspace unavailable");
       const row = proposalRowSchema.parse(result.rows[0]);
@@ -347,14 +390,17 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
         }
       }
 
+      const sequence = row.durable_sequence + (update ? 1 : 0);
       await client.query(
-        `UPDATE public.workspace_proposals SET payload = $2, updated_at = now() WHERE id = $1`,
-        [input.proposalId, JSON.stringify(serializeProposal(proposal))],
+        `UPDATE public.workspace_proposals
+         SET payload = $2, durable_sequence = $3, updated_at = now()
+         WHERE id = $1`,
+        [input.proposalId, JSON.stringify(serializeProposal(proposal)), sequence],
       );
       await client.query("COMMIT");
       return {
         proposal: serializeProposal(proposal),
-        sequence: row.durable_sequence + (update ? 1 : 0),
+        sequence,
         update,
       };
     } catch (error) {

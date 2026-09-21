@@ -53,7 +53,12 @@ echo "Waiting for exclusive access to the local Supabase stack..."
 lock_acquire "$DB_LOCK" 600
 trap cleanup EXIT
 
-runtime_dir="$(mktemp -d)"
+if [ -n "${WORKSPACE_GATE_ARTIFACT_ROOT:-}" ]; then
+  mkdir -p -- "$WORKSPACE_GATE_ARTIFACT_ROOT"
+  runtime_dir="$(mktemp -d "$WORKSPACE_GATE_ARTIFACT_ROOT/workspace-gate.XXXXXX")"
+else
+  runtime_dir="$(mktemp -d)"
+fi
 supabase start >"$runtime_dir/supabase.log" 2>&1
 stack_started=true
 npm run test:db

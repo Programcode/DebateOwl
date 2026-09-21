@@ -316,18 +316,23 @@ BEGIN
     RETURN v_existing.version_id;
   END IF;
 
+  PERFORM 1
+  FROM public.workspaces AS workspace
+  WHERE workspace.id = p_workspace_id
+  FOR UPDATE OF workspace;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.workspaces AS workspace
+    JOIN public.workspace_members AS member
+      ON member.workspace_id = workspace.id AND member.user_id = v_user_id
+    WHERE workspace.id = p_workspace_id AND workspace.status = 'active'
+  ) THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+
   SELECT state.* INTO v_state
   FROM private.workspace_document_state AS state
   JOIN public.workspace_documents AS document
     ON document.workspace_id = state.workspace_id AND document.id = state.document_id
-  JOIN public.workspaces AS workspace ON workspace.id = state.workspace_id
-  WHERE state.workspace_id = p_workspace_id
-    AND state.document_id = p_document_id
-    AND workspace.status = 'active'
-    AND EXISTS (
-      SELECT 1 FROM public.workspace_members AS member
-      WHERE member.workspace_id = state.workspace_id AND member.user_id = v_user_id
-    )
+  WHERE state.workspace_id = p_workspace_id AND state.document_id = p_document_id
   FOR UPDATE OF state;
   IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
   IF v_state.durable_sequence <> p_expected_sequence THEN RAISE EXCEPTION 'document conflict'; END IF;
@@ -581,7 +586,10 @@ CREATE POLICY workspace_comments_select_member ON public.workspace_comments
 CREATE POLICY workspace_comment_replies_select_member ON public.workspace_comment_replies
   FOR SELECT TO authenticated USING ((SELECT private.is_current_workspace_member(workspace_id)));
 CREATE POLICY workspace_notifications_select_recipient ON public.workspace_notifications
-  FOR SELECT TO authenticated USING (recipient_id = (SELECT auth.uid()));
+  FOR SELECT TO authenticated USING (
+    recipient_id = (SELECT auth.uid())
+    AND (SELECT private.is_current_workspace_member(workspace_id))
+  );
 REVOKE ALL ON TABLE public.workspace_proposals, public.workspace_comments,
   public.workspace_comment_replies, public.workspace_notifications
 FROM PUBLIC, anon, authenticated;
@@ -602,16 +610,24 @@ AS $$
 DECLARE
   v_state private.workspace_document_state%ROWTYPE;
 BEGIN
+  PERFORM 1
+  FROM public.workspaces AS workspace
+  WHERE workspace.id = p_workspace_id
+  FOR UPDATE OF workspace;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.workspaces AS workspace
+    JOIN public.workspace_members AS member
+      ON member.workspace_id = workspace.id AND member.user_id = auth.uid()
+    WHERE workspace.id = p_workspace_id
+      AND (NOT p_require_active OR workspace.status = 'active')
+      AND workspace.status <> 'deleted'
+  ) THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+
   SELECT state.* INTO v_state
   FROM private.workspace_document_state AS state
-  JOIN public.workspaces AS workspace ON workspace.id = state.workspace_id
-  WHERE state.workspace_id = p_workspace_id
-    AND state.document_id = p_document_id
-    AND EXISTS (
-      SELECT 1 FROM public.workspace_members AS member
-      WHERE member.workspace_id = state.workspace_id AND member.user_id = auth.uid()
-    )
-    AND (NOT p_require_active OR workspace.status = 'active');
+  WHERE state.workspace_id = p_workspace_id AND state.document_id = p_document_id
+  FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
   RETURN v_state;
 END;
@@ -733,13 +749,16 @@ AS $$
 DECLARE
   v_user_id uuid := auth.uid();
   v_body text := btrim(p_body);
+  v_document_id uuid;
 BEGIN
-  IF v_user_id IS NULL OR p_reply_id IS NULL OR length(v_body) NOT BETWEEN 1 AND 2000
-    OR NOT EXISTS (
-      SELECT 1 FROM public.workspace_comments AS comment
-      WHERE comment.id = p_comment_id AND comment.workspace_id = p_workspace_id
-        AND private.is_current_workspace_member(comment.workspace_id)
-    ) THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  IF v_user_id IS NULL OR p_reply_id IS NULL OR length(v_body) NOT BETWEEN 1 AND 2000 THEN
+    RAISE EXCEPTION 'workspace unavailable';
+  END IF;
+  SELECT document_id INTO v_document_id
+  FROM public.workspace_comments
+  WHERE id = p_comment_id AND workspace_id = p_workspace_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  PERFORM private.require_workspace_document_member(p_workspace_id, v_document_id, true);
   INSERT INTO public.workspace_comment_replies (id, comment_id, workspace_id, author_id, body)
   VALUES (p_reply_id, p_comment_id, p_workspace_id, v_user_id, v_body);
   RETURN p_reply_id;
@@ -756,11 +775,18 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-DECLARE v_user_id uuid := auth.uid();
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_document_id uuid;
 BEGIN
-  IF v_user_id IS NULL OR p_resolved IS NULL OR NOT private.is_current_workspace_member(p_workspace_id) THEN
+  IF v_user_id IS NULL OR p_resolved IS NULL THEN
     RAISE EXCEPTION 'workspace unavailable';
   END IF;
+  SELECT document_id INTO v_document_id
+  FROM public.workspace_comments
+  WHERE id = p_comment_id AND workspace_id = p_workspace_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  PERFORM private.require_workspace_document_member(p_workspace_id, v_document_id, true);
   UPDATE public.workspace_comments
   SET resolved_at = CASE WHEN p_resolved THEN now() ELSE NULL END,
       resolved_by = CASE WHEN p_resolved THEN v_user_id ELSE NULL END

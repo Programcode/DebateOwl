@@ -29,6 +29,14 @@ export function createWorkspaceEditor(
     ? [Extension.create({
       name: "workspaceSuggestionInterceptor",
       addProseMirrorPlugins() {
+        let composing = false;
+        let compositionHunk: ProposalHunkInput | undefined;
+        let compositionTimer: ReturnType<typeof setTimeout> | undefined;
+        const finishComposition = () => {
+          if (compositionHunk) options.onSuggestion?.(compositionHunk);
+          compositionHunk = undefined;
+          compositionTimer = undefined;
+        };
         return [new Plugin({
           filterTransaction: (transaction, state) => {
             if (!options.isSuggesting?.() || !transaction.docChanged || transaction.getMeta(ySyncPluginKey)) {
@@ -45,8 +53,29 @@ export function createWorkspaceEditor(
               : kind === "delete"
                 ? { from, id: crypto.randomUUID(), kind, to }
                 : { content: transaction.doc.slice(from, replacementTo).content.toJSON(), from, id: crypto.randomUUID(), kind, to };
+            if (composing || transaction.getMeta("composition") !== undefined || compositionTimer) {
+              compositionHunk = hunk;
+              return false;
+            }
             queueMicrotask(() => options.onSuggestion?.(hunk));
             return false;
+          },
+          props: {
+            handleDOMEvents: {
+              compositionend: () => {
+                composing = false;
+                if (compositionTimer) clearTimeout(compositionTimer);
+                compositionTimer = setTimeout(finishComposition, 0);
+                return false;
+              },
+              compositionstart: () => {
+                composing = true;
+                compositionHunk = undefined;
+                if (compositionTimer) clearTimeout(compositionTimer);
+                compositionTimer = undefined;
+                return false;
+              },
+            },
           },
         })];
       },

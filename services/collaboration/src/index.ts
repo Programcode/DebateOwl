@@ -31,7 +31,7 @@ const server = createCollaborationServer({
   allowedOrigins: new Set(config.allowedOrigins),
   authenticate,
   authorize: (context, operation) => store.isAuthorized(context, operation === "write"),
-  changeAccess: async ({ expectedRevision, targetUserId, token, workspaceId }) => {
+  changeAccess: async ({ expectedRevision, requestId, targetUserId, token, workspaceId }) => {
     await verifyToken(token);
     const authenticated = createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
@@ -40,7 +40,7 @@ const server = createCollaborationServer({
     const { data, error } = await authenticated.rpc("change_workspace_access", {
       p_action: "remove",
       p_expected_revision: expectedRevision,
-      p_request_id: crypto.randomUUID(),
+      p_request_id: requestId,
       p_target_user_id: targetUserId,
       p_workspace_id: workspaceId,
     });

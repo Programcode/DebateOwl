@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(20);
+SELECT plan(25);
 
 SELECT has_table('public', 'workspace_proposals', 'proposal metadata is persisted');
 SELECT has_table('public', 'workspace_comments', 'inline comments are persisted');
@@ -107,6 +107,60 @@ SELECT results_eq(
   $$SELECT count(*)::bigint FROM public.workspace_notifications$$,
   ARRAY[1::bigint],
   'the mentioned teammate reads their notification'
+);
+
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '81111111-1111-4111-8111-111111111111', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT results_eq(
+  $$SELECT public.change_workspace_access(
+    current_setting('test.review_workspace')::uuid,
+    'remove', '82222222-2222-4222-8222-222222222222', 0,
+    '80000000-0000-4000-8000-000000000008'
+  )$$,
+  ARRAY[1::bigint],
+  'the owner removes the mentioned teammate'
+);
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '82222222-2222-4222-8222-222222222222', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT results_eq(
+  $$SELECT count(*)::bigint FROM public.workspace_notifications$$,
+  ARRAY[0::bigint],
+  'a removed teammate cannot read retained notification metadata'
+);
+
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '81111111-1111-4111-8111-111111111111', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT results_eq(
+  $$SELECT public.change_workspace_state(
+    current_setting('test.review_workspace')::uuid,
+    'archive', 1, '80000000-0000-4000-8000-000000000009'
+  )$$,
+  ARRAY[2::bigint],
+  'the owner archives the review workspace'
+);
+SELECT throws_ok(
+  $$SELECT public.reply_workspace_comment(
+    current_setting('test.review_workspace')::uuid,
+    '80000000-0000-4000-8000-000000000003',
+    '80000000-0000-4000-8000-000000000010',
+    'Late reply'
+  )$$,
+  'P0001', 'workspace unavailable',
+  'archived workspaces reject replies'
+);
+SELECT throws_ok(
+  $$SELECT public.resolve_workspace_comment(
+    current_setting('test.review_workspace')::uuid,
+    '80000000-0000-4000-8000-000000000003', false
+  )$$,
+  'P0001', 'workspace unavailable',
+  'archived workspaces reject resolution changes'
 );
 
 SET LOCAL ROLE authenticated;

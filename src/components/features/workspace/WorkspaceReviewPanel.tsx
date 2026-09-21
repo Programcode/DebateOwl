@@ -13,17 +13,30 @@ import {
 } from "@/lib/workspace/client";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 
+function summarizeContent(value: unknown): string {
+  if (Array.isArray(value)) return value.map(summarizeContent).filter(Boolean).join(" ");
+  if (!value || typeof value !== "object") return "";
+  const node = value as { content?: unknown; marks?: Array<{ type?: unknown }>; text?: unknown; type?: unknown };
+  const content = typeof node.text === "string" ? node.text : summarizeContent(node.content);
+  const marks = node.marks?.map(({ type }) => typeof type === "string" ? type : "").filter(Boolean) ?? [];
+  return marks.length ? `${content} [${marks.join(", ")}]` : content;
+}
+
 export function WorkspaceReviewPanel({
   documentId,
+  editable,
   epoch,
   onDurableSequence,
   token,
+  userId,
   workspaceId,
 }: {
   documentId: string;
+  editable: boolean;
   epoch: number;
   onDurableSequence: (sequence: number) => void;
   token: string;
+  userId: string;
   workspaceId: string;
 }) {
   const { t } = useTranslation();
@@ -32,17 +45,17 @@ export function WorkspaceReviewPanel({
   const [reply, setReply] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const proposals = useQuery({
-    queryKey: ["workspace-proposals", documentId],
+    queryKey: ["workspace-proposals", userId, documentId],
     queryFn: () => listWorkspaceProposals(documentId),
     refetchInterval: 2_000,
   });
   const comments = useQuery({
-    queryKey: ["workspace-comments", documentId],
+    queryKey: ["workspace-comments", userId, documentId],
     queryFn: () => listWorkspaceComments(documentId, workspaceId),
     refetchInterval: 2_000,
   });
   const notifications = useQuery({
-    queryKey: ["workspace-notifications", documentId],
+    queryKey: ["workspace-notifications", userId, documentId],
     queryFn: () => listWorkspaceNotifications(documentId),
     refetchInterval: 2_000,
   });
@@ -53,8 +66,8 @@ export function WorkspaceReviewPanel({
     onSuccess: (result) => {
       setError(null);
       onDurableSequence(result.sequence);
-      void queryClient.invalidateQueries({ queryKey: ["workspace-proposals", documentId] });
-      void queryClient.invalidateQueries({ queryKey: ["workspace-versions", documentId] });
+      void queryClient.invalidateQueries({ queryKey: ["workspace-proposals", userId, documentId] });
+      void queryClient.invalidateQueries({ queryKey: ["workspace-versions", userId, documentId] });
     },
   });
 
@@ -65,7 +78,7 @@ export function WorkspaceReviewPanel({
     try {
       await replyWorkspaceComment(workspaceId, commentId, body);
       setReply((current) => ({ ...current, [commentId]: "" }));
-      await queryClient.invalidateQueries({ queryKey: ["workspace-comments", documentId] });
+      await queryClient.invalidateQueries({ queryKey: ["workspace-comments", userId, documentId] });
     } catch {
       setError(t("workspaces.commentFailed", "Comment could not be saved."));
     }
@@ -85,10 +98,20 @@ export function WorkspaceReviewPanel({
           <div key={`${proposal.id}:${hunk.id}`} className="rounded-md border border-border p-2 text-sm">
             <p className="font-medium">{t(`workspaces.proposal.${hunk.kind}`, hunk.kind)}</p>
             <p className="text-xs text-muted-foreground">{t(`workspaces.proposal.${hunk.status}`, hunk.status)}</p>
+            <div className="mt-2 grid gap-1" aria-label={t("workspaces.changePreview", "Proposed change preview")}>
+              <p className="text-xs font-medium">{t("workspaces.original", "Original")}</p>
+              <del className="rounded bg-muted px-2 py-1 text-sm decoration-current">
+                {summarizeContent(hunk.original) || t("workspaces.emptyChange", "Empty")}
+              </del>
+              <p className="text-xs font-medium">{t("workspaces.proposed", "Proposed")}</p>
+              <ins className="rounded bg-accent px-2 py-1 text-sm no-underline">
+                {summarizeContent(hunk.replacement) || t("workspaces.emptyChange", "Empty")}
+              </ins>
+            </div>
             {hunk.status === "pending" && (
               <div className="mt-2 flex gap-2">
-                <Button type="button" size="sm" disabled={!online || decision.isPending} onClick={() => decision.mutate({ decision: "accepted", hunkId: hunk.id, proposalId: proposal.id })}>{t("workspaces.accept", "Accept")}</Button>
-                <Button type="button" size="sm" variant="outline" disabled={!online || decision.isPending} onClick={() => decision.mutate({ decision: "rejected", hunkId: hunk.id, proposalId: proposal.id })}>{t("workspaces.reject", "Reject")}</Button>
+                <Button type="button" size="sm" disabled={!editable || !online || decision.isPending} onClick={() => decision.mutate({ decision: "accepted", hunkId: hunk.id, proposalId: proposal.id })}>{t("workspaces.accept", "Accept")}</Button>
+                <Button type="button" size="sm" variant="outline" disabled={!editable || !online || decision.isPending} onClick={() => decision.mutate({ decision: "rejected", hunkId: hunk.id, proposalId: proposal.id })}>{t("workspaces.reject", "Reject")}</Button>
               </div>
             )}
           </div>
@@ -100,10 +123,10 @@ export function WorkspaceReviewPanel({
             {comment.replies.map((item) => <p key={item.id} className="mt-2 border-l-2 border-border pl-2">{item.body}</p>)}
             <form className="mt-2 flex gap-2" onSubmit={(event) => void submitReply(event, comment.id)}>
               <Input aria-label={t("workspaces.reply", "Reply")} value={reply[comment.id] ?? ""} onChange={(event) => setReply((current) => ({ ...current, [comment.id]: event.target.value }))} />
-              <Button type="submit" size="sm" disabled={!online}>{t("workspaces.reply", "Reply")}</Button>
+              <Button type="submit" size="sm" disabled={!editable || !online}>{t("workspaces.reply", "Reply")}</Button>
             </form>
-            <Button type="button" size="sm" variant="ghost" className="mt-2" disabled={!online} onClick={() => void resolveWorkspaceComment(workspaceId, comment.id, !comment.resolved_at)
-              .then(() => queryClient.invalidateQueries({ queryKey: ["workspace-comments", documentId] }))
+            <Button type="button" size="sm" variant="ghost" className="mt-2" disabled={!editable || !online} onClick={() => void resolveWorkspaceComment(workspaceId, comment.id, !comment.resolved_at)
+              .then(() => queryClient.invalidateQueries({ queryKey: ["workspace-comments", userId, documentId] }))
               .catch(() => setError(t("workspaces.commentFailed", "Comment could not be saved.")))}>
               {comment.resolved_at ? t("workspaces.reopenComment", "Reopen") : t("workspaces.resolveComment", "Resolve")}
             </Button>

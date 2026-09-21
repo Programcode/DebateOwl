@@ -172,6 +172,10 @@
     "filesPane": "Files",
     "documentPane": "Document",
     "workingPane": "Working panel",
+    "changePreview": "Proposed change preview",
+    "original": "Original",
+    "proposed": "Proposed",
+    "emptyChange": "Empty",
     "proposal": {
       "insert": "Proposed insertion",
       "delete": "Proposed deletion",

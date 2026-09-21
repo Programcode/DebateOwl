@@ -109,6 +109,9 @@ describe("Postgres collaboration writer locks", () => {
     });
 
     expect(durable.sequence).toBe(8);
+    const appendQueries = client.query.mock.calls.map(([text]) => String(text));
+    expect(appendQueries.findIndex((text) => text.includes("FOR UPDATE OF workspace")))
+      .toBeLessThan(appendQueries.findIndex((text) => text.includes("SELECT state.workspace_id, state.durable_sequence")));
     expect(client.query.mock.calls.some(([text]) => String(text).startsWith("INSERT INTO private.workspace_document_updates"))).toBe(true);
     expect(client.query.mock.calls.some(([text]) => String(text).startsWith("UPDATE private.workspace_document_state"))).toBe(true);
     expect(client.query).toHaveBeenCalledWith("COMMIT");
@@ -183,6 +186,11 @@ describe("Postgres collaboration writer locks", () => {
 
   it("stores one automatic version for the durable sequence after the idle window", async () => {
     const client = new FakeClient();
+    client.query.mockImplementation(async (text: string) => ({
+      rows: text.includes("SELECT workspace.id AS workspace_id")
+        ? [{ workspace_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }]
+        : [],
+    }));
     const store = new PostgresDurableUpdateStore({ connect: vi.fn().mockResolvedValue(client) });
     const release = await store.acquireWriter(
       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -218,6 +226,9 @@ describe("Postgres collaboration writer locks", () => {
     const { proposal, snapshot } = proposalFixture();
     const client = new FakeClient();
     client.query.mockImplementation(async (text: string) => {
+      if (text.includes("SELECT workspace.id AS workspace_id")) {
+        return { rows: [{ workspace_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }] };
+      }
       if (text.includes("SELECT proposal.payload")) {
         return { rows: [{
           durable_sequence: 4,
@@ -242,6 +253,9 @@ describe("Postgres collaboration writer locks", () => {
 
     expect(result.proposal.hunks[0].status).toBe("accepted");
     expect(result.sequence).toBe(5);
+    const decisionQueries = client.query.mock.calls.map(([text]) => String(text));
+    expect(decisionQueries.findIndex((text) => text.includes("FOR UPDATE OF workspace")))
+      .toBeLessThan(decisionQueries.findIndex((text) => text.includes("FOR UPDATE OF proposal, state")));
     const accepted = new Y.Doc();
     Y.applyUpdate(accepted, snapshot);
     Y.applyUpdate(accepted, result.update!);
@@ -250,6 +264,10 @@ describe("Postgres collaboration writer locks", () => {
     expect(client.query.mock.calls.some(([text]) => String(text).includes("INSERT INTO public.workspace_versions"))).toBe(true);
     expect(client.query.mock.calls.some(([text]) => String(text).includes("INSERT INTO private.workspace_document_updates"))).toBe(true);
     expect(client.query.mock.calls.some(([text]) => String(text).includes("UPDATE public.workspace_proposals"))).toBe(true);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("durable_sequence = $3"),
+      [proposal.id, expect.any(String), 5],
+    );
     expect(client.query).toHaveBeenCalledWith("COMMIT");
   });
 
@@ -257,6 +275,9 @@ describe("Postgres collaboration writer locks", () => {
     const { proposal, snapshot } = proposalFixture();
     const client = new FakeClient();
     client.query.mockImplementation(async (text: string) => {
+      if (text.includes("SELECT workspace.id AS workspace_id")) {
+        return { rows: [{ workspace_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }] };
+      }
       if (text.includes("SELECT proposal.payload")) {
         return { rows: [{ durable_sequence: 4, payload: serializeProposal(proposal), proposal_sequence: 4, snapshot, workspace_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }] };
       }
