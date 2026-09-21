@@ -20,12 +20,12 @@ import { chromium, devices } from '@playwright/test';
 
 const require = createRequire(import.meta.url);
 const ROOT = process.cwd();
-const OUTPUT_DIR = resolve(ROOT, 'docs/performance/smooth-navigation-baseline');
+const OUTPUT_DIR = resolve(ROOT, process.env.PERFORMANCE_OUTPUT_DIR || 'docs/performance/smooth-navigation-baseline');
 const DIST_DIR = resolve(ROOT, 'dist');
 const RUN_LABEL = process.env.BASELINE_RUN || `run-${new Date().toISOString().replaceAll(':', '-')}`;
 const DELAY_MS = 750;
 const SERVER_TIMEOUT_MS = 45_000;
-const CONTENT_TIMEOUT_MS = 45_000;
+const CONTENT_TIMEOUT_MS = Number(process.env.PERFORMANCE_CONTENT_TIMEOUT_MS || 90_000);
 
 const ROUTES = [
   { path: '/', marker: { selector: 'h1', text: 'Prep Faster' }, module: 'LandingPage' },
@@ -196,6 +196,7 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
     transition: null,
     longTasks: [],
     layoutShifts: [],
+    eventTimings: [],
   };
 
   const visible = (element) => {
@@ -253,6 +254,18 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
       }
     }).observe({ type: 'layout-shift', buffered: true });
   }
+  if (PerformanceObserver.supportedEntryTypes.includes('event')) {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        baseline.eventTimings.push({
+          name: entry.name,
+          startTime: entry.startTime,
+          duration: entry.duration,
+          interactionId: entry.interactionId,
+        });
+      }
+    }).observe({ type: 'event', buffered: true, durationThreshold: 16 });
+  }
 
   window.__navigationBaseline = {
     startTransition(target) {
@@ -281,6 +294,7 @@ const INIT_INSTRUMENTATION = ({ markers }) => {
         } : null,
         longTasks: baseline.longTasks,
         layoutShifts: baseline.layoutShifts,
+        eventTimings: baseline.eventTimings,
       };
     },
   };
@@ -317,12 +331,28 @@ async function createContext(browser, profile, { authenticated = false, cacheDis
     if (url.origin !== origin && url.protocol !== 'data:') return route.abort();
     return route.continue();
   });
+  const client = await context.newCDPSession(page);
+  await client.send('Performance.enable');
   if (cacheDisabled) {
-    const client = await context.newCDPSession(page);
     await client.send('Network.enable');
     await client.send('Network.setCacheDisabled', { cacheDisabled: true });
   }
-  return { context, page };
+  return { context, page, client };
+}
+
+async function readMainThreadMetrics(client) {
+  const { metrics } = await client.send('Performance.getMetrics');
+  const values = Object.fromEntries(metrics.map(({ name, value }) => [name, value * 1_000]));
+  return {
+    scriptDurationMs: values.ScriptDuration ?? 0,
+    taskDurationMs: values.TaskDuration ?? 0,
+    layoutDurationMs: values.LayoutDuration ?? 0,
+    recalcStyleDurationMs: values.RecalcStyleDuration ?? 0,
+  };
+}
+
+function metricDelta(after, before) {
+  return Object.fromEntries(Object.keys(after).map((key) => [key, Math.max(0, after[key] - before[key])]));
 }
 
 async function waitForContent(page, path) {
@@ -360,6 +390,7 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
       transition: null,
       longTasks: [],
       layoutShifts: [],
+      eventTimings: [],
     };
     const transition = state.transition;
     const boundary = transition?.resourceBoundary ?? null;
@@ -373,7 +404,12 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
     const measuredLayoutShifts = boundary === null
       ? state.layoutShifts
       : state.layoutShifts.filter((entry) => entry.startTime >= boundary);
+    const measuredEventTimings = boundary === null
+      ? state.eventTimings
+      : state.eventTimings.filter((entry) => entry.startTime >= boundary);
     const routeChunks = appResources.filter((entry) => new RegExp(chunkPattern, 'i').test(entry.name));
+    const routeCodeReadyAt = routeChunks.length ? Math.max(...routeChunks.map((entry) => entry.responseEnd)) : null;
+    const realContentAt = transition?.firstRealContentFrame ?? state.initial.firstRealContentFrame;
     const relative = (value, start) => value === null || start === null ? null : Math.max(0, value - start);
     return {
       path: target,
@@ -393,7 +429,17 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
         transferSize: entry.transferSize,
         decodedBodySize: entry.decodedBodySize,
       })),
+      postChunkRenderMs: routeCodeReadyAt === null || realContentAt === null
+        ? null
+        : Math.max(0, realContentAt - routeCodeReadyAt),
       longTasks: measuredLongTasks,
+      postChunkLongTasks: routeCodeReadyAt === null
+        ? []
+        : measuredLongTasks.filter((entry) => entry.startTime >= routeCodeReadyAt),
+      controlledInteractionDurationMs: measuredEventTimings
+        .filter((entry) => entry.interactionId > 0)
+        .reduce((maximum, entry) => Math.max(maximum, entry.duration), 0),
+      eventTimings: measuredEventTimings,
       cls: measuredLayoutShifts.reduce((sum, entry) => sum + entry.value, 0),
       layoutShifts: measuredLayoutShifts,
       requestCount: appResources.length,
@@ -402,6 +448,7 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
       transferredBytes: appResources.reduce((sum, entry) => sum + (entry.transferSize || 0), 0),
       encodedBytes: appResources.reduce((sum, entry) => sum + (entry.encodedBodySize || 0), 0),
       decodedBytes: appResources.reduce((sum, entry) => sum + (entry.decodedBodySize || 0), 0),
+      resources: appResources,
       sourceWorkExcluded: boundary === null ? null : {
         requestCount: resources.filter((entry) => entry.sameOrigin && entry.startTime < boundary).length,
         longTaskCount: state.longTasks.length - measuredLongTasks.length,
@@ -434,13 +481,14 @@ async function gotoAndMeasure(page, path, options) {
 }
 
 async function measureColdRoute(browser, profile, route, baseURL) {
-  const { context, page } = await createContext(browser, profile, {
+  const { context, page, client } = await createContext(browser, profile, {
     authenticated: route.authenticated,
     cacheDisabled: true,
     baseURL,
   });
   try {
-    return await gotoAndMeasure(page, route.path, {
+    const before = await readMainThreadMetrics(client);
+    const metrics = await gotoAndMeasure(page, route.path, {
       baseURL,
       kind: 'cold-refresh',
       profile: profile.name,
@@ -448,6 +496,7 @@ async function measureColdRoute(browser, profile, route, baseURL) {
       routeModule: route.module,
       label: `Cold ${route.path}`,
     });
+    return { ...metrics, mainThread: metricDelta(await readMainThreadMetrics(client), before) };
   } finally {
     await context.close();
   }
@@ -496,7 +545,7 @@ async function clickDestination(page, transition, { measure = true } = {}) {
 }
 
 async function measureTransition(browser, profile, transition, baseURL, warm) {
-  const { context, page } = await createContext(browser, profile, { authenticated: transition.authenticated, baseURL });
+  const { context, page, client } = await createContext(browser, profile, { authenticated: transition.authenticated, baseURL });
   try {
     await page.goto(`${baseURL}${transition.from}`, { waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS });
     await waitForContent(page, transition.from);
@@ -524,6 +573,7 @@ async function measureTransition(browser, profile, transition, baseURL, warm) {
       await page.waitForFunction((target) => window.location.pathname === target, transition.from, { timeout: CONTENT_TIMEOUT_MS });
       await waitForContent(page, transition.from);
     }
+    const before = await readMainThreadMetrics(client);
     await clickDestination(page, transition);
     const metrics = await collectMetrics(page, {
       path: transition.to,
@@ -533,17 +583,18 @@ async function measureTransition(browser, profile, transition, baseURL, warm) {
       routeModule: transition.module,
       label: transition.label,
     });
+    const measured = { ...metrics, mainThread: metricDelta(await readMainThreadMetrics(client), before) };
     return warm ? {
-      ...metrics,
+      ...measured,
       warmCacheProof: {
         sameDocumentNavigation: true,
         destinationWarmRequest: warmCacheProof,
-        measuredDestinationRequestCount: metrics.routeChunkRequests.length,
-        semantics: metrics.routeChunkRequests.length === 0
+        measuredDestinationRequestCount: measured.routeChunkRequests.length,
+        semantics: measured.routeChunkRequests.length === 0
           ? 'destination module remained resolved across same-document return; measured click issued no destination request'
           : 'destination request remained observable after same-document warm visit',
       },
-    } : metrics;
+    } : measured;
   } finally {
     await context.close();
   }
@@ -555,7 +606,7 @@ async function captureDelayedTransition(browser, profile, baseURL, outputDir) {
   const videoDir = join(tempRoot, 'video');
   await mkdir(frameDir, { recursive: true });
   await mkdir(videoDir, { recursive: true });
-  const { context, page } = await createContext(browser, profile, {
+  const { context, page, client } = await createContext(browser, profile, {
     authenticated: true,
     cacheDisabled: true,
     videoDir,
@@ -573,6 +624,7 @@ async function captureDelayedTransition(browser, profile, baseURL, outputDir) {
   try {
     await page.goto(`${baseURL}${transition.from}`, { waitUntil: 'commit', timeout: CONTENT_TIMEOUT_MS });
     await waitForContent(page, transition.from);
+    const before = await readMainThreadMetrics(client);
     const clickPromise = clickDestination(page, transition);
     for (let index = 0; index < 8; index += 1) {
       await sleep(index === 0 ? 50 : 100);
@@ -595,6 +647,7 @@ async function captureDelayedTransition(browser, profile, baseURL, outputDir) {
       routeModule: transition.module,
       label: transition.label,
     });
+    metrics.mainThread = metricDelta(await readMainThreadMetrics(client), before);
     metrics.delayMs = DELAY_MS;
     metrics.delayRequestObserved = requestedAt !== null;
     metrics.frameStates = frameStates;
@@ -770,7 +823,7 @@ async function main() {
   const metadata = {
     runLabel: RUN_LABEL,
     capturedAt: new Date().toISOString(),
-    sourceCommit: git(['rev-parse', 'origin/main']),
+    sourceCommit: git(['rev-parse', 'HEAD']),
     harnessCommit: git(['rev-parse', 'HEAD']),
     nodeVersion: process.version,
     npmVersion: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(),
