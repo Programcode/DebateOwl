@@ -488,3 +488,83 @@ test("workspace evidence, team AI review, and practice survive a teammate reload
     await Promise.allSettled(ids.map((id) => admin.auth.admin.deleteUser(id)));
   }
 });
+
+test("private writing and independent imports export useful workspace files", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile-chromium", "The complete mobile collaboration journey runs above");
+  test.setTimeout(120_000);
+  const admin = createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } });
+  const password = `Local-${crypto.randomUUID()}!`;
+  const ids: string[] = [];
+  const contexts: BrowserContext[] = [];
+  let collaboration: ChildProcess | undefined;
+
+  try {
+    const email = `portability-${Date.now()}-${crypto.randomUUID()}@workspace.test`;
+    const created = await admin.auth.admin.createUser({ email, email_confirm: true, password });
+    if (created.error || !created.data.user) throw created.error ?? new Error("User creation failed");
+    ids.push(created.data.user.id);
+    const client = createClient(supabaseUrl!, anonKey!, { auth: { persistSession: false } });
+    const signedIn = await client.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Sign in failed");
+
+    collaboration = await startCollaboration();
+    const owner = await authenticatedPage(browser, signedIn.data.session);
+    contexts.push(owner.context);
+    await owner.page.goto("/app/workspaces");
+    await owner.page.getByRole("textbox", { name: "Motion" }).fill("Schools should teach media literacy");
+    await owner.page.getByRole("button", { name: "Create workspace" }).click();
+    await expect(owner.page).toHaveURL(/\/app\/workspaces\/[0-9a-f-]+$/, { timeout: 20_000 });
+    await owner.page.getByRole("button", { name: "R1" }).click();
+    await owner.page.locator(".ProseMirror").fill("Reusable R1 paragraph");
+    await expect(owner.page.getByText("Saved", { exact: true })).toBeVisible();
+
+    await owner.page.locator(".ProseMirror").click();
+    await owner.page.locator(".ProseMirror").press("ControlOrMeta+A");
+    owner.page.once("dialog", (dialog) => dialog.accept("R1 snippet"));
+    await owner.page.getByRole("button", { name: "Save snippet" }).click();
+    owner.page.once("dialog", (dialog) => dialog.accept("R1 template"));
+    await owner.page.getByRole("button", { name: "Save template" }).click();
+    await expect.poll(async () => {
+      const result = await admin.from("private_writing_items").select("id").eq("user_id", ids[0]);
+      if (result.error) throw result.error;
+      return result.data.length;
+    }).toBe(2);
+
+    await owner.page.goto("/app/workspaces");
+    await owner.page.getByRole("textbox", { name: "Motion" }).fill("Cities should expand transit");
+    await owner.page.getByRole("button", { name: "Create workspace" }).click();
+    await expect(owner.page).toHaveURL(/\/app\/workspaces\/[0-9a-f-]+$/, { timeout: 20_000 });
+    await owner.page.getByRole("button", { name: "R1" }).click();
+    await openPanel(owner.page, "Import, reuse & export");
+    const snippet = owner.page.getByText("R1 snippet", { exact: true }).locator("..");
+    await snippet.getByRole("button", { name: "Insert copy" }).click();
+    await expect(owner.page.locator(".ProseMirror")).toContainText("Reusable R1 paragraph");
+    const changed = await admin.from("private_writing_items").update({
+      content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Changed original" }] }] },
+    }).eq("user_id", ids[0]).eq("title", "R1 snippet");
+    if (changed.error) throw changed.error;
+    await expect(owner.page.locator(".ProseMirror")).not.toContainText("Changed original");
+
+    await owner.page.locator("#workspace-document-import").setInputFiles({
+      buffer: Buffer.from("# Importált beszéd\n\n1. Árvíztűrő tükörfúrógép\n2. [Forrás](https://example.com)"),
+      mimeType: "text/markdown",
+      name: "speech.md",
+    });
+    await expect(owner.page.getByLabel("Import preview")).toContainText("Árvíztűrő");
+    await owner.page.getByRole("button", { name: "Replace with independent copy" }).click();
+    await expect(owner.page.locator(".ProseMirror")).toContainText("Árvíztűrő tükörfúrógép");
+    await expect(owner.page.getByText("Saved", { exact: true })).toBeVisible();
+
+    const portability = owner.page.locator("details").filter({ has: owner.page.locator("summary").filter({ hasText: "Import, reuse & export" }) });
+    for (const name of ["DOCX", "PDF", "Packet DOCX", "Packet PDF"]) {
+      const download = owner.page.waitForEvent("download");
+      await portability.getByRole("button", { name, exact: true }).click();
+      await expect(await download).toBeTruthy();
+    }
+    await expect(portability.getByRole("button", { name: "Connect another Google account" })).toBeVisible();
+  } finally {
+    await stop(collaboration);
+    await Promise.allSettled(contexts.map((context) => context.close()));
+    await Promise.allSettled(ids.map((id) => admin.auth.admin.deleteUser(id)));
+  }
+});
