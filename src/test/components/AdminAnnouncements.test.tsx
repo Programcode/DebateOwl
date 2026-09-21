@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 import type { AdminAnnouncement } from '@/lib/announcements';
+import i18n from '@/i18n';
 
 const {
   mockCreateAnnouncement,
@@ -59,8 +60,9 @@ vi.mock('@/components/ui/select', () => ({
 }));
 
 describe('AdminAnnouncements', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage('en');
     Element.prototype.scrollIntoView = vi.fn();
     mockListAdminAnnouncements.mockResolvedValue([]);
     mockCreateAnnouncement.mockResolvedValue({
@@ -105,6 +107,22 @@ describe('AdminAnnouncements', () => {
     }));
   });
 
+  it('localizes recipient roles in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    render(
+      <AdminAnnouncements
+        users={[{
+          id: '11111111-2222-4333-8444-555555555555',
+          email: 'user@example.com',
+          role: 'user',
+        }]}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Audience'), { target: { value: 'users' } });
+    expect(await screen.findByText('Felhasználó')).toBeInTheDocument();
+  });
+
   it('deactivates an announcement without removing it from history', async () => {
     const activeAnnouncement: AdminAnnouncement = {
       id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
@@ -144,5 +162,33 @@ describe('AdminAnnouncements', () => {
     });
     expect(screen.getByText('Scheduled maintenance')).toBeInTheDocument();
     expect(screen.getByText('Deactivated')).toBeInTheDocument();
+  });
+
+  it('localizes both confirmation dialogs in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    const announcement: AdminAnnouncement = {
+      id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+      title: 'Karbantartás',
+      body: 'A szolgáltatás rövid ideig nem lesz elérhető.',
+      targetType: 'all',
+      targetUserIds: null,
+      startsAt: '2026-08-31T12:00:00.000Z',
+      expiresAt: null,
+      deactivatedAt: null,
+      createdBy: 'admin-id',
+      createdAt: '2026-08-31T12:00:00.000Z',
+    };
+    mockListAdminAnnouncements.mockResolvedValue([announcement]);
+
+    render(<AdminAnnouncements users={[]} />);
+
+    await screen.findByText('Karbantartás');
+    fireEvent.click(screen.getByRole('button', { name: 'Közlemény kikapcsolása: Karbantartás' }));
+    expect(screen.getByRole('heading', { name: 'Kikapcsolod ezt a közleményt?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mégse' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Közlemény törlése: Karbantartás' }));
+    expect(screen.getByRole('heading', { name: 'Törlöd ezt a közleményt?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Közlemény törlése' })).toBeInTheDocument();
   });
 });

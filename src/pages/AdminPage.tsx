@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate, formatEuropeanDateTime } from '@/lib/date-format';
+import { formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -97,8 +97,8 @@ function normalizeDemoCode(value: unknown): DemoAccessCode | null {
     if (typeof row.id !== 'string') return null;
     return {
         id: row.id,
-        label: typeof row.label === 'string' ? row.label : 'Unlabelled demo',
-        email: typeof row.email === 'string' ? row.email : 'Unknown email',
+        label: typeof row.label === 'string' ? row.label : '',
+        email: typeof row.email === 'string' ? row.email : '',
         role: typeof row.role === 'string' ? row.role : 'user',
         expiresAt: typeof row.expires_at === 'string' ? row.expires_at : null,
         maxUses: typeof row.max_uses === 'number' ? row.max_uses : null,
@@ -350,13 +350,14 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                                     {codes.map((code) => {
                                         const status = getDemoCodeStatus(code);
                                         const statusVariant = status === 'active' ? 'default' : status === 'disabled' || status === 'expired' ? 'destructive' : 'secondary';
+                                        const displayLabel = code.label || t('admin.unlabelledDemo');
                                         return (
                                             <tr key={code.id}>
-                                                <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email || t('admin.unknownEmail')}</td>
                                                 <td className="max-w-[14rem] px-3 py-4">
-                                                    <span className="block truncate" title={code.label}>{code.label}</span>
+                                                    <span className="block truncate" title={displayLabel}>{displayLabel}</span>
                                                 </td>
-                                                <td className="px-3 py-4 capitalize">{code.role}</td>
+                                                <td className="px-3 py-4 capitalize">{t(`admin.users.roles.${code.role}`, code.role)}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-muted-foreground">{formatDemoDate(code.expiresAt)}</td>
                                                 <td className="whitespace-nowrap px-3 py-4">{code.useCount} / {code.maxUses === null ? t('admin.unlimited') : code.maxUses}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-muted-foreground">{formatDemoDate(code.lastUsedAt)}</td>
@@ -368,7 +369,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                                                             size="sm"
                                                             variant="outline"
                                                             disabled={status === 'disabled'}
-                                                            aria-label={t('admin.disableAriaLabel', { label: code.label })}
+                                                            aria-label={t('admin.disableAriaLabel', { label: displayLabel })}
                                                             onClick={() => { setActionError(null); setPendingAction({ type: 'disable', code }); }}
                                                         >
                                                             {t('admin.disable')}
@@ -377,7 +378,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                                                             type="button"
                                                             size="sm"
                                                             variant="ghost"
-                                                            aria-label={t('admin.resetAriaLabel', { label: code.label })}
+                                                            aria-label={t('admin.resetAriaLabel', { label: displayLabel })}
                                                             onClick={() => { setActionError(null); setPendingAction({ type: 'reset', code }); }}
                                                         >
                                                             <RotateCcw className="mr-1 h-4 w-4" />
@@ -401,7 +402,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                         <DialogTitle>{pendingAction?.type === 'disable' ? t('admin.disableTitle') : t('admin.resetTitle')}</DialogTitle>
                         <DialogDescription>
                             {pendingAction?.type === 'disable'
-                                ? t('admin.disableDescription', { label: pendingAction.code.label })
+                                ? t('admin.disableDescription', { label: pendingAction.code.label || t('admin.thisCode') })
                                 : t('admin.resetDescription', { label: pendingAction?.code.label || t('admin.thisCode') })}
                         </DialogDescription>
                     </DialogHeader>
@@ -429,33 +430,12 @@ const COLORS: Record<string, string> = {
 };
 const COLORS_FALLBACK = ['#64748b', '#94a3b8', '#475569'];
 
-const FEATURE_LABELS: Record<string, string> = {
-  generate: 'Generate',
-  attack: 'Attack',
-  brainstorm: 'Brainstorm',
-  factoids: 'Factoids',
-  ask: 'Ask',
-  import_source: 'Source Import',
-};
-
 function normalizeFeatureName(feature: string) {
   return feature.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
 function getFeatureColor(feature: string, index: number) {
   return COLORS[normalizeFeatureName(feature)] || COLORS_FALLBACK[index % COLORS_FALLBACK.length];
-}
-
-function getFeatureLabel(feature: string) {
-  const normalized = normalizeFeatureName(feature);
-  return FEATURE_LABELS[normalized] || feature;
-}
-
-function formatKnownCost(cost: number, unknownCostRequests = 0) {
-    if (cost > 0 && unknownCostRequests > 0) return `$${cost.toFixed(4)} + ${unknownCostRequests} unknown`;
-    if (cost > 0) return `$${cost.toFixed(4)}`;
-    if (unknownCostRequests > 0) return 'Unknown';
-    return '$0.0000';
 }
 
 export default function AdminPage() {
@@ -475,10 +455,18 @@ export default function AdminPage() {
     const [giftSubmitting, setGiftSubmitting] = useState(false);
     const { toast } = useToast();
     const { t } = useTranslation();
+    const formatKnownCost = (cost: number, unknownCostRequests = 0) => {
+        if (cost > 0 && unknownCostRequests > 0) {
+            return t('admin.dashboard.knownPlusUnknownCost', { cost: cost.toFixed(4), count: unknownCostRequests });
+        }
+        if (cost > 0) return `$${cost.toFixed(4)}`;
+        if (unknownCostRequests > 0) return t('admin.dashboard.unknownCost');
+        return '$0.0000';
+    };
 
-    const fetchAdminData = async (action: string) => {
+    const fetchAdminData = useCallback(async (action: string) => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
+        if (!session) throw new Error(t('admin.errors.notAuthenticated'));
 
         const response = await fetch(
             `${SUPABASE_URL}/functions/v1/admin?action=${action}`,
@@ -498,21 +486,21 @@ export default function AdminPage() {
                 const error = JSON.parse(text);
                 serverMessage = typeof error.error === 'string' ? error.error : undefined;
             } catch { /* non-JSON error response */ }
-            if (response.status === 401) throw new Error('Not authenticated');
-            if (response.status === 403) throw new Error('Admin access required');
-            throw new Error(serverMessage || `Request failed: ${response.status}`);
+            if (response.status === 401) throw new Error(t('admin.errors.notAuthenticated'));
+            if (response.status === 403) throw new Error(t('admin.errors.accessRequired'));
+            throw new Error(serverMessage || t('admin.errors.requestFailed', { status: response.status }));
         }
 
         try {
             return JSON.parse(text);
         } catch {
-            throw new Error('Invalid response from server');
+            throw new Error(t('admin.errors.invalidResponse'));
         }
-    };
+    }, [t]);
 
-    const postAdminData = async (action: string, body: unknown) => {
+    const postAdminData = useCallback(async (action: string, body: unknown) => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Not authenticated');
+        if (!session) throw new Error(t('admin.errors.notAuthenticated'));
 
         const response = await fetch(
             `${SUPABASE_URL}/functions/v1/admin?action=${action}`,
@@ -534,9 +522,9 @@ export default function AdminPage() {
                 const error = JSON.parse(text);
                 serverMessage = typeof error.error === 'string' ? error.error : undefined;
             } catch { /* non-JSON error response */ }
-            if (response.status === 401) throw new Error('Not authenticated');
-            if (response.status === 403) throw new Error('Admin access required');
-            throw new Error(serverMessage || `Request failed: ${response.status}`);
+            if (response.status === 401) throw new Error(t('admin.errors.notAuthenticated'));
+            if (response.status === 403) throw new Error(t('admin.errors.accessRequired'));
+            throw new Error(serverMessage || t('admin.errors.requestFailed', { status: response.status }));
         }
 
         try {
@@ -544,7 +532,7 @@ export default function AdminPage() {
         } catch {
             return { success: true };
         }
-    };
+    }, [t]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -555,7 +543,7 @@ export default function AdminPage() {
                     .then((data: unknown): { data: unknown; error: Error | null } => ({ data, error: null }))
                     .catch((error: unknown): { data: unknown; error: Error | null } => ({
                         data: null,
-                        error: error instanceof Error ? error : new Error('Failed to load demo codes'),
+                        error: error instanceof Error ? error : new Error(t('admin.errors.demoCodesFailed')),
                     }));
                 const [statsData, usersData, promoData, subData, demoData] = await Promise.all([
                     fetchAdminData('stats'),
@@ -589,14 +577,14 @@ export default function AdminPage() {
             } catch (err) {
                 console.error('Admin load error:', err);
                 const message = err instanceof Error ? err.message : '';
-                if (message.includes('Admin access required') ||
+                if (message.includes(t('admin.errors.accessRequired')) ||
                     message.includes('403') ||
-                    message.includes('Not authenticated') ||
+                    message.includes(t('admin.errors.notAuthenticated')) ||
                     message.includes('401')) {
                     setIsAdmin(false);
                 } else {
                     setIsAdmin(false);
-                    toast({ title: 'Error', description: message || 'Failed to load admin data', variant: 'destructive' });
+                    toast({ title: t('admin.error'), description: message || t('admin.errors.loadFailed'), variant: 'destructive' });
                 }
             } finally {
                 setDemoCodesLoading(false);
@@ -604,7 +592,7 @@ export default function AdminPage() {
             }
         };
         loadData();
-    }, [toast]);
+    }, [fetchAdminData, t, toast]);
 
     useEffect(() => {
         if (isAdmin === true) captureProductEvent('tool_opened', { tool: 'admin' });
@@ -613,10 +601,10 @@ export default function AdminPage() {
     const handleSetUserRole = async (userId: string, role: string) => {
         try {
             await postAdminData('set-role', { userId, role });
-            toast({ title: 'Success', description: `User role updated to ${role}` });
+            toast({ title: t('admin.success'), description: t('admin.users.roleUpdated', { role: t(`admin.users.roles.${role}`, role) }) });
             setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
         } catch (err) {
-            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update role', variant: 'destructive' });
+            toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.users.roleUpdateFailed'), variant: 'destructive' });
         }
     };
 
@@ -641,7 +629,7 @@ export default function AdminPage() {
                 days,
                 notes: giftNotes.trim() || undefined,
             });
-            toast({ title: 'Trial gifted', description: `${giftTarget.email} now has ${days} days of trial access.` });
+            toast({ title: t('admin.giftTrial.gifted'), description: t('admin.giftTrial.giftedDescription', { email: giftTarget.email, count: days }) });
             setUsers(prev => prev.map(u => u.id === giftTarget.id
                 ? {
                     ...u,
@@ -654,7 +642,7 @@ export default function AdminPage() {
             ));
             closeGiftDialog();
         } catch (err) {
-            toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to gift trial', variant: 'destructive' });
+            toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.giftTrial.failed'), variant: 'destructive' });
         } finally {
             setGiftSubmitting(false);
         }
@@ -701,10 +689,10 @@ export default function AdminPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Shield className="h-5 w-5 text-destructive" />
-                            Access Denied
+                            {t('admin.dashboard.accessDenied')}
                         </CardTitle>
                         <CardDescription>
-                            You don't have admin privileges. Contact an administrator to request access.
+                            {t('admin.dashboard.accessDeniedDescription')}
                         </CardDescription>
                     </CardHeader>
                 </Card>
@@ -714,7 +702,7 @@ export default function AdminPage() {
 
     const featureData = stats ? Object.entries(stats.byFeature).map(([name, value], index) => ({
         name,
-        label: getFeatureLabel(name),
+        label: t(`admin.dashboard.features.${normalizeFeatureName(name)}`, name),
         value,
         color: getFeatureColor(name, index),
     })) : [];
@@ -725,27 +713,27 @@ export default function AdminPage() {
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
                         <Settings2 className="h-8 w-8" />
-                        Admin Dashboard
+                        {t('admin.dashboard.title')}
                     </h1>
-                    <p className="text-muted-foreground mt-1">Monitor usage, manage users, and control access</p>
+                    <p className="text-muted-foreground mt-1">{t('admin.dashboard.description')}</p>
                 </div>
 
                 {/* Stats Overview */}
                 <div className="grid gap-4 md:grid-cols-4 mb-8">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t('admin.dashboard.totalRequests')}</CardTitle>
                             <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats?.totals.requests.toLocaleString() || 0}</div>
-                            <p className="text-xs text-muted-foreground">Last 7 days</p>
+                            <div className="text-2xl font-bold">{stats ? formatNumber(stats.totals.requests) : 0}</div>
+                            <p className="text-xs text-muted-foreground">{t('admin.dashboard.lastSevenDays')}</p>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t('admin.dashboard.totalCost')}</CardTitle>
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -754,42 +742,42 @@ export default function AdminPage() {
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 {stats?.totals.unknownCostRequests
-                                    ? `${stats.totals.unknownCostRequests} requests with unknown cost`
-                                    : 'Known API costs'}
+                                    ? t('admin.dashboard.requestsWithUnknownCost', { count: stats.totals.unknownCostRequests })
+                                    : t('admin.dashboard.knownApiCosts')}
                             </p>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t('admin.dashboard.successRate')}</CardTitle>
                             <AlertCircle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats?.totals.successRate.toFixed(1) || 100}%</div>
-                            <p className="text-xs text-muted-foreground">Request success rate</p>
+                            <p className="text-xs text-muted-foreground">{t('admin.dashboard.successRateDescription')}</p>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t('admin.dashboard.activeUsers')}</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats?.byUser.length || 0}</div>
-                            <p className="text-xs text-muted-foreground">Users with requests</p>
+                            <p className="text-xs text-muted-foreground">{t('admin.dashboard.usersWithRequests')}</p>
                         </CardContent>
                     </Card>
                 </div>
 
                 <Tabs defaultValue="usage" className="space-y-6">
                     <TabsList className="h-auto flex-wrap justify-start">
-                        <TabsTrigger value="usage">Usage Analytics</TabsTrigger>
-                        <TabsTrigger value="users">User Management</TabsTrigger>
+                        <TabsTrigger value="usage">{t('admin.dashboard.usageTab')}</TabsTrigger>
+                        <TabsTrigger value="users">{t('admin.dashboard.usersTab')}</TabsTrigger>
                         <TabsTrigger value="announcements">
                             <Megaphone className="h-4 w-4 mr-1" />
-                            Announcements
+                            {t('admin.dashboard.announcementsTab')}
                         </TabsTrigger>
                         <TabsTrigger value="demo-access">
                             <KeyRound className="h-4 w-4 mr-1" />
@@ -797,11 +785,11 @@ export default function AdminPage() {
                         </TabsTrigger>
                         <TabsTrigger value="promo-codes">
                             <Ticket className="h-4 w-4 mr-1" />
-                            Promo Codes
+                            {t('admin.dashboard.promosTab')}
                         </TabsTrigger>
                         <TabsTrigger value="subscribers">
                             <CreditCard className="h-4 w-4 mr-1" />
-                            Subscribers
+                            {t('admin.dashboard.subscribersTab')}
                         </TabsTrigger>
                     </TabsList>
 
@@ -810,8 +798,8 @@ export default function AdminPage() {
                             {/* Daily Usage Chart */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Daily Requests</CardTitle>
-                                    <CardDescription>Request volume over the last 7 days</CardDescription>
+                                    <CardTitle>{t('admin.dashboard.dailyRequests')}</CardTitle>
+                                    <CardDescription>{t('admin.dashboard.dailyRequestsDescription')}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-[300px]">
@@ -831,8 +819,8 @@ export default function AdminPage() {
                             {/* Feature Distribution */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Usage by Feature</CardTitle>
-                                    <CardDescription>Distribution of requests across features</CardDescription>
+                                    <CardTitle>{t('admin.dashboard.usageByFeature')}</CardTitle>
+                                    <CardDescription>{t('admin.dashboard.usageByFeatureDescription')}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-[300px]">
@@ -871,18 +859,18 @@ export default function AdminPage() {
                         {stats?.byFeatureCost && stats.byFeatureCost.length > 0 && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Cost by Feature</CardTitle>
-                                    <CardDescription>Known cost per feature over the last 7 days; unknown costs never render as zero</CardDescription>
+                                    <CardTitle>{t('admin.dashboard.costByFeature')}</CardTitle>
+                                    <CardDescription>{t('admin.dashboard.costByFeatureDescription')}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-3">
                                         {stats.byFeatureCost.map((feature) => (
                                             <div key={feature.feature} className="flex items-center justify-between gap-4">
                                                 <div className="min-w-0">
-                                                    <div className="text-sm font-medium truncate" title={feature.feature}>{getFeatureLabel(feature.feature)}</div>
+                                                    <div className="text-sm font-medium truncate" title={feature.feature}>{t(`admin.dashboard.features.${normalizeFeatureName(feature.feature)}`, feature.feature)}</div>
                                                 </div>
                                                 <div className="flex items-center gap-3 shrink-0">
-                                                    <Badge variant="secondary">{feature.requests} requests</Badge>
+                                                    <Badge variant="secondary">{t('admin.dashboard.requestCount', { count: feature.requests })}</Badge>
                                                     <span className="text-sm text-muted-foreground">
                                                         {formatKnownCost(feature.cost, feature.unknownCostRequests)}
                                                     </span>
@@ -898,8 +886,8 @@ export default function AdminPage() {
                         {stats?.byModel && stats.byModel.length > 0 && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Cost by Model</CardTitle>
-                                    <CardDescription>Known cost per model over the last 7 days; unknown-priced models never render as zero</CardDescription>
+                                    <CardTitle>{t('admin.dashboard.costByModel')}</CardTitle>
+                                    <CardDescription>{t('admin.dashboard.costByModelDescription')}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-3">
@@ -910,7 +898,7 @@ export default function AdminPage() {
                                                     <div className="text-xs text-muted-foreground">{m.provider}</div>
                                                 </div>
                                                 <div className="flex items-center gap-3 shrink-0">
-                                                    <Badge variant="secondary">{m.requests} requests</Badge>
+                                                    <Badge variant="secondary">{t('admin.dashboard.requestCount', { count: m.requests })}</Badge>
                                                     <span className="text-sm text-muted-foreground">
                                                         {formatKnownCost(m.cost, m.unknownCostRequests)}
                                                     </span>
@@ -925,13 +913,13 @@ export default function AdminPage() {
                         {/* Top Users */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Top Users by Usage</CardTitle>
-                                <CardDescription>Users with the most requests in the last 7 days</CardDescription>
+                                <CardTitle>{t('admin.dashboard.topUsers')}</CardTitle>
+                                <CardDescription>{t('admin.dashboard.topUsersDescription')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
                                     {stats?.byUser.map((u, i) => {
-                                        const shortId = u.user_id ? `${u.user_id.slice(0, 8)}…` : 'unknown';
+                                        const shortId = u.user_id ? `${u.user_id.slice(0, 8)}…` : t('admin.dashboard.unknownUser');
                                         const label = u.email || shortId;
                                         return (
                                             <div key={u.user_id} className="flex items-center justify-between">
@@ -947,7 +935,7 @@ export default function AdminPage() {
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-4">
-                                                    <Badge variant="secondary">{u.requests} requests</Badge>
+                                                    <Badge variant="secondary">{t('admin.dashboard.requestCount', { count: u.requests })}</Badge>
                                                     <span className="text-sm text-muted-foreground">
                                                         {formatKnownCost(u.cost, u.unknownCostRequests)}
                                                     </span>
@@ -963,8 +951,8 @@ export default function AdminPage() {
                     <TabsContent value="users" className="space-y-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle>User Management</CardTitle>
-                                <CardDescription>View and manage user access and roles</CardDescription>
+                                <CardTitle>{t('admin.users.title')}</CardTitle>
+                                <CardDescription>{t('admin.users.description')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ScrollArea className="h-[500px]">
@@ -975,54 +963,54 @@ export default function AdminPage() {
                                                     <div className="font-medium flex items-center gap-2">
                                                         {user.email}
                                                         {user.role === 'banned' && (
-                                                            <Badge variant="destructive" className="text-xs">Banned</Badge>
+                                                            <Badge variant="destructive" className="text-xs">{t('admin.users.banned')}</Badge>
                                                         )}
                                                     </div>
                                                     <div className="text-sm text-muted-foreground">
-                                                        {user.requestCount} requests • Joined {formatEuropeanDate(user.createdAt)}
+                                                        {t('admin.users.activity', { count: user.requestCount, date: formatEuropeanDate(user.createdAt) })}
                                                     </div>
                                                     {(user.subscriptionTier || user.trialEndsAt || user.gracePeriodEndsAt) && (
                                                         <div className="text-xs text-muted-foreground">
                                                             {user.subscriptionTier && (
-                                                                <span className="capitalize">{user.subscriptionTier}</span>
+                                                                <span className="capitalize">{t(`admin.subscribers.tiers.${user.subscriptionTier}`, user.subscriptionTier)}</span>
                                                             )}
                                                             {user.trialEndsAt && (
-                                                                <> • Trial ends {formatEuropeanDate(user.trialEndsAt)}</>
+                                                                <> {t('admin.users.trialEnds', { date: formatEuropeanDate(user.trialEndsAt) })}</>
                                                             )}
                                                             {user.gracePeriodEndsAt && (
-                                                                <> • Grace ends {formatEuropeanDate(user.gracePeriodEndsAt)}</>
+                                                                <> {t('admin.users.graceEnds', { date: formatEuropeanDate(user.gracePeriodEndsAt) })}</>
                                                             )}
                                                         </div>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Badge variant={user.role === 'admin' ? 'default' : user.role === 'banned' ? 'destructive' : 'secondary'}>
-                                                        {user.role}
+                                                        {t(`admin.users.roles.${user.role}`, user.role)}
                                                     </Badge>
                                                     {user.role !== 'banned' && (
                                                         <Button size="sm" variant="outline" onClick={() => openGiftDialog(user)}>
                                                             <Gift className="h-4 w-4 mr-1" />
-                                                            Gift trial
+                                                            {t('admin.users.giftTrial')}
                                                         </Button>
                                                     )}
                                                     {user.role === 'banned' ? (
                                                         <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
                                                             <UserCheck className="h-4 w-4 mr-1" />
-                                                            Unban
+                                                            {t('admin.users.unban')}
                                                         </Button>
                                                     ) : user.role !== 'admin' ? (
                                                         <>
                                                             <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'admin')}>
-                                                                Make Admin
+                                                                {t('admin.users.makeAdmin')}
                                                             </Button>
                                                             <Button size="sm" variant="destructive" onClick={() => handleSetUserRole(user.id, 'banned')}>
                                                                 <Ban className="h-4 w-4 mr-1" />
-                                                                Ban
+                                                                {t('admin.users.ban')}
                                                             </Button>
                                                         </>
                                                     ) : (
                                                         <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
-                                                            Remove Admin
+                                                            {t('admin.users.removeAdmin')}
                                                         </Button>
                                                     )}
                                                 </div>
@@ -1057,37 +1045,37 @@ export default function AdminPage() {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Ticket className="h-5 w-5" />
-                                        Create Promo Code
+                                        {t('admin.promos.createTitle')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label>Code</Label>
+                                        <Label>{t('admin.promos.code')}</Label>
                                         <Input
-                                            placeholder="e.g. CIT2026"
+                                            placeholder={t('admin.promos.codePlaceholder')}
                                             value={newPromo.code}
                                             onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value.toUpperCase() })}
                                             className="uppercase"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Type</Label>
+                                        <Label>{t('admin.promos.type')}</Label>
                                         <Select value={newPromo.type} onValueChange={(v) => setNewPromo({ ...newPromo, type: v })}>
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="extended_trial">Extended Trial</SelectItem>
-                                                <SelectItem value="extra_limit">Extra Daily Limit</SelectItem>
-                                                <SelectItem value="free_month">Free Month of Pro</SelectItem>
-                                                <SelectItem value="lifetime_pro">Lifetime Pro</SelectItem>
-                                                <SelectItem value="discount">Checkout Discount</SelectItem>
+                                                <SelectItem value="extended_trial">{t('admin.promos.types.extended_trial')}</SelectItem>
+                                                <SelectItem value="extra_limit">{t('admin.promos.types.extra_limit')}</SelectItem>
+                                                <SelectItem value="free_month">{t('admin.promos.types.free_month')}</SelectItem>
+                                                <SelectItem value="lifetime_pro">{t('admin.promos.types.lifetime_pro')}</SelectItem>
+                                                <SelectItem value="discount">{t('admin.promos.types.discount')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                     {(newPromo.type === 'extended_trial' || newPromo.type === 'free_month') && (
                                         <div className="space-y-2">
-                                            <Label>Days</Label>
+                                            <Label>{t('admin.promos.days')}</Label>
                                             <Input
                                                 type="number"
                                                 value={newPromo.configDays}
@@ -1097,7 +1085,7 @@ export default function AdminPage() {
                                     )}
                                     {newPromo.type === 'extra_limit' && (
                                         <div className="space-y-2">
-                                            <Label>Daily Limit</Label>
+                                            <Label>{t('admin.promos.dailyLimit')}</Label>
                                             <Input
                                                 type="number"
                                                 value={newPromo.configLimit}
@@ -1106,10 +1094,10 @@ export default function AdminPage() {
                                         </div>
                                     )}
                                     <div className="space-y-2">
-                                        <Label>Max Redemptions (blank = unlimited)</Label>
+                                        <Label>{t('admin.promos.maxRedemptions')}</Label>
                                         <Input
                                             type="number"
-                                            placeholder="Unlimited"
+                                            placeholder={t('admin.unlimited')}
                                             value={newPromo.maxRedemptions}
                                             onChange={(e) => setNewPromo({ ...newPromo, maxRedemptions: e.target.value })}
                                         />
@@ -1131,18 +1119,18 @@ export default function AdminPage() {
                                                     config,
                                                     maxRedemptions: newPromo.maxRedemptions ? parseInt(newPromo.maxRedemptions) : null,
                                                 });
-                                                toast({ title: 'Success', description: `Promo code "${newPromo.code}" created` });
+                                                toast({ title: t('admin.success'), description: t('admin.promos.created', { code: newPromo.code }) });
                                                 const data = await fetchAdminData('promo-codes');
                                                 setPromoCodes(data.codes || []);
                                                 setNewPromo({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
                                             } catch (err) {
-                                                toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to create code', variant: 'destructive' });
+                                                toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.promos.createFailed'), variant: 'destructive' });
                                             }
                                         }}
                                         disabled={!newPromo.code.trim()}
                                         className="w-full"
                                     >
-                                        Create Code
+                                        {t('admin.promos.createAction')}
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -1150,8 +1138,8 @@ export default function AdminPage() {
                             {/* Active Promo Codes */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Active Codes</CardTitle>
-                                    <CardDescription>{promoCodes.length} promo codes</CardDescription>
+                                    <CardTitle>{t('admin.promos.activeCodes')}</CardTitle>
+                                    <CardDescription>{t('admin.promos.codeCount', { count: promoCodes.length })}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <ScrollArea className="h-[400px]">
@@ -1162,11 +1150,14 @@ export default function AdminPage() {
                                                         <div className="flex items-center gap-2">
                                                             <code className="font-mono font-bold">{promo.code}</code>
                                                             <Badge variant={promo.is_active ? 'default' : 'secondary'}>
-                                                                {promo.type.replace('_', ' ')}
+                                                                {t(`admin.promos.types.${promo.type}`, promo.type.replace('_', ' '))}
                                                             </Badge>
                                                         </div>
                                                         <p className="text-xs text-muted-foreground mt-1">
-                                                            Used {promo.redemptions_count}{promo.max_redemptions ? ` / ${promo.max_redemptions}` : ''} times
+                                                            {t('admin.promos.redemptionCount', {
+                                                                count: promo.redemptions_count,
+                                                                limit: promo.max_redemptions ? ` / ${promo.max_redemptions}` : '',
+                                                            })}
                                                         </p>
                                                     </div>
                                                     <Button
@@ -1178,17 +1169,17 @@ export default function AdminPage() {
                                                                 const data = await fetchAdminData('promo-codes');
                                                                 setPromoCodes(data.codes || []);
                                                             } catch (err) {
-                                                                toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
+                                                                toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.promos.toggleFailed'), variant: 'destructive' });
                                                             }
                                                         }}
                                                     >
-                                                        {promo.is_active ? 'Disable' : 'Enable'}
+                                                        {promo.is_active ? t('admin.promos.disable') : t('admin.promos.enable')}
                                                     </Button>
                                                 </div>
                                             ))}
                                             {promoCodes.length === 0 && (
                                                 <p className="text-sm text-muted-foreground text-center py-8">
-                                                    No promo codes yet. Create one to get started.
+                                                    {t('admin.promos.none')}
                                                 </p>
                                             )}
                                         </div>
@@ -1204,9 +1195,9 @@ export default function AdminPage() {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <CreditCard className="h-5 w-5" />
-                                    Subscribers
+                                    {t('admin.subscribers.title')}
                                 </CardTitle>
-                                <CardDescription>{subscribers.length} users with subscription data</CardDescription>
+                                <CardDescription>{t('admin.subscribers.userCount', { count: subscribers.length })}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ScrollArea className="h-[500px]">
@@ -1217,17 +1208,17 @@ export default function AdminPage() {
                                                     <p className="font-medium text-sm">{sub.email}</p>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <Badge variant={sub.subscription_tier === 'pro' ? 'default' : 'secondary'}>
-                                                            {sub.subscription_tier}
+                                                            {t(`admin.subscribers.tiers.${sub.subscription_tier}`, sub.subscription_tier)}
                                                         </Badge>
                                                         {sub.status && (
                                                             <Badge variant={sub.status === 'active' ? 'default' : 'destructive'}>
-                                                                {sub.status}
+                                                                {t(`admin.subscribers.status.${sub.status}`, sub.status)}
                                                             </Badge>
                                                         )}
                                                     </div>
                                                     {sub.current_period_end && (
                                                         <p className="text-xs text-muted-foreground mt-1">
-                                                            Renews: {formatEuropeanDate(sub.current_period_end)}
+                                                            {t('admin.subscribers.renews', { date: formatEuropeanDate(sub.current_period_end) })}
                                                         </p>
                                                     )}
                                                 </div>
@@ -1240,7 +1231,7 @@ export default function AdminPage() {
                                         ))}
                                         {subscribers.length === 0 && (
                                             <p className="text-sm text-muted-foreground text-center py-8">
-                                                No subscribers yet.
+                                                {t('admin.subscribers.none')}
                                             </p>
                                         )}
                                     </div>
@@ -1254,21 +1245,21 @@ export default function AdminPage() {
             <Dialog open={giftTarget !== null} onOpenChange={(open) => { if (!open) closeGiftDialog(); }}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Gift trial access</DialogTitle>
+                        <DialogTitle>{t('admin.giftTrial.title')}</DialogTitle>
                         <DialogDescription>
                             {giftTarget ? (
-                                <>Grant <span className="font-medium">{giftTarget.email}</span> trial access for a chosen number of days.</>
+                                <>{t('admin.giftTrial.description', { email: giftTarget.email })}</>
                             ) : null}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         {giftTarget?.trialEndsAt && (
                             <p className="text-xs text-muted-foreground">
-                                Current trial ends {formatEuropeanDate(giftTarget.trialEndsAt)}
+                                {t('admin.giftTrial.currentEnds', { date: formatEuropeanDate(giftTarget.trialEndsAt) })}
                             </p>
                         )}
                         <div className="space-y-2">
-                            <Label htmlFor="gift-days">Days</Label>
+                            <Label htmlFor="gift-days">{t('admin.giftTrial.days')}</Label>
                             <Input
                                 id="gift-days"
                                 type="number"
@@ -1279,10 +1270,10 @@ export default function AdminPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="gift-notes">Notes (optional)</Label>
+                            <Label htmlFor="gift-notes">{t('admin.giftTrial.notes')}</Label>
                             <Input
                                 id="gift-notes"
-                                placeholder="e.g. tournament partner, support request"
+                                placeholder={t('admin.giftTrial.notesPlaceholder')}
                                 value={giftNotes}
                                 onChange={(e) => setGiftNotes(e.target.value)}
                             />
@@ -1290,11 +1281,11 @@ export default function AdminPage() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={closeGiftDialog} disabled={giftSubmitting}>
-                            Cancel
+                            {t('admin.giftTrial.cancel')}
                         </Button>
                         <Button onClick={handleGiftTrial} disabled={giftSubmitting || giftDays < 1 || giftDays > 365}>
                             {giftSubmitting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Gift className="h-4 w-4 mr-1" />}
-                            Gift {giftDays} days
+                            {t('admin.giftTrial.action', { count: giftDays })}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

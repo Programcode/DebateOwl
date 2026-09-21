@@ -316,6 +316,20 @@ Deno.test("ask matrix preserves every mode, toggle, research, and output effect"
   }
 });
 
+Deno.test("prompt matrix applies the explicit Hungarian output contract", () => {
+  const instruction = "Language: Hungarian (hu) - Write ALL output in this language.";
+  for (const [feature, input] of [
+    ["generate", { motion: "M", language: "hu" }],
+    ["attack", { caseText: "C", language: "hu" }],
+    ["brainstorm", { motion: "M", language: "hu" }],
+    ["factoids", { claim: "C", language: "hu" }],
+    ["ask", { message: "Q", language: "hu" }],
+    ["sparring", { motion: "M", language: "hu" }],
+  ] as const) {
+    assertIncludes(buildUserPrompt(feature, input, ""), instruction, `${feature}.language`);
+  }
+});
+
 Deno.test("only plain general ask mode is eligible for streaming", () => {
   for (const mode of ["clarify", "summarize", "proscons", "argumentmap"]) {
     assert(!isAskStreamingModeAllowed(mode), `ask.${mode} streaming bypass`);

@@ -83,8 +83,8 @@ test('authenticated Factoids shows the consulted-source quality panel', async ({
   await expect(page.getByRole('heading', { name: /researched sources/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /official energy statistics/i }).first()).toHaveAttribute('href', strongSourceUrl);
   await expect(page.getByRole('link', { name: /broad commentary/i })).toHaveAttribute('href', weakSourceUrl);
-  await expect(page.getByText('strong', { exact: true })).toBeVisible();
-  await expect(page.getByText('weak', { exact: true })).toBeVisible();
+  await expect(page.getByText('Strong', { exact: true })).toBeVisible();
+  await expect(page.getByText('Weak', { exact: true })).toBeVisible();
   await expect(page.getByText('fallback context only', { exact: true })).toBeVisible();
   await expect(page.getByText('Solar costs fell by 42 percent')).toBeVisible();
 });

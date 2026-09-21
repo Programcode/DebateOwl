@@ -5,12 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-
-const languages = [
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
-  { value: 'hu', label: 'Magyar' },
-] as const;
+import { APP_LANGUAGES, isAppLanguage } from '@/lib/languages';
 
 export function LanguageSwitcher() {
   const { t } = useTranslation();
@@ -31,14 +26,14 @@ export function LanguageSwitcher() {
         <div className="grid gap-5 py-2">
           <div className="space-y-2">
             <Label>{t('langSwitcher.uiLanguage', 'Interface language')}</Label>
-            <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es' | 'hu')}>
+            <Select value={language} onValueChange={(value) => isAppLanguage(value) && setLanguage(value)}>
               <SelectTrigger aria-label={t('langSwitcher.uiLanguage', 'Interface language')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
+                {Object.entries(APP_LANGUAGES).map(([value, language]) => (
+                  <SelectItem key={value} value={value}>
+                    {language.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -46,14 +41,14 @@ export function LanguageSwitcher() {
           </div>
           <div className="space-y-2">
             <Label>{t('langSwitcher.outputLanguage', 'AI output language')}</Label>
-            <Select value={outputLanguage} onValueChange={(v) => setOutputLanguage(v as 'en' | 'es' | 'hu')}>
+            <Select value={outputLanguage} onValueChange={(value) => isAppLanguage(value) && setOutputLanguage(value)}>
               <SelectTrigger aria-label={t('langSwitcher.outputLanguage', 'AI output language')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
+                {Object.entries(APP_LANGUAGES).map(([value, language]) => (
+                  <SelectItem key={value} value={value}>
+                    {language.label}
                   </SelectItem>
                 ))}
               </SelectContent>

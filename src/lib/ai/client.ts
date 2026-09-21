@@ -29,6 +29,8 @@ import { supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { validateUrl } from '@/lib/validation/url';
+import { isAppLanguage, type AppLanguage } from '@/lib/languages';
+import i18n from '@/i18n';
 import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
@@ -53,6 +55,15 @@ interface AIRequestOptions<T = unknown> {
   timeoutMs?: number;
   signal?: AbortSignal;
   transformResponse?: (data: unknown) => T;
+}
+
+function selectedOutputLanguage(): AppLanguage {
+  const language = useSettingsStore.getState().outputLanguage;
+  return isAppLanguage(language) ? language : 'en';
+}
+
+export function withOutputLanguage(input: Record<string, unknown>): Record<string, unknown> {
+  return { ...input, language: selectedOutputLanguage() };
 }
 
 function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
@@ -501,8 +512,8 @@ async function callSupabaseAI<T = unknown>(
 
     if (data.meta && typeof data.meta === 'object' && (data.meta as { truncated?: unknown }).truncated === true) {
       toast({
-        title: 'Input was shortened',
-        description: 'The request was too large, so only the portion that fit was sent to the AI.',
+        title: i18n.t('aiClient.inputShortened'),
+        description: i18n.t('aiClient.inputShortenedDesc'),
       });
     }
 
@@ -652,7 +663,7 @@ export async function crossfire(
 
   return await callSupabaseAI<CrossfireReply | CrossfireDebrief>(
     'crossfire',
-    input.data as unknown as Record<string, unknown>,
+    withOutputLanguage(input.data as unknown as Record<string, unknown>),
     config,
     {
       includeActiveSources: input.data.config.useSourceLibrary,
@@ -1050,8 +1061,8 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
       });
     } catch {
       toast({
-        title: 'Source save failed',
-        description: `Could not save "${source.title}" to your library.`,
+        title: i18n.t('aiClient.sourceSaveFailed'),
+        description: i18n.t('aiClient.sourceSaveFailedDesc', { title: source.title }),
         variant: 'destructive',
       });
     }
@@ -1075,9 +1086,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   if (config.provider === 'mock') {
     return { result: await mockGenerateCase(input.motion, input.side, input.length), discoveredSources: [] };
   }
-  // Inject global language into input for the edge function
-  const language = useSettingsStore.getState().outputLanguage;
-  const inputWithLanguage = { ...input, language } as Record<string, unknown>;
+  const inputWithLanguage = withOutputLanguage(input as unknown as Record<string, unknown>);
   const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
@@ -1097,7 +1106,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
 
 export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
   if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
-  const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', input as Record<string, unknown>, config, {
+  const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1112,7 +1121,7 @@ export async function attackCase(input: AttackInput, config: ProviderConfig): Pr
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
   if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
-  const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', input as Record<string, unknown>, config, {
+  const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1127,14 +1136,11 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<ResultWithSources<FactoidsOutput>> {
   if (config.provider === 'mock') return { result: await mockFactoids(input.claim), discoveredSources: [] };
-  // Inject global language into input for the edge function
-  const language = useSettingsStore.getState().outputLanguage;
-  const inputWithLanguage = {
+  const inputWithLanguage = withOutputLanguage({
     ...input,
     region: input.region?.trim() || 'Global',
     sourceCount: input.sourceCount || 5,
-    language,
-  } as Record<string, unknown>;
+  });
   const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
@@ -1178,7 +1184,7 @@ export async function askChat(
 ): Promise<AskOutput> {
   const output = config.provider === 'mock'
     ? await mockAsk(message, mode)
-    : await callSupabaseAI<AskOutput>('ask', {
+    : await callSupabaseAI<AskOutput>('ask', withOutputLanguage({
       message,
       history,
       mode,
@@ -1186,7 +1192,7 @@ export async function askChat(
       webSearch: Boolean(options.webSearch),
       prosConsMode: Boolean(options.prosConsMode),
       argumentMapMode: Boolean(options.argumentMapMode),
-    }, config, {
+    }), config, {
       transformResponse: (rawData) => {
         const data = rawData as { output: unknown };
         const parsed = AskOutputSchema.safeParse(data.output);
@@ -1202,7 +1208,7 @@ export async function askChat(
 }
 
 function sparringLanguage(language: string): string {
-  return language.trim() || useSettingsStore.getState().outputLanguage;
+  return language.trim() || selectedOutputLanguage();
 }
 
 function validateSparringTurnResponse(output: unknown): SparringTurnResponse {

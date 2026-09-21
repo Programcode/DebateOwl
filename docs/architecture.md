@@ -31,6 +31,12 @@ Browser or Capacitor
 
 [`src/lib/supabase/AuthProvider.tsx`](../src/lib/supabase/AuthProvider.tsx) coordinates store hydration and reset across authentication changes. Store code is not the database schema source of truth; migrations are.
 
+## Language behavior
+
+[`src/lib/languages.ts`](../src/lib/languages.ts) is the shared catalog for English, Spanish, and Hungarian language codes, labels, and Intl locales. [`src/i18n.ts`](../src/i18n.ts) owns the locale resources and applies the selected interface language to i18next, document metadata, and `<html lang>`. Logged-out startup preserves local language preferences; authenticated hydration accepts only catalog languages.
+
+Interface language and AI-output language are separate settings. Interface language controls rendered copy, accessible names, generated app boilerplate, dates, numbers, relative time, PDF chrome, and Web Speech's recognition locale. AI-output language is sent through every structured, streaming, Crossfire, and Sparring request path and becomes an explicit backend prompt instruction. Existing user/provider content and previously saved titles are not rewritten when either setting changes.
+
 ## Supabase environments and sessions
 
 [`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) resolves production or staging client configuration. Public URLs and anon keys are browser configuration. Do not copy their values into docs.

@@ -4,6 +4,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import AdminPage from '@/pages/AdminPage';
 import { BrowserRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
+import i18n from '@/i18n';
 
 // Hoist mocks
 const { mockSupabase, mockToast, captureProductEventMock } = vi.hoisted(() => ({
@@ -52,8 +53,9 @@ global.fetch = globalFetch;
 window.fetch = globalFetch;
 
 describe('AdminPage Integration', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
+        await i18n.changeLanguage('en');
         // Default authenticated session
         mockSupabase.auth.getSession.mockResolvedValue({
             data: { session: { access_token: 'fake-token', user: { id: 'admin-id' } } },
@@ -640,5 +642,50 @@ describe('AdminPage Integration', () => {
 
         await waitFor(() => expect(deleteBody.announcementId).toBe(announcementId));
         expect(screen.queryByText('Remove me')).not.toBeInTheDocument();
+    });
+
+    it('renders every admin tab group in Hungarian', async () => {
+        await i18n.changeLanguage('hu');
+        const stats = {
+            totals: { requests: 2, cost: 0.01, successRate: 100 },
+            daily: [{ date: 'Sep 21', requests: 2, cost: 0.01, errors: 0 }],
+            byFeature: { generate: 2 },
+            byUser: [{ user_id: 'user-1', email: 'user@example.com', requests: 2, cost: 0.01 }],
+        };
+        const users = { users: [{
+            id: 'user-1',
+            email: 'user@example.com',
+            createdAt: '2026-09-01T00:00:00.000Z',
+            lastSignIn: '2026-09-20T00:00:00.000Z',
+            requestCount: 2,
+            role: 'user',
+        }] };
+
+        globalFetch.mockImplementation(async (url: string) => {
+            if (url.includes('action=stats')) return { ok: true, status: 200, text: async () => JSON.stringify(stats) };
+            if (url.includes('action=users')) return { ok: true, status: 200, text: async () => JSON.stringify(users) };
+            if (url.includes('action=promo-codes')) return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            if (url.includes('action=subscribers')) return { ok: true, status: 200, text: async () => JSON.stringify({ subscribers: [] }) };
+            if (url.includes('action=demo-codes')) return { ok: true, status: 200, text: async () => JSON.stringify({ codes: [] }) };
+            if (url.includes('action=announcements')) return { ok: true, status: 200, text: async () => JSON.stringify({ announcements: [] }) };
+            return { ok: false, status: 404, text: async () => '{}' };
+        });
+
+        render(<BrowserRouter><AdminPage /></BrowserRouter>);
+
+        expect(await screen.findByRole('heading', { name: 'Adminisztrációs vezérlőpult' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Használati statisztikák' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Felhasználók kezelése' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Közlemények' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Demóhozzáférés' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Promóciós kódok' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Előfizetők' })).toBeInTheDocument();
+
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Felhasználók kezelése' }), { button: 0 });
+        expect(await screen.findByRole('button', { name: 'Próbaidőszak ajándékozása' })).toBeInTheDocument();
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Promóciós kódok' }), { button: 0 });
+        expect(await screen.findByRole('heading', { name: 'Promóciós kód létrehozása' })).toBeInTheDocument();
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Előfizetők' }), { button: 0 });
+        expect(await screen.findByRole('heading', { name: 'Előfizetők' })).toBeInTheDocument();
     });
 });

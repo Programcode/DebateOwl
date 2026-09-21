@@ -87,6 +87,14 @@ Playwright starts a new Vite server on `127.0.0.1:18080` and runs:
 
 The server is never reused. CI uses retries and two workers. On failure, traces, screenshots, videos, and the HTML report stay in ignored `test-results/` and `playwright-report/` directories. CI may upload those credential-free artifacts for diagnosis.
 
+`e2e/hungarian-parity.spec.ts` is the focused Hungarian browser contract. On desktop and mobile Chromium it checks persisted `<html lang="hu">`, public and authenticated page chrome, route titles, onboarding, saved-chat empty state, Library controls, Timer semantics, localized close labels, and runtime errors. It deliberately does not reject arbitrary English text because source titles, user content, model names, and citations may legitimately remain in their source language.
+
+`src/test/i18n.test.ts` requires identical key sets and non-empty values across all three catalogs. Its explicit identity allowlist is limited to values that should remain canonical, such as product names, file formats, prices, model-facing abbreviations, and debate-format codes. A matching key set and a passing allowlist test prove catalog structure, not Hungarian grammar or natural phrasing.
+
+The speech unit test proves that Hungarian selects `recognition.lang = 'hu-HU'`. Credential-free browser automation has no real microphone or speech service, so it does not prove recognition accuracy or hardware support.
+
+AI client and Edge tests prove that every request path carries a validated language and that prompts require Hungarian output. Provider responses are mocked; only an authorized protected-staging run can prove that a live provider follows the instruction across every prose field.
+
 ## Full credential-free gate
 
 ```bash

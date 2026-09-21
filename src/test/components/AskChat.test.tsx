@@ -1,12 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { AskChat } from '@/components/features/ask/AskChat';
+import i18n from '@/i18n';
 
 vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
 }));
 
 describe('AskChat', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   it('sends citation and web search toggles with the message', () => {
     const onSend = vi.fn();
 
@@ -101,5 +106,41 @@ describe('AskChat', () => {
     fireEvent.click(screen.getByText('School phone bans'));
 
     expect(onLoadChat).toHaveBeenCalledWith('chat-1');
+  });
+
+  it('localizes researched source metadata in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    render(
+      <AskChat
+        messages={[{
+          id: 'm1',
+          role: 'assistant',
+          content: 'Válasz',
+          timestamp: 0,
+          output: {
+            response: 'Válasz',
+            searchInfo: {
+              webSearchUsed: true,
+              queries: [],
+              sources: [{
+                title: 'Jelentés',
+                url: 'https://kormany.hu/jelentes',
+                verified: true,
+                sourceType: 'government',
+                qualityLabel: 'strong',
+              }],
+            },
+            followUpQuestions: [],
+            uncertainties: [],
+          },
+        }]}
+        isLoading={false}
+        onSend={vi.fn()}
+        onClear={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Kormányzati')).toBeInTheDocument();
+    expect(screen.getByText('Erős')).toBeInTheDocument();
   });
 });

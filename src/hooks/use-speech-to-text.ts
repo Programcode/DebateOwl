@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSettingsStore } from '@/lib/stores/settings-store';
+import { toIntlLocale } from '@/lib/languages';
 
 // Use type assertion for window because SpeechRecognition is not standard yet
 interface SpeechRecognitionEvent extends Event {
@@ -46,6 +48,7 @@ declare global {
 }
 
 export function useSpeechToText() {
+  const language = useSettingsStore((state) => state.language);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
@@ -56,10 +59,11 @@ export function useSpeechToText() {
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
+      setIsListening(false);
       const recognitionInstance = new SpeechRecognition();
       recognitionInstance.continuous = true;
       recognitionInstance.interimResults = true;
-      recognitionInstance.lang = 'en-US'; // Could be dynamic based on settings
+      recognitionInstance.lang = toIntlLocale(language);
 
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         setError(null);
@@ -95,7 +99,7 @@ export function useSpeechToText() {
         recognitionInstance.abort();
       };
     }
-  }, []);
+  }, [language]);
 
   const startListening = useCallback(async () => {
     if (recognition && !isListening) {

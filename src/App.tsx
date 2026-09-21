@@ -121,7 +121,13 @@ export function getRouteFallback(pathname: string): RouteFallback {
   return ROUTE_FALLBACKS[normalizedPathname] ?? DEFAULT_ROUTE_FALLBACK;
 }
 
-export class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+interface RouteErrorBoundaryProps {
+  children: ReactNode;
+  heading?: string;
+  reloadLabel?: string;
+}
+
+export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -137,15 +143,24 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, { fai
     if (this.state.failed) {
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
-          <h1 className="text-xl font-semibold">Unable to load this page</h1>
+          <h1 className="text-xl font-semibold">{this.props.heading ?? 'Unable to load this page'}</h1>
           <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={() => window.location.reload()}>
-            Reload
+            {this.props.reloadLabel ?? 'Reload'}
           </button>
         </div>
       );
     }
     return this.props.children;
   }
+}
+
+export function LocalizedRouteErrorBoundary({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <RouteErrorBoundary heading={t('routeError.heading')} reloadLabel={t('routeError.reload')}>
+      {children}
+    </RouteErrorBoundary>
+  );
 }
 
 export function ToolRouteAnalytics(): null {
@@ -167,11 +182,11 @@ function RouteContent({ children }: { children: ReactNode }) {
   const statusText = t("common.openingPage", { page: label });
 
   return (
-    <RouteErrorBoundary key={location.pathname}>
+    <LocalizedRouteErrorBoundary key={location.pathname}>
       <Suspense fallback={<RouteSkeleton variant={fallback.variant} label={label} statusText={statusText} />}>
         {children}
       </Suspense>
-    </RouteErrorBoundary>
+    </LocalizedRouteErrorBoundary>
   );
 }
 
@@ -249,9 +264,9 @@ const App = () => (
             <Sonner />
             <OfflineIndicator />
             <BrowserRouter useTransitions={false}>
-              <RouteErrorBoundary>
+              <LocalizedRouteErrorBoundary>
                 <AppRoutes />
-              </RouteErrorBoundary>
+              </LocalizedRouteErrorBoundary>
             </BrowserRouter>
           </TooltipProvider>
         </MotionConfig>

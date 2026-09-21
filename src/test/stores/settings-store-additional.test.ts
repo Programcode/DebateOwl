@@ -74,6 +74,21 @@ describe('settings-store additional branches', () => {
     expect(useSettingsStore.getState().language).toBe('en');
   });
 
+  it('resetLocalData can preserve only the interface language', () => {
+    const store = useSettingsStore.getState();
+    store.setLanguage('hu');
+    store.setOutputLanguage('hu');
+    store.setTheme('dark');
+    store.setSystemPrompt('custom');
+    store.resetLocalData(true);
+
+    const state = useSettingsStore.getState();
+    expect(state.language).toBe('hu');
+    expect(state.outputLanguage).toBe('en');
+    expect(state.theme).toBe('system');
+    expect(state.customSystemPrompt).toBeUndefined();
+  });
+
   it('resetLocalData resets theme', () => {
     useSettingsStore.getState().setTheme('dark');
     useSettingsStore.getState().resetLocalData();

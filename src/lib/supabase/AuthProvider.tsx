@@ -223,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!nextUserId) {
         hydratedUserId = undefined;
         resetSessionStore();
-        resetSettingsStore();
+        resetSettingsStore(!prevUserId);
         resetSparringStore();
         sessionStorage.removeItem('google_provider_token');
         localStorage.removeItem('google_provider_token');

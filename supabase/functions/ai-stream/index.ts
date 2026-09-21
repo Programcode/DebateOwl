@@ -105,8 +105,8 @@ function normalizeHistory(value: unknown): ChatMessage[] {
   });
 }
 
-export function buildMessages(message: string, history: ChatMessage[], mode: string) {
-  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode));
+export function buildMessages(message: string, history: ChatMessage[], mode: string, language: unknown = "en") {
+  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode), language);
   return [
     { role: "system", content: system },
     ...history,
@@ -407,7 +407,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       try {
         if (req.signal.aborted) throw new DOMException("Client aborted", "AbortError");
-        const messages = buildMessages(userMessage, history, mode);
+        const messages = buildMessages(userMessage, history, mode, input.language);
 
         const payload: Record<string, unknown> = {
           model,

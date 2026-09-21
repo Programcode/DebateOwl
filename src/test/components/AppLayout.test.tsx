@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
+import i18n from '@/i18n';
 
 const { mockAuth, mockDismissAnnouncement, mockListActiveAnnouncements } = vi.hoisted(() => ({
   mockAuth: { user: { id: 'user-a' } },
@@ -50,8 +51,9 @@ function renderLayout() {
 }
 
 describe('AppLayout announcements', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetAllMocks();
+    await i18n.changeLanguage('en');
     mockAuth.user = { id: 'user-a' };
     mockListActiveAnnouncements.mockResolvedValue([announcement]);
     mockDismissAnnouncement.mockResolvedValue(undefined);
@@ -308,6 +310,17 @@ describe('AppLayout announcements', () => {
       ['Flowchart', '/app/flowchart'],
       ['History', '/app/history'],
     ]);
+  });
+
+  it('localizes desktop and mobile navigation labels in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+
+    expect(screen.getByRole('navigation', { name: 'Fő navigáció' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Menü megnyitása' }));
+    expect(screen.getByRole('navigation', { name: 'Mobil navigáció' })).toBeInTheDocument();
+    expect(screen.getByAltText('DebateLab logó')).toBeInTheDocument();
   });
 
   it('closes menus on Escape and returns focus to the trigger', async () => {

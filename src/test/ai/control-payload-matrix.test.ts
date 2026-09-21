@@ -14,6 +14,7 @@ import { setMockInvokeResponse } from '../mocks/supabase';
 import type { AttackOutput } from '@/lib/ai/schemas/attack';
 import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 
 const config: ProviderConfig = { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 };
 
@@ -48,6 +49,7 @@ describe('control-to-payload regression matrix', () => {
   beforeEach(() => {
     resetMockState();
     setMockSessionToken('valid-token');
+    useSettingsStore.setState({ outputLanguage: 'hu' });
     vi.clearAllMocks();
     setMockSessionToken('valid-token');
   });
@@ -80,6 +82,7 @@ describe('control-to-payload regression matrix', () => {
       audience: 'beginner',
       tone: 'conversational',
       format: 'custom',
+      language: 'hu',
     });
   });
 
@@ -96,13 +99,14 @@ describe('control-to-payload regression matrix', () => {
       judgeParadigm: 'policy',
       detectFallacies: false,
       analyzeWeighing: true,
+      language: 'hu',
     });
   });
 
   it('brainstorm sends side and output mode verbatim', async () => {
     await brainstorm({ motion: 'M', side: 'both', outputMode: 'buckets', context: 'ctx' } as never, config);
     const body = await lastInvokeBody();
-    expect(body.input).toMatchObject({ motion: 'M', side: 'both', outputMode: 'buckets', context: 'ctx' });
+    expect(body.input).toMatchObject({ motion: 'M', side: 'both', outputMode: 'buckets', context: 'ctx', language: 'hu' });
   });
 
   it('factoids sends direction, source type, timeframe, region, and source count verbatim', async () => {
@@ -119,6 +123,7 @@ describe('control-to-payload regression matrix', () => {
       timeframe: '2020-2026',
       region: 'EU',
       sourceCount: 9,
+      language: 'hu',
     });
   });
 
@@ -138,6 +143,7 @@ describe('control-to-payload regression matrix', () => {
       webSearch: true,
       prosConsMode: false,
       argumentMapMode: true,
+      language: 'hu',
     });
   });
 
@@ -150,6 +156,7 @@ describe('control-to-payload regression matrix', () => {
       webSearch: false,
       prosConsMode: false,
       argumentMapMode: false,
+      language: 'hu',
     });
   });
 });

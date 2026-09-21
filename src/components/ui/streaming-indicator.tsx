@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface StreamingIndicatorProps {
   messages: string[];
@@ -11,6 +12,7 @@ interface StreamingIndicatorProps {
 const MIN_INTERVAL_MS = 200;
 
 export function StreamingIndicator({ messages, intervalMs = 3000, className }: StreamingIndicatorProps) {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [fading, setFading] = useState(false);
@@ -45,7 +47,7 @@ export function StreamingIndicator({ messages, intervalMs = 3000, className }: S
   }, [index, safeIntervalMs]);
 
   return (
-    <div className={cn('motion-swap flex flex-col items-center justify-center gap-5 py-12', className)} role="status" aria-label="Loading">
+    <div className={cn('motion-swap flex flex-col items-center justify-center gap-5 py-12', className)} role="status" aria-label={t('common.loading')}>
       <div className="relative flex h-16 w-16 items-center justify-center">
         <span className="motion-ping-ring absolute h-full w-full rounded-full border border-primary/35" />
         <span className="absolute h-10 w-10 rounded-full bg-primary/10" />

@@ -2,9 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getRouteFallback, RouteErrorBoundary, ToolRouteAnalytics } from "@/App";
+import { getRouteFallback, LocalizedRouteErrorBoundary, RouteErrorBoundary, ToolRouteAnalytics } from "@/App";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { filterObservabilityBreadcrumb } from "@/lib/observability";
+import i18n from "@/i18n";
 
 const observability = vi.hoisted(() => ({
   captureException: vi.fn(),
@@ -193,6 +194,32 @@ describe("App route observability", () => {
     } finally {
       window.removeEventListener("error", suppressWindowError);
       consoleError.mockRestore();
+    }
+  });
+
+  it("renders localized Hungarian recovery actions", async () => {
+    await i18n.changeLanguage('hu');
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const suppressWindowError = (event: ErrorEvent) => event.preventDefault();
+    window.addEventListener("error", suppressWindowError);
+
+    function ExplodingRoute(): ReactNode {
+      throw new Error('route failed');
+    }
+
+    try {
+      render(
+        <LocalizedRouteErrorBoundary>
+          <ExplodingRoute />
+        </LocalizedRouteErrorBoundary>,
+      );
+
+      expect(screen.getByRole("heading", { name: "Az oldal nem tölthető be" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Újratöltés" })).toBeInTheDocument();
+    } finally {
+      window.removeEventListener("error", suppressWindowError);
+      consoleError.mockRestore();
+      await i18n.changeLanguage('en');
     }
   });
 });

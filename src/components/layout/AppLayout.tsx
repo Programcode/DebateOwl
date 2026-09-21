@@ -194,7 +194,7 @@ export function AppLayout() {
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
           <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
-              <img src="/favicon.png" alt="DebateLab" className="h-full w-full object-cover" />
+              <img src="/favicon.png" alt={t('common.logoAlt')} className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</h1>
@@ -202,7 +202,7 @@ export function AppLayout() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-0.5 xl:gap-1 ml-4">
+          <nav aria-label={t('nav.mainNavigation')} className="hidden lg:flex items-center gap-0.5 xl:gap-1 ml-4">
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -281,7 +281,7 @@ export function AppLayout() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <nav className="motion-reveal native-scroll-y native-mobile-menu overflow-y-auto border-t border-border bg-card p-4 lg:hidden" aria-label="Mobile navigation">
+          <nav className="motion-reveal native-scroll-y native-mobile-menu overflow-y-auto border-t border-border bg-card p-4 lg:hidden" aria-label={t('nav.mobileNavigation')}>
             <div className="grid gap-1 pb-[var(--native-safe-bottom,0px)]">
               {navItems.map((item) => (
                 <NavLink

@@ -128,7 +128,7 @@ test('keeps the setup usable on mobile with reduced motion', async ({ page }) =>
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Sparring' })).toBeVisible();
-  const logo = page.locator('header img[alt="DebateLab"]');
+  const logo = page.getByAltText('DebateLab logo');
   await expect(logo).toHaveAttribute('src', '/favicon.png');
   await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(page.getByRole('combobox', { name: 'Round format' })).toHaveText('School 4-6-6-3 · 8 speeches');

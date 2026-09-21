@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
+import i18n from '@/i18n';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { ToastClose } from '@/components/ui/toast';
 
 describe('StreamingIndicator', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.useRealTimers();
+    await i18n.changeLanguage('en');
   });
 
   const messages = ['Analyzing...', 'Generating...', 'Almost done...'];
@@ -70,5 +75,23 @@ describe('StreamingIndicator', () => {
   it('renders with single message', () => {
     render(<StreamingIndicator messages={['Loading...']} />);
     expect(screen.getByText('Loading...')).toBeDefined();
+  });
+
+  it('localizes loading and shared close controls after a runtime language switch', async () => {
+    await act(async () => { await i18n.changeLanguage('hu'); });
+    const indicator = render(<StreamingIndicator messages={['Elemzés...']} />);
+    expect(screen.getByRole('status', { name: 'Betöltés' })).toBeInTheDocument();
+    indicator.unmount();
+
+    const dialog = render(<Dialog open><DialogContent><DialogTitle>Tesztpárbeszéd</DialogTitle></DialogContent></Dialog>);
+    expect(screen.getByRole('button', { name: 'Bezárás' })).toBeInTheDocument();
+    dialog.unmount();
+
+    const sheet = render(<Sheet open><SheetContent><SheetTitle>Tesztpanel</SheetTitle></SheetContent></Sheet>);
+    expect(screen.getByRole('button', { name: 'Bezárás' })).toBeInTheDocument();
+    sheet.unmount();
+
+    render(<ToastClose />);
+    expect(screen.getByRole('button', { name: 'Bezárás' })).toBeInTheDocument();
   });
 });

@@ -7,6 +7,7 @@ import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm
 import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
+import i18n from '@/i18n';
 
 interface Message {
   id: string;
@@ -676,7 +677,7 @@ export const useSessionStore = create<SessionState>()(
       setBrainstormResult: (result) => {
         set({ brainstormResult: result });
         if (result) {
-          const item: SavedItem<BrainstormOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: 'Brainstorm' };
+          const item: SavedItem<BrainstormOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: i18n.t('generatedArtifacts.brainstormTitle') };
           set((state) => ({ autosavedBrainstorms: [item, ...state.autosavedBrainstorms].slice(0, 3) }));
         }
       },
@@ -708,7 +709,7 @@ export const useSessionStore = create<SessionState>()(
       setFactoidsResult: (result) => {
         set({ factoidsResult: result });
         if (result) {
-          const item: SavedItem<FactoidsOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: 'Factoids' };
+          const item: SavedItem<FactoidsOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: i18n.t('generatedArtifacts.factoidsTitle') };
           set((state) => ({ autosavedFactoids: [item, ...state.autosavedFactoids].slice(0, 3) }));
         }
       },

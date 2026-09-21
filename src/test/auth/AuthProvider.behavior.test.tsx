@@ -230,6 +230,34 @@ describe('AuthProvider behavior', () => {
     expect(hydrateSparringStoreMock).toHaveBeenCalledTimes(1);
   });
 
+  it('clears user data but preserves the interface language on cold signed-out startup', async () => {
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    });
+
+    await act(async () => {
+      callbackRef.current?.('INITIAL_SESSION', null);
+    });
+
+    expect(resetSessionStoreMock).toHaveBeenCalled();
+    expect(resetSettingsStoreMock).toHaveBeenCalledWith(true);
+    expect(resetSparringStoreMock).toHaveBeenCalled();
+
+    await act(async () => {
+      callbackRef.current?.('SIGNED_IN', { user: { id: 'user_2' }, access_token: 'token' });
+    });
+
+    expect(hydrateSessionStoreMock).toHaveBeenCalled();
+    expect(hydrateSettingsStoreMock).toHaveBeenCalled();
+    expect(prepareSparringStoreMock).toHaveBeenCalledWith('user_2');
+  });
+
   it('removes refresh tokens persisted by older clients during startup', async () => {
     localStorage.setItem('google_provider_refresh_token', 'legacy-refresh-token');
     getSessionMock.mockResolvedValue({
