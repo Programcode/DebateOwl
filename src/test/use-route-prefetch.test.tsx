@@ -72,15 +72,30 @@ function setConnection(connection: { saveData?: boolean; effectiveType?: string 
   Reflect.deleteProperty(navigator, 'connection');
 }
 
+function mediaQuery(matches: boolean, media: string): MediaQueryList {
+  return {
+    matches,
+    media,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  };
+}
+
 describe('useRoutePrefetch', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockPreloadRoute.mockReset();
     setConnection(undefined);
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => mediaQuery(true, query));
   });
 
   afterEach(() => {
     setConnection(undefined);
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -103,6 +118,16 @@ describe('useRoutePrefetch', () => {
 
     fireEvent.pointerEnter(link);
     fireEvent.pointerLeave(link);
+    act(() => vi.advanceTimersByTime(100));
+
+    expect(mockPreloadRoute).not.toHaveBeenCalled();
+  });
+
+  it('ignores synthetic pointer hover on coarse touch screens', () => {
+    vi.mocked(window.matchMedia).mockImplementation((query) => mediaQuery(false, query));
+    render(<TestLink to="/app/attack" />);
+
+    fireEvent.pointerEnter(screen.getByRole('link'), { pointerType: 'mouse' });
     act(() => vi.advanceTimersByTime(100));
 
     expect(mockPreloadRoute).not.toHaveBeenCalled();
