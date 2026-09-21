@@ -184,7 +184,7 @@ function joinBytes(chunks: Uint8Array[], totalBytes: number): Uint8Array {
   return bytes;
 }
 
-async function readResponseText(
+export async function readResponseText(
   response: Response,
   maxBytes: number,
   maxChars: number,
