@@ -322,7 +322,7 @@ export default function TimerPage() {
                 </Button>
               ))}
             </div>
-            <CardTitle className="sr-only">Timer Display</CardTitle>
+            <CardTitle className="sr-only">{t('timer.displayLabel')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Timer Display */}

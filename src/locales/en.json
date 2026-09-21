@@ -20,7 +20,9 @@
     "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "more": "More"
+    "more": "More",
+    "mainNavigation": "Main navigation",
+    "mobileNavigation": "Mobile navigation"
   },
   "navDesc": {
     "home": "Choose a mode",
@@ -43,7 +45,11 @@
     "googleDocs": "Google Docs",
     "regenerate": "Regenerate {{title}}",
     "openingPage": "Opening {{page}}",
-    "page": "Page"
+    "page": "Page",
+    "close": "Close",
+    "loading": "Loading",
+    "logoAlt": "DebateLab logo",
+    "or": "or"
   },
   "modelSelector": {
     "reasoning": "Reasoning",
@@ -394,6 +400,7 @@
   },
   "useCases": {
     "title": "Built For Everyone in Debate",
+    "description": "Whether you are competing, coaching, or judging, DebateLab gives you the edge.",
     "forDebaters": "For Debaters",
     "forCoaches": "For Coaches",
     "forJudges": "For Judges",
@@ -924,6 +931,7 @@
   },
   "timer": {
     "title": "Debate Timer",
+    "displayLabel": "Timer display",
     "selectFormat": "Select Format",
     "formatStandard": "Standard (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1588,6 +1596,7 @@
     "reason": "Why it matters",
     "followUp": "Follow-up",
     "turnReference": "Turn {{number}}",
+    "transcriptReferences": "Transcript references",
     "citations": "Citations",
     "citationsDesc": "Sources used to ground this exchange",
     "source": "Source",
@@ -1602,6 +1611,15 @@
     "newSession": "New session",
     "backToSetup": "Back to setup",
     "exit": "Exit crossfire"
+  },
+  "routeError": {
+    "heading": "Unable to load this page",
+    "reload": "Reload"
+  },
+  "sourcesPage": {
+    "title": "Sources",
+    "intro": "The following sources were consulted during the research and development of DebateLab. They are listed alphabetically by author surname or institutional name, following APA citation conventions.",
+    "references": "References"
   },
   "sourceQuality": {
     "researchedSources": "Researched sources",

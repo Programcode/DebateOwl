@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
 export default function SourcesPage() {
+  const { t } = useTranslation();
   const sources = [
     {
       authors: "AITHAL, V.; SILVER, J.",
@@ -125,19 +128,17 @@ export default function SourcesPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Sources</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('sourcesPage.title')}</h1>
 
         <div className="mt-8 space-y-6 text-sm leading-6 text-foreground">
           <section>
             <p className="text-muted-foreground">
-              The following sources were consulted during the research and development of DebateLab.
-              They are listed alphabetically by author surname or institutional name, following APA
-              citation conventions.
+              {t('sourcesPage.intro')}
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold mb-4">References</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('sourcesPage.references')}</h2>
             <ol className="list-decimal list-inside space-y-4">
               {sources.map((source, index) => (
                 <li key={index} className="pl-2 leading-relaxed">

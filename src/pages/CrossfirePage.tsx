@@ -147,8 +147,9 @@ interface ReferenceItem {
 }
 
 function TurnReferences({ turnIds }: { turnIds: string[] }) {
+  const { t } = useTranslation();
   return (
-    <span className="flex flex-wrap gap-1.5" aria-label="Transcript references">
+    <span className="flex flex-wrap gap-1.5" aria-label={t('crossfire.transcriptReferences')}>
       {turnIds.map((turnId) => (
         <a
           key={turnId}

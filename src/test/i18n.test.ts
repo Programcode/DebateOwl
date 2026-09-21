@@ -34,6 +34,26 @@ function flattenValues(obj: Record<string, unknown>, prefix = ''): Record<string
   return result;
 }
 
+const HU_IDENTICAL_VALUE_ALLOWLIST = new Set([
+  'common.pdf', 'common.docx', 'common.googleDocs',
+  'home.title', 'settings.tierPro', 'settings.admin',
+  'login.googleTab', 'login.verificationCodePlaceholder', 'login.demoCodePlaceholder',
+  'notFound.title', 'pricing.trialPrice', 'pricing.pro', 'pricing.proPrice',
+  'generateForm.lengthStandard', 'generateResults.durationMs', 'generateResults.word',
+  'generateResults.pdf', 'generateResults.googleDocs', 'generateResults.exordio',
+  'pricingModal.pro', 'pricingModal.freePrice', 'pricingModal.proPrice',
+  'timer.formatStandard', 'timer.formatLD',
+  'timer.speeches.policy.1ac', 'timer.speeches.policy.1nc',
+  'timer.speeches.policy.2ac', 'timer.speeches.policy.2nc',
+  'timer.speeches.policy.1nr', 'timer.speeches.policy.1ar',
+  'timer.speeches.policy.2nr', 'timer.speeches.policy.2ar',
+  'export.exordio', 'sparring.format.ld', 'sparring.format.pf',
+  'sparring.turns.standard-1', 'sparring.turns.standard-3',
+  'sparring.turns.standard-5', 'sparring.turns.standard-7',
+  'sparring.scorecard.exportPdf',
+  'langSwitcher.en', 'langSwitcher.es', 'langSwitcher.hu',
+]);
+
 describe('i18n locale files', () => {
   const enKeys = flattenKeys(en);
   const esKeys = flattenKeys(es);
@@ -79,6 +99,16 @@ describe('i18n locale files', () => {
     const values = flattenValues(hu);
     const empty = Object.entries(values).filter(([, v]) => v === '');
     expect(empty).toEqual([]);
+  });
+
+  it('has Hungarian copy for every non-canonical English value', () => {
+    const enValues = flattenValues(en);
+    const huValues = flattenValues(hu);
+    const untranslated = Object.keys(enValues).filter((key) => (
+      enValues[key] === huValues[key] && !HU_IDENTICAL_VALUE_ALLOWLIST.has(key)
+    ));
+
+    expect(untranslated).toEqual([]);
   });
 
   it('names both observability processors in every privacy policy translation', () => {

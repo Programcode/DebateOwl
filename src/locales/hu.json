@@ -20,7 +20,9 @@
     "settings": "Beállítások",
     "openMenu": "Menü megnyitása",
     "closeMenu": "Menü bezárása",
-    "more": "Továbbiak"
+    "more": "Továbbiak",
+    "mainNavigation": "Fő navigáció",
+    "mobileNavigation": "Mobil navigáció"
   },
   "navDesc": {
     "home": "Mód választása",
@@ -43,7 +45,11 @@
     "googleDocs": "Google Docs",
     "regenerate": "{{title}} újragenerálása",
     "openingPage": "{{page}} megnyitása",
-    "page": "Oldal"
+    "page": "Oldal",
+    "close": "Bezárás",
+    "loading": "Betöltés",
+    "logoAlt": "DebateLab logó",
+    "or": "vagy"
   },
   "modelSelector": {
     "reasoning": "Érvelés",
@@ -394,6 +400,7 @@
   },
   "useCases": {
     "title": "Mindenkinek Készült a Vitában",
+    "description": "Akár versenyzel, edzősködsz vagy bíráskodsz, a DebateLab előnyhöz juttat.",
     "forDebaters": "Vitázóknak",
     "forCoaches": "Edzőknek",
     "forJudges": "Bíróknak",
@@ -826,13 +833,13 @@
     "analyzing": "Elemzés...",
     "generatingResponse": "Válasz generálása...",
     "almostThere": "Mindjárt kész...",
-    "savedChats": "Saved chats",
-    "savedChatsDesc": "Resume prior coaching conversations.",
-    "openSavedChats": "Open saved chats",
-    "newChat": "New chat",
-    "noSavedChats": "No saved chats yet",
-    "noSavedChatsDesc": "Saved coaching chats will appear here.",
-    "messageCount": "{{count}} messages",
+    "savedChats": "Mentett beszélgetések",
+    "savedChatsDesc": "Folytasd a korábbi edzői beszélgetéseket.",
+    "openSavedChats": "Mentett beszélgetések megnyitása",
+    "newChat": "Új beszélgetés",
+    "noSavedChats": "Még nincsenek mentett beszélgetések",
+    "noSavedChatsDesc": "A mentett edzői beszélgetések itt jelennek meg.",
+    "messageCount": "{{count}} üzenet",
     "savedCount": "{{count}} mentve",
     "removeFile": "{{name}} eltávolítása"
   },
@@ -911,19 +918,20 @@
     "factoidsDesc": "Kutass bizonyítékként használható tényeket és forrásötleteket.",
     "ask": "Kérdés",
     "askDesc": "Használd a vitaedzőt követő kérdésekhez és stratégiához.",
-    "library": "Library",
-    "libraryDesc": "Keep sources that ground AI responses in real evidence.",
-    "timer": "Timer",
-    "timerDesc": "Practice speeches with tournament timing.",
-    "flowchart": "Flowchart",
-    "flowchartDesc": "Map arguments, attacks, and rebuttals visually.",
-    "history": "History",
-    "historyDesc": "Return to saved cases, chats, and prep sessions.",
-    "settings": "Settings",
-    "settingsDesc": "Control language, theme, account, and model preferences."
+    "library": "Forráskönyvtár",
+    "libraryDesc": "Őrizd meg azokat a forrásokat, amelyek valós bizonyítékokkal támasztják alá az MI-válaszokat.",
+    "timer": "Időmérő",
+    "timerDesc": "Gyakorold a beszédeket versenyidőzítéssel.",
+    "flowchart": "Érvelési folyamatábra",
+    "flowchartDesc": "Térképezd fel vizuálisan az érveket, támadásokat és cáfolatokat.",
+    "history": "Előzmények",
+    "historyDesc": "Térj vissza a mentett esetekhez, beszélgetésekhez és felkészülési anyagokhoz.",
+    "settings": "Beállítások",
+    "settingsDesc": "Kezeld a nyelvi, téma-, fiók- és modellbeállításokat."
   },
   "timer": {
     "title": "Vita Időmérő",
+    "displayLabel": "Időmérő kijelző",
     "selectFormat": "Formátum Választása",
     "formatStandard": "Standard (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1135,15 +1143,15 @@
     "sourceAddedDesc": "A forrásod elérhető megalapozáshoz.",
     "clearFailed": "Nem sikerült törölni a forrásokat",
     "clearConfirm": "Biztosan törölni szeretnéd az összes forrást?",
-    "importUrlHelp": "Auto import creates an editable draft. Review it before saving to your library.",
-    "unsupportedFile": "Unsupported file",
-    "unsupportedFileDesc": "Import plain text, Markdown, CSV, or JSON. PDF/DOCX parsing is not reliable here yet.",
-    "totalSources": "Total sources",
-    "activeSources": "Active sources",
-    "syncedFolders": "Synced folders",
-    "manualSource": "Manual source",
-    "searchSources": "Search sources",
-    "searchPlaceholder": "Search sources, folders, or content..."
+    "importUrlHelp": "Az automatikus importálás szerkeszthető piszkozatot hoz létre. Nézd át, mielőtt a könyvtárba mented.",
+    "unsupportedFile": "Nem támogatott fájl",
+    "unsupportedFileDesc": "Importálj egyszerű szöveget, Markdown-, CSV- vagy JSON-fájlt. A PDF/DOCX feldolgozása itt még nem megbízható.",
+    "totalSources": "Összes forrás",
+    "activeSources": "Aktív források",
+    "syncedFolders": "Szinkronizált mappák",
+    "manualSource": "Kézi forrás",
+    "searchSources": "Források keresése",
+    "searchPlaceholder": "Keresés forrásokban, mappákban vagy tartalomban..."
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",
@@ -1588,6 +1596,7 @@
     "reason": "Miért számít",
     "followUp": "Utókérdés",
     "turnReference": "{{number}}. forduló",
+    "transcriptReferences": "Hivatkozások az átiratban",
     "citations": "Hivatkozások",
     "citationsDesc": "A beszélgetés megalapozásához használt források",
     "source": "Forrás",
@@ -1602,6 +1611,15 @@
     "newSession": "Új munkamenet",
     "backToSetup": "Vissza a beállításhoz",
     "exit": "Kilépés a keresztkérdezésből"
+  },
+  "routeError": {
+    "heading": "Az oldal nem tölthető be",
+    "reload": "Újratöltés"
+  },
+  "sourcesPage": {
+    "title": "Források",
+    "intro": "Az alábbi forrásokat használtuk fel a DebateLab kutatása és fejlesztése során. A szerző vezetékneve vagy az intézmény neve szerint, ábécérendben, az APA-hivatkozási szabályok alapján szerepelnek.",
+    "references": "Hivatkozások"
   },
   "sourceQuality": {
     "researchedSources": "Kutatási források",

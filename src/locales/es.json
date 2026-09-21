@@ -20,7 +20,9 @@
     "settings": "Ajustes",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
-    "more": "Más"
+    "more": "Más",
+    "mainNavigation": "Navegación principal",
+    "mobileNavigation": "Navegación móvil"
   },
   "navDesc": {
     "home": "Elegir un modo",
@@ -43,7 +45,11 @@
     "googleDocs": "Google Docs",
     "regenerate": "Regenerar {{title}}",
     "openingPage": "Abriendo {{page}}",
-    "page": "Página"
+    "page": "Página",
+    "close": "Cerrar",
+    "loading": "Cargando",
+    "logoAlt": "Logotipo de DebateLab",
+    "or": "o"
   },
   "modelSelector": {
     "reasoning": "Razonamiento",
@@ -394,6 +400,7 @@
   },
   "useCases": {
     "title": "Hecho Para Todos en el Debate",
+    "description": "Tanto si compites, entrenas o juzgas, DebateLab te da ventaja.",
     "forDebaters": "Para Debatientes",
     "forCoaches": "Para Coaches",
     "forJudges": "Para Jueces",
@@ -826,13 +833,13 @@
     "analyzing": "Analizando...",
     "generatingResponse": "Generando respuesta...",
     "almostThere": "Casi listo...",
-    "savedChats": "Saved chats",
-    "savedChatsDesc": "Resume prior coaching conversations.",
-    "openSavedChats": "Open saved chats",
-    "newChat": "New chat",
-    "noSavedChats": "No saved chats yet",
-    "noSavedChatsDesc": "Saved coaching chats will appear here.",
-    "messageCount": "{{count}} messages",
+    "savedChats": "Chats guardados",
+    "savedChatsDesc": "Retoma conversaciones anteriores con tu coach.",
+    "openSavedChats": "Abrir chats guardados",
+    "newChat": "Nuevo chat",
+    "noSavedChats": "Aún no hay chats guardados",
+    "noSavedChatsDesc": "Los chats de coaching guardados aparecerán aquí.",
+    "messageCount": "{{count}} mensajes",
     "savedCount": "{{count}} guardados",
     "removeFile": "Eliminar {{name}}"
   },
@@ -911,19 +918,20 @@
     "factoidsDesc": "Investiga datos listos para evidencia y pistas de fuentes.",
     "ask": "Preguntar",
     "askDesc": "Usa el coach de debate para preguntas de seguimiento y estrategia.",
-    "library": "Library",
-    "libraryDesc": "Keep sources that ground AI responses in real evidence.",
-    "timer": "Timer",
-    "timerDesc": "Practice speeches with tournament timing.",
-    "flowchart": "Flowchart",
-    "flowchartDesc": "Map arguments, attacks, and rebuttals visually.",
-    "history": "History",
-    "historyDesc": "Return to saved cases, chats, and prep sessions.",
-    "settings": "Settings",
-    "settingsDesc": "Control language, theme, account, and model preferences."
+    "library": "Biblioteca",
+    "libraryDesc": "Guarda las fuentes que fundamentan las respuestas de la IA con evidencia real.",
+    "timer": "Cronómetro",
+    "timerDesc": "Practica discursos con tiempos de torneo.",
+    "flowchart": "Diagrama",
+    "flowchartDesc": "Representa visualmente argumentos, ataques y refutaciones.",
+    "history": "Historial",
+    "historyDesc": "Vuelve a casos, chats y sesiones de preparación guardados.",
+    "settings": "Ajustes",
+    "settingsDesc": "Controla el idioma, el tema, la cuenta y las preferencias de modelo."
   },
   "timer": {
     "title": "Temporizador de Debate",
+    "displayLabel": "Pantalla del temporizador",
     "selectFormat": "Seleccionar Formato",
     "formatStandard": "Estándar (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1135,15 +1143,15 @@
     "sourceAddedDesc": "Tu fuente está disponible para fundamentación.",
     "clearFailed": "Error al borrar fuentes",
     "clearConfirm": "¿Estás seguro de que quieres borrar todas las fuentes?",
-    "importUrlHelp": "Auto import creates an editable draft. Review it before saving to your library.",
-    "unsupportedFile": "Unsupported file",
-    "unsupportedFileDesc": "Import plain text, Markdown, CSV, or JSON. PDF/DOCX parsing is not reliable here yet.",
-    "totalSources": "Total sources",
-    "activeSources": "Active sources",
-    "syncedFolders": "Synced folders",
-    "manualSource": "Manual source",
-    "searchSources": "Search sources",
-    "searchPlaceholder": "Search sources, folders, or content..."
+    "importUrlHelp": "La importación automática crea un borrador editable. Revísalo antes de guardarlo en tu biblioteca.",
+    "unsupportedFile": "Archivo no compatible",
+    "unsupportedFileDesc": "Importa texto sin formato, Markdown, CSV o JSON. El procesamiento de PDF/DOCX aún no es fiable aquí.",
+    "totalSources": "Fuentes totales",
+    "activeSources": "Fuentes activas",
+    "syncedFolders": "Carpetas sincronizadas",
+    "manualSource": "Fuente manual",
+    "searchSources": "Buscar fuentes",
+    "searchPlaceholder": "Buscar en fuentes, carpetas o contenido..."
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
@@ -1588,6 +1596,7 @@
     "reason": "Por qué importa",
     "followUp": "Seguimiento",
     "turnReference": "Turno {{number}}",
+    "transcriptReferences": "Referencias de la transcripción",
     "citations": "Citas",
     "citationsDesc": "Fuentes usadas para fundamentar este intercambio",
     "source": "Fuente",
@@ -1602,6 +1611,15 @@
     "newSession": "Nueva sesión",
     "backToSetup": "Volver a la configuración",
     "exit": "Salir del interrogatorio"
+  },
+  "routeError": {
+    "heading": "No se pudo cargar esta página",
+    "reload": "Recargar"
+  },
+  "sourcesPage": {
+    "title": "Fuentes",
+    "intro": "Las siguientes fuentes se consultaron durante la investigación y el desarrollo de DebateLab. Se presentan en orden alfabético por apellido del autor o nombre de la institución, siguiendo las normas de citación APA.",
+    "references": "Referencias"
   },
   "sourceQuality": {
     "researchedSources": "Fuentes investigadas",
