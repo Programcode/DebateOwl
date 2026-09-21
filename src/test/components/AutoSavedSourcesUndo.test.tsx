@@ -11,7 +11,8 @@ const { mockToastError, mockToastSuccess, mockToastWarning, mockRemoveSource } =
 const sessionState = {
   sourceLibrary: [
     { id: 'source-1', folder: 'Auto-saved' },
-    { id: 'source-2', folder: 'Automatikusan mentett', metadata: { capturedVia: 'attack' } },
+    { id: 'source-2', folder: 'Auto-saved', metadata: { capturedVia: 'attack' } },
+    { id: 'source-3', folder: 'Curated', metadata: { capturedVia: 'generate' } },
   ],
 };
 
