@@ -549,4 +549,178 @@ describe("collaboration durability", () => {
     expect(store.updates).toEqual([]);
     expect(acknowledgements).toEqual([]);
   });
+
+  it("rechecks membership before accepting a document update", async () => {
+    const store = new MemoryStore();
+    let currentMember = true;
+    const server = createCollaborationServer({
+      authenticate: async ({ documentName, token }) => ({
+        authorId: token,
+        documentId: documentName.split("@")[0],
+        epoch: Number(documentName.split("@")[1]),
+      }),
+      authorize: async () => currentMember,
+      store,
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const authorDocument = new Y.Doc();
+    const peerDocument = new Y.Doc();
+    const author = new HocuspocusProvider({
+      document: authorDocument,
+      name: "speech-revoked@1",
+      token: "author",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    const peer = new HocuspocusProvider({
+      document: peerDocument,
+      name: "speech-revoked@1",
+      token: "peer",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    cleanup.push(() => author.destroy(), () => peer.destroy(), () => errorLog.mockRestore());
+
+    await vi.waitFor(() => {
+      expect(author.isSynced).toBe(true);
+      expect(peer.isSynced).toBe(true);
+    });
+    currentMember = false;
+    insertParagraph(authorDocument, "Blocked after removal");
+
+    await vi.waitFor(() => expect(author.isSynced).toBe(false));
+    expect(documentText(peerDocument)).toBe("");
+    expect(store.updates).toEqual([]);
+  });
+
+  it("rechecks membership before broadcasting awareness", async () => {
+    const store = new MemoryStore();
+    let currentMember = true;
+    const server = createCollaborationServer({
+      authenticate: async ({ documentName, token }) => ({
+        authorId: token,
+        documentId: documentName.split("@")[0],
+        epoch: Number(documentName.split("@")[1]),
+      }),
+      authorize: async () => currentMember,
+      store,
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const author = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "speech-awareness@1",
+      token: "author",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    const peer = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "speech-awareness@1",
+      token: "peer",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    cleanup.push(() => author.destroy(), () => peer.destroy(), () => errorLog.mockRestore());
+
+    await vi.waitFor(() => {
+      expect(author.isSynced).toBe(true);
+      expect(peer.isSynced).toBe(true);
+    });
+    currentMember = false;
+    author.setAwarenessField("user", { name: "Removed member" });
+
+    await vi.waitFor(() => expect(author.isSynced).toBe(false));
+    expect(
+      [...(peer.awareness?.getStates().values() ?? [])]
+        .some((state) => state.user?.name === "Removed member"),
+    ).toBe(false);
+  });
+
+  it("closes every writer when the dedicated database lock session dies", async () => {
+    const memory = new MemoryStore();
+    const released = vi.fn();
+    let loseLock: (() => void) | undefined;
+    const store = {
+      append: memory.append.bind(memory),
+      find: memory.find.bind(memory),
+      load: memory.load.bind(memory),
+      acquireWriter: vi.fn(async (_documentId: string, _epoch: number, onLost: () => void) => {
+        loseLock = onLost;
+        return released;
+      }),
+    };
+    const server = createCollaborationServer({
+      authenticate: async ({ documentName, token }) => ({
+        authorId: token,
+        documentId: documentName.split("@")[0],
+        epoch: Number(documentName.split("@")[1]),
+      }),
+      store,
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const provider = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "speech-lock-loss@4",
+      token: "author",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    cleanup.push(() => provider.destroy());
+
+    await vi.waitFor(() => expect(provider.isSynced).toBe(true));
+    expect(store.acquireWriter).toHaveBeenCalledWith(
+      "speech-lock-loss",
+      4,
+      expect.any(Function),
+    );
+    loseLock?.();
+
+    await vi.waitFor(() => expect(provider.isSynced).toBe(false));
+  });
+
+  it("replaces forged cursor identity with the authenticated label", async () => {
+    const store = new MemoryStore();
+    const server = createCollaborationServer({
+      authenticate: async ({ documentName, token }) => ({
+        authorId: token,
+        displayName: "Authenticated author",
+        documentId: documentName.split("@")[0],
+        epoch: Number(documentName.split("@")[1]),
+      }),
+      store,
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const author = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "speech-cursor-label@1",
+      token: "author",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    const peer = new HocuspocusProvider({
+      document: new Y.Doc(),
+      name: "speech-cursor-label@1",
+      token: "peer",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    cleanup.push(() => author.destroy(), () => peer.destroy());
+
+    await vi.waitFor(() => {
+      expect(author.isSynced).toBe(true);
+      expect(peer.isSynced).toBe(true);
+    });
+    author.setAwarenessField("user", { id: "victim", name: "Forged name" });
+
+    await vi.waitFor(() => {
+      expect([...(peer.awareness?.getStates().values() ?? [])]).toContainEqual(
+        expect.objectContaining({
+          user: expect.objectContaining({ id: "author", name: "Authenticated author" }),
+        }),
+      );
+    });
+  });
 });

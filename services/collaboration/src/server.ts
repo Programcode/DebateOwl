@@ -27,18 +27,29 @@ export interface DurableUpdate {
   syncType: number;
 }
 
+export interface DurableAppend extends Omit<DurableUpdate, "sequence"> {
+  snapshot: Uint8Array;
+}
+
 export interface DurableUpdateStore {
-  append(update: Omit<DurableUpdate, "sequence">): Promise<DurableUpdate>;
+  append(update: DurableAppend): Promise<DurableUpdate>;
   find(
     documentId: string,
     epoch: number,
     mutationId: string,
   ): Promise<DurableUpdate | undefined>;
   load(documentId: string, epoch: number): Promise<DurableUpdate[]>;
+  acquireWriter?(
+    documentId: string,
+    epoch: number,
+    onLost: () => void,
+  ): Promise<() => void | Promise<void>>;
+  loadSnapshot?(documentId: string, epoch: number): Promise<Uint8Array | undefined>;
 }
 
 interface AuthenticatedDocument {
   authorId: string;
+  displayName?: string;
   documentId: string;
   epoch: number;
 }
@@ -48,6 +59,11 @@ interface CollaborationServerOptions {
     documentName: string;
     token: string;
   }): Promise<AuthenticatedDocument>;
+  allowedOrigins?: ReadonlySet<string>;
+  authorize?(
+    context: AuthenticatedDocument,
+    operation: "awareness" | "read" | "write",
+  ): Promise<boolean>;
   store: DurableUpdateStore;
 }
 
@@ -73,26 +89,61 @@ export function createCollaborationServer(
     { durable: DurableUpdate; release: () => void }
   >();
   const locks = new Map<string, Mutex>();
+  const writerReleases = new Map<string, () => void | Promise<void>>();
+  const authorize = options.authorize ?? (async () => true);
 
-  return new Server<AuthenticatedDocument>({
+  const server = new Server<AuthenticatedDocument>({
     address: "127.0.0.1",
     flushDelay: false,
     port: 0,
     quiet: true,
     stopOnSignals: false,
+    async onConnect({ requestHeaders }) {
+      if (options.allowedOrigins?.size) {
+        const origin = requestHeaders.get("origin");
+        if (!origin || !options.allowedOrigins.has(origin)) {
+          throw new Error("Origin unavailable");
+        }
+      }
+    },
     onAuthenticate: ({ documentName, token }) =>
       options.authenticate({ documentName, token }),
-    async onLoadDocument({ context }) {
-      const document = new Y.Doc();
-      const updates = await options.store.load(context.documentId, context.epoch);
-      for (const update of [...updates].sort(
-        (a, b) => a.sequence - b.sequence,
-      )) {
-        Y.applyUpdate(document, update.bytes);
+    async onLoadDocument({ context, documentName }) {
+      if (options.store.acquireWriter && !writerReleases.has(documentName)) {
+        const release = await options.store.acquireWriter(
+          context.documentId,
+          context.epoch,
+          () => {
+            writerReleases.delete(documentName);
+            server.hocuspocus.closeConnections(documentName);
+          },
+        );
+        writerReleases.set(documentName, release);
       }
-      return document;
+
+      const document = new Y.Doc();
+      try {
+        const snapshot = await options.store.loadSnapshot?.(context.documentId, context.epoch);
+        if (snapshot?.byteLength) {
+          Y.applyUpdate(document, snapshot);
+        } else {
+          const updates = await options.store.load(context.documentId, context.epoch);
+          for (const update of [...updates].sort(
+            (a, b) => a.sequence - b.sequence,
+          )) {
+            Y.applyUpdate(document, update.bytes);
+          }
+        }
+        return document;
+      } catch (error) {
+        const release = writerReleases.get(documentName);
+        writerReleases.delete(documentName);
+        await release?.();
+        throw error;
+      }
     },
     async onStateless({ connection, payload }) {
+      if (!await authorize(connection.context, "read")) throw new Error("Workspace access revoked");
       if (payload.length > MAX_ACK_QUERY_BYTES) return;
       let input: unknown;
       try {
@@ -115,7 +166,26 @@ export function createCollaborationServer(
         }
       }
     },
+    async beforeHandleAwareness({ connection, context, states }) {
+      if (connection && context && !await authorize(context, "awareness")) {
+        throw new Error("Workspace access revoked");
+      }
+      if (context) {
+        states.forEach((state) => {
+          const color = typeof state.user?.color === "string" ? state.user.color : undefined;
+          state.user = {
+            ...(color ? { color } : {}),
+            id: context.authorId,
+            name: context.displayName ?? `Member ${context.authorId.slice(0, 4)}`,
+          };
+        });
+      }
+    },
     async beforeSync({ connection, context, document, payload, type }) {
+      const operation = type === messageYjsSyncStep2 || type === messageYjsUpdate
+        ? "write"
+        : "read";
+      if (!await authorize(context, operation)) throw new Error("Workspace access revoked");
       if (type !== messageYjsSyncStep2 && type !== messageYjsUpdate) return;
       if (payload.byteLength > MAX_UPDATE_BYTES) {
         throw new Error("Collaboration update exceeds 2 MiB");
@@ -129,11 +199,13 @@ export function createCollaborationServer(
       const release = await mutex.acquire();
       try {
         const candidate = new Y.Doc();
+        let snapshot: Uint8Array;
         try {
           Y.applyUpdate(candidate, Y.encodeStateAsUpdate(document));
           Y.applyUpdate(candidate, payload);
           validateWorkspaceDocument(candidate);
-          if (Y.encodeStateAsUpdate(candidate).byteLength > MAX_UPDATE_BYTES) {
+          snapshot = Y.encodeStateAsUpdate(candidate);
+          if (snapshot.byteLength > MAX_UPDATE_BYTES) {
             throw new Error("Collaboration document exceeds spike limit");
           }
         } finally {
@@ -149,6 +221,7 @@ export function createCollaborationServer(
           documentId: context.documentId,
           epoch: context.epoch,
           mutationId,
+          snapshot,
           syncType: type,
         });
         pending.set(connection, { durable, release });
@@ -178,5 +251,13 @@ export function createCollaborationServer(
         if (mutex && !mutex.isLocked()) locks.delete(key);
       }
     },
+    async onDisconnect({ clientsCount, documentName }) {
+      if (clientsCount > 0) return;
+      const release = writerReleases.get(documentName);
+      writerReleases.delete(documentName);
+      await release?.();
+    },
   });
+
+  return server;
 }

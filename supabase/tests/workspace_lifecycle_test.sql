@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(82);
+SELECT plan(92);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -900,6 +900,128 @@ SELECT results_eq(
   $$VALUES ('active'::text, NULL::timestamptz)$$,
   'workspace restore clears deleted state'
 );
+
+SELECT results_eq(
+  $$SELECT revision FROM public.create_workspace_document(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    'Custom rebuttal', 'pro', NULL, 17,
+    'baaaaaaa-0000-4000-8000-000000000044'
+  )$$,
+  ARRAY[18::bigint],
+  'a member creates a custom file at the end of one side'
+);
+RESET ROLE;
+SELECT set_config(
+  'test.custom_document_id',
+  (SELECT document_id::text FROM public.workspace_audit_events
+    WHERE operation_id = 'baaaaaaa-0000-4000-8000-000000000044'),
+  true
+);
+SELECT results_eq(
+  $$SELECT title, side,
+      position = (SELECT max(position) FROM public.workspace_documents sibling
+        WHERE sibling.workspace_id = created.workspace_id
+          AND sibling.side = created.side
+          AND sibling.state = 'active'),
+      state
+    FROM public.workspace_documents
+    AS created
+    WHERE id = current_setting('test.custom_document_id')::uuid$$,
+  $$VALUES ('Custom rebuttal'::text, 'pro'::text, true, 'active'::text)$$,
+  'custom creation stores the requested metadata without disturbing default files'
+);
+UPDATE private.workspace_document_state
+SET snapshot = decode('01020304', 'hex')
+WHERE document_id = current_setting('test.custom_document_id')::uuid;
+UPDATE public.workspace_documents
+SET assignee_id = '55555555-5555-4555-8555-555555555555'
+WHERE id = current_setting('test.custom_document_id')::uuid;
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '53333333-3333-4333-8333-333333333333', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT results_eq(
+  $$SELECT revision FROM public.create_workspace_document(
+    current_setting('test.english_workspace_id')::uuid,
+    'Custom rebuttal copy', 'con', current_setting('test.custom_document_id')::uuid, 18,
+    'baaaaaaa-0000-4000-8000-000000000045'
+  )$$,
+  ARRAY[19::bigint],
+  'duplication creates one independent file and revision'
+);
+RESET ROLE;
+SELECT set_config(
+  'test.duplicate_document_id',
+  (SELECT document_id::text FROM public.workspace_audit_events
+    WHERE operation_id = 'baaaaaaa-0000-4000-8000-000000000045'),
+  true
+);
+SELECT results_eq(
+  $$SELECT snapshot, epoch, durable_sequence
+    FROM private.workspace_document_state
+    WHERE document_id = current_setting('test.duplicate_document_id')::uuid$$,
+  $$VALUES (decode('01020304', 'hex'), 0::bigint, 0::bigint)$$,
+  'duplication copies only the accepted content snapshot into a fresh epoch'
+);
+SELECT results_eq(
+  $$SELECT title, side, position, assignee_id, state
+    FROM public.workspace_documents
+    WHERE id = current_setting('test.duplicate_document_id')::uuid$$,
+  $$VALUES ('Custom rebuttal copy'::text, 'con'::text, 4, NULL::uuid, 'active'::text)$$,
+  'duplication does not copy assignment or lifecycle state'
+);
+SELECT results_eq(
+  $$SELECT count(*)::bigint FROM private.workspace_document_updates
+    WHERE document_id = current_setting('test.duplicate_document_id')::uuid$$,
+  ARRAY[0::bigint],
+  'duplication does not copy live update history'
+);
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '53333333-3333-4333-8333-333333333333', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT results_eq(
+  $$SELECT document_id, revision FROM public.create_workspace_document(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    'Custom rebuttal copy', 'con', current_setting('test.custom_document_id')::uuid, 18,
+    'baaaaaaa-0000-4000-8000-000000000045'
+  )$$,
+  $$VALUES (current_setting('test.duplicate_document_id')::uuid, 19::bigint)$$,
+  'an identical duplicate request replays the committed file'
+);
+SELECT throws_ok(
+  $$SELECT * FROM public.create_workspace_document(
+    (SELECT id FROM public.workspaces WHERE initial_language = 'en'),
+    'Foreign copy', 'pro', current_setting('test.foreign_document_id')::uuid, 19,
+    'baaaaaaa-0000-4000-8000-000000000046'
+  )$$,
+  'P0001', 'workspace unavailable',
+  'a cross-workspace duplicate source returns the uniform unavailable error'
+);
+SELECT results_eq(
+  $$SELECT revision FROM public.workspaces WHERE initial_language = 'en'$$,
+  ARRAY[19::bigint],
+  'a rejected cross-workspace duplicate leaves the revision unchanged'
+);
+
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '54444444-4444-4444-8444-444444444444', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT throws_ok(
+  $$SELECT * FROM public.create_workspace_document(
+    current_setting('test.english_workspace_id')::uuid,
+    'Outsider file', 'pro', NULL, 19,
+    'baaaaaaa-0000-4000-8000-000000000047'
+  )$$,
+  'P0001', 'workspace unavailable',
+  'an outsider cannot create a file in a foreign workspace'
+);
+
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '53333333-3333-4333-8333-333333333333', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT lives_ok(
   $$SELECT public.clear_current_user_data()$$,
   'personal data clearing remains available to a workspace owner'
@@ -910,7 +1032,7 @@ SELECT results_eq(
       (SELECT count(*) FROM public.workspace_members WHERE workspace_id = (SELECT id FROM public.workspaces WHERE initial_language = 'en'))::bigint,
       (SELECT count(*) FROM public.workspace_documents WHERE workspace_id = (SELECT id FROM public.workspaces WHERE initial_language = 'en'))::bigint,
       (SELECT count(*) FROM public.workspace_audit_events WHERE workspace_id = (SELECT id FROM public.workspaces WHERE initial_language = 'en'))::bigint$$,
-  $$VALUES (1::bigint, 2::bigint, 8::bigint, 18::bigint)$$,
+  $$VALUES (1::bigint, 2::bigint, 10::bigint, 20::bigint)$$,
   'personal data clearing preserves shared workspace rows and audit history'
 );
 
