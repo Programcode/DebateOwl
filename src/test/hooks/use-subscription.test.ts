@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSubscription } from '@/hooks/use-subscription';
 
 interface MockResponses {
@@ -86,8 +88,17 @@ vi.mock('@/lib/supabase/client', () => ({
   },
 }));
 
+let queryClient: QueryClient;
+
+function renderSubscriptionHook() {
+  return renderHook(() => useSubscription(), {
+    wrapper: ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children),
+  });
+}
+
 describe('useSubscription', () => {
   beforeEach(() => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.clearAllMocks();
     mockAuthState.user = null;
     mockResponses.userSettings = null;
@@ -98,7 +109,7 @@ describe('useSubscription', () => {
   });
 
   it('returns non-loading default state when user is not signed in', async () => {
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -122,7 +133,7 @@ describe('useSubscription', () => {
     mockResponses.usageCount = 3;
     mockResponses.billingData = [{ stripe_customer_id: 'cus_123', status: 'active', current_period_end: '2099-12-31T00:00:00.000Z' }];
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -145,7 +156,7 @@ describe('useSubscription', () => {
     };
     mockResponses.billingData = [{ stripe_customer_id: 'cus_pro', status: 'active', current_period_end: '2099-12-31T00:00:00.000Z' }];
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -164,7 +175,7 @@ describe('useSubscription', () => {
       grace_period_ends_at: '2099-12-31T00:00:00.000Z',
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -184,7 +195,7 @@ describe('useSubscription', () => {
       grace_period_ends_at: '2099-01-01T00:00:00.000Z',
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -204,7 +215,7 @@ describe('useSubscription', () => {
       await result.current.refresh();
     });
 
-    expect(result.current.tier).toBe('expired');
+    await waitFor(() => expect(result.current.tier).toBe('expired'));
     expect(result.current.isExpired).toBe(true);
     expect(result.current.dailyLimit).toBe(20);
   });
@@ -217,7 +228,7 @@ describe('useSubscription', () => {
       grace_period_ends_at: null,
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -236,7 +247,7 @@ describe('useSubscription', () => {
     };
     mockResponses.usageCount = 7;
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -256,7 +267,7 @@ describe('useSubscription', () => {
       trial_ends_at: null,
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -275,7 +286,7 @@ describe('useSubscription', () => {
       trial_ends_at: '2099-01-01T00:00:00.000Z',
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -292,7 +303,7 @@ describe('useSubscription', () => {
       daily_limit_override: 13,
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -314,7 +325,7 @@ describe('useSubscription', () => {
       current_period_end: '2099-12-31T00:00:00.000Z',
     }];
 
-    const { result, rerender } = renderHook(() => useSubscription());
+    const { result, rerender } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.tier).toBe('pro');
@@ -347,7 +358,7 @@ describe('useSubscription', () => {
     };
     mockResponses.billingError = { message: 'billing read failed' };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -370,7 +381,7 @@ describe('useSubscription', () => {
     mockAuthState.user = { id: 'user-3' };
     mockResponses.throwOnUserSettings = true;
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

@@ -376,3 +376,59 @@ for (const [label, connection] of [
     expect(requestCount()).toBe(1);
   });
 }
+
+test('subscription reads stay cached across sibling tool routes', async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: true, isTourRunning: false },
+      version: 0,
+    }));
+  });
+
+  const subscriptionRequests: string[] = [];
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      await route.continue();
+      return;
+    }
+    if (url.pathname.endsWith('/auth/v1/user')) {
+      await route.fulfill({ json: { id: '00000000-0000-0000-0000-000000000001', email: 'e2e@example.com' } });
+      return;
+    }
+    if (url.pathname.endsWith('/functions/v1/announcements')) {
+      await route.fulfill({ json: { announcements: [] } });
+      return;
+    }
+    if (url.pathname.includes('/rest/v1/')) {
+      const select = url.searchParams.get('select') ?? '';
+      if (url.pathname.endsWith('/user_settings') && select.includes('subscription_tier')) {
+        subscriptionRequests.push('user_settings');
+      } else if (url.pathname.endsWith('/subscriptions')) {
+        subscriptionRequests.push('subscriptions');
+      } else if (url.pathname.endsWith('/ai_requests')) {
+        subscriptionRequests.push('ai_requests');
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'content-range': '*/0' },
+        body: '[]',
+      });
+      return;
+    }
+    await route.abort('blockedbyclient');
+  });
+
+  await page.goto('/app/generate');
+  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
+  await expect.poll(() => subscriptionRequests.filter((name) => name === 'ai_requests').length).toBe(1);
+
+  await openAppNav(page, 'Attack');
+  await waitForContent(page, attackContent);
+  await page.waitForTimeout(100);
+
+  expect(subscriptionRequests).toEqual(['user_settings', 'ai_requests']);
+});
