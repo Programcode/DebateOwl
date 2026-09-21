@@ -7,7 +7,8 @@ async function openMobileNavigation(page: Page) {
   }
 }
 
-test('a stalled Jam recorder cannot delay the real application', async ({ page }) => {
+test('a stalled Jam recorder cannot delay the real application', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
   await page.route('https://js.jam.dev/**', async () => new Promise(() => undefined));
   const jamRequest = page.waitForRequest('https://js.jam.dev/**');
 
