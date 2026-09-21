@@ -13,8 +13,10 @@ import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 export default function FactoidsPage() {
+  const workspace = useWorkspaceToolScope('factoids');
   const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource, setFactoidsForm } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
@@ -29,9 +31,10 @@ export default function FactoidsPage() {
     setDiscoveredSources([]);
     setFactoidsLoading(true);
     try {
-      const { result, discoveredSources: sources } = await factoids(data, config);
+      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined);
       setDiscoveredSources(sources);
       setFactoidsResult(result);
+      await workspace.attach(data, result);
       toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to find factoids:', error);
@@ -108,6 +111,7 @@ export default function FactoidsPage() {
 
   return (
     <div className="container py-8 px-4">
+      <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>

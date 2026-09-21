@@ -20,6 +20,7 @@ import { createWorkspaceEditor } from "@/lib/workspace/editor-schema";
 import { createProposal, createQuoteAnchor, type ProposalHunkInput } from "@/lib/workspace/review";
 import { createWorkspaceComment, saveWorkspaceProposal } from "@/lib/workspace/client";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import type { WorkspaceSource } from "@/lib/workspace/practice-client";
 
 const acknowledgementSchema = z.object({
   epoch: z.number().int().nonnegative(),
@@ -32,6 +33,8 @@ export type SaveStatus = "Offline" | "Saved" | "Saving";
 
 export function WorkspaceEditor({
   documentId,
+  citationToInsert,
+  aiSuggestion,
   editable,
   epoch,
   members,
@@ -40,9 +43,14 @@ export function WorkspaceEditor({
   userName,
   workspaceId,
   onDurableSequence,
+  onCitationInserted,
+  onAiSuggestionConsumed,
   onSaveStatus,
+  onTextChange,
 }: {
   documentId: string;
+  citationToInsert?: WorkspaceSource | null;
+  aiSuggestion?: { id: string; text: string } | null;
   editable: boolean;
   epoch: number;
   members: Array<{ user_id: string }>;
@@ -51,7 +59,10 @@ export function WorkspaceEditor({
   userName: string;
   workspaceId: string;
   onDurableSequence?: (sequence: number) => void;
+  onCitationInserted?: () => void;
+  onAiSuggestionConsumed?: () => void;
   onSaveStatus?: (status: SaveStatus) => void;
+  onTextChange?: (text: string) => void;
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
@@ -87,6 +98,7 @@ export function WorkspaceEditor({
     setStatus(navigator.onLine ? "Saving" : "Offline");
     let provider: HocuspocusProvider | undefined;
     let activeEditor: ReturnType<typeof createWorkspaceEditor> | undefined;
+    let reportText: (() => void) | undefined;
     const pending = new Set<string>();
     const loadedPending = new Set<string>();
     let bufferedHunk: ProposalHunkInput | undefined;
@@ -231,6 +243,9 @@ export function WorkspaceEditor({
         provider,
         user: { color: `hsl(${Math.abs(userId.charCodeAt(0) * 47) % 360} 70% 45%)`, name: userName },
       });
+      reportText = () => onTextChange?.(activeEditor?.getText() ?? "");
+      activeEditor.on("update", reportText);
+      reportText();
       document.on("update", (_update, origin) => {
         if (origin !== provider) setStatus("Saving");
         void persist();
@@ -248,11 +263,49 @@ export function WorkspaceEditor({
       flushSuggestion();
       window.removeEventListener("offline", offline);
       window.removeEventListener("online", online);
+      if (activeEditor && reportText) activeEditor.off("update", reportText);
       activeEditor?.destroy();
       provider?.destroy();
       document.destroy();
     };
-  }, [documentId, editable, epoch, identity, onDurableSequence, online, queryClient, t, token, userId, userName, workspaceId]);
+  }, [documentId, editable, epoch, identity, onDurableSequence, onTextChange, online, queryClient, t, token, userId, userName, workspaceId]);
+
+  useEffect(() => {
+    if (!editor || !citationToInsert) return;
+    const snapshot = citationToInsert.citation_snapshot;
+    editor.chain().focus().insertContent({
+      type: "citation",
+      attrs: {
+        href: typeof snapshot.url === "string" ? snapshot.url : null,
+        locator: citationToInsert.title,
+        quote: citationToInsert.content,
+        sourceId: citationToInsert.id,
+        title: citationToInsert.title,
+      },
+    }).run();
+    onCitationInserted?.();
+  }, [citationToInsert, editor, onCitationInserted]);
+
+  useEffect(() => {
+    if (!editor || !aiSuggestion || status !== "Saved") return;
+    onAiSuggestionConsumed?.();
+    const proposal = createProposal({
+      authorId: userId,
+      documentEpoch: epoch,
+      editor,
+      hunks: [{
+        content: [{ type: "paragraph", content: [{ type: "text", text: aiSuggestion.text }] }],
+        from: 0,
+        id: aiSuggestion.id,
+        kind: "format",
+        to: editor.state.doc.content.size,
+      }],
+      id: crypto.randomUUID(),
+    });
+    void saveWorkspaceProposal({ documentId, proposal, workspaceId })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["workspace-proposals", userId, documentId] }))
+      .catch(() => setReviewError(t("workspaces.suggestionFailed", "Suggestion could not be saved.")));
+  }, [aiSuggestion, documentId, editor, epoch, onAiSuggestionConsumed, queryClient, status, t, userId, workspaceId]);
 
   if (!COLLABORATION_URL) {
     return <p role="alert" className="p-4 text-sm text-destructive">{t("workspaces.collaborationUnavailable", "Collaboration service is not configured.")}</p>;

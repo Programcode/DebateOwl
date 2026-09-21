@@ -138,10 +138,12 @@ import {
   MAX_CROSSFIRE_REPLY_CHARS,
   validateCrossfireDebrief,
 } from "../_shared/crossfire-response.ts";
+import { isWorkspaceMember, loadAuthorizedWorkspaceContext } from "../_shared/workspace-context.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const workspaceDatabase = supabase as unknown as Parameters<typeof loadAuthorizedWorkspaceContext>[0];
 const sparringSupabase = createClient<SparringDatabaseSchema>(supabaseUrl, supabaseServiceKey);
 const sparringIntegritySecret = Deno.env.get("SPARRING_INTEGRITY_SECRET")?.trim()
   || await deriveSparringIntegritySecret(supabaseServiceKey);
@@ -1198,10 +1200,15 @@ export async function handleRequest(req: Request): Promise<Response> {
     validatedSparringRequest = sparringResult.request;
   }
   let sourceAssessments: SourceAssessment[] = [];
-  const successBody = (payload: Record<string, unknown>) => {
+  let workspaceAccess: { meta: Record<string, unknown>; workspaceId: string } | null = null;
+  const successBody = async (payload: Record<string, unknown>) => {
+    if (workspaceAccess && !await isWorkspaceMember(workspaceDatabase, userId, workspaceAccess.workspaceId)) {
+      throw new Error("Workspace access revoked");
+    }
     const meta = {
       ...(responseTruncated ? { truncated: true } : {}),
       ...(resolvedModelMeta ? { requestedModel, resolvedModel: resolvedModelMeta } : {}),
+      ...(workspaceAccess ? { workspaceContext: workspaceAccess.meta } : {}),
     };
     const enriched = sourceAssessments.length > 0 ? { ...payload, sourceAssessments } : payload;
     return Object.keys(meta).length > 0 ? { ...enriched, meta } : enriched;
@@ -1231,7 +1238,6 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
-
   if (crossfireInput?.operation === "signal") {
     if (await checkUserBanned(userId)) return badRequest("Your account has been suspended. Please contact support.", corsHeaders, 403);
     if (!(await verifyCrossfireSignalToken(userId, crossfireInput))) return badRequest("Invalid or expired Crossfire signal token", corsHeaders, 403);
@@ -1251,11 +1257,24 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
     const signalUsage = evaluated.jev?.usage ?? evaluated.jevUsage;
     if (signalUsage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, signalUsage, undefined, evaluated.jevUsage ? "error" : "success", evaluated.jevUsage ? "jev_incomplete" : undefined);
-    return new Response(JSON.stringify(successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
+    return new Response(JSON.stringify(await successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
+  if (body.workspaceContext !== undefined) {
+    try {
+      const loaded = await loadAuthorizedWorkspaceContext(workspaceDatabase, userId, body.workspaceContext);
+      workspaceAccess = { meta: loaded.meta, workspaceId: loaded.input.workspaceId };
+      sources = boundPromptSources([...sources, {
+        title: "Authorized workspace context",
+        content: loaded.context,
+        type: "workspace",
+      }]);
+    } catch {
+      return badRequest("Workspace unavailable", corsHeaders, 403);
+    }
+  }
   const sparringDatabase = narrowSparringDatabase(sparringSupabase);
   let sparringScoreClaimed = false;
   let sparringScoreClaimToken: string | undefined;
@@ -1284,7 +1303,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       });
     }
     if (claim.status === "complete") {
-      return new Response(JSON.stringify(successBody({
+      return new Response(JSON.stringify(await successBody({
         output: { action: "score", scorecard: claim.scorecard },
         sessionId: validatedSparringRequest.sessionId,
       })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1525,7 +1544,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({
+      return new Response(JSON.stringify(await successBody({
         output: responseOutput,
         sessionId: sparringRequest.sessionId,
       })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1574,7 +1593,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-      return new Response(JSON.stringify(successBody({ output: output.value, ...(signalToken ? { signalToken } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output: output.value, ...(signalToken ? { signalToken } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // FACTOIDS: Use deep research with multiple searches
@@ -1630,7 +1649,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       // Log usage and return
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ASK: Optionally run web search and include URL context from chat
@@ -1767,7 +1786,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       // Log usage and return
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // GENERATE: Use deep research for evidence-backed arguments
@@ -1903,7 +1922,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         metadata.durationMs = latencyMs;
       }
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources: rankedDiscoveredSources, sourceAssessments })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources: rankedDiscoveredSources, sourceAssessments })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // BRAINSTORM: Use research to inform argument angles
@@ -1932,7 +1951,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ATTACK: Use deep research for evidence-based critique
@@ -1958,7 +1977,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fallback for any other feature
@@ -1970,7 +1989,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const latencyMs = Date.now() - startTime;
     await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsageForLog()]), latencyMs);
-    return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);

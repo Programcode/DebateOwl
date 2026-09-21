@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import * as Y from "yjs";
+import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
 import {
   acceptProposalHunkInDocument,
   deserializeProposal,
   rejectProposalHunks,
   serializeProposal,
 } from "../../../src/lib/workspace/review";
-import { validateWorkspaceDocument } from "../../../src/lib/workspace/schema";
+import { validateWorkspaceDocument, WORKSPACE_CONTENT_FIELD, workspaceSchema } from "../../../src/lib/workspace/schema";
 import type { DurableAppend, DurableUpdate, DurableUpdateStore } from "./server";
 
 export interface PgClient {
@@ -42,7 +43,7 @@ const durableRowSchema = z.object({
   sync_type: z.number(),
 });
 const storedUpdateRowSchema = durableRowSchema.extend({ mutation_id: z.string() });
-const snapshotRowSchema = z.object({ snapshot: z.instanceof(Uint8Array) });
+const snapshotRowSchema = z.object({ snapshot: z.instanceof(Uint8Array), text_projection: z.string().optional() });
 const authorizationRowSchema = z.object({ allowed: z.boolean() });
 const proposalRowSchema = z.object({
   durable_sequence: bigintSchema,
@@ -51,6 +52,18 @@ const proposalRowSchema = z.object({
   snapshot: z.instanceof(Uint8Array),
   workspace_id: z.string().uuid(),
 });
+
+function snapshotText(snapshot: Uint8Array) {
+  const document = new Y.Doc();
+  try {
+    if (snapshot.byteLength) Y.applyUpdate(document, snapshot);
+    return workspaceSchema.nodeFromJSON(
+      yXmlFragmentToProsemirrorJSON(document.getXmlFragment(WORKSPACE_CONTENT_FIELD)),
+    ).textContent.slice(0, 100_000);
+  } finally {
+    document.destroy();
+  }
+}
 
 export class PostgresDurableUpdateStore implements DurableUpdateStore {
   private readonly writers = new Map<string, Writer>();
@@ -84,14 +97,26 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
   }
 
   async loadSnapshot(documentId: string, epoch: number) {
-    const result = await this.getWriter(documentId, epoch).query(
-      `SELECT snapshot
+    const client = this.getWriter(documentId, epoch);
+    const result = await client.query(
+      `SELECT snapshot, text_projection
        FROM private.workspace_document_state
        WHERE document_id = $1 AND epoch = $2`,
       [documentId, epoch],
     );
     const input = result.rows[0];
-    return input ? new Uint8Array(snapshotRowSchema.parse(input).snapshot) : undefined;
+    if (!input) return undefined;
+    const row = snapshotRowSchema.parse(input);
+    const snapshot = new Uint8Array(row.snapshot);
+    if (!row.text_projection) {
+      await client.query(
+        `UPDATE private.workspace_document_state
+         SET text_projection = $3
+         WHERE document_id = $1 AND epoch = $2 AND text_projection = ''`,
+        [documentId, epoch, snapshotText(snapshot)],
+      );
+    }
+    return snapshot;
   }
 
   async load(documentId: string, epoch: number): Promise<DurableUpdate[]> {
@@ -204,9 +229,9 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
       );
       await client.query(
         `UPDATE private.workspace_document_state
-         SET durable_sequence = $2, snapshot = $3, updated_at = now()
+         SET durable_sequence = $2, snapshot = $3, text_projection = $4, updated_at = now()
          WHERE document_id = $1`,
-        [update.documentId, sequence, Buffer.from(update.snapshot)],
+        [update.documentId, sequence, Buffer.from(update.snapshot), snapshotText(update.snapshot)],
       );
       await client.query(
         `UPDATE public.workspace_documents
@@ -374,9 +399,9 @@ export class PostgresDurableUpdateStore implements DurableUpdateStore {
             );
             await client.query(
               `UPDATE private.workspace_document_state
-               SET durable_sequence = $2, snapshot = $3, updated_at = now()
+               SET durable_sequence = $2, snapshot = $3, text_projection = $4, updated_at = now()
                WHERE document_id = $1`,
-              [input.documentId, sequence, Buffer.from(snapshot)],
+              [input.documentId, sequence, Buffer.from(snapshot), snapshotText(snapshot)],
             );
             await client.query(
               `UPDATE public.workspace_documents

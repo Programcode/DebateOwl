@@ -15,8 +15,10 @@ import { useNavigate } from 'react-router-dom';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromAttack } from '@/lib/crossfire/prefill';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 export default function AttackPage() {
+  const workspace = useWorkspaceToolScope('attack');
   const { attackResult, attackLoading, attackForm, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('attack'); // Actually we should use 'ask' config for the chat part
@@ -30,9 +32,10 @@ export default function AttackPage() {
   const handleSubmit = async (data: AttackInput) => {
     setAttackLoading(true);
     try {
-      const { result, discoveredSources } = await attackCase(data, config);
+      const { result, discoveredSources } = await attackCase(data, config, workspace.context ?? undefined);
       setDiscoveredSources(discoveredSources);
       setAttackResult(result);
+      await workspace.attach(data, result);
       toast({ title: t('attack.complete', 'Attack analysis complete'), description: t('attack.completeDesc', 'The critique is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to attack case:', error);
@@ -102,6 +105,7 @@ export default function AttackPage() {
 
   return (
     <div className="container py-8 px-4">
+      <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>

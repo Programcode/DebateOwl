@@ -23,8 +23,10 @@ import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { useReducedMotion } from 'framer-motion';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 export default function GeneratePage() {
+  const workspace = useWorkspaceToolScope('generate');
   const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
@@ -64,7 +66,7 @@ export default function GeneratePage() {
   const handleSubmit = async (data: GenerateInput) => {
     setGenerateLoading(true);
     try {
-      const { result, discoveredSources: sources } = await generateCase(data, config);
+      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined);
       // Always stamp with real local time and motion
       if (result.metadata) {
         result.metadata.generatedAt = new Date().toISOString();
@@ -72,6 +74,7 @@ export default function GeneratePage() {
       }
       setDiscoveredSources(sources);
       setGenerateResult(result);
+      await workspace.attach(data, result);
       setSuccessfulGenerationSequence((sequence) => sequence + 1);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
     } catch (error) {
@@ -326,6 +329,7 @@ export default function GeneratePage() {
   return (
     <>
     <div className="container py-8 px-4">
+      <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>

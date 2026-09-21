@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, CircleHelp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { generateSparringTurn, judgeSparringSession } from '@/lib/ai/client';
@@ -11,6 +11,8 @@ import { SparringRound } from '@/components/features/sparring/SparringRound';
 import { SparringScorecard } from '@/components/features/sparring/SparringScorecard';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
 
 function readableError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message;
@@ -23,9 +25,14 @@ function estimateAiTimeUsedSeconds(content: string, limit: number) {
 }
 
 export default function SparringPage() {
+  const workspace = useWorkspaceToolScope('sparring');
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const session = useSparringStore((state) => state.currentSession);
+  const location = useLocation();
+  const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
+  const workspaceArtifact = (location.state as { workspaceArtifact?: unknown } | null)?.workspaceArtifact;
+  const storedSession = useSparringStore((state) => state.currentSession);
+  const session = workspaceLaunch || workspaceArtifact !== undefined ? null : storedSession;
   const currentView = !session ? 'setup' : session.phase === 'complete' && session.scorecard ? 'scorecard' : 'round';
   const previousViewRef = useRef(currentView);
   const viewChanged = previousViewRef.current !== currentView;
@@ -34,6 +41,7 @@ export default function SparringPage() {
   }, [currentView]);
   const stateMotionClass = viewChanged ? 'motion-swap' : undefined;
   const startSession = useSparringStore((state) => state.startSession);
+  const restoreWorkspaceSession = useSparringStore((state) => state.restoreWorkspaceSession);
   const submitUserSpeech = useSparringStore((state) => state.submitUserSpeech);
   const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
   const completeSession = useSparringStore((state) => state.completeSession);
@@ -51,6 +59,13 @@ export default function SparringPage() {
   const aiInFlightRef = useRef(false);
   const judgeInFlightRef = useRef(false);
   const isOnlineRef = useRef(isOnline);
+
+  useEffect(() => {
+    if (!workspace.context || (!workspaceLaunch && workspaceArtifact === undefined)) return;
+    if (workspaceLaunch) abandonSession();
+    else restoreWorkspaceSession(workspaceArtifact);
+    navigate(location.pathname, { replace: true, state: { workspaceContext: workspace.context } });
+  }, [abandonSession, location.pathname, navigate, restoreWorkspaceSession, workspace.context, workspaceArtifact, workspaceLaunch]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -125,7 +140,7 @@ export default function SparringPage() {
       currentTurn: turnInput,
     };
 
-    void generateSparringTurn(input, config)
+    void generateSparringTurn(input, config, workspace.context ?? undefined)
       .then((result) => {
         if (aiRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
@@ -154,7 +169,7 @@ export default function SparringPage() {
           setAiLoading(false);
         }
       });
-  }, [appendAiSpeech, config, outputLanguage, retryNonce, session, t]);
+  }, [appendAiSpeech, config, outputLanguage, retryNonce, session, t, workspace.context]);
 
   useEffect(() => {
     if (!session || session.phase !== 'judging') return;
@@ -177,7 +192,7 @@ export default function SparringPage() {
       speeches: session.speeches,
       language: outputLanguage,
     };
-    void judgeSparringSession(input, config)
+    void judgeSparringSession(input, config, workspace.context ?? undefined)
       .then((result) => {
         if (judgeRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
@@ -190,7 +205,22 @@ export default function SparringPage() {
       .finally(() => {
         if (judgeRequestRef.current === requestKey) judgeInFlightRef.current = false;
       });
-  }, [completeSession, config, outputLanguage, retryNonce, session, t]);
+  }, [completeSession, config, outputLanguage, retryNonce, session, t, workspace.context]);
+
+  useEffect(() => {
+    if (!workspace.context || !session) return;
+    void saveWorkspaceArtifact({
+      documentEpoch: workspace.context.documentEpoch,
+      documentId: workspace.context.documentId,
+      inputSnapshot: { motion: session.motion, side: session.userSide, format: session.format, difficulty: session.difficulty },
+      outputSnapshot: session.phase === 'complete' ? session : undefined,
+      progress: session,
+      requestId: workspace.context.requestId,
+      status: session.phase === 'complete' ? 'complete' : 'progress',
+      tool: 'sparring',
+      workspaceId: workspace.context.workspaceId,
+    });
+  }, [session, workspace.context]);
 
   const handleStart = (values: SparringSetupValues) => {
     startSession(values);
@@ -232,7 +262,11 @@ export default function SparringPage() {
   if (!session) {
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8 sm:py-10')}>
-        <SparringSetup onStart={handleStart} />
+        <WorkspaceToolScope context={workspace.context} />
+        <SparringSetup
+          initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
+          onStart={handleStart}
+        />
       </div>
     );
   }
@@ -240,6 +274,7 @@ export default function SparringPage() {
   if (session.phase === 'complete' && session.scorecard) {
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8 sm:py-10')}>
+        <WorkspaceToolScope context={workspace.context} />
         <SparringScorecard session={session} scorecard={session.scorecard} onRestart={handleRestart} onExport={handleExportDocx} onExportPdf={handleExportPdf} />
       </div>
     );
@@ -247,6 +282,7 @@ export default function SparringPage() {
 
   return (
     <div className={cn(stateMotionClass, 'container px-4 py-6 sm:py-8')}>
+      <WorkspaceToolScope context={workspace.context} />
       <div className="mb-4 flex items-center justify-between gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/app')} className="-ml-2 text-muted-foreground"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t('sparring.round.backToWorkspace', 'Back to workspace')}</Button>
         <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', !isOnline && 'text-amber-600 dark:text-amber-400')}><CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />{t('sparring.round.draftSavedNotice', 'Drafts save in this tab')}</span>

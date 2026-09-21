@@ -50,6 +50,7 @@ interface SparringStoreState {
   savedSessions: SparringSession[];
   hydrated: boolean;
   startSession: (input: StartSessionInput) => SparringSession;
+  restoreWorkspaceSession: (input: unknown) => boolean;
   setDraft: (draft: string) => void;
   tickTimer: (now?: number) => void;
   pauseTimer: (now?: number) => void;
@@ -162,18 +163,21 @@ const debouncedSessionStorage = {
 
 if (typeof window !== 'undefined') window.addEventListener('pagehide', flushPendingStorageWrite);
 
-function migratePersistedSparringState(value: unknown): PersistedSparringState {
-  const parsed = PersistedSparringStateSchema.safeParse(value);
-  if (!parsed.success) return { ownerUserId: null, currentSession: null, savedSessions: [] };
-  const rebuildTurns = (session: z.output<typeof PersistedSparringSessionSchema>): SparringSession => ({
+function rebuildSession(session: z.output<typeof PersistedSparringSessionSchema>): SparringSession {
+  return {
     ...session,
     timerDeadline: session.timerDeadline ?? null,
     turns: buildSparringTurns(session.format, session.userSide),
-  });
+  };
+}
+
+function migratePersistedSparringState(value: unknown): PersistedSparringState {
+  const parsed = PersistedSparringStateSchema.safeParse(value);
+  if (!parsed.success) return { ownerUserId: null, currentSession: null, savedSessions: [] };
   return {
     ownerUserId: parsed.data.ownerUserId ?? null,
-    currentSession: parsed.data.currentSession ? rebuildTurns(parsed.data.currentSession) : null,
-    savedSessions: (parsed.data.savedSessions ?? []).map(rebuildTurns),
+    currentSession: parsed.data.currentSession ? rebuildSession(parsed.data.currentSession) : null,
+    savedSessions: (parsed.data.savedSessions ?? []).map(rebuildSession),
   };
 }
 
@@ -302,6 +306,13 @@ export const useSparringStore = create<SparringStoreState>()(
         };
         set({ currentSession: session });
         return session;
+      },
+
+      restoreWorkspaceSession: (input) => {
+        const parsed = PersistedSparringSessionSchema.safeParse(input);
+        if (!parsed.success) return false;
+        set({ currentSession: rebuildSession(parsed.data) });
+        return true;
       },
 
       setDraft: (draft) => set((state) => state.currentSession
