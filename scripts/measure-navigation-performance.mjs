@@ -397,7 +397,12 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
     const measuredResources = boundary === null
       ? resources
       : resources.filter((entry) => entry.startTime >= boundary);
-    const appResources = measuredResources.filter((entry) => entry.sameOrigin);
+    const sameOriginResources = measuredResources.filter((entry) => entry.sameOrigin);
+    const backgroundResources = boundary === null ? [] : sameOriginResources.filter((entry) =>
+      entry.name.includes('/node_modules/.vite/deps/@vercel_analytics_react.js')
+      || entry.name.includes('/node_modules/.vite/deps/@vercel_speed-insights_react.js')
+    );
+    const appResources = sameOriginResources.filter((entry) => !backgroundResources.includes(entry));
     const measuredLongTasks = boundary === null
       ? state.longTasks
       : state.longTasks.filter((entry) => entry.startTime >= boundary);
@@ -444,7 +449,9 @@ async function collectMetrics(page, { path, kind, profile, cacheState, routeModu
       layoutShifts: measuredLayoutShifts,
       requestCount: appResources.length,
       browserRequestCount: measuredResources.length,
-      externalRequestCount: measuredResources.length - appResources.length,
+      externalRequestCount: measuredResources.length - sameOriginResources.length,
+      backgroundRequestCount: backgroundResources.length,
+      backgroundResources,
       transferredBytes: appResources.reduce((sum, entry) => sum + (entry.transferSize || 0), 0),
       encodedBytes: appResources.reduce((sum, entry) => sum + (entry.encodedBodySize || 0), 0),
       decodedBytes: appResources.reduce((sum, entry) => sum + (entry.decodedBodySize || 0), 0),
