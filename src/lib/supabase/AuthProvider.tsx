@@ -222,11 +222,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!nextUserId) {
         hydratedUserId = undefined;
-        if (prevUserId) {
-          resetSessionStore();
-          resetSettingsStore();
-          resetSparringStore();
-        }
+        resetSessionStore();
+        resetSettingsStore(!prevUserId);
+        resetSparringStore();
         sessionStorage.removeItem('google_provider_token');
         localStorage.removeItem('google_provider_token');
         // Remove refresh tokens written by older clients as well; this client

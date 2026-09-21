@@ -30,7 +30,7 @@ interface SettingsState {
   setSystemPrompt: (prompt: string) => void;
   setWikiResearchEnabled: (enabled: boolean) => void;
   hydrateFromServer: () => Promise<void>;
-  resetLocalData: () => void;
+  resetLocalData: (preserveLanguage?: boolean) => void;
 }
 
 const DEFAULT_PROVIDER = 'openrouter';
@@ -309,16 +309,17 @@ export const useSettingsStore = create<SettingsState>()(
           await persistMigratedFeatureConfigs(mergedConfigs);
         }
       },
-      resetLocalData: () => {
+      resetLocalData: (preserveLanguage = false) => {
+        const language = preserveLanguage ? get().language : 'en';
         set({
-          language: 'en',
+          language,
           outputLanguage: 'en',
           theme: 'system',
           customSystemPrompt: undefined,
           featureConfigs: getDefaultFeatureConfigs(),
           wikiResearchEnabled: false,
         });
-        void applyAppLanguage('en');
+        void applyAppLanguage(language);
       },
     }),
     {
