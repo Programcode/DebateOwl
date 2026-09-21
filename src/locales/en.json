@@ -1,6 +1,7 @@
 {
   "nav": {
     "home": "Home",
+    "workspaces": "Workspaces",
     "generate": "Generate",
     "attack": "Attack",
     "brainstorm": "Brainstorm",
@@ -26,6 +27,7 @@
   },
   "navDesc": {
     "home": "Choose a mode",
+    "workspaces": "Write cases together",
     "generate": "Build arguments",
     "attack": "Find weaknesses",
     "brainstorm": "Explore ideas",
@@ -37,6 +39,32 @@
     "sparring": "Practice a live round",
     "flowchart": "Map arguments",
     "history": "Saved items"
+  },
+  "workspaces": {
+    "title": "Workspaces",
+    "new": "New workspace",
+    "motion": "Motion",
+    "motionPlaceholder": "Schools should ban phones",
+    "create": "Create workspace",
+    "creating": "Creating...",
+    "createFailed": "Workspace creation failed. Try again.",
+    "yours": "Your workspaces",
+    "loading": "Loading workspaces...",
+    "loadFailed": "Workspaces could not be loaded.",
+    "empty": "Create your first workspace above.",
+    "active": "Active",
+    "archived": "Archived",
+    "loadingOne": "Opening workspace...",
+    "unavailable": "Workspace unavailable.",
+    "editorTitle": "Debate workspace",
+    "side": "Side",
+    "proSide": "For",
+    "conSide": "Against",
+    "files": "Files",
+    "assignedTo": "Assigned to {{member}}",
+    "assigned": "Assigned",
+    "document": "Document",
+    "documentEditor": "Document editor"
   },
   "common": {
     "export": "Export",

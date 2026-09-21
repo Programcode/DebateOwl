@@ -18,7 +18,8 @@ import {
   Dumbbell,
   Database,
   GitBranch,
-  Crosshair
+  Crosshair,
+  Files,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import {
 
 const navItems = [
   { path: '/app', key: 'home', icon: Home },
+  { path: '/app/workspaces', key: 'workspaces', icon: Files },
   { path: '/app/generate', key: 'generate', icon: Sparkles },
   { path: '/app/attack', key: 'attack', icon: Swords },
   { path: '/app/brainstorm', key: 'brainstorm', icon: Lightbulb },
@@ -50,7 +52,7 @@ const navItems = [
 ];
 
 const primaryNavItems = navItems.filter((item) =>
-  ['home', 'generate', 'attack', 'ask', 'crossfire', 'sparring'].includes(item.key),
+  ['home', 'workspaces', 'generate', 'attack', 'ask', 'crossfire', 'sparring'].includes(item.key),
 );
 
 const moreNavItems = navItems.filter((item) => !primaryNavItems.includes(item));

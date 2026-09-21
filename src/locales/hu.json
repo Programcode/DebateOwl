@@ -1,6 +1,7 @@
 {
   "nav": {
     "home": "Kezdőlap",
+    "workspaces": "Munkaterek",
     "generate": "Generálás",
     "attack": "Támadás",
     "brainstorm": "Ötletelés",
@@ -26,6 +27,7 @@
   },
   "navDesc": {
     "home": "Mód választása",
+    "workspaces": "Közös esetírás",
     "generate": "Érvek építése",
     "attack": "Gyengeségek keresése",
     "brainstorm": "Ötletek felfedezése",
@@ -37,6 +39,32 @@
     "sparring": "Élő vita forduló gyakorlása",
     "flowchart": "Érvek térképezése",
     "history": "Mentett elemek"
+  },
+  "workspaces": {
+    "title": "Munkaterek",
+    "new": "Új munkatér",
+    "motion": "Tételmondat",
+    "motionPlaceholder": "Az iskoláknak be kellene tiltaniuk a mobiltelefonokat",
+    "create": "Munkatér létrehozása",
+    "creating": "Létrehozás...",
+    "createFailed": "A munkatér létrehozása sikertelen. Próbáld újra.",
+    "yours": "Saját munkaterek",
+    "loading": "Munkaterek betöltése...",
+    "loadFailed": "A munkaterek nem tölthetők be.",
+    "empty": "Hozd létre fent az első munkateredet.",
+    "active": "Aktív",
+    "archived": "Archivált",
+    "loadingOne": "Munkatér megnyitása...",
+    "unavailable": "A munkatér nem érhető el.",
+    "editorTitle": "Vitamunkatér",
+    "side": "Oldal",
+    "proSide": "Mellette",
+    "conSide": "Ellene",
+    "files": "Fájlok",
+    "assignedTo": "Felelős: {{member}}",
+    "assigned": "Kiosztva",
+    "document": "Dokumentum",
+    "documentEditor": "Dokumentumszerkesztő"
   },
   "common": {
     "export": "Exportálás",

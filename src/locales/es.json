@@ -1,6 +1,7 @@
 {
   "nav": {
     "home": "Inicio",
+    "workspaces": "Espacios",
     "generate": "Generar",
     "attack": "Atacar",
     "brainstorm": "Ideas",
@@ -26,6 +27,7 @@
   },
   "navDesc": {
     "home": "Elegir un modo",
+    "workspaces": "Redactar casos en equipo",
     "generate": "Construir argumentos",
     "attack": "Encontrar debilidades",
     "brainstorm": "Explorar ideas",
@@ -37,6 +39,32 @@
     "sparring": "Practicar una ronda en directo",
     "flowchart": "Mapear argumentos",
     "history": "Elementos guardados"
+  },
+  "workspaces": {
+    "title": "Espacios de trabajo",
+    "new": "Nuevo espacio",
+    "motion": "Moción",
+    "motionPlaceholder": "Los colegios deberían prohibir los móviles",
+    "create": "Crear espacio",
+    "creating": "Creando...",
+    "createFailed": "No se pudo crear el espacio. Inténtalo de nuevo.",
+    "yours": "Tus espacios",
+    "loading": "Cargando espacios...",
+    "loadFailed": "No se pudieron cargar los espacios.",
+    "empty": "Crea tu primer espacio arriba.",
+    "active": "Activo",
+    "archived": "Archivado",
+    "loadingOne": "Abriendo el espacio...",
+    "unavailable": "Espacio no disponible.",
+    "editorTitle": "Espacio de debate",
+    "side": "Lado",
+    "proSide": "A favor",
+    "conSide": "En contra",
+    "files": "Archivos",
+    "assignedTo": "Asignado a {{member}}",
+    "assigned": "Asignado",
+    "document": "Documento",
+    "documentEditor": "Editor del documento"
   },
   "common": {
     "export": "Exportar",
