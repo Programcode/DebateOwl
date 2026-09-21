@@ -39,11 +39,13 @@ import {
   CrossfireAIInputSchema,
   CrossfireDebriefSchema,
   CrossfireReplySchema,
+  CrossfireSignalInputSchema,
   CrossfireTurnSignalSchema,
   collectDebriefTurnIds,
   type CrossfireAIInput,
   type CrossfireDebrief,
   type CrossfireReply,
+  type CrossfireSignalInput,
   type CrossfireTurnSignal,
 } from '@/lib/crossfire/schemas';
 
@@ -739,7 +741,7 @@ export async function crossfire(
   rawInput: CrossfireAIInput,
   config: ProviderConfig,
   options: Pick<AIRequestOptions, 'signal'> = {},
-): Promise<(CrossfireReply & { signal?: CrossfireTurnSignal }) | CrossfireDebrief> {
+): Promise<(CrossfireReply & { signalToken?: string }) | CrossfireDebrief> {
   const input = CrossfireAIInputSchema.safeParse(rawInput);
   if (!input.success) {
     throw new AIResponseError('Crossfire request did not match the expected schema.', {
@@ -757,7 +759,7 @@ export async function crossfire(
       timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
       signal: options.signal,
       transformResponse: (rawData) => {
-        const data = rawData as { output: unknown; signal?: unknown };
+        const data = rawData as { output: unknown; signalToken?: unknown };
         if (input.data.operation === 'next-turn') {
           const reply = CrossfireReplySchema.safeParse(data.output);
           if (!reply.success || reply.data.type !== input.data.expectedReply) {
@@ -767,27 +769,11 @@ export async function crossfire(
                 : { issues: reply.error.issues },
             });
           }
-          if (data.signal === undefined) return reply.data;
-          const signal = CrossfireTurnSignalSchema.safeParse(data.signal);
-          if (!signal.success) {
-            throw new AIResponseError('Crossfire signal did not match the expected schema.', { details: { issues: signal.error.issues } });
+          if (data.signalToken === undefined) return reply.data;
+          if (typeof data.signalToken !== 'string' || !data.signalToken.trim() || data.signalToken.length > 128) {
+            throw new AIResponseError('Crossfire signal token was invalid.');
           }
-          const answerTurns = [
-            ...input.data.transcript,
-            {
-              id: `T${input.data.transcript.length + 1}`,
-              sequence: input.data.transcript.length + 1,
-              speaker: 'ai' as const,
-              kind: reply.data.type,
-              text: reply.data.text,
-              createdAt: 0,
-            },
-          ];
-          const target = answerTurns.find((turn) => turn.id === signal.data.answerTurnId);
-          if (!target || target.kind !== 'answer') {
-            throw new AIResponseError('Crossfire signal referenced an unknown or non-answer turn.');
-          }
-          return { ...reply.data, signal: signal.data };
+          return { ...reply.data, signalToken: data.signalToken };
         }
 
         const debrief = CrossfireDebriefSchema.safeParse(data.output);
@@ -798,6 +784,41 @@ export async function crossfire(
         }
         validateCrossfireTurnReferences(input.data, debrief.data);
         return debrief.data;
+      },
+    },
+  );
+}
+
+export async function crossfireSignal(
+  rawInput: CrossfireSignalInput,
+  config: ProviderConfig,
+  options: Pick<AIRequestOptions, 'signal'> = {},
+): Promise<CrossfireTurnSignal | undefined> {
+  const input = CrossfireSignalInputSchema.safeParse(rawInput);
+  if (!input.success) {
+    throw new AIResponseError('Crossfire signal request did not match the expected schema.', { details: { issues: input.error.issues } });
+  }
+  return await callSupabaseAI<CrossfireTurnSignal | undefined>(
+    'crossfire',
+    withOutputLanguage({ operation: 'signal', ...input.data }),
+    config,
+    {
+      includeActiveSources: false,
+      includeCustomSystemPrompt: false,
+      timeoutMs: 5_000,
+      signal: options.signal,
+      transformResponse: (rawData) => {
+        const output = (rawData as { output?: unknown }).output;
+        if (!output || typeof output !== 'object' || Array.isArray(output) || !('signal' in output)) return undefined;
+        const parsed = CrossfireTurnSignalSchema.safeParse((output as { signal: unknown }).signal);
+        if (!parsed.success) throw new AIResponseError('Crossfire signal did not match the expected schema.', { details: { issues: parsed.error.issues } });
+        const turns = [
+          ...input.data.transcript,
+          { id: `T${input.data.transcript.length + 1}`, kind: input.data.reply.type },
+        ];
+        const target = turns.find((turn) => turn.id === parsed.data.answerTurnId);
+        if (!target || target.kind !== 'answer') throw new AIResponseError('Crossfire signal referenced an unknown or non-answer turn.');
+        return parsed.data;
       },
     },
   );

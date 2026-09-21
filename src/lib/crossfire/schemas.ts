@@ -150,6 +150,14 @@ export const CrossfireAIInputSchema = z.discriminatedUnion('operation', [
 ]);
 export type CrossfireAIInput = z.infer<typeof CrossfireAIInputSchema>;
 
+export const CrossfireSignalInputSchema = z.object({
+  config: CrossfireConfigSchema,
+  transcript: CrossfireTranscriptSchema,
+  reply: CrossfireReplySchema,
+  signalToken: z.string().trim().min(1).max(128),
+}).strict();
+export type CrossfireSignalInput = z.infer<typeof CrossfireSignalInputSchema>;
+
 export const CrossfireRequestStateSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('idle') }).strict(),
   z.object({

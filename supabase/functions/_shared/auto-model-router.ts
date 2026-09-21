@@ -8,9 +8,11 @@ import {
 } from "./model-catalog.ts";
 import {
   callJev,
+  getJevErrorUsage,
   type CallJevArgs,
   type JevDecisionResult,
 } from "./jev.ts";
+import type { NormalizedUsage } from "./cost.ts";
 
 const ROUTING_CONFIDENCE = 0.55;
 const MAX_ROUTING_STATE_CHARS = 8_000;
@@ -49,6 +51,7 @@ export interface ResolvedModelSelection {
   modelEntry: ModelCatalogEntry;
   usedFallback: boolean;
   jev?: JevDecisionResult;
+  jevUsage?: NormalizedUsage;
 }
 
 function safeStringify(value: unknown): string {
@@ -106,7 +109,8 @@ export async function resolveModelSelection(args: ResolveModelSelectionArgs): Pr
     if (isAbort(error, args.signal)) throw error;
     const modelEntry = getModelCatalogEntry(fallback);
     if (!modelEntry) throw new Error(`Missing fallback model: ${fallback}`);
-    return { requestedModel, resolvedModel: fallback, modelEntry, usedFallback: true };
+    const jevUsage = getJevErrorUsage(error);
+    return { requestedModel, resolvedModel: fallback, modelEntry, usedFallback: true, ...(jevUsage ? { jevUsage } : {}) };
   }
 
   const answer = jev.answers.model;

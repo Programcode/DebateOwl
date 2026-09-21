@@ -654,15 +654,25 @@ function crossfireTranscript(value: unknown, config: CrossfirePromptConfig): { v
 
 type CrossfireNextTurnInput = CrossfireNextTurnPromptInput & { operation: "next-turn" };
 type CrossfireDebriefInput = CrossfireDebriefPromptInput & { operation: "debrief" };
-type CrossfireInput = CrossfireNextTurnInput | CrossfireDebriefInput;
+type CrossfireSignalInput = {
+  operation: "signal";
+  config: CrossfirePromptConfig;
+  transcript: CrossfirePromptTurn[];
+  reply: { type: "question" | "answer"; text: string };
+  signalToken: string;
+  language: string;
+};
+type CrossfireInput = CrossfireNextTurnInput | CrossfireDebriefInput | CrossfireSignalInput;
 
 function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { error: string } {
-  if (!isRecord(value) || (value.operation !== "next-turn" && value.operation !== "debrief")) {
-    return { error: "Crossfire operation must be next-turn or debrief" };
+  if (!isRecord(value) || (value.operation !== "next-turn" && value.operation !== "debrief" && value.operation !== "signal")) {
+    return { error: "Crossfire operation must be next-turn, debrief, or signal" };
   }
   const allowedKeys = value.operation === "next-turn"
     ? ["operation", "config", "transcript", "expectedReply", "language"]
-    : ["operation", "config", "transcript", "language"];
+    : value.operation === "signal"
+      ? ["operation", "config", "transcript", "reply", "signalToken", "language"]
+      : ["operation", "config", "transcript", "language"];
   if (!hasOnlyKeys(value, allowedKeys)) return { error: "Crossfire input contains unsupported fields" };
   const rawLanguage = value.language;
   const languageError = validateControlInput("crossfire", rawLanguage === undefined ? {} : { language: rawLanguage });
@@ -672,6 +682,24 @@ function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { e
   if ("error" in config) return config;
   const transcript = crossfireTranscript(value.transcript, config.value);
   if ("error" in transcript) return transcript;
+  if (value.operation === "signal") {
+    if (!isRecord(value.reply) || !hasOnlyKeys(value.reply, ["type", "text"]) ||
+      (value.reply.type !== "question" && value.reply.type !== "answer")) return { error: "Crossfire signal reply is invalid" };
+    const replyText = crossfireText(value.reply.text, "reply.text", MAX_CROSSFIRE_REPLY_CHARS);
+    if ("error" in replyText) return replyText;
+    const signalToken = crossfireText(value.signalToken, "signalToken", 128);
+    if ("error" in signalToken) return signalToken;
+    return {
+      value: {
+        operation: "signal",
+        config: config.value,
+        transcript: transcript.value,
+        reply: { type: value.reply.type, text: replyText.value },
+        signalToken: signalToken.value,
+        language,
+      },
+    };
+  }
   if (value.operation === "debrief") {
     if (transcript.value.length === 0) return { error: "Crossfire debrief transcript must not be empty" };
     return { value: { operation: "debrief", config: config.value, transcript: transcript.value, language } };
@@ -696,6 +724,49 @@ function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { e
       language,
     },
   };
+}
+
+const CROSSFIRE_SIGNAL_TOKEN_TTL_MS = 120_000;
+
+function crossfireSignalTokenPayload(userId: string, input: Pick<CrossfireSignalInput, "config" | "transcript" | "reply">, issuedAt: number): string {
+  return JSON.stringify({
+    domain: "debatelab-crossfire-signal-v1",
+    userId,
+    issuedAt,
+    mode: input.config.mode,
+    transcript: input.transcript,
+    reply: input.reply,
+  });
+}
+
+async function crossfireSignalMac(payload: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(sparringIntegritySecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload)));
+  return Array.from(signature, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function createCrossfireSignalToken(userId: string, input: Pick<CrossfireSignalInput, "config" | "transcript" | "reply">): Promise<string> {
+  const issuedAt = Date.now();
+  return `${issuedAt}.${await crossfireSignalMac(crossfireSignalTokenPayload(userId, input, issuedAt))}`;
+}
+
+async function verifyCrossfireSignalToken(userId: string, input: CrossfireSignalInput): Promise<boolean> {
+  const [rawIssuedAt, suppliedMac, ...extra] = input.signalToken.split(".");
+  const issuedAt = Number(rawIssuedAt);
+  if (extra.length > 0 || !Number.isInteger(issuedAt) || !/^[a-f0-9]{64}$/.test(suppliedMac ?? "")) return false;
+  const age = Date.now() - issuedAt;
+  if (age < 0 || age > CROSSFIRE_SIGNAL_TOKEN_TTL_MS) return false;
+  const expectedMac = await crossfireSignalMac(crossfireSignalTokenPayload(userId, input, issuedAt));
+  let mismatch = expectedMac.length ^ suppliedMac.length;
+  for (let index = 0; index < expectedMac.length; index += 1) mismatch |= expectedMac.charCodeAt(index) ^ suppliedMac.charCodeAt(index);
+  return mismatch === 0;
 }
 
 function boundCrossfireSources(value: unknown, enabled: boolean): { value: PromptSource[]; truncated: boolean } | { error: string } {
@@ -1148,6 +1219,22 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
+
+  if (crossfireInput?.operation === "signal") {
+    if (await checkUserBanned(userId)) return badRequest("Your account has been suspended. Please contact support.", corsHeaders, 403);
+    if (!(await verifyCrossfireSignalToken(userId, crossfireInput))) return badRequest("Invalid or expired Crossfire signal token", corsHeaders, 403);
+    const evaluated = await evaluateCrossfireExchange({
+      transcript: crossfireInput.transcript,
+      reply: crossfireInput.reply,
+      signal: req.signal,
+    });
+    const signalUsage = evaluated.jev?.usage ?? evaluated.jevUsage;
+    if (signalUsage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, signalUsage, undefined, evaluated.jevUsage ? "error" : "success", evaluated.jevUsage ? "jev_incomplete" : undefined);
+    return new Response(JSON.stringify(successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const sparringDatabase = narrowSparringDatabase(sparringSupabase);
   let sparringScoreClaimed = false;
   let sparringScoreClaimToken: string | undefined;
@@ -1249,8 +1336,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     model = resolution.resolvedModel;
     modelEntry = resolution.modelEntry;
     resolvedModelMeta = model;
-    if (resolution.jev?.usage) {
-      await logUsage(userId, "jev_model_router", provider, JEV_MODEL, resolution.jev.usage, Date.now() - routingStartedAt);
+    const routingUsage = resolution.jev?.usage ?? resolution.jevUsage;
+    if (routingUsage) {
+      await logUsage(userId, "jev_model_router", provider, JEV_MODEL, routingUsage, Date.now() - routingStartedAt, resolution.jevUsage ? "error" : "success", resolution.jevUsage ? "jev_incomplete" : undefined);
     }
   } catch (error) {
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
@@ -1295,7 +1383,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
     sourceAssessments = ranked.assessments;
     sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
-    if (ranked.jev?.usage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, ranked.jev.usage);
+    const rankingUsage = ranked.jev?.usage ?? ranked.jevUsage;
+    if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -1452,20 +1541,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         : validateCrossfireDebrief(cleanedOutput, crossfireInput.transcript);
       if ("error" in output) throw new Error(output.error);
 
-      let signal;
-      if (crossfireInput.operation === "next-turn") {
-        const evaluated = await evaluateCrossfireExchange({
+      let signalToken: string | undefined;
+      if (crossfireInput.operation === "next-turn" &&
+        ((output.value as { type?: unknown }).type === "answer" || crossfireInput.transcript.at(-1)?.kind === "answer")) {
+        signalToken = await createCrossfireSignalToken(userId, {
+          config: crossfireInput.config,
           transcript: crossfireInput.transcript,
           reply: output.value as { type: "question" | "answer"; text: string },
-          signal: req.signal,
         });
-        signal = evaluated.signal;
-        if (evaluated.jev?.usage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, evaluated.jev.usage);
       }
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-      return new Response(JSON.stringify(successBody({ output: output.value, ...(signal ? { signal } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output: output.value, ...(signalToken ? { signalToken } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // FACTOIDS: Use deep research with multiple searches
@@ -1690,7 +1778,8 @@ export async function handleRequest(req: Request): Promise<Response> {
         sources: discoveredCandidates,
         signal: req.signal,
       });
-      if (discoveredRanking.jev?.usage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, discoveredRanking.jev.usage);
+      const discoveredRankingUsage = discoveredRanking.jev?.usage ?? discoveredRanking.jevUsage;
+      if (discoveredRankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, discoveredRankingUsage, undefined, discoveredRanking.jevUsage ? "error" : "success", discoveredRanking.jevUsage ? "jev_incomplete" : undefined);
       const discoveredAssessmentByKey = new Map(discoveredRanking.assessments.map((assessment) => [assessment.key, assessment]));
       const rankedDiscoveredSources = discoveredRanking.sources.map((candidate) => {
         const source = discoveredSources.find((item) => item.url === candidate.key)!;
@@ -1766,7 +1855,8 @@ export async function handleRequest(req: Request): Promise<Response> {
         sources: usageCandidates,
         signal: req.signal,
       });
-      if (caseUsage.jev?.usage) await logUsage(userId, "jev_source_usage", provider, JEV_MODEL, caseUsage.jev.usage);
+      const caseUsageCost = caseUsage.jev?.usage ?? caseUsage.jevUsage;
+      if (caseUsageCost) await logUsage(userId, "jev_source_usage", provider, JEV_MODEL, caseUsageCost, undefined, caseUsage.jevUsage ? "error" : "success", caseUsage.jevUsage ? "jev_incomplete" : undefined);
       const usedByKey = new Map(caseUsage.sourceUsage.map((usage) => [usage.key, usage]));
       for (const assessment of sourceAssessments) {
         (assessment as SourceAssessment & { usedInCase?: boolean }).usedInCase = usedByKey.get(assessment.key)?.judgment === "used";

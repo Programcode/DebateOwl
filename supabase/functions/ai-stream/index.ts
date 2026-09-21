@@ -381,15 +381,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
     model = resolution.resolvedModel;
     modelEntry = resolution.modelEntry;
-    if (resolution.jev?.usage) {
+    const routingUsage = resolution.jev?.usage ?? resolution.jevUsage;
+    if (routingUsage) {
       await logUsage(
         user.id,
         OPENROUTER_PROVIDER,
         JEV_MODEL,
-        resolution.jev.usage,
+        routingUsage,
         Date.now() - routingStartedAt,
-        "success",
-        undefined,
+        resolution.jevUsage ? "error" : "success",
+        resolution.jevUsage ? "jev_incomplete" : undefined,
         "jev_model_router",
       );
     }

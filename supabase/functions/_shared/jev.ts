@@ -1,4 +1,5 @@
 import {
+  markIncompleteUsage,
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "./cost.ts";
@@ -157,6 +158,18 @@ function normalizeJevUsage(value: unknown): NormalizedUsage | undefined {
   return { ...normalized, raw: usage };
 }
 
+export function getJevErrorUsage(error: unknown): NormalizedUsage | undefined {
+  if (!error || typeof error !== "object" || !("usage" in error)) return undefined;
+  const usage = (error as { usage?: unknown }).usage;
+  return usage && typeof usage === "object" ? markIncompleteUsage(usage as NormalizedUsage) : undefined;
+}
+
+function attachObservedUsage(error: unknown, usage?: NormalizedUsage): unknown {
+  if (!usage || !error || typeof error !== "object") return error;
+  Object.assign(error, { usage: markIncompleteUsage(usage) });
+  return error;
+}
+
 export async function callJev({
   state,
   questions,
@@ -176,6 +189,7 @@ export async function callJev({
   const timeoutId = setTimeout(() => {
     controller.abort(new DOMException("Jev request timed out", "TimeoutError"));
   }, timeoutMs);
+  let observedUsage: NormalizedUsage | undefined;
 
   try {
     const response = await fetchImpl(JEV_DECISIONS_URL, {
@@ -196,6 +210,12 @@ export async function callJev({
         controller.signal,
         true,
       );
+      try {
+        const errorPayload = asRecord(JSON.parse(body.text));
+        observedUsage = normalizeJevUsage(errorPayload?.usage);
+      } catch {
+        // Provider error bodies are not guaranteed to be JSON.
+      }
       throw new Error(`OpenRouter Jev error ${response.status}: ${body.text}`);
     }
 
@@ -207,6 +227,7 @@ export async function callJev({
       false,
     );
     const payload = asRecord(JSON.parse(body.text));
+    observedUsage = normalizeJevUsage(payload?.usage);
     const rawAnswers = asRecord(payload?.answers);
     const model = typeof payload?.model === "string" && payload.model ? payload.model : null;
     if (!payload || !rawAnswers || !model) {
@@ -219,10 +240,10 @@ export async function callJev({
 
     const answers: Record<string, JevAnswer> = {};
     for (const id of questionIds) answers[id] = parseAnswer(id, questions[id], rawAnswers[id]);
-    return { model, answers, usage: normalizeJevUsage(payload.usage) };
+    return { model, answers, usage: observedUsage };
   } catch (error) {
     if (controller.signal.aborted) throw controller.signal.reason;
-    throw error;
+    throw attachObservedUsage(error, observedUsage);
   } finally {
     clearTimeout(timeoutId);
     signal?.removeEventListener("abort", abortFromCaller);

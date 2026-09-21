@@ -451,6 +451,7 @@ Deno.test("AI handler ranks stable library sources and returns bounded assessmen
 Deno.test("Crossfire returns newest-exchange signals without making them a reply dependency", async () => {
   const originalFetch = globalThis.fetch;
   let decisionFails = false;
+  let decisionCalls = 0;
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     const supabaseResponse = supabaseTestResponse(url);
@@ -464,6 +465,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
       return jsonResponse({ choices: [{ message: { content: JSON.stringify(output) } }], usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.000001 } });
     }
     if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      decisionCalls += 1;
       if (decisionFails) return jsonResponse({ error: "unavailable" }, 500);
       return jsonResponse({
         model: "typesafe/jev-1.13",
@@ -478,6 +480,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
     throw new Error(`Unhandled request: ${url}`);
   }) as typeof fetch;
 
+  const config = (mode: "question-ai" | "ai-questions-user") => ({ resolution: "Cities should ban cars.", argument: "Cars cause congestion.", mode, style: "cooperative", durationSeconds: 180, useSourceLibrary: false, seedQuestions: [] });
   const request = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], expectedReply: "question" | "answer") => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
@@ -486,35 +489,47 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
       model: "openai/gpt-5.6-luna",
       input: {
         operation: "next-turn",
-        config: { resolution: "Cities should ban cars.", argument: "Cars cause congestion.", mode, style: "cooperative", durationSeconds: 180, useSourceLibrary: false, seedQuestions: [] },
+        config: config(mode),
         transcript,
         expectedReply,
       },
     }),
   }));
+  const requestSignal = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], reply: { type: "question" | "answer"; text: string }, signalToken: string) => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({ feature: "crossfire", model: "openai/gpt-5.6-luna", input: { operation: "signal", config: config(mode), transcript, reply, signalToken } }),
+  }));
 
   try {
-    const questionAi = await request("question-ai", [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What evidence supports that?", createdAt: 1 }], "answer");
-    const questionAiPayload = await questionAi.json() as { signal?: { answerTurnId?: string; answerQuality?: string } };
-    if (questionAi.status !== 200 || questionAiPayload.signal?.answerTurnId !== "T2" || questionAiPayload.signal.answerQuality !== "direct") {
-      throw new Error(`question-ai signal missing: ${JSON.stringify(questionAiPayload)}`);
+    const questionTranscript = [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What evidence supports that?", createdAt: 1 }];
+    const questionAi = await request("question-ai", questionTranscript, "answer");
+    const questionAiPayload = await questionAi.json() as { output?: { type?: string; text?: string }; signalToken?: string; signal?: unknown };
+    if (questionAi.status !== 200 || questionAiPayload.output?.type !== "answer" || !questionAiPayload.signalToken || questionAiPayload.signal !== undefined) {
+      throw new Error(`question-ai reply was delayed by signal work: ${JSON.stringify(questionAiPayload)}`);
     }
+    if (decisionCalls !== 0) throw new Error("main Crossfire reply waited for Jev");
+    const questionSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
+    const questionSignalPayload = await questionSignal.json() as { output?: { signal?: { answerTurnId?: string; answerQuality?: string } } };
+    if (questionSignalPayload.output?.signal?.answerTurnId !== "T2" || questionSignalPayload.output.signal.answerQuality !== "direct") throw new Error(`question-ai signal missing: ${JSON.stringify(questionSignalPayload)}`);
+    const forgedSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, "forged-token");
+    if (forgedSignal.status !== 403) throw new Error("forged Crossfire signal token was accepted");
 
-    const aiQuestionsUser = await request("ai-questions-user", [
+    const answerTranscript = [
       { id: "T1", sequence: 1, speaker: "ai", kind: "question", text: "Would costs rise?", createdAt: 1 },
       { id: "T2", sequence: 2, speaker: "user", kind: "answer", text: "Some costs may rise.", createdAt: 2 },
-    ], "question");
-    const aiQuestionsPayload = await aiQuestionsUser.json() as { signal?: { answerTurnId?: string; concession?: string } };
-    if (aiQuestionsUser.status !== 200 || aiQuestionsPayload.signal?.answerTurnId !== "T2" || aiQuestionsPayload.signal.concession !== "implicit") {
-      throw new Error(`ai-questions-user signal missing: ${JSON.stringify(aiQuestionsPayload)}`);
-    }
+    ];
+    const aiQuestionsUser = await request("ai-questions-user", answerTranscript, "question");
+    const aiQuestionsPayload = await aiQuestionsUser.json() as { output?: { type?: string; text?: string }; signalToken?: string };
+    if (aiQuestionsUser.status !== 200 || aiQuestionsPayload.output?.type !== "question" || !aiQuestionsPayload.signalToken) throw new Error(`ai-questions-user reply missing: ${JSON.stringify(aiQuestionsPayload)}`);
+    const answerSignal = await requestSignal("ai-questions-user", answerTranscript, aiQuestionsPayload.output as { type: "question"; text: string }, aiQuestionsPayload.signalToken);
+    const answerSignalPayload = await answerSignal.json() as { output?: { signal?: { answerTurnId?: string; concession?: string } } };
+    if (answerSignalPayload.output?.signal?.answerTurnId !== "T2" || answerSignalPayload.output.signal.concession !== "implicit") throw new Error(`ai-questions-user signal missing: ${JSON.stringify(answerSignalPayload)}`);
 
     decisionFails = true;
-    const fallback = await request("question-ai", [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What evidence supports that?", createdAt: 1 }], "answer");
-    const fallbackPayload = await fallback.json() as { output?: { type?: string }; signal?: unknown };
-    if (fallback.status !== 200 || fallbackPayload.output?.type !== "answer" || fallbackPayload.signal !== undefined) {
-      throw new Error(`failed optional signal discarded the reply: ${JSON.stringify(fallbackPayload)}`);
-    }
+    const fallback = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
+    const fallbackPayload = await fallback.json() as { output?: { signal?: unknown } };
+    if (fallback.status !== 200 || fallbackPayload.output?.signal !== undefined) throw new Error(`failed optional signal returned invalid output: ${JSON.stringify(fallbackPayload)}`);
   } finally {
     globalThis.fetch = originalFetch;
   }

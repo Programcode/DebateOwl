@@ -53,6 +53,16 @@ Deno.test("all low-confidence semantic scores preserve deterministic source orde
   if (result.sources.map((source) => source.key).join(",") !== "official,study,forum") throw new Error("low-confidence batch reordered sources");
 });
 
+Deno.test("all irrelevant semantic scores preserve deterministic source order", async () => {
+  const callJevImpl: SourceDecisionJev = (args) => Promise.resolve(answersFor(args, [
+    { relevance: 0.1, importance: 1, strength: 1 },
+    { relevance: 0.2, importance: 3, strength: 3 },
+    { relevance: 0.3, importance: 3, strength: 3 },
+  ]));
+  const result = await rankSourcesForRequest({ feature: "generate", requestText: "motion", sources, callJevImpl });
+  if (result.sources.map((source) => source.key).join(",") !== "official,study,forum") throw new Error("all-irrelevant batch reordered sources");
+});
+
 Deno.test("failed or malformed Jev source decisions preserve deterministic source order", async () => {
   for (const callJevImpl of [
     () => Promise.reject(new Error("unavailable")),
@@ -61,6 +71,13 @@ Deno.test("failed or malformed Jev source decisions preserve deterministic sourc
     const result = await rankSourcesForRequest({ feature: "generate", requestText: "motion", sources, callJevImpl });
     if (result.sources.map((source) => source.key).join(",") !== "official,study,forum") throw new Error("failed batch reordered sources");
   }
+  const failedWithUsage = await rankSourcesForRequest({
+    feature: "generate",
+    requestText: "motion",
+    sources,
+    callJevImpl: () => Promise.reject(Object.assign(new Error("malformed"), { usage: { inputTokens: 7, outputTokens: 0 } })),
+  });
+  if (failedWithUsage.jevUsage?.inputTokens !== 7) throw new Error("failed source-decision usage was discarded");
 });
 
 Deno.test("case use requires probability above 0.70 and keeps the middle band uncertain", async () => {

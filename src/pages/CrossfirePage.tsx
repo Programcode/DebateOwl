@@ -22,7 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { crossfire, AIResponseError, isTimeoutError } from '@/lib/ai/client';
+import { crossfire, crossfireSignal, AIResponseError, isTimeoutError } from '@/lib/ai/client';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import {
   canEndCrossfireSession,
@@ -316,11 +316,23 @@ export default function CrossfirePage() {
         });
         return;
       }
+      const reply = { type: result.type, text: result.text };
       dispatch({
         type: 'ai-turn-received',
         turn: nextTurn(snapshot.turns.length + 1, 'ai', result.type, result.text),
-        signal: result.signal,
       });
+      if (result.signalToken) {
+        void crossfireSignal({
+          config: snapshot.config,
+          transcript: snapshot.turns,
+          reply,
+          signalToken: result.signalToken,
+        }, modelConfig, { signal: controller.signal })
+          .then((signal) => {
+            if (signal && !controller.signal.aborted) dispatch({ type: 'signal-received', signal });
+          })
+          .catch((): void => {});
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       const classified = classifyError(error);

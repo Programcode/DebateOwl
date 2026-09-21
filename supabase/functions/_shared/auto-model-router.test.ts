@@ -79,9 +79,10 @@ Deno.test("Auto Fast falls back to GLM when Jev is uncertain or unavailable", as
     feature: "ask",
     input: { message: "Help me" },
     canAccessProModels: false,
-    callJevImpl: () => Promise.reject(new Error("provider unavailable")),
+    callJevImpl: () => Promise.reject(Object.assign(new Error("provider unavailable"), { usage: { inputTokens: 9, outputTokens: 0 } })),
   });
   if (unavailable.resolvedModel !== "z-ai/glm-5.3-flash" || !unavailable.usedFallback) throw new Error("failed route did not fall back");
+  if (unavailable.jevUsage?.inputTokens !== 9) throw new Error("failed route usage was discarded");
 });
 
 Deno.test("Auto Fast ignores a Jev label outside its candidate set", async () => {

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   userId: 'user-a',
   crossfire: vi.fn<() => Promise<unknown>>(() => new Promise(() => undefined)),
+  crossfireSignal: vi.fn<() => Promise<unknown>>(() => Promise.resolve(undefined)),
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
@@ -24,6 +25,7 @@ vi.mock('@/lib/stores/settings-store', () => ({
 vi.mock('@/lib/ai/client', () => ({
   AIResponseError: class AIResponseError extends Error {},
   crossfire: mocks.crossfire,
+  crossfireSignal: mocks.crossfireSignal,
   isTimeoutError: () => false,
 }));
 
@@ -44,6 +46,8 @@ describe('CrossfirePage', () => {
     mocks.userId = 'user-a';
     mocks.crossfire.mockReset();
     mocks.crossfire.mockImplementation(() => new Promise(() => undefined));
+    mocks.crossfireSignal.mockReset();
+    mocks.crossfireSignal.mockResolvedValue(undefined);
     localStorage.clear();
   });
 
@@ -137,8 +141,9 @@ describe('CrossfirePage', () => {
     mocks.crossfire.mockResolvedValueOnce({
       type: 'answer',
       text: 'A bounded answer.',
-      signal: { answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.91, concession: 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.82 },
+      signalToken: 'token',
     });
+    mocks.crossfireSignal.mockResolvedValueOnce({ answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.91, concession: 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.82 });
     renderPage();
     fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
     fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });

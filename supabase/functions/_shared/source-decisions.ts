@@ -1,10 +1,12 @@
 import {
   callJev,
+  getJevErrorUsage,
   type CallJevArgs,
   type JevDecisionResult,
   type JevNoulAnswer,
   type JevScoreAnswer,
 } from "./jev.ts";
+import type { NormalizedUsage } from "./cost.ts";
 
 const MAX_SOURCES = 10;
 const MAX_REQUEST_CHARS = 8_000;
@@ -91,7 +93,7 @@ export async function rankSourcesForRequest({
   sources: SourceDecisionCandidate[];
   signal?: AbortSignal;
   callJevImpl?: SourceDecisionJev;
-}): Promise<{ sources: SourceDecisionCandidate[]; assessments: SourceAssessment[]; jev?: JevDecisionResult }> {
+}): Promise<{ sources: SourceDecisionCandidate[]; assessments: SourceAssessment[]; jev?: JevDecisionResult; jevUsage?: NormalizedUsage }> {
   const candidates = boundedSources(sources);
   if (candidates.length === 0) return { sources, assessments: [] };
   const questions: CallJevArgs["questions"] = {};
@@ -135,14 +137,16 @@ export async function rankSourcesForRequest({
         retained: sources[index].qualityLabel !== "weak" && relevance.noul >= RETAIN_RELEVANCE,
       };
     });
-    if (assessments.some((assessment) => assessment === null)) return { sources, assessments: [] };
+    if (assessments.some((assessment) => assessment === null)) return { sources, assessments: [], jev };
     const valid = assessments as SourceAssessment[];
     const hasConfidentAssessment = candidates.some((_, index) => {
       const importance = scoreAnswer(jev.answers[`source_${index}_importance`]);
       const strength = scoreAnswer(jev.answers[`source_${index}_strength`]);
       return Boolean(importance && strength && importance.confidence >= SCORE_CONFIDENCE && strength.confidence >= SCORE_CONFIDENCE);
     });
-    if (!hasConfidentAssessment) return { sources, assessments: valid, jev };
+    if (!hasConfidentAssessment || valid.every((assessment) => assessment.relevance < RETAIN_RELEVANCE)) {
+      return { sources, assessments: valid, jev };
+    }
 
     const assessmentByKey = new Map(valid.map((assessment) => [assessment.key, assessment]));
     const ranked = sources.map((source, index) => ({ source, index })).sort((a, b) => {
@@ -160,7 +164,8 @@ export async function rankSourcesForRequest({
     return { sources: ranked, assessments: valid, jev };
   } catch (error) {
     if (isAbort(error, signal)) throw error;
-    return { sources, assessments: [] };
+    const jevUsage = getJevErrorUsage(error);
+    return { sources, assessments: [], ...(jevUsage ? { jevUsage } : {}) };
   }
 }
 
@@ -174,7 +179,7 @@ export async function identifyCaseSourceUsage({
   sources: Array<SourceDecisionCandidate & Partial<Pick<SourceAssessment, "importance" | "strength">>>;
   signal?: AbortSignal;
   callJevImpl?: SourceDecisionJev;
-}): Promise<{ sourceUsage: CaseSourceUsage[]; jev?: JevDecisionResult }> {
+}): Promise<{ sourceUsage: CaseSourceUsage[]; jev?: JevDecisionResult; jevUsage?: NormalizedUsage }> {
   const candidates = boundedSources(sources);
   if (candidates.length === 0) return { sourceUsage: [] };
   const questions: CallJevArgs["questions"] = {};
@@ -202,9 +207,10 @@ export async function identifyCaseSourceUsage({
         judgment: answer.noul > 0.70 ? "used" : answer.noul >= 0.30 ? "uncertain" : "not_used",
       }];
     });
-    return sourceUsage.length === candidates.length ? { sourceUsage, jev } : { sourceUsage: [] };
+    return sourceUsage.length === candidates.length ? { sourceUsage, jev } : { sourceUsage: [], jev };
   } catch (error) {
     if (isAbort(error, signal)) throw error;
-    return { sourceUsage: [] };
+    const jevUsage = getJevErrorUsage(error);
+    return { sourceUsage: [], ...(jevUsage ? { jevUsage } : {}) };
   }
 }

@@ -1,5 +1,6 @@
 import {
   callJev,
+  getJevErrorUsage,
   type JevQuestion,
 } from "./jev.ts";
 
@@ -144,6 +145,26 @@ Deno.test("Jev rejects a response missing a submitted answer", async () => {
     apiKey: "test-key",
     fetchImpl: () => Promise.resolve(jsonResponse(response)),
   }), "concession");
+});
+
+Deno.test("Jev preserves billed usage when a successful response is malformed", async () => {
+  const response = validResponse();
+  delete (response.answers as Record<string, unknown>).concession;
+  try {
+    await callJev({
+      state: "state",
+      questions: QUESTIONS,
+      apiKey: "test-key",
+      fetchImpl: () => Promise.resolve(jsonResponse(response)),
+    });
+  } catch (error) {
+    const usage = getJevErrorUsage(error);
+    if (usage?.inputTokens !== 41 || usage.reportedCostUsd !== 0.00000172 || usage.incomplete !== true) {
+      throw new Error(`malformed response usage was lost: ${JSON.stringify(usage)}`);
+    }
+    return;
+  }
+  throw new Error("malformed Jev response was accepted");
 });
 
 Deno.test("Jev bounds successful response bodies", async () => {

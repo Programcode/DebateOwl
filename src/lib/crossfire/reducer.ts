@@ -19,6 +19,7 @@ export type CrossfireAction =
   | { type: 'session-started'; sessionId: string; now: number }
   | { type: 'user-turn-submitted'; turn: CrossfireTurn; expectedReply: 'question' | 'answer' }
   | { type: 'ai-turn-received'; turn: CrossfireTurn; signal?: CrossfireTurnSignal }
+  | { type: 'signal-received'; signal: CrossfireTurnSignal }
   | {
     type: 'request-failed';
     expectedReply: 'question' | 'answer';
@@ -67,6 +68,16 @@ function appendTurn(turns: CrossfireTurn[], turn: CrossfireTurn): CrossfireTurn[
   return [...turns, parsed.data];
 }
 
+function attachSignal(turns: CrossfireTurn[], value: CrossfireTurnSignal): CrossfireTurn[] | null {
+  const signal = CrossfireTurnSignalSchema.safeParse(value);
+  if (!signal.success) return null;
+  const targetIndex = turns.findIndex((turn) => turn.id === signal.data.answerTurnId && turn.kind === 'answer');
+  if (targetIndex < 0) return null;
+  const target = CrossfireTurnSchema.safeParse({ ...turns[targetIndex], signal: signal.data });
+  if (!target.success) return null;
+  return turns.map((turn, index) => index === targetIndex ? target.data : turn);
+}
+
 export function crossfireReducer(state: CrossfireState, action: CrossfireAction): CrossfireState {
   switch (action.type) {
     case 'config-patched': {
@@ -111,15 +122,15 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
       let turns = appendTurn(state.turns, action.turn);
       if (!turns) return state;
       if (action.signal) {
-        const signal = CrossfireTurnSignalSchema.safeParse(action.signal);
-        if (!signal.success) return state;
-        const targetIndex = turns.findIndex((turn) => turn.id === signal.data.answerTurnId && turn.kind === 'answer');
-        if (targetIndex < 0) return state;
-        const target = CrossfireTurnSchema.safeParse({ ...turns[targetIndex], signal: signal.data });
-        if (!target.success) return state;
-        turns = turns.map((turn, index) => index === targetIndex ? target.data : turn);
+        turns = attachSignal(turns, action.signal);
+        if (!turns) return state;
       }
       return { ...state, turns, request: { status: 'idle' } };
+    }
+    case 'signal-received': {
+      if (state.phase === 'setup') return state;
+      const turns = attachSignal(state.turns, action.signal);
+      return turns ? { ...state, turns } : state;
     }
     case 'request-failed': {
       if (state.phase !== 'active' || state.request.status !== 'pending') return state;

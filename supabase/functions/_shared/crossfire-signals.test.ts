@@ -25,12 +25,17 @@ function signalResult(answerQuality = "direct", concession = "implicit"): JevDec
 }
 
 Deno.test("Crossfire signal evaluates an AI answer added after a user question", async () => {
+  let timeoutMs: number | undefined;
   const result = await evaluateCrossfireExchange({
     transcript: [turn(1, "user", "question", "What evidence supports that?")],
     reply: { type: "answer", text: "A national survey supports it." },
-    callJevImpl: () => Promise.resolve(signalResult("direct", "none")),
+    callJevImpl: (args) => {
+      timeoutMs = args.timeoutMs;
+      return Promise.resolve(signalResult("direct", "none"));
+    },
   });
   if (result.signal?.answerTurnId !== "T2" || result.signal.answerQuality !== "direct") throw new Error("AI answer signal was not attached to T2");
+  if (timeoutMs !== 1_500) throw new Error(`Crossfire signal timeout was ${timeoutMs}`);
 });
 
 Deno.test("Crossfire signal evaluates the user answer before the next AI question", async () => {
@@ -91,9 +96,10 @@ Deno.test("Crossfire signal skips missing exchanges and invalid or failed decisi
   const failed = await evaluateCrossfireExchange({
     transcript: [turn(1, "user", "question", "Question")],
     reply: { type: "answer", text: "Answer" },
-    callJevImpl: () => Promise.reject(new Error("Jev 500")),
+    callJevImpl: () => Promise.reject(Object.assign(new Error("Jev 500"), { usage: { inputTokens: 12, outputTokens: 0 } })),
   });
   if (failed.signal) throw new Error("failed decision discarded the optional-signal contract");
+  if (failed.jevUsage?.inputTokens !== 12) throw new Error("failed signal usage was discarded");
 });
 
 Deno.test("Crossfire signal does not start work after caller cancellation", async () => {

@@ -1,10 +1,14 @@
 import {
   callJev,
+  getJevErrorUsage,
   type CallJevArgs,
   type JevChoiceAnswer,
   type JevDecisionResult,
   type JevNoulAnswer,
 } from "./jev.ts";
+import type { NormalizedUsage } from "./cost.ts";
+
+const CROSSFIRE_SIGNAL_TIMEOUT_MS = 1_500;
 
 export interface CrossfireSignalTurn {
   id: string;
@@ -71,7 +75,7 @@ export async function evaluateCrossfireExchange({
   reply: { type: "question" | "answer"; text: string };
   signal?: AbortSignal;
   callJevImpl?: CrossfireSignalJev;
-}): Promise<{ signal?: CrossfireTurnSignal; jev?: JevDecisionResult }> {
+}): Promise<{ signal?: CrossfireTurnSignal; jev?: JevDecisionResult; jevUsage?: NormalizedUsage }> {
   if (signal?.aborted) throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
   const exchange = newestCompletedExchange(transcript, reply);
   if (!exchange) return {};
@@ -99,12 +103,13 @@ export async function evaluateCrossfireExchange({
         },
       },
       signal,
+      timeoutMs: CROSSFIRE_SIGNAL_TIMEOUT_MS,
     });
     if (signal?.aborted) throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
     const quality = choice(jev.answers.answer_quality, ["direct", "partial", "evasive"]);
     const concession = choice(jev.answers.concession, ["none", "implicit", "explicit"]);
     const followUp = noul(jev.answers.follow_up);
-    if (!quality || !concession || !followUp) return {};
+    if (!quality || !concession || !followUp) return { jev };
     return {
       signal: {
         answerTurnId: exchange.answer.id,
@@ -118,6 +123,7 @@ export async function evaluateCrossfireExchange({
     };
   } catch (error) {
     if (isAbort(error, signal)) throw error;
-    return {};
+    const jevUsage = getJevErrorUsage(error);
+    return jevUsage ? { jevUsage } : {};
   }
 }
