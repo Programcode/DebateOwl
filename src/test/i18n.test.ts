@@ -3,6 +3,13 @@ import i18n from '@/i18n';
 import en from '@/locales/en.json';
 import es from '@/locales/es.json';
 import hu from '@/locales/hu.json';
+import {
+  APP_LANGUAGES,
+  isAppLanguage,
+  languageName,
+  toIntlLocale,
+} from '@/lib/languages';
+import { applyAppLanguage } from '@/i18n';
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(obj).flatMap(([key, value]) => {
@@ -83,6 +90,31 @@ describe('i18n locale files', () => {
 });
 
 describe('i18n runtime', () => {
+  it('defines the complete typed language catalog', () => {
+    expect(Object.keys(APP_LANGUAGES)).toEqual(['en', 'es', 'hu']);
+    expect(isAppLanguage('hu')).toBe(true);
+    expect(isAppLanguage('zz')).toBe(false);
+    expect(isAppLanguage(undefined)).toBe(false);
+    expect(toIntlLocale('hu')).toBe('hu-HU');
+    expect(languageName('hu')).toBe('Hungarian');
+  });
+
+  it('applies Hungarian to i18n and browser metadata', async () => {
+    const languageMeta = document.createElement('meta');
+    languageMeta.setAttribute('name', 'language');
+    document.head.append(languageMeta);
+
+    await applyAppLanguage('hu');
+
+    expect(i18n.language).toBe('hu');
+    expect(document.documentElement.lang).toBe('hu');
+    expect(languageMeta.content).toBe('Hungarian');
+    expect(document.title).toBe(hu.home.title);
+
+    languageMeta.remove();
+    await applyAppLanguage('en');
+  });
+
   it('i18n.t resolves English nav values', () => {
     expect(i18n.t('nav.home')).toBe('Home');
     expect(i18n.t('nav.generate')).toBe('Generate');

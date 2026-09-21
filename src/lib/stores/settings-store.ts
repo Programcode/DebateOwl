@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import i18n from '@/i18n';
+import { applyAppLanguage } from '@/i18n';
+import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '../ai/providers/types';
 import type { ProviderConfig } from '../ai/providers/types';
 import {
@@ -14,15 +15,15 @@ type CoreFeatureTab = Exclude<FeatureTab, 'sparring'>;
 type FeatureConfigs = Record<CoreFeatureTab, ProviderConfig> & Partial<Record<'sparring', ProviderConfig>>;
 
 interface SettingsState {
-  language: 'en' | 'es' | 'hu';
-  outputLanguage: 'en' | 'es' | 'hu';
+  language: AppLanguage;
+  outputLanguage: AppLanguage;
   theme: 'light' | 'dark' | 'system';
   customSystemPrompt?: string;
   featureConfigs: FeatureConfigs;
   wikiResearchEnabled: boolean;
 
-  setLanguage: (lang: 'en' | 'es' | 'hu') => void;
-  setOutputLanguage: (lang: 'en' | 'es' | 'hu') => void;
+  setLanguage: (lang: AppLanguage) => void;
+  setOutputLanguage: (lang: AppLanguage) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
   getFeatureConfig: (feature: FeatureTab) => ProviderConfig;
@@ -205,7 +206,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       setLanguage: (language) => {
         set({ language });
-        void i18n.changeLanguage(language);
+        void applyAppLanguage(language);
         void upsertSettings({
           language,
           output_language: get().outputLanguage,
@@ -291,11 +292,11 @@ export const useSettingsStore = create<SettingsState>()(
         );
         const configsNeedMigration = !featureConfigsAreCanonical(data.feature_configs, mergedConfigs);
 
-        const language = (data.language as 'en' | 'es' | 'hu') || 'en';
-        const outputLanguage = (data.output_language as 'en' | 'es' | 'hu') || get().outputLanguage || 'en';
+        const language = isAppLanguage(data.language) ? data.language : 'en';
+        const outputLanguage = isAppLanguage(data.output_language) ? data.output_language : 'en';
         const theme = (data.theme as 'light' | 'dark' | 'system') || 'system';
         const customSystemPrompt = data.custom_system_prompt || undefined;
-        await i18n.changeLanguage(language);
+        await applyAppLanguage(language);
         set({
           language,
           outputLanguage,
@@ -317,6 +318,7 @@ export const useSettingsStore = create<SettingsState>()(
           featureConfigs: getDefaultFeatureConfigs(),
           wikiResearchEnabled: false,
         });
+        void applyAppLanguage('en');
       },
     }),
     {
@@ -333,17 +335,19 @@ export const useSettingsStore = create<SettingsState>()(
         }
         return {
           ...saved,
+          language: isAppLanguage(saved.language) ? saved.language : 'en',
+          outputLanguage: isAppLanguage(saved.outputLanguage) ? saved.outputLanguage : 'en',
           featureConfigs,
         };
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs, true);
-        if (!state.language) state.language = 'en';
-        if (!state.outputLanguage) state.outputLanguage = 'en';
+        if (!isAppLanguage(state.language)) state.language = 'en';
+        if (!isAppLanguage(state.outputLanguage)) state.outputLanguage = 'en';
         if (!state.theme) state.theme = 'system';
         if (typeof state.wikiResearchEnabled !== 'boolean') state.wikiResearchEnabled = false;
-        void i18n.changeLanguage(state.language);
+        void applyAppLanguage(state.language);
       },
     }
   )
