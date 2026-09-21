@@ -99,14 +99,24 @@ export function WorkspaceReviewPanel({
             <p className="font-medium">{t(`workspaces.proposal.${hunk.kind}`, hunk.kind)}</p>
             <p className="text-xs text-muted-foreground">{t(`workspaces.proposal.${hunk.status}`, hunk.status)}</p>
             <div className="mt-2 grid gap-1" aria-label={t("workspaces.changePreview", "Proposed change preview")}>
+              <p className="text-xs text-muted-foreground">
+                {t("workspaces.changePosition", "Characters {{from}}–{{to}}", {
+                  from: hunk.absoluteFrom,
+                  to: hunk.absoluteTo,
+                })}
+              </p>
               <p className="text-xs font-medium">{t("workspaces.original", "Original")}</p>
-              <del className="rounded bg-muted px-2 py-1 text-sm decoration-current">
-                {summarizeContent(hunk.original) || t("workspaces.emptyChange", "Empty")}
-              </del>
+              <p className="rounded bg-muted px-2 py-1 text-sm">
+                <span>{summarizeContent(hunk.contextBefore)}</span>
+                <del className="font-medium decoration-current">{summarizeContent(hunk.original) || t("workspaces.emptyChange", "Empty")}</del>
+                <span>{summarizeContent(hunk.contextAfter)}</span>
+              </p>
               <p className="text-xs font-medium">{t("workspaces.proposed", "Proposed")}</p>
-              <ins className="rounded bg-accent px-2 py-1 text-sm no-underline">
-                {summarizeContent(hunk.replacement) || t("workspaces.emptyChange", "Empty")}
-              </ins>
+              <p className="rounded bg-accent px-2 py-1 text-sm">
+                <span>{summarizeContent(hunk.contextBefore)}</span>
+                <ins className="font-medium no-underline">{summarizeContent(hunk.replacement) || t("workspaces.emptyChange", "Empty")}</ins>
+                <span>{summarizeContent(hunk.contextAfter)}</span>
+              </p>
             </div>
             {hunk.status === "pending" && (
               <div className="mt-2 flex gap-2">

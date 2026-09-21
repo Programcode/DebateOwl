@@ -28,6 +28,10 @@ describe("workspace review panel", () => {
       hunks: [{
         id: "hunk",
         kind: "format",
+        absoluteFrom: 7,
+        absoluteTo: 16,
+        contextBefore: [{ type: "text", text: "Before " }],
+        contextAfter: [{ type: "text", text: " after" }],
         original: [{ type: "text", text: "Old claim" }],
         replacement: [{ type: "text", text: "New claim", marks: [{ type: "bold" }] }],
         status: "pending",
@@ -55,6 +59,8 @@ describe("workspace review panel", () => {
     expect(screen.getByText("New claim [bold]")).toBeInTheDocument();
     expect(screen.getByText("Original")).toBeInTheDocument();
     expect(screen.getByText("Proposed")).toBeInTheDocument();
+    expect(screen.getByText("Characters 7–16")).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === "Before Old claim after")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accept" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
   });

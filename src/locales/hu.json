@@ -173,6 +173,7 @@
     "documentPane": "Dokumentum",
     "workingPane": "Munkapanel",
     "changePreview": "A javasolt módosítás előnézete",
+    "changePosition": "{{from}}–{{to}}. karakter",
     "original": "Eredeti",
     "proposed": "Javasolt",
     "emptyChange": "Üres",

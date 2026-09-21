@@ -173,6 +173,7 @@
     "documentPane": "Documento",
     "workingPane": "Panel",
     "changePreview": "Vista previa del cambio propuesto",
+    "changePosition": "Caracteres {{from}}–{{to}}",
     "original": "Original",
     "proposed": "Propuesto",
     "emptyChange": "Vacío",
