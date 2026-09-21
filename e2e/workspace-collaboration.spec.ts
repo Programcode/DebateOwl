@@ -279,6 +279,7 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await cdp.send("Input.imeSetComposition", { text: " t", selectionStart: 2, selectionEnd: 2 });
     await cdp.send("Input.imeSetComposition", { text: " tűrő", selectionStart: 5, selectionEnd: 5 });
     await owner.page.locator(".ProseMirror").evaluate((element) => {
+      element.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: " tűrő", inputType: "insertCompositionText" }));
       element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: " tűrő" }));
     });
     await expect(member.page.getByRole("button", { name: "Reject" })).toHaveCount(1);
