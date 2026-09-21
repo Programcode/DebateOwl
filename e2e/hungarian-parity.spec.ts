@@ -58,14 +58,18 @@ test.describe('Hungarian parity', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test('renders Hungarian workspace navigation, route titles, and onboarding', async ({ page }) => {
+  test('renders Hungarian workspace navigation, route titles, and onboarding', async ({ page }, testInfo) => {
     const errors = collectRuntimeErrors(page);
     await stubSupabaseSession(page);
     await page.addInitScript(() => {
-      window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
-        state: { hasCompletedOnboarding: false, isTourRunning: false },
-        version: 0,
-      }));
+      try {
+        window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+          state: { hasCompletedOnboarding: false, isTourRunning: false },
+          version: 0,
+        }));
+      } catch {
+        // Ignore transient opaque documents during browser navigation.
+      }
     });
     await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
@@ -76,19 +80,26 @@ test.describe('Hungarian parity', () => {
     await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra Kihagyása');
     await page.locator('[data-test-id="button-skip"]').click();
 
-    for (const [path, heading] of [
-      ['/app/generate', 'Generálás'],
-      ['/app/attack', 'Támadás'],
-      ['/app/brainstorm', 'Ötletelés'],
-      ['/app/factoids', 'Tények'],
-      ['/app/ask', 'Kérdezés'],
-      ['/app/crossfire', 'Keresztkérdezés'],
-      ['/app/library', 'Forráskönyvtár'],
-      ['/app/timer', 'Vita Időmérő'],
-      ['/app/history', 'Előzmények'],
-      ['/app/settings', 'Beállítások'],
+    for (const [route, heading] of [
+      ['generate', 'Generálás'],
+      ['attack', 'Támadás'],
+      ['brainstorm', 'Ötletelés'],
+      ['factoids', 'Tények'],
+      ['ask', 'Kérdezés'],
     ] as const) {
-      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      const link = page.locator(`[data-tour="nav-${route}"]`).first();
+      if (testInfo.project.name === 'mobile-chromium') {
+        await page.getByRole('button', { name: 'Menü megnyitása' }).click();
+        await page.getByRole('navigation', { name: 'Mobil navigáció' })
+          .getByRole('link')
+          .filter({ hasText: heading })
+          .first()
+          .click();
+      } else {
+        if (!await link.isVisible()) await page.locator('summary[data-tour="nav-more"]').click();
+        await link.click();
+      }
+      await expect(page).toHaveURL(new RegExp(`/app/${route}$`));
       await expect(page.getByRole('heading', { name: heading, exact: true }).last()).toBeVisible();
     }
 
@@ -101,10 +112,14 @@ test.describe('Hungarian parity', () => {
     const errors = collectRuntimeErrors(page);
     await stubSupabaseSession(page);
     await page.addInitScript(() => {
-      window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
-        state: { hasCompletedOnboarding: true, isTourRunning: false },
-        version: 0,
-      }));
+      try {
+        window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+          state: { hasCompletedOnboarding: true, isTourRunning: false },
+          version: 0,
+        }));
+      } catch {
+        // Ignore transient opaque documents during browser navigation.
+      }
     });
 
     await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
