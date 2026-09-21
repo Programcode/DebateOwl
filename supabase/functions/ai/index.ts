@@ -648,16 +648,20 @@ function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { e
     return { error: "Crossfire operation must be next-turn or debrief" };
   }
   const allowedKeys = value.operation === "next-turn"
-    ? ["operation", "config", "transcript", "expectedReply"]
-    : ["operation", "config", "transcript"];
+    ? ["operation", "config", "transcript", "expectedReply", "language"]
+    : ["operation", "config", "transcript", "language"];
   if (!hasOnlyKeys(value, allowedKeys)) return { error: "Crossfire input contains unsupported fields" };
+  const rawLanguage = value.language;
+  const languageError = validateControlInput("crossfire", rawLanguage === undefined ? {} : { language: rawLanguage });
+  if (languageError) return { error: languageError };
+  const language = typeof rawLanguage === "string" ? rawLanguage : "en";
   const config = crossfireConfig(value.config);
   if ("error" in config) return config;
   const transcript = crossfireTranscript(value.transcript, config.value);
   if ("error" in transcript) return transcript;
   if (value.operation === "debrief") {
     if (transcript.value.length === 0) return { error: "Crossfire debrief transcript must not be empty" };
-    return { value: { operation: "debrief", config: config.value, transcript: transcript.value } };
+    return { value: { operation: "debrief", config: config.value, transcript: transcript.value, language } };
   }
   if (value.expectedReply !== "question" && value.expectedReply !== "answer") return { error: "expectedReply is invalid" };
   const lastTurn = transcript.value.at(-1);
@@ -676,6 +680,7 @@ function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { e
       config: config.value,
       transcript: transcript.value,
       expectedReply: value.expectedReply,
+      language,
     },
   };
 }

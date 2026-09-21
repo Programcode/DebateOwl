@@ -1,6 +1,6 @@
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
-import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, mapAIError, reportAIFailure } from './client';
+import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, mapAIError, reportAIFailure, withOutputLanguage } from './client';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
@@ -190,7 +190,7 @@ export async function streamAskChat(
       },
       body: JSON.stringify({
         feature: 'ask',
-        input: {
+        input: withOutputLanguage({
           message,
           history,
           mode,
@@ -198,7 +198,7 @@ export async function streamAskChat(
           webSearch: Boolean(options.webSearch),
           prosConsMode: Boolean(options.prosConsMode),
           argumentMapMode: Boolean(options.argumentMapMode),
-        },
+        }),
         provider,
         model: config.model,
         temperature: config.temperature,

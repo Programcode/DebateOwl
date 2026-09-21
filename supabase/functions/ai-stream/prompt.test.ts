@@ -23,6 +23,7 @@ function assertNotIncludes(text: string, unexpected: string) {
 Deno.test("streaming Ask keeps the shared identity, language, and evidence rules", () => {
   const streamingPrompt = buildStreamingAskSystemPrompt(
     "Give a direct coaching answer with concrete debate tactics.",
+    "hu",
   );
 
   for (
@@ -44,6 +45,10 @@ Deno.test("streaming Ask keeps the shared identity, language, and evidence rules
   assertIncludes(
     streamingPrompt,
     "If the user asks for sources, explain that citation/search mode should be used.",
+  );
+  assertIncludes(
+    streamingPrompt,
+    "Language: Hungarian (hu) - Write ALL output in this language.",
   );
   assertNotIncludes(
     streamingPrompt,

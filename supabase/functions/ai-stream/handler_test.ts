@@ -20,7 +20,7 @@ Deno.test("streaming Ask message construction keeps Markdown output and mode gui
   const messages = buildMessages("Question", [{
     role: "user",
     content: "Earlier",
-  }], "general");
+  }], "general", "hu");
   const system =
     messages.find((message) => message.role === "system")?.content ?? "";
 
@@ -32,6 +32,7 @@ Deno.test("streaming Ask message construction keeps Markdown output and mode gui
     system,
     "Mode guidance: Give a direct coaching answer with concrete debate tactics",
   );
+  assertIncludes(system, "Language: Hungarian (hu) - Write ALL output in this language.");
   if (messages[messages.length - 1]?.content !== "Question") {
     throw new Error("current Ask message was not preserved");
   }
@@ -113,6 +114,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
             message: "¿Cómo respondo a este argumento?",
             history: [],
             mode: "general",
+            language: "hu",
           },
         }),
       }),
@@ -144,6 +146,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     assertIncludes(system, "Follow any explicit output-language instruction.");
     assertIncludes(system, "Otherwise match the language used by the user.");
     assertIncludes(system, "Never invent facts, statistics, citations, or sources.");
+    assertIncludes(system, "Language: Hungarian (hu) - Write ALL output in this language.");
     if (messages?.at(-1)?.content !== "¿Cómo respondo a este argumento?") {
       throw new Error("provider did not receive the current Ask message");
     }
@@ -193,6 +196,11 @@ Deno.test("streaming Ask rejects advanced modes and toggles before quota or prov
       label: "argument map",
       input: { mode: "general", citationMode: false, argumentMapMode: true },
       error: "model/mode combination",
+    },
+    {
+      label: "invalid language",
+      input: { mode: "general", language: "zz" },
+      error: "ask.language",
     },
   ];
   const originalFetch = globalThis.fetch;

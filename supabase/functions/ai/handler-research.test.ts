@@ -46,6 +46,34 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
     if (!(await response.text()).includes("ask.citationMode")) throw new Error("non-streaming error hid the invalid control");
     if (calls.length !== 0) throw new Error(`non-streaming validation performed remote work: ${calls.join(", ")}`);
 
+    for (const [feature, input] of [
+      ["ask", { message: "Question", mode: "general", language: "zz" }],
+      ["crossfire", {
+        operation: "next-turn",
+        config: {
+          resolution: "Cities should ban cars.",
+          argument: "Cars cause congestion.",
+          mode: "ai-questions-user",
+          style: "cooperative",
+          durationSeconds: 180,
+          useSourceLibrary: false,
+          seedQuestions: [],
+        },
+        transcript: [],
+        expectedReply: "question",
+        language: "zz",
+      }],
+    ] as const) {
+      const languageResponse = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature, model: "openai/gpt-5.6-luna", input }),
+      }));
+      if (languageResponse.status !== 400) throw new Error(`${feature} invalid language returned ${languageResponse.status}`);
+      if (!(await languageResponse.text()).includes(`${feature}.language`)) throw new Error(`${feature} invalid language was accepted`);
+      if (calls.length !== 0) throw new Error(`${feature} language validation performed remote work: ${calls.join(", ")}`);
+    }
+
     const streamResponse = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: {

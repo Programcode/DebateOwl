@@ -92,6 +92,7 @@ const validDebrief: CrossfireDebrief = {
 describe('Crossfire AI client', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.settings.outputLanguage = 'hu';
     mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
       { title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
       { title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
@@ -103,7 +104,12 @@ describe('Crossfire AI client', () => {
     mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'A grounded answer.' } }, error: null });
     await crossfire(nextTurnInput(false), config);
     expect(mocks.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
-      body: expect.objectContaining({ feature: 'crossfire', sources: [], customSystemPrompt: null }),
+      body: expect.objectContaining({
+        feature: 'crossfire',
+        input: expect.objectContaining({ language: 'hu' }),
+        sources: [],
+        customSystemPrompt: null,
+      }),
     }));
 
     await crossfire(nextTurnInput(true), config);
