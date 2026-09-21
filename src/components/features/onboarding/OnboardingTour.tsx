@@ -222,6 +222,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                 close: t('onboarding.close'),
                 last: t('onboarding.getStarted'),
                 next: t('onboarding.next'),
+                nextLabelWithProgress: t('onboarding.nextWithProgress'),
                 skip: t('onboarding.skip'),
             }}
         />

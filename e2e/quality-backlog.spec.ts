@@ -3,6 +3,11 @@ import { setLocale, stubSupabaseSession } from './helpers/auth';
 
 const locales = ['en', 'es', 'hu'] as const;
 const titledRoutes = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'] as const;
+const mobileNavigationNames = {
+  en: 'Mobile navigation',
+  es: 'Navegación móvil',
+  hu: 'Mobil navigáció',
+} as const;
 
 test('Sources does not show the stale consultation date', async ({ page }) => {
   await page.goto('/expocit/sources');
@@ -29,7 +34,7 @@ for (const locale of locales) {
       expect(label).toBeTruthy();
       if (testInfo.project.name === 'mobile-chromium') {
         await page.locator('header button.lg\\:hidden[aria-expanded]').click();
-        await page.getByRole('navigation', { name: 'Mobile navigation' })
+        await page.getByRole('navigation', { name: mobileNavigationNames[locale] })
           .getByRole('link')
           .filter({ hasText: label! })
           .first()

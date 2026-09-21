@@ -326,7 +326,7 @@ export default function TimerPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Timer Display */}
-            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner transition-all" role="timer" aria-live="polite" aria-atomic="true">
+            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner transition-all" role="timer" aria-label={t('timer.displayLabel')} aria-live="polite" aria-atomic="true">
               <div className={`absolute inset-0 rounded-full border-8 border-primary transition-all duration-1000`}
                 style={{ clipPath: `inset(${100 - progress}% 0 0 0)` }} />
 

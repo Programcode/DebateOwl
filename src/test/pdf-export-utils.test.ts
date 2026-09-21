@@ -126,5 +126,7 @@ describe('PDF export utilities', () => {
       .filter((text): text is string => typeof text === 'string');
     expect(footerText).toContainEqual(expect.stringContaining('A DebateLab készítette'));
     expect(footerText).toContainEqual(expect.stringMatching(/Oldal 1 \/ \d+/));
+    expect(footerText).toContain('1. érv');
+    expect(pdfMocks.docs[0].setFont).toHaveBeenCalledWith('LiberationSans', 'normal');
   });
 });

@@ -9,6 +9,31 @@ import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate } from './date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { isAppLanguage } from '@/lib/languages';
+import liberationSansRegularUrl from 'pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf?url';
+import liberationSansBoldUrl from 'pdfjs-dist/standard_fonts/LiberationSans-Bold.ttf?url';
+
+const PDF_FONT = 'LiberationSans';
+
+function binaryString(bytes: Uint8Array): string {
+    let value = '';
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+        value += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    }
+    return value;
+}
+
+async function installPdfFonts(doc: import('jspdf').jsPDF): Promise<void> {
+    if (typeof doc.addFileToVFS !== 'function') return;
+    const [regular, bold] = await Promise.all(
+        [liberationSansRegularUrl, liberationSansBoldUrl].map(async (url) => (
+            new Uint8Array(await (await fetch(url)).arrayBuffer())
+        )),
+    );
+    doc.addFileToVFS('LiberationSans-Regular.ttf', binaryString(regular));
+    doc.addFont('LiberationSans-Regular.ttf', PDF_FONT, 'normal');
+    doc.addFileToVFS('LiberationSans-Bold.ttf', binaryString(bold));
+    doc.addFont('LiberationSans-Bold.ttf', PDF_FONT, 'bold');
+}
 
 // Color constants for consistent branding
 const COLORS = {
@@ -78,6 +103,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         unit: 'mm',
         format: 'a4',
     });
+    await installPdfFonts(doc);
 
     const margin = 22;
     const pageHeight = doc.internal.pageSize.height;
@@ -105,20 +131,20 @@ async function createPDFDocument(): Promise<PDFHelpers> {
         // Title - large and bold
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(PDF_FONT, 'bold');
         const titleLines = doc.splitTextToSize(title, contentWidth - 40);
         doc.text(titleLines, margin, 18);
 
         if (subtitle) {
             doc.setFontSize(11);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(PDF_FONT, 'normal');
             doc.setTextColor(219, 234, 254);
             doc.text(subtitle, margin, titleLines.length > 1 ? 28 : 26);
         }
 
         // DebateLab branding - right aligned
         doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(PDF_FONT, 'bold');
         doc.setTextColor(255, 255, 255);
         doc.text('DebateLab', pageWidth - margin, 10, { align: 'right' });
 
@@ -132,7 +158,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
 
         // Section title text - 14pt bold
         doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(PDF_FONT, 'bold');
         doc.setTextColor(...COLORS.dark);
         doc.text(title, margin, state.y);
 
@@ -148,7 +174,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
 
     const addParagraph = (text: string, indent = 0) => {
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(PDF_FONT, 'normal');
         doc.setTextColor(...COLORS.dark);
         const lines = doc.splitTextToSize(text, contentWidth - indent);
         checkPageBreak(lines.length * 4.8 + 2);
@@ -158,7 +184,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
 
     const addBulletList = (items: string[], indent = 0) => {
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(PDF_FONT, 'normal');
         doc.setTextColor(...COLORS.dark);
         items.forEach((item) => {
             const lines = doc.splitTextToSize(`• ${item}`, contentWidth - indent - 5);
@@ -183,6 +209,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             margin: { left: margin, right: margin },
             styles: {
                 fontSize: 8,
+                font: PDF_FONT,
                 cellPadding: 6,
                 minCellHeight: 14,
                 textColor: COLORS.dark,
@@ -219,7 +246,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
             // Footer text
             doc.setFontSize(8);
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(PDF_FONT, 'normal');
             doc.setTextColor(...COLORS.secondary);
             doc.text(
                 `${i18n.t('export.generatedBy')} • ${formatEuropeanDate(new Date(), 'N/A', language)} • ${i18n.t('export.page')} ${i} ${i18n.t('export.of')} ${pageCount}`,
@@ -245,7 +272,7 @@ function addSparringTranscriptParagraph(pdf: PDFHelpers, text: string) {
         const pageLines = remaining.slice(0, linesOnPage);
         remaining = remaining.slice(linesOnPage);
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(PDF_FONT, 'normal');
         doc.setTextColor(...COLORS.dark);
         doc.text(pageLines, pdf.margin, pdf.y);
         pdf.y += pageLines.length * lineHeight;
@@ -275,14 +302,14 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             ? i18n.t('export.proposition')
             : sideValue === 'con'
                 ? i18n.t('export.opposition')
-                : 'Unknown';
-        const format = result.metadata?.format?.toUpperCase() || 'Standard';
+                : i18n.t('export.unknown');
+        const format = result.metadata?.format?.toUpperCase() || i18n.t('export.standard');
         const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
         const margin = pdf.margin;
         const contentWidth = pdf.contentWidth;
         const pageWidth = doc.internal.pageSize.width;
 
-        addHeader(motion || i18n.t('export.debateCase'), `${side} • ${format} Format`);
+        addHeader(motion || i18n.t('export.debateCase'), `${side} • ${format} ${i18n.t('export.format')}`);
 
         // Helper: colored separator line between major sections
         const addSeparator = (color: [number, number, number] = COLORS.secondary) => {
@@ -297,7 +324,7 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
         // Helper: subsection label (12pt bold)
         const addSubsectionLabel = (label: string, indent = 0) => {
             doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(PDF_FONT, 'bold');
             doc.setTextColor(...COLORS.dark);
             pdf.checkPageBreak(8);
             doc.text(label, margin + indent, pdf.y);
@@ -334,14 +361,14 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
 
             // Contention title
             doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(PDF_FONT, 'bold');
             doc.setTextColor(...COLORS.dark);
-            doc.text(`Contention #${index + 1}`, margin + textIndent, pdf.y);
+            doc.text(i18n.t('export.contentionNumber', { number: index + 1 }), margin + textIndent, pdf.y);
             pdf.y += 5;
 
             // Claim text
             doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(PDF_FONT, 'bold');
             doc.setTextColor(...accentColor);
             const claimLines = doc.splitTextToSize(claim, contentWidth - textIndent - 2);
             doc.text(claimLines, margin + textIndent, pdf.y);
@@ -350,13 +377,13 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             // Detail fields
             details.forEach(({ label, text }) => {
                 doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
+                doc.setFont(PDF_FONT, 'bold');
                 doc.setTextColor(...COLORS.secondary);
                 checkBlockPageBreak(10);
                 doc.text(label, margin + textIndent, pdf.y);
                 pdf.y += 4.5;
 
-                doc.setFont('helvetica', 'normal');
+                doc.setFont(PDF_FONT, 'normal');
                 doc.setTextColor(...COLORS.dark);
                 const lines = doc.splitTextToSize(text, contentWidth - textIndent - 2);
                 checkBlockPageBreak(lines.length * 4.8);
@@ -385,7 +412,7 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
 
         // Case Structure
         addSectionTitle(`${i18n.t('export.thesis')} & ${i18n.t('export.framework')}`);
-        addParagraph(result.caseStructure?.thesis || 'No thesis provided');
+        addParagraph(result.caseStructure?.thesis || i18n.t('export.noThesis'));
         if (result.caseStructure?.framework) {
             addSubsectionLabel(i18n.t('export.framework'));
             addParagraph(result.caseStructure.framework, 2);
@@ -459,11 +486,11 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
         addHeader(i18n.t('export.caseAttack'), `${i18n.t('export.overallScore')}: ${score}/100`);
 
         // Summary
-        addSectionTitle('Assessment Summary');
-        addParagraph(result.overallAssessment?.summary || 'No summary provided');
+        addSectionTitle(i18n.t('export.assessmentSummary'));
+        addParagraph(result.overallAssessment?.summary || i18n.t('export.noSummary'));
 
         if (result.overallAssessment?.strengthAreas?.length) {
-            addSectionTitle('Strength Areas', COLORS.success);
+            addSectionTitle(i18n.t('export.strengthAreas'), COLORS.success);
             addBulletList(result.overallAssessment.strengthAreas);
         }
 
@@ -476,7 +503,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
                 w.description || '',
                 w.howOpponentAttacks || '',
             ]);
-            addTable(['Severity', 'Type', 'Description', 'Attack Vector'], rows, {
+            addTable([i18n.t('export.severity'), i18n.t('export.type'), i18n.t('export.description'), i18n.t('export.attackVector')], rows, {
                 headerColor: COLORS.danger,
                 columnStyles: { 0: { cellWidth: 22 } },
             });
@@ -490,7 +517,7 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
                 f.location || '',
                 f.explanation || '',
             ]);
-            addTable(['Fallacy', 'Location', 'Explanation'], fallacyRows, { headerColor: COLORS.warning });
+            addTable([i18n.t('export.fallacy'), i18n.t('export.location'), i18n.t('export.explanation')], fallacyRows, { headerColor: COLORS.warning });
         }
 
         // Cross-Ex Questions
@@ -501,19 +528,19 @@ export async function exportAttackToPdf(result: AttackOutput): Promise<boolean> 
                 q.purpose || '',
                 q.expectedTrap || '',
             ]);
-            addTable(['Question', 'Purpose', 'Expected Trap'], qRows);
+            addTable([i18n.t('export.question'), i18n.t('export.purpose'), i18n.t('export.expectedTrap')], qRows);
         }
 
         // Weighing Analysis
         if (result.weighingAnalysis) {
-            addSectionTitle('Weighing Analysis');
-            addParagraph(result.weighingAnalysis.currentWeighing || 'No current weighing analysis');
+            addSectionTitle(i18n.t('export.weighingAnalysis'));
+            addParagraph(result.weighingAnalysis.currentWeighing || i18n.t('export.noWeighingAnalysis'));
             if (result.weighingAnalysis.missingComparisons?.length) {
-                addParagraph('Missing Comparisons:');
+                addParagraph(`${i18n.t('export.missingComparisons')}:`);
                 addBulletList(result.weighingAnalysis.missingComparisons);
             }
             if (result.weighingAnalysis.improvementSuggestions?.length) {
-                addParagraph('Improvement Suggestions:');
+                addParagraph(`${i18n.t('export.improvementSuggestions')}:`);
                 addBulletList(result.weighingAnalysis.improvementSuggestions);
             }
         }
@@ -536,11 +563,11 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
         const pdf = await createPDFDocument();
         const { doc, addHeader, addSectionTitle, addParagraph, addBulletList, addTable, addFooter } = pdf;
 
-        addHeader(i18n.t('export.brainstormResults'), `${result.topFive?.length || 0} Top Ideas`);
+        addHeader(i18n.t('export.brainstormResults'), i18n.t('export.topIdeasCount', { count: result.topFive?.length || 0 }));
 
         // Top 5
         if (result.topFive?.length) {
-            addSectionTitle('Top 5 Argument Angles', COLORS.success);
+            addSectionTitle(i18n.t('export.topArgumentAngles'), COLORS.success);
             const rows = result.topFive.map((item) => [
                 `#${item.rank}`,
                 item.idea?.title || '',
@@ -548,12 +575,12 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
                 item.idea?.side?.toUpperCase() || '',
                 item.whyTop || '',
             ]);
-            addTable(['Rank', 'Title', 'Description', 'Side', i18n.t('export.whyTop')], rows, { headerColor: COLORS.success });
+            addTable([i18n.t('export.rank'), i18n.t('export.title'), i18n.t('export.description'), i18n.t('export.side'), i18n.t('export.whyTop')], rows, { headerColor: COLORS.success });
         }
 
         // Mind Map Categories
         if (result.mindmap?.length) {
-            addSectionTitle('Argument Categories');
+            addSectionTitle(i18n.t('export.argumentCategories'));
             result.mindmap.forEach((category) => {
                 addParagraph(`📁 ${category.category}`);
                 if (category.items?.length) {
@@ -565,7 +592,7 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
 
         // Buckets
         if (result.buckets?.length) {
-            addSectionTitle('Strategic Buckets', COLORS.primary);
+            addSectionTitle(i18n.t('export.strategicBuckets'), COLORS.primary);
             result.buckets.forEach((bucket) => {
                 addParagraph(`${bucket.name}: ${bucket.keyInsight || ''}`);
             });
@@ -573,13 +600,13 @@ export async function exportBrainstormToPdf(result: BrainstormOutput): Promise<b
 
         // Next Steps
         if (result.nextSteps?.length) {
-            addSectionTitle('Recommended Next Steps', COLORS.warning);
+            addSectionTitle(i18n.t('export.recommendedNextSteps'), COLORS.warning);
             addBulletList(result.nextSteps);
         }
 
         // Warnings
         if (result.warningsAndTradeoffs?.length) {
-            addSectionTitle('Warnings & Tradeoffs', COLORS.danger);
+            addSectionTitle(i18n.t('export.warningsAndTradeoffs'), COLORS.danger);
             addBulletList(result.warningsAndTradeoffs);
         }
 
@@ -602,29 +629,29 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
         const { doc, addHeader, addSectionTitle, addBulletList, addTable, addFooter } = pdf;
 
         const verifiedCount = result.factoids?.filter((f) => f.citation?.verified === 'verified').length || 0;
-        addHeader(i18n.t('export.researchFactoids'), `${result.factoids?.length || 0} Facts • ${verifiedCount} Verified`);
+        addHeader(i18n.t('export.researchFactoids'), i18n.t('export.factoidsSummary', { count: result.factoids?.length || 0, verified: verifiedCount }));
 
         // Factoids Table
         if (result.factoids?.length) {
-            addSectionTitle('Key Facts & Evidence', COLORS.primary);
+            addSectionTitle(i18n.t('export.keyFactsAndEvidence'), COLORS.primary);
             const rows = result.factoids.map((f) => [
                 f.shortClaim || '',
                 f.keyFigure || '',
                 f.citation?.title || '',
-                f.citation?.verified?.toUpperCase() || 'PENDING',
+                i18n.t(`export.status.${f.citation?.verified || 'pending'}`),
                 `${f.relevanceScore || 0}%`,
             ]);
-            addTable(['Claim', i18n.t('export.keyFigure'), i18n.t('export.source'), 'Status', 'Relevance'], rows);
+            addTable([i18n.t('export.claim'), i18n.t('export.keyFigure'), i18n.t('export.source'), i18n.t('export.statusLabel'), i18n.t('export.relevance')], rows);
         }
 
         // Detailed factoids
         if (result.factoids?.length) {
-            addSectionTitle('Detailed Analysis');
+            addSectionTitle(i18n.t('export.detailedAnalysis'));
             result.factoids.forEach((f, i) => {
                 const pdf2 = pdf; // Access outer scope
                 pdf2.addParagraph(`${i + 1}. ${f.shortClaim}`);
                 pdf2.addParagraph(`   ${i18n.t('export.context')}: ${f.context || 'N/A'}`, 5);
-                pdf2.addParagraph(`   Limitations: ${f.limitations || 'N/A'}`, 5);
+                pdf2.addParagraph(`   ${i18n.t('export.limitations')}: ${f.limitations || 'N/A'}`, 5);
                 pdf2.addParagraph(`   ${i18n.t('export.howToUse')}: ${f.howToUse || 'N/A'}`, 5);
                 if (f.citation?.url) {
                     pdf2.addParagraph(`   ${i18n.t('export.source')}: ${f.citation.url}`, 5);
@@ -634,13 +661,13 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
 
         // Search Suggestions
         if (result.searchSuggestions?.length) {
-            addSectionTitle('Further Research Suggestions', COLORS.success);
+            addSectionTitle(i18n.t('export.furtherResearchSuggestions'), COLORS.success);
             addBulletList(result.searchSuggestions);
         }
 
         // Warnings
         if (result.warnings?.length) {
-            addSectionTitle('Warnings', COLORS.warning);
+            addSectionTitle(i18n.t('export.warnings'), COLORS.warning);
             addBulletList(result.warnings);
         }
 
