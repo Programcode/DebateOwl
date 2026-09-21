@@ -319,6 +319,7 @@ export default function CrossfirePage() {
       dispatch({
         type: 'ai-turn-received',
         turn: nextTurn(snapshot.turns.length + 1, 'ai', result.type, result.text),
+        signal: result.signal,
       });
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -814,6 +815,39 @@ function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMot
                 <span>{turn.kind === 'question' ? t('crossfire.question') : t('crossfire.answer')}</span>
               </div>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{turn.text}</p>
+              {turn.kind === 'answer' && turn.signal ? (
+                <div className="mt-3 flex flex-wrap gap-1.5" aria-label={t('crossfire.liveSignals')}>
+                  <Badge
+                    variant="outline"
+                    aria-label={t('crossfire.signalConfidence', {
+                      label: t(`crossfire.signalQuality.${turn.signal.answerQuality}`),
+                      percent: Math.round(turn.signal.answerQualityConfidence * 100),
+                    })}
+                  >
+                    {t(`crossfire.signalQuality.${turn.signal.answerQuality}`)}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    aria-label={t('crossfire.signalConfidence', {
+                      label: t(`crossfire.signalConcession.${turn.signal.concession}`),
+                      percent: Math.round(turn.signal.concessionConfidence * 100),
+                    })}
+                  >
+                    {t(`crossfire.signalConcession.${turn.signal.concession}`)}
+                  </Badge>
+                  {turn.signal.followUpOpportunity > 0.70 ? (
+                    <Badge
+                      variant="secondary"
+                      aria-label={t('crossfire.signalProbability', {
+                        label: t('crossfire.signalFollowUp'),
+                        percent: Math.round(turn.signal.followUpOpportunity * 100),
+                      })}
+                    >
+                      {t('crossfire.signalFollowUp')}
+                    </Badge>
+                  ) : null}
+                </div>
+              ) : null}
             </motion.article>
           ))}
         </div>

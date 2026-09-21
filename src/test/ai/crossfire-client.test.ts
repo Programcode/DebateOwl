@@ -148,6 +148,23 @@ describe('Crossfire AI client', () => {
     await expect(crossfire(nextTurnInput(), config)).rejects.toBeInstanceOf(AIResponseError);
   });
 
+  it('parses a valid live signal and rejects unknown or non-answer targets', async () => {
+    const signal = { answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.9, concession: 'none', concessionConfidence: 0.8, followUpOpportunity: 0.75 };
+    mocks.invoke.mockResolvedValueOnce({ data: { output: { type: 'answer', text: 'Answer.' }, signal }, error: null });
+    await expect(crossfire(nextTurnInput(), config)).resolves.toEqual({ type: 'answer', text: 'Answer.', signal });
+
+    mocks.invoke.mockResolvedValueOnce({ data: { output: { type: 'answer', text: 'Answer.' }, signal: { ...signal, answerTurnId: 'T99' } }, error: null });
+    await expect(crossfire(nextTurnInput(), config)).rejects.toBeInstanceOf(AIResponseError);
+
+    mocks.invoke.mockResolvedValueOnce({ data: { output: { type: 'question', text: 'Next?' }, signal: { ...signal, answerTurnId: 'T1' } }, error: null });
+    const aiQuestionInput = nextTurnInput();
+    if (aiQuestionInput.operation !== 'next-turn') throw new Error('Unexpected fixture');
+    aiQuestionInput.config.mode = 'ai-questions-user';
+    aiQuestionInput.transcript = [];
+    aiQuestionInput.expectedReply = 'question';
+    await expect(crossfire(aiQuestionInput, config)).rejects.toBeInstanceOf(AIResponseError);
+  });
+
   it('validates debrief shape and every transcript reference', async () => {
     mocks.invoke.mockResolvedValueOnce({ data: { output: validDebrief }, error: null });
     await expect(crossfire(debriefInput(), config)).resolves.toEqual(validDebrief);

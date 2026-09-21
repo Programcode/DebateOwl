@@ -448,6 +448,78 @@ Deno.test("AI handler ranks stable library sources and returns bounded assessmen
   }
 });
 
+Deno.test("Crossfire returns newest-exchange signals without making them a reply dependency", async () => {
+  const originalFetch = globalThis.fetch;
+  let decisionFails = false;
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      const body = JSON.parse(String(init?.body)) as { messages?: Array<{ content?: string }> };
+      const prompt = body.messages?.at(-1)?.content ?? "";
+      const output = prompt.includes('must be type "question"')
+        ? { type: "question", text: "What follows from that concession?" }
+        : { type: "answer", text: "The evidence directly supports the claim." };
+      return jsonResponse({ choices: [{ message: { content: JSON.stringify(output) } }], usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.000001 } });
+    }
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      if (decisionFails) return jsonResponse({ error: "unavailable" }, 500);
+      return jsonResponse({
+        model: "typesafe/jev-1.13",
+        answers: {
+          answer_quality: { type: "choice", choice: "direct", confidence: 0.9, probabilities: { direct: 0.9, partial: 0.08, evasive: 0.02 } },
+          concession: { type: "choice", choice: "implicit", confidence: 0.8, probabilities: { none: 0.15, implicit: 0.8, explicit: 0.05 } },
+          follow_up: { type: "noul", noul: 0.82 },
+        },
+        usage: { input_tokens: 10, output_tokens: 0, cost: 0.000001 },
+      });
+    }
+    throw new Error(`Unhandled request: ${url}`);
+  }) as typeof fetch;
+
+  const request = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], expectedReply: "question" | "answer") => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      feature: "crossfire",
+      model: "openai/gpt-5.6-luna",
+      input: {
+        operation: "next-turn",
+        config: { resolution: "Cities should ban cars.", argument: "Cars cause congestion.", mode, style: "cooperative", durationSeconds: 180, useSourceLibrary: false, seedQuestions: [] },
+        transcript,
+        expectedReply,
+      },
+    }),
+  }));
+
+  try {
+    const questionAi = await request("question-ai", [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What evidence supports that?", createdAt: 1 }], "answer");
+    const questionAiPayload = await questionAi.json() as { signal?: { answerTurnId?: string; answerQuality?: string } };
+    if (questionAi.status !== 200 || questionAiPayload.signal?.answerTurnId !== "T2" || questionAiPayload.signal.answerQuality !== "direct") {
+      throw new Error(`question-ai signal missing: ${JSON.stringify(questionAiPayload)}`);
+    }
+
+    const aiQuestionsUser = await request("ai-questions-user", [
+      { id: "T1", sequence: 1, speaker: "ai", kind: "question", text: "Would costs rise?", createdAt: 1 },
+      { id: "T2", sequence: 2, speaker: "user", kind: "answer", text: "Some costs may rise.", createdAt: 2 },
+    ], "question");
+    const aiQuestionsPayload = await aiQuestionsUser.json() as { signal?: { answerTurnId?: string; concession?: string } };
+    if (aiQuestionsUser.status !== 200 || aiQuestionsPayload.signal?.answerTurnId !== "T2" || aiQuestionsPayload.signal.concession !== "implicit") {
+      throw new Error(`ai-questions-user signal missing: ${JSON.stringify(aiQuestionsPayload)}`);
+    }
+
+    decisionFails = true;
+    const fallback = await request("question-ai", [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What evidence supports that?", createdAt: 1 }], "answer");
+    const fallbackPayload = await fallback.json() as { output?: { type?: string }; signal?: unknown };
+    if (fallback.status !== 200 || fallbackPayload.output?.type !== "answer" || fallbackPayload.signal !== undefined) {
+      throw new Error(`failed optional signal discarded the reply: ${JSON.stringify(fallbackPayload)}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning tiers", async () => {
   const originalFetch = globalThis.fetch;
   const originalTier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier;

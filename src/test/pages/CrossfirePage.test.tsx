@@ -132,4 +132,25 @@ describe('CrossfirePage', () => {
     expect(await screen.findByTestId('retry-debrief')).toBeInTheDocument();
     expect(screen.getByText('The coach returned an incomplete debrief. Try again to continue.')).toBeInTheDocument();
   });
+
+  it('shows live coaching on the answer only', async () => {
+    mocks.crossfire.mockResolvedValueOnce({
+      type: 'answer',
+      text: 'A bounded answer.',
+      signal: { answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.91, concession: 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.82 },
+    });
+    renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+    fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+
+    const answer = await screen.findByText('A bounded answer.');
+    expect(answer.closest('article')).toHaveTextContent('Direct answer');
+    expect(answer.closest('article')).toHaveTextContent('Implicit concession');
+    expect(answer.closest('article')).toHaveTextContent('Follow-up opportunity');
+    expect(screen.getByText('What is the mechanism?').closest('article')).not.toHaveTextContent('Direct answer');
+    expect(answer.closest('article')?.querySelector('[aria-label*="82%"]')).not.toBeNull();
+  });
 });

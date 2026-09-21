@@ -115,6 +115,7 @@ import {
   type SourceAssessment,
   type SourceDecisionCandidate,
 } from "../_shared/source-decisions.ts";
+import { evaluateCrossfireExchange } from "../_shared/crossfire-signals.ts";
 import {
   ASK_RESEARCH,
   applyFactoidsVerification,
@@ -1451,9 +1452,20 @@ export async function handleRequest(req: Request): Promise<Response> {
         : validateCrossfireDebrief(cleanedOutput, crossfireInput.transcript);
       if ("error" in output) throw new Error(output.error);
 
+      let signal;
+      if (crossfireInput.operation === "next-turn") {
+        const evaluated = await evaluateCrossfireExchange({
+          transcript: crossfireInput.transcript,
+          reply: output.value as { type: "question" | "answer"; text: string },
+          signal: req.signal,
+        });
+        signal = evaluated.signal;
+        if (evaluated.jev?.usage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, evaluated.jev.usage);
+      }
+
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-      return new Response(JSON.stringify(successBody({ output: output.value })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output: output.value, ...(signal ? { signal } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // FACTOIDS: Use deep research with multiple searches

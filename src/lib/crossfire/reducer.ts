@@ -4,19 +4,21 @@ import {
   CrossfireSetupConfigSchema,
   CrossfireStateSchema,
   CrossfireTurnSchema,
+  CrossfireTurnSignalSchema,
   type CrossfireConfig,
   type CrossfireDebrief,
   type CrossfirePrefill,
   type CrossfireState,
   type CrossfireSetupConfig,
   type CrossfireTurn,
+  type CrossfireTurnSignal,
 } from './schemas';
 
 export type CrossfireAction =
   | { type: 'config-patched'; patch: Partial<CrossfireSetupConfig> }
   | { type: 'session-started'; sessionId: string; now: number }
   | { type: 'user-turn-submitted'; turn: CrossfireTurn; expectedReply: 'question' | 'answer' }
-  | { type: 'ai-turn-received'; turn: CrossfireTurn }
+  | { type: 'ai-turn-received'; turn: CrossfireTurn; signal?: CrossfireTurnSignal }
   | {
     type: 'request-failed';
     expectedReply: 'question' | 'answer';
@@ -106,8 +108,17 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
     case 'ai-turn-received': {
       if (state.phase !== 'active' || state.request.status !== 'pending') return state;
       if (action.turn.speaker !== 'ai' || action.turn.kind !== state.request.expectedReply) return state;
-      const turns = appendTurn(state.turns, action.turn);
+      let turns = appendTurn(state.turns, action.turn);
       if (!turns) return state;
+      if (action.signal) {
+        const signal = CrossfireTurnSignalSchema.safeParse(action.signal);
+        if (!signal.success) return state;
+        const targetIndex = turns.findIndex((turn) => turn.id === signal.data.answerTurnId && turn.kind === 'answer');
+        if (targetIndex < 0) return state;
+        const target = CrossfireTurnSchema.safeParse({ ...turns[targetIndex], signal: signal.data });
+        if (!target.success) return state;
+        turns = turns.map((turn, index) => index === targetIndex ? target.data : turn);
+      }
       return { ...state, turns, request: { status: 'idle' } };
     }
     case 'request-failed': {

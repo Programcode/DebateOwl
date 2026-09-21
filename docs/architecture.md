@@ -58,6 +58,8 @@ Client-side environment selection is a developer convenience, not authorization.
 
 [`supabase/functions/ai/index.ts`](../supabase/functions/ai/index.ts) serves non-streaming structured tools and practice modes. [`supabase/functions/ai-stream/index.ts`](../supabase/functions/ai-stream/index.ts) serves Ask over server-sent events.
 
+For a validated Crossfire next turn, the server may ask Jev to classify only the newest completed question-answer exchange. The optional directness, concession, and follow-up signal is attached by turn ID to the answer; a missing or failed Jev decision never invalidates the main Crossfire reply. Draft version 1 remains compatible because turn signals are optional.
+
 A configured mock provider bypasses Supabase for local and test behavior. It is not authenticated backend evidence.
 
 ## Research and source import

@@ -70,6 +70,31 @@ describe('crossfireReducer', () => {
     expect(canEndCrossfireSession(state)).toBe(true);
   });
 
+  it('attaches a live signal only to its answer and replaces it on retry', () => {
+    let state = crossfireReducer(configured(), { type: 'session-started', sessionId: 'signal-session', now: 1 });
+    state = crossfireReducer(state, { type: 'user-turn-submitted', turn: turn(1, 'user', 'question'), expectedReply: 'answer' });
+    const signal = { answerTurnId: 'T2', answerQuality: 'direct' as const, answerQualityConfidence: 0.9, concession: 'none' as const, concessionConfidence: 0.8, followUpOpportunity: 0.75 };
+    state = crossfireReducer(state, { type: 'ai-turn-received', turn: turn(2, 'ai', 'answer'), signal });
+    expect(state.phase === 'active' && state.turns[0].signal).toBeUndefined();
+    expect(state.phase === 'active' && state.turns[1].signal).toEqual(signal);
+
+    const invalidTarget = crossfireReducer(state, { type: 'state-restored', state: {
+      ...state,
+      turns: state.phase === 'active' ? state.turns.map((item) => item.id === 'T2' ? { ...item, signal: { ...signal, answerTurnId: 'T9' } } : item) : [],
+    } as CrossfireState });
+    expect(invalidTarget).toEqual(createCrossfireSetupState());
+  });
+
+  it('attaches a signal to the previous user answer when the AI returns the next question', () => {
+    let state = crossfireReducer(configured('ai-questions-user'), { type: 'session-started', sessionId: 'signal-session-2', now: 1 });
+    state = crossfireReducer(state, { type: 'ai-turn-received', turn: turn(1, 'ai', 'question') });
+    state = crossfireReducer(state, { type: 'user-turn-submitted', turn: turn(2, 'user', 'answer'), expectedReply: 'question' });
+    const signal = { answerTurnId: 'T2', answerQuality: 'partial' as const, answerQualityConfidence: 0.8, concession: 'implicit' as const, concessionConfidence: 0.7, followUpOpportunity: 0.9 };
+    state = crossfireReducer(state, { type: 'ai-turn-received', turn: turn(3, 'ai', 'question'), signal });
+    expect(state.phase === 'active' && state.turns[1].signal).toEqual(signal);
+    expect(state.phase === 'active' && state.turns[2].signal).toBeUndefined();
+  });
+
   it('models Let the AI question me and requests a new question after the user answer', () => {
     let state = crossfireReducer(configured('ai-questions-user'), {
       type: 'session-started',

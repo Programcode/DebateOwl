@@ -4,6 +4,7 @@ import {
   CrossfireDebriefSchema,
   CrossfireReplySchema,
   CrossfireStateSchema,
+  CrossfireTurnSchema,
   MAX_CROSSFIRE_ARGUMENT_CHARS,
   MAX_CROSSFIRE_REPLY_CHARS,
   MAX_CROSSFIRE_TRANSCRIPT_CHARS,
@@ -93,6 +94,20 @@ describe('Crossfire schemas', () => {
     expect(CrossfireReplySchema.safeParse({ type: 'answer', text: '' }).success).toBe(false);
     expect(CrossfireReplySchema.safeParse({ type: 'answer', text: 'x'.repeat(MAX_CROSSFIRE_REPLY_CHARS + 1) }).success).toBe(false);
     expect(CrossfireReplySchema.safeParse({ type: 'answer', text: 'Valid', extra: true }).success).toBe(false);
+  });
+
+  it('accepts signals only on their matching answer turn', () => {
+    const signal = {
+      answerTurnId: 'T2',
+      answerQuality: 'direct',
+      answerQualityConfidence: 0.9,
+      concession: 'implicit',
+      concessionConfidence: 0.7,
+      followUpOpportunity: 0.8,
+    } as const;
+    expect(CrossfireTurnSchema.safeParse({ ...turn, id: 'T2', sequence: 2, speaker: 'ai', kind: 'answer', signal }).success).toBe(true);
+    expect(CrossfireTurnSchema.safeParse({ ...turn, signal: { ...signal, answerTurnId: 'T2' } }).success).toBe(false);
+    expect(CrossfireTurnSchema.safeParse({ ...turn, id: 'T2', sequence: 2, kind: 'answer', signal: { ...signal, answerTurnId: 'T9' } }).success).toBe(false);
   });
 
   it('requires every debrief claim and suggestion to cite transcript turns', () => {
