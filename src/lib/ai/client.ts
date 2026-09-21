@@ -1048,7 +1048,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
         content: source.content ?? '',
         type: 'url',
         origin: source.url,
-        folder: i18n.t('aiClient.autoSavedFolder'),
+        folder: 'Auto-saved',
         isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
         metadata: {
           url: source.url,

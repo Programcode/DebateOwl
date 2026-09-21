@@ -59,8 +59,15 @@ function SourceRow({
   folderLabel,
   ariaAttributes,
 }: SourceRowProps & { index: number; style: CSSProperties; ariaAttributes: AriaAttributes }) {
+  const { t } = useTranslation();
   const source = sources[index];
   if (!source) return null;
+  const sourceFolder = source.folder || 'General';
+  const sourceFolderLabel = sourceFolder === 'General'
+    ? t('libraryPage.generalFolder')
+    : sourceFolder === 'Auto-saved'
+      ? t('aiClient.autoSavedFolder')
+      : sourceFolder;
 
   return (
     <div style={style} {...ariaAttributes} className="px-1 pb-2">
@@ -90,17 +97,19 @@ function SourceRow({
               ) : (
                 <span className="truncate text-sm font-medium">{source.title}</span>
               )}
-              <Badge variant="outline" className="shrink-0 py-0 text-[9px]">{source.type.toUpperCase()}</Badge>
+              <Badge variant="outline" className="shrink-0 py-0 text-[9px]">
+                {t(`libraryPage.${source.type}Source`, source.type.toUpperCase())}
+              </Badge>
             </div>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
             <div className="mt-1 flex min-w-0 items-center gap-1.5">
               <Badge
                 variant="secondary"
                 className="shrink-0 max-w-[200px] truncate py-0 text-[10px]"
-                title={`${folderLabel}: ${source.folder || 'General'}`}
+                title={`${folderLabel}: ${sourceFolderLabel}`}
               >
                 <Folder className="mr-1 h-3 w-3 shrink-0" />
-                <span className="truncate">{source.folder || 'General'}</span>
+                <span className="truncate">{sourceFolderLabel}</span>
               </Badge>
               <span className="truncate text-[11px] text-muted-foreground">{source.content}</span>
             </div>
@@ -115,7 +124,7 @@ function SourceRow({
               event.stopPropagation();
               onRemove(source);
             }}
-            aria-label={`Delete ${source.title}`}
+            aria-label={t('libraryPage.deleteSourceLabel', { title: source.title })}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -123,7 +132,7 @@ function SourceRow({
             checked={source.isActive}
             onClick={(event) => event.stopPropagation()}
             onCheckedChange={() => onToggle(source.id)}
-            aria-label={`Toggle ${source.title}`}
+            aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
           />
         </div>
       </div>
@@ -133,6 +142,11 @@ function SourceRow({
 
 export default function LibraryPage() {
   const { t } = useTranslation();
+  const getFolderName = (folder: string) => folder === 'General'
+    ? t('libraryPage.generalFolder')
+    : folder === 'Auto-saved'
+      ? t('aiClient.autoSavedFolder')
+      : folder;
   const {
     sourceLibrary,
     sourceFolders,
@@ -435,7 +449,7 @@ export default function LibraryPage() {
                 <SelectContent>
                   <SelectItem value="all">{t('libraryPage.allFolders', 'All')}</SelectItem>
                   {folders.map((f) => (
-                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                    <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -609,7 +623,7 @@ export default function LibraryPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                          <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -657,7 +671,7 @@ export default function LibraryPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                      <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -715,7 +729,7 @@ export default function LibraryPage() {
                       className="shrink-0"
                       onClick={() => setSelectedFolder(folder)}
                     >
-                      {folder === 'all' ? t('libraryPage.allFolders', 'All folders') : folder}
+                      {folder === 'all' ? t('libraryPage.allFolders', 'All folders') : getFolderName(folder)}
                     </Button>
                   ))}
                 </div>
@@ -862,7 +876,7 @@ export default function LibraryPage() {
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="truncate">{sourceDraft.title || t('libraryPage.untitledSource', 'Untitled source')}</SheetTitle>
                     <SheetDescription className="mt-1">
-                      {[sourceDraft.folder || 'General', formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
+                      {[getFolderName(sourceDraft.folder || 'General'), formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
                     </SheetDescription>
                   </div>
                 </div>
@@ -886,7 +900,7 @@ export default function LibraryPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {['General', ...folders.filter(f => f !== 'General')].map((folder) => (
-                            <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                            <SelectItem key={folder} value={folder}>{getFolderName(folder)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

@@ -67,6 +67,26 @@ describe('useSpeechToText locale', () => {
     expect(instances[1].abort).toHaveBeenCalledOnce();
   });
 
+  it('can restart after the language changes during active dictation', async () => {
+    const { result } = renderHook(() => useSpeechToText());
+    await waitFor(() => expect(instances).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.startListening();
+    });
+    expect(result.current.isListening).toBe(true);
+
+    act(() => useSettingsStore.setState({ language: 'hu' }));
+    await waitFor(() => expect(instances).toHaveLength(2));
+    expect(result.current.isListening).toBe(false);
+
+    await act(async () => {
+      await result.current.startListening();
+    });
+    expect(instances[1].start).toHaveBeenCalledOnce();
+    expect(result.current.isListening).toBe(true);
+  });
+
   it('reports unsupported browsers without constructing recognition', () => {
     Object.defineProperty(window, 'SpeechRecognition', { configurable: true, value: undefined });
     const { result } = renderHook(() => useSpeechToText());

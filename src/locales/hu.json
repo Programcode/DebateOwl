@@ -883,6 +883,12 @@
     "critical": "Kritikus",
     "major": "Jelentős",
     "minor": "Kisebb",
+    "types": {
+      "logical": "Logikai",
+      "evidential": "Bizonyítéki",
+      "structural": "Szerkezeti",
+      "strategic": "Stratégiai"
+    },
     "discuss": "Megvitatás",
     "exportedDocx": "Támadás elemzés exportálva DOCX-ba!",
     "exportedGdocs": "Támadás elemzés exportálva Google Docs-ba!",
@@ -1322,6 +1328,9 @@
     "saveImported": "Importált forrás mentése",
     "words": "szó",
     "folder": "Mappa",
+    "generalFolder": "Általános",
+    "deleteSourceLabel": "{{title}} törlése",
+    "toggleSourceLabel": "{{title}} be- vagy kikapcsolása",
     "newFolder": "Új mappa",
     "newFolderPlaceholder": "Mappa neve...",
     "newFolderHint": "Új mappára van szükség? Használd a felső „Új mappa” gombot.",
@@ -1899,6 +1908,22 @@
   "sourceQuality": {
     "researchedSources": "Kutatási források",
     "fallbackOnly": "csak háttérkontextus",
-    "fallbackNote": "A gyenge források csak háttérkontextusok, soha nem támasztanak alá idézeteket."
+    "fallbackNote": "A gyenge források csak háttérkontextusok, soha nem támasztanak alá idézeteket.",
+    "types": {
+      "academic": "Tudományos",
+      "government": "Kormányzati",
+      "news": "Hírforrás",
+      "social": "Közösségi",
+      "official": "Hivatalos",
+      "results": "Eredmények",
+      "encyclopedia": "Enciklopédia",
+      "video": "Videó",
+      "generic": "Általános"
+    },
+    "labels": {
+      "strong": "Erős",
+      "moderate": "Közepes",
+      "weak": "Gyenge"
+    }
   }
 }

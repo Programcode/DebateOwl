@@ -212,6 +212,25 @@ describe('LibraryPage', () => {
     expect(screen.getByText(/1 sources/)).toBeDefined();
   });
 
+  it('localizes the canonical General folder and source controls in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    mockStore.sourceLibrary = [{
+      id: '1',
+      title: 'Forrás',
+      content: 'Bizonyíték',
+      type: 'text',
+      folder: 'General',
+      isActive: true,
+      createdAt: Date.now(),
+    }];
+
+    render(<LibraryPage />);
+
+    expect(screen.getAllByText('Általános').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Forrás törlése' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Forrás be- vagy kikapcsolása' })).toBeInTheDocument();
+  });
+
   it('opens a source detail sheet and saves edits', async () => {
     mockStore.sourceFolders = ['General', 'Round 1'];
     mockStore.sourceLibrary = [

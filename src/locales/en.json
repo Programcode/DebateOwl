@@ -883,6 +883,12 @@
     "critical": "Critical",
     "major": "Major",
     "minor": "Minor",
+    "types": {
+      "logical": "Logical",
+      "evidential": "Evidential",
+      "structural": "Structural",
+      "strategic": "Strategic"
+    },
     "discuss": "Discuss",
     "exportedDocx": "Attack analysis exported to DOCX!",
     "exportedGdocs": "Attack analysis exported to Google Docs!",
@@ -1325,6 +1331,9 @@
     "saveImported": "Save imported source",
     "words": "words",
     "folder": "Folder",
+    "generalFolder": "General",
+    "deleteSourceLabel": "Delete {{title}}",
+    "toggleSourceLabel": "Toggle {{title}}",
     "newFolder": "New folder",
     "newFolderPlaceholder": "Folder name...",
     "newFolderHint": "Need a new folder? Use the \"New folder\" button up top.",
@@ -1899,6 +1908,22 @@
   "sourceQuality": {
     "researchedSources": "Researched sources",
     "fallbackOnly": "fallback context only",
-    "fallbackNote": "Weak sources are fallback context only and never support citations."
+    "fallbackNote": "Weak sources are fallback context only and never support citations.",
+    "types": {
+      "academic": "Academic",
+      "government": "Government",
+      "news": "News",
+      "social": "Social",
+      "official": "Official",
+      "results": "Results",
+      "encyclopedia": "Encyclopedia",
+      "video": "Video",
+      "generic": "General"
+    },
+    "labels": {
+      "strong": "Strong",
+      "moderate": "Moderate",
+      "weak": "Weak"
+    }
   }
 }

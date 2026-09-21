@@ -269,7 +269,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                         aria-label={t('admin.announcements.selectRecipient', { email: user.email })}
                       />
                       <span className="min-w-0 flex-1 truncate text-sm">{user.email}</span>
-                      <Badge variant="secondary">{user.role}</Badge>
+                      <Badge variant="secondary">{t(`admin.users.roles.${user.role}`, user.role)}</Badge>
                     </label>
                   ))}
                   {filteredUsers.length === 0 && (

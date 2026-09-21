@@ -53,12 +53,12 @@ export function SourceQualityList({ sources, className }: SourceQualityListProps
             )}
             {source.sourceType && (
               <Badge variant="outline" className="text-[11px] px-1.5 py-0">
-                {source.sourceType}
+                {t(`sourceQuality.types.${source.sourceType}`, source.sourceType)}
               </Badge>
             )}
             {source.qualityLabel && (
               <Badge variant="outline" className={`text-[11px] px-1.5 py-0 ${QUALITY_STYLES[source.qualityLabel] ?? ''}`}>
-                {source.qualityLabel}
+                {t(`sourceQuality.labels.${source.qualityLabel}`, source.qualityLabel)}
               </Badge>
             )}
             {source.qualityLabel === 'weak' && (

@@ -10,7 +10,9 @@ export function AutoSavedSourcesUndo() {
   const sourceLibrary = useSessionStore((state) => state.sourceLibrary);
   const removeSource = useSessionStore((state) => state.removeSource);
   const [removing, setRemoving] = useState(false);
-  const autoSavedSources = sourceLibrary.filter((source) => source.folder === 'Auto-saved');
+  const autoSavedSources = sourceLibrary.filter((source) =>
+    source.folder === 'Auto-saved' || Boolean(source.metadata?.capturedVia),
+  );
 
   if (autoSavedSources.length === 0) return null;
 

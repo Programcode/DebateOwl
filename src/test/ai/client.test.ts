@@ -369,7 +369,7 @@ describe('AI Client Integration', () => {
             expect(clientMocks.session.addSource).toHaveBeenCalledWith(expect.objectContaining({
                 title: 'Study',
                 content: 'Provider content',
-                folder: 'Automatikusan mentett',
+                folder: 'Auto-saved',
             }));
 
             clientMocks.session.addSource.mockRejectedValueOnce(new Error('save failed'));

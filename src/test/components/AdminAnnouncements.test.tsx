@@ -107,6 +107,22 @@ describe('AdminAnnouncements', () => {
     }));
   });
 
+  it('localizes recipient roles in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    render(
+      <AdminAnnouncements
+        users={[{
+          id: '11111111-2222-4333-8444-555555555555',
+          email: 'user@example.com',
+          role: 'user',
+        }]}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Audience'), { target: { value: 'users' } });
+    expect(await screen.findByText('Felhasználó')).toBeInTheDocument();
+  });
+
   it('deactivates an announcement without removing it from history', async () => {
     const activeAnnouncement: AdminAnnouncement = {
       id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',

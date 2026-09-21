@@ -883,6 +883,12 @@
     "critical": "Crítico",
     "major": "Mayor",
     "minor": "Menor",
+    "types": {
+      "logical": "Lógica",
+      "evidential": "Probatoria",
+      "structural": "Estructural",
+      "strategic": "Estratégica"
+    },
     "discuss": "Discutir",
     "exportedDocx": "¡Análisis de ataque exportado a DOCX!",
     "exportedGdocs": "¡Análisis de ataque exportado a Google Docs!",
@@ -1322,6 +1328,9 @@
     "saveImported": "Guardar fuente importada",
     "words": "palabras",
     "folder": "Carpeta",
+    "generalFolder": "General",
+    "deleteSourceLabel": "Eliminar {{title}}",
+    "toggleSourceLabel": "Activar o desactivar {{title}}",
     "newFolder": "Nueva carpeta",
     "newFolderPlaceholder": "Nombre de carpeta...",
     "newFolderHint": "¿Necesitas una carpeta nueva? Usa el botón \"Nueva carpeta\" arriba.",
@@ -1899,6 +1908,22 @@
   "sourceQuality": {
     "researchedSources": "Fuentes investigadas",
     "fallbackOnly": "solo contexto de respaldo",
-    "fallbackNote": "Las fuentes débiles son solo contexto de respaldo y nunca sostienen citas."
+    "fallbackNote": "Las fuentes débiles son solo contexto de respaldo y nunca sostienen citas.",
+    "types": {
+      "academic": "Académica",
+      "government": "Gubernamental",
+      "news": "Noticias",
+      "social": "Social",
+      "official": "Oficial",
+      "results": "Resultados",
+      "encyclopedia": "Enciclopedia",
+      "video": "Vídeo",
+      "generic": "General"
+    },
+    "labels": {
+      "strong": "Fuerte",
+      "moderate": "Moderada",
+      "weak": "Débil"
+    }
   }
 }
