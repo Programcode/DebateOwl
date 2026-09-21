@@ -2,27 +2,11 @@
 // Creates and manages shareable links for debate content
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders } from "../_shared/cors.ts";
 
-const PUBLIC_WEB_APP_ORIGIN = "https://debate.pi-stack.org";
 
 // SECURITY: Allow specific origins for CORS
-const ALLOWED_ORIGINS = [
-    PUBLIC_WEB_APP_ORIGIN,
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://localhost:5173",
-    "http://127.0.0.1:54321",
-    "capacitor://localhost"
-];
 
-function getCorsHeaders(origin: string | null) {
-    const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-    return {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-    };
-}
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ALLOWED_ORIGINS, getCorsHeaders } from "../_shared/cors.ts";
 import {
   getDemoCodeDenialReason,
   getDemoLoginRole,
@@ -9,15 +10,6 @@ import {
   normalizeDemoCode,
 } from "../_shared/demo-code.ts";
 
-const ALLOWED_ORIGINS = [
-  "https://debate.pi-stack.org",
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-  "http://localhost:18080",
-  "http://127.0.0.1:18080",
-  "http://localhost:5173",
-  "http://127.0.0.1:54321",
-];
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -35,14 +27,6 @@ type DemoAccessCode = {
   disabled_at: string | null;
 };
 
-function getCorsHeaders(origin: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-}
 
 // Only hand generateLink a redirectTo that points at one of our own origins,
 // so a client-supplied value can't be used for an open redirect off the auth
@@ -51,7 +35,14 @@ function sanitizeRedirectTo(value: unknown): string | undefined {
   if (typeof value !== "string" || !value) return undefined;
   try {
     const url = new URL(value);
-    return ALLOWED_ORIGINS.includes(`${url.protocol}//${url.host}`) ? value : undefined;
+    // Web origins only. The shared CORS list also carries the Capacitor
+    // WebView scheme, which must never be a generateLink redirect target.
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    return ALLOWED_ORIGINS.includes(
+      `${url.protocol}//${url.host}` as typeof ALLOWED_ORIGINS[number],
+    )
+      ? value
+      : undefined;
   } catch {
     return undefined;
   }

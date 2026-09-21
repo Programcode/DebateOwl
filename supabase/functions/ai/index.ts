@@ -5,25 +5,7 @@
 // SECURITY: Using production domain. Localhost calls from dev browser work because 
 // browsers accept specific origin even when request is from different origin.
 // SECURITY: Allow specific origins for CORS
-const ALLOWED_ORIGINS = [
-  "https://debate.pi-stack.org",
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-  "http://localhost:18080",
-  "http://127.0.0.1:18080",
-  "http://localhost:5173",
-  "http://127.0.0.1:54321", // Local Supabase
-  "capacitor://localhost"
-];
 
-function getCorsHeaders(origin: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-}
 
 type Feature = "generate" | "attack" | "brainstorm" | "factoids" | "ask" | "sparring" | "crossfire";
 
@@ -121,6 +103,12 @@ import {
   type ResearchDeps,
   type ResearchSource,
 } from "../_shared/research.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  checkRateLimit,
+  logUsage,
+  type RateLimitResult,
+} from "../_shared/entitlements.ts";
 import {
   MAX_CROSSFIRE_REPLY_CHARS,
   validateCrossfireDebrief,
@@ -147,33 +135,6 @@ function modelForRequest(model: string): ModelCatalogEntry {
   return entry;
 }
 
-interface RateLimitResult {
-  allowed: boolean;
-  canAccessProModels?: boolean;
-  reason?: string;
-  limit?: number;
-  current?: number;
-  code?: "limit_reached" | "trial_expired" | "banned" | "upgrade_required";
-  statusCode?: number;
-}
-
-interface SubscriptionInfo {
-  tier: string; // 'trial' | 'pro' | 'legacy_free' | 'expired'
-  dailyLimit: number;
-  canAccessProModels: boolean;
-  trialEndsAt: string | null;
-  gracePeriodEndsAt: string | null;
-}
-
-async function checkUserBanned(userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .single();
-  return data?.role === "banned";
-}
-
 async function getGlobalPrompt(feature: string): Promise<string | null> {
   // First try feature-specific prompt
   const { data: featurePrompt } = await supabase
@@ -198,245 +159,6 @@ async function getGlobalPrompt(feature: string): Promise<string | null> {
   return allPrompt?.prompt_text || null;
 }
 
-async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
-  const { data: user } = await supabase
-    .from("user_settings")
-    .select("subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at")
-    .eq("user_id", userId)
-    .single();
-
-  // A settings row is provisioned for every account by the on_auth_user_created
-  // trigger and can no longer be deleted by the client (see 20260819000000
-  // security_hardening.sql). A missing row is therefore untrusted, not a new
-  // user — fail closed instead of granting a fresh trial.
-  if (!user) return { tier: "expired", dailyLimit: 0, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
-
-  const tier = user.subscription_tier || "trial";
-  const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
-  const now = new Date();
-  const expired = { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-  const activeGiftTrial = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-  const giftTrialInfo = activeGiftTrial && now < activeGiftTrial
-    ? { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
-    : null;
-
-  // Legacy free users in grace period get pro-level access
-  if (tier === "legacy_free") {
-    const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-    if (graceEnd && now < graceEnd) {
-      const limit = limitOrDefault(50);
-      return { tier: "legacy_free", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-    if (giftTrialInfo) return giftTrialInfo;
-    // Grace period expired — treat as expired
-    return expired;
-  }
-
-  // Pro subscribers or promo Pro access. Stripe Pro must have an active
-  // subscription period; promo Pro uses grace_period_ends_at, with lifetime
-  // promo codes represented by a far-future date.
-  if (tier === "pro") {
-    const promoEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-    if (promoEnd && now < promoEnd) {
-      const limit = limitOrDefault(50);
-      return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-
-    const { data: subscriptions } = await supabase
-      .from("subscriptions")
-      .select("status, current_period_end")
-      .eq("user_id", userId)
-      .in("status", ["active", "trialing"])
-      .order("current_period_end", { ascending: false })
-      .limit(1);
-
-    const activeSubscription = subscriptions?.find((sub) =>
-      sub.current_period_end && new Date(sub.current_period_end) > now
-    );
-
-    if (activeSubscription) {
-      const limit = limitOrDefault(50);
-      return { tier: "pro", dailyLimit: limit, canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-
-    if (giftTrialInfo) return giftTrialInfo;
-    return expired;
-  }
-
-  // Trial users
-  if (tier === "trial") {
-    const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-    if (trialEnd && now < trialEnd) {
-      const limit = limitOrDefault(5);
-      return { tier: "trial", dailyLimit: limit, canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-    // Trial expired
-    return expired;
-  }
-
-  if (giftTrialInfo) return giftTrialInfo;
-
-  // Expired
-  return expired;
-}
-
-async function getConfiguredDailyLimit(userId: string, fallbackLimit: number): Promise<number> {
-  const { data: userLimit } = await supabase
-    .from("rate_limits")
-    .select("limit_value")
-    .eq("user_id", userId)
-    .eq("limit_type", "daily_requests")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (typeof userLimit?.limit_value === "number") {
-    return userLimit.limit_value;
-  }
-
-  const { data: globalLimit } = await supabase
-    .from("rate_limits")
-    .select("limit_value")
-    .is("user_id", null)
-    .eq("limit_type", "daily_requests")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (typeof globalLimit?.limit_value === "number") {
-    return globalLimit.limit_value;
-  }
-
-  return fallbackLimit;
-}
-
-async function checkRateLimit(userId: string | null, model?: string): Promise<RateLimitResult> {
-  if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
-
-  try {
-    // First check if user is banned
-    const isBanned = await checkUserBanned(userId);
-    if (isBanned) {
-      return { allowed: false, reason: "Your account has been suspended. Please contact support.", code: "banned", statusCode: 403 };
-    }
-
-    // Get subscription info
-    const sub = await getSubscriptionInfo(userId);
-    const dailyLimit = sub.tier === "expired" && sub.dailyLimit === 0
-      ? 0
-      : await getConfiguredDailyLimit(userId, sub.dailyLimit);
-
-    // Check if trial/access expired (limit = 0)
-    if (sub.tier === "expired" && dailyLimit === 0) {
-      return {
-        allowed: false,
-        reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.",
-        code: "trial_expired",
-        limit: 0,
-        current: 0,
-        statusCode: 402,
-      };
-    }
-
-    // Check model access
-    if (model && getModelCatalogEntry(model)?.isProOnly && !sub.canAccessProModels) {
-      return {
-        allowed: false,
-        reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.",
-        code: "upgrade_required",
-        statusCode: 403,
-      };
-    }
-
-    if (dailyLimit <= 0) {
-      return {
-        allowed: false,
-        reason: "Your daily request limit is currently set to zero. Contact support if this seems wrong.",
-        code: "limit_reached",
-        limit: 0,
-        current: 0,
-        statusCode: 402,
-      };
-    }
-
-    // Atomically reserve today's request slot server-side so concurrent requests
-    // can't race past the limit (see consume_daily_quota in the security hardening migration).
-    const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
-      p_user_id: userId,
-      p_limit: dailyLimit,
-    });
-
-    if (quotaError) {
-      console.error("[RATE LIMIT] Quota reservation failed:", quotaError);
-      return { allowed: false, reason: "Unable to verify your quota. Please try again.", statusCode: 500 };
-    }
-
-    const quotaRow = Array.isArray(quota) ? quota[0] : quota;
-    const currentCount = quotaRow?.current_count ?? 0;
-
-    if (!quotaRow?.allowed) {
-      return {
-        allowed: false,
-        reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`,
-        code: "limit_reached",
-        limit: dailyLimit,
-        current: currentCount,
-        statusCode: 402,
-      };
-    }
-
-    return { allowed: true, limit: dailyLimit, current: currentCount, canAccessProModels: sub.canAccessProModels };
-  } catch (err) {
-    console.error("[RATE LIMIT] Check failed:", err);
-    return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
-  }
-}
-
-async function logUsage(
-  userId: string | null,
-  feature: string,
-  provider: Provider,
-  model: string,
-  usage?: NormalizedUsage,
-  latencyMs?: number,
-  status: string = "success",
-  errorCode?: string
-) {
-  try {
-    const cost: CostResult = usage
-      ? calculateRequestCost({ provider, model, usage })
-      : calculateRequestCost({ provider, model });
-
-    const row: Record<string, unknown> = {
-      user_id: userId,
-      feature,
-      provider,
-      model,
-      input_tokens: cost.inputTokens,
-      output_tokens: cost.outputTokens,
-      latency_ms: latencyMs,
-      status,
-      error_code: errorCode,
-      cost_usd: cost.costUsd,
-    };
-
-    // Audit columns added by migration 20260822000000_ai_request_cost_audit.sql.
-    const auditFields: Record<string, unknown> = {
-      cached_input_tokens: cost.cachedInputTokens,
-      cache_write_tokens: cost.cacheWriteTokens,
-      reasoning_output_tokens: cost.reasoningOutputTokens,
-      pricing_snapshot_id: cost.pricingSnapshotId,
-      pricing_source_url: cost.pricingSourceUrl,
-      cost_calculation_version: cost.costCalculationVersion,
-      raw_usage: cost.rawUsage ?? null,
-    };
-
-    const { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
-    if (error) throw error;
-  } catch (err) {
-    console.warn("[USAGE LOG] Failed to log:", err);
-  }
-}
 
 function badRequest(message: string, corsHeaders: Record<string, string>, status = 400) {
   return new Response(JSON.stringify({ error: message }), {
