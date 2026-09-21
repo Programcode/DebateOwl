@@ -1,7 +1,7 @@
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getGoogleAccessToken } from "../_shared/google-connections.ts";
 
-const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080"];
+const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080", "capacitor://localhost"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function cors(origin: string | null) {
@@ -42,12 +42,13 @@ function googleInline(elements: unknown[]) {
     if (!text) return "";
     if (style.bold) text = `**${text}**`;
     if (style.italic) text = `*${text}*`;
+    if (style.strikethrough) text = `~~${text}~~`;
     const link = style.link && typeof style.link === "object" ? String((style.link as Record<string, unknown>).url ?? "") : "";
     return link && /^https?:\/\//i.test(link) ? `[${text}](${link})` : text;
   }).join("");
 }
 
-function structuralMarkdown(content: unknown[]) {
+function structuralMarkdown(content: unknown[], lists: Record<string, unknown> = {}) {
   const lines: string[] = [];
   for (const raw of content) {
     const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
@@ -57,8 +58,18 @@ function structuralMarkdown(content: unknown[]) {
       const style = paragraph.paragraphStyle && typeof paragraph.paragraphStyle === "object" ? paragraph.paragraphStyle as Record<string, unknown> : {};
       const named = String(style.namedStyleType ?? "");
       const heading = /^HEADING_(\d)$/.exec(named);
-      const bullet = paragraph.bullet ? "- " : "";
-      lines.push(`${heading ? `${"#".repeat(Number(heading[1]))} ` : bullet}${text}`);
+      const bullet = paragraph.bullet && typeof paragraph.bullet === "object" ? paragraph.bullet as Record<string, unknown> : null;
+      let listPrefix = "";
+      if (bullet) {
+        const list = lists[String(bullet.listId)] as Record<string, unknown> | undefined;
+        const properties = list?.listProperties as Record<string, unknown> | undefined;
+        const levels = Array.isArray(properties?.nestingLevels) ? properties.nestingLevels : [];
+        const nesting = Math.max(0, Number(bullet.nestingLevel ?? 0));
+        const level = levels[nesting] && typeof levels[nesting] === "object" ? levels[nesting] as Record<string, unknown> : {};
+        const ordered = /DECIMAL|ALPHA|ROMAN/i.test(String(level.glyphType ?? ""));
+        listPrefix = `${"  ".repeat(nesting)}${ordered ? "1." : "-"} `;
+      }
+      lines.push(`${heading ? `${"#".repeat(Number(heading[1]))} ` : listPrefix}${text}`);
       continue;
     }
     const table = item.table && typeof item.table === "object" ? item.table as Record<string, unknown> : null;
@@ -69,7 +80,7 @@ function structuralMarkdown(content: unknown[]) {
         const cells = Array.isArray(row.tableCells) ? row.tableCells : [];
         lines.push(`| ${cells.map((rawCell) => {
           const cell = rawCell && typeof rawCell === "object" ? rawCell as Record<string, unknown> : {};
-          return structuralMarkdown(Array.isArray(cell.content) ? cell.content : []).replace(/\n+/g, " ").trim();
+          return structuralMarkdown(Array.isArray(cell.content) ? cell.content : [], lists).replace(/\n+/g, " ").trim();
         }).join(" | ")} |`);
         if (rowIndex === 0) lines.push(`| ${cells.map(() => "---").join(" | ")} |`);
       });
@@ -78,11 +89,12 @@ function structuralMarkdown(content: unknown[]) {
   return lines.join("\n");
 }
 
-function tabsMarkdown(document: Record<string, unknown>) {
+export function tabsMarkdown(document: Record<string, unknown>) {
   const tabs = Array.isArray(document.tabs) ? document.tabs : [];
   if (!tabs.length) {
     const body = document.body && typeof document.body === "object" ? document.body as Record<string, unknown> : {};
-    return [{ title: String(document.title ?? "Google document"), markdown: structuralMarkdown(Array.isArray(body.content) ? body.content : []) }];
+    const lists = document.lists && typeof document.lists === "object" ? document.lists as Record<string, unknown> : {};
+    return [{ title: String(document.title ?? "Google document"), markdown: structuralMarkdown(Array.isArray(body.content) ? body.content : [], lists) }];
   }
   const output: Array<{ title: string; markdown: string }> = [];
   const visit = (raw: unknown) => {
@@ -90,35 +102,159 @@ function tabsMarkdown(document: Record<string, unknown>) {
     const properties = tab.tabProperties && typeof tab.tabProperties === "object" ? tab.tabProperties as Record<string, unknown> : {};
     const content = tab.documentTab && typeof tab.documentTab === "object" ? tab.documentTab as Record<string, unknown> : {};
     const body = content.body && typeof content.body === "object" ? content.body as Record<string, unknown> : {};
-    output.push({ title: String(properties.title ?? "Tab"), markdown: structuralMarkdown(Array.isArray(body.content) ? body.content : []) });
+    const lists = content.lists && typeof content.lists === "object" ? content.lists as Record<string, unknown> : {};
+    output.push({ title: String(properties.title ?? "Tab"), markdown: structuralMarkdown(Array.isArray(body.content) ? body.content : [], lists) });
     if (Array.isArray(tab.childTabs)) tab.childTabs.forEach(visit);
   };
   tabs.forEach(visit);
   return output;
 }
 
-function markdownRequests(markdown: string) {
-  const requests: Record<string, unknown>[] = [];
-  let text = "";
-  const paragraphs: Array<{ start: number; end: number; heading?: number; bullet?: boolean }> = [];
-  for (const rawLine of markdown.split(/\r?\n/)) {
-    const heading = /^(#{1,6})\s+(.*)$/.exec(rawLine);
-    const bullet = /^\s*(?:[-+*]|\d+\.)\s+(.*)$/.exec(rawLine);
-    const line = heading?.[2] ?? bullet?.[1] ?? rawLine;
-    const plain = line.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/~~([^~]+)~~/g, "$1");
-    const start = text.length + 1;
-    text += `${plain}\n`;
-    paragraphs.push({ start, end: text.length + 1, heading: heading?.[1].length, bullet: Boolean(bullet) });
-  }
-  requests.push({ insertText: { endOfSegmentLocation: {}, text } });
-  for (const paragraph of paragraphs) {
-    if (paragraph.heading) requests.push({ updateParagraphStyle: { fields: "namedStyleType", paragraphStyle: { namedStyleType: `HEADING_${paragraph.heading}` }, range: { startIndex: paragraph.start, endIndex: paragraph.end } } });
-    if (paragraph.bullet) requests.push({ createParagraphBullets: { bulletPreset: "BULLET_DISC_CIRCLE_SQUARE", range: { startIndex: paragraph.start, endIndex: paragraph.end } } });
-  }
-  return requests;
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-Deno.serve(async (req) => {
+function safeLink(value: string) {
+  if (/^https?:\/\//i.test(value)) return value;
+  if (!value.startsWith("debatelab-citation:")) return null;
+  try {
+    const query = value.split("?", 2)[1] ?? "";
+    const href = new URLSearchParams(query).get("href");
+    return href && /^https?:\/\//i.test(href) ? href : null;
+  } catch {
+    return null;
+  }
+}
+
+function inlineHtml(value: string): string {
+  const links: string[] = [];
+  const withPlaceholders: string = value.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_match, label: string, destination: string): string => {
+    const href = safeLink(destination);
+    const html: string = href ? `<a href="${escapeHtml(href)}">${inlineHtml(label)}</a>` : inlineHtml(label);
+    const index: number = links.push(html) - 1;
+    return `\uE000LINK${index}\uE000`;
+  });
+  return escapeHtml(withPlaceholders)
+    .replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/~~([^~]+)~~/g, "<s>$1</s>")
+    .replace(/\uE000LINK(\d+)\uE000/g, (_match, index: string) => links[Number(index)] ?? "");
+}
+
+function splitMarkdownRow(line: string) {
+  return line.trim().replace(/^\||\|$/g, "").split(/(?<!\\)\|/).map((cell) => cell.trim().replace(/\\\|/g, "|"));
+}
+
+function listHtml(lines: string[]) {
+  let html = "";
+  const stack: Array<"ol" | "ul"> = [];
+  let currentDepth = -1;
+  for (const line of lines) {
+    const match = /^(\s*)([-+*]|\d+\.)\s+(.*)$/.exec(line)!;
+    const depth = Math.floor(match[1].length / 2);
+    const type = /\d+\./.test(match[2]) ? "ol" : "ul";
+    while (currentDepth > depth) {
+      html += `</li></${stack.pop()}>`;
+      currentDepth -= 1;
+    }
+    if (currentDepth === depth && currentDepth >= 0) html += "</li>";
+    if (stack[depth] && stack[depth] !== type) {
+      html += `</${stack.pop()}>`;
+      currentDepth -= 1;
+    }
+    while (currentDepth < depth) {
+      stack.push(type);
+      html += `<${type}>`;
+      currentDepth += 1;
+    }
+    if (currentDepth < 0) {
+      stack.push(type);
+      html += `<${type}>`;
+      currentDepth = 0;
+    }
+    html += `<li>${inlineHtml(match[3])}`;
+  }
+  while (currentDepth >= 0) {
+    html += `</li></${stack.pop()}>`;
+    currentDepth -= 1;
+  }
+  return html;
+}
+
+export function markdownToGoogleHtml(markdown: string, title: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks: string[] = [];
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index];
+    if (!line.trim()) { index += 1; continue; }
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      blocks.push(`<h${heading[1].length}>${inlineHtml(heading[2])}</h${heading[1].length}>`);
+      index += 1;
+      continue;
+    }
+    if (/^\s*(?:[-+*]|\d+\.)\s+/.test(line)) {
+      const start = index;
+      while (index < lines.length && /^\s*(?:[-+*]|\d+\.)\s+/.test(lines[index])) index += 1;
+      blocks.push(listHtml(lines.slice(start, index)));
+      continue;
+    }
+    if (/^\s*\|/.test(line) && /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[index + 1] ?? "")) {
+      const rows: string[][] = [];
+      while (index < lines.length && /^\s*\|/.test(lines[index])) {
+        if (!/^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[index])) rows.push(splitMarkdownRow(lines[index]));
+        index += 1;
+      }
+      blocks.push(`<table>${rows.map((row, rowIndex) => `<tr>${row.map((cell) => `<${rowIndex ? "td" : "th"}>${inlineHtml(cell)}</${rowIndex ? "td" : "th"}>`).join("")}</tr>`).join("")}</table>`);
+      continue;
+    }
+    blocks.push(`<p>${inlineHtml(line)}</p>`);
+    index += 1;
+  }
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body>${blocks.join("\n")}</body></html>`;
+}
+
+export async function findOrCreateGoogleDocument(accessToken: string, requestId: string, title: string, markdown: string) {
+  const markerQuery = `appProperties has { key='debatelabRequestId' and value='${requestId}' } and trashed = false`;
+  const searchUrl = new URL("https://www.googleapis.com/drive/v3/files");
+  searchUrl.search = new URLSearchParams({ fields: "files(id)", pageSize: "2", q: markerQuery, spaces: "drive" }).toString();
+  const searchResponse = await fetch(searchUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const search = await searchResponse.json() as { files?: Array<{ id?: string }> };
+  if (!searchResponse.ok) throw new Error("Google export reconciliation failed");
+  const existing = search.files?.find((file) => file.id)?.id;
+  if (existing) return existing;
+
+  const boundary = `debatelab_${crypto.randomUUID()}`;
+  const metadata = JSON.stringify({
+    appProperties: { debatelabRequestId: requestId },
+    mimeType: "application/vnd.google-apps.document",
+    name: title,
+  });
+  const media = markdownToGoogleHtml(markdown, title);
+  const body = [
+    `--${boundary}`,
+    "Content-Type: application/json; charset=UTF-8",
+    "",
+    metadata,
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "",
+    media,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+  const createdResponse = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+    body,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+    method: "POST",
+  });
+  const created = await createdResponse.json() as { id?: string };
+  if (!createdResponse.ok || !created.id) throw new Error("Google document creation failed");
+  return created.id;
+}
+
+export async function handleRequest(req: Request) {
   const headers = cors(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
   try {
@@ -160,34 +296,17 @@ Deno.serve(async (req) => {
       if (!operation || insertError && insertError.code !== "23505") throw new Error("Google export could not start");
       let fileId = operation.provider_file_id as string | null;
       if (!fileId) {
-        const createdResponse = await fetch("https://docs.googleapis.com/v1/documents", {
-          body: JSON.stringify({ title }),
-          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-          method: "POST",
-        });
-        const created = await createdResponse.json() as { documentId?: string };
-        if (!createdResponse.ok || !created.documentId) throw new Error("Google document creation failed");
-        fileId = created.documentId;
-        await auth.adminClient.from("google_file_operations").update({ provider_file_id: fileId, updated_at: new Date().toISOString() }).eq("id", operation.id);
+        fileId = await findOrCreateGoogleDocument(accessToken, requestId, title, markdown);
       }
-      const currentResponse = await fetch(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(fileId)}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-      const current = await currentResponse.json() as { body?: { content?: Array<{ endIndex?: number }> } };
-      const endIndex = current.body?.content?.at(-1)?.endIndex ?? 1;
-      const requests = [
-        ...(endIndex > 2 ? [{ deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } }] : []),
-        ...markdownRequests(markdown),
-      ];
-      const updateResponse = await fetch(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(fileId)}:batchUpdate`, {
-        body: JSON.stringify({ requests }),
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        method: "POST",
-      });
-      if (!updateResponse.ok) throw new Error("Google document formatting failed");
-      await auth.adminClient.from("google_file_operations").update({ status: "complete", updated_at: new Date().toISOString() }).eq("id", operation.id);
+      const saved = await auth.adminClient.from("google_file_operations")
+        .update({ provider_file_id: fileId, status: "complete", updated_at: new Date().toISOString() }).eq("id", operation.id);
+      if (saved.error) throw new Error("Google export confirmation failed");
       return json({ documentId: fileId, url: `https://docs.google.com/document/d/${fileId}/edit` }, 200, headers);
     }
     throw new HttpError(400, "Invalid action");
   } catch (error) {
     return jsonError(error, headers);
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleRequest);

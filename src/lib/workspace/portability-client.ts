@@ -80,6 +80,12 @@ export async function deletePrivateWritingItem(id: string) {
   if (error) throw error;
 }
 
+export async function updatePrivateWritingItem(id: string, input: { content: unknown; title: string }) {
+  const { error } = await supabase.from("private_writing_items")
+    .update({ ...input, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw error;
+}
+
 function decodeSnapshot(value: string) {
   const binary = atob(value.replace(/\s/g, ""));
   const snapshot = Uint8Array.from(binary, (character) => character.charCodeAt(0));

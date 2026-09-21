@@ -35,7 +35,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { deletePrivateWritingItem, listPrivateWritingItems } from '@/lib/workspace/portability-client';
+import { deletePrivateWritingItem, listPrivateWritingItems, updatePrivateWritingItem } from '@/lib/workspace/portability-client';
+import { fromWorkspaceMarkdown, toWorkspaceMarkdown } from '@/lib/workspace/document-conversion';
+import { workspaceSchema } from '@/lib/workspace/schema';
 
 const SOURCE_ROW_HEIGHT = 92;
 const SOURCE_LIST_HEIGHT = 600;
@@ -164,6 +166,9 @@ export default function LibraryPage() {
       ? t('aiClient.autoSavedFolder')
       : folder;
   const [writingItems, setWritingItems] = useState<Awaited<ReturnType<typeof listPrivateWritingItems>>>([]);
+  const [editingWritingId, setEditingWritingId] = useState<string | null>(null);
+  const [writingTitle, setWritingTitle] = useState('');
+  const [writingMarkdown, setWritingMarkdown] = useState('');
   useEffect(() => {
     void listPrivateWritingItems().then(setWritingItems).catch(() => setWritingItems([]));
   }, []);
@@ -727,12 +732,36 @@ export default function LibraryPage() {
             </CardHeader>
             <CardContent className="grid gap-2">
               {writingItems.length ? writingItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-                  <Badge variant="outline">{item.kind}</Badge>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span>
-                  <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => void deletePrivateWritingItem(item.id).then(() => setWritingItems((current) => current.filter(({ id }) => id !== item.id)))}>
-                    <Trash2 className="mr-1 h-3.5 w-3.5" />{t('common.delete', 'Delete')}
-                  </Button>
+                <div key={item.id} className="grid gap-2 rounded-lg border px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{item.kind}</Badge>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => {
+                      try {
+                        setWritingMarkdown(toWorkspaceMarkdown(workspaceSchema.nodeFromJSON(item.content).toJSON()));
+                        setWritingTitle(item.title);
+                        setEditingWritingId(item.id);
+                      } catch {
+                        toast({ title: t('common.error', 'Error'), description: t('workspaces.invalidLibraryItem', 'This saved item is not a valid workspace document.'), variant: 'destructive' });
+                      }
+                    }}><Pencil className="mr-1 h-3.5 w-3.5" />{t('common.edit', 'Edit')}</Button>
+                    <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => void deletePrivateWritingItem(item.id).then(() => setWritingItems((current) => current.filter(({ id }) => id !== item.id)))}>
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />{t('common.delete', 'Delete')}
+                    </Button>
+                  </div>
+                  {editingWritingId === item.id && (
+                    <div className="grid gap-2 border-t pt-2">
+                      <Input aria-label={t('libraryPage.privateWritingTitle', 'Saved writing title')} value={writingTitle} onChange={(event) => setWritingTitle(event.target.value)} />
+                      <Textarea aria-label={t('libraryPage.privateWritingContent', 'Saved writing Markdown')} className="min-h-32" value={writingMarkdown} onChange={(event) => setWritingMarkdown(event.target.value)} />
+                      <div className="flex gap-2">
+                        <Button type="button" size="sm" disabled={!writingTitle.trim()} onClick={() => void updatePrivateWritingItem(item.id, { content: fromWorkspaceMarkdown(writingMarkdown), title: writingTitle.trim() }).then(() => {
+                          setWritingItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, content: fromWorkspaceMarkdown(writingMarkdown), title: writingTitle.trim() } : entry));
+                          setEditingWritingId(null);
+                        })}>{t('common.save', 'Save')}</Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingWritingId(null)}>{t('common.cancel', 'Cancel')}</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )) : <p className="text-sm text-muted-foreground">{t('libraryPage.privateWritingEmpty', 'Save selected workspace text as a snippet, or a whole speech as a template.')}</p>}
             </CardContent>

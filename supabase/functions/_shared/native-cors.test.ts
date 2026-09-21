@@ -9,8 +9,10 @@ const browserCalledFunctions = [
   "create-portal",
   "export-gdoc",
   "import-source",
+  "google-connections",
   "redeem-promo",
   "share",
+  "workspace-google-docs",
 ];
 
 for (const functionName of browserCalledFunctions) {

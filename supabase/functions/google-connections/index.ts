@@ -8,7 +8,7 @@ import {
 } from "../_shared/google-connections.ts";
 
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080"];
+const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080", "capacitor://localhost"];
 
 function cors(origin: string | null) {
   return {
