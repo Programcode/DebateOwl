@@ -50,6 +50,7 @@ function googleInline(elements: unknown[]) {
 
 function structuralMarkdown(content: unknown[], lists: Record<string, unknown> = {}) {
   const lines: string[] = [];
+  const listCounters = new Map<string, number>();
   for (const raw of content) {
     const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
     const paragraph = item.paragraph && typeof item.paragraph === "object" ? item.paragraph as Record<string, unknown> : null;
@@ -67,7 +68,10 @@ function structuralMarkdown(content: unknown[], lists: Record<string, unknown> =
         const nesting = Math.max(0, Number(bullet.nestingLevel ?? 0));
         const level = levels[nesting] && typeof levels[nesting] === "object" ? levels[nesting] as Record<string, unknown> : {};
         const ordered = /DECIMAL|ALPHA|ROMAN/i.test(String(level.glyphType ?? ""));
-        listPrefix = `${"  ".repeat(nesting)}${ordered ? "1." : "-"} `;
+        const counterKey = `${String(bullet.listId)}:${nesting}`;
+        const number = listCounters.get(counterKey) ?? Math.max(1, Number(level.startNumber ?? 1));
+        if (ordered) listCounters.set(counterKey, number + 1);
+        listPrefix = `${"  ".repeat(nesting)}${ordered ? `${number}.` : "-"} `;
       }
       lines.push(`${heading ? `${"#".repeat(Number(heading[1]))} ` : listPrefix}${text}`);
       continue;
@@ -127,8 +131,13 @@ function safeLink(value: string) {
 }
 
 function inlineHtml(value: string): string {
+  const literals: string[] = [];
   const links: string[] = [];
-  const withPlaceholders: string = value.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_match, label: string, destination: string): string => {
+  const withoutEscapes = value.replace(/\\([\\`*_\[\]()|])/g, (_match, literal: string) => {
+    const index = literals.push(escapeHtml(literal)) - 1;
+    return `\uE001LITERAL${index}\uE001`;
+  });
+  const withPlaceholders: string = withoutEscapes.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_match, label: string, destination: string): string => {
     const href = safeLink(destination);
     const html: string = href ? `<a href="${escapeHtml(href)}">${inlineHtml(label)}</a>` : inlineHtml(label);
     const index: number = links.push(html) - 1;
@@ -139,7 +148,8 @@ function inlineHtml(value: string): string {
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/~~([^~]+)~~/g, "<s>$1</s>")
-    .replace(/\uE000LINK(\d+)\uE000/g, (_match, index: string) => links[Number(index)] ?? "");
+    .replace(/\uE000LINK(\d+)\uE000/g, (_match, index: string) => links[Number(index)] ?? "")
+    .replace(/\uE001LITERAL(\d+)\uE001/g, (_match, index: string) => literals[Number(index)] ?? "");
 }
 
 function splitMarkdownRow(line: string) {
@@ -163,14 +173,17 @@ function listHtml(lines: string[]) {
       html += `</${stack.pop()}>`;
       currentDepth -= 1;
     }
+    const open = () => type === "ol" && /^\d+\.$/.test(match[2])
+      ? `<ol start="${Number(match[2].slice(0, -1))}">`
+      : `<${type}>`;
     while (currentDepth < depth) {
       stack.push(type);
-      html += `<${type}>`;
+      html += open();
       currentDepth += 1;
     }
     if (currentDepth < 0) {
       stack.push(type);
-      html += `<${type}>`;
+      html += open();
       currentDepth = 0;
     }
     html += `<li>${inlineHtml(match[3])}`;
@@ -296,11 +309,36 @@ export async function handleRequest(req: Request) {
       if (!operation || insertError && insertError.code !== "23505") throw new Error("Google export could not start");
       let fileId = operation.provider_file_id as string | null;
       if (!fileId) {
-        fileId = await findOrCreateGoogleDocument(accessToken, requestId, title, markdown);
+        const claimId = crypto.randomUUID();
+        const claimResult = await auth.adminClient.rpc("claim_google_file_operation", {
+          p_claim_id: claimId,
+          p_request_id: requestId,
+          p_user_id: auth.user.id,
+        });
+        const claim = Array.isArray(claimResult.data) ? claimResult.data[0] : claimResult.data;
+        if (claimResult.error || !claim) throw new Error("Google export could not claim creation");
+        if (!claim.claimed) {
+          for (let attempt = 0; attempt < 20; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            const current = await auth.adminClient.from("google_file_operations")
+              .select("provider_file_id,status").eq("id", operation.id).single();
+            if (current.data?.provider_file_id && current.data.status === "complete") {
+              fileId = current.data.provider_file_id;
+              break;
+            }
+          }
+          if (!fileId) throw new HttpError(409, "Google export is already in progress");
+        } else {
+          fileId = await findOrCreateGoogleDocument(accessToken, requestId, title, markdown);
+          const finished = await auth.adminClient.rpc("finish_google_file_operation", {
+            p_claim_id: claimId,
+            p_operation_id: operation.id,
+            p_provider_file_id: fileId,
+          });
+          if (finished.error || finished.data !== true) throw new Error("Google export confirmation failed");
+        }
       }
-      const saved = await auth.adminClient.from("google_file_operations")
-        .update({ provider_file_id: fileId, status: "complete", updated_at: new Date().toISOString() }).eq("id", operation.id);
-      if (saved.error) throw new Error("Google export confirmation failed");
+      if (!fileId) throw new Error("Google export did not return a document");
       return json({ documentId: fileId, url: `https://docs.google.com/document/d/${fileId}/edit` }, 200, headers);
     }
     throw new HttpError(400, "Invalid action");

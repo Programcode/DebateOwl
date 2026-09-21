@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(18);
+SELECT plan(22);
 
 SELECT has_table('public', 'private_writing_items', 'private writing library exists');
 SELECT has_table('public', 'workspace_document_provenance', 'workspace import provenance exists');
@@ -7,6 +7,8 @@ SELECT has_table('public', 'google_connections', 'separate Google connections ex
 SELECT has_table('public', 'google_file_operations', 'idempotent Google operations exist');
 SELECT has_function('public', 'get_workspace_export_manifest', ARRAY['uuid','uuid[]','boolean'], 'packet export captures a server manifest');
 SELECT has_function('public', 'save_workspace_document_provenance', ARRAY['uuid','uuid','text','jsonb'], 'imports record provenance through an RPC');
+SELECT has_function('public', 'claim_google_file_operation', ARRAY['uuid','uuid','uuid'], 'Google export creation has a database claim');
+SELECT has_function('public', 'finish_google_file_operation', ARRAY['uuid','uuid','text'], 'Google export completion confirms its claim');
 SELECT ok((SELECT relrowsecurity FROM pg_class WHERE oid = 'public.private_writing_items'::regclass), 'private writing enables RLS');
 SELECT ok((SELECT relrowsecurity FROM pg_class WHERE oid = 'public.google_connections'::regclass), 'Google connections enable RLS');
 
@@ -70,6 +72,41 @@ RESET ROLE;
 SELECT ok(NOT has_table_privilege('anon', 'public.private_writing_items', 'SELECT'), 'anonymous callers cannot read private writing');
 SELECT ok(NOT has_column_privilege('authenticated', 'public.google_connections', 'refresh_token_ciphertext', 'SELECT'), 'browser cannot read encrypted refresh tokens');
 SELECT ok(NOT has_function_privilege('authenticated', 'public.claim_google_connection_refresh(uuid,uuid,uuid)', 'EXECUTE'), 'browser cannot claim token refresh');
+
+INSERT INTO public.google_connections (
+  id, user_id, email, account_label, refresh_token_ciphertext
+) VALUES (
+  'a0000000-0000-4000-8000-000000000010',
+  'a1111111-1111-4111-8111-111111111111',
+  'owner@example.com', 'Owner', 'encrypted'
+);
+INSERT INTO public.google_file_operations (
+  id, user_id, connection_id, request_id, kind
+) VALUES (
+  'a0000000-0000-4000-8000-000000000011',
+  'a1111111-1111-4111-8111-111111111111',
+  'a0000000-0000-4000-8000-000000000010',
+  'a0000000-0000-4000-8000-000000000012', 'export'
+);
+SET LOCAL ROLE service_role;
+SELECT results_eq(
+  $$SELECT claimed FROM public.claim_google_file_operation(
+    'a1111111-1111-4111-8111-111111111111',
+    'a0000000-0000-4000-8000-000000000012',
+    'a0000000-0000-4000-8000-000000000013'
+  )$$,
+  ARRAY[true],
+  'first Google export worker owns creation'
+);
+SELECT results_eq(
+  $$SELECT claimed FROM public.claim_google_file_operation(
+    'a1111111-1111-4111-8111-111111111111',
+    'a0000000-0000-4000-8000-000000000012',
+    'a0000000-0000-4000-8000-000000000014'
+  )$$,
+  ARRAY[false],
+  'concurrent Google export worker cannot create a duplicate'
+);
 
 SELECT * FROM finish();
 ROLLBACK;

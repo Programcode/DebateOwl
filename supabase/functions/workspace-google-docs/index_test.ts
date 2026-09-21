@@ -9,15 +9,18 @@ Deno.test("workspace Markdown becomes rich Google import HTML", async () => {
   const { markdownToGoogleHtml } = await modulePromise;
   const html = markdownToGoogleHtml(`# Cím Ősz
 
-1. ***Első***
+3. ***Első***
   - [Forrás](https://example.com/evidence)
+
+\\*literal\\*
 
 | Név | Érték |
 | --- | --- |
 | Árvíz | tűrő |`, "Beszéd");
-  for (const expected of ["<h1>", "<ol>", "<ul>", "<strong><em>", "<a href=\"https://example.com/evidence\"", "<table>", "Árvíz", "tűrő"]) {
+  for (const expected of ["<h1>", "<ol start=\"3\">", "<ul>", "<strong><em>", "<a href=\"https://example.com/evidence\"", "<table>", "*literal*", "Árvíz", "tűrő"]) {
     assertStringIncludes(html, expected);
   }
+  if (html.includes("<em>literal</em>")) throw new Error("escaped literal became formatting");
 });
 
 Deno.test("Google ordered and nested list metadata survives import", async () => {
@@ -25,14 +28,14 @@ Deno.test("Google ordered and nested list metadata survives import", async () =>
   const tabs = tabsMarkdown({
     title: "List",
     lists: {
-      list1: { listProperties: { nestingLevels: [{ glyphType: "DECIMAL" }, { glyphType: "GLYPH_TYPE_UNSPECIFIED" }] } },
+      list1: { listProperties: { nestingLevels: [{ glyphType: "DECIMAL", startNumber: 3 }, { glyphType: "GLYPH_TYPE_UNSPECIFIED" }] } },
     },
     body: { content: [
       { paragraph: { bullet: { listId: "list1", nestingLevel: 0 }, elements: [{ textRun: { content: "First\n", textStyle: {} } }] } },
       { paragraph: { bullet: { listId: "list1", nestingLevel: 1 }, elements: [{ textRun: { content: "Nested\n", textStyle: {} } }] } },
     ] },
   });
-  assertEquals(tabs[0].markdown, "1. First\n  - Nested");
+  assertEquals(tabs[0].markdown, "3. First\n  - Nested");
 });
 
 Deno.test("provider marker reconciles a retry without creating another Doc", async () => {

@@ -184,6 +184,8 @@ CREATE TABLE public.google_file_operations (
   request_id uuid NOT NULL,
   kind text NOT NULL CHECK (kind IN ('export')),
   provider_file_id text,
+  provider_claim_id uuid,
+  provider_claimed_at timestamptz,
   status text NOT NULL DEFAULT 'progress' CHECK (status IN ('progress', 'complete')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -278,4 +280,63 @@ REVOKE ALL ON FUNCTION public.claim_google_connection_refresh(uuid, uuid, uuid),
 FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_google_connection_refresh(uuid, uuid, uuid),
   public.finish_google_connection_refresh(uuid, uuid, text, timestamptz, text)
+TO service_role;
+
+CREATE FUNCTION public.claim_google_file_operation(
+  p_user_id uuid,
+  p_request_id uuid,
+  p_claim_id uuid
+)
+RETURNS TABLE (
+  operation_id uuid,
+  provider_file_id text,
+  status text,
+  claimed boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  RETURN QUERY
+  UPDATE public.google_file_operations
+  SET provider_claim_id = CASE
+        WHEN google_file_operations.provider_claim_id IS NULL OR google_file_operations.provider_claimed_at < now() - interval '1 minute'
+        THEN p_claim_id ELSE google_file_operations.provider_claim_id END,
+      provider_claimed_at = CASE
+        WHEN google_file_operations.provider_claim_id IS NULL OR google_file_operations.provider_claimed_at < now() - interval '1 minute'
+        THEN now() ELSE google_file_operations.provider_claimed_at END
+  WHERE user_id = p_user_id AND request_id = p_request_id
+  RETURNING id, google_file_operations.provider_file_id,
+    google_file_operations.status, google_file_operations.provider_claim_id = p_claim_id;
+END;
+$$;
+
+CREATE FUNCTION public.finish_google_file_operation(
+  p_operation_id uuid,
+  p_claim_id uuid,
+  p_provider_file_id text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE v_updated bigint;
+BEGIN
+  UPDATE public.google_file_operations
+  SET provider_file_id = p_provider_file_id,
+      status = 'complete', provider_claim_id = NULL,
+      provider_claimed_at = NULL, updated_at = now()
+  WHERE id = p_operation_id AND provider_claim_id = p_claim_id;
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  RETURN v_updated > 0;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.claim_google_file_operation(uuid, uuid, uuid),
+  public.finish_google_file_operation(uuid, uuid, text)
+FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_google_file_operation(uuid, uuid, uuid),
+  public.finish_google_file_operation(uuid, uuid, text)
 TO service_role;
