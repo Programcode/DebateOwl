@@ -5,22 +5,12 @@ import type { ReasoningEffort } from '../../../../supabase/functions/_shared/mod
 
 export { DEFAULT_MODEL, DEFAULT_PRO_MODEL, isReasoningEffort } from '../../../../supabase/functions/_shared/model-catalog';
 export type { ReasoningEffort } from '../../../../supabase/functions/_shared/model-catalog';
+export type { ModelCatalogEntry as AIModel } from '../../../../supabase/functions/_shared/model-catalog';
 
-export interface AIProvider {
-  id: string;
-  name: string;
-  models: readonly AIModel[];
-  isAvailable: () => boolean;
-}
+/** Every accepted model routes through OpenRouter; see _shared/model-catalog. */
+export const PROVIDER_ID = 'openrouter';
 
-export interface AIModel {
-  id: string;
-  name: string;
-  maxTokens: number;
-  isProOnly: boolean;
-  supportsTemperature: boolean;
-  supportedEfforts: readonly ReasoningEffort[];
-}
+export const AVAILABLE_MODELS = MODEL_CATALOG;
 
 export interface ProviderConfig {
   provider: string;
@@ -28,12 +18,3 @@ export interface ProviderConfig {
   temperature: number;
   reasoningEffort?: ReasoningEffort;
 }
-
-export const DEFAULT_PROVIDERS: AIProvider[] = [
-  {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    models: MODEL_CATALOG,
-    isAvailable: () => true,
-  },
-];

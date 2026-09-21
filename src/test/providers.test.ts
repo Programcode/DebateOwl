@@ -1,18 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_PROVIDERS } from '@/lib/ai/providers/types';
+import { AVAILABLE_MODELS, PROVIDER_ID } from '@/lib/ai/providers/types';
 
-describe('DEFAULT_PROVIDERS', () => {
+describe('AVAILABLE_MODELS', () => {
   // Model IDs key request routing and the stored per-session model choice, so a
-  // collision across providers would silently route to the wrong provider.
-  it('no duplicate model IDs across all providers', () => {
-    const allIds = DEFAULT_PROVIDERS.flatMap(p => p.models.map(m => m.id));
+  // duplicate would silently route to the wrong catalog entry.
+  it('has no duplicate model IDs', () => {
+    const allIds = AVAILABLE_MODELS.map((model) => model.id);
     expect(new Set(allIds).size).toBe(allIds.length);
   });
 
   it('exposes the approved model catalog through OpenRouter', () => {
-    expect(DEFAULT_PROVIDERS).toHaveLength(1);
-    expect(DEFAULT_PROVIDERS[0]?.id).toBe('openrouter');
-    expect(DEFAULT_PROVIDERS[0]?.models.map((model) => model.id)).toEqual([
+    expect(PROVIDER_ID).toBe('openrouter');
+    expect(AVAILABLE_MODELS.map((model) => model.id)).toEqual([
       'openai/gpt-5.6-luna',
       'google/gemini-3.8-flash',
       'deepseek/deepseek-v4-flash-0731',

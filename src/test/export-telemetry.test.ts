@@ -35,7 +35,6 @@ vi.mock('docx', () => ({
   AlignmentType: { CENTER: 'CENTER' },
 }));
 
-vi.mock('file-saver', () => ({ saveAs: vi.fn() }));
 
 vi.mock('jspdf', () => ({
   jsPDF: class MockJsPdf {

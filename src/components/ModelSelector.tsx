@@ -1,7 +1,7 @@
 import { Cpu } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { DEFAULT_MODEL, DEFAULT_PROVIDERS, isReasoningEffort } from '@/lib/ai/providers/types';
+import { AVAILABLE_MODELS, DEFAULT_MODEL, PROVIDER_ID, isReasoningEffort } from '@/lib/ai/providers/types';
 import type { ReasoningEffort } from '@/lib/ai/providers/types';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSubscription } from '@/hooks/use-subscription';
@@ -15,8 +15,7 @@ interface ModelSelectorProps {
   showLabel?: boolean;
 }
 
-const allModels = DEFAULT_PROVIDERS
-  .flatMap(p => p.models.map(m => ({ ...m, provider: p.id, providerName: p.name })));
+const allModels = AVAILABLE_MODELS;
 
 const reasoningOptions: { value: ReasoningEffort; labelKey: string; fallback: string }[] = [
   { value: 'low', labelKey: 'modelSelector.reasoningLow', fallback: 'Low' },
@@ -49,7 +48,7 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
           const found = allModels.find(m => m.id === model);
           if (found) {
             if (found.isProOnly && !isPro) return;
-            setFeatureConfig(feature, { model, provider: found.provider });
+            setFeatureConfig(feature, { model, provider: PROVIDER_ID });
           }
         }}
       >

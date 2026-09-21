@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { Server, type Connection } from "@hocuspocus/server";
-import { Mutex } from "async-mutex";
 import {
   messageYjsSyncStep2,
   messageYjsUpdate,
@@ -72,7 +71,27 @@ export function createCollaborationServer(
     Connection<AuthenticatedDocument>,
     { durable: DurableUpdate; release: () => void }
   >();
-  const locks = new Map<string, Mutex>();
+  const locks = new Map<string, Promise<void>>();
+
+  /**
+   * Serializes work per document epoch by chaining promises. Resolving the
+   * returned function releases the lock and drops the map entry when nothing
+   * else is queued behind it.
+   */
+  function acquireLock(key: string): Promise<() => void> {
+    const previous = locks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const chained = previous.then(() => held);
+    locks.set(key, chained);
+
+    return previous.then(() => () => {
+      release();
+      if (locks.get(key) === chained) locks.delete(key);
+    });
+  }
 
   return new Server<AuthenticatedDocument>({
     address: "127.0.0.1",
@@ -124,9 +143,7 @@ export function createCollaborationServer(
       if (decoded.structs.length === 0 && decoded.ds.clients.size === 0) return;
 
       const key = `${context.documentId}@${context.epoch}`;
-      const mutex = locks.get(key) ?? new Mutex();
-      locks.set(key, mutex);
-      const release = await mutex.acquire();
+      const release = await acquireLock(key);
       try {
         const candidate = new Y.Doc();
         try {
@@ -154,7 +171,6 @@ export function createCollaborationServer(
         pending.set(connection, { durable, release });
       } catch (error) {
         release();
-        if (!mutex.isLocked()) locks.delete(key);
         throw error;
       }
     },
@@ -162,7 +178,6 @@ export function createCollaborationServer(
       const accepted = pending.get(connection);
       pending.delete(connection);
       if (!accepted) return;
-      const key = `${accepted.durable.documentId}@${accepted.durable.epoch}`;
       try {
         if (
           Y.snapshotContainsUpdate(
@@ -174,8 +189,6 @@ export function createCollaborationServer(
         }
       } finally {
         accepted.release();
-        const mutex = locks.get(key);
-        if (mutex && !mutex.isLocked()) locks.delete(key);
       }
     },
   });

@@ -21,29 +21,6 @@ vi.mock('@/lib/stores/settings-store', () => ({
   })),
 }));
 
-vi.mock('@/lib/ai/providers/types', () => ({
-  DEFAULT_MODEL: 'openai/gpt-5.6-luna',
-  isReasoningEffort: (value: unknown) => value === 'low' || value === 'medium' || value === 'high',
-  DEFAULT_PROVIDERS: [
-    {
-      id: 'openrouter', name: 'OpenRouter',
-      models: [
-        { id: 'openai/gpt-5.6-luna', name: 'GPT-5.6 Luna', maxTokens: 128000, isProOnly: false, supportsTemperature: false },
-        { id: 'google/gemini-3.8-flash', name: 'Gemini 3.8 Flash', maxTokens: 65536, isProOnly: false, supportsTemperature: true },
-        { id: 'deepseek/deepseek-v4-flash-0731', name: 'DeepSeek V4 Flash', maxTokens: 131072, isProOnly: false, supportsTemperature: true },
-        { id: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5', maxTokens: 128000, isProOnly: true, supportsTemperature: false },
-        { id: 'anthropic/claude-opus-5', name: 'Claude Opus 5', maxTokens: 128000, isProOnly: true, supportsTemperature: true },
-        { id: 'openai/gpt-5.6-sol', name: 'GPT-5.6 Sol', maxTokens: 128000, isProOnly: true, supportsTemperature: false },
-        { id: 'openai/gpt-5.6-terra', name: 'GPT-5.6 Terra', maxTokens: 128000, isProOnly: true, supportsTemperature: false },
-        { id: 'deepseek/deepseek-v4-pro-0813', name: 'DeepSeek V4 Pro', maxTokens: 384000, isProOnly: true, supportsTemperature: true },
-        { id: 'z-ai/glm-5.3-flash', name: 'GLM-5.3 Flash', maxTokens: 131072, isProOnly: true, supportsTemperature: true },
-        { id: 'meta/muse-spark-1.3', name: 'Muse Spark 1.3', maxTokens: 943718, isProOnly: true, supportsTemperature: true },
-      ],
-      isAvailable: () => true,
-    },
-  ],
-}));
-
 import { ModelSelector } from '@/components/ModelSelector';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 

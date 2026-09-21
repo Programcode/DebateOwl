@@ -7,6 +7,18 @@ import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate, formatEuropeanDateTime } from './date-format';
 import { captureProductEvent } from '@/lib/observability';
 
+/** Triggers a browser download from a Blob. */
+function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function formatSparringDuration(seconds: number): string {
   const totalSeconds = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(totalSeconds / 60);
@@ -51,7 +63,6 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
 
     // Dynamically import heavy libraries only when needed
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    const { saveAs } = await import('file-saver');
 
     const thesis = result.caseStructure.thesis?.trim() || 'Untitled Thesis';
     const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
@@ -192,7 +203,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
 
     const blob = await Packer.toBlob(doc);
     const fileSuffix = result.metadata.side || 'case';
-    saveAs(blob, `DebateCase_${fileSuffix}.docx`);
+    saveBlob(blob, `DebateCase_${fileSuffix}.docx`);
     captureProductEvent('content_exported', { format: 'docx', tool: 'generate' });
     return true;
   } catch (error) {
@@ -211,7 +222,6 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
     }
 
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    const { saveAs } = await import('file-saver');
 
     const weaknesses = result.weaknesses || [];
     const weaknessesSection = weaknesses.length > 0
@@ -291,7 +301,7 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `AttackAnalysis_${new Date().toISOString().split('T')[0]}.docx`);
+    saveBlob(blob, `AttackAnalysis_${new Date().toISOString().split('T')[0]}.docx`);
     captureProductEvent('content_exported', { format: 'docx', tool: 'attack' });
     return true;
   } catch (error) {
@@ -306,7 +316,6 @@ export async function exportAttackToDocx(result: AttackOutput): Promise<boolean>
 export async function exportBrainstormToDocx(result: BrainstormOutput): Promise<boolean> {
   try {
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    const { saveAs } = await import('file-saver');
 
     const children: InstanceType<typeof Paragraph>[] = [
       new Paragraph({
@@ -379,7 +388,7 @@ export async function exportBrainstormToDocx(result: BrainstormOutput): Promise<
 
     const doc = new Document({ sections: [{ properties: {}, children }] });
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `Brainstorm_${new Date().toISOString().split('T')[0]}.docx`);
+    saveBlob(blob, `Brainstorm_${new Date().toISOString().split('T')[0]}.docx`);
     captureProductEvent('content_exported', { format: 'docx', tool: 'brainstorm' });
     return true;
   } catch (error) {
@@ -398,7 +407,6 @@ export async function exportFactoidsToDocx(result: FactoidsOutput): Promise<bool
     }
 
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    const { saveAs } = await import('file-saver');
 
     const factoids = result.factoids || [];
     const factoidsSection = factoids.length > 0
@@ -455,7 +463,7 @@ export async function exportFactoidsToDocx(result: FactoidsOutput): Promise<bool
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `Factoids_${new Date().toISOString().split('T')[0]}.docx`);
+    saveBlob(blob, `Factoids_${new Date().toISOString().split('T')[0]}.docx`);
     captureProductEvent('content_exported', { format: 'docx', tool: 'factoids' });
     return true;
   } catch (error) {
@@ -602,7 +610,6 @@ export async function exportFactoidsToGoogleDocs(result: FactoidsOutput): Promis
 export async function exportSparringToDocx(session: SparringSession): Promise<boolean> {
   try {
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    const { saveAs } = await import('file-saver');
     const totalTimeUsedSeconds = session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0);
     const totalTimeLimitSeconds = session.speeches.reduce((total, speech) => total + speech.timeLimitSeconds, 0);
     const scorecard = session.scorecard;
@@ -700,7 +707,7 @@ export async function exportSparringToDocx(session: SparringSession): Promise<bo
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.docx`);
+    saveBlob(blob, `SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.docx`);
     captureProductEvent('content_exported', { format: 'docx', tool: 'sparring' });
     return true;
   } catch (error) {

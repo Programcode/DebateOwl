@@ -1,6 +1,5 @@
-import { useEffect, useState, type AriaAttributes, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { List } from 'react-window';
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,11 +35,10 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
-const SOURCE_ROW_HEIGHT = 92;
 const SOURCE_LIST_HEIGHT = 600;
 
 interface SourceRowProps {
-  sources: Source[];
+  source: Source;
   onRemove: (source: Source) => void;
   onToggle: (id: string) => void;
   onOpen: (source: Source) => void;
@@ -49,21 +47,15 @@ interface SourceRowProps {
 }
 
 function SourceRow({
-  index,
-  style,
-  sources,
+  source,
   onRemove,
   onToggle,
   onOpen,
   manualEntryLabel,
   folderLabel,
-  ariaAttributes,
-}: SourceRowProps & { index: number; style: CSSProperties; ariaAttributes: AriaAttributes }) {
-  const source = sources[index];
-  if (!source) return null;
-
+}: SourceRowProps) {
   return (
-    <div style={style} {...ariaAttributes} className="px-1 pb-2">
+    <div className="px-1 pb-2">
       <div
         role="button"
         tabIndex={0}
@@ -808,23 +800,18 @@ export default function LibraryPage() {
                   </p>
                 </div>
               ) : (
-                <div className="h-[600px] pr-1 stagger-enter">
-                  <List<SourceRowProps>
-                    rowComponent={SourceRow}
-                    rowCount={visibleSources.length}
-                    rowHeight={SOURCE_ROW_HEIGHT}
-                    rowProps={{
-                      sources: visibleSources,
-                      onRemove: handleRemoveSource,
-                      onToggle: toggleSource,
-                      onOpen: (source: Source) => setSelectedSourceId(source.id),
-                      manualEntryLabel: t('libraryPage.manualEntry'),
-                      folderLabel: t('libraryPage.folder', 'Folder'),
-                    }}
-                    overscanCount={8}
-                    className="scrollbar-thin"
-                    style={{ height: SOURCE_LIST_HEIGHT }}
-                  />
+                <div className="scrollbar-thin overflow-y-auto pr-1 stagger-enter" style={{ height: SOURCE_LIST_HEIGHT }}>
+                  {visibleSources.map((source) => (
+                    <SourceRow
+                      key={source.id}
+                      source={source}
+                      onRemove={handleRemoveSource}
+                      onToggle={toggleSource}
+                      onOpen={(item: Source) => setSelectedSourceId(item.id)}
+                      manualEntryLabel={t('libraryPage.manualEntry')}
+                      folderLabel={t('libraryPage.folder', 'Folder')}
+                    />
+                  ))}
                 </div>
               )}
             </CardContent>

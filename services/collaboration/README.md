@@ -8,7 +8,6 @@
 - Hocuspocus 4.7.0
 - Yjs 13.6.32
 - y-protocols 1.0.7
-- async-mutex 0.5.0
 
 These exact versions are MIT, support Node 22, and work with DebateLab's React 18 client. Tiptap 3 uses `@tiptap/y-tiptap`; the spike does not install redundant `y-prosemirror`, React provider bindings, or IndexedDB support.
 

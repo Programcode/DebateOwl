@@ -55,3 +55,18 @@ Object.defineProperty(globalThis, "ResizeObserver", {
   writable: true,
   value: MockResizeObserver,
 });
+
+// jsdom implements neither of these; export code uses them to trigger downloads.
+Object.defineProperty(URL, "createObjectURL", {
+  writable: true,
+  value: () => "blob:mock",
+});
+
+Object.defineProperty(URL, "revokeObjectURL", {
+  writable: true,
+  value: () => { },
+});
+
+// A real anchor click makes jsdom attempt navigation and log "Not implemented".
+// Tests that need to observe downloads spy on this via test/helpers/downloads.
+HTMLAnchorElement.prototype.click = function () { };
