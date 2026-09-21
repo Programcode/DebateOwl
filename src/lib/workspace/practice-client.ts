@@ -106,26 +106,6 @@ export async function saveWorkspaceThreadMessage(input: {
   return z.string().uuid().parse(data);
 }
 
-export async function startWorkspaceThreadGeneration(input: {
-  assistantMessageId: string;
-  content: string;
-  requestId: string;
-  threadId: string;
-  userMessageId: string;
-  workspaceId: string;
-}) {
-  const { data, error } = await supabase.rpc("start_workspace_thread_generation", {
-    p_assistant_message_id: input.assistantMessageId,
-    p_content: input.content,
-    p_request_id: input.requestId,
-    p_thread_id: input.threadId,
-    p_user_message_id: input.userMessageId,
-    p_workspace_id: input.workspaceId,
-  });
-  if (error) throw error;
-  return z.string().uuid().parse(data);
-}
-
 export async function saveWorkspaceArtifact(input: {
   artifactId?: string;
   documentEpoch: number | null;

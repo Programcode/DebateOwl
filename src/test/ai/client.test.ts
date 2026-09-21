@@ -281,6 +281,7 @@ describe('AI Client Integration', () => {
             returnUrl: '/app/workspaces/33333333-3333-4333-8333-333333333333',
             side: 'pro' as const,
             sourceIds: [],
+            threadRequest: null,
             threadId: null,
             workspaceId: '33333333-3333-4333-8333-333333333333',
         };

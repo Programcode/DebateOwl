@@ -16,6 +16,7 @@ const context: WorkspaceToolContext = {
   returnUrl: "/app/workspaces/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   side: "pro" as const,
   sourceIds: ["cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
+  threadRequest: null,
   threadId: null,
   workspaceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
 };

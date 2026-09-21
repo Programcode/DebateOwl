@@ -12,6 +12,10 @@ const contextSchema = z.object({
   returnUrl: z.string().regex(/^\/app\/workspaces\/[0-9a-f-]+$/),
   side: z.enum(["pro", "con"]),
   sourceIds: z.array(z.string().uuid()).max(20),
+  threadRequest: z.object({
+    assistantMessageId: z.string().uuid(),
+    userMessageId: z.string().uuid(),
+  }).nullable(),
   threadId: z.string().uuid().nullable(),
   workspaceId: z.string().uuid(),
 });

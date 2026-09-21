@@ -59,6 +59,7 @@ function input() {
     requestId,
     side: "pro",
     sourceIds: [sourceId],
+    threadRequest: null,
     threadId: null,
     workspaceId,
   };

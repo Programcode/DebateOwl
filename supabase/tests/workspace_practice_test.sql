@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(24);
+SELECT plan(27);
 
 SELECT has_table('public', 'workspace_sources', 'shared sources exist');
 SELECT has_table('public', 'workspace_threads', 'shared threads exist');
@@ -8,7 +8,7 @@ SELECT has_table('public', 'workspace_artifacts', 'practice artifacts exist');
 SELECT has_function('public', 'save_workspace_source', ARRAY['uuid','uuid','text','text','text','jsonb','jsonb'], 'sources use an authorized RPC');
 SELECT has_function('public', 'create_workspace_thread', ARRAY['uuid','uuid','text'], 'threads use an authorized RPC');
 SELECT has_function('public', 'save_workspace_thread_message', ARRAY['uuid','uuid','uuid','uuid','text','text','text'], 'messages use an authorized RPC');
-SELECT has_function('public', 'start_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','uuid','text'], 'thread generation starts atomically');
+SELECT has_function('public', 'start_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','uuid','uuid','text'], 'thread generation starts atomically');
 SELECT has_function('public', 'complete_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','text','text'], 'assistant completion stays server-owned');
 SELECT has_function('public', 'save_workspace_artifact', ARRAY['uuid','uuid','uuid','uuid','bigint','text','text','jsonb','jsonb','jsonb'], 'artifacts use an authorized RPC');
 
@@ -44,8 +44,11 @@ SELECT lives_ok(
   )$$,
   'a member creates a named shared thread'
 );
+RESET ROLE;
+SET LOCAL ROLE service_role;
 SELECT lives_ok(
   $$SELECT public.start_workspace_thread_generation(
+    '91111111-1111-4111-8111-111111111111',
     current_setting('test.practice_workspace')::uuid,
     '90000000-0000-4000-8000-000000000003',
     '90000000-0000-4000-8000-000000000004',
@@ -57,6 +60,7 @@ SELECT lives_ok(
 );
 SELECT throws_ok(
   $$SELECT public.start_workspace_thread_generation(
+    '91111111-1111-4111-8111-111111111111',
     current_setting('test.practice_workspace')::uuid,
     '90000000-0000-4000-8000-000000000003',
     '90000000-0000-4000-8000-000000000006',
@@ -67,6 +71,10 @@ SELECT throws_ok(
   'P0001', 'thread generation in progress',
   'a thread serializes generation'
 );
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '91111111-1111-4111-8111-111111111111', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT throws_ok(
   $$SELECT public.save_workspace_thread_message(
     current_setting('test.practice_workspace')::uuid,
@@ -90,6 +98,40 @@ SELECT lives_ok(
     'Shared answer', 'complete'
   )$$,
   'server-owned assistant completion releases the thread'
+);
+RESET ROLE;
+INSERT INTO public.workspace_members (workspace_id, user_id)
+VALUES (current_setting('test.practice_workspace')::uuid, '92222222-2222-4222-8222-222222222222');
+SET LOCAL ROLE service_role;
+SELECT lives_ok(
+  $$SELECT public.start_workspace_thread_generation(
+    '92222222-2222-4222-8222-222222222222',
+    current_setting('test.practice_workspace')::uuid,
+    '90000000-0000-4000-8000-000000000003',
+    '90000000-0000-4000-8000-000000000015',
+    '90000000-0000-4000-8000-000000000016',
+    '90000000-0000-4000-8000-000000000017',
+    'Request before revocation'
+  )$$,
+  'server starts a teammate request'
+);
+RESET ROLE;
+DELETE FROM public.workspace_members WHERE user_id = '92222222-2222-4222-8222-222222222222';
+SET LOCAL ROLE service_role;
+SELECT lives_ok(
+  $$SELECT public.complete_workspace_thread_generation(
+    '92222222-2222-4222-8222-222222222222',
+    current_setting('test.practice_workspace')::uuid,
+    '90000000-0000-4000-8000-000000000003',
+    '90000000-0000-4000-8000-000000000017',
+    'Generation interrupted', 'interrupted'
+  )$$,
+  'revocation still releases a matching pending request'
+);
+SELECT results_eq(
+  $$SELECT active_request_id FROM public.workspace_threads WHERE id = '90000000-0000-4000-8000-000000000003'$$,
+  ARRAY[NULL::uuid],
+  'revoked request no longer blocks the thread'
 );
 RESET ROLE;
 SET LOCAL ROLE authenticated;

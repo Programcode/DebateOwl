@@ -3,6 +3,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from "@pla
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import { kill as killProcess } from "node:process";
+import type { WorkspaceToolContext } from "../src/lib/workspace/tool-context";
 
 const supabaseUrl = process.env.LOCAL_SUPABASE_URL;
 const anonKey = process.env.LOCAL_SUPABASE_ANON_KEY;
@@ -375,15 +376,35 @@ test("workspace evidence, team AI review, and practice survive a teammate reload
     const owner = await authenticatedPage(browser, sessions[0]);
     const member = await authenticatedPage(browser, sessions[1]);
     contexts.push(owner.context, member.context);
-    await owner.page.route("**/functions/v1/ai", (route) => route.fulfill({
-      body: JSON.stringify({ output: { response: "Phones should be limited with a clear enforcement mechanism.", followUpQuestions: [], uncertainties: [] } }),
-      contentType: "application/json",
-      status: 200,
-    }));
+    await owner.page.route("**/functions/v1/ai", async (route) => {
+      const body = route.request().postDataJSON() as {
+        input?: { message?: string };
+        workspaceContext?: WorkspaceToolContext;
+      };
+      const workspaceContext = body.workspaceContext;
+      if (workspaceContext?.threadId && workspaceContext.threadRequest && body.input?.message) {
+        const started = await admin.rpc("start_workspace_thread_generation", {
+          p_assistant_message_id: workspaceContext.threadRequest.assistantMessageId,
+          p_content: body.input.message,
+          p_request_id: workspaceContext.requestId,
+          p_thread_id: workspaceContext.threadId,
+          p_user_id: ids[0],
+          p_user_message_id: workspaceContext.threadRequest.userMessageId,
+          p_workspace_id: workspaceContext.workspaceId,
+        });
+        if (started.error) throw started.error;
+      }
+      await route.fulfill({
+        body: JSON.stringify({ output: { response: "Phones should be limited with a clear enforcement mechanism.", followUpQuestions: [], uncertainties: [] } }),
+        contentType: "application/json",
+        status: 200,
+      });
+    });
 
     await owner.page.goto("/app/workspaces");
     await owner.page.getByRole("textbox", { name: "Motion" }).fill("Schools should limit phones");
     await owner.page.getByRole("button", { name: "Create workspace" }).click();
+    await expect(owner.page).toHaveURL(/\/app\/workspaces\/[0-9a-f-]+$/, { timeout: 20_000 });
     const workspaceUrl = owner.page.url();
     const workspaceId = workspaceUrl.split("/").at(-1)!;
     const membership = await admin.from("workspace_members").insert({ workspace_id: workspaceId, user_id: ids[1] });

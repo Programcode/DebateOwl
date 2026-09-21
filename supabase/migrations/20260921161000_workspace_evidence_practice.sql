@@ -247,7 +247,7 @@ END;
 $$;
 
 CREATE FUNCTION public.start_workspace_thread_generation(
-  p_workspace_id uuid, p_thread_id uuid, p_user_message_id uuid,
+  p_user_id uuid, p_workspace_id uuid, p_thread_id uuid, p_user_message_id uuid,
   p_assistant_message_id uuid, p_request_id uuid, p_content text
 )
 RETURNS uuid
@@ -259,10 +259,14 @@ DECLARE
   v_active_request_id uuid;
   v_thread_updated_at timestamptz;
 BEGIN
-  IF auth.uid() IS NULL OR p_user_message_id IS NULL OR p_assistant_message_id IS NULL
+  IF p_user_id IS NULL OR p_user_message_id IS NULL OR p_assistant_message_id IS NULL
     OR p_request_id IS NULL OR length(p_content) NOT BETWEEN 1 AND 50000
+    OR NOT EXISTS (
+      SELECT 1 FROM public.workspaces AS workspace
+      JOIN public.workspace_members AS member ON member.workspace_id = workspace.id
+      WHERE workspace.id = p_workspace_id AND workspace.status = 'active' AND member.user_id = p_user_id
+    )
   THEN RAISE EXCEPTION 'invalid message'; END IF;
-  PERFORM private.require_active_workspace_member(p_workspace_id);
   SELECT active_request_id, updated_at INTO v_active_request_id, v_thread_updated_at
   FROM public.workspace_threads
   WHERE id = p_thread_id AND workspace_id = p_workspace_id FOR UPDATE;
@@ -277,17 +281,17 @@ BEGIN
   INSERT INTO public.workspace_thread_messages (
     id, workspace_id, thread_id, author_id, request_id, role, content, status
   ) VALUES (
-    p_user_message_id, p_workspace_id, p_thread_id, auth.uid(), p_request_id, 'user', p_content, 'complete'
+    p_user_message_id, p_workspace_id, p_thread_id, p_user_id, p_request_id, 'user', p_content, 'complete'
   ) ON CONFLICT (thread_id, request_id, role) DO NOTHING;
   IF NOT EXISTS (
     SELECT 1 FROM public.workspace_thread_messages
     WHERE thread_id = p_thread_id AND request_id = p_request_id
-      AND role = 'user' AND author_id = auth.uid() AND content = p_content
+      AND role = 'user' AND author_id = p_user_id AND content = p_content
   ) THEN RAISE EXCEPTION 'operation ID conflict'; END IF;
   INSERT INTO public.workspace_thread_messages (
     id, workspace_id, thread_id, author_id, request_id, role, content, status
   ) VALUES (
-    p_assistant_message_id, p_workspace_id, p_thread_id, auth.uid(), p_request_id, 'assistant', 'Thinking…', 'progress'
+    p_assistant_message_id, p_workspace_id, p_thread_id, p_user_id, p_request_id, 'assistant', 'Thinking…', 'progress'
   ) ON CONFLICT (thread_id, request_id, role) DO NOTHING;
   UPDATE public.workspace_threads SET active_request_id = p_request_id, updated_at = now() WHERE id = p_thread_id;
   RETURN (SELECT id FROM public.workspace_thread_messages
@@ -307,7 +311,7 @@ AS $$
 BEGIN
   IF p_user_id IS NULL OR p_request_id IS NULL OR p_status NOT IN ('complete', 'interrupted')
     OR length(p_content) NOT BETWEEN 1 AND 50000
-    OR NOT EXISTS (
+    OR p_status = 'complete' AND NOT EXISTS (
       SELECT 1 FROM public.workspaces AS workspace
       JOIN public.workspace_members AS member ON member.workspace_id = workspace.id
       WHERE workspace.id = p_workspace_id AND workspace.status = 'active' AND member.user_id = p_user_id
@@ -377,17 +381,17 @@ $$;
 REVOKE ALL ON FUNCTION public.save_workspace_source(uuid, uuid, text, text, text, jsonb, jsonb),
   public.create_workspace_thread(uuid, uuid, text),
   public.save_workspace_thread_message(uuid, uuid, uuid, uuid, text, text, text),
-  public.start_workspace_thread_generation(uuid, uuid, uuid, uuid, uuid, text),
+  public.start_workspace_thread_generation(uuid, uuid, uuid, uuid, uuid, uuid, text),
   public.complete_workspace_thread_generation(uuid, uuid, uuid, uuid, text, text),
   public.save_workspace_artifact(uuid, uuid, uuid, uuid, bigint, text, text, jsonb, jsonb, jsonb)
 FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.save_workspace_source(uuid, uuid, text, text, text, jsonb, jsonb),
   public.create_workspace_thread(uuid, uuid, text),
   public.save_workspace_thread_message(uuid, uuid, uuid, uuid, text, text, text),
-  public.start_workspace_thread_generation(uuid, uuid, uuid, uuid, uuid, text),
   public.save_workspace_artifact(uuid, uuid, uuid, uuid, bigint, text, text, jsonb, jsonb, jsonb)
 TO authenticated;
-GRANT EXECUTE ON FUNCTION public.complete_workspace_thread_generation(uuid, uuid, uuid, uuid, text, text)
+GRANT EXECUTE ON FUNCTION public.start_workspace_thread_generation(uuid, uuid, uuid, uuid, uuid, uuid, text),
+  public.complete_workspace_thread_generation(uuid, uuid, uuid, uuid, text, text)
 TO service_role;
 
 CREATE FUNCTION public.get_workspace_ai_context(

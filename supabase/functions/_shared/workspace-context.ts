@@ -20,6 +20,7 @@ export type AuthorizedWorkspaceContext = {
   requestId: string;
   side: "pro" | "con";
   sourceIds: string[];
+  threadRequest: { assistantMessageId: string; userMessageId: string } | null;
   threadId: string | null;
   workspaceId: string;
 };
@@ -36,7 +37,14 @@ export function parseWorkspaceContext(value: unknown): AuthorizedWorkspaceContex
   const sourceIds = Array.isArray(input.sourceIds) ? input.sourceIds.filter((id): id is string => typeof id === "string" && UUID.test(id)).slice(0, 20) : [];
   const documentIds = Array.isArray(input.documentIds) ? input.documentIds.filter((id): id is string => typeof id === "string" && UUID.test(id)).slice(0, 12) : [];
   const threadId = input.threadId === null || input.threadId === undefined ? null : String(input.threadId);
+  const rawThreadRequest = record(input.threadRequest);
+  const threadRequest = rawThreadRequest
+    && UUID.test(String(rawThreadRequest.assistantMessageId))
+    && UUID.test(String(rawThreadRequest.userMessageId))
+    ? { assistantMessageId: String(rawThreadRequest.assistantMessageId), userMessageId: String(rawThreadRequest.userMessageId) }
+    : null;
   if (threadId && !UUID.test(threadId) || documentIds.length === 0 || !documentIds.includes(String(input.documentId))) return null;
+  if ((input.threadRequest !== null && input.threadRequest !== undefined && !threadRequest) || (threadRequest && !threadId)) return null;
   if (input.side !== "pro" && input.side !== "con") return null;
   return {
     documentId: String(input.documentId),
@@ -47,6 +55,7 @@ export function parseWorkspaceContext(value: unknown): AuthorizedWorkspaceContex
     requestId: String(input.requestId),
     side: input.side,
     sourceIds,
+    threadRequest,
     threadId,
     workspaceId: String(input.workspaceId),
   };

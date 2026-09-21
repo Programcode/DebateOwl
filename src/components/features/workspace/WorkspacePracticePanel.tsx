@@ -14,7 +14,6 @@ import {
   listWorkspacePractice,
   saveWorkspaceArtifact,
   saveWorkspaceSource,
-  startWorkspaceThreadGeneration,
   type WorkspaceSource,
 } from "@/lib/workspace/practice-client";
 import { workspaceRouteState, type WorkspaceTool, type WorkspaceToolContext } from "@/lib/workspace/tool-context";
@@ -112,7 +111,10 @@ export function WorkspacePracticePanel({
       setBusy(false);
     }
   };
-  const context = (requestId: string = crypto.randomUUID()): WorkspaceToolContext => ({
+  const context = (
+    requestId: string = crypto.randomUUID(),
+    threadRequest: WorkspaceToolContext["threadRequest"] = null,
+  ): WorkspaceToolContext => ({
     documentEpoch,
     documentId,
     documentIds: selectedDocumentIds.includes(documentId) ? selectedDocumentIds : [documentId, ...selectedDocumentIds].slice(0, 12),
@@ -123,6 +125,7 @@ export function WorkspacePracticePanel({
     returnUrl: `/app/workspaces/${workspaceId}`,
     side,
     sourceIds: selectedSourceIds.slice(0, 20),
+    threadRequest,
     threadId: selectedThread,
     workspaceId,
   });
@@ -172,13 +175,12 @@ export function WorkspacePracticePanel({
     const userMessageId = crypto.randomUUID();
     setMessage("");
     void run(async () => {
-      await startWorkspaceThreadGeneration({ assistantMessageId, content, requestId, threadId: selectedThread, userMessageId, workspaceId });
       await askChat(
         content,
         threadMessages.filter(({ status }) => status === "complete").map(({ role, content: item }) => ({ role, content: item })),
         "general",
         askConfig,
-        { workspaceContext: context(requestId) },
+        { workspaceContext: context(requestId, { assistantMessageId, userMessageId }) },
       );
     });
   };

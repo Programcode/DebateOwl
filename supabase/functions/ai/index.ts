@@ -1200,13 +1200,19 @@ export async function handleRequest(req: Request): Promise<Response> {
     validatedSparringRequest = sparringResult.request;
   }
   let sourceAssessments: SourceAssessment[] = [];
-  let workspaceAccess: { meta: Record<string, unknown>; requestId: string; threadId: string | null; workspaceId: string } | null = null;
+  let workspaceAccess: {
+    meta: Record<string, unknown>;
+    requestId: string;
+    threadId: string | null;
+    threadRequest: { assistantMessageId: string; userMessageId: string } | null;
+    workspaceId: string;
+  } | null = null;
   let workspaceThreadSettled = false;
   const successBody = async (payload: Record<string, unknown>) => {
     if (workspaceAccess && !await isWorkspaceMember(workspaceDatabase, userId, workspaceAccess.workspaceId)) {
       throw new Error("Workspace access revoked");
     }
-    if (workspaceAccess?.threadId) {
+    if (workspaceAccess?.threadId && workspaceAccess.threadRequest) {
       const output = payload.output && typeof payload.output === "object" ? payload.output as Record<string, unknown> : null;
       if (typeof output?.response !== "string") throw new Error("Workspace thread response unavailable");
       const settled = await supabase.rpc("complete_workspace_thread_generation", {
@@ -1284,6 +1290,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         meta: loaded.meta,
         requestId: loaded.input.requestId,
         threadId: loaded.input.threadId,
+        threadRequest: loaded.input.threadRequest,
         workspaceId: loaded.input.workspaceId,
       };
       sources = boundPromptSources([{
@@ -1291,6 +1298,24 @@ export async function handleRequest(req: Request): Promise<Response> {
         content: loaded.context,
         type: "workspace",
       }]);
+      if (loaded.input.threadRequest) {
+        const threadMessage = sanitizedInput && typeof sanitizedInput === "object"
+          ? (sanitizedInput as Record<string, unknown>).message
+          : null;
+        if (feature !== "ask" || !loaded.input.threadId || typeof threadMessage !== "string") {
+          return badRequest("Workspace unavailable", corsHeaders, 403);
+        }
+        const started = await supabase.rpc("start_workspace_thread_generation", {
+          p_assistant_message_id: loaded.input.threadRequest.assistantMessageId,
+          p_content: threadMessage,
+          p_request_id: loaded.input.requestId,
+          p_thread_id: loaded.input.threadId,
+          p_user_id: userId,
+          p_user_message_id: loaded.input.threadRequest.userMessageId,
+          p_workspace_id: loaded.input.workspaceId,
+        });
+        if (started.error) return badRequest("Workspace thread unavailable", corsHeaders, 409);
+      }
     } catch {
       return badRequest("Workspace unavailable", corsHeaders, 403);
     }
@@ -2016,7 +2041,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);
 
-    if (workspaceAccess?.threadId && !workspaceThreadSettled) {
+    if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
       await supabase.rpc("complete_workspace_thread_generation", {
         p_content: "Generation interrupted",
         p_request_id: workspaceAccess.requestId,
