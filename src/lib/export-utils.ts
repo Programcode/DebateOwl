@@ -6,6 +6,14 @@ import type { FactoidsOutput } from './ai/schemas/factoids';
 import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate, formatEuropeanDateTime } from './date-format';
 import { captureProductEvent } from '@/lib/observability';
+import {
+  formatSparringDuration,
+  getSparringCategoryLabel,
+  getSparringFormatLabel,
+  getSparringSideLabel,
+  getSparringTurnLabel,
+  getSparringWinnerLabel,
+} from './export-sparring-labels';
 
 /** Triggers a browser download from a Blob. */
 function saveBlob(blob: Blob, filename: string): void {
@@ -17,36 +25,6 @@ function saveBlob(blob: Blob, filename: string): void {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-}
-
-function formatSparringDuration(seconds: number): string {
-  const totalSeconds = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainder = String(totalSeconds % 60).padStart(2, '0');
-  return `${minutes}:${remainder}`;
-}
-
-function getSparringSideLabel(side: SparringSession['userSide']): string {
-  return side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
-}
-
-function getSparringWinnerLabel(session: SparringSession): string {
-  const winner = session.scorecard?.winner;
-  if (winner === 'user') return i18n.t('export.sparringUser');
-  if (winner === 'ai') return i18n.t('export.sparringOpponent');
-  return i18n.t('export.sparringTie');
-}
-
-function getSparringCategoryLabel(category: string): string {
-  return i18n.t(`sparring.category.${category}`, category);
-}
-
-function getSparringTurnLabel(speech: SparringSession['speeches'][number]): string {
-  return i18n.t(`sparring.turns.${speech.turnId}`, speech.role);
-}
-
-function getSparringFormatLabel(format: SparringSession['format']): string {
-  return i18n.t(`sparring.format.${format}`, format.toUpperCase());
 }
 
 export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean> {
