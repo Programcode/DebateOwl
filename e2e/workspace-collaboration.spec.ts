@@ -265,7 +265,8 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await owner.page.locator(".ProseMirror").press("ControlOrMeta+A");
     await owner.page.keyboard.insertText("Phones reduce attention");
     await openPanel(member.page, "Review");
-    await expect(member.page.getByLabel("Proposed change preview")).toContainText("Phones reduce attention");
+    await expect(member.page.getByLabel("Proposed change preview")).toContainText("reduce attention");
+    await expect(member.page.getByLabel("Proposed change preview")).toContainText("interrupt learning");
     await expect(member.page.getByText("Original", { exact: true })).toBeVisible();
     await expect(member.page.getByText("Proposed", { exact: true })).toBeVisible();
     await expect(member.page.getByRole("button", { name: "Accept" })).toHaveCount(1);

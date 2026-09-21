@@ -101,6 +101,12 @@ for url in "$mailer_url/api/v1/messages" "$app_origin"; do
   done
   curl --fail --silent --output /dev/null "$url"
 done
+function_url="$api_url/functions/v1/workspace-invites"
+for _ in $(seq 1 200); do
+  if curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"; then break; fi
+  sleep 0.1
+done
+curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"
 
 LOCAL_SUPABASE_URL="$api_url" \
 LOCAL_SUPABASE_ANON_KEY="$anon_key" \
