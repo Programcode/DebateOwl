@@ -204,9 +204,9 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
   await expect(page.locator('header')).toBeVisible();
 });
 
-for (const [locale, attackLabel, menuLabel, openingLabel] of [
-  ['es', 'Atacar', 'Abrir menú', 'Abriendo Atacar'],
-  ['hu', 'Támadás', 'Menü megnyitása', 'Támadás megnyitása'],
+for (const [locale, attackLabel, menuLabel, mainNavigationLabel, mobileNavigationLabel, openingLabel] of [
+  ['es', 'Atacar', 'Abrir menú', 'Navegación principal', 'Navegación móvil', 'Abriendo Atacar'],
+  ['hu', 'Támadás', 'Menü megnyitása', 'Fő navigáció', 'Mobil navigáció', 'Támadás megnyitása'],
 ] as const) {
   test(`${locale} delayed route announces the localized destination`, async ({ page }) => {
     await setLocale(page, locale);
@@ -223,9 +223,9 @@ for (const [locale, attackLabel, menuLabel, openingLabel] of [
 
     if ((page.viewportSize()?.width ?? 1280) < 1024) {
       await page.getByRole('button', { name: menuLabel }).click();
-      await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: new RegExp(`^${attackLabel}`) }).click();
+      await page.getByRole('navigation', { name: mobileNavigationLabel }).getByRole('link', { name: new RegExp(`^${attackLabel}`) }).click();
     } else {
-      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: attackLabel }).click();
+      await page.getByRole('navigation', { name: mainNavigationLabel }).getByRole('link', { name: attackLabel }).click();
     }
 
     await expect.poll(() => destinationRequested).toBe(true);

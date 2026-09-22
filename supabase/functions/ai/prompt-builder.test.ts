@@ -110,6 +110,31 @@ Deno.test("attack prompt includes intensity, paradigm, and toggle states", () =>
   assertIncludes(prompt, "SEARCH CONTEXT");
 });
 
+Deno.test("every AI feature carries an explicit Hungarian output instruction", () => {
+  const instruction = "Language: Hungarian (hu) - Write ALL output in this language.";
+  const prompts = [
+    buildUserPrompt("attack", { caseText: "CASE", language: "hu" }, ""),
+    buildUserPrompt("brainstorm", { motion: "MOTION", language: "hu" }, ""),
+    buildUserPrompt("factoids", { claim: "CLAIM", language: "hu" }, ""),
+    buildUserPrompt("ask", { message: "QUESTION", language: "hu" }, ""),
+    buildUserPrompt("sparring", { motion: "MOTION", language: "hu" }, ""),
+    buildUserPrompt("crossfire", {
+      operation: "next-turn",
+      config: crossfireConfig,
+      transcript: crossfireTranscript,
+      expectedReply: "answer",
+      language: "hu",
+    }, ""),
+    buildUserPrompt("crossfire", {
+      operation: "debrief",
+      config: crossfireConfig,
+      transcript: crossfireTranscript,
+      language: "hu",
+    }, ""),
+  ];
+  for (const prompt of prompts) assertIncludes(prompt, instruction);
+});
+
 Deno.test("attack prompt matrix preserves intensity, every judge paradigm, and toggles", () => {
   const intensities = ["moderate", "ruthless"] as const;
   const paradigms = ["logic", "values", "policy"] as const;
@@ -370,13 +395,14 @@ Deno.test("crossfire next-turn prompt carries the expected reply and real turn I
       createdAt: 1,
     }],
     expectedReply: "answer",
+    language: "hu",
   });
 
   assertIncludes(prompt, "The next model reply must be type \"answer\"");
   assertIncludes(prompt, "turn-id=T1");
   assertIncludes(prompt, "aggressive");
   assertIncludes(prompt, "Do not insult, threaten, harass");
-  assertIncludes(prompt, "same language as the user's resolution");
+  assertIncludes(prompt, "Language: Hungarian (hu) - Write ALL output in this language.");
 });
 
 Deno.test("crossfire next-turn builder preserves all three style controls", () => {
@@ -415,6 +441,7 @@ Deno.test("crossfire debrief prompt requires cited IDs and omits typed-session s
       { id: "T1", sequence: 1, speaker: "user", kind: "question", text: "Why?", createdAt: 1 },
       { id: "T2", sequence: 2, speaker: "ai", kind: "answer", text: "Because streets are crowded.", createdAt: 2 },
     ],
+    language: "hu",
   });
 
   assertIncludes(prompt, '"missedFollowUps"');
@@ -423,6 +450,7 @@ Deno.test("crossfire debrief prompt requires cited IDs and omits typed-session s
   assertIncludes(prompt, "Return null for strongestExchange");
   assertIncludes(prompt, "Do not return a percentage, numeric performance score");
   assertIncludes(prompt, "speaking-speed, vocal-quality");
+  assertIncludes(prompt, "Language: Hungarian (hu) - Write ALL output in this language.");
   if (prompt.includes("delivery score") || prompt.includes("confidence score")) {
     throw new Error("typed-session scoring guidance leaked into debrief prompt");
   }

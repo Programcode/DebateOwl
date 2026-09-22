@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Ban, Loader2, Megaphone, Search, Trash2 } from 'lucide-react';
 import {
   createAnnouncement,
@@ -46,10 +47,10 @@ function isTargetType(value: string): value is AnnouncementTargetType {
 
 function getStatus(announcement: AdminAnnouncement) {
   const now = Date.now();
-  if (announcement.deactivatedAt) return 'Deactivated';
-  if (new Date(announcement.startsAt).getTime() > now) return 'Scheduled';
-  if (announcement.expiresAt && new Date(announcement.expiresAt).getTime() <= now) return 'Expired';
-  return 'Active';
+  if (announcement.deactivatedAt) return 'deactivated';
+  if (new Date(announcement.startsAt).getTime() > now) return 'scheduled';
+  if (announcement.expiresAt && new Date(announcement.expiresAt).getTime() <= now) return 'expired';
+  return 'active';
 }
 
 export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
@@ -68,6 +69,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
   const [startsAt, setStartsAt] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -77,8 +79,8 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
       } catch (error) {
         if (controller.signal.aborted) return;
         toast({
-          title: 'Could not load announcements',
-          description: error instanceof Error ? error.message : 'Try again.',
+          title: t('admin.announcements.loadFailed'),
+          description: error instanceof Error ? error.message : t('admin.announcements.tryAgain'),
           variant: 'destructive',
         });
       } finally {
@@ -87,7 +89,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
     };
     void load();
     return () => controller.abort();
-  }, [toast]);
+  }, [t, toast]);
 
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase();
@@ -108,8 +110,8 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
     if (!title.trim() || !body.trim()) return;
     if (targetType === 'users' && selectedUserIds.size === 0) {
       toast({
-        title: 'Select at least one user',
-        description: 'Targeted announcements need a recipient.',
+        title: t('admin.announcements.selectUser'),
+        description: t('admin.announcements.recipientRequired'),
         variant: 'destructive',
       });
       return;
@@ -132,11 +134,11 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
       setSelectedUserIds(new Set());
       setStartsAt('');
       setExpiresAt('');
-      toast({ title: 'Announcement created', description: 'Users will see it when it becomes active.' });
+      toast({ title: t('admin.announcements.created'), description: t('admin.announcements.createdDescription') });
     } catch (error) {
       toast({
-        title: 'Could not create announcement',
-        description: error instanceof Error ? error.message : 'Try again.',
+        title: t('admin.announcements.createFailed'),
+        description: error instanceof Error ? error.message : t('admin.announcements.tryAgain'),
         variant: 'destructive',
       });
     } finally {
@@ -151,11 +153,11 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
       await deleteAnnouncement(deleteTarget.id);
       setAnnouncements((current) => current.filter((item) => item.id !== deleteTarget.id));
       setDeleteTarget(null);
-      toast({ title: 'Announcement deleted' });
+      toast({ title: t('admin.announcements.deleted') });
     } catch (error) {
       toast({
-        title: 'Could not delete announcement',
-        description: error instanceof Error ? error.message : 'Try again.',
+        title: t('admin.announcements.deleteFailed'),
+        description: error instanceof Error ? error.message : t('admin.announcements.tryAgain'),
         variant: 'destructive',
       });
     } finally {
@@ -172,11 +174,11 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
         item.id === announcement.id ? announcement : item
       )));
       setDeactivateTarget(null);
-      toast({ title: 'Announcement deactivated' });
+      toast({ title: t('admin.announcements.deactivated') });
     } catch (error) {
       toast({
-        title: 'Could not deactivate announcement',
-        description: error instanceof Error ? error.message : 'Try again.',
+        title: t('admin.announcements.deactivateFailed'),
+        description: error instanceof Error ? error.message : t('admin.announcements.tryAgain'),
         variant: 'destructive',
       });
     } finally {
@@ -190,38 +192,38 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Megaphone className="h-5 w-5" aria-hidden="true" />
-            Compose announcement
+            {t('admin.announcements.compose')}
           </CardTitle>
-          <CardDescription>Send a dismissible message to everyone or selected users.</CardDescription>
+          <CardDescription>{t('admin.announcements.composeDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="announcement-title">Title</Label>
+            <Label htmlFor="announcement-title">{t('admin.announcements.title')}</Label>
             <Input
               id="announcement-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               maxLength={160}
-              placeholder="Scheduled maintenance"
+              placeholder={t('admin.announcements.titlePlaceholder')}
             />
-            <p className="text-xs text-muted-foreground">{title.length}/160 characters</p>
+            <p className="text-xs text-muted-foreground">{t('admin.announcements.characterCount', { count: title.length, max: 160 })}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="announcement-body">Message</Label>
+            <Label htmlFor="announcement-body">{t('admin.announcements.message')}</Label>
             <Textarea
               id="announcement-body"
               value={body}
               onChange={(event) => setBody(event.target.value)}
               maxLength={5000}
               rows={6}
-              placeholder="Tell users what changed and what they need to know."
+              placeholder={t('admin.announcements.messagePlaceholder')}
             />
-            <p className="text-xs text-muted-foreground">{body.length}/5000 characters</p>
+            <p className="text-xs text-muted-foreground">{t('admin.announcements.characterCount', { count: body.length, max: 5000 })}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="announcement-audience">Audience</Label>
+            <Label htmlFor="announcement-audience">{t('admin.announcements.audience')}</Label>
             <Select
               value={targetType}
               onValueChange={(value) => {
@@ -232,8 +234,8 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All users</SelectItem>
-                <SelectItem value="users">Selected users</SelectItem>
+                <SelectItem value="all">{t('admin.announcements.allUsers')}</SelectItem>
+                <SelectItem value="users">{t('admin.announcements.selectedUsers')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -241,8 +243,8 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
           {targetType === 'users' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <Label>Recipients</Label>
-                <span className="text-xs text-muted-foreground">{selectedUserIds.size} selected</span>
+                <Label>{t('admin.announcements.recipients')}</Label>
+                <span className="text-xs text-muted-foreground">{t('admin.announcements.selectedCount', { count: selectedUserIds.size })}</span>
               </div>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -250,8 +252,8 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                   value={userSearch}
                   onChange={(event) => setUserSearch(event.target.value)}
                   className="pl-9"
-                  placeholder="Search by email"
-                  aria-label="Search announcement recipients"
+                  placeholder={t('admin.announcements.searchByEmail')}
+                  aria-label={t('admin.announcements.searchRecipients')}
                 />
               </div>
               <ScrollArea className="h-52 rounded-lg border">
@@ -264,14 +266,14 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                       <Checkbox
                         checked={selectedUserIds.has(user.id)}
                         onCheckedChange={(checked) => toggleUser(user.id, checked === true)}
-                        aria-label={`Select ${user.email}`}
+                        aria-label={t('admin.announcements.selectRecipient', { email: user.email })}
                       />
                       <span className="min-w-0 flex-1 truncate text-sm">{user.email}</span>
-                      <Badge variant="secondary">{user.role}</Badge>
+                      <Badge variant="secondary">{t(`admin.users.roles.${user.role}`, user.role)}</Badge>
                     </label>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <p className="px-2 py-8 text-center text-sm text-muted-foreground">No users match that search.</p>
+                    <p className="px-2 py-8 text-center text-sm text-muted-foreground">{t('admin.announcements.noMatchingUsers')}</p>
                   )}
                 </div>
               </ScrollArea>
@@ -280,24 +282,24 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="announcement-start">Starts</Label>
+              <Label htmlFor="announcement-start">{t('admin.announcements.starts')}</Label>
               <Input
                 id="announcement-start"
                 type="datetime-local"
                 value={startsAt}
                 onChange={(event) => setStartsAt(event.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Leave blank to start immediately.</p>
+              <p className="text-xs text-muted-foreground">{t('admin.announcements.startsHint')}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="announcement-expiry">Expires</Label>
+              <Label htmlFor="announcement-expiry">{t('admin.announcements.expires')}</Label>
               <Input
                 id="announcement-expiry"
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(event) => setExpiresAt(event.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Leave blank to keep it active.</p>
+              <p className="text-xs text-muted-foreground">{t('admin.announcements.expiresHint')}</p>
             </div>
           </div>
 
@@ -308,27 +310,27 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
             disabled={submitting || !title.trim() || !body.trim()}
           >
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-            Create announcement
+            {t('admin.announcements.create')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Announcement history</CardTitle>
-          <CardDescription>Review scheduled, active, and expired messages.</CardDescription>
+          <CardTitle>{t('admin.announcements.history')}</CardTitle>
+          <CardDescription>{t('admin.announcements.historyDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex min-h-48 items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
-              Loading announcements
+              {t('admin.announcements.loading')}
             </div>
           ) : announcements.length === 0 ? (
             <div className="rounded-lg border border-dashed px-4 py-12 text-center">
               <Megaphone className="mx-auto mb-3 h-6 w-6 text-muted-foreground" aria-hidden="true" />
-              <p className="font-medium">No announcements yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">Create the first message from the form.</p>
+              <p className="font-medium">{t('admin.announcements.none')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('admin.announcements.noneDescription')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -338,34 +340,34 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold">{announcement.title}</h3>
-                        <Badge variant={getStatus(announcement) === 'Active' ? 'default' : 'secondary'}>
-                          {getStatus(announcement)}
+                        <Badge variant={getStatus(announcement) === 'active' ? 'default' : 'secondary'}>
+                          {t(`admin.announcements.status.${getStatus(announcement)}`)}
                         </Badge>
                         <Badge variant="outline">
                           {announcement.targetType === 'all'
-                            ? 'All users'
-                            : `${announcement.targetUserIds?.length ?? 0} users`}
+                            ? t('admin.announcements.allUsers')
+                            : t('admin.announcements.userCount', { count: announcement.targetUserIds?.length ?? 0 })}
                         </Badge>
                       </div>
                       <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
                         {announcement.body}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>Starts {formatEuropeanDateTime(announcement.startsAt)}</span>
-                        {announcement.expiresAt && <span>Expires {formatEuropeanDateTime(announcement.expiresAt)}</span>}
+                        <span>{t('admin.announcements.startsAt', { date: formatEuropeanDateTime(announcement.startsAt) })}</span>
+                        {announcement.expiresAt && <span>{t('admin.announcements.expiresAt', { date: formatEuropeanDateTime(announcement.expiresAt) })}</span>}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1 self-start">
-                      {(getStatus(announcement) === 'Active' || getStatus(announcement) === 'Scheduled') && (
+                      {(getStatus(announcement) === 'active' || getStatus(announcement) === 'scheduled') && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          aria-label={`Deactivate announcement: ${announcement.title}`}
+                          aria-label={t('admin.announcements.deactivateAria', { title: announcement.title })}
                           onClick={() => setDeactivateTarget(announcement)}
                         >
                           <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Deactivate
+                          {t('admin.announcements.deactivate')}
                         </Button>
                       )}
                       <Button
@@ -373,11 +375,11 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive"
-                        aria-label={`Delete announcement: ${announcement.title}`}
+                        aria-label={t('admin.announcements.deleteAria', { title: announcement.title })}
                         onClick={() => setDeleteTarget(announcement)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Delete
+                        {t('admin.announcements.delete')}
                       </Button>
                     </div>
                   </div>
@@ -396,13 +398,13 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate this announcement?</AlertDialogTitle>
+            <AlertDialogTitle>{t('admin.announcements.deactivateTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Users will stop seeing it. The announcement and its dismissal history will remain available.
+              {t('admin.announcements.deactivateDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deactivating}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deactivating}>{t('admin.announcements.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();
@@ -411,7 +413,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
               disabled={deactivating}
             >
               {deactivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-              Deactivate announcement
+              {t('admin.announcements.deactivateAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -420,16 +422,16 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
       <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this announcement?</AlertDialogTitle>
+            <AlertDialogTitle>{t('admin.announcements.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the message for every user and cannot be undone.
+              {t('admin.announcements.deleteDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t('admin.announcements.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={deleting}>
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-              Delete announcement
+              {t('admin.announcements.deleteAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

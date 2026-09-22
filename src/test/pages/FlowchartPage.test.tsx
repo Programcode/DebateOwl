@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import FlowchartPage from '@/pages/FlowchartPage';
+import i18n from '@/i18n';
 
 const { mockSavedFlowcharts, mockToastSuccess } = vi.hoisted(() => ({
   mockSavedFlowcharts: [] as Array<{
@@ -32,10 +33,12 @@ vi.mock('reactflow', async () => {
   const React = await import('react');
   return {
     default: ({ nodes, onNodeClick }: {
-      nodes: Array<{ id: string; data: { label: string } }>;
+      nodes: Array<{ id: string; data: { label: string; description?: string } }>;
       onNodeClick: (event: React.MouseEvent, node: { id: string }) => void;
     }) => <div>{nodes.map((node) => (
-      <button key={node.id} onClick={(event) => onNodeClick(event, node)}>{node.data.label}</button>
+      <button key={node.id} onClick={(event) => onNodeClick(event, node)}>
+        {node.data.label}{node.data.description && <span aria-hidden="true">{node.data.description}</span>}
+      </button>
     ))}</div>,
     useNodesState: (initial: unknown[]) => {
       const [nodes, setNodes] = React.useState(initial);
@@ -56,9 +59,11 @@ vi.mock('reactflow', async () => {
   };
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   mockSavedFlowcharts.length = 0;
   mockToastSuccess.mockClear();
+  vi.useRealTimers();
+  await i18n.changeLanguage('en');
 });
 
 test('keeps a selected node when deletion is cancelled', () => {
@@ -107,4 +112,31 @@ test('clears a stale node selection when a saved flowchart is loaded', () => {
 
   expect(screen.getByRole('button', { name: 'Loaded argument' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+});
+
+test('formats saved-flowchart relative time in Hungarian', async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 4, 19, 13, 45));
+  await i18n.changeLanguage('hu');
+  mockSavedFlowcharts.push({
+    id: 'saved-hu',
+    title: 'Mentett ábra',
+    createdAt: new Date(2026, 4, 19, 12, 45).getTime(),
+    data: { nodes: [], edges: [] },
+  });
+
+  render(<FlowchartPage />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Betöltés' }));
+  expect(screen.getByText('körülbelül 1 órával ezelőtt')).toBeInTheDocument();
+});
+
+test('localizes starter flowchart nodes in Hungarian', async () => {
+  await i18n.changeLanguage('hu');
+  render(<FlowchartPage />);
+
+  expect(screen.getByRole('button', { name: '1. érv' })).toBeInTheDocument();
+  expect(screen.getByText('Az első érved')).toBeInTheDocument();
+  expect(screen.getByText('Így válaszolhatnak')).toBeInTheDocument();
+  expect(screen.getByText('Így válaszolsz a támadásukra')).toBeInTheDocument();
 });

@@ -48,7 +48,9 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
               <Badge variant="outline" className={cn('text-xs uppercase', config.color)}>
                 {t(`attackResults.severity.${weakness.severity}`, weakness.severity)}
               </Badge>
-              <Badge variant="outline" className="text-xs">{weakness.type}</Badge>
+              <Badge variant="outline" className="text-xs">
+                {t(`attackResults.types.${weakness.type}`, weakness.type)}
+              </Badge>
             </div>
             <h4 className="mt-1 font-medium text-foreground">{weakness.description}</h4>
           </div>

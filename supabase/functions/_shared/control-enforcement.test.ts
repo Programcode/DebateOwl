@@ -50,6 +50,19 @@ Deno.test("control validator accepts every enum value and omitted defaults", () 
   }
 });
 
+Deno.test("control validator accepts supported languages and rejects invalid language values", () => {
+  for (const feature of ["generate", "attack", "brainstorm", "factoids", "ask", "sparring", "crossfire"]) {
+    if (validateControlInput(feature, {}) !== null) throw new Error(`${feature} rejected omitted language`);
+    for (const language of ["en", "es", "hu"]) {
+      if (validateControlInput(feature, { language }) !== null) throw new Error(`${feature} rejected ${language}`);
+    }
+    for (const language of ["zz", 7, null]) {
+      const error = validateControlInput(feature, { language });
+      if (!error?.includes(`${feature}.language`)) throw new Error(`${feature} accepted ${String(language)}`);
+    }
+  }
+});
+
 Deno.test("control validator rejects every unsupported enum", () => {
   for (const [feature, controls] of Object.entries(ENUM_CONTROLS)) {
     for (const control of Object.keys(controls)) {

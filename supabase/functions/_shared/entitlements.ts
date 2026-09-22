@@ -4,7 +4,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { calculateRequestCost, type CostResult, type NormalizedUsage } from "./cost.ts";
-import { getModelCatalogEntry } from "./model-catalog.ts";
+import {
+  AUTO_PRO,
+  getModelCatalogEntry,
+  isAutoModelSelection,
+  type ModelSelection,
+} from "./model-catalog.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -140,7 +145,7 @@ export async function getConfiguredDailyLimit(userId: string, fallbackLimit: num
   return typeof globalLimit?.limit_value === "number" ? globalLimit.limit_value : fallbackLimit;
 }
 
-export async function checkRateLimit(userId: string | null, model?: string): Promise<RateLimitResult> {
+export async function checkRateLimit(userId: string | null, model?: ModelSelection): Promise<RateLimitResult> {
   if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
 
   try {
@@ -158,7 +163,7 @@ export async function checkRateLimit(userId: string | null, model?: string): Pro
       return { allowed: false, reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.", code: "trial_expired", limit: 0, current: 0, statusCode: 402 };
     }
 
-    if (model && getModelCatalogEntry(model)?.isProOnly && !sub.canAccessProModels) {
+    if (model && (model === AUTO_PRO || (!isAutoModelSelection(model) && getModelCatalogEntry(model)?.isProOnly)) && !sub.canAccessProModels) {
       return { allowed: false, reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.", code: "upgrade_required", statusCode: 403 };
     }
 

@@ -235,6 +235,74 @@ describe("settings-store", () => {
     });
   });
 
+  it("keeps Auto Fast for trial users", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-fast",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate).toMatchObject({
+      model: "auto-fast",
+      reasoningEffort: "high",
+    });
+  });
+
+  it("moves an inaccessible Auto Pro selection to Auto Fast", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-pro",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("auto-fast");
+  });
+
+  it("keeps Auto Pro for active Pro users", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-pro",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("auto-pro");
+  });
+
   it("uses Sonnet when an active Pro user has no saved feature configs", async () => {
     setMockTableResponse("subscriptions", {
       select: [{ status: "trialing", current_period_end: "2099-01-01T00:00:00.000Z" }],
@@ -511,5 +579,137 @@ describe("settings-store", () => {
     const persisted = JSON.parse(localStorage.getItem('debate-trainer-settings') || '{}');
     expect(persisted.version).toBe(2);
     expect(persisted.state.featureConfigs.generate.model).toBe('openai/gpt-5.6-luna');
+  });
+
+  it("keeps Auto Fast for trial users", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-fast",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate).toMatchObject({
+      model: "auto-fast",
+      reasoningEffort: "high",
+    });
+  });
+
+  it("moves an inaccessible Auto Pro selection to Auto Fast", async () => {
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "trial",
+        trial_ends_at: "2099-01-01T00:00:00.000Z",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-pro",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("auto-fast");
+  });
+
+  it("keeps Auto Pro for active Pro users", async () => {
+    setMockTableResponse("subscriptions", {
+      select: [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }],
+    });
+    setMockTableResponse("user_settings", {
+      single: {
+        subscription_tier: "pro",
+        feature_configs: {
+          generate: {
+            provider: "openrouter",
+            model: "auto-pro",
+            temperature: 0.7,
+            reasoningEffort: "high",
+          },
+        },
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().featureConfigs.generate.model).toBe("auto-pro");
+  });
+
+  it('resetLocalData can preserve only the interface language', () => {
+    const store = useSettingsStore.getState();
+    store.setLanguage('hu');
+    store.setOutputLanguage('hu');
+    store.setTheme('dark');
+    store.setSystemPrompt('custom');
+    store.resetLocalData(true);
+
+    const state = useSettingsStore.getState();
+    expect(state.language).toBe('hu');
+    expect(state.outputLanguage).toBe('en');
+    expect(state.theme).toBe('system');
+    expect(state.customSystemPrompt).toBeUndefined();
+  });
+
+  it('hydrateFromServer accepts Hungarian language settings', async () => {
+    setMockTableResponse('user_settings', {
+      single: {
+        language: 'hu',
+        output_language: 'hu',
+        feature_configs: undefined,
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().language).toBe('hu');
+    expect(useSettingsStore.getState().outputLanguage).toBe('hu');
+    expect(document.documentElement.lang).toBe('hu');
+  });
+
+  it('hydrateFromServer rejects unsupported language settings', async () => {
+    setMockTableResponse('user_settings', {
+      single: {
+        language: 'zz',
+        output_language: 'zz',
+        feature_configs: undefined,
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().language).toBe('en');
+    expect(useSettingsStore.getState().outputLanguage).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+  });
+
+  it('normalizes unsupported locally persisted languages', () => {
+    const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
+
+    const partialState = {
+      featureConfigs: undefined,
+      language: 'zz',
+      outputLanguage: 'zz',
+    } as any;
+
+    afterRehydrate(partialState);
+
+    expect(partialState.language).toBe('en');
+    expect(partialState.outputLanguage).toBe('en');
   });
 });

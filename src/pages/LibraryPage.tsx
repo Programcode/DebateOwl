@@ -54,6 +54,15 @@ function SourceRow({
   manualEntryLabel,
   folderLabel,
 }: SourceRowProps) {
+  const { t } = useTranslation();
+  const sourceFolder = source.folder || 'General';
+  const sourceFolderLabel = sourceFolder === 'General'
+    ? t('libraryPage.generalFolder')
+    : sourceFolder === 'Auto-saved'
+      ? t('aiClient.autoSavedFolder')
+      : sourceFolder;
+
+
   return (
     <div className="px-1 pb-2">
       <div
@@ -82,18 +91,35 @@ function SourceRow({
               ) : (
                 <span className="truncate text-sm font-medium">{source.title}</span>
               )}
-              <Badge variant="outline" className="shrink-0 py-0 text-[9px]">{source.type.toUpperCase()}</Badge>
+              <Badge variant="outline" className="shrink-0 py-0 text-[9px]">
+                {t(`libraryPage.${source.type}Source`, source.type.toUpperCase())}
+              </Badge>
             </div>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
             <div className="mt-1 flex min-w-0 items-center gap-1.5">
               <Badge
                 variant="secondary"
                 className="shrink-0 max-w-[200px] truncate py-0 text-[10px]"
-                title={`${folderLabel}: ${source.folder || 'General'}`}
+                title={`${folderLabel}: ${sourceFolderLabel}`}
               >
                 <Folder className="mr-1 h-3 w-3 shrink-0" />
-                <span className="truncate">{source.folder || 'General'}</span>
+                <span className="truncate">{sourceFolderLabel}</span>
               </Badge>
+              {source.metadata?.semantic?.lastUsedInCase && (
+                <Badge variant="outline" className="shrink-0 border-primary/30 bg-primary/10 py-0 text-[10px] text-primary">
+                  {t('sourceQuality.usedInCase')}
+                </Badge>
+              )}
+              {source.metadata?.semantic && (
+                <Badge variant="outline" className="shrink-0 py-0 text-[10px]">
+                  {t('sourceQuality.importance', { level: t(`sourceQuality.levels.${source.metadata.semantic.importance}`) })}
+                </Badge>
+              )}
+              {source.metadata?.semantic && (
+                <Badge variant="outline" className="shrink-0 py-0 text-[10px]">
+                  {t('sourceQuality.strength', { level: t(`sourceQuality.levels.${source.metadata.semantic.strength}`) })}
+                </Badge>
+              )}
               <span className="truncate text-[11px] text-muted-foreground">{source.content}</span>
             </div>
           </div>
@@ -107,7 +133,7 @@ function SourceRow({
               event.stopPropagation();
               onRemove(source);
             }}
-            aria-label={`Delete ${source.title}`}
+            aria-label={t('libraryPage.deleteSourceLabel', { title: source.title })}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -115,7 +141,7 @@ function SourceRow({
             checked={source.isActive}
             onClick={(event) => event.stopPropagation()}
             onCheckedChange={() => onToggle(source.id)}
-            aria-label={`Toggle ${source.title}`}
+            aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
           />
         </div>
       </div>
@@ -125,6 +151,11 @@ function SourceRow({
 
 export default function LibraryPage() {
   const { t } = useTranslation();
+  const getFolderName = (folder: string) => folder === 'General'
+    ? t('libraryPage.generalFolder')
+    : folder === 'Auto-saved'
+      ? t('aiClient.autoSavedFolder')
+      : folder;
   const {
     sourceLibrary,
     sourceFolders,
@@ -154,7 +185,7 @@ export default function LibraryPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [folderRenameValue, setFolderRenameValue] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'folder'>('newest');
+  const [sortBy, setSortBy] = useState<'smart' | 'mostUsed' | 'importance' | 'strength' | 'newest' | 'oldest' | 'title' | 'folder'>('smart');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -180,7 +211,7 @@ export default function LibraryPage() {
 
   const handleAdd = async () => {
     if (!newSource.title || !newSource.content) {
-      toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
+      toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
     await addSource(newSource);
@@ -277,7 +308,7 @@ export default function LibraryPage() {
       toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.clearSuccess', 'Library cleared.') });
     } catch (error) {
       console.error('Failed to clear library:', error);
-      toast({ title: "Error", description: t('libraryPage.clearFailed'), variant: "destructive" });
+      toast({ title: t('common.error'), description: t('libraryPage.clearFailed'), variant: "destructive" });
     } finally {
       setIsClearing(false);
     }
@@ -303,7 +334,21 @@ export default function LibraryPage() {
     })
     .slice()
     .sort((a, b) => {
+      const aSemantic = a.metadata?.semantic;
+      const bSemantic = b.metadata?.semantic;
       switch (sortBy) {
+        case 'smart':
+          return Number(Boolean(bSemantic?.lastUsedInCase)) - Number(Boolean(aSemantic?.lastUsedInCase)) ||
+            (bSemantic?.importance ?? 0) - (aSemantic?.importance ?? 0) ||
+            (bSemantic?.strength ?? 0) - (aSemantic?.strength ?? 0) ||
+            (b.metadata?.qualityScore ?? 0) - (a.metadata?.qualityScore ?? 0) ||
+            b.createdAt - a.createdAt;
+        case 'mostUsed':
+          return (bSemantic?.useCount ?? 0) - (aSemantic?.useCount ?? 0) || b.createdAt - a.createdAt;
+        case 'importance':
+          return (bSemantic?.importance ?? 0) - (aSemantic?.importance ?? 0) || b.createdAt - a.createdAt;
+        case 'strength':
+          return (bSemantic?.strength ?? 0) - (aSemantic?.strength ?? 0) || b.createdAt - a.createdAt;
         case 'oldest':
           return a.createdAt - b.createdAt;
         case 'title':
@@ -380,7 +425,7 @@ export default function LibraryPage() {
   const handleSaveSourceDraft = async () => {
     if (!selectedSource) return;
     if (!sourceDraft.title.trim() || !sourceDraft.content.trim()) {
-      toast({ title: "Error", description: t('libraryPage.errorRequired'), variant: "destructive" });
+      toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
 
@@ -427,7 +472,7 @@ export default function LibraryPage() {
                 <SelectContent>
                   <SelectItem value="all">{t('libraryPage.allFolders', 'All')}</SelectItem>
                   {folders.map((f) => (
-                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                    <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -475,6 +520,10 @@ export default function LibraryPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="smart">{t('libraryPage.sortSmart', 'Smart')}</SelectItem>
+                  <SelectItem value="mostUsed">{t('libraryPage.sortMostUsed', 'Most used')}</SelectItem>
+                  <SelectItem value="importance">{t('libraryPage.sortImportance', 'Importance')}</SelectItem>
+                  <SelectItem value="strength">{t('libraryPage.sortStrength', 'Evidence strength')}</SelectItem>
                   <SelectItem value="newest">{t('libraryPage.sortNewest', 'Date added (newest)')}</SelectItem>
                   <SelectItem value="oldest">{t('libraryPage.sortOldest', 'Date added (oldest)')}</SelectItem>
                   <SelectItem value="title">{t('libraryPage.sortTitle', 'Name (A–Z)')}</SelectItem>
@@ -601,7 +650,7 @@ export default function LibraryPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                          <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -649,7 +698,7 @@ export default function LibraryPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                      <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -707,7 +756,7 @@ export default function LibraryPage() {
                       className="shrink-0"
                       onClick={() => setSelectedFolder(folder)}
                     >
-                      {folder === 'all' ? t('libraryPage.allFolders', 'All folders') : folder}
+                      {folder === 'all' ? t('libraryPage.allFolders', 'All folders') : getFolderName(folder)}
                     </Button>
                   ))}
                 </div>
@@ -849,13 +898,29 @@ export default function LibraryPage() {
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="truncate">{sourceDraft.title || t('libraryPage.untitledSource', 'Untitled source')}</SheetTitle>
                     <SheetDescription className="mt-1">
-                      {[sourceDraft.folder || 'General', formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
+                      {[getFolderName(sourceDraft.folder || 'General'), formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
                     </SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-5 py-5">
                 <div className="grid gap-4">
+                  {selectedSource.metadata?.semantic && (
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                      <p className="font-medium">
+                        {selectedSource.metadata.semantic.lastUsedInCase
+                          ? t('sourceQuality.usedInCase')
+                          : t('sourceQuality.semanticAssessment')}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t('sourceQuality.usageExplanation', {
+                          count: selectedSource.metadata.semantic.caseUseCount,
+                          importance: t(`sourceQuality.levels.${selectedSource.metadata.semantic.importance}`),
+                          strength: t(`sourceQuality.levels.${selectedSource.metadata.semantic.strength}`),
+                        })}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid gap-2">
                     <Label htmlFor="source-detail-title">{t('libraryPage.titleLabel')}</Label>
                     <Input
@@ -873,7 +938,7 @@ export default function LibraryPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {['General', ...folders.filter(f => f !== 'General')].map((folder) => (
-                            <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                            <SelectItem key={folder} value={folder}>{getFolderName(folder)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

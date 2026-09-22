@@ -4,15 +4,18 @@ import { setLocale, stubSupabaseSession } from './helpers/auth';
 type CrossfireRequest = {
   feature: string;
   input: {
-    operation: 'next-turn' | 'debrief';
+    operation: 'next-turn' | 'debrief' | 'signal';
     expectedReply?: 'question' | 'answer';
+    reply?: { type: 'question' | 'answer'; text: string };
+    signalToken?: string;
     config: { mode: 'question-ai' | 'ai-questions-user'; useSourceLibrary: boolean };
-    transcript: Array<{ id: string; text: string }>;
+    transcript: Array<{ id: string; kind: 'question' | 'answer'; text: string }>;
   };
   sources: unknown[];
 };
 
-async function installDeterministicBackend(page: Page, requests: CrossfireRequest[]) {
+async function installDeterministicBackend(page: Page, requests: CrossfireRequest[], failFirstAnswer = false) {
+  let answerFailed = false;
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
@@ -42,7 +45,27 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
     if (url.pathname.endsWith('/functions/v1/ai')) {
       const body = route.request().postDataJSON() as CrossfireRequest;
       requests.push(body);
+      if (body.input.operation === 'signal') {
+        const answerTurnId = body.input.reply?.type === 'answer'
+          ? `T${body.input.transcript.length + 1}`
+          : body.input.transcript.at(-1)?.kind === 'answer' ? body.input.transcript.at(-1)?.id : undefined;
+        const signal = answerTurnId ? {
+          answerTurnId,
+          answerQuality: body.input.reply?.type === 'answer' ? 'direct' : 'partial',
+          answerQualityConfidence: 0.91,
+          concession: body.input.reply?.type === 'answer' ? 'none' : 'implicit',
+          concessionConfidence: 0.76,
+          followUpOpportunity: 0.82,
+        } : undefined;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output: signal ? { signal } : {} }) });
+        return;
+      }
       if (body.input.operation === 'next-turn') {
+        if (failFirstAnswer && !answerFailed && body.input.expectedReply === 'answer') {
+          answerFailed = true;
+          await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Temporary Crossfire failure' }) });
+          return;
+        }
         const questionCount = requests.filter((request) =>
           request.input.operation === 'next-turn' && request.input.expectedReply === 'question'
         ).length;
@@ -54,7 +77,8 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
                 ? 'What evidence connects fewer private cars to safer streets?'
                 : 'How would you answer the strongest enforcement objection?',
             };
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output }) });
+        const hasCompletedExchange = output.type === 'answer' || body.input.transcript.at(-1)?.kind === 'answer';
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output, ...(hasCompletedExchange ? { signalToken: 'e2e-signal-token' } : {}) }) });
         return;
       }
 
@@ -75,7 +99,7 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
   });
 }
 
-async function prepare(page: Page, requests: CrossfireRequest[]) {
+async function prepare(page: Page, requests: CrossfireRequest[], failFirstAnswer = false) {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.addInitScript(() => {
@@ -83,7 +107,7 @@ async function prepare(page: Page, requests: CrossfireRequest[]) {
       if (key.startsWith('debatelab-crossfire-draft:')) window.localStorage.removeItem(key);
     }
   });
-  await installDeterministicBackend(page, requests);
+  await installDeterministicBackend(page, requests, failFirstAnswer);
   await page.goto('/app/crossfire');
   await page.getByTestId('crossfire-resolution').fill('Resolved: cities should ban private cars downtown.');
   await page.getByTestId('crossfire-argument').fill('Private cars create congestion and unsafe streets.');
@@ -100,9 +124,13 @@ test('Question the AI completes a grounded Crossfire debrief', async ({ page }, 
   await page.getByTestId('crossfire-input').fill('What evidence supports the safety mechanism?');
   await page.getByTestId('submit-turn').click();
   await expect(page.getByText('The case relies on reduced traffic exposure and documented collision risk.')).toBeVisible();
+  await expect(page.getByText('Direct answer')).toBeVisible();
+  await expect(page.getByText('What evidence supports the safety mechanism?').locator('..')).not.toContainText('Direct answer');
+  await expect(page.getByText('Follow-up opportunity')).toHaveCount(1);
   await page.getByTestId('end-crossfire').click();
 
   await expect(page.getByTestId('crossfire-debrief')).toBeVisible();
+  await expect(page.getByText('Direct answer')).toBeVisible();
   await expect(page.getByText('T1', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('T2', { exact: true }).first()).toBeVisible();
   expect(requests[0].input).toMatchObject({ operation: 'next-turn', expectedReply: 'answer', config: { mode: 'question-ai', useSourceLibrary: true } });
@@ -122,11 +150,28 @@ test('Let the AI question me alternates roles and completes a debrief', async ({
   await page.getByTestId('crossfire-input').fill('Traffic exposure falls when trips shift to transit and walking.');
   await page.getByTestId('submit-turn').click();
   await expect(page.getByText('How would you answer the strongest enforcement objection?')).toBeVisible();
+  await expect(page.getByText('Partial answer')).toBeVisible();
+  await expect(page.getByText('Implicit concession')).toBeVisible();
+  await expect(page.getByText('What evidence connects fewer private cars to safer streets?').locator('..')).not.toContainText('Partial answer');
   await page.getByTestId('end-crossfire').click();
 
   await expect(page.getByTestId('crossfire-debrief')).toBeVisible();
+  await expect(page.getByText('Partial answer')).toBeVisible();
   expect(requests[0].input).toMatchObject({ operation: 'next-turn', expectedReply: 'question', config: { mode: 'ai-questions-user', useSourceLibrary: false } });
-  expect(requests[1].input.transcript.at(-1)?.text).toBe('Traffic exposure falls when trips shift to transit and walking.');
+  expect(requests.filter((request) => request.input.operation === 'next-turn')[1].input.transcript.at(-1)?.text).toBe('Traffic exposure falls when trips shift to transit and walking.');
   expect(requests.at(-1)?.input.operation).toBe('debrief');
   await page.screenshot({ path: testInfo.outputPath('crossfire-ai-questions-user-final.png'), fullPage: true });
+});
+
+test('retry attaches one signal to the recovered answer', async ({ page }) => {
+  const requests: CrossfireRequest[] = [];
+  await prepare(page, requests, true);
+  await page.getByTestId('start-crossfire').click();
+  await page.getByTestId('crossfire-input').fill('What evidence supports the safety mechanism?');
+  await page.getByTestId('submit-turn').click();
+  await expect(page.getByTestId('retry-ai')).toBeVisible();
+  await page.getByTestId('retry-ai').click();
+  await expect(page.getByText('The case relies on reduced traffic exposure and documented collision risk.')).toBeVisible();
+  await expect(page.getByText('Direct answer')).toHaveCount(1);
+  await expect(page.getByText('Follow-up opportunity')).toHaveCount(1);
 });

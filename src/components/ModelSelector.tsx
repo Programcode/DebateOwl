@@ -1,7 +1,14 @@
 import { Cpu } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { AVAILABLE_MODELS, DEFAULT_MODEL, PROVIDER_ID, isReasoningEffort } from '@/lib/ai/providers/types';
+import {
+  AUTO_MODEL_SELECTIONS,
+  AVAILABLE_MODELS,
+  DEFAULT_MODEL,
+  PROVIDER_ID,
+  isAutoModelSelection,
+  isReasoningEffort,
+} from '@/lib/ai/providers/types';
 import type { ReasoningEffort } from '@/lib/ai/providers/types';
 import { useSettingsStore, type FeatureTab } from '@/lib/stores/settings-store';
 import { useSubscription } from '@/hooks/use-subscription';
@@ -15,7 +22,12 @@ interface ModelSelectorProps {
   showLabel?: boolean;
 }
 
-const allModels = AVAILABLE_MODELS;
+// Every catalog model routes through OpenRouter, so the provider fan-out that
+// used to wrap this collapses to one tag.
+const allModels = [
+  ...AUTO_MODEL_SELECTIONS.map((model) => ({ ...model, provider: PROVIDER_ID, providerName: 'OpenRouter', isAuto: true })),
+  ...AVAILABLE_MODELS.map((model) => ({ ...model, provider: PROVIDER_ID, providerName: 'OpenRouter', isAuto: false })),
+];
 
 const reasoningOptions: { value: ReasoningEffort; labelKey: string; fallback: string }[] = [
   { value: 'low', labelKey: 'modelSelector.reasoningLow', fallback: 'Low' },
@@ -30,7 +42,8 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
   const config = featureConfigs?.[feature];
   const selectedModel = allModels.find((model) => model.id === config?.model);
   const currentModel = selectedModel?.id ?? DEFAULT_MODEL;
-  const currentReasoning = (isPro || subscriptionLoading) && config?.reasoningEffort && isReasoningEffort(config.reasoningEffort)
+  const automatic = isAutoModelSelection(currentModel);
+  const currentReasoning = !automatic && (isPro || subscriptionLoading) && config?.reasoningEffort && isReasoningEffort(config.reasoningEffort)
     ? config.reasoningEffort
     : 'low';
 
@@ -64,8 +77,19 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
               disabled={m.isProOnly && !isPro}
             >
               <span className="flex items-center gap-2">
-                {m.name}
-                {m.isProOnly && <Badge variant="outline" className="text-[10px] px-1 py-0">Pro</Badge>}
+                <span>
+                  <span className="flex items-center gap-2">
+                    {m.name}
+                    {m.isProOnly && <Badge variant="outline" className="text-[10px] px-1 py-0">Pro</Badge>}
+                  </span>
+                  {m.isAuto && (
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {m.id === 'auto-fast'
+                        ? t('modelSelector.autoFastDescription', 'Fast routing, usually GLM')
+                        : t('modelSelector.autoProDescription', 'Routes among the strongest models')}
+                    </span>
+                  )}
+                </span>
               </span>
             </SelectItem>
           ))}
@@ -77,9 +101,9 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
         </Label>
         <Select
           value={currentReasoning}
-          disabled={!isPro}
+          disabled={!isPro || automatic}
           onValueChange={(value) => {
-            if (!isPro || !isReasoningEffort(value)) return;
+            if (!isPro || automatic || !isReasoningEffort(value)) return;
             setFeatureConfig(feature, { reasoningEffort: value });
           }}
         >

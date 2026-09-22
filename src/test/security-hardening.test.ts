@@ -72,7 +72,8 @@ describe('security hardening regressions', () => {
     expect(modelCatalog).toContain('id: "openai/gpt-5.6-luna"');
     expect(modelCatalog).toContain('id: "google/gemini-3.8-flash"');
     expect(ai).toContain('function modelForRequest');
-    expect(stream).toContain('function modelForRequest');
+    expect(stream).toContain('isModelSelection(rawModel)');
+    expect(stream).toContain('resolveModelSelection({');
     expect(ai).toContain('const provider: Provider = OPENROUTER_PROVIDER');
     expect(stream).toContain('const OPENROUTER_PROVIDER = "openrouter"');
     expect(entitlements).not.toContain('api.anthropic.com');

@@ -55,6 +55,16 @@ export const GenerateOutputSchema = z.object({
     model: z.string().optional(),
     provider: z.string().optional(),
     durationMs: z.number().optional(),
+    sourceUsage: z.array(z.object({
+      key: z.string(),
+      id: z.string().optional(),
+      title: z.string(),
+      origin: z.string().optional(),
+      importance: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+      strength: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+      probability: z.number().min(0).max(1),
+      judgment: z.enum(['used', 'uncertain', 'not_used']),
+    })).max(10).optional(),
   }),
 });
 

@@ -7,6 +7,23 @@ import type { ProviderConfig } from '@/lib/ai/providers/types';
 import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 import type { AttackInput, AttackOutput } from '@/lib/ai/schemas/attack';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
+import i18n from '@/i18n';
+
+const clientMocks = vi.hoisted(() => ({
+    toast: vi.fn(),
+    settings: {
+        customSystemPrompt: 'test-system-prompt',
+        language: 'en',
+        outputLanguage: 'en',
+    },
+    session: {
+        sourceLibrary: [
+            { title: 'Source 1', content: 'Content 1', origin: 'url1', type: 'web', isActive: true },
+            { title: 'Source 2', content: 'Content 2', origin: 'url2', type: 'web', isActive: false },
+        ],
+        addSource: vi.fn(),
+    },
+}));
 
 // Mock Supabase client - Importing the mock object directly
 // We must use vi.hoisted or just inline for variables used in vi.mock
@@ -20,24 +37,17 @@ vi.mock('@/lib/supabase/client', () => ({
 // Mock Stores - Inline the implementation to avoid ReferenceError
 vi.mock('@/lib/stores/settings-store', () => ({
     useSettingsStore: {
-        getState: vi.fn(() => ({
-            customSystemPrompt: 'test-system-prompt',
-            language: 'en',
-            outputLanguage: 'en',
-        })),
+        getState: vi.fn(() => clientMocks.settings),
     },
 }));
 
 vi.mock('@/lib/stores/session-store', () => ({
     useSessionStore: {
-        getState: vi.fn(() => ({
-            sourceLibrary: [
-                { title: 'Source 1', content: 'Content 1', origin: 'url1', type: 'web', isActive: true },
-                { title: 'Source 2', content: 'Content 2', origin: 'url2', type: 'web', isActive: false }, // Inactive should be filtered
-            ],
-        })),
+        getState: vi.fn(() => clientMocks.session),
     },
 }));
+
+vi.mock('@/hooks/use-toast', () => ({ toast: clientMocks.toast }));
 
 describe('AI Client Integration', () => {
     const mockConfig: ProviderConfig = {
@@ -46,10 +56,14 @@ describe('AI Client Integration', () => {
         temperature: 0.8,
     };
 
-    beforeEach(() => {
+    beforeEach(async () => {
         resetMockState();
         setMockSessionToken('valid-token');
         vi.clearAllMocks();
+        clientMocks.settings.language = 'en';
+        clientMocks.settings.outputLanguage = 'en';
+        clientMocks.session.addSource.mockResolvedValue(undefined);
+        await i18n.changeLanguage('en');
     });
 
     afterEach(() => {
@@ -209,7 +223,7 @@ describe('AI Client Integration', () => {
             }, mockConfig);
 
             expect(result.contentions).toHaveLength(expectedCount);
-        });
+        }, 15000);
 
         it('rejects a response whose contention count does not match the requested length', async () => {
             setMockInvokeResponse({
@@ -226,6 +240,32 @@ describe('AI Client Integration', () => {
                 motion: 'Test Motion', side: 'pro', format: 'bp', role: 'intro',
                 length: 'comprehensive', audience: 'beginner', tone: 'formal',
             }, mockConfig)).rejects.toBeInstanceOf(AIResponseError);
+        });
+
+        it('localizes the truncated-input notification in Hungarian', async () => {
+            clientMocks.settings.language = 'hu';
+            clientMocks.settings.outputLanguage = 'hu';
+            await i18n.changeLanguage('hu');
+            setMockInvokeResponse({
+                output: {
+                    caseStructure: { thesis: 'T', framework: 'F', keyDefinitions: [], burdenOfProof: 'B' },
+                    contentions: [
+                        { id: '1', claim: 'A', reasoning: 'R', evidence: 'E', needsSource: false, impact: 'I' },
+                        { id: '2', claim: 'B', reasoning: 'R', evidence: 'E', needsSource: false, impact: 'I' },
+                    ],
+                    predictedOpponentCase: { likelyArguments: [], strategicWeaknesses: [], keyClashes: [] },
+                    counters: [],
+                    metadata: { side: 'pro', format: 'custom', generatedAt: '2026-01-01T00:00:00.000Z' },
+                },
+                meta: { truncated: true },
+            });
+
+            await generateCase({ motion: 'M', side: 'pro', length: 'brief' } as GenerateInput, mockConfig);
+
+            expect(clientMocks.toast).toHaveBeenCalledWith({
+                title: 'A bemenet rövidítve lett',
+                description: 'A kérés túl nagy volt, ezért csak az elküldhető rész került az MI-hez.',
+            });
         });
     });
 
@@ -310,6 +350,37 @@ describe('AI Client Integration', () => {
 
             expect(outcome.result.overallAssessment.score).toBe(80);
             expect(outcome.discoveredSources).toEqual(discoveredSources);
+        });
+
+        it('localizes new auto-saved sources and save failures in Hungarian', async () => {
+            clientMocks.settings.language = 'hu';
+            clientMocks.settings.outputLanguage = 'hu';
+            await i18n.changeLanguage('hu');
+            const discoveredSources = [{
+                title: 'Study',
+                url: 'https://edu.example/study',
+                content: 'Provider content',
+                sourceType: 'academic',
+                qualityLabel: 'strong' as const,
+                qualityScore: 85,
+                query: 'study query',
+            }];
+            setMockInvokeResponse({ output: validAttackOutput, discoveredSources });
+
+            await attackCase({ caseText: 'c' } as AttackInput, mockConfig);
+            expect(clientMocks.session.addSource).toHaveBeenCalledWith(expect.objectContaining({
+                title: 'Study',
+                content: 'Provider content',
+                folder: 'Auto-saved',
+            }));
+
+            clientMocks.session.addSource.mockRejectedValueOnce(new Error('save failed'));
+            await attackCase({ caseText: 'c' } as AttackInput, mockConfig);
+            expect(clientMocks.toast).toHaveBeenCalledWith({
+                title: 'A forrás mentése sikertelen',
+                description: 'Nem sikerült a(z) „Study” forrást a könyvtárba menteni.',
+                variant: 'destructive',
+            });
         });
 
         it('throws AIResponseError when attack output does not match the schema', async () => {

@@ -77,14 +77,27 @@ import {
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
+  AUTO_PRO,
   DEFAULT_MODEL,
   effectiveReasoningEffort,
   getModelCatalogEntry,
+  isAutoModelSelection,
+  isModelSelection,
   isReasoningEffort,
   MAX_REQUEST_OUTPUT_TOKENS,
   type ModelCatalogEntry,
+  type ModelSelection,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
+import { resolveModelSelection } from "../_shared/auto-model-router.ts";
+import { JEV_MODEL } from "../_shared/jev.ts";
+import {
+  identifyCaseSourceUsage,
+  rankSourcesForRequest,
+  type SourceAssessment,
+  type SourceDecisionCandidate,
+} from "../_shared/source-decisions.ts";
+import { evaluateCrossfireExchange } from "../_shared/crossfire-signals.ts";
 import {
   ASK_RESEARCH,
   applyFactoidsVerification,
@@ -106,6 +119,7 @@ import {
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
   checkRateLimit,
+  checkUserBanned,
   logUsage,
   type RateLimitResult,
 } from "../_shared/entitlements.ts";
@@ -363,23 +377,55 @@ function crossfireTranscript(value: unknown, config: CrossfirePromptConfig): { v
 
 type CrossfireNextTurnInput = CrossfireNextTurnPromptInput & { operation: "next-turn" };
 type CrossfireDebriefInput = CrossfireDebriefPromptInput & { operation: "debrief" };
-type CrossfireInput = CrossfireNextTurnInput | CrossfireDebriefInput;
+type CrossfireSignalInput = {
+  operation: "signal";
+  config: CrossfirePromptConfig;
+  transcript: CrossfirePromptTurn[];
+  reply: { type: "question" | "answer"; text: string };
+  signalToken: string;
+  language: string;
+};
+type CrossfireInput = CrossfireNextTurnInput | CrossfireDebriefInput | CrossfireSignalInput;
 
 function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { error: string } {
-  if (!isRecord(value) || (value.operation !== "next-turn" && value.operation !== "debrief")) {
-    return { error: "Crossfire operation must be next-turn or debrief" };
+  if (!isRecord(value) || (value.operation !== "next-turn" && value.operation !== "debrief" && value.operation !== "signal")) {
+    return { error: "Crossfire operation must be next-turn, debrief, or signal" };
   }
   const allowedKeys = value.operation === "next-turn"
-    ? ["operation", "config", "transcript", "expectedReply"]
-    : ["operation", "config", "transcript"];
+    ? ["operation", "config", "transcript", "expectedReply", "language"]
+    : value.operation === "signal"
+      ? ["operation", "config", "transcript", "reply", "signalToken", "language"]
+      : ["operation", "config", "transcript", "language"];
   if (!hasOnlyKeys(value, allowedKeys)) return { error: "Crossfire input contains unsupported fields" };
+  const rawLanguage = value.language;
+  const languageError = validateControlInput("crossfire", rawLanguage === undefined ? {} : { language: rawLanguage });
+  if (languageError) return { error: languageError };
+  const language = typeof rawLanguage === "string" ? rawLanguage : "en";
   const config = crossfireConfig(value.config);
   if ("error" in config) return config;
   const transcript = crossfireTranscript(value.transcript, config.value);
   if ("error" in transcript) return transcript;
+  if (value.operation === "signal") {
+    if (!isRecord(value.reply) || !hasOnlyKeys(value.reply, ["type", "text"]) ||
+      (value.reply.type !== "question" && value.reply.type !== "answer")) return { error: "Crossfire signal reply is invalid" };
+    const replyText = crossfireText(value.reply.text, "reply.text", MAX_CROSSFIRE_REPLY_CHARS);
+    if ("error" in replyText) return replyText;
+    const signalToken = crossfireText(value.signalToken, "signalToken", 128);
+    if ("error" in signalToken) return signalToken;
+    return {
+      value: {
+        operation: "signal",
+        config: config.value,
+        transcript: transcript.value,
+        reply: { type: value.reply.type, text: replyText.value },
+        signalToken: signalToken.value,
+        language,
+      },
+    };
+  }
   if (value.operation === "debrief") {
     if (transcript.value.length === 0) return { error: "Crossfire debrief transcript must not be empty" };
-    return { value: { operation: "debrief", config: config.value, transcript: transcript.value } };
+    return { value: { operation: "debrief", config: config.value, transcript: transcript.value, language } };
   }
   if (value.expectedReply !== "question" && value.expectedReply !== "answer") return { error: "expectedReply is invalid" };
   const lastTurn = transcript.value.at(-1);
@@ -398,8 +444,64 @@ function validateCrossfireInput(value: unknown): { value: CrossfireInput } | { e
       config: config.value,
       transcript: transcript.value,
       expectedReply: value.expectedReply,
+      language,
     },
   };
+}
+
+const CROSSFIRE_SIGNAL_TOKEN_TTL_MS = 120_000;
+
+function crossfireSignalTokenPayload(userId: string, input: Pick<CrossfireSignalInput, "config" | "transcript" | "reply">, issuedAt: number): string {
+  return JSON.stringify({
+    domain: "debatelab-crossfire-signal-v1",
+    userId,
+    issuedAt,
+    mode: input.config.mode,
+    transcript: input.transcript,
+    reply: input.reply,
+  });
+}
+
+async function crossfireSignalMac(payload: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(sparringIntegritySecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload)));
+  return Array.from(signature, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function createCrossfireSignalToken(userId: string, input: Pick<CrossfireSignalInput, "config" | "transcript" | "reply">): Promise<string> {
+  const issuedAt = Date.now();
+  return `${issuedAt}.${await crossfireSignalMac(crossfireSignalTokenPayload(userId, input, issuedAt))}`;
+}
+
+async function verifyCrossfireSignalToken(userId: string, input: CrossfireSignalInput): Promise<boolean> {
+  const [rawIssuedAt, suppliedMac, ...extra] = input.signalToken.split(".");
+  const issuedAt = Number(rawIssuedAt);
+  if (extra.length > 0 || !Number.isInteger(issuedAt) || !/^[a-f0-9]{64}$/.test(suppliedMac ?? "")) return false;
+  const age = Date.now() - issuedAt;
+  if (age < 0 || age > CROSSFIRE_SIGNAL_TOKEN_TTL_MS) return false;
+  const expectedMac = await crossfireSignalMac(crossfireSignalTokenPayload(userId, input, issuedAt));
+  let mismatch = expectedMac.length ^ suppliedMac.length;
+  for (let index = 0; index < expectedMac.length; index += 1) mismatch |= expectedMac.charCodeAt(index) ^ suppliedMac.charCodeAt(index);
+  return mismatch === 0;
+}
+
+async function claimCrossfireSignalToken(userId: string, input: CrossfireSignalInput): Promise<boolean> {
+  const tokenMac = input.signalToken.split(".")[1];
+  const { data, error } = await supabase.rpc("consume_daily_quota", {
+    p_user_id: userId,
+    p_limit: 1,
+    p_quota_key: `crossfire_signal:${tokenMac}`,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return Boolean(row?.allowed);
 }
 
 function boundCrossfireSources(value: unknown, enabled: boolean): { value: PromptSource[]; truncated: boolean } | { error: string } {
@@ -738,14 +840,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
   const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
   const rawInput = body.input;
-  const model = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
-  let modelEntry: ModelCatalogEntry;
-  try {
-    modelEntry = modelForRequest(model);
-  } catch (err) {
-    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model });
-    return badRequest(err instanceof Error ? err.message : "Unsupported model or provider combination", corsHeaders);
+  const rawModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  if (!isModelSelection(rawModel)) {
+    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model: rawModel });
+    return badRequest("Unsupported model or provider combination", corsHeaders);
   }
+  const requestedModel: ModelSelection = rawModel;
+  let model = DEFAULT_MODEL as string;
+  let modelEntry: ModelCatalogEntry = modelForRequest(DEFAULT_MODEL);
+  let resolvedModelMeta: string | undefined;
   const provider: Provider = OPENROUTER_PROVIDER;
   const requestedReasoningEffort = body.reasoningEffort === undefined
     ? undefined
@@ -760,7 +863,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   const rawSources = body.sources;
 
   // Log incoming request
-  log(requestId, "INFO", "Request received", { feature, provider, model, sourcesCount: Array.isArray(rawSources) ? rawSources.length : 0 });
+  log(requestId, "INFO", "Request received", { feature, provider, model: requestedModel, sourcesCount: Array.isArray(rawSources) ? rawSources.length : 0 });
 
   if (!feature) return badRequest("Missing feature", corsHeaders);
   if (!isRecord(rawInput)) return badRequest("Missing input", corsHeaders);
@@ -797,7 +900,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return badRequest(controlError, corsHeaders);
   }
   let responseTruncated = sanitizeResult.truncated || crossfireSourcesTruncated;
-  const sources: PromptSource[] = feature === "crossfire"
+  let sources: PromptSource[] = feature === "crossfire"
     ? crossfireSources
     : Array.isArray(rawSources) ? rawSources as PromptSource[] : [];
   if (customSystemPrompt) {
@@ -817,9 +920,15 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     validatedSparringRequest = sparringResult.request;
   }
-  const successBody = (payload: Record<string, unknown>) => responseTruncated
-    ? { ...payload, meta: { truncated: true } }
-    : payload;
+  let sourceAssessments: SourceAssessment[] = [];
+  const successBody = (payload: Record<string, unknown>) => {
+    const meta = {
+      ...(responseTruncated ? { truncated: true } : {}),
+      ...(resolvedModelMeta ? { requestedModel, resolvedModel: resolvedModelMeta } : {}),
+    };
+    const enriched = sourceAssessments.length > 0 ? { ...payload, sourceAssessments } : payload;
+    return Object.keys(meta).length > 0 ? { ...enriched, meta } : enriched;
+  };
 
   // Require a valid user session for all AI requests.
   // The frontend already enforces auth; this protects the endpoint even when
@@ -845,6 +954,31 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
+
+  if (crossfireInput?.operation === "signal") {
+    if (await checkUserBanned(userId)) return badRequest("Your account has been suspended. Please contact support.", corsHeaders, 403);
+    if (!(await verifyCrossfireSignalToken(userId, crossfireInput))) return badRequest("Invalid or expired Crossfire signal token", corsHeaders, 403);
+    try {
+      // A token-specific counter atomically bounds replays without consuming the product's AI quota.
+      if (!(await claimCrossfireSignalToken(userId, crossfireInput))) {
+        return badRequest("Crossfire signal token has already been used", corsHeaders, 409);
+      }
+    } catch (error) {
+      log(requestId, "ERROR", "Crossfire signal token claim failed", { error: error instanceof Error ? error.message : "Unknown error" });
+      return badRequest("Unable to verify Crossfire signal token", corsHeaders, 500);
+    }
+    const evaluated = await evaluateCrossfireExchange({
+      transcript: crossfireInput.transcript,
+      reply: crossfireInput.reply,
+      signal: req.signal,
+    });
+    const signalUsage = evaluated.jev?.usage ?? evaluated.jevUsage;
+    if (signalUsage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, signalUsage, undefined, evaluated.jevUsage ? "error" : "success", evaluated.jevUsage ? "jev_incomplete" : undefined);
+    return new Response(JSON.stringify(successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const sparringDatabase = narrowSparringDatabase(sparringSupabase);
   let sparringScoreClaimed = false;
   let sparringScoreClaimToken: string | undefined;
@@ -903,7 +1037,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Check rate limits (includes subscription gating and model access)
   let rateLimit: RateLimitResult;
   try {
-    rateLimit = await checkRateLimit(userId, model);
+    rateLimit = await checkRateLimit(userId, requestedModel);
   } catch (error) {
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
@@ -920,7 +1054,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
       sparringScoreClaimed = false;
     }
-    await logUsage(userId, feature, provider, model, undefined, undefined, "rate_limited", rateLimit.code);
+    await logUsage(userId, feature, provider, requestedModel, undefined, undefined, "rate_limited", rateLimit.code);
     return new Response(JSON.stringify({
       error: rateLimit.reason,
       code: rateLimit.code,
@@ -930,6 +1064,71 @@ export async function handleRequest(req: Request): Promise<Response> {
       status: rateLimit.statusCode || 429,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
+  }
+
+  const routingStartedAt = Date.now();
+  try {
+    const resolution = await resolveModelSelection({
+      requestedModel,
+      feature,
+      input: sanitizedInput,
+      canAccessProModels: Boolean(rateLimit.canAccessProModels),
+      reasoningEffort: requestedReasoningEffort,
+      sourceCount: Array.isArray(rawSources) ? rawSources.length : 0,
+      signal: req.signal,
+    });
+    model = resolution.resolvedModel;
+    modelEntry = resolution.modelEntry;
+    resolvedModelMeta = model;
+    const routingUsage = resolution.jev?.usage ?? resolution.jevUsage;
+    if (routingUsage) {
+      await logUsage(userId, "jev_model_router", provider, JEV_MODEL, routingUsage, Date.now() - routingStartedAt, resolution.jevUsage ? "error" : "success", resolution.jevUsage ? "jev_incomplete" : undefined);
+    }
+  } catch (error) {
+    if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
+      await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
+      sparringScoreClaimed = false;
+    }
+    const message = error instanceof Error ? error.message : "Model routing failed";
+    log(requestId, "ERROR", "Model routing failed", { error: message });
+    return badRequest(message.includes("Pro") ? message : "Unable to route this request", corsHeaders, message.includes("Pro") ? 403 : 500);
+  }
+
+  const sourceDecisionCandidates = Array.isArray(rawSources)
+    ? rawSources.slice(0, MAX_PROMPT_SOURCE_COUNT).flatMap((value, index): SourceDecisionCandidate[] => {
+      if (!isRecord(value) || typeof value.title !== "string" || typeof value.content !== "string" || typeof value.type !== "string") return [];
+      const metadata = isRecord(value.metadata) ? value.metadata : {};
+      const id = typeof value.id === "string" && value.id.trim() ? value.id.trim().slice(0, 128) : undefined;
+      const origin = typeof value.origin === "string" && value.origin.trim() ? value.origin.trim().slice(0, 500) : undefined;
+      const qualityLabel = metadata.qualityLabel === "strong" || metadata.qualityLabel === "moderate" || metadata.qualityLabel === "weak"
+        ? metadata.qualityLabel
+        : undefined;
+      const qualityScore = typeof metadata.qualityScore === "number" && Number.isFinite(metadata.qualityScore)
+        ? metadata.qualityScore
+        : undefined;
+      return [{
+        key: id ?? origin ?? `source-${index}`,
+        ...(id ? { id } : {}),
+        title: value.title,
+        content: value.content,
+        ...(origin ? { origin } : {}),
+        type: value.type,
+        ...(qualityLabel ? { qualityLabel } : {}),
+        ...(qualityScore !== undefined ? { qualityScore } : {}),
+      }];
+    })
+    : [];
+  if (feature !== "sparring" && feature !== "crossfire" && sourceDecisionCandidates.length > 0) {
+    const ranked = await rankSourcesForRequest({
+      feature,
+      requestText: JSON.stringify(sanitizedInput),
+      sources: sourceDecisionCandidates,
+      signal: req.signal,
+    });
+    sourceAssessments = ranked.assessments;
+    sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
+    const rankingUsage = ranked.jev?.usage ?? ranked.jevUsage;
+    if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -1086,9 +1285,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         : validateCrossfireDebrief(cleanedOutput, crossfireInput.transcript);
       if ("error" in output) throw new Error(output.error);
 
+      let signalToken: string | undefined;
+      if (crossfireInput.operation === "next-turn" &&
+        ((output.value as { type?: unknown }).type === "answer" || crossfireInput.transcript.at(-1)?.kind === "answer")) {
+        signalToken = await createCrossfireSignalToken(userId, {
+          config: crossfireInput.config,
+          transcript: crossfireInput.transcript,
+          reply: output.value as { type: "question" | "answer"; text: string },
+        });
+      }
+
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-      return new Response(JSON.stringify(successBody({ output: output.value })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output: output.value, ...(signalToken ? { signalToken } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // FACTOIDS: Use deep research with multiple searches
@@ -1297,6 +1506,43 @@ export async function handleRequest(req: Request): Promise<Response> {
       const research = await deepResearch(motion, "", researchDeps, withResearchPreferences(DEEP_RESEARCH, {
         preferredSourceType: "any",
       }));
+      const discoveredSources = buildDiscoveredSources(research);
+      const discoveredCandidates: SourceDecisionCandidate[] = discoveredSources.map((source) => ({
+        key: source.url,
+        title: source.title,
+        content: source.content,
+        origin: source.url,
+        type: source.sourceType ?? "url",
+        qualityScore: source.qualityScore,
+        qualityLabel: source.qualityLabel,
+      }));
+      const discoveredRanking = await rankSourcesForRequest({
+        feature,
+        requestText: JSON.stringify(sanitizedInput),
+        sources: discoveredCandidates,
+        signal: req.signal,
+      });
+      const discoveredRankingUsage = discoveredRanking.jev?.usage ?? discoveredRanking.jevUsage;
+      if (discoveredRankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, discoveredRankingUsage, undefined, discoveredRanking.jevUsage ? "error" : "success", discoveredRanking.jevUsage ? "jev_incomplete" : undefined);
+      const discoveredAssessmentByKey = new Map(discoveredRanking.assessments.map((assessment) => [assessment.key, assessment]));
+      const rankedDiscoveredSources = discoveredRanking.sources.map((candidate) => {
+        const source = discoveredSources.find((item) => item.url === candidate.key)!;
+        const assessment = discoveredAssessmentByKey.get(candidate.key);
+        if (!assessment) return source;
+        const semantic: {
+          relevance: number;
+          importance: 0 | 1 | 2 | 3;
+          strength: 0 | 1 | 2 | 3;
+          evaluatedAt: string;
+          useCount: number;
+          caseUseCount: number;
+          lastUsedInCase?: boolean;
+          lastUsedAt?: string;
+        } = { relevance: assessment.relevance, importance: assessment.importance, strength: assessment.strength, evaluatedAt: assessment.evaluatedAt, useCount: 1, caseUseCount: 0 };
+        return { ...source, semantic };
+      });
+      const discoveredOrder = new Map(discoveredRanking.sources.map((source, index) => [source.key, index]));
+      research.readContent.sort((a, b) => (discoveredOrder.get(a.url) ?? Number.MAX_SAFE_INTEGER) - (discoveredOrder.get(b.url) ?? Number.MAX_SAFE_INTEGER));
       const searchContext = buildResearchContext(research);
 
       // Build prompt with research context
@@ -1335,7 +1581,42 @@ export async function handleRequest(req: Request): Promise<Response> {
       enforceGenerateControls(output, side, format, length, role);
 
       // Build discovered sources from research
-      const discoveredSources = buildDiscoveredSources(research);
+      const activeAssessmentByKey = new Map(sourceAssessments.map((assessment) => [assessment.key, assessment]));
+      const usageCandidates = [
+        ...sourceDecisionCandidates.filter((source) => activeAssessmentByKey.get(source.key)?.retained).map((source) => ({
+          ...source,
+          importance: activeAssessmentByKey.get(source.key)?.importance ?? 0,
+          strength: activeAssessmentByKey.get(source.key)?.strength ?? 0,
+        })),
+        ...discoveredRanking.sources.filter((source) => discoveredAssessmentByKey.get(source.key)?.retained).map((source) => ({
+          ...source,
+          importance: discoveredAssessmentByKey.get(source.key)?.importance ?? 0,
+          strength: discoveredAssessmentByKey.get(source.key)?.strength ?? 0,
+        })),
+      ].slice(0, 10);
+      const caseUsage = await identifyCaseSourceUsage({
+        caseText: JSON.stringify(output),
+        sources: usageCandidates,
+        signal: req.signal,
+      });
+      const caseUsageCost = caseUsage.jev?.usage ?? caseUsage.jevUsage;
+      if (caseUsageCost) await logUsage(userId, "jev_source_usage", provider, JEV_MODEL, caseUsageCost, undefined, caseUsage.jevUsage ? "error" : "success", caseUsage.jevUsage ? "jev_incomplete" : undefined);
+      const usedByKey = new Map(caseUsage.sourceUsage.map((usage) => [usage.key, usage]));
+      for (const assessment of sourceAssessments) {
+        (assessment as SourceAssessment & { usedInCase?: boolean }).usedInCase = usedByKey.get(assessment.key)?.judgment === "used";
+      }
+      for (const source of rankedDiscoveredSources) {
+        const semantic = "semantic" in source ? source.semantic : undefined;
+        if (semantic) {
+          const used = usedByKey.get(source.url)?.judgment === "used";
+          semantic.lastUsedInCase = used;
+          semantic.caseUseCount = used ? 1 : 0;
+          if (used) semantic.lastUsedAt = new Date().toISOString();
+        }
+      }
+      if (output && typeof output === "object" && "metadata" in output && isRecord((output as { metadata?: unknown }).metadata)) {
+        (output as { metadata: Record<string, unknown> }).metadata.sourceUsage = caseUsage.sourceUsage;
+      }
       console.log(`[GENERATE] Found ${discoveredSources.length} sources`);
 
       // Log usage and return with sources
@@ -1345,7 +1626,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         metadata.durationMs = latencyMs;
       }
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(successBody({ output, discoveredSources: rankedDiscoveredSources, sourceAssessments })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // BRAINSTORM: Use research to inform argument angles

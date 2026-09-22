@@ -25,6 +25,19 @@ describe('Crossfire draft storage', () => {
     expect(loadCrossfireDraft('user-a', storage)).toEqual(state);
   });
 
+  it('round-trips version-one drafts containing optional answer signals', () => {
+    const storage = new MemoryStorage();
+    let state = crossfireReducer(createCrossfireSetupState({ resolution: 'Resolved: test', argument: 'Case text' }), { type: 'session-started', sessionId: 's', now: 1 });
+    state = crossfireReducer(state, { type: 'user-turn-submitted', turn: { id: 'T1', sequence: 1, speaker: 'user', kind: 'question', text: 'Why?', createdAt: 1 }, expectedReply: 'answer' });
+    state = crossfireReducer(state, {
+      type: 'ai-turn-received',
+      turn: { id: 'T2', sequence: 2, speaker: 'ai', kind: 'answer', text: 'Because.', createdAt: 2 },
+      signal: { answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.9, concession: 'none', concessionConfidence: 0.8, followUpOpportunity: 0.75 },
+    });
+    expect(saveCrossfireDraft('user-a', state, storage, 10)).toBe(true);
+    expect(loadCrossfireDraft('user-a', storage)).toEqual(state);
+  });
+
   it('clears malformed, oversized, or differently owned data', () => {
     const malformed = new MemoryStorage();
     malformed.setItem(crossfireStorageKey('user-a'), '{broken');

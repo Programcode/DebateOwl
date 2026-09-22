@@ -128,7 +128,7 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   const menuControl = page.getByRole('button', { name: 'Open menu' });
   const controls = [languageControl, themeControl, settingsControl, menuControl];
 
-  await expect(page.locator('header img[alt="DebateLab"]')).toBeVisible();
+  await expect(page.getByAltText('DebateLab logo')).toBeVisible();
   for (const control of controls) await expect(control).toBeVisible();
 
   const boxes = await Promise.all(controls.map((control) => control.boundingBox()));

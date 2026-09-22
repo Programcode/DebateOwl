@@ -7,6 +7,7 @@ import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm
 import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
+import i18n from '@/i18n';
 
 interface Message {
   id: string;
@@ -25,6 +26,17 @@ interface StreamingAskMessage {
 }
 
 /** Auditable provenance for sources captured from AI research or imports. */
+export interface SourceSemanticMetadata {
+  relevance: number;
+  importance: 0 | 1 | 2 | 3;
+  strength: 0 | 1 | 2 | 3;
+  evaluatedAt: string;
+  useCount: number;
+  caseUseCount: number;
+  lastUsedAt?: string;
+  lastUsedInCase?: boolean;
+}
+
 export interface SourceProvenance {
   url?: string;
   sourceType?: string;
@@ -33,6 +45,18 @@ export interface SourceProvenance {
   query?: string;
   /** Which flow captured this source, e.g. 'generate' | 'brainstorm' | 'ask' | 'factoids'. */
   capturedVia?: string;
+  semantic?: SourceSemanticMetadata;
+}
+
+export interface SourceAssessmentUpdate {
+  key: string;
+  id?: string;
+  relevance: number;
+  importance: 0 | 1 | 2 | 3;
+  strength: 0 | 1 | 2 | 3;
+  evaluatedAt: string;
+  retained: boolean;
+  usedInCase?: boolean;
 }
 
 export interface Source {
@@ -135,6 +159,7 @@ interface SessionState {
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean }) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
+  applySourceAssessments: (assessments: SourceAssessmentUpdate[]) => Promise<void>;
   renameSourceFolder: (oldName: string, newName: string) => Promise<void>;
   deleteSourceFolder: (name: string, mode: 'empty-only' | 'move-to-general') => Promise<void>;
   setFolderActive: (folder: string, isActive: boolean) => Promise<void>;
@@ -306,7 +331,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function parseSourceProvenance(value: unknown): SourceProvenance | undefined {
+export function parseSourceProvenance(value: unknown): SourceProvenance | undefined {
   if (!isRecord(value)) return undefined;
 
   const provenance: SourceProvenance = {};
@@ -320,6 +345,36 @@ function parseSourceProvenance(value: unknown): SourceProvenance | undefined {
   }
   if (typeof value.query === 'string') provenance.query = value.query;
   if (typeof value.capturedVia === 'string') provenance.capturedVia = value.capturedVia;
+  if (isRecord(value.semantic)) {
+    const semantic = value.semantic;
+    const relevance = semantic.relevance;
+    const importance = semantic.importance;
+    const strength = semantic.strength;
+    const evaluatedAt = semantic.evaluatedAt;
+    const useCount = semantic.useCount;
+    const caseUseCount = semantic.caseUseCount;
+    if (
+      typeof relevance === 'number' && Number.isFinite(relevance) && relevance >= 0 && relevance <= 1 &&
+      Number.isInteger(importance) && typeof importance === 'number' && importance >= 0 && importance <= 3 &&
+      Number.isInteger(strength) && typeof strength === 'number' && strength >= 0 && strength <= 3 &&
+      typeof evaluatedAt === 'string' && Number.isFinite(Date.parse(evaluatedAt)) &&
+      Number.isInteger(useCount) && typeof useCount === 'number' && useCount >= 0 &&
+      Number.isInteger(caseUseCount) && typeof caseUseCount === 'number' && caseUseCount >= 0 &&
+      (semantic.lastUsedAt === undefined || typeof semantic.lastUsedAt === 'string') &&
+      (semantic.lastUsedInCase === undefined || typeof semantic.lastUsedInCase === 'boolean')
+    ) {
+      provenance.semantic = {
+        relevance,
+        importance: importance as 0 | 1 | 2 | 3,
+        strength: strength as 0 | 1 | 2 | 3,
+        evaluatedAt,
+        useCount,
+        caseUseCount,
+        ...(typeof semantic.lastUsedAt === 'string' ? { lastUsedAt: semantic.lastUsedAt } : {}),
+        ...(typeof semantic.lastUsedInCase === 'boolean' ? { lastUsedInCase: semantic.lastUsedInCase } : {}),
+      };
+    }
+  }
 
   return Object.keys(provenance).length > 0 ? provenance : undefined;
 }
@@ -467,6 +522,7 @@ export const useSessionStore = create<SessionState>()(
               origin: nextSource.origin || null,
               folder: nextSource.folder || 'General',
               is_active: nextSource.isActive,
+              metadata: nextSource.metadata ?? null,
             }),
             userId,
             id,
@@ -477,6 +533,52 @@ export const useSessionStore = create<SessionState>()(
             sourceFolders: previousFolders,
             sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? current : source),
           }));
+          throw error;
+        }
+      },
+      applySourceAssessments: async (assessments) => {
+        if (assessments.length === 0) return;
+        const previous = get().sourceLibrary;
+        const updates = new Map<string, Source>();
+        for (const assessment of assessments.slice(0, 10)) {
+          const source = previous.find((candidate) => candidate.id === assessment.id || candidate.id === assessment.key || candidate.origin === assessment.key || candidate.metadata?.url === assessment.key);
+          if (!source) continue;
+          const prior = source.metadata?.semantic;
+          const usedInCase = assessment.usedInCase;
+          updates.set(source.id, {
+            ...source,
+            metadata: {
+              ...source.metadata,
+              semantic: {
+                relevance: assessment.relevance,
+                importance: assessment.importance,
+                strength: assessment.strength,
+                evaluatedAt: assessment.evaluatedAt,
+                useCount: (prior?.useCount ?? 0) + 1,
+                caseUseCount: (prior?.caseUseCount ?? 0) + (usedInCase === true ? 1 : 0),
+                lastUsedAt: assessment.evaluatedAt,
+                ...(usedInCase !== undefined
+                  ? { lastUsedInCase: usedInCase }
+                  : prior?.lastUsedInCase !== undefined ? { lastUsedInCase: prior.lastUsedInCase } : {}),
+              },
+            },
+          });
+        }
+        if (updates.size === 0) return;
+        set((state) => ({ sourceLibrary: state.sourceLibrary.map((source) => updates.get(source.id) ?? source) }));
+        try {
+          const userId = await getUserId();
+          if (!userId) return;
+          await Promise.all(Array.from(updates.values()).map(async (source) => {
+            const result = await applyUserScopedIdFilter(
+              supabase.from('sources').update({ metadata: source.metadata ?? null }),
+              userId,
+              source.id,
+            );
+            throwOnWriteError(result, 'update source assessment');
+          }));
+        } catch (error) {
+          set({ sourceLibrary: previous });
           throw error;
         }
       },
@@ -676,7 +778,7 @@ export const useSessionStore = create<SessionState>()(
       setBrainstormResult: (result) => {
         set({ brainstormResult: result });
         if (result) {
-          const item: SavedItem<BrainstormOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: 'Brainstorm' };
+          const item: SavedItem<BrainstormOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: i18n.t('generatedArtifacts.brainstormTitle') };
           set((state) => ({ autosavedBrainstorms: [item, ...state.autosavedBrainstorms].slice(0, 3) }));
         }
       },
@@ -708,7 +810,7 @@ export const useSessionStore = create<SessionState>()(
       setFactoidsResult: (result) => {
         set({ factoidsResult: result });
         if (result) {
-          const item: SavedItem<FactoidsOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: 'Factoids' };
+          const item: SavedItem<FactoidsOutput> = { id: generateId(), data: result, createdAt: Date.now(), title: i18n.t('generatedArtifacts.factoidsTitle') };
           set((state) => ({ autosavedFactoids: [item, ...state.autosavedFactoids].slice(0, 3) }));
         }
       },

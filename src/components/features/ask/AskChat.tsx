@@ -188,12 +188,12 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                     <div className="flex flex-wrap items-center gap-1.5">
                       {source.qualityLabel && (
                         <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', sourceQualityClass(source.qualityLabel))}>
-                          {source.qualityLabel}
+                          {t(`sourceQuality.labels.${source.qualityLabel}`, source.qualityLabel)}
                         </span>
                       )}
                       {source.sourceType && (
                         <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                          {source.sourceType}
+                          {t(`sourceQuality.types.${source.sourceType}`, source.sourceType)}
                         </span>
                       )}
                       <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">

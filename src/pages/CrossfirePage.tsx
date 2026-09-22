@@ -22,7 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { crossfire, AIResponseError, isTimeoutError } from '@/lib/ai/client';
+import { crossfire, crossfireSignal, AIResponseError, isTimeoutError } from '@/lib/ai/client';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import {
   canEndCrossfireSession,
@@ -147,8 +147,9 @@ interface ReferenceItem {
 }
 
 function TurnReferences({ turnIds }: { turnIds: string[] }) {
+  const { t } = useTranslation();
   return (
-    <span className="flex flex-wrap gap-1.5" aria-label="Transcript references">
+    <span className="flex flex-wrap gap-1.5" aria-label={t('crossfire.transcriptReferences')}>
       {turnIds.map((turnId) => (
         <a
           key={turnId}
@@ -262,21 +263,31 @@ export default function CrossfirePage() {
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
+  const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
   const activeSourceCount = useSessionStore((session) => session.sourceLibrary.filter((source) => source.isActive).length);
   const { getFeatureConfig } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  const abortSignalRequests = useCallback(() => {
+    signalRequestsRef.current.forEach((controller) => controller.abort());
+    signalRequestsRef.current.clear();
+  }, []);
+
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    abortSignalRequests();
+  }, [abortSignalRequests]);
 
   useEffect(() => {
     if (stateOwnerId === user?.id) return;
     requestRef.current?.abort();
+    abortSignalRequests();
     dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
     setStateOwnerId(user?.id);
     setDraftTurn('');
     setFormError('');
-  }, [stateOwnerId, user?.id]);
+  }, [abortSignalRequests, stateOwnerId, user?.id]);
 
   useEffect(() => {
     if (!user?.id || stateOwnerId !== user.id) return;
@@ -315,10 +326,26 @@ export default function CrossfirePage() {
         });
         return;
       }
+      const reply = { type: result.type, text: result.text };
       dispatch({
         type: 'ai-turn-received',
         turn: nextTurn(snapshot.turns.length + 1, 'ai', result.type, result.text),
       });
+      if (result.signalToken) {
+        const signalController = new AbortController();
+        signalRequestsRef.current.add(signalController);
+        void crossfireSignal({
+          config: snapshot.config,
+          transcript: snapshot.turns,
+          reply,
+          signalToken: result.signalToken,
+        }, modelConfig, { signal: signalController.signal })
+          .then((signal) => {
+            if (signal && !signalController.signal.aborted) dispatch({ type: 'signal-received', signal });
+          })
+          .catch((): void => {})
+          .finally(() => signalRequestsRef.current.delete(signalController));
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       const classified = classifyError(error);
@@ -431,6 +458,7 @@ export default function CrossfirePage() {
 
   const restart = () => {
     requestRef.current?.abort();
+    abortSignalRequests();
     if (user?.id) clearCrossfireDraft(user.id);
     dispatch({ type: 'session-reset' });
     setDraftTurn('');
@@ -813,6 +841,39 @@ function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMot
                 <span>{turn.kind === 'question' ? t('crossfire.question') : t('crossfire.answer')}</span>
               </div>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{turn.text}</p>
+              {turn.kind === 'answer' && turn.signal ? (
+                <div className="mt-3 flex flex-wrap gap-1.5" aria-label={t('crossfire.liveSignals')}>
+                  <Badge
+                    variant="outline"
+                    aria-label={t('crossfire.signalConfidence', {
+                      label: t(`crossfire.signalQuality.${turn.signal.answerQuality}`),
+                      percent: Math.round(turn.signal.answerQualityConfidence * 100),
+                    })}
+                  >
+                    {t(`crossfire.signalQuality.${turn.signal.answerQuality}`)}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    aria-label={t('crossfire.signalConfidence', {
+                      label: t(`crossfire.signalConcession.${turn.signal.concession}`),
+                      percent: Math.round(turn.signal.concessionConfidence * 100),
+                    })}
+                  >
+                    {t(`crossfire.signalConcession.${turn.signal.concession}`)}
+                  </Badge>
+                  {turn.signal.followUpOpportunity > 0.70 ? (
+                    <Badge
+                      variant="secondary"
+                      aria-label={t('crossfire.signalProbability', {
+                        label: t('crossfire.signalFollowUp'),
+                        percent: Math.round(turn.signal.followUpOpportunity * 100),
+                      })}
+                    >
+                      {t('crossfire.signalFollowUp')}
+                    </Badge>
+                  ) : null}
+                </div>
+              ) : null}
             </motion.article>
           ))}
         </div>

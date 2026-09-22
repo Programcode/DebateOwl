@@ -47,6 +47,16 @@ export const CrossfirePrefillSchema = z.object({
 }).strict();
 export type CrossfirePrefill = z.infer<typeof CrossfirePrefillSchema>;
 
+export const CrossfireTurnSignalSchema = z.object({
+  answerTurnId: z.string().trim().min(1).max(40),
+  answerQuality: z.enum(['direct', 'partial', 'evasive']),
+  answerQualityConfidence: z.number().min(0).max(1),
+  concession: z.enum(['none', 'implicit', 'explicit']),
+  concessionConfidence: z.number().min(0).max(1),
+  followUpOpportunity: z.number().min(0).max(1),
+}).strict();
+export type CrossfireTurnSignal = z.infer<typeof CrossfireTurnSignalSchema>;
+
 export const CrossfireTurnSchema = z.object({
   id: z.string().trim().min(1).max(40),
   sequence: z.number().int().positive().max(MAX_CROSSFIRE_TRANSCRIPT_TURNS),
@@ -54,7 +64,13 @@ export const CrossfireTurnSchema = z.object({
   kind: z.enum(['question', 'answer']),
   text: boundedText(1, MAX_CROSSFIRE_TURN_CHARS),
   createdAt: z.number().int().nonnegative(),
-}).strict();
+  signal: CrossfireTurnSignalSchema.optional(),
+}).strict().superRefine((turn, context) => {
+  if (!turn.signal) return;
+  if (turn.kind !== 'answer' || turn.signal.answerTurnId !== turn.id) {
+    context.addIssue({ code: 'custom', path: ['signal', 'answerTurnId'], message: 'Signal must reference this answer turn' });
+  }
+});
 export type CrossfireTurn = z.infer<typeof CrossfireTurnSchema>;
 
 export const CrossfireTranscriptSchema = z.array(CrossfireTurnSchema)
@@ -133,6 +149,14 @@ export const CrossfireAIInputSchema = z.discriminatedUnion('operation', [
   CrossfireDebriefInputSchema,
 ]);
 export type CrossfireAIInput = z.infer<typeof CrossfireAIInputSchema>;
+
+export const CrossfireSignalInputSchema = z.object({
+  config: CrossfireConfigSchema,
+  transcript: CrossfireTranscriptSchema,
+  reply: CrossfireReplySchema,
+  signalToken: z.string().trim().min(1).max(128),
+}).strict();
+export type CrossfireSignalInput = z.infer<typeof CrossfireSignalInputSchema>;
 
 export const CrossfireRequestStateSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('idle') }).strict(),

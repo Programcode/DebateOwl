@@ -158,7 +158,7 @@ describe('supabase prompt-builder', () => {
     expect(getAskModeGuidance('not-a-mode')).toContain('direct coaching answer');
   });
 
-  it('uses fallback values for non-string generate fields', () => {
+  it('uses safe fallback values for invalid generate fields', () => {
     const prompt = buildUserPrompt('generate', {
       motion: '',
       side: 123,
@@ -177,7 +177,8 @@ describe('supabase prompt-builder', () => {
     expect(prompt).toContain('Length: standard');
     expect(prompt).toContain('Audience: intermediate');
     expect(prompt).toContain('Tone: formal');
-    expect(prompt).toContain('Language: zz (zz)');
+    expect(prompt).toContain('Language: English (en)');
+    expect(prompt).not.toContain('Language: zz');
   });
 
   it('builds attack prompts with boolean defaults and explicit disabled weighing', () => {

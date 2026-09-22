@@ -13,14 +13,20 @@ import {
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
 import {
+  AUTO_PRO,
   DEFAULT_MODEL,
   effectiveReasoningEffort,
   getModelCatalogEntry,
+  isAutoModelSelection,
+  isModelSelection,
   isReasoningEffort,
   MAX_REQUEST_OUTPUT_TOKENS,
   type ModelCatalogEntry,
+  type ModelSelection,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
+import { resolveModelSelection } from "../_shared/auto-model-router.ts";
+import { JEV_MODEL } from "../_shared/jev.ts";
 
 type ChatRole = "user" | "assistant";
 
@@ -36,10 +42,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const MAX_INPUT_LENGTH = 50000;
 const MAX_HISTORY_ITEMS = 8;
 const OPENROUTER_PROVIDER = "openrouter" as const;
-
-function modelForRequest(model: string): ModelCatalogEntry | undefined {
-  return getModelCatalogEntry(model);
-}
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
   return Response.json(body, { status, headers: corsHeaders });
@@ -69,8 +71,8 @@ function normalizeHistory(value: unknown): ChatMessage[] {
   });
 }
 
-export function buildMessages(message: string, history: ChatMessage[], mode: string) {
-  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode));
+export function buildMessages(message: string, history: ChatMessage[], mode: string, language: unknown = "en") {
+  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode), language);
   return [
     { role: "system", content: system },
     ...history,
@@ -112,9 +114,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
-  const model = sanitizeText(body.model, 80) || DEFAULT_MODEL;
-  const modelEntry = modelForRequest(model);
-  if (!modelEntry) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
+  const rawModel = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  if (!isModelSelection(rawModel)) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
+  const requestedModel: ModelSelection = rawModel;
   const requestedReasoningEffort = body.reasoningEffort === undefined
     ? undefined
     : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
@@ -142,7 +144,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   const userMessage = sanitizeText(input.message, MAX_INPUT_LENGTH);
   if (!userMessage.trim()) return jsonResponse({ error: "Message is required" }, 400, corsHeaders);
 
-  const rateLimit = await checkRateLimit(user.id, model);
+  const rateLimit = await checkRateLimit(user.id, requestedModel);
   if (!rateLimit.allowed) {
     return jsonResponse({
       error: rateLimit.reason,
@@ -150,6 +152,38 @@ export async function handleRequest(req: Request): Promise<Response> {
       limit: rateLimit.limit,
       current: rateLimit.current,
     }, rateLimit.statusCode || 402, corsHeaders);
+  }
+
+  const routingStartedAt = Date.now();
+  let model: string;
+  let modelEntry: ModelCatalogEntry;
+  try {
+    const resolution = await resolveModelSelection({
+      requestedModel,
+      feature: "ask",
+      input,
+      canAccessProModels: Boolean(rateLimit.canAccessProModels),
+      reasoningEffort: requestedReasoningEffort,
+      signal: req.signal,
+    });
+    model = resolution.resolvedModel;
+    modelEntry = resolution.modelEntry;
+    const routingUsage = resolution.jev?.usage ?? resolution.jevUsage;
+    if (routingUsage) {
+      await logUsage(
+        user.id,
+        "jev_model_router",
+        OPENROUTER_PROVIDER,
+        JEV_MODEL,
+        routingUsage,
+        Date.now() - routingStartedAt,
+        resolution.jevUsage ? "error" : "success",
+        resolution.jevUsage ? "jev_incomplete" : undefined,
+      );
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Model routing failed";
+    return jsonResponse({ error: message.includes("Pro") ? message : "Unable to route this request" }, message.includes("Pro") ? 403 : 500, corsHeaders);
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -195,7 +229,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       try {
         if (req.signal.aborted) throw new DOMException("Client aborted", "AbortError");
-        const messages = buildMessages(userMessage, history, mode);
+        const messages = buildMessages(userMessage, history, mode, input.language);
 
         const payload: Record<string, unknown> = {
           model,
@@ -283,7 +317,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         };
 
         if (!req.signal.aborted) {
-          try { emit("final", { output }); } catch { /* client disconnected after provider completion */ }
+          try { emit("final", { output, meta: { requestedModel, resolvedModel: model } }); } catch { /* client disconnected after provider completion */ }
         }
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {

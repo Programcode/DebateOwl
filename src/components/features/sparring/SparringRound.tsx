@@ -188,7 +188,7 @@ export function SparringRound({
                       disabled={judging}
                     />
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-muted-foreground">{isOnline ? <><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">⌘</kbd> or <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Ctrl</kbd> + <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Enter</kbd> {t('sparring.round.toSubmit', 'to submit')}</> : t('sparring.round.offlineCannotSubmit', 'Reconnect to submit this speech.')}</p>
+                      <p className="text-xs text-muted-foreground">{isOnline ? <><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">⌘</kbd> {t('common.or')} <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Ctrl</kbd> + <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Enter</kbd> {t('sparring.round.toSubmit', 'to submit')}</> : t('sparring.round.offlineCannotSubmit', 'Reconnect to submit this speech.')}</p>
                       <Button type="button" onClick={() => onSubmit(session.draft)} disabled={!session.draft.trim() || !isOnline || timeExpired} className="sm:min-w-36">
                         {t('sparring.round.submitSpeech', 'Submit speech')} <Send className="h-4 w-4" aria-hidden="true" />
                       </Button>

@@ -36,6 +36,7 @@ export function SourceQualityList({ sources, className }: SourceQualityListProps
     <ul className={`space-y-2 ${className ?? ''}`}>
       {sources.map((source, index) => {
         const linkable = isSafeHref(source.url);
+        const semantic = source.semantic;
         return (
           <li key={`${source.url}-${index}`} className="flex flex-wrap items-center gap-2 text-sm">
             {linkable ? (
@@ -53,16 +54,31 @@ export function SourceQualityList({ sources, className }: SourceQualityListProps
             )}
             {source.sourceType && (
               <Badge variant="outline" className="text-[11px] px-1.5 py-0">
-                {source.sourceType}
+                {t(`sourceQuality.types.${source.sourceType}`, source.sourceType)}
               </Badge>
             )}
             {source.qualityLabel && (
               <Badge variant="outline" className={`text-[11px] px-1.5 py-0 ${QUALITY_STYLES[source.qualityLabel] ?? ''}`}>
-                {source.qualityLabel}
+                {t(`sourceQuality.labels.${source.qualityLabel}`, source.qualityLabel)}
               </Badge>
             )}
             {source.qualityLabel === 'weak' && (
               <span className="text-xs text-muted-foreground">{t('sourceQuality.fallbackOnly')}</span>
+            )}
+            {semantic?.lastUsedInCase && (
+              <Badge variant="outline" className="border-primary/30 bg-primary/10 px-1.5 py-0 text-[11px] text-primary">
+                {t('sourceQuality.usedInCase')}
+              </Badge>
+            )}
+            {semantic && (
+              <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
+                {t('sourceQuality.importance', { level: t(`sourceQuality.levels.${semantic.importance}`) })}
+              </Badge>
+            )}
+            {semantic && (
+              <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
+                {t('sourceQuality.strength', { level: t(`sourceQuality.levels.${semantic.strength}`) })}
+              </Badge>
             )}
           </li>
         );

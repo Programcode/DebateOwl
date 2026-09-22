@@ -17,6 +17,7 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 
 import { consumeSSEChunk, isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 
 function streamFromChunks(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -45,6 +46,7 @@ const streamOptions = {};
 beforeEach(() => {
   resetMockState();
   setMockSessionToken('test-token');
+  useSettingsStore.setState({ outputLanguage: 'hu' });
   vi.clearAllMocks();
 });
 
@@ -124,7 +126,7 @@ describe('AI streaming helpers', () => {
 
   describe('telemetry', () => {
     it('emits comparable success events without including Ask input', async () => {
-      mockFetchOnce(streamFromChunks([
+      const fetchMock = mockFetchOnce(streamFromChunks([
         'event: delta\ndata: {"text":"answer"}\n\n',
         'event: final\ndata: {"output":{"response":"answer","followUpQuestions":[],"uncertainties":[]}}\n\n',
       ]));
@@ -152,6 +154,9 @@ describe('AI streaming helpers', () => {
         durationMs: expect.any(Number),
       }));
       expect(captureExceptionMock).not.toHaveBeenCalled();
+      const fetchCall = fetchMock.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit];
+      const requestBody = JSON.parse(String(fetchCall[1].body));
+      expect(requestBody.input.language).toBe('hu');
       expect(JSON.stringify(captureProductEventMock.mock.calls)).not.toContain('private question');
       expect(JSON.stringify(captureProductEventMock.mock.calls)).not.toContain('private history');
     });

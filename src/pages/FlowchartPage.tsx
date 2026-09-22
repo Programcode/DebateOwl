@@ -65,8 +65,9 @@ import {
     LayoutGrid
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { formatRelativeDate } from '@/lib/date-format';
 import { toast } from 'sonner';
-import { formatRelativeTime } from '@/lib/date-format';
+import type { TFunction } from 'i18next';
 
 // Custom node types
 type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
@@ -150,44 +151,46 @@ const edgeStyles: Record<EdgeKind, { label: string; stroke: string }> = {
 };
 
 // Initial sample data
-const initialNodes: Node<FlowNodeData>[] = [
+function createInitialNodes(t: TFunction): Node<FlowNodeData>[] {
+    return [
     {
         id: 'thesis',
         type: 'custom',
         position: { x: 400, y: 50 },
-        data: { label: 'Your Thesis', description: 'Click to edit or add new nodes', type: 'thesis' },
+        data: { label: t('flowchart.starter.thesisLabel'), description: t('flowchart.starter.thesisDesc'), type: 'thesis' },
     },
     {
         id: 'c1',
         type: 'custom',
         position: { x: 150, y: 200 },
-        data: { label: 'Argument 1', description: 'Your first argument', type: 'contention', strength: 'strong' },
+        data: { label: t('flowchart.starter.argument1Label'), description: t('flowchart.starter.argument1Desc'), type: 'contention', strength: 'strong' },
     },
     {
         id: 'c2',
         type: 'custom',
         position: { x: 400, y: 200 },
-        data: { label: 'Argument 2', description: 'Your second argument', type: 'contention', strength: 'moderate' },
+        data: { label: t('flowchart.starter.argument2Label'), description: t('flowchart.starter.argument2Desc'), type: 'contention', strength: 'moderate' },
     },
     {
         id: 'c3',
         type: 'custom',
         position: { x: 650, y: 200 },
-        data: { label: 'Argument 3', description: 'Your third argument', type: 'contention', strength: 'weak' },
+        data: { label: t('flowchart.starter.argument3Label'), description: t('flowchart.starter.argument3Desc'), type: 'contention', strength: 'weak' },
     },
     {
         id: 'a1',
         type: 'custom',
         position: { x: 150, y: 350 },
-        data: { label: 'Opponent Attack', description: 'How they might respond', type: 'attack' },
+        data: { label: t('flowchart.starter.opponentAttackLabel'), description: t('flowchart.starter.opponentAttackDesc'), type: 'attack' },
     },
     {
         id: 'r1',
         type: 'custom',
         position: { x: 150, y: 500 },
-        data: { label: 'Your Rebuttal', description: 'How you counter their attack', type: 'rebuttal' },
+        data: { label: t('flowchart.starter.rebuttalLabel'), description: t('flowchart.starter.rebuttalDesc'), type: 'rebuttal' },
     },
-];
+    ];
+}
 
 const initialEdges: Edge[] = [
     { id: 'e-thesis-c1', source: 'thesis', target: 'c1', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
@@ -207,7 +210,7 @@ export default function FlowchartPage() {
         deleteSavedFlowchart
     } = useSessionStore();
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+    const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes(t));
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
     // Save/Load dialog states
@@ -465,7 +468,7 @@ export default function FlowchartPage() {
                                                         <div className="font-medium">{item.title}</div>
                                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
-                                                            {formatRelativeTime(item.createdAt)}
+                                                            {formatRelativeDate(item.createdAt)}
                                                         </div>
                                                     </div>
                                                     <Button
