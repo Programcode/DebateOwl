@@ -33,7 +33,7 @@ supabase/tests/            pgTAP database and policy tests
 
 Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. GPT-5.6 Luna is the Basic default; Pro-only models require active Pro access.
 
-The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, model-pricing, cost, and control logic lives in `_shared`.
+The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, cost, entitlement, CORS, and control logic lives in `_shared`.
 
 ### Content and sharing
 

@@ -4,7 +4,6 @@ import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import i18n from '@/i18n';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { ToastClose } from '@/components/ui/toast';
 
 describe('StreamingIndicator', () => {
   beforeEach(() => {
@@ -77,7 +76,7 @@ describe('StreamingIndicator', () => {
     expect(screen.getByText('Loading...')).toBeDefined();
   });
 
-  it('localizes loading and shared close controls after a runtime language switch', async () => {
+  it('localizes loading and overlay close controls after a runtime language switch', async () => {
     await act(async () => { await i18n.changeLanguage('hu'); });
     const indicator = render(<StreamingIndicator messages={['Elemzés...']} />);
     expect(screen.getByRole('status', { name: 'Betöltés' })).toBeInTheDocument();
@@ -87,11 +86,7 @@ describe('StreamingIndicator', () => {
     expect(screen.getByRole('button', { name: 'Bezárás' })).toBeInTheDocument();
     dialog.unmount();
 
-    const sheet = render(<Sheet open><SheetContent><SheetTitle>Tesztpanel</SheetTitle></SheetContent></Sheet>);
-    expect(screen.getByRole('button', { name: 'Bezárás' })).toBeInTheDocument();
-    sheet.unmount();
-
-    render(<ToastClose />);
+    render(<Sheet open><SheetContent><SheetTitle>Tesztpanel</SheetTitle></SheetContent></Sheet>);
     expect(screen.getByRole('button', { name: 'Bezárás' })).toBeInTheDocument();
   });
 });

@@ -1,12 +1,3 @@
-import {
-  mockGenerateCase,
-  mockAttackCase,
-  mockBrainstorm,
-  mockFactoids,
-  mockAsk,
-  mockGenerateSparringTurn,
-  mockJudgeSparringSession,
-} from './providers/mock-provider';
 import type { ProviderConfig } from './providers/types';
 import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from './schemas/generate';
 import { AttackOutputSchema, type AttackOutput, type AttackInput } from './schemas/attack';
@@ -450,7 +441,7 @@ async function callSupabaseAI<T = unknown>(
     ? boundCrossfireRequestSources(selectedSources)
     : selectedSources;
 
-  const provider = config.provider === 'mock' ? 'mock' : 'openrouter';
+  const provider = 'openrouter';
   captureProductEvent('ai_request_started', {
     feature,
     provider,
@@ -1218,9 +1209,6 @@ function expectedContentionCount(length: GenerateInput['length']): number {
 }
 
 export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<GenerateOutput>> {
-  if (config.provider === 'mock') {
-    return { result: await mockGenerateCase(input.motion, input.side, input.length), discoveredSources: [] };
-  }
   const inputWithLanguage = withOutputLanguage(input as unknown as Record<string, unknown>);
   const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
     workspaceContext,
@@ -1241,7 +1229,6 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
 }
 
 export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<AttackOutput>> {
-  if (config.provider === 'mock') return { result: await mockAttackCase(input.caseText), discoveredSources: [] };
   const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
     transformResponse: (rawData) => {
@@ -1257,7 +1244,6 @@ export async function attackCase(input: AttackInput, config: ProviderConfig, wor
 }
 
 export async function brainstorm(input: BrainstormInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<BrainstormOutput>> {
-  if (config.provider === 'mock') return { result: await mockBrainstorm(input.motion, input.outputMode), discoveredSources: [] };
   const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
     transformResponse: (rawData) => {
@@ -1273,7 +1259,6 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig,
 }
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<FactoidsOutput>> {
-  if (config.provider === 'mock') return { result: await mockFactoids(input.claim), discoveredSources: [] };
   const inputWithLanguage = withOutputLanguage({
     ...input,
     region: input.region?.trim() || 'Global',
@@ -1322,30 +1307,27 @@ export async function askChat(
   config: ProviderConfig,
   options: AskChatOptions = {}
 ): Promise<AskOutput> {
-  const output = config.provider === 'mock'
-    ? await mockAsk(message, mode)
-    : await callSupabaseAI<AskOutput>('ask', withOutputLanguage({
-      message,
-      history,
-      mode,
-      citationMode: Boolean(options.citationMode),
-      webSearch: Boolean(options.webSearch),
-      prosConsMode: Boolean(options.prosConsMode),
-      argumentMapMode: Boolean(options.argumentMapMode),
-    }), config, {
-      workspaceContext: options.workspaceContext,
-      transformResponse: (rawData) => {
-        const data = rawData as { output: unknown };
-        const parsed = AskOutputSchema.safeParse(data.output);
-        if (!parsed.success) {
-          throw new AIResponseError('AI response did not match the expected ask schema.', {
-            details: { issues: parsed.error.issues },
-          });
-        }
-        return parsed.data;
-      },
-    });
-  return output;
+  return await callSupabaseAI<AskOutput>('ask', withOutputLanguage({
+    message,
+    history,
+    mode,
+    citationMode: Boolean(options.citationMode),
+    webSearch: Boolean(options.webSearch),
+    prosConsMode: Boolean(options.prosConsMode),
+    argumentMapMode: Boolean(options.argumentMapMode),
+  }), config, {
+    workspaceContext: options.workspaceContext,
+    transformResponse: (rawData) => {
+      const data = rawData as { output: unknown };
+      const parsed = AskOutputSchema.safeParse(data.output);
+      if (!parsed.success) {
+        throw new AIResponseError('AI response did not match the expected ask schema.', {
+          details: { issues: parsed.error.issues },
+        });
+      }
+      return parsed.data;
+    },
+  });
 }
 
 function sparringLanguage(language: string): string {
@@ -1433,10 +1415,6 @@ async function generateSparringTurnOnce(
     });
   }
 
-  if (config.provider === 'mock') {
-    return validateSparringTurnResponse(await mockGenerateSparringTurn(inputResult.data));
-  }
-
   return await callSupabaseAI<SparringTurnResponse>('sparring', inputResult.data, config, {
     workspaceContext,
     transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
@@ -1486,10 +1464,6 @@ async function judgeSparringSessionOnce(
     throw new AIResponseError('Invalid sparring score request.', {
       details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
     });
-  }
-
-  if (config.provider === 'mock') {
-    return validateSparringScoreResponse(await mockJudgeSparringSession(inputResult.data));
   }
 
   return await callSupabaseAI<SparringScoreResponse>('sparring', inputResult.data, config, {

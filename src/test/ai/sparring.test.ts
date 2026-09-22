@@ -169,22 +169,6 @@ describe('sparring AI client', () => {
       .rejects.toMatchObject({ name: 'AIResponseError' });
   });
 
-  it('uses the local provider adapter while preserving the same response contract', async () => {
-    const mockConfig: ProviderConfig = { ...CONFIG, provider: 'mock' };
-    const response = await generateSparringTurn(RESPOND_INPUT, mockConfig);
-
-    expect(response.action).toBe('respond');
-    expect(response.speech.content).toContain(SESSION.motion);
-    expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
-  });
-
-  it('scores with the local provider adapter without calling the Edge function', async () => {
-    const response = await judgeSparringSession(SCORE_INPUT, { ...CONFIG, provider: 'mock' });
-
-    expect(response).toMatchObject({ action: 'score', scorecard: { winner: expect.any(String) } });
-    expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
-  });
-
   it('rejects a turn request passed to the scoring operation', async () => {
     await expect(judgeSparringSession(RESPOND_INPUT as unknown as SparringScoreInput, CONFIG))
       .rejects.toMatchObject({ name: 'AIResponseError' });

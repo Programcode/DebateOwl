@@ -4,6 +4,7 @@
 
 // Import Supabase client for JWT verification
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Initialize Supabase client with service role key for user verification
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -31,44 +32,8 @@ async function validateJWT(req: Request): Promise<{ valid: boolean; userId?: str
     }
 }
 
-const ALLOWED_ORIGINS = [
-    "https://debate.pi-stack.org",
-    "http://localhost:5173",
-    "http://localhost:8080",
-    "http://127.0.0.1:54321",
-    "capacitor://localhost"
-];
 
-function isDevOrigin(origin: string): boolean {
-    // Match the exact hostname (and require http:), not a string prefix —
-    // `startsWith('http://localhost')` also matches an attacker-controlled
-    // origin like "http://localhost.evil.com" or "http://localhostevil.com".
-    let url: URL;
-    try {
-        url = new URL(origin);
-    } catch {
-        return false;
-    }
-    if (url.protocol !== 'http:') return false;
-    return (
-        url.hostname === 'localhost' ||
-        url.hostname === '127.0.0.1' ||
-        /^192\.168\.\d{1,3}\.\d{1,3}$/.test(url.hostname)
-    );
-}
 
-function getCorsHeaders(origin: string | null) {
-    // Allow any localhost/127.0.0.1 origin for development
-    // Also allow local network IPs (192.168.x.x) for mobile/device testing
-    const allowedOrigin = (origin && (isDevOrigin(origin) || ALLOWED_ORIGINS.includes(origin)))
-        ? origin
-        : ALLOWED_ORIGINS[0];
-    return {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-    };
-}
 
 type ExportMode = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
@@ -792,7 +757,7 @@ Deno.serve(async (req: Request) => {
     console.log("[GDOC] Function invoked, method:", req.method);
 
     const origin = req.headers.get("origin");
-    const corsHeaders = getCorsHeaders(origin);
+    const corsHeaders = getCorsHeaders(origin, { allowDevOrigins: true });
 
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });

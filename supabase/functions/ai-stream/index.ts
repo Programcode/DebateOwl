@@ -1,37 +1,17 @@
 // Supabase Edge Function: streaming Ask proxy for DebateLab.
 // Keeps provider keys server-side and uses SSE for progressive UI rendering.
 
-const ALLOWED_ORIGINS = [
-  "https://debate.pi-stack.org",
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-  "http://localhost:18080",
-  "http://127.0.0.1:18080",
-  "http://localhost:5173",
-  "http://127.0.0.1:54321",
-  "capacitor://localhost",
-];
-
-function getCorsHeaders(origin: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-}
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
 import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
 import { buildStreamingAskSystemPrompt } from "../_shared/prompts.ts";
 import {
-  calculateRequestCost,
-  type CostResult,
   markIncompleteUsage,
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
 import {
   AUTO_PRO,
   DEFAULT_MODEL,
@@ -53,22 +33,6 @@ type ChatRole = "user" | "assistant";
 type ChatMessage = {
   role: ChatRole;
   content: string;
-};
-
-type RateLimitResult = {
-  allowed: boolean;
-  canAccessProModels?: boolean;
-  reason?: string;
-  limit?: number;
-  current?: number;
-  code?: "limit_reached" | "trial_expired" | "banned" | "upgrade_required";
-  statusCode?: number;
-};
-
-type SubscriptionInfo = {
-  tier: string;
-  dailyLimit: number;
-  canAccessProModels: boolean;
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -116,183 +80,6 @@ export function buildMessages(message: string, history: ChatMessage[], mode: str
   ];
 }
 
-async function checkUserBanned(userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .single();
-  return data?.role === "banned";
-}
-
-async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
-  const { data: user } = await supabase
-    .from("user_settings")
-    .select("subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at")
-    .eq("user_id", userId)
-    .single();
-
-  // A settings row is provisioned for every account on signup and can no
-  // longer be deleted by the client (see 20260819000000 security_hardening.sql).
-  // A missing row is untrusted, not a new user — fail closed.
-  if (!user) return { tier: "expired", dailyLimit: 0, canAccessProModels: false };
-
-  const tier = user.subscription_tier || "trial";
-  const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
-  const now = new Date();
-  const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-  const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-
-  if (tier === "legacy_free") {
-    if (graceEnd && now < graceEnd) return { tier, dailyLimit: limitOrDefault(50), canAccessProModels: true };
-    if (trialEnd && now < trialEnd) return { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false };
-    return { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false };
-  }
-
-  if (tier === "pro") {
-    if (graceEnd && now < graceEnd) return { tier, dailyLimit: limitOrDefault(50), canAccessProModels: true };
-
-    const { data: subscriptions } = await supabase
-      .from("subscriptions")
-      .select("status, current_period_end")
-      .eq("user_id", userId)
-      .in("status", ["active", "trialing"])
-      .order("current_period_end", { ascending: false })
-      .limit(1);
-
-    const activeSubscription = subscriptions?.find((sub) =>
-      sub.current_period_end && new Date(sub.current_period_end) > now
-    );
-    if (activeSubscription) return { tier, dailyLimit: limitOrDefault(50), canAccessProModels: true };
-    if (trialEnd && now < trialEnd) return { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false };
-    return { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false };
-  }
-
-  if (tier === "trial") {
-    if (trialEnd && now < trialEnd) return { tier, dailyLimit: limitOrDefault(5), canAccessProModels: false };
-    return { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false };
-  }
-
-  return { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false };
-}
-
-async function getConfiguredDailyLimit(userId: string, fallbackLimit: number): Promise<number> {
-  const { data: userLimit } = await supabase
-    .from("rate_limits")
-    .select("limit_value")
-    .eq("user_id", userId)
-    .eq("limit_type", "daily_requests")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (typeof userLimit?.limit_value === "number") return userLimit.limit_value;
-
-  const { data: globalLimit } = await supabase
-    .from("rate_limits")
-    .select("limit_value")
-    .is("user_id", null)
-    .eq("limit_type", "daily_requests")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return typeof globalLimit?.limit_value === "number" ? globalLimit.limit_value : fallbackLimit;
-}
-
-async function checkRateLimit(userId: string, model: ModelSelection): Promise<RateLimitResult> {
-  try {
-    if (await checkUserBanned(userId)) {
-      return { allowed: false, reason: "Your account has been suspended. Please contact support.", code: "banned", statusCode: 403 };
-    }
-
-    const sub = await getSubscriptionInfo(userId);
-    const dailyLimit = sub.tier === "expired" && sub.dailyLimit === 0
-      ? 0
-      : await getConfiguredDailyLimit(userId, sub.dailyLimit);
-
-    if (sub.tier === "expired" && dailyLimit === 0) {
-      return { allowed: false, reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.", code: "trial_expired", limit: 0, current: 0, statusCode: 402 };
-    }
-
-    if ((model === AUTO_PRO || (!isAutoModelSelection(model) && getModelCatalogEntry(model)?.isProOnly)) && !sub.canAccessProModels) {
-      return { allowed: false, reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.", code: "upgrade_required", statusCode: 403 };
-    }
-
-    if (dailyLimit <= 0) {
-      return { allowed: false, reason: "Your daily request limit is currently set to zero. Contact support if this seems wrong.", code: "limit_reached", limit: 0, current: 0, statusCode: 402 };
-    }
-
-    // Atomically reserve today's request slot server-side so concurrent requests
-    // can't race past the limit (see consume_daily_quota in the security hardening migration).
-    const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
-      p_user_id: userId,
-      p_limit: dailyLimit,
-    });
-
-    if (quotaError) {
-      console.error("[AI STREAM] Quota reservation failed:", quotaError);
-      return { allowed: false, reason: "Unable to verify your quota. Please try again.", statusCode: 500 };
-    }
-
-    const quotaRow = Array.isArray(quota) ? quota[0] : quota;
-    const current = quotaRow?.current_count ?? 0;
-    if (!quotaRow?.allowed) {
-      return { allowed: false, reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`, code: "limit_reached", limit: dailyLimit, current, statusCode: 402 };
-    }
-
-    return { allowed: true, limit: dailyLimit, current, canAccessProModels: sub.canAccessProModels };
-  } catch (err) {
-    console.error("[AI STREAM] Rate-limit check failed:", err);
-    return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
-  }
-}
-
-async function logUsage(
-  userId: string,
-  provider: string,
-  model: string,
-  usage?: NormalizedUsage,
-  latencyMs?: number,
-  status = "success",
-  errorCode?: string,
-  feature = "ask",
-) {
-  try {
-    const cost: CostResult = usage
-      ? calculateRequestCost({ provider, model, usage })
-      : calculateRequestCost({ provider, model });
-
-    const row: Record<string, unknown> = {
-      user_id: userId,
-      feature,
-      provider,
-      model,
-      input_tokens: cost.inputTokens,
-      output_tokens: cost.outputTokens,
-      latency_ms: latencyMs,
-      status,
-      error_code: errorCode,
-      cost_usd: cost.costUsd,
-    };
-
-    // Audit columns added by migration 20260822000000_ai_request_cost_audit.sql.
-    const auditFields: Record<string, unknown> = {
-      cached_input_tokens: cost.cachedInputTokens,
-      cache_write_tokens: cost.cacheWriteTokens,
-      reasoning_output_tokens: cost.reasoningOutputTokens,
-      pricing_snapshot_id: cost.pricingSnapshotId,
-      pricing_source_url: cost.pricingSourceUrl,
-      cost_calculation_version: cost.costCalculationVersion,
-      raw_usage: cost.rawUsage ?? null,
-    };
-
-    const { error } = await supabase.from("ai_requests").insert({ ...row, ...auditFields });
-    if (error) throw error;
-  } catch (err) {
-    console.warn("[AI STREAM] Failed to log usage:", err);
-  }
-}
 
 export async function handleRequest(req: Request): Promise<Response> {
   const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
@@ -385,13 +172,13 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (routingUsage) {
       await logUsage(
         user.id,
+        "jev_model_router",
         OPENROUTER_PROVIDER,
         JEV_MODEL,
         routingUsage,
         Date.now() - routingStartedAt,
         resolution.jevUsage ? "error" : "success",
         resolution.jevUsage ? "jev_incomplete" : undefined,
-        "jev_model_router",
       );
     }
   } catch (error) {
@@ -532,7 +319,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         if (!req.signal.aborted) {
           try { emit("final", { output, meta: { requestedModel, resolvedModel: model } }); } catch { /* client disconnected after provider completion */ }
         }
-        await logUsage(user.id, OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
+        await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         cancelUpstream();
         const errorMessage = err instanceof Error ? err.message : "Streaming failed";
@@ -543,6 +330,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         const observedUsage = collectUsage();
         await logUsage(
           user.id,
+          "ask",
           OPENROUTER_PROVIDER,
           model,
           markIncompleteUsage(observedUsage),

@@ -6,6 +6,15 @@
 
 **Goal:** Finish the operational accounting cleanup so stored model costs stay auditable, incomplete provider work is not billed as complete, and admin totals distinguish unknown cost from non-AI activity.
 
+> **Superseded in part (2026-09-21).** The app routes every request through
+> OpenRouter, which reports the authoritative account charge per response, so
+> the direct-provider pricing table (`_shared/model-pricing.ts`), its refresh
+> script (`scripts/update-model-pricing.ts`), the `tsx` dev dependency, and the
+> per-provider usage normalizers were unreachable and have been removed.
+> `docs/pricing-snapshots/` is kept as historical evidence. The remaining goals
+> below — incomplete work staying unpriced, and admin totals distinguishing
+> unknown cost from non-AI activity — are unaffected.
+
 ## Preconditions
 
 Work in a new isolated T3 Code worktree with a dedicated feature branch owned by this plan. Before reading for implementation or editing, run `pwd`, `git branch --show-current`, `git status --short --branch`, and `git worktree list --porcelain`. Stop if the current directory is the main checkout, the branch is `main`, the worktree is dirty with another task's changes, or an existing plan worktree is being reused. Keep this plan's branch and PR independent of every other plan.

@@ -199,47 +199,49 @@ describe('AI Client Integration', () => {
             }));
         });
 
-        it('should use local mock provider logic when provider is "mock"', async () => {
-            const mockProviderConfig: ProviderConfig = { ...mockConfig, provider: 'mock' };
-
-            const { result } = await generateCase({
-                motion: 'Test Motion',
-                side: 'pro',
-                format: 'bp',
-                role: 'intro',
-                length: 'brief',
-                audience: 'beginner',
-                tone: 'formal',
-            }, mockProviderConfig);
-
-            // Should NOT call Supabase
-            expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
-
-            // Should return mock data
-            expect(result.caseStructure.thesis).toContain('Test Motion');
-            expect(result.metadata.format).toBe('bp');
-        });
-
         it.each([
             ['brief', 2],
             ['standard', 3],
             ['comprehensive', 4],
-        ] as const)('returns %s mock output with %d contentions', async (length, expectedCount) => {
-            const mockProviderConfig: ProviderConfig = { ...mockConfig, provider: 'mock' };
-            const input: GenerateInput = {
-                motion: 'Test Motion',
-                side: 'pro',
-                format: 'bp',
-                role: 'intro',
-                length,
-                audience: 'beginner',
-                tone: 'formal',
-            };
+        ] as const)('accepts %s output with its expected %d contentions', async (length, expectedCount) => {
+            const contention = (id: number) => ({
+                id: String(id), claim: `Claim ${id}`, reasoning: `Reasoning ${id}`,
+                evidence: `Evidence ${id}`, needsSource: false, impact: `Impact ${id}`,
+            });
+            setMockInvokeResponse({
+                output: {
+                    caseStructure: { thesis: 'Thesis', framework: 'Framework', keyDefinitions: [], burdenOfProof: 'Burden' },
+                    contentions: Array.from({ length: expectedCount }, (_, index) => contention(index + 1)),
+                    predictedOpponentCase: { likelyArguments: [], strategicWeaknesses: [], keyClashes: [] },
+                    counters: [],
+                    metadata: { side: 'pro', format: 'bp', generatedAt: '2026-01-01T00:00:00.000Z' },
+                } satisfies GenerateOutput,
+            });
 
-            const { result } = await generateCase(input, mockProviderConfig);
+            const { result } = await generateCase({
+                motion: 'Test Motion', side: 'pro', format: 'bp', role: 'intro',
+                length, audience: 'beginner', tone: 'formal',
+            }, mockConfig);
 
             expect(result.contentions).toHaveLength(expectedCount);
         }, 15000);
+
+        it('rejects a response whose contention count does not match the requested length', async () => {
+            setMockInvokeResponse({
+                output: {
+                    caseStructure: { thesis: 'Thesis', framework: 'Framework', keyDefinitions: [], burdenOfProof: 'Burden' },
+                    contentions: [{ id: '1', claim: 'Claim', reasoning: 'Reasoning', evidence: 'Evidence', needsSource: false, impact: 'Impact' }],
+                    predictedOpponentCase: { likelyArguments: [], strategicWeaknesses: [], keyClashes: [] },
+                    counters: [],
+                    metadata: { side: 'pro', format: 'bp', generatedAt: '2026-01-01T00:00:00.000Z' },
+                } satisfies GenerateOutput,
+            });
+
+            await expect(generateCase({
+                motion: 'Test Motion', side: 'pro', format: 'bp', role: 'intro',
+                length: 'comprehensive', audience: 'beginner', tone: 'formal',
+            }, mockConfig)).rejects.toBeInstanceOf(AIResponseError);
+        });
 
         it('localizes the truncated-input notification in Hungarian', async () => {
             clientMocks.settings.language = 'hu';

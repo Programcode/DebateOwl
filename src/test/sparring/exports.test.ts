@@ -34,10 +34,6 @@ vi.mock('docx', () => ({
   AlignmentType: { CENTER: 'CENTER' },
 }));
 
-vi.mock('file-saver', () => ({
-  saveAs: vi.fn(),
-}));
-
 vi.mock('jspdf', () => ({
   jsPDF: class MockJsPdf {
     constructor() {
@@ -79,7 +75,7 @@ vi.mock('jspdf-autotable', () => ({
   }),
 }));
 
-import { saveAs } from 'file-saver';
+import { captureDownloads } from '../helpers/downloads';
 import { exportSparringToDocx } from '@/lib/export-utils';
 import { exportSparringToPdf } from '@/lib/pdf-export-utils';
 
@@ -152,8 +148,11 @@ const SCHOOL_SESSION: SparringSession = {
 };
 
 describe('sparring transcript exports', () => {
+  let downloads: ReturnType<typeof captureDownloads>;
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    downloads = captureDownloads();
     exportMocks.paragraphs.length = 0;
     exportMocks.textRuns.length = 0;
     exportMocks.documents.length = 0;
@@ -166,7 +165,7 @@ describe('sparring transcript exports', () => {
     await i18n.changeLanguage('es');
 
     await expect(exportSparringToDocx(SESSION)).resolves.toBe(true);
-    expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'SparringTranscript_1970-01-01.docx');
+    expect(downloads.at(-1)?.filename).toBe('SparringTranscript_1970-01-01.docx');
 
     const paragraphText = exportMocks.paragraphs
       .map((paragraph) => paragraph.text)

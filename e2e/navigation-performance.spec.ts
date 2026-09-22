@@ -58,6 +58,7 @@ async function openAppNav(page: Page, label: string) {
 }
 
 test('cold routes expose real content on both browser profiles', async ({ page }) => {
+  test.setTimeout(60_000);
   await setLocale(page, 'en');
   for (const [path, selector] of publicRoutes) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -77,6 +78,17 @@ test('cold routes expose real content on both browser profiles', async ({ page }
     await waitForContent(appPage, selector);
   }
   await appPage.close();
+});
+
+test('workspaces stay unavailable without a collaboration endpoint', async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+
+  await expect(page.locator('a[href="/app/workspaces"]')).toHaveCount(0);
+  await page.goto('/app/workspaces', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
 });
 
 test('a delayed public route keeps the main landmark', async ({ page }) => {
@@ -305,9 +317,13 @@ test('hover intent is limited to fine pointers and click stays in-document', asy
   expect(requestCount()).toBe(0);
 
   await link.hover();
-  await page.waitForTimeout(INTENT_OBSERVATION_MS);
   const supportsHover = await page.evaluate(() => window.matchMedia('(hover: hover) and (pointer: fine)').matches);
-  expect(requestCount()).toBe(supportsHover ? 1 : 0);
+  if (supportsHover) {
+    await expect.poll(requestCount).toBe(1);
+  } else {
+    await page.waitForTimeout(INTENT_OBSERVATION_MS);
+    expect(requestCount()).toBe(0);
+  }
 
   const navigationEntriesBeforeClick = await page.evaluate(() => performance.getEntriesByType('navigation').length);
   await startGenericLoaderObservation(page);
@@ -327,8 +343,7 @@ test('keyboard focus fetches one destination chunk before click', async ({ page 
 
   await link.focus();
   await expect(link).toBeFocused();
-  await page.waitForTimeout(INTENT_OBSERVATION_MS);
-  expect(requestCount()).toBe(1);
+  await expect.poll(requestCount).toBe(1);
 
   await startGenericLoaderObservation(page);
   await link.click();
@@ -345,8 +360,7 @@ test('touch intent fetches one destination chunk before click', async ({ page })
   expect(requestCount()).toBe(0);
 
   await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
-  await page.waitForTimeout(INTENT_OBSERVATION_MS);
-  expect(requestCount()).toBe(1);
+  await expect.poll(requestCount).toBe(1);
 
   await startGenericLoaderObservation(page);
   await link.click();

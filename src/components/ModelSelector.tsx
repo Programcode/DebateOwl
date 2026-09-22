@@ -3,8 +3,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import {
   AUTO_MODEL_SELECTIONS,
+  AVAILABLE_MODELS,
   DEFAULT_MODEL,
-  DEFAULT_PROVIDERS,
+  PROVIDER_ID,
   isAutoModelSelection,
   isReasoningEffort,
 } from '@/lib/ai/providers/types';
@@ -21,11 +22,11 @@ interface ModelSelectorProps {
   showLabel?: boolean;
 }
 
+// Every catalog model routes through OpenRouter, so the provider fan-out that
+// used to wrap this collapses to one tag.
 const allModels = [
-  ...AUTO_MODEL_SELECTIONS.map((model) => ({ ...model, provider: 'openrouter', providerName: 'OpenRouter', isAuto: true })),
-  ...DEFAULT_PROVIDERS.flatMap((provider) =>
-    provider.models.map((model) => ({ ...model, provider: provider.id, providerName: provider.name, isAuto: false }))
-  ),
+  ...AUTO_MODEL_SELECTIONS.map((model) => ({ ...model, provider: PROVIDER_ID, providerName: 'OpenRouter', isAuto: true })),
+  ...AVAILABLE_MODELS.map((model) => ({ ...model, provider: PROVIDER_ID, providerName: 'OpenRouter', isAuto: false })),
 ];
 
 const reasoningOptions: { value: ReasoningEffort; labelKey: string; fallback: string }[] = [
@@ -60,7 +61,7 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
           const found = allModels.find(m => m.id === model);
           if (found) {
             if (found.isProOnly && !isPro) return;
-            setFeatureConfig(feature, { model, provider: found.provider });
+            setFeatureConfig(feature, { model, provider: PROVIDER_ID });
           }
         }}
       >

@@ -10,7 +10,6 @@ import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatedSection } from '@/components/ui/animated-section';
-import { ToastAction } from '@/components/ui/toast';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
@@ -242,14 +241,10 @@ export default function AskPage() {
           title: t('ask.failed'),
           description: getUserFacingAIError(error) || t('ask.retryableFailedDesc', "Couldn't reach the AI. Check your connection and retry."),
           variant: "destructive",
-          action: (
-            <ToastAction
-              altText={t('common.retry', 'Retry')}
-              onClick={() => void handleSend(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files)}
-            >
-              {t('common.retry', 'Retry')}
-            </ToastAction>
-          ),
+          action: {
+            label: t('common.retry', 'Retry'),
+            onClick: () => void handleSend(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files),
+          },
         });
       }
     } finally {

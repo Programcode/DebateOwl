@@ -8,26 +8,10 @@ import {
 } from "../_shared/announcements.ts";
 import { generateDemoCode, hashDemoCode, isCreatableDemoRole } from "../_shared/demo-code.ts";
 import { collectAdminUsagePages, getKnownCost, hasUnknownCost, isNonAiActivity } from "../_shared/admin-cost.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // SECURITY: Allow specific origins for CORS
-const ALLOWED_ORIGINS = [
-    "https://debate.pi-stack.org",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://127.0.0.1:18080",
-    "http://localhost:5173",
-    "http://127.0.0.1:54321",
-    "capacitor://localhost"
-];
 
-function getCorsHeaders(origin: string | null) {
-    const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-    return {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-        "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    };
-}
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -104,7 +88,7 @@ async function assertCurrentAdmin(userId: string) {
 
 Deno.serve(async (req) => {
     const origin = req.headers.get("origin");
-    const corsHeaders = getCorsHeaders(origin);
+    const corsHeaders = getCorsHeaders(origin, { methods: "POST, GET, OPTIONS" });
 
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });

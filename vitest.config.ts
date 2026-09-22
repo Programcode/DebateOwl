@@ -1,4 +1,4 @@
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -7,15 +7,10 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test/setup.ts", "./src/test/deno-compat.ts"],
-    include: [
-      "src/**/*.{test,spec}.{ts,tsx}",
-      "supabase/functions/**/*.{test,spec}.{ts,tsx}",
-    ],
-    // This boundary test imports the deployed Edge Function entrypoint and its
-    // remote Deno dependencies. Run it with `deno test`; Vite cannot resolve
-    // those URL imports in the browser-oriented Vitest suite.
-    exclude: [...configDefaults.exclude, "supabase/functions/ai/handler-research.test.ts"],
+    setupFiles: ["./src/test/setup.ts"],
+    // Edge function tests are Deno tests. `npm run test:edge` runs them under
+    // the runtime they ship on, so Vitest does not re-run them through a shim.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
       // Omit `all` intentionally: this is a selected-scope gate for the audited
@@ -35,7 +30,6 @@ export default defineConfig({
         "src/lib/supabase/AuthProvider.tsx",
         "src/hooks/use-subscription.ts",
         "src/hooks/use-subscription-error.ts",
-        "supabase/functions/ai/prompt-builder.ts",
       ],
       thresholds: {
         statements: 90,
@@ -51,12 +45,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Run Deno-flavored function tests under Vitest without rewriting them.
-      // Deno resolves this pinned JSR package directly; Vitest uses the shim.
-      "jsr:@std/assert@1.0.19": path.resolve(
-        __dirname,
-        "./src/test/deno-assert-shim.ts",
-      ),
     },
   },
 });

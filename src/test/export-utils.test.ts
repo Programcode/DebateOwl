@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
 
-// Mock docx and file-saver
+// Mock docx; downloads are captured via the real DOM path
 vi.mock('docx', () => ({
     Document: vi.fn(function DocumentMock() {}),
     Packer: {
@@ -14,17 +14,16 @@ vi.mock('docx', () => ({
     AlignmentType: { CENTER: 'CENTER' },
 }));
 
-vi.mock('file-saver', () => ({
-    saveAs: vi.fn(),
-}));
-
 // Import after mocking
 import { exportCaseToDocx } from '@/lib/export-utils';
-import { saveAs } from 'file-saver';
+import { captureDownloads } from './helpers/downloads';
 
 describe('Export Utils', () => {
+    let downloads: ReturnType<typeof captureDownloads>;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        downloads = captureDownloads();
     });
 
     const createValidOutput = (overrides: Partial<GenerateOutput> = {}): GenerateOutput => ({
@@ -68,17 +67,17 @@ describe('Export Utils', () => {
         it('exports valid case successfully', async () => {
             const result = await exportCaseToDocx(createValidOutput());
             expect(result).toBe(true);
-            expect(saveAs).toHaveBeenCalled();
+            expect(downloads).toHaveLength(1);
         });
 
         it('generates correct filename for pro side', async () => {
             await exportCaseToDocx(createValidOutput({ metadata: { side: 'pro', format: 'bp', generatedAt: '2024-01-01' } }));
-            expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'DebateCase_pro.docx');
+            expect(downloads.at(-1)?.filename).toBe('DebateCase_pro.docx');
         });
 
         it('generates correct filename for con side', async () => {
             await exportCaseToDocx(createValidOutput({ metadata: { side: 'con', format: 'bp', generatedAt: '2024-01-01' } }));
-            expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'DebateCase_con.docx');
+            expect(downloads.at(-1)?.filename).toBe('DebateCase_con.docx');
         });
 
         it('returns false when metadata is missing', async () => {

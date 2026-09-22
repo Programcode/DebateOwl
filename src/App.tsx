@@ -1,7 +1,6 @@
 // src/App.tsx
 import { Component, Suspense, lazy, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
@@ -18,6 +17,7 @@ import { captureException, captureProductEvent } from "@/lib/observability";
 import { routeLoaders } from "@/lib/route-modules";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
+import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
 
 // Lazy load all pages for code splitting
 const LandingPage = lazy(routeLoaders["/"]);
@@ -240,9 +240,13 @@ function AppRoutes() {
             }
           >
             <Route path="/app" element={<RouteContent><HomePage /></RouteContent>} />
-            <Route path="/app/workspaces" element={<RouteContent><WorkspacesPage /></RouteContent>} />
-            <Route path="/app/workspaces/invite" element={<RouteContent><WorkspaceInvitePage /></RouteContent>} />
-            <Route path="/app/workspaces/:workspaceId" element={<RouteContent><WorkspacePage /></RouteContent>} />
+            {COLLABORATION_URL && (
+              <>
+                <Route path="/app/workspaces" element={<RouteContent><WorkspacesPage /></RouteContent>} />
+                <Route path="/app/workspaces/invite" element={<RouteContent><WorkspaceInvitePage /></RouteContent>} />
+                <Route path="/app/workspaces/:workspaceId" element={<RouteContent><WorkspacePage /></RouteContent>} />
+              </>
+            )}
             <Route path="/app/generate" element={<RouteContent><GeneratePage /></RouteContent>} />
             <Route path="/app/attack" element={<RouteContent><AttackPage /></RouteContent>} />
             <Route path="/app/brainstorm" element={<RouteContent><BrainstormPage /></RouteContent>} />
@@ -270,7 +274,6 @@ const App = () => (
         <MotionConfig reducedMotion="user">
           <TooltipProvider delayDuration={200}>
             <Toaster />
-            <Sonner />
             <OfflineIndicator />
             <BrowserRouter useTransitions={false}>
               <LocalizedRouteErrorBoundary>

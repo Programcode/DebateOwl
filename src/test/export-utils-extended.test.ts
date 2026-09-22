@@ -16,9 +16,6 @@ vi.mock('docx', () => ({
   AlignmentType: { CENTER: 'CENTER' },
 }));
 
-vi.mock('file-saver', () => ({
-  saveAs: vi.fn(),
-}));
 
 vi.mock('@/lib/supabase/client', () => ({
   supabase: {

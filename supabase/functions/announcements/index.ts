@@ -2,32 +2,16 @@
 
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { validateAnnouncementId } from "../_shared/announcements.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const ALLOWED_ORIGINS = [
-  "https://debate.pi-stack.org",
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-  "http://127.0.0.1:18080",
-  "http://localhost:5173",
-  "http://127.0.0.1:54321",
-  "capacitor://localhost",
-];
 
-function getCorsHeaders(origin: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  };
-}
 
 function json(data: unknown, status: number, corsHeaders: Record<string, string>) {
   return Response.json(data, { status, headers: corsHeaders });
 }
 
 Deno.serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"), { methods: "GET, POST, OPTIONS" });
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {

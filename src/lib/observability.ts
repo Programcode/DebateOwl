@@ -1,4 +1,4 @@
-import { DEFAULT_PROVIDERS } from "@/lib/ai/providers/types";
+import { AVAILABLE_MODELS, PROVIDER_ID } from "@/lib/ai/providers/types";
 
 type SentryModule = typeof import("@sentry/react");
 type PostHogClient = typeof import("posthog-js")["default"];
@@ -56,8 +56,8 @@ const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
   ]),
   feature: new Set(["ask", "attack", "brainstorm", "crossfire", "factoids", "generate", "sparring"]),
   format: new Set(["docx", "google_docs", "ld", "pdf", "pf", "standard"]),
-  model: new Set(DEFAULT_PROVIDERS.flatMap((provider) => provider.models.map((model) => model.id))),
-  provider: new Set(DEFAULT_PROVIDERS.map((provider) => provider.id)),
+  model: new Set(AVAILABLE_MODELS.map((model) => model.id)),
+  provider: new Set([PROVIDER_ID]),
   tool: new Set([
     "admin",
     "ask",

@@ -8,6 +8,14 @@ import type { FactoidsOutput } from './ai/schemas/factoids';
 import type { SparringSession } from './stores/sparring-store';
 import { formatEuropeanDate } from './date-format';
 import { captureProductEvent } from '@/lib/observability';
+import {
+    formatSparringDuration,
+    getSparringCategoryLabel,
+    getSparringFormatLabel,
+    getSparringSideLabel,
+    getSparringTurnLabel,
+    getSparringWinnerLabel,
+} from './export-sparring-labels';
 import { isAppLanguage } from '@/lib/languages';
 import liberationSansRegularUrl from 'pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf?url';
 import liberationSansBoldUrl from 'pdfjs-dist/standard_fonts/LiberationSans-Bold.ttf?url';
@@ -45,36 +53,6 @@ const COLORS = {
     dark: [15, 23, 42] as [number, number, number], // Dark slate
     light: [248, 250, 252] as [number, number, number], // Light
 };
-
-function formatSparringDuration(seconds: number): string {
-    const totalSeconds = Math.max(0, Math.round(seconds));
-    const minutes = Math.floor(totalSeconds / 60);
-    const remainder = String(totalSeconds % 60).padStart(2, '0');
-    return `${minutes}:${remainder}`;
-}
-
-function getSparringSideLabel(side: SparringSession['userSide']): string {
-    return side === 'pro' ? i18n.t('export.proposition') : i18n.t('export.opposition');
-}
-
-function getSparringWinnerLabel(session: SparringSession): string {
-    const winner = session.scorecard?.winner;
-    if (winner === 'user') return i18n.t('export.sparringUser');
-    if (winner === 'ai') return i18n.t('export.sparringOpponent');
-    return i18n.t('export.sparringTie');
-}
-
-function getSparringCategoryLabel(category: string): string {
-    return i18n.t(`sparring.category.${category}`, category);
-}
-
-function getSparringTurnLabel(speech: SparringSession['speeches'][number]): string {
-    return i18n.t(`sparring.turns.${speech.turnId}`, speech.role);
-}
-
-function getSparringFormatLabel(format: SparringSession['format']): string {
-    return i18n.t(`sparring.format.${format}`, format.toUpperCase());
-}
 
 interface PDFHelpers {
     doc: import('jspdf').jsPDF;
