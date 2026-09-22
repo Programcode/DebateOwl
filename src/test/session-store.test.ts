@@ -9,9 +9,12 @@ import {
 vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from "@/lib/stores/session-store";
+import i18n from "@/i18n";
 
 import type { GenerateOutput } from "@/lib/ai/schemas/generate";
 import type { AttackOutput } from "@/lib/ai/schemas/attack";
+import type { BrainstormOutput } from "@/lib/ai/schemas/brainstorm";
+import type { FactoidsOutput } from "@/lib/ai/schemas/factoids";
 
 const sampleGenerate: GenerateOutput = {
   caseStructure: {
@@ -35,9 +38,10 @@ const sampleAttack: AttackOutput = {
 };
 
 describe("session-store", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetMockState();
     localStorage.clear();
+    await i18n.changeLanguage('en');
     useSessionStore.setState({
       generateResult: null,
       generateLoading: false,
@@ -54,6 +58,8 @@ describe("session-store", () => {
       savedBrainstorms: [],
       savedFactoids: [],
       savedChats: [],
+      autosavedBrainstorms: [],
+      autosavedFactoids: [],
       sourceLibrary: [],
     });
   });
@@ -65,6 +71,28 @@ describe("session-store", () => {
     expect(messages).toHaveLength(1);
     expect(messages[0].id).toBeTruthy();
     expect(messages[0].timestamp).toBeGreaterThan(0);
+  });
+
+  it("localizes automatic Brainstorm and Factoids titles", async () => {
+    const brainstorm: BrainstormOutput = {
+      needsMoreInfo: false,
+      buckets: [],
+      nextSteps: [],
+      warningsAndTradeoffs: [],
+    };
+    const factoids: FactoidsOutput = {
+      factoids: [],
+      searchSuggestions: [],
+      warnings: [],
+      verificationStatus: 'complete',
+    };
+
+    await i18n.changeLanguage('hu');
+    useSessionStore.getState().setBrainstormResult(brainstorm);
+    useSessionStore.getState().setFactoidsResult(factoids);
+
+    expect(useSessionStore.getState().autosavedBrainstorms[0].title).toBe('Ötletelés');
+    expect(useSessionStore.getState().autosavedFactoids[0].title).toBe('Tények');
   });
 
   it("saves and loads a case with server id replacement", async () => {
@@ -361,6 +389,81 @@ describe("session-store", () => {
       url: "https://example.com/mixed",
       query: "valid query",
     });
+  });
+
+  it("parses valid semantic metadata and discards only an invalid semantic object", async () => {
+    setMockTableResponse("sources", {
+      order: [
+        {
+          id: "semantic-valid", title: "Valid", content: "c", type: "url", origin: "https://example.com/valid", is_active: true, created_at: new Date().toISOString(),
+          metadata: { qualityLabel: "strong", semantic: { relevance: 0.9, importance: 3, strength: 2, evaluatedAt: "2026-09-21T00:00:00.000Z", useCount: 4, caseUseCount: 2, lastUsedInCase: true } },
+        },
+        {
+          id: "semantic-invalid", title: "Invalid", content: "c", type: "url", origin: "https://example.com/invalid", is_active: true, created_at: new Date().toISOString(),
+          metadata: { qualityLabel: "moderate", semantic: { relevance: 7, importance: 5 } },
+        },
+      ],
+    });
+
+    await useSessionStore.getState().hydrateFromServer();
+    expect(useSessionStore.getState().sourceLibrary.find((source) => source.id === "semantic-valid")?.metadata?.semantic?.caseUseCount).toBe(2);
+    expect(useSessionStore.getState().sourceLibrary.find((source) => source.id === "semantic-invalid")?.metadata).toEqual({ qualityLabel: "moderate" });
+  });
+
+  it("persists metadata when updating a source", async () => {
+    setMockAuthUser({ id: "user_1" });
+    useSessionStore.setState({ sourceLibrary: [{ id: "source_1", title: "Source", content: "Content", type: "text", createdAt: 1, isActive: true }] });
+    const updates: Array<Record<string, unknown>> = [];
+    const originalFrom = supabaseMock.from.getMockImplementation() as unknown as (table: string) => ReturnType<typeof supabaseMock.from>;
+    supabaseMock.from.mockImplementation(((table: string) => {
+      const builder = originalFrom(table);
+      if (table === "sources") {
+        const originalUpdate = builder.update;
+        builder.update = ((payload: Record<string, unknown>) => {
+          updates.push(payload);
+          return (originalUpdate as unknown as (p: Record<string, unknown>) => ReturnType<typeof builder.update>)(payload);
+        }) as typeof builder.update;
+      }
+      return builder;
+    }) as never);
+    const semantic = { relevance: 0.8, importance: 2 as const, strength: 3 as const, evaluatedAt: "2026-09-21T00:00:00.000Z", useCount: 1, caseUseCount: 1, lastUsedInCase: true };
+    try {
+      await useSessionStore.getState().updateSource("source_1", { metadata: { semantic } });
+    } finally {
+      supabaseMock.from.mockImplementation(originalFrom as never);
+    }
+    expect(updates[0].metadata).toEqual({ semantic });
+  });
+
+  it("merges semantic assessments without losing source provenance", async () => {
+    useSessionStore.setState({ sourceLibrary: [{
+      id: "source_1",
+      title: "Source",
+      content: "Content",
+      type: "url",
+      origin: "https://example.com/source",
+      createdAt: 1,
+      isActive: true,
+      metadata: { url: "https://example.com/source", query: "original query", qualityLabel: "strong" },
+    }] });
+
+    await useSessionStore.getState().applySourceAssessments([{
+      key: "source_1",
+      id: "source_1",
+      relevance: 0.9,
+      importance: 3,
+      strength: 2,
+      evaluatedAt: "2026-09-21T00:00:00.000Z",
+      retained: true,
+      usedInCase: true,
+    }]);
+
+    expect(useSessionStore.getState().sourceLibrary[0].metadata).toEqual(expect.objectContaining({
+      url: "https://example.com/source",
+      query: "original query",
+      qualityLabel: "strong",
+      semantic: expect.objectContaining({ useCount: 1, caseUseCount: 1, lastUsedInCase: true }),
+    }));
   });
 
   it("persists local collections but excludes pending session state", () => {

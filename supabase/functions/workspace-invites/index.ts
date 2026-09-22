@@ -24,8 +24,19 @@ type Dependencies = {
 };
 
 function corsHeaders(origin: string | null) {
+  const configured = (Deno.env.get("WORKSPACE_INVITE_ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => {
+      try {
+        return new URL(value).origin === value;
+      } catch {
+        return false;
+      }
+    });
+  const allowed = [...ALLOWED_ORIGINS, ...configured];
   return {
-    "Access-Control-Allow-Origin": origin && ALLOWED_ORIGINS.includes(origin)
+    "Access-Control-Allow-Origin": origin && allowed.includes(origin)
       ? origin
       : ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Headers":
@@ -204,6 +215,7 @@ function configuredSender(): { sender: InviteSender; baseUrl: string } {
   const endpoint = Deno.env.get("WORKSPACE_INVITE_MAILER_URL");
   const token = Deno.env.get("WORKSPACE_INVITE_MAILER_TOKEN");
   const baseUrl = Deno.env.get("WORKSPACE_INVITE_BASE_URL");
+  const format = Deno.env.get("WORKSPACE_INVITE_MAILER_FORMAT");
   if (!endpoint || !token || !baseUrl) {
     throw new HttpError(503, "Invitation email is unavailable");
   }
@@ -213,11 +225,16 @@ function configuredSender(): { sender: InviteSender; baseUrl: string } {
     sender: async (message) => {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(message),
+        headers: format === "mailpit"
+          ? { "Content-Type": "application/json" }
+          : { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(format === "mailpit" ? {
+          From: { Email: "workspace@debatelab.local", Name: "DebateLab" },
+          To: [{ Email: message.to }],
+          Subject: "Join your DebateLab workspace",
+          Text: `Join your workspace: ${message.inviteUrl}`,
+          Headers: { "X-Idempotency-Key": message.idempotencyKey },
+        } : message),
       });
       if (!response.ok) throw new Error("Invitation email delivery failed");
     },
@@ -232,7 +249,10 @@ export async function handleRequest(req: Request, dependencies?: Dependencies) {
   }
 
   try {
-    const auth = await requireUser(req);
+    const auth = await requireUser(
+      req,
+      Deno.env.get("WORKSPACE_INVITE_SERVICE_ROLE_KEY") || undefined,
+    );
     const parsedBody: unknown = await req.json().catch(() => null);
     if (!isRecord(parsedBody) || typeof parsedBody.action !== "string") {
       throw new HttpError(400, "Invalid invitation request");
@@ -346,7 +366,11 @@ export async function handleRequest(req: Request, dependencies?: Dependencies) {
             }`,
             idempotencyKey: `workspace-invite:${result.invite_id}`,
           });
-        } catch {
+        } catch (error) {
+          const message = error instanceof Error
+            ? error.message.replace(/WS-[A-Z2-7-]+|wi_[A-Za-z0-9_-]+/g, "[redacted]")
+            : "unknown delivery error";
+          console.error(`[workspace-invites] delivery failed: ${message}`);
           throw new HttpError(503, "Invitation email is unavailable");
         }
 
@@ -413,6 +437,10 @@ export async function handleRequest(req: Request, dependencies?: Dependencies) {
     if (error instanceof HttpError) {
       return json({ error: error.message }, error.status, cors);
     }
+    const diagnostic = error instanceof Error
+      ? error.message.replace(/WS-[A-Z2-7-]+|wi_[A-Za-z0-9_-]+/g, "[redacted]")
+      : "unknown error";
+    console.error(`[workspace-invites] ${diagnostic}`);
     return json(
       { error: "Invitations are temporarily unavailable" },
       500,

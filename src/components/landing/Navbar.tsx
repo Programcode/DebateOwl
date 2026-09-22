@@ -25,13 +25,14 @@ const Navbar = () => {
             animate={{ y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="fixed left-0 right-0 top-0 z-50 nav-blur"
+            aria-label={t('nav.mainNavigation')}
         >
             <div className="section-container">
                 <div className="flex h-16 items-center justify-between md:h-20">
                     <Link to="/" className="group flex items-center gap-2">
                         <img
                             src="/favicon-72.png"
-                            alt="DebateLab logo"
+                            alt={t('common.logoAlt')}
                             width={36}
                             height={36}
                             className="h-9 w-9 rounded-lg border border-primary/20 object-cover transition-colors group-hover:border-primary/40"

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   userId: 'user-a',
   crossfire: vi.fn<() => Promise<unknown>>(() => new Promise(() => undefined)),
+  crossfireSignal: vi.fn<(input: unknown, config: unknown, options: { signal?: AbortSignal }) => Promise<unknown>>(() => Promise.resolve(undefined)),
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
@@ -24,6 +25,7 @@ vi.mock('@/lib/stores/settings-store', () => ({
 vi.mock('@/lib/ai/client', () => ({
   AIResponseError: class AIResponseError extends Error {},
   crossfire: mocks.crossfire,
+  crossfireSignal: mocks.crossfireSignal,
   isTimeoutError: () => false,
 }));
 
@@ -44,6 +46,8 @@ describe('CrossfirePage', () => {
     mocks.userId = 'user-a';
     mocks.crossfire.mockReset();
     mocks.crossfire.mockImplementation(() => new Promise(() => undefined));
+    mocks.crossfireSignal.mockReset();
+    mocks.crossfireSignal.mockResolvedValue(undefined);
     localStorage.clear();
   });
 
@@ -131,5 +135,57 @@ describe('CrossfirePage', () => {
 
     expect(await screen.findByTestId('retry-debrief')).toBeInTheDocument();
     expect(screen.getByText('The coach returned an incomplete debrief. Try again to continue.')).toBeInTheDocument();
+  });
+
+  it('shows live coaching on the answer only', async () => {
+    mocks.crossfire.mockResolvedValueOnce({
+      type: 'answer',
+      text: 'A bounded answer.',
+      signalToken: 'token',
+    });
+    mocks.crossfireSignal.mockResolvedValueOnce({ answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.91, concession: 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.82 });
+    renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+    fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+
+    const answer = await screen.findByText('A bounded answer.');
+    expect(answer.closest('article')).toHaveTextContent('Direct answer');
+    expect(answer.closest('article')).toHaveTextContent('Implicit concession');
+    expect(answer.closest('article')).toHaveTextContent('Follow-up opportunity');
+    expect(screen.getByText('What is the mechanism?').closest('article')).not.toHaveTextContent('Direct answer');
+    expect(answer.closest('article')?.querySelector('[aria-label*="82%"]')).not.toBeNull();
+  });
+
+  it('keeps a delayed coaching signal alive while the next turn runs', async () => {
+    let resolveSignal: (value: unknown) => void = () => undefined;
+    let sidecarSignal: AbortSignal | undefined;
+    mocks.crossfire
+      .mockResolvedValueOnce({ type: 'answer', text: 'First bounded answer.', signalToken: 'token-1' })
+      .mockResolvedValueOnce({ type: 'answer', text: 'Second bounded answer.' });
+    mocks.crossfireSignal.mockImplementationOnce((_input, _config, options) => {
+      sidecarSignal = options.signal;
+      return new Promise((resolve) => {
+        resolveSignal = resolve;
+      });
+    });
+    renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+    fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'First question?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+    const firstAnswer = await screen.findByText('First bounded answer.');
+
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'Second question?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+    expect(await screen.findByText('Second bounded answer.')).toBeInTheDocument();
+    expect(sidecarSignal?.aborted).toBe(false);
+
+    resolveSignal({ answerTurnId: 'T2', answerQuality: 'direct', answerQualityConfidence: 0.91, concession: 'none', concessionConfidence: 0.88, followUpOpportunity: 0.76 });
+    await waitFor(() => expect(firstAnswer.closest('article')).toHaveTextContent('Direct answer'));
   });
 });

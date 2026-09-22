@@ -45,8 +45,15 @@ const BOOLEAN_CONTROLS: Record<string, readonly string[]> = {
   attack: ["detectFallacies", "analyzeWeighing"],
 };
 
+const SUPPORTED_LANGUAGES = new Set(["en", "es", "hu"]);
+
 /** Returns a safe client-facing error for malformed, present AI controls. */
 export function validateControlInput(feature: string, input: Record<string, unknown>): string | null {
+  if (Object.hasOwn(input, "language") &&
+    (typeof input.language !== "string" || !SUPPORTED_LANGUAGES.has(input.language))) {
+    return `${feature}.language is invalid`;
+  }
+
   for (const [name, allowed] of Object.entries(ENUM_CONTROLS[feature] ?? {})) {
     if (Object.hasOwn(input, name) && (typeof input[name] !== "string" || !allowed.includes(input[name]))) {
       return `${feature}.${name} is invalid`;

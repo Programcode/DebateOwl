@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18n from '@/i18n';
+
+const { mockToast } = vi.hoisted(() => ({ mockToast: vi.fn() }));
 
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({ toast: mockToast }),
 }));
 
 const mockStore = {
@@ -33,8 +36,9 @@ vi.mock('@/lib/source-import', () => ({
 import LibraryPage from '@/pages/LibraryPage';
 
 describe('LibraryPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage('en');
     mockStore.sourceLibrary = [];
     mockStore.sourceFolders = ['General'];
     mockStore.addSource.mockResolvedValue(undefined);
@@ -106,6 +110,19 @@ describe('LibraryPage', () => {
     expect(screen.getByText('Source B')).toBeDefined();
   });
 
+  it('defaults to Smart ordering and puts case-used evidence first', () => {
+    mockStore.sourceLibrary = [
+      { id: 'new', title: 'New source', content: 'A', type: 'text', isActive: true, createdAt: 2 },
+      { id: 'used', title: 'Used source', content: 'B', type: 'text', isActive: true, createdAt: 1, metadata: { semantic: { relevance: 0.8, importance: 2, strength: 3, evaluatedAt: '2026-09-21T00:00:00.000Z', useCount: 4, caseUseCount: 1, lastUsedInCase: true } } },
+    ];
+    render(<LibraryPage />);
+
+    expect(screen.getByRole('combobox', { name: 'Sort by' })).toHaveTextContent('Smart');
+    const labels = screen.getAllByText(/source$/i).map((element) => element.textContent);
+    expect(labels.indexOf('Used source')).toBeLessThan(labels.indexOf('New source'));
+    expect(screen.getByText('Used in this case')).toBeInTheDocument();
+  });
+
   it('shows grounding status', () => {
     mockStore.sourceLibrary = [
       { id: '1', title: 'Active Source', content: 'C', type: 'text', isActive: true, createdAt: Date.now() },
@@ -126,6 +143,16 @@ describe('LibraryPage', () => {
     render(<LibraryPage />);
     fireEvent.click(screen.getByText('Add Source'));
     expect(screen.getByText('Save to Library')).toBeDefined();
+  });
+
+  it('localizes validation errors in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    render(<LibraryPage />);
+
+    fireEvent.click(screen.getByText('Forrás Hozzáadása'));
+    fireEvent.click(screen.getByText('Mentés a Könyvtárba'));
+
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Hiba' }));
   });
 
   it('imports a URL into a preview and saves it', async () => {
@@ -196,6 +223,24 @@ describe('LibraryPage', () => {
     ];
     render(<LibraryPage />);
     expect(screen.getByText(/1 sources/)).toBeDefined();
+  });
+
+  it('localizes the canonical General folder and source controls in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    mockStore.sourceLibrary = [
+      { id: '1', title: 'Forrás', content: 'Bizonyíték', type: 'text', folder: 'General', isActive: true, createdAt: Date.now() },
+      { id: '2', title: 'Fájlforrás', content: 'Bizonyíték', type: 'file', folder: 'General', isActive: true, createdAt: Date.now() },
+      { id: '3', title: 'Webforrás', content: 'Bizonyíték', type: 'url', folder: 'General', isActive: true, createdAt: Date.now() },
+    ];
+
+    render(<LibraryPage />);
+
+    expect(screen.getAllByText('Általános').length).toBeGreaterThan(0);
+    expect(screen.getByText('Szöveg')).toBeInTheDocument();
+    expect(screen.getByText('Fájl')).toBeInTheDocument();
+    expect(screen.getByText('URL')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Forrás törlése' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Forrás be- vagy kikapcsolása' })).toBeInTheDocument();
   });
 
   it('opens a source detail sheet and saves edits', async () => {

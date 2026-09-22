@@ -27,6 +27,7 @@ import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { APP_LANGUAGES, isAppLanguage } from '@/lib/languages';
 
 
 const tierLabels: Record<string, { labelKey: string; color: string }> = {
@@ -191,27 +192,27 @@ export default function SettingsPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>{t('settings.uiLanguage')}</Label>
-                <Select value={language} onValueChange={(v) => setLanguage(v as 'en' | 'es' | 'hu')}>
+                <Select value={language} onValueChange={(value) => isAppLanguage(value) && setLanguage(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Español</SelectItem>
-                    <SelectItem value="hu">Magyar</SelectItem>
+                    {Object.entries(APP_LANGUAGES).map(([value, languageOption]) => (
+                      <SelectItem key={value} value={value}>{languageOption.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.outputLanguage')}</Label>
-                <Select value={outputLanguage || 'en'} onValueChange={(v) => setOutputLanguage(v as 'en' | 'es' | 'hu')}>
+                <Select value={outputLanguage} onValueChange={(value) => isAppLanguage(value) && setOutputLanguage(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Español</SelectItem>
-                    <SelectItem value="hu">Magyar</SelectItem>
+                    {Object.entries(APP_LANGUAGES).map(([value, languageOption]) => (
+                      <SelectItem key={value} value={value}>{languageOption.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

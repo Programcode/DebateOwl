@@ -41,6 +41,38 @@ describe('settings-store branch coverage', () => {
     expect(state.featureConfigs.generate.model).toBe('openai/gpt-5.6-luna');
   });
 
+  it('hydrateFromServer accepts Hungarian language settings', async () => {
+    setMockTableResponse('user_settings', {
+      single: {
+        language: 'hu',
+        output_language: 'hu',
+        feature_configs: undefined,
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().language).toBe('hu');
+    expect(useSettingsStore.getState().outputLanguage).toBe('hu');
+    expect(document.documentElement.lang).toBe('hu');
+  });
+
+  it('hydrateFromServer rejects unsupported language settings', async () => {
+    setMockTableResponse('user_settings', {
+      single: {
+        language: 'zz',
+        output_language: 'zz',
+        feature_configs: undefined,
+      },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().language).toBe('en');
+    expect(useSettingsStore.getState().outputLanguage).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+  });
+
   it('normalizes persisted state in onRehydrateStorage callback', () => {
     const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
     expect(onRehydrateStorage).toBeTypeOf('function');
@@ -61,6 +93,23 @@ describe('settings-store branch coverage', () => {
     expect(partialState.language).toBe('en');
     expect(partialState.theme).toBe('system');
     expect(partialState.wikiResearchEnabled).toBe(false);
+  });
+
+  it('normalizes unsupported locally persisted languages', () => {
+    const onRehydrateStorage = useSettingsStore.persist.getOptions().onRehydrateStorage;
+    const afterRehydrate = onRehydrateStorage?.(useSettingsStore.getState());
+    if (!afterRehydrate) throw new Error('Expected a rehydration callback');
+
+    const partialState = {
+      featureConfigs: undefined,
+      language: 'zz',
+      outputLanguage: 'zz',
+    } as any;
+
+    afterRehydrate(partialState);
+
+    expect(partialState.language).toBe('en');
+    expect(partialState.outputLanguage).toBe('en');
   });
 
   it('canonicalizes legacy local configs and removes client credentials', () => {

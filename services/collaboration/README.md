@@ -1,40 +1,32 @@
-# Collaboration service spike
+# Collaboration service
 
-**Status:** Phase 0 evidence only. No production route or deployment uses this service.
+The Node 22 service is the durable workspace editor boundary. Hocuspocus carries Yjs updates; Supabase Auth and PostgreSQL remain authoritative for identity, current membership, metadata, snapshots, updates, versions, and review decisions.
 
-## Selected stack
+For every loaded document epoch, one dedicated PostgreSQL session holds an advisory lock. Incoming reconnect and live updates are schema-checked and persisted before broadcast or the custom `durable-ack`. Access is rechecked for reads, writes, and awareness. Database lock loss, member removal, and version restore close writable sessions. The 2 MiB update/document ceiling is intentional for the trial.
 
-- Tiptap 3.31.3
-- Hocuspocus 4.7.0
-- Yjs 13.6.32
-- y-protocols 1.0.7
-- async-mutex 0.5.0
+The same loopback server exposes two authenticated HTTP operations:
 
-These exact versions are MIT, support Node 22, and work with DebateLab's React 18 client. Tiptap 3 uses `@tiptap/y-tiptap`; the spike does not install redundant `y-prosemirror`, React provider bindings, or IndexedDB support.
+- `/access/remove` waits for queued writes, changes membership, fences sockets, then acknowledges;
+- `/review/decide` commits proposal status, accepted Yjs content, and the pre-decision version in one database transaction.
 
-## Proven write order
+Required configuration names:
 
-Both reconnect `SyncStep2` and live `Update` messages use the same public Hocuspocus hook path:
+- `COLLABORATION_DATABASE_URL`
+- `COLLABORATION_PORT`
+- `COLLABORATION_ALLOWED_ORIGINS`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
 
-1. authenticate the room's document and epoch;
-2. acquire the per-document lock;
-3. apply the candidate to a bounded scratch Y.Doc and validate the editor schema;
-4. append the update with authenticated author, epoch, SHA-256 mutation ID, and server sequence;
-5. let Hocuspocus apply and broadcast synchronously;
-6. verify the live document contains the update;
-7. send the stateless durable acknowledgement and release the lock.
-
-The UI must use the custom acknowledgement for Saved. Hocuspocus `synced` and its boolean sync status do not prove database persistence. A reconnecting client queries pending mutation IDs and receives the original durable sequence.
-
-The tests reject append failures, invalid schema, stale epochs, and frames above 2 MiB before broadcast or acknowledgement. They also kill the service after commit before acknowledgement and after acknowledgement, then reload the stored update in a new process.
-
-## Remaining production boundary
-
-The in-memory mutex proves single-process serialization. P2.1 must replace it with the planned dedicated-session PostgreSQL advisory lock and terminate writable sessions when that database connection is lost. P2.2 owns account-scoped IndexedDB recovery and presence.
-
-Run:
+Run focused checks with:
 
 ```sh
 npm run test:collaboration
-npx vitest run src/test/workspace/collaboration.test.ts
 ```
+
+Run the complete local database/Auth/browser lifecycle under the repository lock with:
+
+```sh
+./.superset/db-gate.sh
+```
+
+This service has no production deployment in Milestone 1.

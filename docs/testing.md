@@ -54,7 +54,7 @@ For a bug, watch the reproduction fail for the expected reason before implementi
 npm run test:collaboration
 ```
 
-This runs the isolated Node service spike with real Hocuspocus providers and Yjs documents. It covers durable acknowledgement ordering, reconnect sync, duplicate delivery, schema and size rejection, writer serialization, stale epochs, and process-kill recovery. It does not prove PostgreSQL advisory locks or a deployed collaboration service.
+This runs the Node collaboration service with real Hocuspocus providers and Yjs documents. It covers durable acknowledgement ordering, reconnect sync, duplicate delivery, schema and size rejection, PostgreSQL adapter behavior, proposal decision rollback, writer serialization, stale epochs, and process-kill recovery. It does not prove a deployed service.
 
 ## Edge Function tests
 
@@ -65,6 +65,14 @@ npm run test:edge
 This uses Deno directly for `supabase/functions/`, including tests that import deployed handler boundaries and remote Deno modules. The npm script declares the allowed filesystem, environment, and loopback-network permissions.
 
 A browser-oriented Vitest pass does not replace native Deno tests. The stream accounting handler tests use synthetic OpenRouter responses and inspect audit inserts for complete, interrupted, and truncated streams. The permission list includes the OpenRouter key name because the handler reads it, but these tests require no real provider credentials.
+
+### Live Jev contract smoke
+
+```bash
+OPENROUTER_API_KEY=... npm run smoke:jev
+```
+
+This sends one tiny typed choice to OpenRouter's Decisions endpoint using the pinned `typesafe/jev-1.13` model. It prints only the returned model, answer labels, latency, and token counts; it never prints the key or submitted state. The command makes a negligible billable live request and is separate from the credential-free `verify` gate.
 
 ## Production build
 
@@ -94,6 +102,14 @@ Playwright starts a new Vite server on `127.0.0.1:18080` and runs:
 - mobile Chromium using the Pixel 5 device profile
 
 The server is never reused. CI uses retries and two workers. On failure, traces, screenshots, videos, and the HTML report stay in ignored `test-results/` and `playwright-report/` directories. CI may upload those credential-free artifacts for diagnosis.
+
+`e2e/hungarian-parity.spec.ts` is the focused Hungarian browser contract. On desktop and mobile Chromium it checks persisted `<html lang="hu">`, public and authenticated page chrome, route titles, onboarding, saved-chat empty state, Library controls, Timer semantics, localized close labels, and runtime errors. It deliberately does not reject arbitrary English text because source titles, user content, model names, and citations may legitimately remain in their source language.
+
+`src/test/i18n.test.ts` requires identical key sets and non-empty values across all three catalogs. Its explicit identity allowlist is limited to values that should remain canonical, such as product names, file formats, prices, model-facing abbreviations, and debate-format codes. A matching key set and a passing allowlist test prove catalog structure, not Hungarian grammar or natural phrasing.
+
+The speech unit test proves that Hungarian selects `recognition.lang = 'hu-HU'`. Credential-free browser automation has no real microphone or speech service, so it does not prove recognition accuracy or hardware support.
+
+AI client and Edge tests prove that every request path carries a validated language and that prompts require Hungarian output. Provider responses are mocked; only an authorized protected-staging run can prove that a live provider follows the instruction across every prose field.
 
 ## Full credential-free gate
 
@@ -129,7 +145,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts the stack, runs `npm run test:db`, and stops the stack on exit, including after a test failure. Outside Superset, run:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, and Vite client run the real-Auth desktop/mobile workspace journey. Pull requests run this same gate in the `database-tests` job and retain its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
 
 ```bash
 supabase db start
@@ -137,7 +153,7 @@ npm run test:db
 supabase stop --no-backup
 ```
 
-The stack replays migrations and runs pgTAP tests. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.
+The stack replays migrations and runs pgTAP tests. The browser portion creates isolated local users and deletes them, captures mail only in local Mailpit, restarts the collaboration process, and proves recovery and revocation. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 

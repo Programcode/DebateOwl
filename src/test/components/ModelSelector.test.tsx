@@ -23,6 +23,11 @@ vi.mock('@/lib/stores/settings-store', () => ({
 
 vi.mock('@/lib/ai/providers/types', () => ({
   DEFAULT_MODEL: 'openai/gpt-5.6-luna',
+  AUTO_MODEL_SELECTIONS: [
+    { id: 'auto-fast', name: 'Auto Fast', isProOnly: false },
+    { id: 'auto-pro', name: 'Auto Pro', isProOnly: true },
+  ],
+  isAutoModelSelection: (value: unknown) => value === 'auto-fast' || value === 'auto-pro',
   isReasoningEffort: (value: unknown) => value === 'low' || value === 'medium' || value === 'high',
   DEFAULT_PROVIDERS: [
     {
@@ -218,6 +223,39 @@ describe('ModelSelector', () => {
     const [model, reasoning] = screen.getAllByRole('combobox');
     expect(model).not.toBeDisabled();
     expect(reasoning).not.toBeDisabled();
+  });
+
+  it('shows Auto Fast to Basic users and lets routing own reasoning', () => {
+    vi.mocked(useSettingsStore).mockReturnValue({
+      featureConfigs: {
+        generate: { provider: 'openrouter', model: 'auto-fast', temperature: 0.7, reasoningEffort: 'high' },
+      } as any,
+      setFeatureConfig: vi.fn(),
+    });
+
+    render(<ModelSelector feature="generate" />);
+
+    const [model, reasoning] = screen.getAllByRole('combobox');
+    expect(model).toHaveTextContent('Auto Fast');
+    expect(model).not.toBeDisabled();
+    expect(reasoning).toBeDisabled();
+  });
+
+  it('shows Auto Pro for Pro users and lets routing own reasoning', () => {
+    subscriptionState.isPro = true;
+    subscriptionState.tier = 'pro';
+    vi.mocked(useSettingsStore).mockReturnValue({
+      featureConfigs: {
+        generate: { provider: 'openrouter', model: 'auto-pro', temperature: 0.7, reasoningEffort: 'high' },
+      } as any,
+      setFeatureConfig: vi.fn(),
+    });
+
+    render(<ModelSelector feature="generate" />);
+
+    const [model, reasoning] = screen.getAllByRole('combobox');
+    expect(model).toHaveTextContent('Auto Pro');
+    expect(reasoning).toBeDisabled();
   });
 
 });

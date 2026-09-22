@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import i18n from '@/i18n';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', () => ({
@@ -27,8 +28,9 @@ vi.mock('@/lib/stores/session-store', () => ({
 import HistoryPage from '@/pages/HistoryPage';
 
 describe('HistoryPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage('en');
     mockStore.savedCases = [];
     mockStore.savedChats = [];
     mockStore.savedAttacks = [];
@@ -102,6 +104,19 @@ describe('HistoryPage', () => {
     ];
     render(<HistoryPage />);
     expect(screen.getByText('Load')).toBeDefined();
+  });
+
+  it('localizes the saved-case delete label in Hungarian', async () => {
+    await i18n.changeLanguage('hu');
+    mockStore.savedCases = [{
+      id: '1',
+      title: 'Teszt eset',
+      createdAt: Date.now(),
+      data: { metadata: { side: 'pro' } },
+    }];
+
+    render(<HistoryPage />);
+    expect(screen.getByRole('button', { name: 'Teszt eset törlése' })).toBeInTheDocument();
   });
 
   it('renders heading element', () => {

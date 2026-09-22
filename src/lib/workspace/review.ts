@@ -2,14 +2,19 @@ import type { Editor, JSONContent } from "@tiptap/core";
 import { createMappablePosition } from "@tiptap/extension-collaboration";
 import { Fragment, Slice } from "@tiptap/pm/model";
 import {
+  prosemirrorJSONToYXmlFragment,
   relativePositionToAbsolutePosition,
+  yXmlFragmentToProsemirrorJSON,
   ySyncPluginKey,
 } from "@tiptap/y-tiptap";
 import * as Y from "yjs";
+import { z } from "zod";
+import { EditorState } from "@tiptap/pm/state";
+import { WORKSPACE_CONTENT_FIELD, workspaceSchema } from "./schema";
 
 export type ProposalHunkStatus = "pending" | "accepted" | "rejected" | "stale";
 
-type ProposalHunkInput =
+export type ProposalHunkInput =
   | { id: string; kind: "insert"; at: number; content: JSONContent[] }
   | { id: string; kind: "delete"; from: number; to: number }
   | {
@@ -21,6 +26,8 @@ type ProposalHunkInput =
     };
 
 export interface ProposalHunk {
+  absoluteFrom: number;
+  absoluteTo: number;
   id: string;
   kind: ProposalHunkInput["kind"];
   status: ProposalHunkStatus;
@@ -38,6 +45,45 @@ export interface WorkspaceProposal {
   documentEpoch: number;
   baseStateVector: Uint8Array;
   hunks: ProposalHunk[];
+}
+
+const bytesSchema = z.array(z.number().int().min(0).max(255)).transform((bytes) => Uint8Array.from(bytes));
+const serializedProposalSchema = z.object({
+  authorId: z.string().uuid(),
+  baseStateVector: bytesSchema,
+  documentEpoch: z.number().int().nonnegative(),
+  hunks: z.array(z.object({
+    contextAfter: z.array(z.unknown()),
+    contextBefore: z.array(z.unknown()),
+    absoluteFrom: z.number().int().nonnegative(),
+    absoluteTo: z.number().int().nonnegative(),
+    from: bytesSchema,
+    id: z.string().min(1).max(100),
+    kind: z.enum(["insert", "delete", "format"]),
+    original: z.array(z.unknown()),
+    replacement: z.array(z.unknown()),
+    status: z.enum(["pending", "accepted", "rejected", "stale"]),
+    to: bytesSchema,
+  })).min(1).max(100),
+  id: z.string().uuid(),
+});
+
+export type SerializedWorkspaceProposal = ReturnType<typeof serializeProposal>;
+
+export function serializeProposal(proposal: WorkspaceProposal) {
+  return {
+    ...proposal,
+    baseStateVector: Array.from(proposal.baseStateVector),
+    hunks: proposal.hunks.map((hunk) => ({
+      ...hunk,
+      from: Array.from(hunk.from),
+      to: Array.from(hunk.to),
+    })),
+  };
+}
+
+export function deserializeProposal(input: unknown): WorkspaceProposal {
+  return serializedProposalSchema.parse(input) as WorkspaceProposal;
 }
 
 export interface QuoteAnchor {
@@ -65,7 +111,12 @@ function documentFor(editor: Editor): Y.Doc {
 }
 
 function sameContent(left: JSONContent[], right: JSONContent[]) {
-  return JSON.stringify(left) === JSON.stringify(right);
+  const canonical = (value: unknown): unknown => Array.isArray(value)
+    ? value.map(canonical)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey)).map(([key, item]) => [key, canonical(item)]))
+      : value;
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
 }
 
 function resolveAnchors(editor: Editor, fromAnchor: Uint8Array, toAnchor: Uint8Array) {
@@ -162,6 +213,8 @@ export function createProposal({
         input.kind === "delete" ? [] : normalizedContent(editor, input.content);
 
       return {
+        absoluteFrom: from,
+        absoluteTo: to,
         id: input.id,
         kind: input.kind,
         status: "pending",
@@ -181,6 +234,62 @@ export function createProposal({
           .content.toJSON(),
       };
     }),
+  };
+}
+
+export function acceptProposalHunkInDocument({
+  document,
+  documentEpoch,
+  hunkId,
+  proposal,
+}: {
+  document: Y.Doc;
+  documentEpoch: number;
+  hunkId: string;
+  proposal: WorkspaceProposal;
+}) {
+  const hunk = proposal.hunks.find(({ id }) => id === hunkId);
+  if (!hunk || hunk.status !== "pending") throw new Error("Proposal unavailable");
+  const state = EditorState.create({
+    doc: workspaceSchema.nodeFromJSON(
+      yXmlFragmentToProsemirrorJSON(document.getXmlFragment(WORKSPACE_CONTENT_FIELD)),
+    ),
+    schema: workspaceSchema,
+  });
+  const { absoluteFrom: from, absoluteTo: to } = hunk;
+  const documentEnd = state.doc.content.size;
+  const original = state.doc.slice(from, to).content.toJSON();
+  const contextBefore = state.doc.slice(Math.max(0, from - 1), from).content.toJSON();
+  const contextAfter = state.doc.slice(to, Math.min(documentEnd, to + 1)).content.toJSON();
+  if (
+    documentEpoch !== proposal.documentEpoch ||
+    !sameContent(original, hunk.original) ||
+    !sameContent(contextBefore, hunk.contextBefore) ||
+    !sameContent(contextAfter, hunk.contextAfter)
+  ) {
+    return withStatuses(proposal, new Set([hunkId]), "stale");
+  }
+  const transaction = state.tr.replace(
+    from,
+    to,
+    new Slice(Fragment.fromJSON(workspaceSchema, hunk.replacement), 0, 0),
+  );
+  prosemirrorJSONToYXmlFragment(
+    workspaceSchema,
+    transaction.doc.toJSON(),
+    document.getXmlFragment(WORKSPACE_CONTENT_FIELD),
+  );
+  return {
+    ...proposal,
+    hunks: proposal.hunks.map((candidate) => candidate.id === hunkId
+      ? { ...candidate, status: "accepted" as const }
+      : candidate.status === "pending"
+        ? {
+            ...candidate,
+            absoluteFrom: transaction.mapping.map(candidate.absoluteFrom, -1),
+            absoluteTo: transaction.mapping.map(candidate.absoluteTo, 1),
+          }
+        : candidate),
   };
 }
 

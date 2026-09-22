@@ -37,9 +37,21 @@ HUMANIZER STYLE INSTRUCTIONS:
 
 export const JSON_RULES = `OUTPUT RULES: Return ONLY a valid JSON object matching the schema in this prompt. No markdown fences, no commentary before or after the JSON. Required fields must always be present. When a field has no honest value, use the schema's allowed empty value, such as [] or null. Never omit required fields or invent placeholder content.`;
 
-export function buildStreamingAskSystemPrompt(modeGuidance: string): string {
+const LANGUAGE_LABELS: Record<string, string> = {
+  en: "English",
+  es: "Spanish",
+  hu: "Hungarian",
+};
+
+export function outputLanguageInstruction(value: unknown): string {
+  const language = typeof value === "string" && Object.prototype.hasOwnProperty.call(LANGUAGE_LABELS, value) ? value : "en";
+  return `Language: ${LANGUAGE_LABELS[language]} (${language}) - Write ALL output in this language.`;
+}
+
+export function buildStreamingAskSystemPrompt(modeGuidance: string, language: unknown = "en"): string {
   return [
     ASK_COMMON_RULES,
+    outputLanguageInstruction(language),
     "Answer in clear Markdown that can stream smoothly token by token.",
     "Be direct, concrete, and honest about uncertainty.",
     "If the user asks for sources, explain that citation/search mode should be used.",

@@ -9,6 +9,7 @@ import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { useOnboardingStore } from "@/hooks/use-onboarding";
@@ -23,6 +24,9 @@ const LandingPage = lazy(routeLoaders["/"]);
 const TermsPage = lazy(routeLoaders["/terms"]);
 const PrivacyPage = lazy(routeLoaders["/privacy"]);
 const HomePage = lazy(routeLoaders["/app"]);
+const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
+const WorkspaceInvitePage = lazy(routeLoaders["/app/workspaces/invite"]);
+const WorkspacePage = lazy(routeLoaders["/app/workspaces/:workspaceId"]);
 const GeneratePage = lazy(routeLoaders["/app/generate"]);
 const AttackPage = lazy(routeLoaders["/app/attack"]);
 const BrainstormPage = lazy(routeLoaders["/app/brainstorm"]);
@@ -93,6 +97,7 @@ const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
   "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
   "/app": { variant: "home-grid", label: "Home", labelKey: "nav.home" },
+  "/app/workspaces": { variant: "settings/list", label: "Workspaces", labelKey: "nav.workspaces" },
   "/app/generate": { variant: "tool-form", label: "Generate", labelKey: "nav.generate" },
   "/app/attack": { variant: "tool-form", label: "Attack", labelKey: "nav.attack" },
   "/app/brainstorm": { variant: "tool-form", label: "Brainstorm", labelKey: "nav.brainstorm" },
@@ -121,7 +126,13 @@ export function getRouteFallback(pathname: string): RouteFallback {
   return ROUTE_FALLBACKS[normalizedPathname] ?? DEFAULT_ROUTE_FALLBACK;
 }
 
-export class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+interface RouteErrorBoundaryProps {
+  children: ReactNode;
+  heading?: string;
+  reloadLabel?: string;
+}
+
+export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -137,15 +148,24 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, { fai
     if (this.state.failed) {
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
-          <h1 className="text-xl font-semibold">Unable to load this page</h1>
+          <h1 className="text-xl font-semibold">{this.props.heading ?? 'Unable to load this page'}</h1>
           <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={() => window.location.reload()}>
-            Reload
+            {this.props.reloadLabel ?? 'Reload'}
           </button>
         </div>
       );
     }
     return this.props.children;
   }
+}
+
+export function LocalizedRouteErrorBoundary({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <RouteErrorBoundary heading={t('routeError.heading')} reloadLabel={t('routeError.reload')}>
+      {children}
+    </RouteErrorBoundary>
+  );
 }
 
 export function ToolRouteAnalytics(): null {
@@ -167,11 +187,11 @@ function RouteContent({ children }: { children: ReactNode }) {
   const statusText = t("common.openingPage", { page: label });
 
   return (
-    <RouteErrorBoundary key={location.pathname}>
+    <LocalizedRouteErrorBoundary key={location.pathname}>
       <Suspense fallback={<RouteSkeleton variant={fallback.variant} label={label} statusText={statusText} />}>
         {children}
       </Suspense>
-    </RouteErrorBoundary>
+    </LocalizedRouteErrorBoundary>
   );
 }
 
@@ -220,6 +240,9 @@ function AppRoutes() {
             }
           >
             <Route path="/app" element={<RouteContent><HomePage /></RouteContent>} />
+            <Route path="/app/workspaces" element={<RouteContent><WorkspacesPage /></RouteContent>} />
+            <Route path="/app/workspaces/invite" element={<RouteContent><WorkspaceInvitePage /></RouteContent>} />
+            <Route path="/app/workspaces/:workspaceId" element={<RouteContent><WorkspacePage /></RouteContent>} />
             <Route path="/app/generate" element={<RouteContent><GeneratePage /></RouteContent>} />
             <Route path="/app/attack" element={<RouteContent><AttackPage /></RouteContent>} />
             <Route path="/app/brainstorm" element={<RouteContent><BrainstormPage /></RouteContent>} />
@@ -242,6 +265,7 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <AccountQueryCache />
       <ThemeProvider>
         <MotionConfig reducedMotion="user">
           <TooltipProvider delayDuration={200}>
@@ -249,9 +273,9 @@ const App = () => (
             <Sonner />
             <OfflineIndicator />
             <BrowserRouter useTransitions={false}>
-              <RouteErrorBoundary>
+              <LocalizedRouteErrorBoundary>
                 <AppRoutes />
-              </RouteErrorBoundary>
+              </LocalizedRouteErrorBoundary>
             </BrowserRouter>
           </TooltipProvider>
         </MotionConfig>

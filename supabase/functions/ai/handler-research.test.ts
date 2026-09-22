@@ -46,6 +46,34 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
     if (!(await response.text()).includes("ask.citationMode")) throw new Error("non-streaming error hid the invalid control");
     if (calls.length !== 0) throw new Error(`non-streaming validation performed remote work: ${calls.join(", ")}`);
 
+    for (const [feature, input] of [
+      ["ask", { message: "Question", mode: "general", language: "zz" }],
+      ["crossfire", {
+        operation: "next-turn",
+        config: {
+          resolution: "Cities should ban cars.",
+          argument: "Cars cause congestion.",
+          mode: "ai-questions-user",
+          style: "cooperative",
+          durationSeconds: 180,
+          useSourceLibrary: false,
+          seedQuestions: [],
+        },
+        transcript: [],
+        expectedReply: "question",
+        language: "zz",
+      }],
+    ] as const) {
+      const languageResponse = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature, model: "openai/gpt-5.6-luna", input }),
+      }));
+      if (languageResponse.status !== 400) throw new Error(`${feature} invalid language returned ${languageResponse.status}`);
+      if (!(await languageResponse.text()).includes(`${feature}.language`)) throw new Error(`${feature} invalid language was accepted`);
+      if (calls.length !== 0) throw new Error(`${feature} language validation performed remote work: ${calls.join(", ")}`);
+    }
+
     const streamResponse = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: {
@@ -357,10 +385,181 @@ function askRequest(model: string, reasoningEffort?: string): Request {
   });
 }
 
+Deno.test("AI handler ranks stable library sources and returns bounded assessments", async () => {
+  const originalFetch = globalThis.fetch;
+  const providerBodies: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      const body = JSON.parse(String(init?.body)) as { questions: Record<string, { type: string; criteria?: readonly string[] }> };
+      const answers: Record<string, unknown> = {};
+      for (const [id, question] of Object.entries(body.questions)) {
+        const second = id.startsWith("source_1_");
+        if (question.type === "noul") {
+          answers[id] = { type: "noul", noul: second ? 0.95 : 0.7 };
+        } else {
+          const criteria = question.criteria ?? ["None", "Low", "Medium", "High"];
+          const score = second ? 3 : 1;
+          answers[id] = {
+            type: "score",
+            score,
+            confidence: 0.9,
+            probabilities: Object.fromEntries(criteria.map((_, index) => [String(index), index === score ? 0.9 : 0.03])),
+            legend: Object.fromEntries(criteria.map((label, index) => [String(index), label])),
+          };
+        }
+      }
+      return jsonResponse({ model: "typesafe/jev-1.13", answers, usage: { input_tokens: 10, output_tokens: 0, cost: 0.000001 } });
+    }
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      providerBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify({ response: "ok", followUpQuestions: [], uncertainties: [] }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.000001 },
+      });
+    }
+    throw new Error(`Unhandled request: ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        feature: "ask",
+        model: "openai/gpt-5.6-luna",
+        input: { message: "Compare the evidence", mode: "general", webSearch: false },
+        sources: [
+          { id: "source-a", title: "Source A", content: "Evidence A", type: "text", metadata: { qualityLabel: "strong", qualityScore: 90 } },
+          { id: "source-b", title: "Source B", content: "Evidence B", type: "text", metadata: { qualityLabel: "strong", qualityScore: 80 } },
+        ],
+      }),
+    }));
+    if (response.status !== 200) throw new Error(`source-ranking request returned ${response.status}: ${await response.text()}`);
+    const payload = await response.json() as { sourceAssessments?: Array<{ id?: string; importance?: number }> };
+    if (payload.sourceAssessments?.map((item) => item.id).join(",") !== "source-a,source-b") throw new Error("stable source IDs were not returned");
+    if (payload.sourceAssessments?.[1]?.importance !== 3) throw new Error("semantic assessment was not returned");
+    const providerText = JSON.stringify(providerBodies);
+    if (providerText.indexOf("Source B") > providerText.indexOf("Source A")) throw new Error("semantic source order did not reach the provider prompt");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("Crossfire returns newest-exchange signals without making them a reply dependency", async () => {
+  const originalFetch = globalThis.fetch;
+  let decisionFails = false;
+  let decisionCalls = 0;
+  const claimedSignalKeys = new Set<string>();
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.origin === "https://supabase.test" && url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { p_quota_key?: string };
+      if (body.p_quota_key?.startsWith("crossfire_signal:")) {
+        const allowed = !claimedSignalKeys.has(body.p_quota_key);
+        claimedSignalKeys.add(body.p_quota_key);
+        return jsonResponse([{ allowed, current_count: 1 }]);
+      }
+    }
+    const supabaseResponse = supabaseTestResponse(url);
+    if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
+      const body = JSON.parse(String(init?.body)) as { messages?: Array<{ content?: string }> };
+      const prompt = body.messages?.at(-1)?.content ?? "";
+      const output = prompt.includes('must be type "question"')
+        ? { type: "question", text: "What follows from that concession?" }
+        : { type: "answer", text: "The evidence directly supports the claim." };
+      return jsonResponse({ choices: [{ message: { content: JSON.stringify(output) } }], usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.000001 } });
+    }
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      decisionCalls += 1;
+      if (decisionFails) return jsonResponse({ error: "unavailable" }, 500);
+      return jsonResponse({
+        model: "typesafe/jev-1.13",
+        answers: {
+          answer_quality: { type: "choice", choice: "direct", confidence: 0.9, probabilities: { direct: 0.9, partial: 0.08, evasive: 0.02 } },
+          concession: { type: "choice", choice: "implicit", confidence: 0.8, probabilities: { none: 0.15, implicit: 0.8, explicit: 0.05 } },
+          follow_up: { type: "noul", noul: 0.82 },
+        },
+        usage: { input_tokens: 10, output_tokens: 0, cost: 0.000001 },
+      });
+    }
+    throw new Error(`Unhandled request: ${url}`);
+  }) as typeof fetch;
+
+  const config = (mode: "question-ai" | "ai-questions-user") => ({ resolution: "Cities should ban cars.", argument: "Cars cause congestion.", mode, style: "cooperative", durationSeconds: 180, useSourceLibrary: false, seedQuestions: [] });
+  const request = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], expectedReply: "question" | "answer") => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      feature: "crossfire",
+      model: "openai/gpt-5.6-luna",
+      input: {
+        operation: "next-turn",
+        config: config(mode),
+        transcript,
+        expectedReply,
+      },
+    }),
+  }));
+  const requestSignal = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], reply: { type: "question" | "answer"; text: string }, signalToken: string) => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+    method: "POST",
+    headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+    body: JSON.stringify({ feature: "crossfire", model: "openai/gpt-5.6-luna", input: { operation: "signal", config: config(mode), transcript, reply, signalToken } }),
+  }));
+
+  try {
+    const questionTranscript = [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What evidence supports that?", createdAt: 1 }];
+    const questionAi = await request("question-ai", questionTranscript, "answer");
+    const questionAiPayload = await questionAi.json() as { output?: { type?: string; text?: string }; signalToken?: string; signal?: unknown };
+    if (questionAi.status !== 200 || questionAiPayload.output?.type !== "answer" || !questionAiPayload.signalToken || questionAiPayload.signal !== undefined) {
+      throw new Error(`question-ai reply was delayed by signal work: ${JSON.stringify(questionAiPayload)}`);
+    }
+    if (decisionCalls !== 0) throw new Error("main Crossfire reply waited for Jev");
+    const questionSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
+    const questionSignalPayload = await questionSignal.json() as { output?: { signal?: { answerTurnId?: string; answerQuality?: string } } };
+    if (questionSignalPayload.output?.signal?.answerTurnId !== "T2" || questionSignalPayload.output.signal.answerQuality !== "direct") throw new Error(`question-ai signal missing: ${JSON.stringify(questionSignalPayload)}`);
+    const replayedSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, questionAiPayload.signalToken);
+    if (replayedSignal.status !== 409 || Number(decisionCalls) !== 1) throw new Error("replayed Crossfire signal token reached Jev");
+    const forgedSignal = await requestSignal("question-ai", questionTranscript, questionAiPayload.output as { type: "answer"; text: string }, "forged-token");
+    if (forgedSignal.status !== 403) throw new Error("forged Crossfire signal token was accepted");
+
+    const answerTranscript = [
+      { id: "T1", sequence: 1, speaker: "ai", kind: "question", text: "Would costs rise?", createdAt: 1 },
+      { id: "T2", sequence: 2, speaker: "user", kind: "answer", text: "Some costs may rise.", createdAt: 2 },
+    ];
+    const aiQuestionsUser = await request("ai-questions-user", answerTranscript, "question");
+    const aiQuestionsPayload = await aiQuestionsUser.json() as { output?: { type?: string; text?: string }; signalToken?: string };
+    if (aiQuestionsUser.status !== 200 || aiQuestionsPayload.output?.type !== "question" || !aiQuestionsPayload.signalToken) throw new Error(`ai-questions-user reply missing: ${JSON.stringify(aiQuestionsPayload)}`);
+    const decisionCallsBeforeReplayRace = decisionCalls;
+    const racedSignals = await Promise.all(Array.from({ length: 4 }, () => requestSignal("ai-questions-user", answerTranscript, aiQuestionsPayload.output as { type: "question"; text: string }, aiQuestionsPayload.signalToken!)));
+    if (racedSignals.filter((response) => response.status === 200).length !== 1 || racedSignals.filter((response) => response.status === 409).length !== 3) {
+      throw new Error(`concurrent signal token claim was not atomic: ${racedSignals.map((response) => response.status).join(",")}`);
+    }
+    if (decisionCalls !== decisionCallsBeforeReplayRace + 1) throw new Error("concurrent Crossfire signal replays reached Jev");
+    const answerSignalPayload = await racedSignals.find((response) => response.status === 200)!.json() as { output?: { signal?: { answerTurnId?: string; concession?: string } } };
+    if (answerSignalPayload.output?.signal?.answerTurnId !== "T2" || answerSignalPayload.output.signal.concession !== "implicit") throw new Error(`ai-questions-user signal missing: ${JSON.stringify(answerSignalPayload)}`);
+
+    decisionFails = true;
+    const fallbackTranscript = [{ id: "T1", sequence: 1, speaker: "user", kind: "question", text: "What is the fallback evidence?", createdAt: 3 }];
+    const fallbackReply = await request("question-ai", fallbackTranscript, "answer");
+    const fallbackReplyPayload = await fallbackReply.json() as { output?: { type: "answer"; text: string }; signalToken?: string };
+    if (!fallbackReplyPayload.output || !fallbackReplyPayload.signalToken) throw new Error("fallback Crossfire reply token missing");
+    const fallback = await requestSignal("question-ai", fallbackTranscript, fallbackReplyPayload.output, fallbackReplyPayload.signalToken);
+    const fallbackPayload = await fallback.json() as { output?: { signal?: unknown } };
+    if (fallback.status !== 200 || fallbackPayload.output?.signal !== undefined) throw new Error(`failed optional signal returned invalid output: ${JSON.stringify(fallbackPayload)}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning tiers", async () => {
   const originalFetch = globalThis.fetch;
   const originalTier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier;
   const openRouterBodies: Array<Record<string, unknown>> = [];
+  const decisionBodies: Array<Record<string, unknown>> = [];
   const testState = globalThis as typeof globalThis & { __testTier?: string };
   const requestForModel = (model: string, tier: "trial" | "pro", effort = "high") => {
     testState.__testTier = tier;
@@ -371,6 +570,25 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const url = new URL(input instanceof Request ? input.url : String(input));
     const supabaseResponse = supabaseTestResponse(url);
     if (supabaseResponse) return supabaseResponse;
+    if (url.href === "https://openrouter.ai/api/alpha/decisions") {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      decisionBodies.push(body);
+      const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
+      const labels = Object.keys(questions.model.criteria);
+      const choice = labels.includes("z-ai/glm-5.3-flash") ? "z-ai/glm-5.3-flash" : "openai/gpt-5.6-sol";
+      return jsonResponse({
+        model: "typesafe/jev-1.13",
+        answers: {
+          model: {
+            type: "choice",
+            choice,
+            confidence: 0.97,
+            probabilities: Object.fromEntries(labels.map((label) => [label, label === choice ? 0.97 : 0.01])),
+          },
+        },
+        usage: { input_tokens: 20, output_tokens: 0, cost: 0.00000084 },
+      });
+    }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       openRouterBodies.push(body);
@@ -399,7 +617,25 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (response.status !== 200) throw new Error(`Pro medium ${model} returned ${response.status}: ${await response.text()}`);
     }
 
-    if (openRouterBodies.length !== MODEL_CATALOG.length + 6) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
+    const manualGlmBasic = await requestForModel("z-ai/glm-5.3-flash", "trial");
+    if (manualGlmBasic.status !== 403) throw new Error("manual GLM unexpectedly bypassed the Basic gate");
+    const autoFastBasic = await requestForModel("auto-fast", "trial");
+    if (autoFastBasic.status !== 200) throw new Error(`Basic Auto Fast returned ${autoFastBasic.status}: ${await autoFastBasic.text()}`);
+    const autoFastPayload = await autoFastBasic.json();
+    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "z-ai/glm-5.3-flash") {
+      throw new Error(`Auto Fast metadata was wrong: ${JSON.stringify(autoFastPayload.meta)}`);
+    }
+    const autoProBasic = await requestForModel("auto-pro", "trial");
+    if (autoProBasic.status !== 403) throw new Error("Basic Auto Pro was accepted");
+    const autoPro = await requestForModel("auto-pro", "pro");
+    if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
+    const autoProPayload = await autoPro.json();
+    if (autoProPayload.meta?.resolvedModel !== "openai/gpt-5.6-sol") {
+      throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
+    }
+
+    if (openRouterBodies.length !== MODEL_CATALOG.length + 8) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
+    if (decisionBodies.length !== 2) throw new Error(`unexpected Decisions call count: ${decisionBodies.length}`);
     for (let index = 0; index < MODEL_CATALOG.length; index += 1) {
       const entry = MODEL_CATALOG[index];
       const body = openRouterBodies[index];
@@ -420,6 +656,8 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
+    if (openRouterBodies.at(-2)?.model !== "z-ai/glm-5.3-flash") throw new Error("Auto Fast did not call GLM");
+    if (openRouterBodies.at(-1)?.model !== "openai/gpt-5.6-sol") throw new Error("Auto Pro did not call Sol");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;

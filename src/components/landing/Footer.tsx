@@ -11,7 +11,7 @@ const Footer = () => {
                         <a href="/" className="flex items-center gap-2">
                             <img
                                 src="/favicon-72.png"
-                                alt="DebateLab logo"
+                                alt={t('common.logoAlt')}
                                 width={32}
                                 height={32}
                                 className="h-8 w-8 rounded-lg border border-primary/20 object-cover"

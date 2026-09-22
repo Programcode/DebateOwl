@@ -40,7 +40,7 @@ const UseCases = () => {
                         {t('useCases.title')}
                     </h2>
                     <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                        Whether you are competing, coaching, or judging, DebateLab gives you the edge.
+                        {t('useCases.description')}
                     </p>
                 </motion.div>
 

@@ -18,7 +18,8 @@ import {
   Dumbbell,
   Database,
   GitBranch,
-  Crosshair
+  Crosshair,
+  Files,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import {
 
 const navItems = [
   { path: '/app', key: 'home', icon: Home },
+  { path: '/app/workspaces', key: 'workspaces', icon: Files },
   { path: '/app/generate', key: 'generate', icon: Sparkles },
   { path: '/app/attack', key: 'attack', icon: Swords },
   { path: '/app/brainstorm', key: 'brainstorm', icon: Lightbulb },
@@ -50,7 +52,7 @@ const navItems = [
 ];
 
 const primaryNavItems = navItems.filter((item) =>
-  ['home', 'generate', 'attack', 'ask', 'crossfire', 'sparring'].includes(item.key),
+  ['home', 'workspaces', 'generate', 'attack', 'ask', 'crossfire', 'sparring'].includes(item.key),
 );
 
 const moreNavItems = navItems.filter((item) => !primaryNavItems.includes(item));
@@ -194,7 +196,7 @@ export function AppLayout() {
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
           <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
-              <img src="/favicon-72.png" alt="DebateLab" width={36} height={36} className="h-full w-full object-cover" />
+              <img src="/favicon-72.png" alt={t('common.logoAlt')} width={36} height={36} className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</h1>
@@ -202,7 +204,7 @@ export function AppLayout() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-0.5 xl:gap-1 ml-4">
+          <nav aria-label={t('nav.mainNavigation')} className="hidden lg:flex items-center gap-0.5 xl:gap-1 ml-4">
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -281,7 +283,7 @@ export function AppLayout() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <nav className="motion-reveal native-scroll-y native-mobile-menu overflow-y-auto border-t border-border bg-card p-4 lg:hidden" aria-label="Mobile navigation">
+          <nav className="motion-reveal native-scroll-y native-mobile-menu overflow-y-auto border-t border-border bg-card p-4 lg:hidden" aria-label={t('nav.mobileNavigation')}>
             <div className="grid gap-1 pb-[var(--native-safe-bottom,0px)]">
               {navItems.map((item) => (
                 <NavLink

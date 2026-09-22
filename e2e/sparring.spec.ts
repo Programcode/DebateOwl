@@ -128,7 +128,7 @@ test('keeps the setup usable on mobile with reduced motion', async ({ page }) =>
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Sparring' })).toBeVisible();
-  const logo = page.locator('header img[alt="DebateLab"]');
+  const logo = page.getByAltText('DebateLab logo');
   await expect(logo).toHaveAttribute('src', '/favicon-72.png');
   await expect(logo).toHaveAttribute('width', '36');
   await expect(logo).toHaveAttribute('height', '36');
