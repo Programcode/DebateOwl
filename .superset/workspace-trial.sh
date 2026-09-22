@@ -116,7 +116,10 @@ curl --fail --silent --output /dev/null --header "Host: codex-remote.tailab0ab3.
 
 tailscale serve --bg --https="$SERVE_PORT" "http://127.0.0.1:$APP_PORT"
 serve_started=true
-curl --fail --silent --output /dev/null "$TRIAL_ORIGIN"
+tailscale_ip="$(tailscale ip -4)"
+curl --fail --silent --output /dev/null \
+  --resolve "codex-remote.tailab0ab3.ts.net:$SERVE_PORT:$tailscale_ip" \
+  "$TRIAL_ORIGIN"
 
 echo "Workspace trial ready: $TRIAL_ORIGIN"
 echo "Commit: $(git rev-parse HEAD)"
