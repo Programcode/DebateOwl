@@ -8,6 +8,7 @@ import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 import type { AttackInput, AttackOutput } from '@/lib/ai/schemas/attack';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import i18n from '@/i18n';
+import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 
 const clientMocks = vi.hoisted(() => ({
     toast: vi.fn(),
@@ -265,6 +266,31 @@ describe('AI Client Integration', () => {
                 description: 'A kérés túl nagy volt, ezért csak az elküldhető rész került az MI-hez.',
             });
         });
+    });
+
+    it('keeps private sources and personal prompts out of workspace requests', async () => {
+        setMockInvokeResponse({ output: { response: 'Workspace answer', followUpQuestions: [], uncertainties: [] } });
+        const workspaceContext: WorkspaceToolContext = {
+            documentEpoch: 1,
+            documentId: '11111111-1111-4111-8111-111111111111',
+            documentIds: ['11111111-1111-4111-8111-111111111111'],
+            documentText: 'Accepted text',
+            documentTitle: 'R1',
+            motion: 'Motion',
+            requestId: '22222222-2222-4222-8222-222222222222',
+            returnUrl: '/app/workspaces/33333333-3333-4333-8333-333333333333',
+            side: 'pro' as const,
+            sourceIds: [],
+            threadRequest: null,
+            threadId: null,
+            workspaceId: '33333333-3333-4333-8333-333333333333',
+        };
+
+        await askChat('Question', [], 'general', mockConfig, { workspaceContext });
+
+        expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
+            body: expect.objectContaining({ customSystemPrompt: null, sources: [], workspaceContext }),
+        }));
     });
 
     describe('Error Handling', () => {

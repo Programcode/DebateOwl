@@ -47,9 +47,13 @@ interface StartSessionInput {
 interface SparringStoreState {
   ownerUserId: string | null;
   currentSession: SparringSession | null;
+  privateSessionBackup: SparringSession | null;
   savedSessions: SparringSession[];
   hydrated: boolean;
+  beginWorkspaceSession: () => void;
+  endWorkspaceSession: () => void;
   startSession: (input: StartSessionInput) => SparringSession;
+  restoreWorkspaceSession: (input: unknown) => boolean;
   setDraft: (draft: string) => void;
   tickTimer: (now?: number) => void;
   pauseTimer: (now?: number) => void;
@@ -105,10 +109,11 @@ const PersistedSparringSessionSchema = z.object({
 const PersistedSparringStateSchema = z.object({
   ownerUserId: z.string().nullable().optional(),
   currentSession: PersistedSparringSessionSchema.nullable().optional(),
+  privateSessionBackup: PersistedSparringSessionSchema.nullable().optional(),
   savedSessions: z.array(PersistedSparringSessionSchema).optional(),
 });
 
-type PersistedSparringState = Pick<SparringStoreState, 'ownerUserId' | 'currentSession' | 'savedSessions'>;
+type PersistedSparringState = Pick<SparringStoreState, 'ownerUserId' | 'currentSession' | 'privateSessionBackup' | 'savedSessions'>;
 const MAX_SAVED_SESSIONS = 50;
 const PERSIST_DELAY_MS = 250;
 let pendingStorageWrite: { name: string; value: string } | null = null;
@@ -162,18 +167,22 @@ const debouncedSessionStorage = {
 
 if (typeof window !== 'undefined') window.addEventListener('pagehide', flushPendingStorageWrite);
 
-function migratePersistedSparringState(value: unknown): PersistedSparringState {
-  const parsed = PersistedSparringStateSchema.safeParse(value);
-  if (!parsed.success) return { ownerUserId: null, currentSession: null, savedSessions: [] };
-  const rebuildTurns = (session: z.output<typeof PersistedSparringSessionSchema>): SparringSession => ({
+function rebuildSession(session: z.output<typeof PersistedSparringSessionSchema>): SparringSession {
+  return {
     ...session,
     timerDeadline: session.timerDeadline ?? null,
     turns: buildSparringTurns(session.format, session.userSide),
-  });
+  };
+}
+
+function migratePersistedSparringState(value: unknown): PersistedSparringState {
+  const parsed = PersistedSparringStateSchema.safeParse(value);
+  if (!parsed.success) return { ownerUserId: null, currentSession: null, privateSessionBackup: null, savedSessions: [] };
   return {
     ownerUserId: parsed.data.ownerUserId ?? null,
-    currentSession: parsed.data.currentSession ? rebuildTurns(parsed.data.currentSession) : null,
-    savedSessions: (parsed.data.savedSessions ?? []).map(rebuildTurns),
+    currentSession: parsed.data.currentSession ? rebuildSession(parsed.data.currentSession) : null,
+    privateSessionBackup: parsed.data.privateSessionBackup ? rebuildSession(parsed.data.privateSessionBackup) : null,
+    savedSessions: (parsed.data.savedSessions ?? []).map(rebuildSession),
   };
 }
 
@@ -279,8 +288,18 @@ export const useSparringStore = create<SparringStoreState>()(
     (set, get) => ({
       ownerUserId: null as string | null,
       currentSession: null as SparringSession | null,
+      privateSessionBackup: null as SparringSession | null,
       savedSessions: [] as SparringSession[],
       hydrated: false,
+
+      beginWorkspaceSession: () => set((state) => ({
+        currentSession: null,
+        privateSessionBackup: state.privateSessionBackup ?? state.currentSession,
+      })),
+      endWorkspaceSession: () => set((state) => ({
+        currentSession: state.privateSessionBackup,
+        privateSessionBackup: null,
+      })),
 
       startSession: (input) => {
         const now = Date.now();
@@ -302,6 +321,13 @@ export const useSparringStore = create<SparringStoreState>()(
         };
         set({ currentSession: session });
         return session;
+      },
+
+      restoreWorkspaceSession: (input) => {
+        const parsed = PersistedSparringSessionSchema.safeParse(input);
+        if (!parsed.success) return false;
+        set({ currentSession: rebuildSession(parsed.data) });
+        return true;
       },
 
       setDraft: (draft) => set((state) => state.currentSession
@@ -410,7 +436,7 @@ export const useSparringStore = create<SparringStoreState>()(
       prepareForUser: (userId) => {
         if (get().ownerUserId === userId) return;
         hydrationEpoch += 1;
-        set({ ownerUserId: userId, currentSession: null, savedSessions: [], hydrated: false });
+        set({ ownerUserId: userId, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false });
       },
 
       hydrateSavedSessions: async () => {
@@ -455,13 +481,13 @@ export const useSparringStore = create<SparringStoreState>()(
       abandonSession: () => set({ currentSession: null }),
       resetLocalData: () => {
         hydrationEpoch += 1;
-        set({ ownerUserId: null, currentSession: null, savedSessions: [], hydrated: false });
+        set({ ownerUserId: null, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false });
       },
     }),
     {
       name: 'debate-sparring-storage',
       storage: createJSONStorage(() => debouncedSessionStorage),
-      version: 3,
+      version: 4,
       migrate: (persistedState) => migratePersistedSparringState(persistedState),
       merge: (persistedState, currentState) => ({
         ...currentState,
@@ -470,6 +496,7 @@ export const useSparringStore = create<SparringStoreState>()(
       partialize: (state) => ({
         ownerUserId: state.ownerUserId,
         currentSession: state.currentSession,
+        privateSessionBackup: state.privateSessionBackup,
         savedSessions: state.savedSessions.slice(0, MAX_SAVED_SESSIONS),
       }),
     },

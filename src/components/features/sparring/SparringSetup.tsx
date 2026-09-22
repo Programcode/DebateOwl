@@ -26,6 +26,7 @@ export interface SparringSetupValues {
 interface SparringSetupProps {
   onStart: (values: SparringSetupValues) => void;
   isStarting?: boolean;
+  initialValues?: Partial<SparringSetupValues>;
 }
 
 const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
@@ -34,10 +35,10 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, isStarting = false }: SparringSetupProps) {
+export function SparringSetup({ onStart, isStarting = false, initialValues }: SparringSetupProps) {
   const { t } = useTranslation();
-  const [motion, setMotion] = useState('');
-  const [userSide, setUserSide] = useState<SparringSide>('pro');
+  const [motion, setMotion] = useState(initialValues?.motion ?? '');
+  const [userSide, setUserSide] = useState<SparringSide>(initialValues?.userSide ?? 'pro');
   const [format, setFormat] = useState<SparringFormat>('standard');
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('medium');
   const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);

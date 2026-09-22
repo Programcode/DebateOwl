@@ -68,6 +68,7 @@ import { toPng } from 'html-to-image';
 import { formatRelativeDate } from '@/lib/date-format';
 import { toast } from 'sonner';
 import type { TFunction } from 'i18next';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 // Custom node types
 type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
@@ -201,6 +202,7 @@ const initialEdges: Edge[] = [
 ];
 
 export default function FlowchartPage() {
+    const workspace = useWorkspaceToolScope('flowchart');
     const { t } = useTranslation();
     const {
         pendingFlowchartData,
@@ -302,6 +304,7 @@ export default function FlowchartPage() {
 
         try {
             await saveFlowchart(saveTitle, { nodes, edges });
+            await workspace.attach({ title: saveTitle }, { nodes, edges });
             setIsSaveDialogOpen(false);
             setSaveTitle('');
             toast.success(t('flowchart.savedToast'));
@@ -417,6 +420,7 @@ export default function FlowchartPage() {
 
     return (
         <div className="space-y-6">
+            <WorkspaceToolScope context={workspace.context} />
             <Card>
                 <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
                     <div className="flex items-center justify-between">

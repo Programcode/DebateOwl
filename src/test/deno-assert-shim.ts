@@ -4,6 +4,10 @@
 
 import { isDeepStrictEqual } from "node:util";
 
+export function assert(condition: unknown, msg = "Assertion failed"): asserts condition {
+  if (!condition) throw new Error(msg);
+}
+
 export function assertStringIncludes(actual: string, expected: string, msg = ""): void {
   if (!actual.includes(expected)) {
     throw new Error(
@@ -18,4 +22,21 @@ export function assertEquals(actual: unknown, expected: unknown, msg = ""): void
       msg || `Expected values to be equal:\n  ${JSON.stringify(expected)}\nActual value:\n  ${JSON.stringify(actual)}`,
     );
   }
+}
+
+export async function assertRejects(
+  fn: () => Promise<unknown>,
+  ErrorClass: typeof Error = Error,
+  msgIncludes = "",
+): Promise<Error> {
+  try {
+    await fn();
+  } catch (error) {
+    if (!(error instanceof ErrorClass)) throw error;
+    if (msgIncludes && !error.message.includes(msgIncludes)) {
+      throw new Error(`Expected error message to include: ${msgIncludes}\nActual message: ${error.message}`);
+    }
+    return error;
+  }
+  throw new Error("Expected function to reject");
 }

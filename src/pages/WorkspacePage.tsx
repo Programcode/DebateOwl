@@ -10,6 +10,7 @@ import { WorkspaceEditor, type SaveStatus } from "@/components/features/workspac
 import { WorkspaceAccessPanel } from "@/components/features/workspace/WorkspaceAccessPanel";
 import { WorkspaceReviewPanel } from "@/components/features/workspace/WorkspaceReviewPanel";
 import { WorkspaceVersions } from "@/components/features/workspace/WorkspaceVersions";
+import { WorkspacePracticePanel } from "@/components/features/workspace/WorkspacePracticePanel";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import {
   changeWorkspaceState,
@@ -18,6 +19,7 @@ import {
   updateWorkspaceDocument,
 } from "@/lib/workspace/client";
 import { loadWorkspacePreference, saveWorkspacePreference } from "@/lib/workspace/preferences";
+import type { WorkspaceSource } from "@/lib/workspace/practice-client";
 
 type DocumentView = "active" | "archived" | "trashed";
 
@@ -36,6 +38,9 @@ export default function WorkspacePage() {
   const [renameTitle, setRenameTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [documentText, setDocumentText] = useState("");
+  const [citationToInsert, setCitationToInsert] = useState<WorkspaceSource | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<{ id: string; text: string } | null>(null);
   const [preferenceLoaded, setPreferenceLoaded] = useState(false);
   const workspace = useQuery({
     queryKey: ["workspace", user?.id, workspaceId],
@@ -79,6 +84,9 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     setEditorStatus("Saving");
+    setDocumentText("");
+    setCitationToInsert(null);
+    setAiSuggestion(null);
   }, [selectedDocument?.id]);
 
   useEffect(() => {
@@ -343,6 +351,8 @@ export default function WorkspacePage() {
             )}
             {selectedDocument && session && user ? (
               <WorkspaceEditor
+                aiSuggestion={aiSuggestion}
+                citationToInsert={citationToInsert}
                 documentId={selectedDocument.id}
                 editable={workspace.data.workspace.status === "active" && view === "active"}
                 epoch={selectedDocument.document_epoch}
@@ -356,7 +366,10 @@ export default function WorkspacePage() {
                 }
                 workspaceId={workspace.data.workspace.id}
                 onDurableSequence={setDurableSequence}
+                onCitationInserted={() => setCitationToInsert(null)}
+                onAiSuggestionConsumed={() => setAiSuggestion(null)}
                 onSaveStatus={setEditorStatus}
+                onTextChange={setDocumentText}
               />
             ) : (
               <p role="alert" className="p-4 text-sm text-destructive">
@@ -380,6 +393,22 @@ export default function WorkspacePage() {
               )}
               {selectedDocument && (
                 <>
+                  {user && (
+                    <WorkspacePracticePanel
+                      key={`practice:${selectedDocument.id}`}
+                      documentEpoch={selectedDocument.document_epoch}
+                      documentId={selectedDocument.id}
+                      documents={workspace.data.documents.filter((document) => document.state === "active").map(({ id, side, title }) => ({ id, side, title }))}
+                      documentText={documentText}
+                      documentTitle={selectedDocument.title}
+                      motion={workspace.data.workspace.motion}
+                      onInsertCitation={setCitationToInsert}
+                      onSuggestRewrite={setAiSuggestion}
+                      side={selectedDocument.side}
+                      userId={user.id}
+                      workspaceId={workspace.data.workspace.id}
+                    />
+                  )}
                   {session && (
                     <WorkspaceReviewPanel
                       key={`review:${selectedDocument.id}`}

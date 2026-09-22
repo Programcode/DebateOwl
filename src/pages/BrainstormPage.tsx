@@ -14,8 +14,10 @@ import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 export default function BrainstormPage() {
+  const workspace = useWorkspaceToolScope('brainstorm');
   const { brainstormResult, brainstormLoading, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('brainstorm');
@@ -29,9 +31,10 @@ export default function BrainstormPage() {
   const handleSubmit = async (data: BrainstormInput) => {
     setBrainstormLoading(true);
     try {
-      const { result, discoveredSources } = await brainstorm(data, config);
+      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined);
       setDiscoveredSources(discoveredSources);
       setBrainstormResult(result);
+      await workspace.attach(data, result);
       toast({ title: t('brainstorm.complete', 'Brainstorm complete'), description: t('brainstorm.completeDesc', 'Your argument angles are ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to brainstorm:', error);
@@ -93,6 +96,7 @@ export default function BrainstormPage() {
 
   return (
     <div className="container py-8 px-4">
+      <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
         <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>

@@ -13,10 +13,12 @@ import { AnimatedSection } from '@/components/ui/animated-section';
 import { ToastAction } from '@/components/ui/toast';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 const MAX_AI_INPUT_LENGTH = 50000;
 
 export default function AskPage() {
+  const workspace = useWorkspaceToolScope('ask');
   const {
     askMessages,
     askLoading,
@@ -107,7 +109,7 @@ export default function AskPage() {
         fileContext = contents.join('\n');
       }
 
-      const history = askMessages.map(m => ({ role: m.role, content: m.content }));
+      const history = workspace.context ? [] : askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
       if (fullMessage.length > MAX_AI_INPUT_LENGTH) {
         toast({
@@ -127,12 +129,13 @@ export default function AskPage() {
         webSearch,
         prosConsMode,
         argumentMapMode,
+        workspaceContext: workspace.context ?? undefined,
       };
 
       let result: AskOutput;
       const askStartTime = Date.now();
 
-      if (isAskStreamingSupported(config, { ...options, mode })) {
+      if (!workspace.context && isAskStreamingSupported(config, { ...options, mode })) {
         let receivedStreamText = false;
         let partialResponse = '';
         const streamingMessage = {
@@ -220,6 +223,7 @@ export default function AskPage() {
           generatedAt: result.generatedAt || new Date().toISOString(),
         }
       });
+      await workspace.attach({ fullMessage, history, mode }, result);
     } catch (error) {
       if (!isCurrentRequest()) return;
       setAskStreamingAssistant(null);
@@ -309,6 +313,7 @@ export default function AskPage() {
 
   return (
     <div className="container py-8 px-4">
+      <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-5xl mx-auto">
         <AnimatedSection className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">{t('nav.ask')}</h1>
