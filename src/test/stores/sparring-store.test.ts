@@ -144,6 +144,22 @@ describe('sparring-store', () => {
     expect(useSparringStore.getState().privateSessionBackup).toBeNull();
   });
 
+  it('restores and abandons a persisted workspace session safely', () => {
+    const session = useSparringStore.getState().startSession({
+      motion: 'Workspace motion',
+      userSide: 'con',
+      format: 'ld',
+      difficulty: 'hard',
+    });
+    useSparringStore.setState({ currentSession: null });
+
+    expect(useSparringStore.getState().restoreWorkspaceSession(session)).toBe(true);
+    expect(getSession()).toMatchObject({ id: session.id, motion: 'Workspace motion' });
+    useSparringStore.getState().abandonSession();
+    expect(useSparringStore.getState().currentSession).toBeNull();
+    expect(useSparringStore.getState().restoreWorkspaceSession({ id: 'invalid' })).toBe(false);
+  });
+
   it('migrates an in-progress legacy standard round to the school roles', async () => {
     const session = useSparringStore.getState().startSession({
       motion: 'This House would make public transport free.',
