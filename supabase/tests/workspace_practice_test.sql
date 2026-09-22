@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(30);
+SELECT plan(32);
 
 SELECT has_table('public', 'workspace_sources', 'shared sources exist');
 SELECT has_table('public', 'workspace_threads', 'shared threads exist');
@@ -11,6 +11,24 @@ SELECT has_function('public', 'save_workspace_thread_message', ARRAY['uuid','uui
 SELECT has_function('public', 'start_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','uuid','uuid','text'], 'thread generation starts atomically');
 SELECT has_function('public', 'complete_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','text','text'], 'assistant completion stays server-owned');
 SELECT has_function('public', 'save_workspace_artifact', ARRAY['uuid','uuid','uuid','uuid','bigint','text','text','jsonb','jsonb','jsonb'], 'artifacts use an authorized RPC');
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.start_workspace_thread_generation(uuid,uuid,uuid,uuid,uuid,uuid,text)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.complete_workspace_thread_generation(uuid,uuid,uuid,uuid,text,text)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'public.start_workspace_thread_generation(uuid,uuid,uuid,uuid,uuid,uuid,text)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'public.complete_workspace_thread_generation(uuid,uuid,uuid,uuid,text,text)', 'EXECUTE')
+    AND has_function_privilege('service_role', 'public.start_workspace_thread_generation(uuid,uuid,uuid,uuid,uuid,uuid,text)', 'EXECUTE')
+    AND has_function_privilege('service_role', 'public.complete_workspace_thread_generation(uuid,uuid,uuid,uuid,text,text)', 'EXECUTE'),
+  'thread generation RPCs are service-role only'
+);
+SELECT ok(
+  NOT has_function_privilege('anon', 'private.capture_workspace_version_text()', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'private.capture_workspace_version_text()', 'EXECUTE')
+    AND NOT has_function_privilege('service_role', 'private.capture_workspace_version_text()', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'private.restore_workspace_state_text()', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'private.restore_workspace_state_text()', 'EXECUTE')
+    AND NOT has_function_privilege('service_role', 'private.restore_workspace_state_text()', 'EXECUTE'),
+  'workspace text projection triggers are not directly executable'
+);
 
 INSERT INTO auth.users (id) VALUES
   ('91111111-1111-4111-8111-111111111111'),
