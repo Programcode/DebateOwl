@@ -118,9 +118,11 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gte('created_at', todayStart.toISOString());
-    if (usageError) throw new Error(usageError.message);
+    if (usageError) {
+      console.warn('[useSubscription] Failed to load daily usage:', usageError.message);
+    }
 
-    return { ...snapshot, dailyUsed: count || 0 };
+    return { ...snapshot, dailyUsed: usageError ? 0 : count || 0 };
   } catch (error) {
     console.warn('[useSubscription] Failed to load:', error);
     throw error;

@@ -7,6 +7,13 @@ import { chromium } from '@playwright/test';
 const ROOT = process.cwd();
 const SERVER_TIMEOUT_MS = 30_000;
 const CONTENT_TIMEOUT_MS = 15_000;
+const V2_WORKER = `
+const CACHE = 'debate-lab-v2-shell';
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.put('/legacy.js', new Response('legacy'))));
+});
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+`;
 
 async function freePort() {
   const server = createServer();
@@ -97,14 +104,18 @@ async function main() {
   try {
     await waitForServer(origin);
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: 1280, height: 800 } });
-    await context.addInitScript((session) => {
-      localStorage.setItem('debate-auth-production', JSON.stringify(session));
-      localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
-        state: { hasCompletedOnboarding: true, isTourRunning: false },
-        version: 0,
-      }));
-    }, stubSession());
+    const createContext = async () => {
+      const nextContext = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: 1280, height: 800 } });
+      await nextContext.addInitScript((session) => {
+        localStorage.setItem('debate-auth-production', JSON.stringify(session));
+        localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+          state: { hasCompletedOnboarding: true, isTourRunning: false },
+          version: 0,
+        }));
+      }, stubSession());
+      return nextContext;
+    };
+    let context = await createContext();
 
     const prepare = async (page) => {
       await page.route('**/*', (route) => {
@@ -115,20 +126,44 @@ async function main() {
 
     const upgradePage = await context.newPage();
     await prepare(upgradePage);
-    await upgradePage.goto(`${origin}/theme-init.js`, { waitUntil: 'domcontentloaded' });
-    await upgradePage.evaluate(async () => {
-      const cache = await caches.open('debate-lab-v2-shell');
-      await cache.put('/legacy.js', new Response('legacy'));
-    });
+    await context.route(`${origin}/sw.js`, (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      headers: { 'Cache-Control': 'no-store' },
+      body: V2_WORKER,
+    }));
     await upgradePage.goto(origin, { waitUntil: 'networkidle' });
     await upgradePage.evaluate(async () => navigator.serviceWorker.ready);
     await upgradePage.waitForFunction(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      return registration?.active?.state === 'activated' &&
+        navigator.serviceWorker.controller !== null &&
+        (await caches.keys()).includes('debate-lab-v2-shell');
+    });
+    await context.unroute(`${origin}/sw.js`);
+    await upgradePage.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update();
+    });
+    await upgradePage.waitForFunction(async () =>
+      Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+    undefined, { timeout: CONTENT_TIMEOUT_MS });
+    await upgradePage.close();
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+
+    const activatedPage = await context.newPage();
+    await prepare(activatedPage);
+    await activatedPage.goto(origin, { waitUntil: 'networkidle' });
+    await activatedPage.evaluate(async () => navigator.serviceWorker.ready);
+    await activatedPage.waitForFunction(async () => {
       const keys = await caches.keys();
       return navigator.serviceWorker.controller !== null &&
         keys.includes('debate-lab-v3-shell') &&
         !keys.some((key) => key.startsWith('debate-lab-v2'));
     }, undefined, { timeout: CONTENT_TIMEOUT_MS });
-    await upgradePage.close();
+    await activatedPage.close();
+    await context.close();
+    context = await createContext();
 
     const page = await context.newPage();
     await prepare(page);

@@ -12,6 +12,7 @@ interface MockResponses {
     grace_period_ends_at?: string | null;
   } | null;
   usageCount: number | null;
+  usageError: { message: string } | null;
   billingData: Array<{ stripe_customer_id?: string | null; status?: string | null; current_period_end?: string | null }> | null;
   billingError: { message: string } | null;
   throwOnUserSettings: boolean;
@@ -26,6 +27,7 @@ const {
   const mockResponses: MockResponses = {
     userSettings: null,
     usageCount: 0,
+    usageError: null,
     billingData: null,
     billingError: null,
     throwOnUserSettings: false,
@@ -51,7 +53,7 @@ const {
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            gte: vi.fn(async () => ({ count: mockResponses.usageCount })),
+            gte: vi.fn(async () => ({ count: mockResponses.usageCount, error: mockResponses.usageError })),
           })),
         })),
       };
@@ -103,6 +105,7 @@ describe('useSubscription', () => {
     mockAuthState.user = null;
     mockResponses.userSettings = null;
     mockResponses.usageCount = 0;
+    mockResponses.usageError = null;
     mockResponses.billingData = null;
     mockResponses.billingError = null;
     mockResponses.throwOnUserSettings = false;
@@ -460,6 +463,36 @@ describe('useSubscription', () => {
 
     await waitFor(() => expect(result.current.tier).toBe('expired'));
     expect(result.current.isPro).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('keeps validated Pro access when the usage-count refresh fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'usage-refresh-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_usage',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+    mockResponses.usageCount = 3;
+
+    const { result } = renderSubscriptionHook();
+    await waitFor(() => expect(result.current.tier).toBe('pro'));
+    expect(result.current.dailyUsed).toBe(3);
+
+    mockResponses.usageError = { message: 'usage read failed' };
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.dailyUsed).toBe(0));
+    expect(result.current.tier).toBe('pro');
+    expect(result.current.isPro).toBe(true);
 
     warnSpy.mockRestore();
   });
