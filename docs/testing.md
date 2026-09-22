@@ -82,6 +82,14 @@ npm run build
 
 This proves the Vite production bundle compiles and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
 
+## Production service-worker smoke
+
+```bash
+npm run test:sw
+```
+
+Run this after `npm run build`. It serves `dist/` through Vite preview and proves that a v2 worker cache upgrades to v3 and claims the page, a first-visited route and its display logo reload offline, an unvisited route shows recovery UI, an intent-prefetched route opens offline, and private API paths do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
+
 ## Credential-free browser gate
 
 ```bash
@@ -118,7 +126,8 @@ The gate runs, in order:
 5. collaboration service tests
 6. native Edge Function tests
 7. production build
-8. desktop and mobile Chromium
+8. production service-worker offline smoke
+9. desktop and mobile Chromium
 
 It does not start local Supabase, run pgTAP, run WebKit, or use protected staging.
 

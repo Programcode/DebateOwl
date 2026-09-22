@@ -107,7 +107,7 @@ CI and staging must not upload authenticated browser captures. Logging must not 
 
 ## PWA and offline behavior
 
-The service worker and manifest provide installable web assets and an offline app shell. It precaches only the navigation shell and static identity assets; route chunks enter the runtime cache when a user visits them. Updates wait for the normal service-worker lifecycle instead of reloading an active page. Offline support does not make unvisited routes, authenticated Supabase, or AI operations available without a network.
+The service worker and manifest provide installable web assets and an offline app shell. It precaches only the navigation shell and static identity assets; route chunks enter the runtime cache when a user visits them. On first registration, the client also reports same-origin `/assets/` resources that loaded before the worker took control so the first visited route works offline without a forced reload. Updates wait for the normal service-worker lifecycle instead of reloading an active page. Offline support does not make unvisited routes, authenticated Supabase, or AI operations available without a network.
 
 ## iOS shell
 

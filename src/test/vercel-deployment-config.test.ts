@@ -88,7 +88,7 @@ describe("Vercel frontend deployment configuration", () => {
     expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
     expect(themeBootstrap).toContain("pathname === '/login'");
     expect(themeBootstrap).toContain('window.__showDebateBootstrapError = showBootstrapError');
-    expect(nginxConfig).toMatch(/location = \/theme-init\.js \{[\s\S]*?Cache-Control/);
+    expect(nginxConfig).toContain('"/theme-init.js" "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"');
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
 
@@ -147,6 +147,7 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
     expect(serviceWorker).not.toContain("'/app/crossfire'");
     expect(serviceWorker).not.toContain("'/app/sparring'");
+    expect(serviceWorker).toContain("'/favicon-72.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
     expect(serviceWorker).not.toContain('self.skipWaiting()');
   });
@@ -167,6 +168,22 @@ describe("Vercel frontend deployment configuration", () => {
       expect(headersFor(config, source)["Cache-Control"]).toContain("max-age=0");
     },
   );
+
+  it.each(["index.html", "sw.js"])("prevents stale Nginx caching for /%s", (file) => {
+    const nginxConfig = readProjectFile("nginx.conf");
+    expect(nginxConfig).toContain(`"/${file}" "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"`);
+  });
+
+  it("keeps Nginx security headers inherited by every location", () => {
+    const nginxConfig = readProjectFile("nginx.conf");
+    const firstLocation = nginxConfig.indexOf("    location ");
+
+    expect(firstLocation).toBeGreaterThan(0);
+    expect(nginxConfig.slice(firstLocation)).not.toContain("add_header");
+    expect(nginxConfig.slice(0, firstLocation)).toContain("add_header Content-Security-Policy");
+    expect(nginxConfig.slice(0, firstLocation)).toContain("add_header Strict-Transport-Security");
+    expect(nginxConfig).toContain('default "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"');
+  });
 
   it("caches hashed Vite assets immutably", () => {
     const config = loadConfig();
