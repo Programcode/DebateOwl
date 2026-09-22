@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { JSONContent } from "@tiptap/core";
+import { saveAs } from "file-saver";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -31,13 +32,7 @@ import {
 } from "@/lib/workspace/google-drive";
 
 function download(bytes: Uint8Array, name: string, type: string) {
-  const blob = new Blob([new Uint8Array(bytes)], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
+  saveAs(new Blob([new Uint8Array(bytes)], { type }), name);
 }
 
 export function WorkspacePortabilityPanel({
