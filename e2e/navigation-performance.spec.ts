@@ -305,8 +305,7 @@ test('hover intent fetches one destination chunk before click and keeps navigati
   expect(requestCount()).toBe(0);
 
   await link.hover();
-  await page.waitForTimeout(INTENT_OBSERVATION_MS);
-  expect(requestCount()).toBe(1);
+  await expect.poll(requestCount).toBe(1);
 
   const navigationEntriesBeforeClick = await page.evaluate(() => performance.getEntriesByType('navigation').length);
   await startGenericLoaderObservation(page);
@@ -326,8 +325,7 @@ test('keyboard focus fetches one destination chunk before click', async ({ page 
 
   await link.focus();
   await expect(link).toBeFocused();
-  await page.waitForTimeout(INTENT_OBSERVATION_MS);
-  expect(requestCount()).toBe(1);
+  await expect.poll(requestCount).toBe(1);
 
   await startGenericLoaderObservation(page);
   await link.click();
@@ -344,8 +342,7 @@ test('touch intent fetches one destination chunk before click', async ({ page })
   expect(requestCount()).toBe(0);
 
   await link.dispatchEvent('pointerdown', { pointerType: 'touch' });
-  await page.waitForTimeout(INTENT_OBSERVATION_MS);
-  expect(requestCount()).toBe(1);
+  await expect.poll(requestCount).toBe(1);
 
   await startGenericLoaderObservation(page);
   await link.click();

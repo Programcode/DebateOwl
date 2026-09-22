@@ -138,7 +138,7 @@ Document names, never values. Depending on deployed features, server-side config
 - Stripe secret, webhook secret, and price configuration;
 - demo-code hashing material;
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
-- `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay;
+- `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;
 - sparring integrity material;
 - Google export configuration;
 - allowed origins and environment-specific application URLs.
@@ -147,7 +147,7 @@ Use `supabase secrets` or protected deployment configuration for server values. 
 
 Jev uses the same `OPENROUTER_API_KEY` as every other model request; there is no separate TypeSafe credential. `npm run smoke:jev` exercises one fixed, sanitized typed decision against the live Decisions endpoint and incurs a negligible provider charge.
 
-The invitation handler does not select an email provider. Its mail boundary sends `{ to, inviteUrl, idempotencyKey }` to the configured relay. The relay must deduplicate repeated acceptance of the same key, which stays stable across pending-delivery retries. The handler marks delivery only after relay acceptance and suppresses later sends only after that mark commits. Email creation fails before storing an invite when the three mailer values are absent. Local tests inject an in-memory sender and make no external mail request.
+The invitation handler does not select a production email provider. Its default mail boundary sends `{ to, inviteUrl, idempotencyKey }` to the configured relay. The relay must deduplicate repeated acceptance of the same key, which stays stable across pending-delivery retries. The handler marks delivery only after relay acceptance and suppresses later sends only after that mark commits. Email creation fails before storing an invite when the three required mailer values are absent. The locked local gate alone sets `WORKSPACE_INVITE_MAILER_FORMAT=mailpit` and captures messages in local Supabase Mailpit; it makes no external mail request.
 
 Public browser configuration in [`../src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) is not a replacement for server authorization.
 

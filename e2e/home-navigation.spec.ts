@@ -60,19 +60,6 @@ test('onboarding follows visible home targets when secondary navigation is close
 
 test('onboarding keeps its original start schedule after a delayed lazy chunk', async ({ page }) => {
   await page.addInitScript(() => {
-    const originalSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function setItem(key, value) {
-      if (key === 'debate-trainer-onboarding') {
-        try {
-          if (JSON.parse(value).state?.isTourRunning === true) {
-            originalSetItem.call(this, '__onboarding-tour-started-at', String(Date.now()));
-          }
-        } catch {
-          // Ignore malformed test-only storage writes.
-        }
-      }
-      originalSetItem.call(this, key, value);
-    };
     window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
       state: { hasCompletedOnboarding: false, isTourRunning: false },
       version: 0,
@@ -80,7 +67,12 @@ test('onboarding keeps its original start schedule after a delayed lazy chunk', 
   });
   await page.route('**/src/components/features/onboarding/OnboardingTour.tsx*', async (route) => {
     const response = await route.fetch();
-    const body = `${await response.text()}\nwindow.localStorage.setItem('__onboarding-module-evaluated-at', String(Date.now()));`;
+    const source = await response.text();
+    const body = source.replace(
+      /const\s+timer\s*=\s*setTimeout\(\(\)\s*=>\s*\{/,
+      'window.localStorage.setItem("__onboarding-auto-start-delay", String(autoStartDelay));\n        const timer = setTimeout(() => {',
+    );
+    if (body === source) throw new Error('Unable to instrument the onboarding auto-start delay');
     await new Promise((resolve) => setTimeout(resolve, 750));
     await route.fulfill({ response, body });
   });
@@ -92,11 +84,10 @@ test('onboarding keeps its original start schedule after a delayed lazy chunk', 
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
-  await expect.poll(async () => Number(await page.evaluate(() => window.localStorage.getItem('__onboarding-module-evaluated-at') ?? 0)), { timeout: 15_000 }).toBeGreaterThan(0);
-  await expect.poll(async () => Number(await page.evaluate(() => window.localStorage.getItem('__onboarding-tour-started-at') ?? 0)), { timeout: 15_000 }).toBeGreaterThan(0);
-  const moduleEvaluatedAt = await page.evaluate(() => Number(window.localStorage.getItem('__onboarding-module-evaluated-at')));
-  const startedAt = await page.evaluate(() => Number(window.localStorage.getItem('__onboarding-tour-started-at')));
-  expect(startedAt - moduleEvaluatedAt).toBeLessThan(450);
+  await expect.poll(
+    () => page.evaluate(() => Number(window.localStorage.getItem('__onboarding-auto-start-delay') ?? -1)),
+    { timeout: 15_000 },
+  ).toBe(0);
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
 });
 

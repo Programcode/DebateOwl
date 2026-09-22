@@ -8,6 +8,7 @@ import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { useOnboardingStore } from "@/hooks/use-onboarding";
@@ -22,6 +23,9 @@ const LandingPage = lazy(routeLoaders["/"]);
 const TermsPage = lazy(routeLoaders["/terms"]);
 const PrivacyPage = lazy(routeLoaders["/privacy"]);
 const HomePage = lazy(routeLoaders["/app"]);
+const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
+const WorkspaceInvitePage = lazy(routeLoaders["/app/workspaces/invite"]);
+const WorkspacePage = lazy(routeLoaders["/app/workspaces/:workspaceId"]);
 const GeneratePage = lazy(routeLoaders["/app/generate"]);
 const AttackPage = lazy(routeLoaders["/app/attack"]);
 const BrainstormPage = lazy(routeLoaders["/app/brainstorm"]);
@@ -92,6 +96,7 @@ const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
   "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
   "/app": { variant: "home-grid", label: "Home", labelKey: "nav.home" },
+  "/app/workspaces": { variant: "settings/list", label: "Workspaces", labelKey: "nav.workspaces" },
   "/app/generate": { variant: "tool-form", label: "Generate", labelKey: "nav.generate" },
   "/app/attack": { variant: "tool-form", label: "Attack", labelKey: "nav.attack" },
   "/app/brainstorm": { variant: "tool-form", label: "Brainstorm", labelKey: "nav.brainstorm" },
@@ -234,6 +239,9 @@ function AppRoutes() {
             }
           >
             <Route path="/app" element={<RouteContent><HomePage /></RouteContent>} />
+            <Route path="/app/workspaces" element={<RouteContent><WorkspacesPage /></RouteContent>} />
+            <Route path="/app/workspaces/invite" element={<RouteContent><WorkspaceInvitePage /></RouteContent>} />
+            <Route path="/app/workspaces/:workspaceId" element={<RouteContent><WorkspacePage /></RouteContent>} />
             <Route path="/app/generate" element={<RouteContent><GeneratePage /></RouteContent>} />
             <Route path="/app/attack" element={<RouteContent><AttackPage /></RouteContent>} />
             <Route path="/app/brainstorm" element={<RouteContent><BrainstormPage /></RouteContent>} />
@@ -256,6 +264,7 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <AccountQueryCache />
       <ThemeProvider>
         <MotionConfig reducedMotion="user">
           <TooltipProvider delayDuration={200}>

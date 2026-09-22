@@ -77,15 +77,15 @@ Follow existing functional React, Zustand, Zod, and shadcn/Radix patterns. Reuse
 
 Run the closest unit or component test while changing behavior. Run lint, type checking, and build before handing work off.
 
-## Collaboration service spike
+## Collaboration service
 
-The Phase 0 service evidence lives under `services/collaboration/`. Run:
+The local PostgreSQL-backed Hocuspocus service lives under `services/collaboration/`. Run its focused tests with:
 
 ```bash
 npm run test:collaboration
 ```
 
-The spike is not a deployed service. Its in-memory writer lock is single-process evidence; the database-backed service and advisory-lock lifecycle belong to P2.1.
+Start it only with explicit local Supabase values for `COLLABORATION_DATABASE_URL`, `COLLABORATION_PORT`, `COLLABORATION_ALLOWED_ORIGINS`, `SUPABASE_URL`, and `SUPABASE_ANON_KEY`. The service binds loopback, takes one PostgreSQL session advisory lock per loaded document epoch, and closes sessions on access or restore notifications. It is not a production deployment.
 
 ## Edge Function workflow
 
@@ -119,7 +119,7 @@ npm run test:db
 supabase stop --no-backup
 ```
 
-The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` and stops the stack on exit, including after a test failure. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
+The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` through database tests and the real-Auth collaboration browser journey, and stops the stack and owned processes on exit. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
 
 Never point local tests at staging or production. Never apply a migration to an unverified project.
 

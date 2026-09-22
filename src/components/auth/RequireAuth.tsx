@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
+import { consumeWorkspaceInvite, stashWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -15,8 +16,14 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const invite = stashWorkspaceInvite(location);
+    return <Navigate to="/login" state={{ from: { pathname: invite ? "/app/workspaces/invite" : location.pathname } }} replace />;
   }
+
+  const invite = location.pathname === "/app/workspaces/invite"
+    ? null
+    : consumeWorkspaceInvite();
+  if (invite) return <Navigate to={invite} replace />;
 
   return <>{children}</>;
 }

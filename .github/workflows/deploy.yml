@@ -85,15 +85,28 @@ jobs:
         with:
           version: 2.116.0
 
-      - name: Start isolated database and apply migrations
-        run: supabase db start
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Database policy tests
-        run: npm run test:db
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
-      - name: Stop isolated database
-        if: always()
-        run: supabase stop --no-backup
+      - name: Database and real workspace journey
+        env:
+          WORKSPACE_GATE_ARTIFACT_ROOT: ${{ runner.temp }}/workspace-gate
+        run: ./.superset/db-gate.sh
+
+      - name: Upload workspace failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workspace-gate-failure-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/workspace-gate/
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   browser-tests:
     if: github.event_name == 'pull_request'

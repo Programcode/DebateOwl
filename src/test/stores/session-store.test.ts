@@ -478,6 +478,22 @@ describe("session-store", () => {
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
   };
 
+  it("merges nested form updates without dropping sibling fields", () => {
+    const store = useSessionStore.getState();
+    store.setGenerateForm({ options: { depth: "standard", citations: true } } as any);
+    store.setGenerateForm({ options: { depth: "comprehensive" } } as any);
+    store.setAttackForm({ caseText: "Attack case" });
+    store.setBrainstormForm({ motion: "Brainstorm motion" });
+    store.setFactoidsForm({ claim: "Factoid claim" });
+
+    expect(useSessionStore.getState().generateForm).toEqual({
+      options: { depth: "comprehensive", citations: true },
+    });
+    expect(useSessionStore.getState().attackForm).toEqual({ caseText: "Attack case" });
+    expect(useSessionStore.getState().brainstormForm).toEqual({ motion: "Brainstorm motion" });
+    expect(useSessionStore.getState().factoidsForm).toEqual({ claim: "Factoid claim" });
+  });
+
   it("flips each feature's loading flag", () => {
     const store = useSessionStore.getState();
     store.setGenerateLoading(true);

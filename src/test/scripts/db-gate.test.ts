@@ -42,6 +42,6 @@ it("stops local Supabase when database tests fail", async () => {
 
   expect(result.status).toBe(17);
   await expect(readFile(log, "utf8")).resolves.toBe(
-    "supabase db start\nnpm run test:db\nsupabase stop --no-backup\n",
+    "supabase start\nnpm run test:db\nsupabase stop --no-backup\n",
   );
 });
