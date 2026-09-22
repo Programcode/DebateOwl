@@ -147,7 +147,7 @@ CREATE FUNCTION public.save_workspace_source(
   p_workspace_id uuid, p_source_id uuid, p_title text, p_content text,
   p_source_type text, p_provenance jsonb, p_citation_snapshot jsonb
 )
-RETURNS uuid
+RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
@@ -257,7 +257,9 @@ SET search_path = ''
 AS $$
 DECLARE
   v_active_request_id uuid;
+  v_assistant_message public.workspace_thread_messages%ROWTYPE;
   v_thread_updated_at timestamptz;
+  v_user_message public.workspace_thread_messages%ROWTYPE;
 BEGIN
   IF p_user_id IS NULL OR p_user_message_id IS NULL OR p_assistant_message_id IS NULL
     OR p_request_id IS NULL OR length(p_content) NOT BETWEEN 1 AND 50000
@@ -271,6 +273,24 @@ BEGIN
   FROM public.workspace_threads
   WHERE id = p_thread_id AND workspace_id = p_workspace_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
+  SELECT * INTO v_user_message FROM public.workspace_thread_messages
+  WHERE thread_id = p_thread_id AND request_id = p_request_id AND role = 'user';
+  SELECT * INTO v_assistant_message FROM public.workspace_thread_messages
+  WHERE thread_id = p_thread_id AND request_id = p_request_id AND role = 'assistant';
+  IF v_user_message.id IS NOT NULL OR v_assistant_message.id IS NOT NULL THEN
+    IF v_user_message.id IS DISTINCT FROM p_user_message_id
+      OR v_assistant_message.id IS DISTINCT FROM p_assistant_message_id
+      OR v_user_message.author_id IS DISTINCT FROM p_user_id
+      OR v_assistant_message.author_id IS DISTINCT FROM p_user_id
+      OR v_user_message.content IS DISTINCT FROM p_content
+    THEN RAISE EXCEPTION 'operation ID conflict'; END IF;
+    RETURN jsonb_build_object(
+      'assistantMessageId', v_assistant_message.id,
+      'claimed', false,
+      'content', v_assistant_message.content,
+      'status', v_assistant_message.status
+    );
+  END IF;
   IF v_active_request_id IS NOT NULL AND v_active_request_id <> p_request_id
     AND v_thread_updated_at > now() - interval '5 minutes'
   THEN RAISE EXCEPTION 'thread generation in progress'; END IF;
@@ -294,8 +314,12 @@ BEGIN
     p_assistant_message_id, p_workspace_id, p_thread_id, p_user_id, p_request_id, 'assistant', 'Thinking…', 'progress'
   ) ON CONFLICT (thread_id, request_id, role) DO NOTHING;
   UPDATE public.workspace_threads SET active_request_id = p_request_id, updated_at = now() WHERE id = p_thread_id;
-  RETURN (SELECT id FROM public.workspace_thread_messages
-    WHERE thread_id = p_thread_id AND request_id = p_request_id AND role = 'assistant');
+  RETURN jsonb_build_object(
+    'assistantMessageId', p_assistant_message_id,
+    'claimed', true,
+    'content', 'Thinking…',
+    'status', 'progress'
+  );
 END;
 $$;
 

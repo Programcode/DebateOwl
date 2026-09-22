@@ -1310,6 +1310,41 @@ export async function handleRequest(req: Request): Promise<Response> {
       return badRequest("Workspace unavailable", corsHeaders, 403);
     }
   }
+  const interruptWorkspaceThread = async () => {
+    if (!workspaceAccess?.threadId || !workspaceAccess.threadRequest || workspaceThreadSettled) return;
+    await supabase.rpc("complete_workspace_thread_generation", {
+      p_content: "Generation interrupted",
+      p_request_id: workspaceAccess.requestId,
+      p_status: "interrupted",
+      p_thread_id: workspaceAccess.threadId,
+      p_user_id: userId,
+      p_workspace_id: workspaceAccess.workspaceId,
+    });
+    workspaceThreadSettled = true;
+  };
+  if (workspaceAccess?.threadRequest && workspaceAccess.threadId) {
+    const threadMessage = (sanitizedInput as Record<string, unknown>).message;
+    const started = await supabase.rpc("start_workspace_thread_generation", {
+      p_assistant_message_id: workspaceAccess.threadRequest.assistantMessageId,
+      p_content: threadMessage,
+      p_request_id: workspaceAccess.requestId,
+      p_thread_id: workspaceAccess.threadId,
+      p_user_id: userId,
+      p_user_message_id: workspaceAccess.threadRequest.userMessageId,
+      p_workspace_id: workspaceAccess.workspaceId,
+    });
+    const claim = started.data && typeof started.data === "object" ? started.data as Record<string, unknown> : null;
+    if (started.error || !claim) return badRequest("Workspace thread unavailable", corsHeaders, 409);
+    if (claim.claimed !== true) {
+      workspaceThreadSettled = true;
+      if (claim.status === "complete" && typeof claim.content === "string") {
+        return new Response(JSON.stringify(await successBody({
+          output: { response: claim.content, followUpQuestions: [], uncertainties: [] },
+        })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      return badRequest("Workspace thread generation is already in progress", corsHeaders, 409);
+    }
+  }
   const sparringDatabase = narrowSparringDatabase(sparringSupabase);
   let sparringScoreClaimed = false;
   let sparringScoreClaimToken: string | undefined;
@@ -1370,6 +1405,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   try {
     rateLimit = await checkRateLimit(userId, requestedModel);
   } catch (error) {
+    await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
     }
@@ -1381,6 +1417,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   }
   if (!rateLimit.allowed) {
+    await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
       sparringScoreClaimed = false;
@@ -1416,6 +1453,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       await logUsage(userId, "jev_model_router", provider, JEV_MODEL, routingUsage, Date.now() - routingStartedAt, resolution.jevUsage ? "error" : "success", resolution.jevUsage ? "jev_incomplete" : undefined);
     }
   } catch (error) {
+    await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
       sparringScoreClaimed = false;
@@ -1450,16 +1488,21 @@ export async function handleRequest(req: Request): Promise<Response> {
     })
     : [];
   if (feature !== "sparring" && feature !== "crossfire" && sourceDecisionCandidates.length > 0) {
-    const ranked = await rankSourcesForRequest({
-      feature,
-      requestText: JSON.stringify(sanitizedInput),
-      sources: sourceDecisionCandidates,
-      signal: req.signal,
-    });
-    sourceAssessments = ranked.assessments;
-    sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
-    const rankingUsage = ranked.jev?.usage ?? ranked.jevUsage;
-    if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
+    try {
+      const ranked = await rankSourcesForRequest({
+        feature,
+        requestText: JSON.stringify(sanitizedInput),
+        sources: sourceDecisionCandidates,
+        signal: req.signal,
+      });
+      sourceAssessments = ranked.assessments;
+      sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
+      const rankingUsage = ranked.jev?.usage ?? ranked.jevUsage;
+      if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
+    } catch {
+      await interruptWorkspaceThread();
+      return badRequest("Unable to rank sources", corsHeaders, 500);
+    }
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -1532,19 +1575,6 @@ export async function handleRequest(req: Request): Promise<Response> {
         : undefined,
     });
   try {
-    if (workspaceAccess?.threadRequest && workspaceAccess.threadId) {
-      const threadMessage = (sanitizedInput as Record<string, unknown>).message;
-      const started = await supabase.rpc("start_workspace_thread_generation", {
-        p_assistant_message_id: workspaceAccess.threadRequest.assistantMessageId,
-        p_content: threadMessage,
-        p_request_id: workspaceAccess.requestId,
-        p_thread_id: workspaceAccess.threadId,
-        p_user_id: userId,
-        p_user_message_id: workspaceAccess.threadRequest.userMessageId,
-        p_workspace_id: workspaceAccess.workspaceId,
-      });
-      if (started.error) return badRequest("Workspace thread unavailable", corsHeaders, 409);
-    }
     // SPARRING: transcript-only opponent replies and scorecards. No research
     // branch runs here, and score persistence follows output validation.
     if (feature === "sparring") {

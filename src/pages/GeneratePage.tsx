@@ -115,9 +115,9 @@ export default function GeneratePage() {
     };
 
     setGenerateLoading(true);
-    void generateCase(data, config)
-      .then(({ result: next, discoveredSources: sources }) => {
-        setGenerateResult({
+    void generateCase(data, config, workspace.context ?? undefined)
+      .then(async ({ result: next, discoveredSources: sources }) => {
+        const regenerated = {
           ...generateResult,
           ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
           ...(section === 'contentions' ? { contentions: next.contentions } : {}),
@@ -125,8 +125,10 @@ export default function GeneratePage() {
           ...(section === 'counters' ? { counters: next.counters } : {}),
           ...(section === 'exordio' ? { exordio: next.exordio } : {}),
           metadata: next.metadata,
-        });
+        };
+        setGenerateResult(regenerated);
         setDiscoveredSources(sources);
+        await workspace.attach({ ...data, regeneratedSection: section }, regenerated);
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {
