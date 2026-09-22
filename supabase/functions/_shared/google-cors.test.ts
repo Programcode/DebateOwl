@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1";
+import { assertEquals } from "jsr:@std/assert@1.0.19";
 
 Deno.env.set("SUPABASE_URL", "http://127.0.0.1:54321");
 Deno.env.set("SUPABASE_ANON_KEY", "test-anon-key");

@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert@1";
+import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19";
 import { decryptGoogleSecret, encryptGoogleSecret, getGoogleAccessToken } from "./google-connections.ts";
 
 const CONNECTION_ID = "a0000000-0000-4000-8000-000000000001";
