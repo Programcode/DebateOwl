@@ -79,6 +79,17 @@ test('cold routes expose real content on both browser profiles', async ({ page }
   await appPage.close();
 });
 
+test('workspaces stay unavailable without a collaboration endpoint', async ({ page }) => {
+  await setLocale(page, 'en');
+  await stubSupabaseSession(page);
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+
+  await expect(page.locator('a[href="/app/workspaces"]')).toHaveCount(0);
+  await page.goto('/app/workspaces', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
+});
+
 test('a delayed public route keeps the main landmark', async ({ page }) => {
   await setLocale(page, 'en');
   let releaseTerms: (() => void) | undefined;

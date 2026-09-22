@@ -29,6 +29,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { useAuth } from '@/lib/supabase/AuthProvider';
+import { COLLABORATION_URL } from '@/lib/workspace/collaboration-config';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -49,7 +50,7 @@ const navItems = [
   { path: '/app/sparring', key: 'sparring', icon: Dumbbell },
   { path: '/app/flowchart', key: 'flowchart', icon: GitBranch },
   { path: '/app/history', key: 'history', icon: Clock },
-];
+].filter((item) => item.key !== 'workspaces' || COLLABORATION_URL);
 
 const primaryNavItems = navItems.filter((item) =>
   ['home', 'workspaces', 'generate', 'attack', 'ask', 'crossfire', 'sparring'].includes(item.key),
