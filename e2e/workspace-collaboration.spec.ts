@@ -10,6 +10,7 @@ const anonKey = process.env.LOCAL_SUPABASE_ANON_KEY;
 const serviceKey = process.env.LOCAL_SUPABASE_SERVICE_ROLE_KEY;
 const mailerUrl = process.env.WORKSPACE_TEST_MAILER_URL;
 const collaborationPort = Number(process.env.COLLABORATION_PORT ?? 12345);
+const reuseCollaboration = process.env.WORKSPACE_TEST_REUSE_COLLABORATION === "true";
 
 test.skip(!supabaseUrl || !anonKey || !serviceKey || !mailerUrl, "Local workspace services are required");
 
@@ -42,6 +43,10 @@ async function stop(child: ChildProcess | undefined) {
 }
 
 async function startCollaboration() {
+  if (reuseCollaboration) {
+    await waitForPort(collaborationPort);
+    return undefined;
+  }
   const child = spawn("npm", ["run", "start:collaboration"], {
     cwd: process.cwd(),
     detached: true,
@@ -536,7 +541,7 @@ test("private writing and independent imports export useful workspace files", as
     await expect(owner.page).toHaveURL(/\/app\/workspaces\/[0-9a-f-]+$/, { timeout: 20_000 });
     await owner.page.getByRole("button", { name: "R1" }).click();
     await openPanel(owner.page, "Import, reuse & export");
-    const snippet = owner.page.getByText("R1 snippet", { exact: true }).locator("..");
+    const snippet = owner.page.getByRole("group", { name: "R1 snippet" });
     await snippet.getByRole("button", { name: "Insert copy" }).click();
     await expect(owner.page.locator(".ProseMirror")).toContainText("Reusable R1 paragraph");
     const changed = await admin.from("private_writing_items").update({

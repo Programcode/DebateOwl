@@ -107,7 +107,7 @@ export function WorkspacePortabilityPanel({
       <div className="mt-3 grid gap-2">
         <p className="text-xs font-medium">{t("workspaces.privateWriting", "Private snippets and templates")}</p>
         {library.data?.map((item) => (
-          <div key={item.id} className="flex flex-wrap items-center gap-1 rounded-md border border-border p-2 text-sm">
+          <div key={item.id} role="group" aria-label={item.title} className="flex flex-wrap items-center gap-1 rounded-md border border-border p-2 text-sm">
             <span className="mr-auto min-w-0 truncate"><span className="text-xs text-muted-foreground">{item.kind}</span> · {item.title}</span>
             <Button type="button" size="sm" variant="outline" onClick={() => insertItem(item.content, "insert")}>{t("workspaces.insertCopy", "Insert copy")}</Button>
             {item.kind === "template" && <Button type="button" size="sm" variant="outline" onClick={() => insertItem(item.content, "replace")}>{t("workspaces.useTemplate", "Use template")}</Button>}
