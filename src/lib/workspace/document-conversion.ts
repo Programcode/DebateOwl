@@ -360,7 +360,7 @@ export async function toWorkspaceDocx(document: JSONContent): Promise<Uint8Array
     },
     sections: [{ children }],
   });
-  return new Uint8Array(await docx.Packer.toBuffer(file));
+  return new Uint8Array(await docx.Packer.toArrayBuffer(file));
 }
 
 function htmlInline(node: ChildNode, marks: JSONContent["marks"] = []): JSONContent[] {
@@ -708,7 +708,7 @@ export async function toWorkspacePacketDocx(manifest: WorkspacePacketManifest) {
     },
     sections: [{ children }],
   });
-  return new Uint8Array(await docx.Packer.toBuffer(file));
+  return new Uint8Array(await docx.Packer.toArrayBuffer(file));
 }
 
 export function toWorkspacePacketPdf(manifest: WorkspacePacketManifest, options: { fontData?: Uint8Array } = {}) {
