@@ -1212,7 +1212,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (workspaceAccess && !await isWorkspaceMember(workspaceDatabase, userId, workspaceAccess.workspaceId)) {
       throw new Error("Workspace access revoked");
     }
-    if (workspaceAccess?.threadId && workspaceAccess.threadRequest) {
+    if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
       const output = payload.output && typeof payload.output === "object" ? payload.output as Record<string, unknown> : null;
       if (typeof output?.response !== "string") throw new Error("Workspace thread response unavailable");
       const settled = await supabase.rpc("complete_workspace_thread_generation", {

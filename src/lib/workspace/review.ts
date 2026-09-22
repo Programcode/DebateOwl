@@ -48,19 +48,20 @@ export interface WorkspaceProposal {
 }
 
 const bytesSchema = z.array(z.number().int().min(0).max(255)).transform((bytes) => Uint8Array.from(bytes));
+const contentSchema = z.array(z.unknown()).nullable().transform((content) => content ?? []);
 const serializedProposalSchema = z.object({
   authorId: z.string().uuid(),
   baseStateVector: bytesSchema,
   documentEpoch: z.number().int().nonnegative(),
   hunks: z.array(z.object({
-    contextAfter: z.array(z.unknown()),
-    contextBefore: z.array(z.unknown()),
+    contextAfter: contentSchema,
+    contextBefore: contentSchema,
     absoluteFrom: z.number().int().nonnegative(),
     absoluteTo: z.number().int().nonnegative(),
     from: bytesSchema,
     id: z.string().min(1).max(100),
     kind: z.enum(["insert", "delete", "format"]),
-    original: z.array(z.unknown()),
+    original: contentSchema,
     replacement: z.array(z.unknown()),
     status: z.enum(["pending", "accepted", "rejected", "stale"]),
     to: bytesSchema,
@@ -83,7 +84,19 @@ export function serializeProposal(proposal: WorkspaceProposal) {
 }
 
 export function deserializeProposal(input: unknown): WorkspaceProposal {
-  return serializedProposalSchema.parse(input) as WorkspaceProposal;
+  const proposal = serializedProposalSchema.parse(input);
+  return {
+    ...proposal,
+    baseStateVector: new Uint8Array(proposal.baseStateVector),
+    hunks: proposal.hunks.map((hunk) => ({
+      ...hunk,
+      contextAfter: hunk.contextAfter ?? [],
+      contextBefore: hunk.contextBefore ?? [],
+      from: new Uint8Array(hunk.from),
+      original: hunk.original ?? [],
+      to: new Uint8Array(hunk.to),
+    })),
+  };
 }
 
 export interface QuoteAnchor {
@@ -144,13 +157,13 @@ function resolvedRange(editor: Editor, hunk: ProposalHunk) {
   const { from, to } = range;
 
   const documentEnd = editor.state.doc.content.size;
-  const original = editor.state.doc.slice(from, to).content.toJSON();
+  const original = editor.state.doc.slice(from, to).content.toJSON() ?? [];
   const contextBefore = editor.state.doc
     .slice(Math.max(0, from - 1), from)
-    .content.toJSON();
+    .content.toJSON() ?? [];
   const contextAfter = editor.state.doc
     .slice(to, Math.min(documentEnd, to + 1))
-    .content.toJSON();
+    .content.toJSON() ?? [];
 
   return sameContent(original, hunk.original) &&
     sameContent(contextBefore, hunk.contextBefore) &&
@@ -224,14 +237,14 @@ export function createProposal({
         to: Y.encodeRelativePosition(
           createMappablePosition(to, editor.state).yRelativePosition,
         ),
-        original: editor.state.doc.slice(from, to).content.toJSON(),
+        original: editor.state.doc.slice(from, to).content.toJSON() ?? [],
         replacement,
         contextBefore: editor.state.doc
           .slice(Math.max(0, from - 1), from)
-          .content.toJSON(),
+          .content.toJSON() ?? [],
         contextAfter: editor.state.doc
           .slice(to, Math.min(documentEnd, to + 1))
-          .content.toJSON(),
+          .content.toJSON() ?? [],
       };
     }),
   };
@@ -258,9 +271,9 @@ export function acceptProposalHunkInDocument({
   });
   const { absoluteFrom: from, absoluteTo: to } = hunk;
   const documentEnd = state.doc.content.size;
-  const original = state.doc.slice(from, to).content.toJSON();
-  const contextBefore = state.doc.slice(Math.max(0, from - 1), from).content.toJSON();
-  const contextAfter = state.doc.slice(to, Math.min(documentEnd, to + 1)).content.toJSON();
+  const original = state.doc.slice(from, to).content.toJSON() ?? [];
+  const contextBefore = state.doc.slice(Math.max(0, from - 1), from).content.toJSON() ?? [];
+  const contextAfter = state.doc.slice(to, Math.min(documentEnd, to + 1)).content.toJSON() ?? [];
   if (
     documentEpoch !== proposal.documentEpoch ||
     !sameContent(original, hunk.original) ||

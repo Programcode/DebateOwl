@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(29);
+SELECT plan(30);
 
 SELECT has_table('public', 'workspace_sources', 'shared sources exist');
 SELECT has_table('public', 'workspace_threads', 'shared threads exist');
@@ -46,8 +46,8 @@ SELECT lives_ok(
 );
 RESET ROLE;
 SET LOCAL ROLE service_role;
-SELECT lives_ok(
-  $$SELECT public.start_workspace_thread_generation(
+SELECT results_eq(
+  $$SELECT (public.start_workspace_thread_generation(
     '91111111-1111-4111-8111-111111111111',
     current_setting('test.practice_workspace')::uuid,
     '90000000-0000-4000-8000-000000000003',
@@ -55,7 +55,8 @@ SELECT lives_ok(
     '90000000-0000-4000-8000-000000000008',
     '90000000-0000-4000-8000-000000000005',
     'Compare both sides'
-  )$$,
+  )->>'claimed')::boolean$$,
+  ARRAY[true],
   'the first thread request claims generation'
 );
 SELECT results_eq(
@@ -111,6 +112,19 @@ SELECT lives_ok(
     'Shared answer', 'complete'
   )$$,
   'server-owned assistant completion releases the thread'
+);
+SELECT results_eq(
+  $$SELECT public.start_workspace_thread_generation(
+    '91111111-1111-4111-8111-111111111111',
+    current_setting('test.practice_workspace')::uuid,
+    '90000000-0000-4000-8000-000000000003',
+    '90000000-0000-4000-8000-000000000004',
+    '90000000-0000-4000-8000-000000000008',
+    '90000000-0000-4000-8000-000000000005',
+    'Compare both sides'
+  ) - 'assistantMessageId'$$,
+  ARRAY['{"claimed": false, "content": "Shared answer", "status": "complete"}'::jsonb],
+  'a completed retry returns its cached answer without reclaiming generation'
 );
 RESET ROLE;
 INSERT INTO public.workspace_members (workspace_id, user_id)

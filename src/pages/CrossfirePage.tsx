@@ -313,11 +313,11 @@ export default function CrossfirePage() {
   }, [state, stateOwnerId, user?.id]);
 
   useEffect(() => {
-    if (!workspace.context || state.phase === 'setup') return;
+    if (!workspace.context) return;
     void saveWorkspaceArtifact({
       documentEpoch: workspace.context.documentEpoch,
       documentId: workspace.context.documentId,
-      inputSnapshot: { config: state.config },
+      inputSnapshot: state.phase === 'setup' ? state.config : { config: state.config },
       outputSnapshot: state.phase === 'complete' ? state : undefined,
       progress: state,
       requestId: artifactRequestIdRef.current,

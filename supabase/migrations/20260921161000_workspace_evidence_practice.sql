@@ -147,7 +147,7 @@ CREATE FUNCTION public.save_workspace_source(
   p_workspace_id uuid, p_source_id uuid, p_title text, p_content text,
   p_source_type text, p_provenance jsonb, p_citation_snapshot jsonb
 )
-RETURNS jsonb
+RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
@@ -250,7 +250,7 @@ CREATE FUNCTION public.start_workspace_thread_generation(
   p_user_id uuid, p_workspace_id uuid, p_thread_id uuid, p_user_message_id uuid,
   p_assistant_message_id uuid, p_request_id uuid, p_content text
 )
-RETURNS uuid
+RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
