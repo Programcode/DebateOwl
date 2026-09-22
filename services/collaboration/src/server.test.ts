@@ -295,6 +295,35 @@ describe("collaboration durability", () => {
     expect(store.updates[1].syncType).toBe(2);
   });
 
+  it("allows an archived workspace to complete a read-only reconnect", async () => {
+    const store = new MemoryStore();
+    const authorize = vi.fn(async (_context: unknown, operation: "awareness" | "read" | "write") => operation !== "write");
+    const server = createCollaborationServer({
+      authenticate: async ({ documentName, token }) => ({
+        authorId: token,
+        documentId: documentName.split("@")[0],
+        epoch: Number(documentName.split("@")[1]),
+      }),
+      authorize,
+      store,
+    });
+    await server.listen();
+    cleanup.push(() => server.destroy());
+
+    const document = new Y.Doc();
+    const provider = new HocuspocusProvider({
+      document,
+      name: "archived-speech@1",
+      token: "archived-member",
+      url: `ws://127.0.0.1:${server.address.port}`,
+    });
+    cleanup.push(() => provider.destroy(), () => document.destroy());
+
+    await vi.waitFor(() => expect(provider.isSynced).toBe(true));
+    expect(store.updates).toHaveLength(0);
+    expect(authorize.mock.calls.some(([, operation]) => operation === "write")).toBe(false);
+  });
+
   it("deduplicates identical update bytes within each document and epoch scope", async () => {
     const store = new MemoryStore();
     const server = createCollaborationServer({

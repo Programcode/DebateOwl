@@ -239,16 +239,30 @@ export function createCollaborationServer(
       }
     },
     async beforeSync({ connection, context, document, payload, type }) {
-      const operation = type === messageYjsSyncStep2 || type === messageYjsUpdate
-        ? "write"
-        : "read";
-      if (!await authorize(context, operation)) throw new Error("Workspace access revoked");
-      if (type !== messageYjsSyncStep2 && type !== messageYjsUpdate) return;
+      if (!await authorize(context, "read")) throw new Error("Workspace access revoked");
+      const isUpdate = type === messageYjsSyncStep2 || type === messageYjsUpdate;
+      if (!isUpdate) return;
       if (payload.byteLength > MAX_UPDATE_BYTES) {
         throw new Error("Collaboration update exceeds 2 MiB");
       }
       const decoded = Y.decodeUpdate(payload);
       if (decoded.structs.length === 0 && decoded.ds.clients.size === 0) return;
+      const mutationId = createHash("sha256").update(payload).digest("base64url");
+      const probe = new Y.Doc();
+      try {
+        Y.applyUpdate(probe, Y.encodeStateAsUpdate(document));
+        const before = Y.encodeStateAsUpdate(probe);
+        Y.applyUpdate(probe, payload);
+        const after = Y.encodeStateAsUpdate(probe);
+        if (Buffer.from(before).equals(Buffer.from(after))) {
+          const duplicate = await options.store.find(context.documentId, context.epoch, mutationId);
+          if (duplicate?.authorId === context.authorId) sendAcknowledgement(connection, duplicate);
+          return;
+        }
+      } finally {
+        probe.destroy();
+      }
+      if (!await authorize(context, "write")) throw new Error("Workspace access revoked");
 
       const releaseAccess = await accessFence.acquire();
       const key = `${context.documentId}@${context.epoch}`;
@@ -270,9 +284,6 @@ export function createCollaborationServer(
           candidate.destroy();
         }
 
-        const mutationId = createHash("sha256")
-          .update(payload)
-          .digest("base64url");
         const durable = await options.store.append({
           authorId: context.authorId,
           bytes: payload,

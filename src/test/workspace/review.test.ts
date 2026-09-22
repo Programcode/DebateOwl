@@ -154,6 +154,13 @@ describe("workspace review model", () => {
     editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(onSuggestion).toHaveBeenCalledTimes(4);
+
+    suggesting = false;
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: " committed" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend", { data: " committed" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSuggestion).toHaveBeenCalledTimes(4);
   });
 
   it("accepts one independent hunk and keeps teammate text outside local undo", async () => {

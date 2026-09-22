@@ -33,6 +33,21 @@ export function createWorkspaceEditor(
         let compositionFrom = 0;
         let compositionTo = 0;
         let compositionText = "";
+        const finishComposition = (eventText = "") => {
+          const wasComposing = composing;
+          composing = false;
+          const text = (compositionText || eventText).normalize("NFC");
+          compositionText = "";
+          if (!wasComposing || !options.isSuggesting?.()) return;
+          const hunk: ProposalHunkInput | undefined = text
+            ? compositionFrom === compositionTo
+              ? { at: compositionFrom, content: [{ type: "text", text }], id: crypto.randomUUID(), kind: "insert" }
+              : { content: [{ type: "text", text }], from: compositionFrom, id: crypto.randomUUID(), kind: "format", to: compositionTo }
+            : compositionFrom === compositionTo
+              ? undefined
+              : { from: compositionFrom, id: crypto.randomUUID(), kind: "delete", to: compositionTo };
+          if (hunk) queueMicrotask(() => options.onSuggestion?.(hunk));
+        };
         return [new Plugin({
           filterTransaction: (transaction, state) => {
             if (!options.isSuggesting?.() || !transaction.docChanged || transaction.getMeta(ySyncPluginKey)) {
@@ -56,21 +71,11 @@ export function createWorkspaceEditor(
           props: {
             handleDOMEvents: {
               compositionend: (_view, rawEvent) => {
-                composing = false;
-                const text = (compositionText || (rawEvent as CompositionEvent).data).normalize("NFC");
-                const hunk: ProposalHunkInput | undefined = text
-                  ? compositionFrom === compositionTo
-                    ? { at: compositionFrom, content: [{ type: "text", text }], id: crypto.randomUUID(), kind: "insert" }
-                    : { content: [{ type: "text", text }], from: compositionFrom, id: crypto.randomUUID(), kind: "format", to: compositionTo }
-                  : compositionFrom === compositionTo
-                    ? undefined
-                    : { from: compositionFrom, id: crypto.randomUUID(), kind: "delete", to: compositionTo };
-                compositionText = "";
-                if (hunk) queueMicrotask(() => options.onSuggestion?.(hunk));
+                finishComposition((rawEvent as CompositionEvent).data);
                 return false;
               },
               compositionstart: (view) => {
-                composing = true;
+                composing = Boolean(options.isSuggesting?.());
                 compositionFrom = view.state.selection.from;
                 compositionTo = view.state.selection.to;
                 compositionText = "";
@@ -82,10 +87,18 @@ export function createWorkspaceEditor(
               },
               beforeinput: (_view, rawEvent) => {
                 const event = rawEvent as InputEvent;
-                if (!options.isSuggesting?.() || !composing || event.inputType !== "insertCompositionText") return false;
-                compositionText = event.data ?? compositionText;
-                event.preventDefault();
-                return true;
+                if (!options.isSuggesting?.() || !composing) return false;
+                if (event.inputType === "insertCompositionText") {
+                  compositionText = event.data ?? compositionText;
+                  event.preventDefault();
+                  return true;
+                }
+                if (event.inputType === "insertText" && !event.isComposing) {
+                  finishComposition(event.data ?? "");
+                  event.preventDefault();
+                  return true;
+                }
+                return false;
               },
             },
           },
