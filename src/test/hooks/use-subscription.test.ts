@@ -313,6 +313,20 @@ describe('useSubscription', () => {
     expect(result.current.dailyLimit).toBe(13);
   });
 
+  it('honors an active trial gift on an otherwise expired account', async () => {
+    mockAuthState.user = { id: 'gifted-user' };
+    mockResponses.userSettings = {
+      subscription_tier: 'expired',
+      trial_ends_at: '2099-01-01T00:00:00.000Z',
+    };
+
+    const { result } = renderSubscriptionHook();
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.tier).toBe('trial');
+    expect(result.current.dailyLimit).toBe(5);
+  });
+
   it('fails closed when switching to an account with no settings row', async () => {
     mockAuthState.user = { id: 'user-a' };
     mockResponses.userSettings = {
