@@ -169,4 +169,9 @@ describe('sparring AI client', () => {
       .rejects.toMatchObject({ name: 'AIResponseError' });
   });
 
+  it('rejects a turn request passed to the scoring operation', async () => {
+    await expect(judgeSparringSession(RESPOND_INPUT as unknown as SparringScoreInput, CONFIG))
+      .rejects.toMatchObject({ name: 'AIResponseError' });
+    expect(supabaseMock.functions.invoke).not.toHaveBeenCalled();
+  });
 });

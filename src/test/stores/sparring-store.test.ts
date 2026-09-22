@@ -87,7 +87,7 @@ describe('sparring-store', () => {
     sessionStorage.clear();
     resetMockState();
     captureProductEventMock.mockClear();
-    useSparringStore.setState({ ownerUserId: null, currentSession: null, savedSessions: [], hydrated: false });
+    useSparringStore.setState({ ownerUserId: null, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false });
   });
 
   it('starts a session with a live user timer and preserves the draft without writing on every keystroke', () => {
@@ -120,6 +120,44 @@ describe('sparring-store', () => {
       state?: { currentSession?: { draft?: string } };
     };
     expect(persisted.state?.currentSession?.draft).toBe('My opening claim and warrant.');
+  });
+
+  it('keeps a private draft while a workspace session runs', () => {
+    const privateSession = useSparringStore.getState().startSession({
+      motion: 'Private motion',
+      userSide: 'pro',
+      format: 'standard',
+      difficulty: 'medium',
+    });
+
+    useSparringStore.getState().beginWorkspaceSession();
+    expect(useSparringStore.getState()).toMatchObject({ currentSession: null, privateSessionBackup: { id: privateSession.id } });
+    useSparringStore.getState().startSession({
+      motion: 'Workspace motion',
+      userSide: 'con',
+      format: 'ld',
+      difficulty: 'hard',
+    });
+    useSparringStore.getState().endWorkspaceSession();
+
+    expect(useSparringStore.getState().currentSession?.id).toBe(privateSession.id);
+    expect(useSparringStore.getState().privateSessionBackup).toBeNull();
+  });
+
+  it('restores and abandons a persisted workspace session safely', () => {
+    const session = useSparringStore.getState().startSession({
+      motion: 'Workspace motion',
+      userSide: 'con',
+      format: 'ld',
+      difficulty: 'hard',
+    });
+    useSparringStore.setState({ currentSession: null });
+
+    expect(useSparringStore.getState().restoreWorkspaceSession(session)).toBe(true);
+    expect(getSession()).toMatchObject({ id: session.id, motion: 'Workspace motion' });
+    useSparringStore.getState().abandonSession();
+    expect(useSparringStore.getState().currentSession).toBeNull();
+    expect(useSparringStore.getState().restoreWorkspaceSession({ id: 'invalid' })).toBe(false);
   });
 
   it('migrates an in-progress legacy standard round to the school roles', async () => {

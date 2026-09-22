@@ -127,10 +127,12 @@ import {
   MAX_CROSSFIRE_REPLY_CHARS,
   validateCrossfireDebrief,
 } from "../_shared/crossfire-response.ts";
+import { isWorkspaceMember, loadAuthorizedWorkspaceContext } from "../_shared/workspace-context.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const workspaceDatabase = supabase as unknown as Parameters<typeof loadAuthorizedWorkspaceContext>[0];
 const sparringSupabase = createClient<SparringDatabaseSchema>(supabaseUrl, supabaseServiceKey);
 const sparringIntegritySecret = Deno.env.get("SPARRING_INTEGRITY_SECRET")?.trim()
   || await deriveSparringIntegritySecret(supabaseServiceKey);
@@ -921,10 +923,36 @@ export async function handleRequest(req: Request): Promise<Response> {
     validatedSparringRequest = sparringResult.request;
   }
   let sourceAssessments: SourceAssessment[] = [];
-  const successBody = (payload: Record<string, unknown>) => {
+  let workspaceAccess: {
+    meta: Record<string, unknown>;
+    requestId: string;
+    threadId: string | null;
+    threadRequest: { assistantMessageId: string; userMessageId: string } | null;
+    workspaceId: string;
+  } | null = null;
+  let workspaceThreadSettled = false;
+  const successBody = async (payload: Record<string, unknown>) => {
+    if (workspaceAccess && !await isWorkspaceMember(workspaceDatabase, userId, workspaceAccess.workspaceId)) {
+      throw new Error("Workspace access revoked");
+    }
+    if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
+      const output = payload.output && typeof payload.output === "object" ? payload.output as Record<string, unknown> : null;
+      if (typeof output?.response !== "string") throw new Error("Workspace thread response unavailable");
+      const settled = await supabase.rpc("complete_workspace_thread_generation", {
+        p_content: output.response,
+        p_request_id: workspaceAccess.requestId,
+        p_status: "complete",
+        p_thread_id: workspaceAccess.threadId,
+        p_user_id: userId,
+        p_workspace_id: workspaceAccess.workspaceId,
+      });
+      if (settled.error) throw new Error("Workspace thread response unavailable");
+      workspaceThreadSettled = true;
+    }
     const meta = {
       ...(responseTruncated ? { truncated: true } : {}),
       ...(resolvedModelMeta ? { requestedModel, resolvedModel: resolvedModelMeta } : {}),
+      ...(workspaceAccess ? { workspaceContext: workspaceAccess.meta } : {}),
     };
     const enriched = sourceAssessments.length > 0 ? { ...payload, sourceAssessments } : payload;
     return Object.keys(meta).length > 0 ? { ...enriched, meta } : enriched;
@@ -954,7 +982,6 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
-
   if (crossfireInput?.operation === "signal") {
     if (await checkUserBanned(userId)) return badRequest("Your account has been suspended. Please contact support.", corsHeaders, 403);
     if (!(await verifyCrossfireSignalToken(userId, crossfireInput))) return badRequest("Invalid or expired Crossfire signal token", corsHeaders, 403);
@@ -974,11 +1001,73 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
     const signalUsage = evaluated.jev?.usage ?? evaluated.jevUsage;
     if (signalUsage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, signalUsage, undefined, evaluated.jevUsage ? "error" : "success", evaluated.jevUsage ? "jev_incomplete" : undefined);
-    return new Response(JSON.stringify(successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
+    return new Response(JSON.stringify(await successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
+  if (body.workspaceContext !== undefined) {
+    try {
+      const loaded = await loadAuthorizedWorkspaceContext(workspaceDatabase, userId, body.workspaceContext);
+      workspaceAccess = {
+        meta: loaded.meta,
+        requestId: loaded.input.requestId,
+        threadId: loaded.input.threadId,
+        threadRequest: loaded.input.threadRequest,
+        workspaceId: loaded.input.workspaceId,
+      };
+      sources = boundPromptSources([{
+        title: "Authorized workspace context",
+        content: loaded.context,
+        type: "workspace",
+      }]);
+      if (loaded.input.threadRequest) {
+        const threadMessage = sanitizedInput && typeof sanitizedInput === "object"
+          ? (sanitizedInput as Record<string, unknown>).message
+          : null;
+        if (feature !== "ask" || !loaded.input.threadId || typeof threadMessage !== "string") {
+          return badRequest("Workspace unavailable", corsHeaders, 403);
+        }
+      }
+    } catch {
+      return badRequest("Workspace unavailable", corsHeaders, 403);
+    }
+  }
+  const interruptWorkspaceThread = async () => {
+    if (!workspaceAccess?.threadId || !workspaceAccess.threadRequest || workspaceThreadSettled) return;
+    await supabase.rpc("complete_workspace_thread_generation", {
+      p_content: "Generation interrupted",
+      p_request_id: workspaceAccess.requestId,
+      p_status: "interrupted",
+      p_thread_id: workspaceAccess.threadId,
+      p_user_id: userId,
+      p_workspace_id: workspaceAccess.workspaceId,
+    });
+    workspaceThreadSettled = true;
+  };
+  if (workspaceAccess?.threadRequest && workspaceAccess.threadId) {
+    const threadMessage = (sanitizedInput as Record<string, unknown>).message;
+    const started = await supabase.rpc("start_workspace_thread_generation", {
+      p_assistant_message_id: workspaceAccess.threadRequest.assistantMessageId,
+      p_content: threadMessage,
+      p_request_id: workspaceAccess.requestId,
+      p_thread_id: workspaceAccess.threadId,
+      p_user_id: userId,
+      p_user_message_id: workspaceAccess.threadRequest.userMessageId,
+      p_workspace_id: workspaceAccess.workspaceId,
+    });
+    const claim = started.data && typeof started.data === "object" ? started.data as Record<string, unknown> : null;
+    if (started.error || !claim) return badRequest("Workspace thread unavailable", corsHeaders, 409);
+    if (claim.claimed !== true) {
+      workspaceThreadSettled = true;
+      if (claim.status === "complete" && typeof claim.content === "string") {
+        return new Response(JSON.stringify(await successBody({
+          output: { response: claim.content, followUpQuestions: [], uncertainties: [] },
+        })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      return badRequest("Workspace thread generation is already in progress", corsHeaders, 409);
+    }
+  }
   const sparringDatabase = narrowSparringDatabase(sparringSupabase);
   let sparringScoreClaimed = false;
   let sparringScoreClaimToken: string | undefined;
@@ -1007,7 +1096,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       });
     }
     if (claim.status === "complete") {
-      return new Response(JSON.stringify(successBody({
+      return new Response(JSON.stringify(await successBody({
         output: { action: "score", scorecard: claim.scorecard },
         sessionId: validatedSparringRequest.sessionId,
       })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1039,6 +1128,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   try {
     rateLimit = await checkRateLimit(userId, requestedModel);
   } catch (error) {
+    await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
     }
@@ -1050,6 +1140,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   }
   if (!rateLimit.allowed) {
+    await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
       sparringScoreClaimed = false;
@@ -1085,6 +1176,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       await logUsage(userId, "jev_model_router", provider, JEV_MODEL, routingUsage, Date.now() - routingStartedAt, resolution.jevUsage ? "error" : "success", resolution.jevUsage ? "jev_incomplete" : undefined);
     }
   } catch (error) {
+    await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
       sparringScoreClaimed = false;
@@ -1119,16 +1211,21 @@ export async function handleRequest(req: Request): Promise<Response> {
     })
     : [];
   if (feature !== "sparring" && feature !== "crossfire" && sourceDecisionCandidates.length > 0) {
-    const ranked = await rankSourcesForRequest({
-      feature,
-      requestText: JSON.stringify(sanitizedInput),
-      sources: sourceDecisionCandidates,
-      signal: req.signal,
-    });
-    sourceAssessments = ranked.assessments;
-    sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
-    const rankingUsage = ranked.jev?.usage ?? ranked.jevUsage;
-    if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
+    try {
+      const ranked = await rankSourcesForRequest({
+        feature,
+        requestText: JSON.stringify(sanitizedInput),
+        sources: sourceDecisionCandidates,
+        signal: req.signal,
+      });
+      sourceAssessments = ranked.assessments;
+      sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
+      const rankingUsage = ranked.jev?.usage ?? ranked.jevUsage;
+      if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
+    } catch {
+      await interruptWorkspaceThread();
+      return badRequest("Unable to rank sources", corsHeaders, 500);
+    }
   }
 
   const reasoningEffort = effectiveReasoningEffort(model, requestedReasoningEffort ?? undefined, Boolean(rateLimit.canAccessProModels));
@@ -1195,7 +1292,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       customPrompt: feature === "sparring" ? null : customSystemPrompt ?? null,
       // Sparring is transcript-only. Do not let unrelated saved evidence alter
       // an opponent response or a judge's scorecard.
-      sources: feature === "sparring" ? [] : promptSources,
+      sources: feature === "sparring" && !workspaceAccess ? [] : promptSources,
       researchContext: hasResearch(research)
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
@@ -1248,7 +1345,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({
+      return new Response(JSON.stringify(await successBody({
         output: responseOutput,
         sessionId: sparringRequest.sessionId,
       })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1265,7 +1362,9 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = buildSystemPrompt({
         feature: "crossfire",
         dateContext: getCurrentDateContext(),
-        sources: crossfireSources,
+        sources: workspaceAccess
+          ? sources.map((source) => ({ ...source, content: source.content.slice(0, 8_000) }))
+          : crossfireSources,
       });
       if (systemPrompt.length + userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
         throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
@@ -1297,7 +1396,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-      return new Response(JSON.stringify(successBody({ output: output.value, ...(signalToken ? { signalToken } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output: output.value, ...(signalToken ? { signalToken } : {}) })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // FACTOIDS: Use deep research with multiple searches
@@ -1353,7 +1452,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       // Log usage and return
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ASK: Optionally run web search and include URL context from chat
@@ -1490,7 +1589,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       // Log usage and return
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // GENERATE: Use deep research for evidence-backed arguments
@@ -1626,7 +1725,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         metadata.durationMs = latencyMs;
       }
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources: rankedDiscoveredSources, sourceAssessments })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources: rankedDiscoveredSources, sourceAssessments })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // BRAINSTORM: Use research to inform argument angles
@@ -1655,7 +1754,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       // Log usage and return with sources
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ATTACK: Use deep research for evidence-based critique
@@ -1681,7 +1780,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([aiResult.usage, ...researchUsageForLog()]), latencyMs);
-      return new Response(JSON.stringify(successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(await successBody({ output, discoveredSources })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fallback for any other feature
@@ -1693,10 +1792,22 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const latencyMs = Date.now() - startTime;
     await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsageForLog()]), latencyMs);
-    return new Response(JSON.stringify(successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ERROR]", message);
+
+    if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
+      await supabase.rpc("complete_workspace_thread_generation", {
+        p_content: "Generation interrupted",
+        p_request_id: workspaceAccess.requestId,
+        p_status: "interrupted",
+        p_thread_id: workspaceAccess.threadId,
+        p_user_id: userId,
+        p_workspace_id: workspaceAccess.workspaceId,
+      });
+      workspaceThreadSettled = true;
+    }
 
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
       await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);

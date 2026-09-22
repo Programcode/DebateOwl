@@ -49,6 +49,30 @@ describe("workspace review model", () => {
     };
   }
 
+  it("restores binary proposal anchors after a JSON round trip", () => {
+    const editor = createEditor();
+    editor.commands.setContent("<p>Accepted text</p>");
+    const proposal = review.createProposal({
+      authorId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      documentEpoch: 1,
+      editor,
+      hunks: [{
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Improved text" }] }],
+        from: 0,
+        id: "format",
+        kind: "format",
+        to: editor.state.doc.content.size,
+      }],
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+
+    const restored = review.deserializeProposal(JSON.parse(JSON.stringify(review.serializeProposal(proposal))));
+
+    expect(restored.baseStateVector).toBeInstanceOf(Uint8Array);
+    expect(restored.hunks[0].from).toBeInstanceOf(Uint8Array);
+    expect(restored.hunks[0].to).toBeInstanceOf(Uint8Array);
+  });
+
   it("keeps the representative multilingual document structured", () => {
     const editor = createEditor();
 

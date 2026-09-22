@@ -129,7 +129,9 @@ test('keeps the setup usable on mobile with reduced motion', async ({ page }) =>
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Sparring' })).toBeVisible();
   const logo = page.getByAltText('DebateLab logo');
-  await expect(logo).toHaveAttribute('src', '/favicon.png');
+  await expect(logo).toHaveAttribute('src', '/favicon-72.png');
+  await expect(logo).toHaveAttribute('width', '36');
+  await expect(logo).toHaveAttribute('height', '36');
   await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(page.getByRole('combobox', { name: 'Round format' })).toHaveText('School 4-6-6-3 · 8 speeches');
   await expect(page.getByText('Write the resolution as you would hear it in the room.')).toHaveCount(0);

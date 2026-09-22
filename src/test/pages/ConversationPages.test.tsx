@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
+import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 
 vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ isPro: false, tier: 'trial', loading: false }),
@@ -208,6 +209,37 @@ describe('Conversation Pages', () => {
     });
     expect(sessionState.setAskLoading).toHaveBeenCalledWith(true);
     expect(sessionState.setAskLoading).toHaveBeenCalledWith(false);
+  });
+
+  it('AskPage excludes private chat history from workspace requests', async () => {
+    sessionState.askMessages = [{ role: 'user', content: 'Private question' }];
+    mockAskChat.mockResolvedValueOnce({ response: 'Workspace answer', followUpQuestions: [], uncertainties: [] });
+    const workspaceContext: WorkspaceToolContext = {
+      documentEpoch: 2,
+      documentId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      documentIds: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
+      documentText: 'Accepted text',
+      documentTitle: 'R1',
+      motion: 'Motion',
+      requestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      returnUrl: '/app/workspaces/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      side: 'pro',
+      sourceIds: [],
+      threadRequest: null,
+      threadId: null,
+      workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    };
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/app/ask', state: { workspaceContext } }]}>
+        <AskPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByTestId('ask-send'));
+
+    await waitFor(() => expect(mockAskChat).toHaveBeenCalled());
+    expect(mockAskChat.mock.calls[0][1]).toEqual([]);
+    expect(mockAskChat.mock.calls[0][4]).toEqual(expect.objectContaining({ workspaceContext }));
   });
 
   it('AskPage shows timeout toast for timeout errors', async () => {

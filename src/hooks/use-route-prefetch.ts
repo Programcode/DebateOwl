@@ -77,6 +77,11 @@ export function useRoutePrefetch(to: To): RoutePrefetchHandlers {
     }, INTENT_DELAY_MS);
   }, [pathname, startPrefetch]);
 
+  const scheduleHoverPrefetch = useCallback(() => {
+    if (typeof window.matchMedia === 'function' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    schedulePrefetch();
+  }, [schedulePrefetch]);
+
   useEffect(() => {
     prefetchedRef.current = false;
     cancelTimer();
@@ -84,7 +89,7 @@ export function useRoutePrefetch(to: To): RoutePrefetchHandlers {
   }, [cancelTimer, pathname]);
 
   return {
-    onPointerEnter: schedulePrefetch,
+    onPointerEnter: scheduleHoverPrefetch,
     onPointerLeave: cancelTimer,
     onFocus: schedulePrefetch,
     onBlur: cancelTimer,

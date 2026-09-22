@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSubscription } from '@/hooks/use-subscription';
 
 interface MockResponses {
@@ -10,6 +12,7 @@ interface MockResponses {
     grace_period_ends_at?: string | null;
   } | null;
   usageCount: number | null;
+  usageError: { message: string } | null;
   billingData: Array<{ stripe_customer_id?: string | null; status?: string | null; current_period_end?: string | null }> | null;
   billingError: { message: string } | null;
   throwOnUserSettings: boolean;
@@ -24,6 +27,7 @@ const {
   const mockResponses: MockResponses = {
     userSettings: null,
     usageCount: 0,
+    usageError: null,
     billingData: null,
     billingError: null,
     throwOnUserSettings: false,
@@ -49,7 +53,7 @@ const {
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            gte: vi.fn(async () => ({ count: mockResponses.usageCount })),
+            gte: vi.fn(async () => ({ count: mockResponses.usageCount, error: mockResponses.usageError })),
           })),
         })),
       };
@@ -86,19 +90,29 @@ vi.mock('@/lib/supabase/client', () => ({
   },
 }));
 
+let queryClient: QueryClient;
+
+function renderSubscriptionHook() {
+  return renderHook(() => useSubscription(), {
+    wrapper: ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children),
+  });
+}
+
 describe('useSubscription', () => {
   beforeEach(() => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.clearAllMocks();
     mockAuthState.user = null;
     mockResponses.userSettings = null;
     mockResponses.usageCount = 0;
+    mockResponses.usageError = null;
     mockResponses.billingData = null;
     mockResponses.billingError = null;
     mockResponses.throwOnUserSettings = false;
   });
 
   it('returns non-loading default state when user is not signed in', async () => {
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -122,7 +136,7 @@ describe('useSubscription', () => {
     mockResponses.usageCount = 3;
     mockResponses.billingData = [{ stripe_customer_id: 'cus_123', status: 'active', current_period_end: '2099-12-31T00:00:00.000Z' }];
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -145,7 +159,7 @@ describe('useSubscription', () => {
     };
     mockResponses.billingData = [{ stripe_customer_id: 'cus_pro', status: 'active', current_period_end: '2099-12-31T00:00:00.000Z' }];
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -163,8 +177,9 @@ describe('useSubscription', () => {
       daily_limit_override: 60,
       grace_period_ends_at: '2099-12-31T00:00:00.000Z',
     };
+    mockResponses.billingError = { message: 'billing read failed' };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -184,7 +199,7 @@ describe('useSubscription', () => {
       grace_period_ends_at: '2099-01-01T00:00:00.000Z',
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -204,7 +219,7 @@ describe('useSubscription', () => {
       await result.current.refresh();
     });
 
-    expect(result.current.tier).toBe('expired');
+    await waitFor(() => expect(result.current.tier).toBe('expired'));
     expect(result.current.isExpired).toBe(true);
     expect(result.current.dailyLimit).toBe(20);
   });
@@ -217,7 +232,7 @@ describe('useSubscription', () => {
       grace_period_ends_at: null,
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -236,7 +251,7 @@ describe('useSubscription', () => {
     };
     mockResponses.usageCount = 7;
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -256,7 +271,7 @@ describe('useSubscription', () => {
       trial_ends_at: null,
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -275,7 +290,7 @@ describe('useSubscription', () => {
       trial_ends_at: '2099-01-01T00:00:00.000Z',
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -292,7 +307,7 @@ describe('useSubscription', () => {
       daily_limit_override: 13,
     };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -300,6 +315,20 @@ describe('useSubscription', () => {
 
     expect(result.current.tier).toBe('expired');
     expect(result.current.dailyLimit).toBe(13);
+  });
+
+  it('honors an active trial gift on an otherwise expired account', async () => {
+    mockAuthState.user = { id: 'gifted-user' };
+    mockResponses.userSettings = {
+      subscription_tier: 'expired',
+      trial_ends_at: '2099-01-01T00:00:00.000Z',
+    };
+
+    const { result } = renderSubscriptionHook();
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.tier).toBe('trial');
+    expect(result.current.dailyLimit).toBe(5);
   });
 
   it('fails closed when switching to an account with no settings row', async () => {
@@ -314,7 +343,7 @@ describe('useSubscription', () => {
       current_period_end: '2099-12-31T00:00:00.000Z',
     }];
 
-    const { result, rerender } = renderHook(() => useSubscription());
+    const { result, rerender } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.tier).toBe('pro');
@@ -347,7 +376,7 @@ describe('useSubscription', () => {
     };
     mockResponses.billingError = { message: 'billing read failed' };
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -364,13 +393,117 @@ describe('useSubscription', () => {
     warnSpy.mockRestore();
   });
 
+  it('keeps settings-backed trial access when billing lookup fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'trial-with-billing-error' };
+    mockResponses.userSettings = {
+      subscription_tier: 'trial',
+      trial_ends_at: '2099-12-31T00:00:00.000Z',
+    };
+    mockResponses.billingError = { message: 'billing read failed' };
+
+    const { result } = renderSubscriptionHook();
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.tier).toBe('trial');
+    expect(result.current.dailyLimit).toBe(5);
+    expect(result.current.hasStripeBilling).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('fails closed when a cached Pro entitlement cannot be refreshed', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'stale-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_stale',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const { result } = renderSubscriptionHook();
+    await waitFor(() => expect(result.current.tier).toBe('pro'));
+
+    mockResponses.throwOnUserSettings = true;
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.tier).toBe('expired'));
+    expect(result.current.isPro).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('replaces cached Pro access when the billing refresh fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'billing-refresh-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_refresh',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const { result } = renderSubscriptionHook();
+    await waitFor(() => expect(result.current.tier).toBe('pro'));
+
+    mockResponses.billingData = null;
+    mockResponses.billingError = { message: 'billing read failed' };
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.tier).toBe('expired'));
+    expect(result.current.isPro).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('keeps validated Pro access when the usage-count refresh fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'usage-refresh-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_usage',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+    mockResponses.usageCount = 3;
+
+    const { result } = renderSubscriptionHook();
+    await waitFor(() => expect(result.current.tier).toBe('pro'));
+    expect(result.current.dailyUsed).toBe(3);
+
+    mockResponses.usageError = { message: 'usage read failed' };
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.dailyUsed).toBe(0));
+    expect(result.current.tier).toBe('pro');
+    expect(result.current.isPro).toBe(true);
+
+    warnSpy.mockRestore();
+  });
+
   it('handles unexpected load failures and clears loading state', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     mockAuthState.user = { id: 'user-3' };
     mockResponses.throwOnUserSettings = true;
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderSubscriptionHook();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -383,6 +516,33 @@ describe('useSubscription', () => {
       '[useSubscription] Failed to load:',
       expect.any(Error)
     );
+
+    warnSpy.mockRestore();
+  });
+
+  it('retries a transient entitlement failure when the hook remounts inside the stale window', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'recovering-user' };
+    mockResponses.throwOnUserSettings = true;
+
+    const first = renderSubscriptionHook();
+    await waitFor(() => expect(first.result.current.loading).toBe(false));
+    expect(first.result.current.tier).toBe('expired');
+    first.unmount();
+
+    mockResponses.throwOnUserSettings = false;
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_recovered',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const second = renderSubscriptionHook();
+    await waitFor(() => expect(second.result.current.tier).toBe('pro'));
 
     warnSpy.mockRestore();
   });

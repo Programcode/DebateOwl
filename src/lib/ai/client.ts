@@ -39,6 +39,7 @@ import {
   type CrossfireSignalInput,
   type CrossfireTurnSignal,
 } from '@/lib/crossfire/schemas';
+import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -54,6 +55,7 @@ interface AIRequestOptions<T = unknown> {
   timeoutMs?: number;
   signal?: AbortSignal;
   transformResponse?: (data: unknown) => T;
+  workspaceContext?: WorkspaceToolContext;
 }
 
 function selectedOutputLanguage(): AppLanguage {
@@ -423,7 +425,7 @@ async function callSupabaseAI<T = unknown>(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const selectedSources = options.includeActiveSources === false || feature === 'sparring'
+  const selectedSources = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
@@ -491,8 +493,9 @@ async function callSupabaseAI<T = unknown>(
       model: config.model,
       temperature: config.temperature,
       reasoningEffort: config.reasoningEffort ?? 'low',
-      customSystemPrompt: options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
+      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
       sources: activeSources,
+      workspaceContext: options.workspaceContext,
     };
 
     const { data, error } = await supabase.functions.invoke('ai', {
@@ -731,7 +734,7 @@ function validateCrossfireTurnReferences(input: CrossfireAIInput, debrief: Cross
 export async function crossfire(
   rawInput: CrossfireAIInput,
   config: ProviderConfig,
-  options: Pick<AIRequestOptions, 'signal'> = {},
+  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext'> = {},
 ): Promise<(CrossfireReply & { signalToken?: string }) | CrossfireDebrief> {
   const input = CrossfireAIInputSchema.safeParse(rawInput);
   if (!input.success) {
@@ -749,6 +752,7 @@ export async function crossfire(
       includeCustomSystemPrompt: false,
       timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
       signal: options.signal,
+      workspaceContext: options.workspaceContext,
       transformResponse: (rawData) => {
         const data = rawData as { output: unknown; signalToken?: unknown };
         if (input.data.operation === 'next-turn') {
@@ -1204,9 +1208,10 @@ function expectedContentionCount(length: GenerateInput['length']): number {
   }
 }
 
-export async function generateCase(input: GenerateInput, config: ProviderConfig): Promise<ResultWithSources<GenerateOutput>> {
+export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<GenerateOutput>> {
   const inputWithLanguage = withOutputLanguage(input as unknown as Record<string, unknown>);
   const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
+    workspaceContext,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
@@ -1223,8 +1228,9 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig)
   return response;
 }
 
-export async function attackCase(input: AttackInput, config: ProviderConfig): Promise<ResultWithSources<AttackOutput>> {
+export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<AttackOutput>> {
   const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
+    workspaceContext,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1237,8 +1243,9 @@ export async function attackCase(input: AttackInput, config: ProviderConfig): Pr
   return response;
 }
 
-export async function brainstorm(input: BrainstormInput, config: ProviderConfig): Promise<ResultWithSources<BrainstormOutput>> {
+export async function brainstorm(input: BrainstormInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<BrainstormOutput>> {
   const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
+    workspaceContext,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1251,13 +1258,14 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig)
   return response;
 }
 
-export async function factoids(input: FactoidsInput, config: ProviderConfig): Promise<ResultWithSources<FactoidsOutput>> {
+export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<FactoidsOutput>> {
   const inputWithLanguage = withOutputLanguage({
     ...input,
     region: input.region?.trim() || 'Global',
     sourceCount: input.sourceCount || 5,
   });
   const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
+    workspaceContext,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const parsed = FactoidsOutputSchema.safeParse(data.output);
@@ -1289,6 +1297,7 @@ export interface AskChatOptions {
   webSearch?: boolean;
   prosConsMode?: boolean;
   argumentMapMode?: boolean;
+  workspaceContext?: WorkspaceToolContext;
 }
 
 export async function askChat(
@@ -1307,6 +1316,7 @@ export async function askChat(
     prosConsMode: Boolean(options.prosConsMode),
     argumentMapMode: Boolean(options.argumentMapMode),
   }), config, {
+    workspaceContext: options.workspaceContext,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown };
       const parsed = AskOutputSchema.safeParse(data.output);
@@ -1353,16 +1363,18 @@ const pendingSparringScores = new Map<string, Promise<SparringScoreResponse>>();
 async function sparringRequestKey(
   input: SparringRespondInput | SparringScoreInput,
   config: ProviderConfig,
+  workspaceContext?: WorkspaceToolContext,
 ): Promise<string> {
   const { data } = await supabase.auth.getSession();
   const authScope = data.session?.user?.id ?? data.session?.access_token ?? 'signed-out';
-  return JSON.stringify([authScope, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
+  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
 }
 
 /** Generate the opponent's next speech for a validated sparring turn. */
 export async function generateSparringTurn(
   input: SparringRespondInput,
   config: ProviderConfig,
+  workspaceContext?: WorkspaceToolContext,
 ): Promise<SparringTurnResponse> {
   const requestInput: SparringRespondInput = {
     ...input,
@@ -1374,11 +1386,11 @@ export async function generateSparringTurn(
       details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = await sparringRequestKey(inputResult.data, config);
+  const requestKey = await sparringRequestKey(inputResult.data, config, workspaceContext);
   const pending = pendingSparringTurns.get(requestKey);
   if (pending) return pending;
 
-  const request = generateSparringTurnOnce(inputResult.data, config);
+  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext);
   pendingSparringTurns.set(requestKey, request);
   try {
     return await request;
@@ -1390,6 +1402,7 @@ export async function generateSparringTurn(
 async function generateSparringTurnOnce(
   input: SparringRespondInput,
   config: ProviderConfig,
+  workspaceContext?: WorkspaceToolContext,
 ): Promise<SparringTurnResponse> {
   const requestInput: SparringRespondInput = {
     ...input,
@@ -1403,6 +1416,7 @@ async function generateSparringTurnOnce(
   }
 
   return await callSupabaseAI<SparringTurnResponse>('sparring', inputResult.data, config, {
+    workspaceContext,
     transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
   });
 }
@@ -1411,6 +1425,7 @@ async function generateSparringTurnOnce(
 export async function judgeSparringSession(
   input: SparringScoreInput,
   config: ProviderConfig,
+  workspaceContext?: WorkspaceToolContext,
 ): Promise<SparringScoreResponse> {
   const requestInput: SparringScoreInput = {
     ...input,
@@ -1422,11 +1437,11 @@ export async function judgeSparringSession(
       details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = await sparringRequestKey(inputResult.data, config);
+  const requestKey = await sparringRequestKey(inputResult.data, config, workspaceContext);
   const pending = pendingSparringScores.get(requestKey);
   if (pending) return pending;
 
-  const request = judgeSparringSessionOnce(inputResult.data, config);
+  const request = judgeSparringSessionOnce(inputResult.data, config, workspaceContext);
   pendingSparringScores.set(requestKey, request);
   try {
     return await request;
@@ -1438,6 +1453,7 @@ export async function judgeSparringSession(
 async function judgeSparringSessionOnce(
   input: SparringScoreInput,
   config: ProviderConfig,
+  workspaceContext?: WorkspaceToolContext,
 ): Promise<SparringScoreResponse> {
   const requestInput: SparringScoreInput = {
     ...input,
@@ -1451,6 +1467,7 @@ async function judgeSparringSessionOnce(
   }
 
   return await callSupabaseAI<SparringScoreResponse>('sparring', inputResult.data, config, {
+    workspaceContext,
     transformResponse: (rawData) => validateSparringScoreResponse((rawData as { output: unknown }).output),
   });
 }

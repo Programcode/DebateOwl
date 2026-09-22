@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,6 +33,7 @@ import {
 import {
   CrossfireConfigSchema,
   CrossfirePrefillSchema,
+  CrossfireStateSchema,
   MAX_CROSSFIRE_ARGUMENT_CHARS,
   MAX_CROSSFIRE_RESOLUTION_CHARS,
   MAX_CROSSFIRE_TURN_CHARS,
@@ -50,16 +51,22 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { cn } from '@/lib/utils';
+import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
 
 const SESSION_ID_PREFIX = 'crossfire';
 
 function routePrefill(value: unknown): CrossfirePrefill | undefined {
-  const parsed = CrossfirePrefillSchema.safeParse(value);
+  const input = value && typeof value === 'object'
+    ? (({ argument, resolution, seedQuestions, source }) => ({ argument, resolution, seedQuestions, source }))(value as Record<string, unknown>)
+    : value;
+  const parsed = CrossfirePrefillSchema.safeParse(input);
   return parsed.success ? parsed.data : undefined;
 }
 
-function restoreState(userId: string | undefined, prefill: CrossfirePrefill | undefined): CrossfireState {
-  const restored = userId ? loadCrossfireDraft(userId) : null;
+function restoreState(userId: string | undefined, prefill: CrossfirePrefill | undefined, fresh = false, resumed?: CrossfireState): CrossfireState {
+  const restored = resumed ?? (userId ? loadCrossfireDraft(userId) : null);
+  if (fresh && prefill) return createCrossfireSetupState(prefill);
   if (restored?.phase === 'active') {
     return restored.request.status === 'pending'
       ? {
@@ -242,15 +249,24 @@ function CrossfireDebriefView({ debrief, onRestart }: { debrief: CrossfireDebrie
 }
 
 export default function CrossfirePage() {
+  const workspace = useWorkspaceToolScope('crossfire');
   const { t } = useTranslation();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
+  const workspaceArtifact = CrossfireStateSchema.safeParse((location.state as { workspaceArtifact?: unknown } | null)?.workspaceArtifact).data;
   const importedPrefill = useMemo(() => routePrefill(location.state), [location.state]);
   const [state, dispatch] = useReducer(
     crossfireReducer,
     undefined,
-    () => restoreState(user?.id, importedPrefill),
+    () => restoreState(user?.id, importedPrefill, workspaceLaunch, workspaceArtifact),
   );
+
+  useEffect(() => {
+    if ((!workspaceLaunch && !workspaceArtifact) || !workspace.context) return;
+    navigate(location.pathname, { replace: true, state: { workspaceContext: workspace.context } });
+  }, [location.pathname, navigate, workspace.context, workspaceArtifact, workspaceLaunch]);
   const previousPhaseRef = useRef(state.phase);
   const phaseChanged = previousPhaseRef.current !== state.phase;
   useEffect(() => {
@@ -263,6 +279,7 @@ export default function CrossfirePage() {
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
+  const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
   const activeSourceCount = useSessionStore((session) => session.sourceLibrary.filter((source) => source.isActive).length);
@@ -296,6 +313,21 @@ export default function CrossfirePage() {
   }, [state, stateOwnerId, user?.id]);
 
   useEffect(() => {
+    if (!workspace.context) return;
+    void saveWorkspaceArtifact({
+      documentEpoch: workspace.context.documentEpoch,
+      documentId: workspace.context.documentId,
+      inputSnapshot: state.phase === 'setup' ? state.config : { config: state.config },
+      outputSnapshot: state.phase === 'complete' ? state : undefined,
+      progress: state,
+      requestId: artifactRequestIdRef.current,
+      status: state.phase === 'complete' ? 'complete' : 'progress',
+      tool: 'crossfire',
+      workspaceId: workspace.context.workspaceId,
+    });
+  }, [state, workspace.context]);
+
+  useEffect(() => {
     if (state.phase !== 'active') return;
     setNow(Date.now());
     const interval = window.setInterval(() => setNow(Date.now()), 500);
@@ -315,7 +347,7 @@ export default function CrossfirePage() {
         config: snapshot.config,
         transcript: snapshot.turns,
         expectedReply,
-      }, modelConfig, { signal: controller.signal });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
         dispatch({
@@ -351,7 +383,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig]);
+  }, [modelConfig, workspace.context]);
 
   const runDebrief = useCallback(async (snapshot: Extract<CrossfireState, { phase: 'debriefing' }>) => {
     requestRef.current?.abort();
@@ -362,7 +394,7 @@ export default function CrossfirePage() {
         operation: 'debrief',
         config: snapshot.config,
         transcript: snapshot.turns,
-      }, modelConfig, { signal: controller.signal });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined });
       if (controller.signal.aborted) return;
       if ('type' in result) {
         dispatch({
@@ -378,7 +410,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig]);
+  }, [modelConfig, workspace.context]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;
@@ -412,6 +444,7 @@ export default function CrossfirePage() {
       return;
     }
     setFormError('');
+    artifactRequestIdRef.current = crypto.randomUUID();
     const action = {
       type: 'session-started' as const,
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,
@@ -460,6 +493,7 @@ export default function CrossfirePage() {
     requestRef.current?.abort();
     abortSignalRequests();
     if (user?.id) clearCrossfireDraft(user.id);
+    artifactRequestIdRef.current = crypto.randomUUID();
     dispatch({ type: 'session-reset' });
     setDraftTurn('');
     setFormError('');
@@ -477,6 +511,7 @@ export default function CrossfirePage() {
   if (state.phase === 'setup') {
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8')}>
+        <WorkspaceToolScope context={workspace.context} />
         <div className="mx-auto max-w-5xl space-y-6">
           <header className="max-w-2xl">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -682,6 +717,7 @@ export default function CrossfirePage() {
   if (state.phase === 'complete') {
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8')}>
+        <WorkspaceToolScope context={workspace.context} />
         <div className="mx-auto max-w-5xl space-y-10">
           <CrossfireDebriefView debrief={state.debrief} onRestart={restart} />
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
@@ -693,6 +729,7 @@ export default function CrossfirePage() {
   if (state.phase === 'debriefing') {
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8')}>
+        <WorkspaceToolScope context={workspace.context} />
         <div className="mx-auto max-w-4xl space-y-6">
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
           <Card>
@@ -731,6 +768,7 @@ export default function CrossfirePage() {
   const remaining = state.endsAt - now;
   return (
     <div className={cn(stateMotionClass, 'container px-4 py-6 md:py-8')}>
+      <WorkspaceToolScope context={workspace.context} />
       <div className="mx-auto max-w-5xl space-y-5">
         <header className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
