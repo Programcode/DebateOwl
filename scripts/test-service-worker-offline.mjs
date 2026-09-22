@@ -130,7 +130,7 @@ async function main() {
     await context.setOffline(true);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.getByRole('heading', { name: 'Generate', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
-    const logo = page.locator('header img[alt="DebateLab"]');
+    const logo = page.locator('header a[href="/app"] img');
     assert.equal(await logo.getAttribute('src'), '/favicon-72.png');
     assert.ok(await logo.evaluate((image) => image.naturalWidth > 0), 'offline logo did not load');
 
