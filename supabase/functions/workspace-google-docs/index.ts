@@ -133,7 +133,7 @@ function safeLink(value: string) {
 function inlineHtml(value: string): string {
   const literals: string[] = [];
   const links: string[] = [];
-  const withoutEscapes = value.replace(/\\([\\`*_\[\]()|])/g, (_match, literal: string) => {
+  const withoutEscapes = value.replace(/\\([\\`*_[\]()|])/g, (_match, literal: string) => {
     const index = literals.push(escapeHtml(literal)) - 1;
     return `\uE001LITERAL${index}\uE001`;
   });
