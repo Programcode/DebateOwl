@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 import FlowchartPage from '@/pages/FlowchartPage';
 import i18n from '@/i18n';
@@ -66,8 +67,10 @@ beforeEach(async () => {
   await i18n.changeLanguage('en');
 });
 
+const renderPage = () => render(<MemoryRouter><FlowchartPage /></MemoryRouter>);
+
 test('keeps a selected node when deletion is cancelled', () => {
-  render(<FlowchartPage />);
+  renderPage();
 
   fireEvent.click(screen.getByRole('button', { name: 'Argument 1' }));
   fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
@@ -79,7 +82,7 @@ test('keeps a selected node when deletion is cancelled', () => {
 });
 
 test('deletes a selected node only after confirmation and reports success', () => {
-  render(<FlowchartPage />);
+  renderPage();
 
   fireEvent.click(screen.getByRole('button', { name: 'Argument 1' }));
   fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
@@ -104,7 +107,7 @@ test('clears a stale node selection when a saved flowchart is loaded', () => {
       edges: [],
     },
   });
-  render(<FlowchartPage />);
+  renderPage();
 
   fireEvent.click(screen.getByRole('button', { name: 'Argument 1' }));
   fireEvent.click(screen.getByRole('button', { name: 'Load' }));
@@ -125,7 +128,7 @@ test('formats saved-flowchart relative time in Hungarian', async () => {
     data: { nodes: [], edges: [] },
   });
 
-  render(<FlowchartPage />);
+  renderPage();
 
   fireEvent.click(screen.getByRole('button', { name: 'Betöltés' }));
   expect(screen.getByText('körülbelül 1 órával ezelőtt')).toBeInTheDocument();
@@ -133,7 +136,7 @@ test('formats saved-flowchart relative time in Hungarian', async () => {
 
 test('localizes starter flowchart nodes in Hungarian', async () => {
   await i18n.changeLanguage('hu');
-  render(<FlowchartPage />);
+  renderPage();
 
   expect(screen.getByRole('button', { name: '1. érv' })).toBeInTheDocument();
   expect(screen.getByText('Az első érved')).toBeInTheDocument();
