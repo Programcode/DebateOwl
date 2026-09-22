@@ -9,16 +9,19 @@ TRIAL_ORIGIN="https://codex-remote.tailab0ab3.ts.net:18443"
 APP_PORT=18480
 COLLABORATION_PORT=12345
 SERVE_PORT=18443
-PROXY_NAME="debatelab-workspace-trial-proxy"
+PROXY_NAME="debatelab-workspace-trial-proxy-$$"
 
 runtime_dir=""
 stack_started=false
 serve_started=false
+proxy_started=false
 owned_pids=()
 
 stop_owned_processes() {
   local index
-  docker rm --force "$PROXY_NAME" >/dev/null 2>&1 || true
+  if [ "$proxy_started" = true ]; then
+    docker rm --force "$PROXY_NAME" >/dev/null 2>&1 || true
+  fi
   for ((index=${#owned_pids[@]}-1; index>=0; index--)); do
     kill -- "-${owned_pids[$index]}" 2>/dev/null || true
   done
@@ -107,6 +110,7 @@ setsid docker run --rm --name "$PROXY_NAME" --network host \
   --volume "$DIR/workspace-trial-nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
   nginx:alpine >"$runtime_dir/proxy.log" 2>&1 &
 owned_pids+=("$!")
+proxy_started=true
 
 for _ in $(seq 1 200); do
   if curl --fail --silent --output /dev/null --header "Host: codex-remote.tailab0ab3.ts.net:$SERVE_PORT" "http://127.0.0.1:$APP_PORT"; then break; fi
