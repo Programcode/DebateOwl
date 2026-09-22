@@ -113,6 +113,23 @@ async function main() {
       });
     };
 
+    const upgradePage = await context.newPage();
+    await prepare(upgradePage);
+    await upgradePage.goto(`${origin}/theme-init.js`, { waitUntil: 'domcontentloaded' });
+    await upgradePage.evaluate(async () => {
+      const cache = await caches.open('debate-lab-v2-shell');
+      await cache.put('/legacy.js', new Response('legacy'));
+    });
+    await upgradePage.goto(origin, { waitUntil: 'networkidle' });
+    await upgradePage.evaluate(async () => navigator.serviceWorker.ready);
+    await upgradePage.waitForFunction(async () => {
+      const keys = await caches.keys();
+      return navigator.serviceWorker.controller !== null &&
+        keys.includes('debate-lab-v3-shell') &&
+        !keys.some((key) => key.startsWith('debate-lab-v2'));
+    }, undefined, { timeout: CONTENT_TIMEOUT_MS });
+    await upgradePage.close();
+
     const page = await context.newPage();
     await prepare(page);
     await page.goto(`${origin}/app/generate`, { waitUntil: 'networkidle' });
@@ -162,6 +179,7 @@ async function main() {
       'private API response entered Cache Storage',
     );
     console.log(JSON.stringify({
+      upgradeActivated: true,
       firstVisitedRouteOffline: true,
       unvisitedRouteShowsRecovery: true,
       intentPrefetchedRouteOffline: true,

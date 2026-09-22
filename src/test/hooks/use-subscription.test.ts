@@ -174,6 +174,7 @@ describe('useSubscription', () => {
       daily_limit_override: 60,
       grace_period_ends_at: '2099-12-31T00:00:00.000Z',
     };
+    mockResponses.billingError = { message: 'billing read failed' };
 
     const { result } = renderSubscriptionHook();
 
@@ -379,12 +380,86 @@ describe('useSubscription', () => {
     });
 
     expect(result.current.tier).toBe('expired');
-    expect(result.current.dailyLimit).toBe(0);
+    expect(result.current.dailyLimit).toBe(10);
     expect(result.current.hasStripeBilling).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       '[useSubscription] Failed to load Stripe billing state:',
       'billing read failed'
     );
+
+    warnSpy.mockRestore();
+  });
+
+  it('keeps settings-backed trial access when billing lookup fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'trial-with-billing-error' };
+    mockResponses.userSettings = {
+      subscription_tier: 'trial',
+      trial_ends_at: '2099-12-31T00:00:00.000Z',
+    };
+    mockResponses.billingError = { message: 'billing read failed' };
+
+    const { result } = renderSubscriptionHook();
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.tier).toBe('trial');
+    expect(result.current.dailyLimit).toBe(5);
+    expect(result.current.hasStripeBilling).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('fails closed when a cached Pro entitlement cannot be refreshed', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'stale-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_stale',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const { result } = renderSubscriptionHook();
+    await waitFor(() => expect(result.current.tier).toBe('pro'));
+
+    mockResponses.throwOnUserSettings = true;
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.tier).toBe('expired'));
+    expect(result.current.isPro).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('replaces cached Pro access when the billing refresh fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAuthState.user = { id: 'billing-refresh-pro' };
+    mockResponses.userSettings = {
+      subscription_tier: 'pro',
+      daily_limit_override: 50,
+    };
+    mockResponses.billingData = [{
+      stripe_customer_id: 'cus_refresh',
+      status: 'active',
+      current_period_end: '2099-12-31T00:00:00.000Z',
+    }];
+
+    const { result } = renderSubscriptionHook();
+    await waitFor(() => expect(result.current.tier).toBe('pro'));
+
+    mockResponses.billingData = null;
+    mockResponses.billingError = { message: 'billing read failed' };
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.tier).toBe('expired'));
+    expect(result.current.isPro).toBe(false);
 
     warnSpy.mockRestore();
   });

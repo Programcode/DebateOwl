@@ -74,7 +74,6 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
 
       if (billingError) {
         console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
-        throw new Error(billingError.message);
       } else {
         billingRows = billingData || [];
       }
@@ -137,7 +136,9 @@ export function useSubscription(): SubscriptionState {
     enabled: Boolean(userId),
     staleTime: SUBSCRIPTION_STALE_TIME_MS,
   });
-  const snapshot = userId ? query.data ?? SIGNED_IN_FALLBACK : SIGNED_OUT_SNAPSHOT;
+  const snapshot = userId
+    ? query.isError ? SIGNED_IN_FALLBACK : query.data ?? SIGNED_IN_FALLBACK
+    : SIGNED_OUT_SNAPSHOT;
   const { tier, dailyLimit, dailyUsed, trialEndsAt, gracePeriodEndsAt, hasStripeBilling } = snapshot;
 
   const isPro = tier === 'pro' || tier === 'legacy_free';

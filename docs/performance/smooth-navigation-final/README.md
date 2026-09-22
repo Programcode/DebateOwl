@@ -90,6 +90,7 @@ The committed production-build smoke in
 [`scripts/test-service-worker-offline.mjs`](../../../scripts/test-service-worker-offline.mjs)
 provides direct browser proof:
 
+- a seeded v2 worker cache is removed when v3 activates and claims the page;
 - first-visited Generate reloads offline;
 - an unvisited Attack route shows the existing route error offline;
 - an intent-prefetched Attack route opens offline after its prefetch finishes;

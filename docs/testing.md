@@ -88,7 +88,7 @@ This proves the Vite production bundle compiles and then walks the emitted Vite 
 npm run test:sw
 ```
 
-Run this after `npm run build`. It serves `dist/` through Vite preview and proves that a first-visited route and its display logo reload offline, an unvisited route shows recovery UI, an intent-prefetched route opens offline, and private API paths do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
+Run this after `npm run build`. It serves `dist/` through Vite preview and proves that a v2 worker cache upgrades to v3 and claims the page, a first-visited route and its display logo reload offline, an unvisited route shows recovery UI, an intent-prefetched route opens offline, and private API paths do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
 
 ## Credential-free browser gate
 
