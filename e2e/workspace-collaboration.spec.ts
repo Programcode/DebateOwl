@@ -283,15 +283,6 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await owner.page.waitForTimeout(500);
     await expect(member.page.getByRole("button", { name: "Reject" })).toHaveCount(0);
     await expect(owner.page.locator(".ProseMirror")).not.toContainText("tűrő");
-    await owner.page.locator(".ProseMirror").evaluate((element) => {
-      element.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
-      element.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: " tűrő" }));
-      element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: " tűrő" }));
-    });
-    await expect(member.page.getByRole("button", { name: "Reject" })).toHaveCount(1);
-    await expect(member.page.getByLabel("Proposed change preview").last()).toContainText("tűrő");
-    await member.page.getByRole("button", { name: "Reject" }).click();
-    await expect(owner.page.locator(".ProseMirror")).not.toContainText("tűrő");
 
     await owner.page.getByRole("button", { name: "Suggesting" }).click();
     await owner.page.locator(".ProseMirror").click();

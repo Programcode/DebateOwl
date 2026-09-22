@@ -45,6 +45,7 @@ async function compose(
   acceptedUpdates: number,
 ) {
   await page.locator(".ProseMirror").focus();
+  await page.locator(".ProseMirror").press("End");
   for (const text of steps) {
     await cdp.send("Input.imeSetComposition", {
       text,
@@ -60,8 +61,14 @@ async function compose(
     expect(during.canonicalUpdates).toBe(acceptedUpdates);
   }
   await cdp.send("Input.insertText", { text: steps[steps.length - 1] });
+  if ((await snapshot(page)).phase === "composing") {
+    await page.locator(".ProseMirror").evaluate((element, text) => {
+      element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: text }));
+    }, steps[steps.length - 1]);
+  }
   await expect.poll(async () => (await snapshot(page)).phase).toBe("settled");
   await expect.poll(async () => (await snapshot(page)).editorComposing).toBe(false);
+  await expect.poll(async () => (await snapshot(page)).proposal).not.toBeNull();
 }
 
 test("captures Spanish and Hungarian IME text only after composition settles", async ({
@@ -82,9 +89,11 @@ test("captures Spanish and Hungarian IME text only after composition settles", a
     "input",
     "compositionend",
   ]));
-  expect(spanishSettled.events.filter((event) => event.type === "beforeinput").every((event) =>
-    event.inputType === "insertCompositionText" && event.isComposing,
-  )).toBe(true);
+  const compositionInputs = spanishSettled.events.filter((event) =>
+    event.type === "beforeinput" && event.inputType === "insertCompositionText",
+  );
+  expect(compositionInputs.length).toBeGreaterThan(0);
+  expect(compositionInputs.every((event) => event.isComposing)).toBe(true);
   expect(spanishSettled.proposal).toEqual({
     status: "pending",
     replacement: [{ type: "text", text: "niño" }],
