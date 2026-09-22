@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs the Docker-backed Supabase migration/pgTAP gate
-# (`supabase db start` + `npm run test:db`) with exclusive access across
+# Runs the Docker-backed Supabase, database, collaboration, and real-Auth browser gate
+# with exclusive access across
 # Superset workspaces of this repo. `supabase/config.toml` sets no
 # project_id or custom port block, so `supabase db start` always binds the
 # CLI's default ports and container names - two workspaces running it at
@@ -14,13 +14,36 @@ source "$DIR/lib/lock.sh"
 
 DB_LOCK="$HOME/.superset/debatelab-db.lock"
 stack_started=false
+runtime_dir=""
+owned_pids=()
+
+stop_owned_processes() {
+  local index
+  for ((index=${#owned_pids[@]}-1; index>=0; index--)); do
+    kill -- "-${owned_pids[$index]}" 2>/dev/null || true
+  done
+  for ((index=${#owned_pids[@]}-1; index>=0; index--)); do
+    wait "${owned_pids[$index]}" 2>/dev/null || true
+  done
+}
 
 cleanup() {
   local status=$?
   trap - EXIT
 
+  stop_owned_processes
+
+  if [ -n "$runtime_dir" ] && [ -f "$runtime_dir/function.env" ]; then
+    rm -- "$runtime_dir/function.env"
+  fi
+
   if [ "$stack_started" = true ] && ! supabase stop --no-backup; then
     [ "$status" -ne 0 ] || status=1
+  fi
+  if [ "$status" -ne 0 ] && [ -n "$runtime_dir" ]; then
+    echo "Workspace gate failed; local service logs retained at $runtime_dir"
+  elif [ -n "$runtime_dir" ] && [ -d "$runtime_dir" ]; then
+    rm -r -- "$runtime_dir"
   fi
   lock_release "$DB_LOCK"
   exit "$status"
@@ -30,6 +53,69 @@ echo "Waiting for exclusive access to the local Supabase stack..."
 lock_acquire "$DB_LOCK" 600
 trap cleanup EXIT
 
-supabase db start
+if [ -n "${WORKSPACE_GATE_ARTIFACT_ROOT:-}" ]; then
+  mkdir -p -- "$WORKSPACE_GATE_ARTIFACT_ROOT"
+  runtime_dir="$(mktemp -d "$WORKSPACE_GATE_ARTIFACT_ROOT/workspace-gate.XXXXXX")"
+else
+  runtime_dir="$(mktemp -d)"
+fi
+supabase start >"$runtime_dir/supabase.log" 2>&1
 stack_started=true
 npm run test:db
+
+status_json="$(supabase status -o json 2>/dev/null)"
+status_value() {
+  node -e 'const value=JSON.parse(process.argv[1])[process.argv[2]]; if (!value) process.exit(1); process.stdout.write(String(value))' "$status_json" "$1"
+}
+api_url="$(status_value API_URL)"
+anon_key="$(status_value ANON_KEY)"
+service_role_key="$(status_value SERVICE_ROLE_KEY)"
+database_url="$(status_value DB_URL)"
+app_origin="http://127.0.0.1:18081"
+project_id="$(basename "$(pwd)")"
+mailer_host="$(docker ps --filter "name=supabase_inbucket_$project_id" --format '{{.Names}}')"
+if [ -z "$mailer_host" ]; then
+  echo "Local Mailpit container is unavailable" >&2
+  exit 1
+fi
+LOCAL_SERVICE_ROLE_KEY="$service_role_key" \
+LOCAL_MAILER_HOST="$mailer_host" \
+  node scripts/workspace-test-env.mjs .superset/workspace-test.env "$runtime_dir/function.env"
+
+setsid supabase functions serve workspace-invites --no-verify-jwt \
+  --env-file "$runtime_dir/function.env" >"$runtime_dir/functions.log" 2>&1 &
+owned_pids+=("$!")
+
+VITE_LOCAL_PREVIEW=true \
+VITE_LOCAL_SUPABASE_URL="$api_url" \
+VITE_LOCAL_SUPABASE_ANON_KEY="$anon_key" \
+VITE_COLLABORATION_URL=ws://127.0.0.1:12345 \
+  setsid npm run dev -- --host 127.0.0.1 --port 18081 --strictPort >"$runtime_dir/vite.log" 2>&1 &
+owned_pids+=("$!")
+
+mailer_url="$(status_value MAILPIT_URL)"
+for url in "$mailer_url/api/v1/messages" "$app_origin"; do
+  for _ in $(seq 1 200); do
+    if curl --fail --silent --output /dev/null "$url"; then break; fi
+    sleep 0.1
+  done
+  curl --fail --silent --output /dev/null "$url"
+done
+function_url="$api_url/functions/v1/workspace-invites"
+for _ in $(seq 1 200); do
+  if curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"; then break; fi
+  sleep 0.1
+done
+curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"
+
+LOCAL_SUPABASE_URL="$api_url" \
+LOCAL_SUPABASE_ANON_KEY="$anon_key" \
+LOCAL_SUPABASE_SERVICE_ROLE_KEY="$service_role_key" \
+WORKSPACE_TEST_MAILER_URL="$mailer_url" \
+COLLABORATION_DATABASE_URL="$database_url" \
+COLLABORATION_PORT=12345 \
+COLLABORATION_ALLOWED_ORIGINS="$app_origin" \
+SUPABASE_URL="$api_url" \
+SUPABASE_ANON_KEY="$anon_key" \
+PLAYWRIGHT_BASE_URL="$app_origin" \
+  npx playwright test --config=playwright.workspace.config.ts

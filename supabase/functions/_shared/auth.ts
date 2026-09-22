@@ -54,9 +54,11 @@ export function getBearerToken(req: Request) {
   return { authHeader, token };
 }
 
-export async function requireUser(req: Request): Promise<AuthContext> {
+export async function requireUser(req: Request, adminKey = supabaseServiceRoleKey): Promise<AuthContext> {
   const { authHeader, token } = getBearerToken(req);
-  const adminClient = createAdminClient();
+  const adminClient = createClient(supabaseUrl, adminKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const { data: { user }, error } = await adminClient.auth.getUser(token);
 
   if (error || !user) {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { yUndoPluginKey } from "@tiptap/y-tiptap";
 import * as Y from "yjs";
 import { createWorkspaceEditor } from "@/lib/workspace/editor-schema";
@@ -111,6 +111,58 @@ describe("workspace review model", () => {
     ]);
   });
 
+  it("intercepts paste and emits only settled native composition without changing accepted text", async () => {
+    const document = new Y.Doc();
+    const onSuggestion = vi.fn();
+    let suggesting = false;
+    const editor = createWorkspaceEditor(document, {
+      isSuggesting: () => suggesting,
+      onSuggestion,
+    });
+    cleanup.push(() => editor.destroy(), () => document.destroy());
+    editor.commands.setContent("<p>Alpha</p>");
+    const accepted = editor.getJSON();
+    suggesting = true;
+
+    editor.view.dispatch(editor.state.tr.insertText(" pasted", 6).setMeta("uiEvent", "paste"));
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(1));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: " t", inputType: "insertCompositionText" }));
+    editor.view.dom.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: " tűrő", inputType: "insertCompositionText" }));
+    expect(onSuggestion).toHaveBeenCalledTimes(1);
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
+
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(2));
+    expect(editor.getJSON()).toEqual(accepted);
+    expect(onSuggestion.mock.calls.map(([hunk]) => hunk.kind)).toEqual(["insert", "insert"]);
+    expect(onSuggestion.mock.calls[1][0].content).toEqual([{ type: "text", text: " tűrő" }]);
+
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend", { data: " vég" }));
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(3));
+    expect(onSuggestion.mock.calls[2][0].content).toEqual([{ type: "text", text: " vég" }]);
+
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: " ősz" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
+    await vi.waitFor(() => expect(onSuggestion).toHaveBeenCalledTimes(4));
+    expect(onSuggestion.mock.calls[3][0].content).toEqual([{ type: "text", text: " ősz" }]);
+
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: " cancelled" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: "" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSuggestion).toHaveBeenCalledTimes(4);
+
+    suggesting = false;
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionupdate", { data: " committed" }));
+    editor.view.dom.dispatchEvent(new CompositionEvent("compositionend", { data: " committed" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSuggestion).toHaveBeenCalledTimes(4);
+  });
+
   it("accepts one independent hunk and keeps teammate text outside local undo", async () => {
     expect(review.acceptProposalHunks).toBeTypeOf("function");
     expect(review.rejectProposalHunks).toBeTypeOf("function");
@@ -137,6 +189,7 @@ describe("workspace review model", () => {
         { id: "delete-gamma", kind: "delete", from: 12, to: 17 },
       ],
     });
+    proposal.hunks[0].original = [{ text: "Beta", type: "text" }];
 
     yUndoPluginKey.getState(left.state).undoManager.clear();
     yUndoPluginKey.getState(right.state).undoManager.clear();
@@ -181,6 +234,29 @@ describe("workspace review model", () => {
     expect(left.commands.redo()).toBe(true);
     expect(left.getText()).toBe("Remote Alpha Beta Gamma Local");
     expect(JSON.stringify(left.getJSON())).toContain('"type":"bold"');
+  });
+
+  it("accepts independent hunks sequentially after the first shifts the document", () => {
+    const document = new Y.Doc();
+    const editor = createEditor(document);
+    editor.commands.setContent("<p>Alpha Beta</p>");
+    let proposal = review.createProposal({
+      id: "proposal-sequential",
+      authorId: "member-1",
+      documentEpoch: 1,
+      editor,
+      hunks: [
+        { id: "prefix", kind: "insert", at: 1, content: [{ type: "text", text: "Remote " }] },
+        { id: "beta", kind: "format", from: 7, to: 11, content: [{ type: "text", text: "Beta", marks: [{ type: "bold" }] }] },
+      ],
+    });
+
+    proposal = review.acceptProposalHunkInDocument({ document, documentEpoch: 1, hunkId: "prefix", proposal });
+    proposal = review.acceptProposalHunkInDocument({ document, documentEpoch: 1, hunkId: "beta", proposal });
+
+    expect(proposal.hunks.map(({ status }) => status)).toEqual(["accepted", "accepted"]);
+    expect(editor.getText()).toBe("Remote Alpha Beta");
+    expect(JSON.stringify(editor.getJSON())).toContain('"type":"bold"');
   });
 
   it("stales a remotely deleted and reinserted identical target", () => {

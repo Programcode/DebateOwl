@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 
 type AuthMode = 'email' | 'demo';
 type AuthStatus = 'idle' | 'submitting' | 'code-sent' | 'verifying' | 'success' | 'error';
@@ -38,7 +39,7 @@ export default function LoginPage() {
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/app';
 
   useEffect(() => {
-    if (user) navigate(from, { replace: true });
+    if (user) navigate(consumeWorkspaceInvite() ?? from, { replace: true });
   }, [user, navigate, from]);
 
   useEffect(() => {

@@ -45,3 +45,11 @@ verify_jwt = false
 # there is no JWT yet to verify at the gateway.
 [functions.demo-code-login]
 verify_jwt = false
+
+[auth.email]
+otp_length = 6
+max_frequency = "1s"
+
+[auth.email.template.magic_link]
+subject = "Your DebateLab sign-in code"
+content_path = "./supabase/templates/magic_link.html"
