@@ -87,6 +87,7 @@ export async function updatePrivateWritingItem(id: string, input: { content: unk
 }
 
 function decodeSnapshot(value: string) {
+  if (!value.trim()) return { type: "doc", content: [] };
   const binary = atob(value.replace(/\s/g, ""));
   const snapshot = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   const document = new Y.Doc();
