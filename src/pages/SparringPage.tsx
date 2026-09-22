@@ -46,6 +46,8 @@ export default function SparringPage() {
   const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
   const completeSession = useSparringStore((state) => state.completeSession);
   const abandonSession = useSparringStore((state) => state.abandonSession);
+  const beginWorkspaceSession = useSparringStore((state) => state.beginWorkspaceSession);
+  const endWorkspaceSession = useSparringStore((state) => state.endWorkspaceSession);
   const getFeatureConfig = useSettingsStore((state) => state.getFeatureConfig);
   const outputLanguage = useSettingsStore((state) => state.outputLanguage);
   const [aiLoading, setAiLoading] = useState(false);
@@ -58,14 +60,21 @@ export default function SparringPage() {
   const judgeRequestRef = useRef<string | null>(null);
   const aiInFlightRef = useRef(false);
   const judgeInFlightRef = useRef(false);
+  const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   const isOnlineRef = useRef(isOnline);
+
+  const workspaceRequestId = workspace.context?.requestId;
+  useEffect(() => {
+    if (!workspaceRequestId) return;
+    beginWorkspaceSession();
+    return endWorkspaceSession;
+  }, [beginWorkspaceSession, endWorkspaceSession, workspaceRequestId]);
 
   useEffect(() => {
     if (!workspace.context || (!workspaceLaunch && workspaceArtifact === undefined)) return;
-    if (workspaceLaunch) abandonSession();
-    else restoreWorkspaceSession(workspaceArtifact);
+    if (workspaceArtifact !== undefined) restoreWorkspaceSession(workspaceArtifact);
     navigate(location.pathname, { replace: true, state: { workspaceContext: workspace.context } });
-  }, [abandonSession, location.pathname, navigate, restoreWorkspaceSession, workspace.context, workspaceArtifact, workspaceLaunch]);
+  }, [location.pathname, navigate, restoreWorkspaceSession, workspace.context, workspaceArtifact, workspaceLaunch]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -215,7 +224,7 @@ export default function SparringPage() {
       inputSnapshot: { motion: session.motion, side: session.userSide, format: session.format, difficulty: session.difficulty },
       outputSnapshot: session.phase === 'complete' ? session : undefined,
       progress: session,
-      requestId: workspace.context.requestId,
+      requestId: artifactRequestIdRef.current,
       status: session.phase === 'complete' ? 'complete' : 'progress',
       tool: 'sparring',
       workspaceId: workspace.context.workspaceId,
@@ -223,6 +232,7 @@ export default function SparringPage() {
   }, [session, workspace.context]);
 
   const handleStart = (values: SparringSetupValues) => {
+    artifactRequestIdRef.current = crypto.randomUUID();
     startSession(values);
     setAiError(null);
     setJudgingError(null);
@@ -233,6 +243,7 @@ export default function SparringPage() {
   };
 
   const handleRestart = () => {
+    artifactRequestIdRef.current = crypto.randomUUID();
     abandonSession();
     setAiError(null);
     setJudgingError(null);

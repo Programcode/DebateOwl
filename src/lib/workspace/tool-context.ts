@@ -43,7 +43,7 @@ export async function attachWorkspaceResult(
     documentId: context.documentId,
     inputSnapshot: input,
     outputSnapshot: output,
-    requestId: context.requestId,
+    requestId: crypto.randomUUID(),
     status: "complete",
     tool,
     workspaceId: context.workspaceId,

@@ -352,7 +352,8 @@ BEGIN
   END IF;
   PERFORM private.require_active_workspace_member(p_workspace_id);
   IF p_document_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.workspace_documents WHERE id = p_document_id AND workspace_id = p_workspace_id
+    SELECT 1 FROM public.workspace_documents
+    WHERE id = p_document_id AND workspace_id = p_workspace_id AND document_epoch = p_document_epoch
   ) THEN RAISE EXCEPTION 'workspace unavailable'; END IF;
   SELECT * INTO v_existing FROM public.workspace_artifacts
   WHERE created_by = auth.uid() AND request_id = p_request_id FOR UPDATE;

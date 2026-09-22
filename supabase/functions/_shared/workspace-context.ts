@@ -12,6 +12,7 @@ type Database = { from(table: string): { select(columns: string): QueryBuilder }
 type RpcDatabase = Database & { rpc(name: string, parameters: Record<string, unknown>): Query };
 
 export type AuthorizedWorkspaceContext = {
+  documentEpoch: number;
   documentId: string;
   documentIds: string[];
   documentText: string;
@@ -34,6 +35,8 @@ function record(value: unknown): Record<string, unknown> | null {
 export function parseWorkspaceContext(value: unknown): AuthorizedWorkspaceContext | null {
   const input = record(value);
   if (!input || !UUID.test(String(input.workspaceId)) || !UUID.test(String(input.documentId)) || !UUID.test(String(input.requestId))) return null;
+  const documentEpoch = Number(input.documentEpoch);
+  if (!Number.isSafeInteger(documentEpoch) || documentEpoch < 0) return null;
   const sourceIds = Array.isArray(input.sourceIds) ? input.sourceIds.filter((id): id is string => typeof id === "string" && UUID.test(id)).slice(0, 20) : [];
   const documentIds = Array.isArray(input.documentIds) ? input.documentIds.filter((id): id is string => typeof id === "string" && UUID.test(id)).slice(0, 12) : [];
   const threadId = input.threadId === null || input.threadId === undefined ? null : String(input.threadId);
@@ -47,6 +50,7 @@ export function parseWorkspaceContext(value: unknown): AuthorizedWorkspaceContex
   if ((input.threadRequest !== null && input.threadRequest !== undefined && !threadRequest) || (threadRequest && !threadId)) return null;
   if (input.side !== "pro" && input.side !== "con") return null;
   return {
+    documentEpoch,
     documentId: String(input.documentId),
     documentIds,
     documentText: String(input.documentText ?? "").slice(0, 24000),
@@ -93,7 +97,7 @@ export async function loadAuthorizedWorkspaceContext(database: RpcDatabase, user
   const durableDocuments = Array.isArray(durableContext?.documents)
     ? durableContext.documents.map(record).filter(Boolean) as Record<string, unknown>[]
     : [];
-  if (!workspaceRow || workspaceRow.status !== "active" || !memberRow || !documentRow || documentRow.side !== input.side) {
+  if (!workspaceRow || workspaceRow.status !== "active" || !memberRow || !documentRow || documentRow.side !== input.side || Number(documentRow.document_epoch) !== input.documentEpoch) {
     throw new Error("Workspace unavailable");
   }
   if (sourceRows.length !== input.sourceIds.length) throw new Error("Workspace unavailable");

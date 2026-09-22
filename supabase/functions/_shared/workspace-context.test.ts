@@ -51,6 +51,7 @@ function database({ member = true, sources = 1 }: { member?: boolean; sources?: 
 
 function input() {
   return {
+    documentEpoch: 2,
     documentId,
     documentIds: [documentId],
     documentText: "FORGED CLIENT TEXT",
@@ -74,6 +75,10 @@ Deno.test("workspace AI context uses server durable text after authorizing every
 
 Deno.test("workspace AI context rejects a foreign requested source", async () => {
   await assertRejects(() => loadAuthorizedWorkspaceContext(database({ sources: 0 }) as never, userId, input()), Error, "Workspace unavailable");
+});
+
+Deno.test("workspace AI context rejects a restored document epoch", async () => {
+  await assertRejects(() => loadAuthorizedWorkspaceContext(database() as never, userId, { ...input(), documentEpoch: 1 }), Error, "Workspace unavailable");
 });
 
 Deno.test("workspace access recheck denies a revoked requester", async () => {

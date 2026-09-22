@@ -1305,16 +1305,6 @@ export async function handleRequest(req: Request): Promise<Response> {
         if (feature !== "ask" || !loaded.input.threadId || typeof threadMessage !== "string") {
           return badRequest("Workspace unavailable", corsHeaders, 403);
         }
-        const started = await supabase.rpc("start_workspace_thread_generation", {
-          p_assistant_message_id: loaded.input.threadRequest.assistantMessageId,
-          p_content: threadMessage,
-          p_request_id: loaded.input.requestId,
-          p_thread_id: loaded.input.threadId,
-          p_user_id: userId,
-          p_user_message_id: loaded.input.threadRequest.userMessageId,
-          p_workspace_id: loaded.input.workspaceId,
-        });
-        if (started.error) return badRequest("Workspace thread unavailable", corsHeaders, 409);
       }
     } catch {
       return badRequest("Workspace unavailable", corsHeaders, 403);
@@ -1542,6 +1532,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         : undefined,
     });
   try {
+    if (workspaceAccess?.threadRequest && workspaceAccess.threadId) {
+      const threadMessage = (sanitizedInput as Record<string, unknown>).message;
+      const started = await supabase.rpc("start_workspace_thread_generation", {
+        p_assistant_message_id: workspaceAccess.threadRequest.assistantMessageId,
+        p_content: threadMessage,
+        p_request_id: workspaceAccess.requestId,
+        p_thread_id: workspaceAccess.threadId,
+        p_user_id: userId,
+        p_user_message_id: workspaceAccess.threadRequest.userMessageId,
+        p_workspace_id: workspaceAccess.workspaceId,
+      });
+      if (started.error) return badRequest("Workspace thread unavailable", corsHeaders, 409);
+    }
     // SPARRING: transcript-only opponent replies and scorecards. No research
     // branch runs here, and score persistence follows output validation.
     if (feature === "sparring") {

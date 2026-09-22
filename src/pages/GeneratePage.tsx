@@ -24,6 +24,7 @@ import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { useReducedMotion } from 'framer-motion';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { workspaceRouteState } from '@/lib/workspace/tool-context';
 
 export default function GeneratePage() {
   const workspace = useWorkspaceToolScope('generate');
@@ -200,7 +201,10 @@ export default function GeneratePage() {
   const handlePracticeCrossfire = () => {
     if (!generateResult) return;
     navigate('/app/crossfire', {
-      state: prefillFromGenerate(generateForm?.motion ?? generateResult.caseStructure.thesis, generateResult),
+      state: {
+        ...prefillFromGenerate(generateForm?.motion ?? generateResult.caseStructure.thesis, generateResult),
+        ...(workspace.context ? workspaceRouteState(workspace.context) : {}),
+      },
     });
   };
 

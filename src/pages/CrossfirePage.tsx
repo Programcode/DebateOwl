@@ -279,6 +279,7 @@ export default function CrossfirePage() {
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
+  const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
   const activeSourceCount = useSessionStore((session) => session.sourceLibrary.filter((source) => source.isActive).length);
@@ -312,14 +313,14 @@ export default function CrossfirePage() {
   }, [state, stateOwnerId, user?.id]);
 
   useEffect(() => {
-    if (!workspace.context) return;
+    if (!workspace.context || state.phase === 'setup') return;
     void saveWorkspaceArtifact({
       documentEpoch: workspace.context.documentEpoch,
       documentId: workspace.context.documentId,
-      inputSnapshot: state.phase === 'setup' ? state.config : { config: state.config },
+      inputSnapshot: { config: state.config },
       outputSnapshot: state.phase === 'complete' ? state : undefined,
       progress: state,
-      requestId: workspace.context.requestId,
+      requestId: artifactRequestIdRef.current,
       status: state.phase === 'complete' ? 'complete' : 'progress',
       tool: 'crossfire',
       workspaceId: workspace.context.workspaceId,
@@ -443,6 +444,7 @@ export default function CrossfirePage() {
       return;
     }
     setFormError('');
+    artifactRequestIdRef.current = crypto.randomUUID();
     const action = {
       type: 'session-started' as const,
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,
@@ -491,6 +493,7 @@ export default function CrossfirePage() {
     requestRef.current?.abort();
     abortSignalRequests();
     if (user?.id) clearCrossfireDraft(user.id);
+    artifactRequestIdRef.current = crypto.randomUUID();
     dispatch({ type: 'session-reset' });
     setDraftTurn('');
     setFormError('');

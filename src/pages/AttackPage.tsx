@@ -16,6 +16,7 @@ import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromAttack } from '@/lib/crossfire/prefill';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { workspaceRouteState } from '@/lib/workspace/tool-context';
 
 export default function AttackPage() {
   const workspace = useWorkspaceToolScope('attack');
@@ -99,7 +100,10 @@ export default function AttackPage() {
   const handlePracticeCrossfire = () => {
     if (!attackResult) return;
     navigate('/app/crossfire', {
-      state: prefillFromAttack(attackForm?.caseText ?? '', attackResult),
+      state: {
+        ...prefillFromAttack(attackForm?.caseText ?? '', attackResult),
+        ...(workspace.context ? workspaceRouteState(workspace.context) : {}),
+      },
     });
   };
 

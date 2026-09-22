@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(27);
+SELECT plan(28);
 
 SELECT has_table('public', 'workspace_sources', 'shared sources exist');
 SELECT has_table('public', 'workspace_threads', 'shared threads exist');
@@ -137,6 +137,17 @@ RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '91111111-1111-4111-8111-111111111111', true);
 SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT throws_ok(
+  $$SELECT public.save_workspace_artifact(
+    current_setting('test.practice_workspace')::uuid,
+    '90000000-0000-4000-8000-000000000018',
+    '90000000-0000-4000-8000-000000000019',
+    current_setting('test.practice_document')::uuid, 99,
+    'attack', 'complete', '{}', '{}', '{}'
+  )$$,
+  'P0001', 'workspace unavailable',
+  'a stale document epoch cannot receive a result'
+);
 SELECT results_eq(
   $$SELECT public.save_workspace_artifact(
     current_setting('test.practice_workspace')::uuid,

@@ -32,10 +32,11 @@ describe("workspace tool context", () => {
     expect(saveArtifact).toHaveBeenCalledWith(expect.objectContaining({
       documentEpoch: 3,
       documentId: context.documentId,
-      requestId: context.requestId,
+      requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       tool: "attack",
       workspaceId: context.workspaceId,
     }));
+    expect(saveArtifact.mock.calls[0][0].requestId).not.toBe(context.requestId);
   });
 
   it("rejects a foreign return route instead of attaching late output elsewhere", () => {

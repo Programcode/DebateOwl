@@ -85,7 +85,7 @@ export function WorkspacePracticePanel({
     const search = sourceSearch.trim().toLowerCase();
     return practice.data?.sources.filter((source) => !search || `${source.title} ${source.content}`.toLowerCase().includes(search)) ?? [];
   }, [practice.data?.sources, sourceSearch]);
-  const selectedThread = threadId ?? practice.data?.threads[0]?.id ?? null;
+  const selectedThread = threadId;
   const threadMessages = practice.data?.messages.filter((item) => item.thread_id === selectedThread) ?? [];
   const privateResults = useMemo(() => [
     ...savedCases.map((item) => ({ ...item, tool: "generate" as const })),

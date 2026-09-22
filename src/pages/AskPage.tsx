@@ -109,7 +109,7 @@ export default function AskPage() {
         fileContext = contents.join('\n');
       }
 
-      const history = askMessages.map(m => ({ role: m.role, content: m.content }));
+      const history = workspace.context ? [] : askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
       if (fullMessage.length > MAX_AI_INPUT_LENGTH) {
         toast({
