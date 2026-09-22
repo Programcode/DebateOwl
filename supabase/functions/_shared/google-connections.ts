@@ -59,7 +59,7 @@ function row(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? value as Record<string, unknown> : null;
 }
 
-export async function getGoogleAccessToken(database: ServiceDatabase, userId: string, connectionId: string) {
+export async function getGoogleAccessToken(database: ServiceDatabase, userId: string, connectionId: string, providerTimeoutMs = 30_000) {
   const claimId = crypto.randomUUID();
   const claim = await database.rpc("claim_google_connection_refresh", {
     p_claim_id: claimId,
@@ -106,6 +106,7 @@ export async function getGoogleAccessToken(database: ServiceDatabase, userId: st
       }),
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       method: "POST",
+      signal: AbortSignal.timeout(providerTimeoutMs),
     });
     const payload = await response.json() as { access_token?: string; expires_in?: number; refresh_token?: string };
     if (!response.ok || !payload.access_token) throw new Error("Google token refresh failed");

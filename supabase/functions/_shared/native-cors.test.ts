@@ -22,7 +22,7 @@ for (const functionName of browserCalledFunctions) {
   });
 }
 
-for (const functionName of ["admin", "announcements"]) {
+for (const functionName of ["admin", "announcements", "google-connections", "workspace-google-docs"]) {
   Deno.test(`${functionName} allows the isolated staging browser origin`, async () => {
     const source = await Deno.readTextFile(new URL(`../${functionName}/index.ts`, import.meta.url));
     assertStringIncludes(source, '"http://127.0.0.1:18080"');

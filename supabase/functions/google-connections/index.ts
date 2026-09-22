@@ -8,7 +8,7 @@ import {
 } from "../_shared/google-connections.ts";
 
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080", "capacitor://localhost"];
+const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080", "http://127.0.0.1:18080", "capacitor://localhost"];
 
 function cors(origin: string | null) {
   return {
@@ -92,7 +92,7 @@ async function callback(req: Request) {
   return Response.redirect(new URL(`${stored.return_to}${stored.return_to.includes("?") ? "&" : "?"}google=connected`, appOrigin), 302);
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request) {
   const headers = cors(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
   try {
@@ -151,4 +151,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     return jsonError(error, headers);
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleRequest);

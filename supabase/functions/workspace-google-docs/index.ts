@@ -1,7 +1,7 @@
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getGoogleAccessToken } from "../_shared/google-connections.ts";
 
-const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080", "capacitor://localhost"];
+const ORIGINS = ["https://debate.pi-stack.org", "http://localhost:8080", "http://localhost:18080", "http://127.0.0.1:18080", "capacitor://localhost"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function cors(origin: string | null) {
@@ -228,11 +228,17 @@ export function markdownToGoogleHtml(markdown: string, title: string) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body>${blocks.join("\n")}</body></html>`;
 }
 
-export async function findOrCreateGoogleDocument(accessToken: string, requestId: string, title: string, markdown: string) {
+export async function findOrCreateGoogleDocument(
+  accessToken: string,
+  requestId: string,
+  title: string,
+  markdown: string,
+  signal: AbortSignal = AbortSignal.timeout(30_000),
+) {
   const markerQuery = `appProperties has { key='debatelabRequestId' and value='${requestId}' } and trashed = false`;
   const searchUrl = new URL("https://www.googleapis.com/drive/v3/files");
   searchUrl.search = new URLSearchParams({ fields: "files(id)", pageSize: "2", q: markerQuery, spaces: "drive" }).toString();
-  const searchResponse = await fetch(searchUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const searchResponse = await fetch(searchUrl, { headers: { Authorization: `Bearer ${accessToken}` }, signal });
   const search = await searchResponse.json() as { files?: Array<{ id?: string }> };
   if (!searchResponse.ok) throw new Error("Google export reconciliation failed");
   const existing = search.files?.find((file) => file.id)?.id;
@@ -261,6 +267,7 @@ export async function findOrCreateGoogleDocument(accessToken: string, requestId:
     body,
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
     method: "POST",
+    signal,
   });
   const created = await createdResponse.json() as { id?: string };
   if (!createdResponse.ok || !created.id) throw new Error("Google document creation failed");

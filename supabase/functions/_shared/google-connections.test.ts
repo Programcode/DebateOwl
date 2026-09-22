@@ -50,6 +50,33 @@ Deno.test("refresh preserves an omitted replacement refresh token", async () => 
   }
 });
 
+Deno.test("a slow refresh aborts before its database claim can expire", async () => {
+  Deno.env.set("GOOGLE_CONNECTION_ENCRYPTION_KEY", btoa("12345678901234567890123456789012"));
+  const refresh = await encryptGoogleSecret("refresh-secret");
+  const calls: Array<{ name: string; parameters: Record<string, unknown> }> = [];
+  const database = {
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+    rpc: async (name: string, parameters: Record<string, unknown>) => {
+      calls.push({ name, parameters });
+      if (name === "claim_google_connection_refresh") return { data: [{ access_token_ciphertext: null, access_expires_at: null, refresh_token_ciphertext: refresh, claimed: true }], error: null };
+      return { data: true, error: null };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (_input, init) => new Promise<Response>((_resolve, reject) => {
+    const signal = init?.signal;
+    const abort = () => reject(signal?.reason ?? new Error("aborted"));
+    if (signal?.aborted) abort();
+    else signal?.addEventListener("abort", abort, { once: true });
+  });
+  try {
+    await assertRejects(() => getGoogleAccessToken(database as never, USER_ID, CONNECTION_ID, 1));
+    assertEquals(calls.at(-1)?.name, "finish_google_connection_refresh");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("a foreign or missing connection is rejected", async () => {
   const database = {
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),

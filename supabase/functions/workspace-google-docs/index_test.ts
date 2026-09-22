@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
+import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1";
 
 Deno.env.set("SUPABASE_URL", "http://127.0.0.1:54321");
 Deno.env.set("SUPABASE_ANON_KEY", "test-anon-key");
@@ -67,6 +67,28 @@ Deno.test("new Google Doc creation carries its idempotency marker and rich HTML 
     assertEquals(await findOrCreateGoogleDocument("token", "a0000000-0000-4000-8000-000000000001", "Title", "**Body**"), "created-doc");
     assertStringIncludes(bodies[0], "debatelabRequestId");
     assertStringIncludes(bodies[0], "<strong>Body</strong>");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("slow Drive reconciliation aborts before its creation claim can expire", async () => {
+  const { findOrCreateGoogleDocument } = await modulePromise;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (_input, init) => new Promise<Response>((_resolve, reject) => {
+    const signal = init?.signal;
+    const abort = () => reject(signal?.reason ?? new Error("aborted"));
+    if (signal?.aborted) abort();
+    else signal?.addEventListener("abort", abort, { once: true });
+  });
+  try {
+    await assertRejects(() => findOrCreateGoogleDocument(
+      "token",
+      "a0000000-0000-4000-8000-000000000001",
+      "Title",
+      "Body",
+      AbortSignal.timeout(1),
+    ));
   } finally {
     globalThis.fetch = originalFetch;
   }
