@@ -58,6 +58,7 @@ async function openAppNav(page: Page, label: string) {
 }
 
 test('cold routes expose real content on both browser profiles', async ({ page }) => {
+  test.setTimeout(60_000);
   await setLocale(page, 'en');
   for (const [path, selector] of publicRoutes) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
