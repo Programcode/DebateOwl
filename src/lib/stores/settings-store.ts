@@ -169,7 +169,9 @@ async function getUserId() {
   return data.user?.id || null;
 }
 
-async function upsertSettings(payload: {
+// The auth trigger provisions every settings row, and clients may only UPDATE
+// the user-editable columns. An upsert needs INSERT and is always denied.
+async function updateSettings(payload: {
   language: string;
   output_language: string;
   theme: string;
@@ -178,11 +180,10 @@ async function upsertSettings(payload: {
 }) {
   const userId = await getUserId();
   if (!userId) return;
-  const { error } = await supabase.from('user_settings').upsert({
-    user_id: userId,
+  const { error } = await supabase.from('user_settings').update({
     ...payload,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' });
+  }).eq('user_id', userId);
   if (error) {
     console.warn('[SettingsStore] Failed to persist settings:', error.message);
   }
@@ -213,7 +214,7 @@ export const useSettingsStore = create<SettingsState>()(
       setLanguage: (language) => {
         set({ language });
         void applyAppLanguage(language);
-        void upsertSettings({
+        void updateSettings({
           language,
           output_language: get().outputLanguage,
           theme: get().theme,
@@ -223,7 +224,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setOutputLanguage: (outputLanguage) => {
         set({ outputLanguage });
-        void upsertSettings({
+        void updateSettings({
           language: get().language,
           output_language: outputLanguage,
           theme: get().theme,
@@ -233,7 +234,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setTheme: (theme) => {
         set({ theme });
-        void upsertSettings({
+        void updateSettings({
           language: get().language,
           output_language: get().outputLanguage,
           theme,
@@ -243,7 +244,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setSystemPrompt: (prompt) => {
         set({ customSystemPrompt: prompt });
-        void upsertSettings({
+        void updateSettings({
           language: get().language,
           output_language: get().outputLanguage,
           theme: get().theme,
@@ -265,7 +266,7 @@ export const useSettingsStore = create<SettingsState>()(
             ),
           },
         }));
-        void upsertSettings({
+        void updateSettings({
           language: get().language,
           output_language: get().outputLanguage,
           theme: get().theme,
