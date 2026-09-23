@@ -32,6 +32,8 @@ const clientMocks = vi.hoisted(() => ({
 // actually it's better to use doMock or inline return.
 
 vi.mock('@/lib/supabase/client', () => ({
+    getActiveAccessToken: (): string | null => null,
+    invokeAuthenticatedFunction: supabaseMock.functions.invoke,
     supabase: supabaseMock
 }));
 

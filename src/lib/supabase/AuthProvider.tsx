@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from './client';
+import { setActiveAccessToken, supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
@@ -163,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
 
         if (oauthSession) {
+          setActiveAccessToken(oauthSession.access_token, oauthSession.user.id);
           setSession(oauthSession);
           currentUserIdRef.current = oauthSession.user?.id;
           setJamUserId(oauthSession.user?.id);
@@ -183,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
         const { data, error } = getSessionResult;
         if (error) console.warn('[Auth] getSession error:', error.message);
+        setActiveAccessToken(data.session?.access_token ?? null, data.session?.user.id ?? null);
         setSession(data.session ?? null);
         currentUserIdRef.current = data.session?.user?.id;
         setJamUserId(data.session?.user?.id);
@@ -192,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn('[Auth] init failed:', err);
         if (!mounted) return;
+        setActiveAccessToken(null);
         setSession(null);
         currentUserIdRef.current = undefined;
         setJamUserId(undefined);
@@ -210,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearCrossfireDraftOnAuthChange(prevUserId, nextUserId);
       currentUserIdRef.current = nextUserId;
       setJamUserId(nextUserId);
+      setActiveAccessToken(newSession?.access_token ?? null, newSession?.user.id ?? null);
       setSession(newSession);
       setLoading(false);
 

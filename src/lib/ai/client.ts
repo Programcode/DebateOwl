@@ -20,7 +20,7 @@ import {
   type SourceProvenance,
   type SourceSemanticMetadata,
 } from '../stores/session-store';
-import { supabase } from '@/lib/supabase/client';
+import { getActiveAccessToken, getActiveUserId, invokeAuthenticatedFunction, supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { validateUrl } from '@/lib/validation/url';
@@ -469,8 +469,9 @@ async function callSupabaseAI<T = unknown>(
   else options.signal?.addEventListener('abort', abortFromCaller, { once: true });
 
   try {
-    const { data: sessionData } = await waitForAbortable(() => supabase.auth.getSession(), controller.signal);
-    const accessToken = sessionData.session?.access_token;
+    const accessToken = getActiveAccessToken() ?? (
+      await waitForAbortable(() => supabase.auth.getSession(), controller.signal)
+    ).data.session?.access_token;
 
     if (DEBUG) {
       console.log(`[AI Request ${requestId}]`, {
@@ -498,7 +499,7 @@ async function callSupabaseAI<T = unknown>(
       workspaceContext: options.workspaceContext,
     };
 
-    const { data, error } = await supabase.functions.invoke('ai', {
+    const { data, error } = await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: requestBody,
       signal: controller.signal,
@@ -1360,13 +1361,12 @@ function validateSparringScoreResponse(output: unknown): SparringScoreResponse {
 const pendingSparringTurns = new Map<string, Promise<SparringTurnResponse>>();
 const pendingSparringScores = new Map<string, Promise<SparringScoreResponse>>();
 
-async function sparringRequestKey(
+function sparringRequestKey(
   input: SparringRespondInput | SparringScoreInput,
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
-): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  const authScope = data.session?.user?.id ?? data.session?.access_token ?? 'signed-out';
+): string {
+  const authScope = getActiveUserId() ?? getActiveAccessToken() ?? 'signed-out';
   return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
 }
 
@@ -1386,7 +1386,7 @@ export async function generateSparringTurn(
       details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = await sparringRequestKey(inputResult.data, config, workspaceContext);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext);
   const pending = pendingSparringTurns.get(requestKey);
   if (pending) return pending;
 
@@ -1437,7 +1437,7 @@ export async function judgeSparringSession(
       details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = await sparringRequestKey(inputResult.data, config, workspaceContext);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext);
   const pending = pendingSparringScores.get(requestKey);
   if (pending) return pending;
 

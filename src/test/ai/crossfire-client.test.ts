@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => null,
+  invokeAuthenticatedFunction: mocks.invoke,
   supabase: {
     auth: { getSession: mocks.getSession },
     functions: { invoke: mocks.invoke },

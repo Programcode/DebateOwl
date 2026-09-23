@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
+import { getActiveAccessToken, supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
 import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, mapAIError, reportAIFailure, withOutputLanguage } from './client';
 import type { ProviderConfig } from './providers/types';
@@ -130,14 +130,16 @@ export async function streamAskChat(
     throw error;
   }
 
-  let sessionData: Awaited<ReturnType<typeof supabase.auth.getSession>>['data'];
+  let accessToken = getActiveAccessToken();
   try {
-    ({ data: sessionData } = await waitForCaller(supabase.auth.getSession(), handlers.signal));
+    if (!accessToken) {
+      const { data } = await waitForCaller(supabase.auth.getSession(), handlers.signal);
+      accessToken = data.session?.access_token ?? null;
+    }
   } catch (error) {
     captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));
     throw error;
   }
-  const accessToken = sessionData.session?.access_token;
   if (!accessToken) {
     const error = new AIAuthError('Please sign in to use AI features', { requestId });
     captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));

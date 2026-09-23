@@ -2,6 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { supabaseMock, resetMockState, setMockSessionToken } from '../mocks/supabase';
 
 vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => null,
   supabase: supabaseMock,
   SUPABASE_URL: 'http://test-supabase.local',
 }));

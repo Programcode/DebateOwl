@@ -30,6 +30,8 @@ const {
 });
 
 vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => null,
+  invokeAuthenticatedFunction: invokeMock,
   supabase: {
     auth: {
       getSession: getSessionMock,

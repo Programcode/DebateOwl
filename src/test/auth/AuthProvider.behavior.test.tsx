@@ -74,6 +74,7 @@ const {
 
 vi.mock('@/lib/supabase/client', () => ({
   SUPABASE_URL: 'https://example.supabase.co',
+  setActiveAccessToken: vi.fn(),
   supabase: {
     auth: {
       getSession: getSessionMock,

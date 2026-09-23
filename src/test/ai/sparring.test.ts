@@ -8,7 +8,12 @@ import {
 import type { SparringRespondInput, SparringScoreInput } from '@/lib/ai/schemas/sparring';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 
+const authState = vi.hoisted(() => ({ token: 'cached-token', userId: 'user-1' }));
+
 vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => authState.token,
+  getActiveUserId: (): string | null => authState.userId,
+  invokeAuthenticatedFunction: supabaseMock.functions.invoke,
   supabase: supabaseMock,
 }));
 
@@ -86,6 +91,8 @@ const SCORE_RESPONSE = {
 describe('sparring AI client', () => {
   beforeEach(() => {
     resetMockState();
+    authState.token = 'cached-token';
+    authState.userId = 'user-1';
   });
 
   it('sends a validated opponent-turn request with its full session context', async () => {
@@ -112,17 +119,30 @@ describe('sparring AI client', () => {
 
   it('shares identical in-flight turn requests across remounts', async () => {
     let resolveInvoke!: (value: { data: { output: typeof TURN_RESPONSE }; error: null }) => void;
-    supabaseMock.functions.invoke.mockImplementationOnce(() => new Promise((resolve) => {
+    const invokeResponse = new Promise<{ data: { output: typeof TURN_RESPONSE }; error: null }>((resolve) => {
       resolveInvoke = resolve;
-    }));
+    });
+    supabaseMock.functions.invoke.mockImplementation(() => invokeResponse);
 
     const first = generateSparringTurn(RESPOND_INPUT, CONFIG);
-    const second = generateSparringTurn(RESPOND_INPUT, CONFIG);
     await vi.waitFor(() => expect(supabaseMock.functions.invoke).toHaveBeenCalledTimes(1));
+    authState.token = 'refreshed-token';
+    const second = generateSparringTurn(RESPOND_INPUT, CONFIG);
+    await Promise.resolve();
     resolveInvoke({ data: { output: TURN_RESPONSE }, error: null });
 
     await expect(Promise.all([first, second])).resolves.toEqual([TURN_RESPONSE, TURN_RESPONSE]);
     expect(supabaseMock.functions.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends turns and scores without reopening the Supabase session', async () => {
+    setMockInvokeResponse({ output: TURN_RESPONSE });
+    supabaseMock.auth.getSession.mockRejectedValue(new Error('session lookup must not run'));
+
+    await expect(generateSparringTurn(RESPOND_INPUT, CONFIG)).resolves.toEqual(TURN_RESPONSE);
+    setMockInvokeResponse({ output: SCORE_RESPONSE });
+    await expect(judgeSparringSession(SCORE_INPUT, CONFIG)).resolves.toEqual(SCORE_RESPONSE);
+    expect(supabaseMock.auth.getSession).not.toHaveBeenCalled();
   });
 
   it('sends a score request and validates the scorecard envelope', async () => {
