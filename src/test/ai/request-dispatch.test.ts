@@ -112,17 +112,23 @@ it('maps a rejected fetch through the Edge Function error contract', async () =>
 
 it('keeps large Ask context below the Edge Function request limit', async () => {
   setActiveAccessToken('test-access-token');
-  sessionState.sourceLibrary = Array.from({ length: 12 }, (_, index) => ({
+  sessionState.sourceLibrary = [{
+    id: 'local_source_legacy',
+    title: 'Local source',
+    content: 'local only',
+    type: 'text',
+    isActive: true,
+  }, ...Array.from({ length: 12 }, (_, index) => ({
     id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
     title: `Source ${index}`,
     content: 'source context '.repeat(3_000),
     type: 'text',
     isActive: true,
-  }));
-  settingsState.customSystemPrompt = 'prompt '.repeat(12_000);
+  }))];
+  settingsState.customSystemPrompt = '界'.repeat(50_000);
   const history = Array.from({ length: 12 }, (_, index) => ({
     role: index % 2 === 0 ? 'user' as const : 'assistant' as const,
-    content: 'history '.repeat(2_500),
+    content: '界'.repeat(20_000),
   }));
 
   let sentBody = '';
@@ -139,7 +145,7 @@ it('keeps large Ask context below the Edge Function request limit', async () => 
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   });
 
-  await expect(askChat('Hello', history, 'clarify', {
+  await expect(askChat('界'.repeat(50_000), history, 'clarify', {
     provider: 'openrouter',
     model: 'openai/gpt-5.6-luna',
     temperature: 0.7,
@@ -148,14 +154,17 @@ it('keeps large Ask context below the Edge Function request limit', async () => 
 
   const body = JSON.parse(sentBody) as {
     customSystemPrompt: string;
-    input: { history: Array<{ content: string }> };
+    input: { history: Array<{ content: string }>; message: string };
     sourceIds: string[];
     sources?: unknown;
   };
   expect(new TextEncoder().encode(sentBody).byteLength).toBeLessThanOrEqual(200_000);
   expect(body.sourceIds).toHaveLength(10);
+  expect(body.sourceIds).not.toContain('local_source_legacy');
   expect(body.sources).toBeUndefined();
   expect(body.input.history).toHaveLength(8);
-  expect(body.input.history.every((message) => message.content.length <= 6_000)).toBe(true);
-  expect(body.customSystemPrompt.length).toBeLessThanOrEqual(50_000);
+  expect(body.input.history.every((message) => new TextEncoder().encode(message.content).byteLength <= 6_000)).toBe(true);
+  expect(body.input.history.reduce((total, message) => total + new TextEncoder().encode(message.content).byteLength, 0)).toBeLessThanOrEqual(48_000);
+  expect(new TextEncoder().encode(body.input.message).byteLength).toBeLessThanOrEqual(80_000);
+  expect(new TextEncoder().encode(body.customSystemPrompt).byteLength).toBeLessThanOrEqual(32_000);
 });

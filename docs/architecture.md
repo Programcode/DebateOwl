@@ -70,7 +70,7 @@ The import endpoint validates public HTTP URLs, resolves redirect targets, block
 
 Authenticated personal AI requests carry stable source IDs instead of source content. The Edge Function loads matching active rows for the authenticated user, bounds their title, content, origin, and type, then passes that context to ranking and prompt construction. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
 
-Ordinary Ask remains stateless while a conversation is in progress. The browser sends only the newest eight messages with bounded content. Pressing Save persists the chat and its messages in Supabase; Workspace threads use their separate durable server-side context path.
+Ordinary Ask remains stateless while a conversation is in progress. The browser sends only the newest eight messages within a UTF-8 byte budget. Pressing Save persists the chat and its messages in Supabase; Workspace threads use their separate durable server-side context path. Legacy local-only sources are not sent to the authenticated AI endpoint because they have no persisted UUID to authorize and load.
 
 ## Database boundary
 

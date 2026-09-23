@@ -1,6 +1,6 @@
 import { getActiveAccessToken, supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
-import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, mapAIError, reportAIFailure, withOutputLanguage } from './client';
+import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, mapAIError, reportAIFailure, withOutputLanguage } from './client';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
@@ -193,7 +193,7 @@ export async function streamAskChat(
       body: JSON.stringify({
         feature: 'ask',
         input: withOutputLanguage({
-          message,
+          message: boundAskMessage(message),
           history: boundAskHistory(history),
           mode,
           citationMode: Boolean(options.citationMode),
