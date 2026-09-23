@@ -1361,13 +1361,12 @@ function validateSparringScoreResponse(output: unknown): SparringScoreResponse {
 const pendingSparringTurns = new Map<string, Promise<SparringTurnResponse>>();
 const pendingSparringScores = new Map<string, Promise<SparringScoreResponse>>();
 
-async function sparringRequestKey(
+function sparringRequestKey(
   input: SparringRespondInput | SparringScoreInput,
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
-): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  const authScope = data.session?.user?.id ?? data.session?.access_token ?? 'signed-out';
+): string {
+  const authScope = getActiveAccessToken() ?? 'signed-out';
   return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
 }
 
@@ -1387,7 +1386,7 @@ export async function generateSparringTurn(
       details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = await sparringRequestKey(inputResult.data, config, workspaceContext);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext);
   const pending = pendingSparringTurns.get(requestKey);
   if (pending) return pending;
 
@@ -1438,7 +1437,7 @@ export async function judgeSparringSession(
       details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = await sparringRequestKey(inputResult.data, config, workspaceContext);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext);
   const pending = pendingSparringScores.get(requestKey);
   if (pending) return pending;
 

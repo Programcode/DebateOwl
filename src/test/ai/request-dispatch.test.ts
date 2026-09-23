@@ -91,3 +91,19 @@ it('dispatches the AI request without another session lookup', async () => {
   expect(result).toMatchObject({ response: 'Request reached the AI function.' });
   expect(getSession).toHaveBeenCalledTimes(authInitializationLookups);
 });
+
+it('maps a rejected fetch through the Edge Function error contract', async () => {
+  setActiveAccessToken('test-access-token');
+  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+
+  await expect(askChat('Hello', [], 'general', {
+    provider: 'openrouter',
+    model: 'openai/gpt-5.6-luna',
+    temperature: 0.7,
+    reasoningEffort: 'low',
+  })).rejects.toMatchObject({
+    name: 'AIError',
+    message: 'AI service error: Failed to send a request to the Edge Function. Please try again.',
+    statusCode: 500,
+  });
+});

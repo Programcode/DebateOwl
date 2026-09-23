@@ -9,7 +9,7 @@ import type { SparringRespondInput, SparringScoreInput } from '@/lib/ai/schemas/
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 
 vi.mock('@/lib/supabase/client', () => ({
-  getActiveAccessToken: (): string | null => null,
+  getActiveAccessToken: (): string | null => 'cached-token',
   invokeAuthenticatedFunction: supabaseMock.functions.invoke,
   supabase: supabaseMock,
 }));
@@ -125,6 +125,16 @@ describe('sparring AI client', () => {
 
     await expect(Promise.all([first, second])).resolves.toEqual([TURN_RESPONSE, TURN_RESPONSE]);
     expect(supabaseMock.functions.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends turns and scores without reopening the Supabase session', async () => {
+    setMockInvokeResponse({ output: TURN_RESPONSE });
+    supabaseMock.auth.getSession.mockRejectedValue(new Error('session lookup must not run'));
+
+    await expect(generateSparringTurn(RESPOND_INPUT, CONFIG)).resolves.toEqual(TURN_RESPONSE);
+    setMockInvokeResponse({ output: SCORE_RESPONSE });
+    await expect(judgeSparringSession(SCORE_INPUT, CONFIG)).resolves.toEqual(SCORE_RESPONSE);
+    expect(supabaseMock.auth.getSession).not.toHaveBeenCalled();
   });
 
   it('sends a score request and validates the scorecard envelope', async () => {

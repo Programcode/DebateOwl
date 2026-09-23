@@ -1,5 +1,6 @@
 import {
   createClient,
+  FunctionsFetchError,
   FunctionsHttpError,
   FunctionsRelayError,
 } from '@supabase/supabase-js';
@@ -30,22 +31,28 @@ export function getActiveAccessToken(): string | null {
 
 type AuthenticatedFunctionResult<T> =
   | { data: T; error: null }
-  | { data: null; error: FunctionsHttpError | FunctionsRelayError };
+  | { data: null; error: FunctionsFetchError | FunctionsHttpError | FunctionsRelayError };
 
 export async function invokeAuthenticatedFunction<T = unknown>(
   functionName: string,
   options: { body: Record<string, unknown>; headers: Record<string, string>; signal?: AbortSignal },
 ): Promise<AuthenticatedFunctionResult<T>> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    body: JSON.stringify(options.body),
-    signal: options.signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      body: JSON.stringify(options.body),
+      signal: options.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    return { data: null, error: new FunctionsFetchError(error) };
+  }
 
   if (response.headers.get('x-relay-error') === 'true') {
     return { data: null, error: new FunctionsRelayError(response) };
