@@ -145,7 +145,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, and Vite client run the real-Auth desktop/mobile workspace journey. Pull requests run this same gate in the `database-tests` job and retain its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. Pull requests run this same gate in the `database-tests` job and retain its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
 
 ```bash
 supabase db start
@@ -154,6 +154,23 @@ supabase stop --no-backup
 ```
 
 The stack replays migrations and runs pgTAP tests. The browser portion creates isolated local users and deletes them, captures mail only in local Mailpit, restarts the collaboration process, and proves recovery and revocation. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.
+
+### Full-stack feature journeys
+
+The same gate serves every Edge Function and runs `e2e/full-stack/` on desktop and mobile Chromium. Only the paid model provider is replaced: [`e2e/full-stack/fake-openrouter.mjs`](../e2e/full-stack/fake-openrouter.mjs) runs as a `node:22-alpine` container on the Supabase Docker network, and the functions reach it through `OPENROUTER_API_URL`. Real code handles everything else: Auth, demo-code sign-in, RLS, quota, source loading, prompt building, output validation, streaming, and persistence.
+
+Each test signs in through the Login page with a fresh demo code and deletes that user afterwards. The specs cover:
+
+- sign-in, reload, sign-out, a rejected code, and an expired token that refreshes before an AI request;
+- case generation grounded in a 250 KB Library source, provider failure with retry, a zero quota, and a saved case that a fresh browser loads from History;
+- Attack, Brainstorm, Factoids, streamed Ask (it fails if the client falls back to the non-streaming path), and Ask with citations;
+- a judged Lincoln-Douglas sparring round and a Crossfire debrief;
+- Library activation and deletion, output-language sync across devices, and flowchart saves;
+- admin announcements seen by another user, denied admin access, and a public share link.
+
+Tests assert the rendered result, what the Edge Function sent upstream (read back from the fake provider), and the resulting database rows. They also fail on any uncaught page error or horizontal page overflow. The fake provider rejects prompts it does not recognize, so a prompt change must update it.
+
+These journeys do not prove live provider behavior, web research (the local stack has no search key), Jev decisions (the fake returns 503 and callers use their fallbacks), Stripe, or Google export.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 

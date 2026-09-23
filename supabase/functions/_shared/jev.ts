@@ -7,11 +7,12 @@ import {
   MAX_PROVIDER_ERROR_BODY_BYTES,
   MAX_PROVIDER_ERROR_BODY_CHARS,
   MAX_PROVIDER_RESPONSE_BYTES,
+  OPENROUTER_API_URL,
   readResponseText,
 } from "./research.ts";
 
 export const JEV_MODEL = "typesafe/jev-1.13";
-export const JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions";
+export const JEV_DECISIONS_URL = `${OPENROUTER_API_URL}/alpha/decisions`;
 const JEV_TIMEOUT_MS = 8_000;
 
 type JsonPrimitive = string | number | boolean | null;

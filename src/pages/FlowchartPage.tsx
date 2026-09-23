@@ -423,7 +423,7 @@ export default function FlowchartPage() {
             <WorkspaceToolScope context={workspace.context} />
             <Card>
                 <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                                 <GitBranch className="h-5 w-5 text-primary" />
@@ -432,7 +432,7 @@ export default function FlowchartPage() {
                                 <CardTitle>{t('flowchart.title')}</CardTitle>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             {/* Load Dialog */}
                             <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
                                 <DialogTrigger asChild>

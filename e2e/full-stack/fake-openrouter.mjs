@@ -1,0 +1,231 @@
+// Deterministic stand-in for OpenRouter used by the full-stack browser gate.
+// The real `ai` and `ai-stream` Edge Functions call it through
+// OPENROUTER_API_URL, so their auth, quota, source loading, prompt building,
+// and output validation all run for real. Unknown prompts fail loudly: a prompt
+// change must update this file rather than silently receive a generic answer.
+import { createServer } from "node:http";
+
+const port = Number(process.env.PORT ?? 8787);
+const requests = [];
+let failures = [];
+
+const MARK = "FAKE-PROVIDER";
+
+const usage = { prompt_tokens: 120, completion_tokens: 80, total_tokens: 200, cost: 0.0001 };
+
+const contention = (index) => ({
+  id: String(index + 1),
+  claim: `${MARK} contention ${index + 1}: fares block the riders who need transit most`,
+  reasoning: "Fares are a regressive barrier concentrated on low-income riders.",
+  evidence: "Comparable jurisdictions report ridership gains after fare removal.",
+  needsSource: false,
+  impact: "More people reach work, school, and healthcare.",
+});
+
+const generate = (user) => {
+  const length = /^Length: (\w+)/m.exec(user)?.[1] ?? "standard";
+  const count = { brief: 2, standard: 3, comprehensive: 4 }[length] ?? 3;
+  return {
+    caseStructure: {
+      thesis: `${MARK} case thesis: free transit is a net public good`,
+      framework: "Net societal benefit, weighed on access and cost.",
+      keyDefinitions: ["Public transport: publicly funded scheduled transit."],
+      burdenOfProof: "We must show the policy produces a net gain in practice.",
+    },
+    contentions: Array.from({ length: count }, (_, index) => contention(index)),
+    predictedOpponentCase: {
+      likelyArguments: ["The lost farebox revenue has to come from somewhere."],
+      strategicWeaknesses: ["Assumes fare revenue is the only funding model."],
+      keyClashes: ["Who actually bears the cost."],
+    },
+    counters: [{
+      targetArgument: "Funding gap",
+      counterpoint: "Fare collection itself carries substantial overhead.",
+      rebuttal: "Net cost is far below headline farebox revenue.",
+    }],
+    metadata: { side: "pro", format: "custom", generatedAt: new Date().toISOString() },
+  };
+};
+
+const attack = () => ({
+  overallAssessment: {
+    score: 62,
+    summary: `${MARK} attack summary: the central warrant is underdefended.`,
+    strengthAreas: ["Clear thesis"],
+  },
+  weaknesses: [{
+    id: "w1",
+    severity: "major",
+    type: "evidential",
+    description: `${MARK} weakness: the congestion claim has no comparative evidence.`,
+    whyWeak: "Correlation between fare policy and congestion is asserted, not shown.",
+    howOpponentAttacks: "Name a city where ridership rose and congestion did not fall.",
+    improvedVersion: "Cite a before/after study with a control corridor.",
+  }],
+  fallaciesDetected: [{ name: "Hasty generalization", location: "Second contention", explanation: "One city generalized to all." }],
+  crossExQuestions: [{ question: "Which funding line replaces the farebox?", purpose: "Force a concrete mechanism.", expectedTrap: "A vague appeal to general taxation." }],
+  weighingAnalysis: {
+    currentWeighing: "Access is asserted to outweigh cost without comparison.",
+    missingComparisons: ["Cost per additional rider versus targeted subsidy."],
+    improvementSuggestions: ["Weigh against the strongest alternative."],
+  },
+});
+
+const idea = (index, side) => ({
+  id: `i${index}`,
+  title: `${MARK} idea ${index}: access as a precondition for participation`,
+  description: "Mobility gates work, education, and civic life.",
+  side,
+  strength: "strong",
+  tradeoffs: ["Requires a durable funding source."],
+  relatedTo: [],
+});
+
+const brainstorm = () => ({
+  needsMoreInfo: false,
+  topFive: [1, 2, 3, 4, 5].map((rank) => ({ rank, idea: idea(rank, rank % 2 ? "pro" : "con"), whyTop: "It reaches the widest impact." })),
+  nextSteps: ["Find a before/after ridership study."],
+  warningsAndTradeoffs: ["Do not overclaim the congestion effect."],
+});
+
+const factoids = () => ({
+  factoids: [],
+  searchSuggestions: [`${MARK} search suggestion`],
+  warnings: [],
+  verificationStatus: "complete",
+});
+
+const ask = () => ({
+  response: `${MARK} answer: weigh access against cost by naming who bears each.`,
+  followUpQuestions: ["What is the strongest alternative policy?"],
+  uncertainties: [],
+});
+
+const sparring = (user) => /^SPARRING ACTION: score/m.test(user)
+  ? {
+    action: "score",
+    scorecard: {
+      userScore: 78,
+      aiScore: 74,
+      categories: ["Logic", "Evidence", "Delivery", "Strategy"].map((name) => ({ name, userScore: 20, aiScore: 18, feedback: `${name} feedback.` })),
+      overallFeedback: "The user won a narrow edge by weighing the main mechanism.",
+      keyMoments: ["The rebuttal answered the strongest objection."],
+      improvementAreas: ["Compare the alternative policy explicitly."],
+      winner: "user",
+      verdict: `${MARK} verdict: the user had the edge.`,
+    },
+  }
+  : {
+    action: "respond",
+    speech: {
+      content: `${MARK} opponent speech: the policy needs a stronger comparative case.`,
+      strategy: "Test the warrant, then weigh the alternative.",
+      targetedPoints: ["The comparative mechanism is underdeveloped."],
+    },
+  };
+
+const crossfire = (user) => {
+  if (user.startsWith("CROSSFIRE DEBRIEF")) {
+    return {
+      concessionsSecured: [],
+      controlledQuestions: [],
+      weakOrRepetitiveQuestions: [],
+      evasiveOrIncompleteAnswers: [],
+      missedFollowUps: [],
+      betterFollowUpQuestions: [],
+      strongestExchange: null,
+    };
+  }
+  const type = /must be type "(question|answer)"/.exec(user)?.[1];
+  if (!type) return null;
+  return { type, text: `${MARK} crossfire ${type}: what evidence links fewer cars to safer streets?` };
+};
+
+// Order matters only where one marker could appear inside another prompt.
+const routes = [
+  ["research-decision", "You decide whether a debate coaching answer needs live web research", () => ({ shouldSearch: false, query: "" })],
+  ["research-queries", "generate 2-3 follow-up search queries", () => ({ queries: [] })],
+  ["generate", "Generate a tournament-ready debate case", (user) => generate(user)],
+  ["attack", "Analyze the opponent's case clearly", attack],
+  ["brainstorm", "Brainstorm arguments like experienced competitive debaters", brainstorm],
+  ["factoids", "You are a debate research specialist", factoids],
+  ["sparring", "live debate sparring opponent", (user) => sparring(user)],
+  ["crossfire", "You are DebateLab's crossfire coach", (user) => crossfire(user)],
+  ["ask", "You are a debate coach chat bot", ask],
+];
+
+function classify(body) {
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const system = String(messages.find((message) => message.role === "system")?.content ?? "");
+  const user = String(messages.at(-1)?.content ?? "");
+  if (body.stream === true && system.includes("Answer in clear Markdown that can stream smoothly")) {
+    return { feature: "ask-stream", system, user };
+  }
+  const route = routes.find(([, marker]) => system.includes(marker));
+  if (!route) return { feature: null, system, user };
+  return { feature: route[0], system, user, output: route[2](user) };
+}
+
+function json(res, status, value) {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(value));
+}
+
+function stream(res) {
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+  const chunks = [`${MARK} streamed answer: `, "weigh access ", "against cost."];
+  for (const content of chunks) {
+    res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
+  }
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
+  res.end("data: [DONE]\n\n");
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+createServer(async (req, res) => {
+  const url = new URL(req.url ?? "/", "http://fake");
+  if (url.pathname === "/__requests" && req.method === "GET") return json(res, 200, requests);
+  if (url.pathname === "/__reset" && req.method === "POST") {
+    requests.length = 0;
+    failures = [];
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__fail" && req.method === "POST") {
+    const { feature, count = 1, status = 500 } = JSON.parse(await readBody(req) || "{}");
+    failures.push({ feature, count, status });
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/api/alpha/decisions") {
+    // Jev is optional: callers fall back to deterministic ranking and signals.
+    requests.push({ feature: "jev", path: url.pathname });
+    return json(res, 503, { error: { message: "Jev is not faked" } });
+  }
+  if (url.pathname !== "/api/v1/chat/completions" || req.method !== "POST") {
+    return json(res, 404, { error: { message: `Unexpected ${req.method} ${url.pathname}` } });
+  }
+
+  const body = JSON.parse(await readBody(req));
+  const { feature, system, user, output } = classify(body);
+  requests.push({ feature, model: body.model, stream: body.stream === true, system, user });
+  if (!feature) return json(res, 500, { error: { message: "Fake OpenRouter does not recognize this prompt" } });
+
+  const failure = failures.find((item) => item.count > 0 && (!item.feature || item.feature === feature));
+  if (failure) {
+    failure.count -= 1;
+    return json(res, failure.status, { error: { message: `Fake ${feature} failure` } });
+  }
+  if (feature === "ask-stream") return stream(res);
+  if (output === null) return json(res, 500, { error: { message: `Fake ${feature} could not parse the request` } });
+  return json(res, 200, {
+    id: `fake-${requests.length}`,
+    model: body.model,
+    choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(output) } }],
+    usage,
+  });
+}).listen(port, "0.0.0.0", () => console.log(`fake OpenRouter listening on ${port}`));

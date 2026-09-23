@@ -36,7 +36,7 @@ describe("settings-store", () => {
     expect(supabaseMock.from).toHaveBeenCalledWith("user_settings");
   });
 
-  it("setSystemPrompt updates local state and upserts settings", async () => {
+  it("setSystemPrompt updates local state and persists settings", async () => {
     const store = useSettingsStore.getState();
     store.setSystemPrompt("Custom system");
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -100,18 +100,17 @@ describe("settings-store", () => {
     store.setTheme("dark");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const settingsQuery = supabaseMock.from.mock.results.find(({ value }) => value.upsert)?.value;
-    expect(settingsQuery.upsert).toHaveBeenCalledWith(
-      expect.any(Object),
-      { onConflict: "user_id" },
-    );
-    expect(settingsQuery.upsert.mock.calls[0][0]).not.toHaveProperty("wiki_research_enabled");
+    const settingsQuery = supabaseMock.from.mock.results.find(({ value }) => value.update.mock.calls.length)?.value;
+    expect(settingsQuery.update).toHaveBeenCalledWith(expect.objectContaining({ theme: "dark" }));
+    expect(settingsQuery.update.mock.results[0].value.eq).toHaveBeenCalledWith("user_id", "user_1");
+    expect(settingsQuery.upsert).not.toHaveBeenCalled();
+    expect(settingsQuery.update.mock.calls[0][0]).not.toHaveProperty("wiki_research_enabled");
   });
 
   it("reports settings persistence failures", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const upsert = vi.fn(async () => ({ data: null, error: { message: "database unavailable" } }));
-    supabaseMock.from.mockImplementationOnce((() => ({ upsert })) as never);
+    const eq = vi.fn(async () => ({ data: null, error: { message: "database unavailable" } }));
+    supabaseMock.from.mockImplementationOnce((() => ({ update: () => ({ eq }) })) as never);
 
     useSettingsStore.getState().setTheme("dark");
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -388,7 +387,7 @@ describe("settings-store", () => {
     expect(settingsWrites).toHaveLength(0);
   });
 
-  it("does not upsert when user is not signed in", async () => {
+  it("does not write settings when user is not signed in", async () => {
     setMockAuthUser(null);
     const store = useSettingsStore.getState();
     store.setTheme("dark");
@@ -403,7 +402,7 @@ describe("settings-store", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const configWrite = supabaseMock.from.mock.results
-      .map(({ value }) => value.upsert?.mock.calls?.at(-1)?.[0])
+      .map(({ value }) => value.update?.mock.calls?.at(-1)?.[0])
       .filter(Boolean)
       .at(-1);
     expect(configWrite.custom_system_prompt).toBe("You are a debate coach.");
@@ -412,7 +411,7 @@ describe("settings-store", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const clearWrite = supabaseMock.from.mock.results
-      .map(({ value }) => value.upsert?.mock.calls?.at(-1)?.[0])
+      .map(({ value }) => value.update?.mock.calls?.at(-1)?.[0])
       .filter(Boolean)
       .at(-1);
     expect(clearWrite.custom_system_prompt).toBeNull();

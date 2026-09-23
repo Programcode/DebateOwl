@@ -13,6 +13,7 @@ export const ALLOWED_ORIGINS = [
   "http://127.0.0.1:8080",
   "http://localhost:18080",
   "http://127.0.0.1:18080",
+  "http://127.0.0.1:18081", // Local full-stack browser gate
   "http://localhost:5173",
   "http://127.0.0.1:54321", // Local Supabase
   "capacitor://localhost", // iOS Capacitor WebView

@@ -108,6 +108,7 @@ import {
   decideAskSearch,
   exaGetContents,
   fetchJsonWithTimeout,
+  OPENROUTER_API_URL,
   getResearchSources,
   verifyUrl,
   withResearchPreferences,
@@ -757,7 +758,7 @@ async function callOpenRouter(
   };
   if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
-  const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>("https://openrouter.ai/api/v1/chat/completions", {
+  const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify(payload),

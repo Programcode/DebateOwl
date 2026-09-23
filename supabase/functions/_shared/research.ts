@@ -21,6 +21,8 @@ import type { ReasoningEffort } from "./model-catalog.ts";
 
 export type Provider = "openrouter";
 
+// Local browser gates point this at a fake provider; production leaves it unset.
+export const OPENROUTER_API_URL = Deno.env.get("OPENROUTER_API_URL") || "https://openrouter.ai/api";
 export const MAX_PROVIDER_RESPONSE_BYTES = 1_048_576;
 export const MAX_PROVIDER_ERROR_BODY_BYTES = 65_536;
 export const MAX_PROVIDER_ERROR_BODY_CHARS = 16_000;
