@@ -145,7 +145,7 @@ it('keeps large Ask context below the Edge Function request limit', async () => 
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   });
 
-  await expect(askChat('界'.repeat(50_000), history, 'clarify', {
+  await expect(askChat('界'.repeat(20_000), history, 'clarify', {
     provider: 'openrouter',
     model: 'openai/gpt-5.6-luna',
     temperature: 0.7,
@@ -167,4 +167,22 @@ it('keeps large Ask context below the Edge Function request limit', async () => 
   expect(body.input.history.reduce((total, message) => total + new TextEncoder().encode(message.content).byteLength, 0)).toBeLessThanOrEqual(48_000);
   expect(new TextEncoder().encode(body.input.message).byteLength).toBeLessThanOrEqual(80_000);
   expect(new TextEncoder().encode(body.customSystemPrompt).byteLength).toBeLessThanOrEqual(32_000);
+});
+
+it('rejects an oversized multibyte Ask message instead of shortening it silently', async () => {
+  setActiveAccessToken('test-access-token');
+  const fetchRequest = vi.spyOn(globalThis, 'fetch');
+
+  await expect(askChat('😀'.repeat(30_000), [], 'clarify', {
+    provider: 'openrouter',
+    model: 'openai/gpt-5.6-luna',
+    temperature: 0.7,
+    reasoningEffort: 'low',
+  })).rejects.toMatchObject({
+    name: 'AIError',
+    message: 'Message is too large. Shorten it before sending.',
+    statusCode: 413,
+  });
+
+  expect(fetchRequest).not.toHaveBeenCalled();
 });

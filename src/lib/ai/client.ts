@@ -91,7 +91,14 @@ function truncateUtf8(value: string, maxBytes: number): string {
 }
 
 export function boundAskMessage(message: string): string {
-  return truncateUtf8(message, MAX_ASK_MESSAGE_BYTES);
+  if (!isAskMessageWithinBudget(message)) {
+    throw new AIError('Message is too large. Shorten it before sending.', { statusCode: 413 });
+  }
+  return message;
+}
+
+export function isAskMessageWithinBudget(message: string): boolean {
+  return utf8ByteLength(message) <= MAX_ASK_MESSAGE_BYTES;
 }
 
 export function boundAskHistory(history: { role: 'user' | 'assistant'; content: string }[]) {
