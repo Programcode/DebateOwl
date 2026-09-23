@@ -20,7 +20,7 @@ import {
   type SourceProvenance,
   type SourceSemanticMetadata,
 } from '../stores/session-store';
-import { getActiveAccessToken, invokeAuthenticatedFunction, supabase } from '@/lib/supabase/client';
+import { getActiveAccessToken, getActiveUserId, invokeAuthenticatedFunction, supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { validateUrl } from '@/lib/validation/url';
@@ -1366,7 +1366,7 @@ function sparringRequestKey(
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
 ): string {
-  const authScope = getActiveAccessToken() ?? 'signed-out';
+  const authScope = getActiveUserId() ?? getActiveAccessToken() ?? 'signed-out';
   return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
 }
 

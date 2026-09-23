@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
 
         if (oauthSession) {
-          setActiveAccessToken(oauthSession.access_token);
+          setActiveAccessToken(oauthSession.access_token, oauthSession.user.id);
           setSession(oauthSession);
           currentUserIdRef.current = oauthSession.user?.id;
           setJamUserId(oauthSession.user?.id);
@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
         const { data, error } = getSessionResult;
         if (error) console.warn('[Auth] getSession error:', error.message);
-        setActiveAccessToken(data.session?.access_token ?? null);
+        setActiveAccessToken(data.session?.access_token ?? null, data.session?.user.id ?? null);
         setSession(data.session ?? null);
         currentUserIdRef.current = data.session?.user?.id;
         setJamUserId(data.session?.user?.id);
@@ -213,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearCrossfireDraftOnAuthChange(prevUserId, nextUserId);
       currentUserIdRef.current = nextUserId;
       setJamUserId(nextUserId);
-      setActiveAccessToken(newSession?.access_token ?? null);
+      setActiveAccessToken(newSession?.access_token ?? null, newSession?.user.id ?? null);
       setSession(newSession);
       setLoading(false);
 

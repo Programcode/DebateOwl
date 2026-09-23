@@ -20,13 +20,19 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 let activeAccessToken: string | null = null;
+let activeUserId: string | null = null;
 
-export function setActiveAccessToken(accessToken: string | null): void {
+export function setActiveAccessToken(accessToken: string | null, userId: string | null = null): void {
   activeAccessToken = accessToken;
+  activeUserId = userId;
 }
 
 export function getActiveAccessToken(): string | null {
   return activeAccessToken;
+}
+
+export function getActiveUserId(): string | null {
+  return activeUserId;
 }
 
 type AuthenticatedFunctionResult<T> =
