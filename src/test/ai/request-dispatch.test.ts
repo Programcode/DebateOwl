@@ -56,7 +56,7 @@ function AuthState() {
   return createElement('span', { 'data-testid': 'auth-state' }, loading ? 'loading' : user?.id ?? 'signed-out');
 }
 
-it('dispatches the AI request without another session lookup', async () => {
+it('calls the AI fetch boundary without another session lookup', async () => {
   const getSession = vi.spyOn(supabase.auth, 'getSession')
     .mockResolvedValue({
       data: { session: { access_token: 'test-access-token', user: { id: 'user-1' } } },
@@ -67,7 +67,7 @@ it('dispatches the AI request without another session lookup', async () => {
   } as ReturnType<typeof supabase.auth.onAuthStateChange>);
   const fetchRequest = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
     output: {
-      response: 'Request reached the AI function.',
+      response: 'Mock AI response.',
       followUpQuestions: [],
       uncertainties: [],
     },
@@ -88,7 +88,7 @@ it('dispatches the AI request without another session lookup', async () => {
   });
 
   expect(fetchRequest).toHaveBeenCalledOnce();
-  expect(result).toMatchObject({ response: 'Request reached the AI function.' });
+  expect(result).toMatchObject({ response: 'Mock AI response.' });
   expect(getSession).toHaveBeenCalledTimes(authInitializationLookups);
 });
 
