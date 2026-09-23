@@ -48,6 +48,8 @@ import { setActiveAccessToken, supabase } from '@/lib/supabase/client';
 
 afterEach(() => {
   setActiveAccessToken(null);
+  sessionState.sourceLibrary = [];
+  settingsState.customSystemPrompt = '';
   vi.restoreAllMocks();
 });
 
@@ -106,4 +108,54 @@ it('maps a rejected fetch through the Edge Function error contract', async () =>
     message: 'AI service error: Failed to send a request to the Edge Function. Please try again.',
     statusCode: 500,
   });
+});
+
+it('keeps large Ask context below the Edge Function request limit', async () => {
+  setActiveAccessToken('test-access-token');
+  sessionState.sourceLibrary = Array.from({ length: 12 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    title: `Source ${index}`,
+    content: 'source context '.repeat(3_000),
+    type: 'text',
+    isActive: true,
+  }));
+  settingsState.customSystemPrompt = 'prompt '.repeat(12_000);
+  const history = Array.from({ length: 12 }, (_, index) => ({
+    role: index % 2 === 0 ? 'user' as const : 'assistant' as const,
+    content: 'history '.repeat(2_500),
+  }));
+
+  let sentBody = '';
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+    sentBody = String(init?.body ?? '');
+    if (new TextEncoder().encode(sentBody).byteLength > 200_000) {
+      return new Response(JSON.stringify({ error: 'Request body exceeds 200000 bytes' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({
+      output: { response: 'Mock AI response.', followUpQuestions: [], uncertainties: [] },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  });
+
+  await expect(askChat('Hello', history, 'clarify', {
+    provider: 'openrouter',
+    model: 'openai/gpt-5.6-luna',
+    temperature: 0.7,
+    reasoningEffort: 'low',
+  })).resolves.toMatchObject({ response: 'Mock AI response.' });
+
+  const body = JSON.parse(sentBody) as {
+    customSystemPrompt: string;
+    input: { history: Array<{ content: string }> };
+    sourceIds: string[];
+    sources?: unknown;
+  };
+  expect(new TextEncoder().encode(sentBody).byteLength).toBeLessThanOrEqual(200_000);
+  expect(body.sourceIds).toHaveLength(10);
+  expect(body.sources).toBeUndefined();
+  expect(body.input.history).toHaveLength(8);
+  expect(body.input.history.every((message) => message.content.length <= 6_000)).toBe(true);
+  expect(body.customSystemPrompt.length).toBeLessThanOrEqual(50_000);
 });

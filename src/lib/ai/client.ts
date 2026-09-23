@@ -45,9 +45,10 @@ import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 export const CROSSFIRE_REQUEST_TIMEOUT_MS = 75 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
-const MAX_CROSSFIRE_SOURCE_COUNT = 10;
-const MAX_CROSSFIRE_SOURCE_CHARS = 8_000;
-const MAX_CROSSFIRE_SOURCE_TOTAL_CHARS = 24_000;
+const MAX_REQUEST_SOURCE_IDS = 10;
+const MAX_ASK_HISTORY_ITEMS = 8;
+const MAX_ASK_HISTORY_CONTENT_CHARS = 6_000;
+const MAX_CUSTOM_SYSTEM_PROMPT_CHARS = 50_000;
 
 interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;
@@ -67,35 +68,19 @@ export function withOutputLanguage(input: Record<string, unknown>): Record<strin
   return { ...input, language: selectedOutputLanguage() };
 }
 
+export function boundAskHistory(history: { role: 'user' | 'assistant'; content: string }[]) {
+  return history.slice(-MAX_ASK_HISTORY_ITEMS).map((message) => ({
+    ...message,
+    content: message.content.slice(0, MAX_ASK_HISTORY_CONTENT_CHARS),
+  }));
+}
+
 function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(new DOMException('The request was canceled.', 'AbortError'));
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
     signal.addEventListener('abort', onAbort, { once: true });
     Promise.resolve().then(operation).then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
-  });
-}
-
-interface AIRequestSource {
-  id?: string;
-  title: string;
-  content: string;
-  origin?: string;
-  type: string;
-  metadata?: SourceProvenance;
-}
-
-function boundCrossfireRequestSources(sources: AIRequestSource[]): AIRequestSource[] {
-  let remaining = MAX_CROSSFIRE_SOURCE_TOTAL_CHARS;
-  return sources.slice(0, MAX_CROSSFIRE_SOURCE_COUNT).flatMap((source) => {
-    if (remaining <= 0) return [];
-    const title = source.title.trim().slice(0, 240);
-    const content = source.content.trim().slice(0, Math.min(MAX_CROSSFIRE_SOURCE_CHARS, remaining));
-    const type = source.type.trim().slice(0, 64);
-    if (!title || !content || !type) return [];
-    remaining -= content.length;
-    const origin = source.origin?.trim().slice(0, 240);
-    return [{ title, content, type, ...(origin ? { origin } : {}) }];
   });
 }
 
@@ -425,21 +410,12 @@ async function callSupabaseAI<T = unknown>(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const selectedSources = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
+  const sourceIds = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
-      .map((s) => ({
-        ...(s.id ? { id: s.id } : {}),
-        title: s.title,
-        content: s.content,
-        ...(s.origin ? { origin: s.origin } : {}),
-        type: s.type,
-        ...(s.metadata ? { metadata: s.metadata } : {}),
-      }));
-  const activeSources = feature === 'crossfire'
-    ? boundCrossfireRequestSources(selectedSources)
-    : selectedSources;
+      .map((s) => s.id)
+      .slice(0, MAX_REQUEST_SOURCE_IDS);
 
   const provider = 'openrouter';
   captureProductEvent('ai_request_started', {
@@ -479,7 +455,7 @@ async function callSupabaseAI<T = unknown>(
         provider,
         model: config.model,
         hasAccessToken: !!accessToken,
-        activeSources: activeSources.length,
+        activeSources: sourceIds.length,
       });
     }
 
@@ -494,8 +470,10 @@ async function callSupabaseAI<T = unknown>(
       model: config.model,
       temperature: config.temperature,
       reasoningEffort: config.reasoningEffort ?? 'low',
-      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
-      sources: activeSources,
+      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false
+        ? null
+        : settings.customSystemPrompt?.slice(0, MAX_CUSTOM_SYSTEM_PROMPT_CHARS) || null,
+      sourceIds,
       workspaceContext: options.workspaceContext,
     };
 
@@ -1310,7 +1288,7 @@ export async function askChat(
 ): Promise<AskOutput> {
   return await callSupabaseAI<AskOutput>('ask', withOutputLanguage({
     message,
-    history,
+    history: boundAskHistory(history),
     mode,
     citationMode: Boolean(options.citationMode),
     webSearch: Boolean(options.webSearch),

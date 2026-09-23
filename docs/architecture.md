@@ -51,8 +51,8 @@ Client-side environment selection is a developer convenience, not authorization.
 
 1. A feature page validates input and calls a feature wrapper.
 2. The client reads the current Supabase session.
-3. It invokes `ai` or `ai-stream` with selected controls and active source context.
-4. The Edge Function validates authentication, input bounds, supported model and control combinations, access limits, and feature-specific rules.
+3. It invokes `ai` or `ai-stream` with selected controls, stable active-source IDs, and a bounded recent Ask history when needed.
+4. The Edge Function validates authentication, loads active personal sources by authenticated user and ID, then enforces input bounds, supported model and control combinations, access limits, and feature-specific rules.
 5. The backend optionally gathers research, builds prompts, calls an allowlisted model through OpenRouter, validates output, and records the provider-reported usage and charge.
 6. The client validates or transforms the response and updates the relevant store.
 
@@ -68,7 +68,9 @@ Shared research, source ranking, URL validation, and prompt construction live un
 
 The import endpoint validates public HTTP URLs, resolves redirect targets, blocks private networks, and enforces response timeout, content type, and size limits. Research paths bound source count and content before prompt construction.
 
-Authenticated AI requests carry stable source IDs only for user-scoped assessment updates; prompt construction still receives bounded title, content, origin, and type fields. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
+Authenticated personal AI requests carry stable source IDs instead of source content. The Edge Function loads matching active rows for the authenticated user, bounds their title, content, origin, and type, then passes that context to ranking and prompt construction. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
+
+Ordinary Ask remains stateless while a conversation is in progress. The browser sends only the newest eight messages with bounded content. Pressing Save persists the chat and its messages in Supabase; Workspace threads use their separate durable server-side context path.
 
 ## Database boundary
 

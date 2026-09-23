@@ -388,8 +388,19 @@ function askRequest(model: string, reasoningEffort?: string): Request {
 Deno.test("AI handler ranks stable library sources and returns bounded assessments", async () => {
   const originalFetch = globalThis.fetch;
   const providerBodies: Array<Record<string, unknown>> = [];
+  const sourceA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const sourceB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.origin === "https://supabase.test" && url.pathname.includes("/rest/v1/sources")) {
+      if (url.searchParams.get("user_id") !== "eq.user-1" || url.searchParams.get("is_active") !== "eq.true") {
+        throw new Error(`source lookup was not user scoped: ${url}`);
+      }
+      return jsonResponse([
+        { id: sourceA, title: "Source A", content: "Evidence A", type: "text", metadata: { qualityLabel: "strong", qualityScore: 90 } },
+        { id: sourceB, title: "Source B", content: "Evidence B", type: "text", metadata: { qualityLabel: "strong", qualityScore: 80 } },
+      ]);
+    }
     const supabaseResponse = supabaseTestResponse(url);
     if (supabaseResponse) return supabaseResponse;
     if (url.href === "https://openrouter.ai/api/alpha/decisions") {
@@ -431,15 +442,12 @@ Deno.test("AI handler ranks stable library sources and returns bounded assessmen
         feature: "ask",
         model: "openai/gpt-5.6-luna",
         input: { message: "Compare the evidence", mode: "general", webSearch: false },
-        sources: [
-          { id: "source-a", title: "Source A", content: "Evidence A", type: "text", metadata: { qualityLabel: "strong", qualityScore: 90 } },
-          { id: "source-b", title: "Source B", content: "Evidence B", type: "text", metadata: { qualityLabel: "strong", qualityScore: 80 } },
-        ],
+        sourceIds: [sourceA, sourceB],
       }),
     }));
     if (response.status !== 200) throw new Error(`source-ranking request returned ${response.status}: ${await response.text()}`);
     const payload = await response.json() as { sourceAssessments?: Array<{ id?: string; importance?: number }> };
-    if (payload.sourceAssessments?.map((item) => item.id).join(",") !== "source-a,source-b") throw new Error("stable source IDs were not returned");
+    if (payload.sourceAssessments?.map((item) => item.id).join(",") !== `${sourceA},${sourceB}`) throw new Error("stable source IDs were not returned");
     if (payload.sourceAssessments?.[1]?.importance !== 3) throw new Error("semantic assessment was not returned");
     const providerText = JSON.stringify(providerBodies);
     if (providerText.indexOf("Source B") > providerText.indexOf("Source A")) throw new Error("semantic source order did not reach the provider prompt");

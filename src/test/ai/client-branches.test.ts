@@ -16,8 +16,8 @@ const {
   const applySourceAssessmentsMock = vi.fn();
   const sessionState = {
     sourceLibrary: [
-      { title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
     ],
     addSource: addSourceMock,
     applySourceAssessments: applySourceAssessmentsMock,
@@ -120,8 +120,8 @@ describe('AI client branch coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionState.sourceLibrary = [
-      { title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
     ];
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'token-123' } },
@@ -275,18 +275,19 @@ describe('AI client branch coverage', () => {
   });
 
   it('sends stable source IDs and applies returned semantic assessments', async () => {
-    sessionState.sourceLibrary[0] = { ...sessionState.sourceLibrary[0], id: 'source-active', metadata: { qualityLabel: 'strong' } } as any;
+    const sourceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    sessionState.sourceLibrary[0] = { ...sessionState.sourceLibrary[0], id: sourceId, metadata: { qualityLabel: 'strong' } } as any;
     invokeMock.mockResolvedValueOnce({
       data: {
         output: validGenerateOutput,
-        sourceAssessments: [{ key: 'source-active', id: 'source-active', relevance: 0.9, importance: 3, strength: 2, evaluatedAt: '2026-09-21T00:00:00.000Z', retained: true, usedInCase: true }],
+        sourceAssessments: [{ key: sourceId, id: sourceId, relevance: 0.9, importance: 3, strength: 2, evaluatedAt: '2026-09-21T00:00:00.000Z', retained: true, usedInCase: true }],
       },
       error: null,
     });
 
     await generateCase(validGenerateInput, config);
-    expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({ body: expect.objectContaining({ sources: [expect.objectContaining({ id: 'source-active' })] }) }));
-    expect(sessionState.applySourceAssessments).toHaveBeenCalledWith([expect.objectContaining({ id: 'source-active', usedInCase: true })]);
+    expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({ body: expect.objectContaining({ sourceIds: [sourceId] }) }));
+    expect(sessionState.applySourceAssessments).toHaveBeenCalledWith([expect.objectContaining({ id: sourceId, usedInCase: true })]);
   });
 
   it('does not autosave a semantically irrelevant discovered source', async () => {
@@ -831,14 +832,7 @@ describe('AI client branch coverage', () => {
       body: expect.objectContaining({
         provider: 'openrouter',
         customSystemPrompt: 'custom-system-prompt',
-        sources: [
-          {
-            title: 'Active source',
-            content: 'Useful evidence',
-            origin: 'https://example.com',
-            type: 'url',
-          },
-        ],
+        sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
       }),
     }));
   });
