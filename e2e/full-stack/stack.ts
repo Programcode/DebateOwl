@@ -13,6 +13,8 @@ const demoPepper = process.env.DEMO_CODE_PEPPER;
 
 export const MARK = "FAKE-PROVIDER";
 export const stackReady = Boolean(supabaseUrl && serviceKey && fakeUrl && demoPepper);
+// Only the locked gate loads these specs in CI; a skip there would read as a pass.
+if (process.env.CI && !stackReady) throw new Error("Full-stack gate environment is incomplete");
 
 export const admin = stackReady
   ? createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } })
