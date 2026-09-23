@@ -12,6 +12,7 @@ vi.mock('@/lib/observability', () => ({
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => null,
   supabase: supabaseMock,
   SUPABASE_URL: 'http://test-supabase.local',
 }));

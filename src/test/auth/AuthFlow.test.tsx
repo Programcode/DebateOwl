@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client';
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({
+    setActiveAccessToken: vi.fn(),
     supabase: {
         auth: {
             getSession: vi.fn(),

@@ -6,7 +6,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabaseMock, resetMockState, setMockSessionToken } from '../mocks/supabase';
 
-vi.mock('@/lib/supabase/client', () => ({ supabase: supabaseMock }));
+vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => null,
+  invokeAuthenticatedFunction: supabaseMock.functions.invoke,
+  supabase: supabaseMock,
+}));
 
 import { generateCase, attackCase, brainstorm, factoids, askChat } from '@/lib/ai/client';
 import type { ProviderConfig } from '@/lib/ai/providers/types';

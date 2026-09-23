@@ -20,7 +20,7 @@ import {
   type SourceProvenance,
   type SourceSemanticMetadata,
 } from '../stores/session-store';
-import { supabase } from '@/lib/supabase/client';
+import { getActiveAccessToken, invokeAuthenticatedFunction, supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { validateUrl } from '@/lib/validation/url';
@@ -469,8 +469,9 @@ async function callSupabaseAI<T = unknown>(
   else options.signal?.addEventListener('abort', abortFromCaller, { once: true });
 
   try {
-    const { data: sessionData } = await waitForAbortable(() => supabase.auth.getSession(), controller.signal);
-    const accessToken = sessionData.session?.access_token;
+    const accessToken = getActiveAccessToken() ?? (
+      await waitForAbortable(() => supabase.auth.getSession(), controller.signal)
+    ).data.session?.access_token;
 
     if (DEBUG) {
       console.log(`[AI Request ${requestId}]`, {
@@ -498,7 +499,7 @@ async function callSupabaseAI<T = unknown>(
       workspaceContext: options.workspaceContext,
     };
 
-    const { data, error } = await supabase.functions.invoke('ai', {
+    const { data, error } = await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: requestBody,
       signal: controller.signal,

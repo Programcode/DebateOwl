@@ -9,6 +9,8 @@ import type { SparringRespondInput, SparringScoreInput } from '@/lib/ai/schemas/
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 
 vi.mock('@/lib/supabase/client', () => ({
+  getActiveAccessToken: (): string | null => null,
+  invokeAuthenticatedFunction: supabaseMock.functions.invoke,
   supabase: supabaseMock,
 }));
 
