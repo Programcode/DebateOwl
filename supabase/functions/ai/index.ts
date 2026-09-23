@@ -186,6 +186,8 @@ function badRequest(message: string, corsHeaders: Record<string, string>, status
 const MAX_INPUT_LENGTH = 50000;
 const MAX_ASK_CONTEXT_LENGTH = 32000;
 export const MAX_REQUEST_BODY_BYTES = 200_000;
+const MAX_PERSONAL_SOURCE_IDS = 10;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const MAX_CROSSFIRE_PROMPT_CHARS = 100_000;
 export const MAX_CROSSFIRE_TRANSCRIPT_TURNS = 40;
 export const MAX_CROSSFIRE_TRANSCRIPT_CHARS = 24_000;
@@ -268,6 +270,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
   const allowed = new Set(keys);
   return Object.keys(value).every((key) => allowed.has(key));
+}
+
+function parsePersonalSourceIds(value: unknown): { value?: string[] } | { error: string } {
+  if (value === undefined) return { value: undefined };
+  if (!Array.isArray(value) || value.length > MAX_PERSONAL_SOURCE_IDS) {
+    return { error: `sourceIds must contain at most ${MAX_PERSONAL_SOURCE_IDS} items` };
+  }
+  if (!value.every((id): id is string => typeof id === "string" && UUID_PATTERN.test(id))) {
+    return { error: "sourceIds must contain valid UUIDs" };
+  }
+  if (new Set(value).size !== value.length) return { error: "sourceIds must not contain duplicates" };
+  return { value };
 }
 
 function crossfireText(value: unknown, fieldName: string, maxLength: number): { value: string } | { error: string } {
@@ -862,10 +876,20 @@ export async function handleRequest(req: Request): Promise<Response> {
   const customSystemPrompt = feature === "crossfire"
     ? null
     : body.customSystemPrompt as string | null | undefined;
-  const rawSources = body.sources;
+  let rawSources = body.sources;
+  const sourceIdsResult = parsePersonalSourceIds(body.sourceIds);
+  if ("error" in sourceIdsResult) return badRequest(sourceIdsResult.error, corsHeaders);
+  if (sourceIdsResult.value !== undefined && body.sources !== undefined) {
+    return badRequest("Send sourceIds instead of source content", corsHeaders);
+  }
 
   // Log incoming request
-  log(requestId, "INFO", "Request received", { feature, provider, model: requestedModel, sourcesCount: Array.isArray(rawSources) ? rawSources.length : 0 });
+  log(requestId, "INFO", "Request received", {
+    feature,
+    provider,
+    model: requestedModel,
+    sourcesCount: sourceIdsResult.value?.length ?? (Array.isArray(rawSources) ? rawSources.length : 0),
+  });
 
   if (!feature) return badRequest("Missing feature", corsHeaders);
   if (!isRecord(rawInput)) return badRequest("Missing input", corsHeaders);
@@ -882,13 +906,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     crossfireInput = crossfireResult.value;
     input = crossfireInput as unknown as Record<string, unknown>;
-    const sourcesResult = boundCrossfireSources(rawSources, crossfireInput.config.useSourceLibrary);
-    if ("error" in sourcesResult) {
-      log(requestId, "WARN", "Crossfire source validation failed", { reason: sourcesResult.error });
-      return badRequest(sourcesResult.error, corsHeaders);
-    }
-    crossfireSources = sourcesResult.value;
-    crossfireSourcesTruncated = sourcesResult.truncated;
   }
   const sanitizeResult = sanitizeInput(input);
   if ("rejected" in sanitizeResult) {
@@ -982,6 +999,45 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
+
+  if (sourceIdsResult.value !== undefined) {
+    if (body.workspaceContext !== undefined && sourceIdsResult.value.length > 0) {
+      return badRequest("Personal sources cannot be mixed with workspace context", corsHeaders);
+    }
+    if (sourceIdsResult.value.length === 0) {
+      rawSources = [];
+      sources = [];
+    } else {
+      const { data, error } = await supabase
+        .from("sources")
+        .select("id,title,content,origin,type,metadata")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .in("id", sourceIdsResult.value);
+      if (error) {
+        log(requestId, "ERROR", "Unable to load personal sources", { error: error.message });
+        return badRequest("Unable to load source library", corsHeaders, 500);
+      }
+      const rows = Array.isArray(data) ? data.filter(isRecord) : [];
+      const rowById = new Map(rows.map((row) => [String(row.id), row]));
+      const orderedRows = sourceIdsResult.value.flatMap((id) => {
+        const row = rowById.get(id);
+        if (!row || typeof row.title !== "string" || !row.title.trim() || typeof row.content !== "string" || !row.content || typeof row.type !== "string" || !row.type.trim()) return [];
+        return [row];
+      });
+      const bounded = boundPromptSources(orderedRows);
+      rawSources = bounded.flatMap((source, index) => {
+        const row = orderedRows[index];
+        return row ? [{
+          ...source,
+          id: String(row.id),
+          ...(isRecord(row.metadata) ? { metadata: row.metadata } : {}),
+        }] : [];
+      });
+      sources = bounded;
+    }
+  }
+
   if (crossfireInput?.operation === "signal") {
     if (await checkUserBanned(userId)) return badRequest("Your account has been suspended. Please contact support.", corsHeaders, 403);
     if (!(await verifyCrossfireSignalToken(userId, crossfireInput))) return badRequest("Invalid or expired Crossfire signal token", corsHeaders, 403);
@@ -1004,6 +1060,18 @@ export async function handleRequest(req: Request): Promise<Response> {
     return new Response(JSON.stringify(await successBody({ output: evaluated.signal ? { signal: evaluated.signal } : {} })), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  if (feature === "crossfire" && crossfireInput) {
+    const sourcesResult = boundCrossfireSources(rawSources, crossfireInput.config.useSourceLibrary);
+    if ("error" in sourcesResult) {
+      log(requestId, "WARN", "Crossfire source validation failed", { reason: sourcesResult.error });
+      return badRequest(sourcesResult.error, corsHeaders);
+    }
+    crossfireSources = sourcesResult.value;
+    crossfireSourcesTruncated = sourcesResult.truncated;
+    sources = crossfireSources;
+    responseTruncated = responseTruncated || crossfireSourcesTruncated;
   }
 
   if (body.workspaceContext !== undefined) {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
-import { askChat, isTimeoutError } from '@/lib/ai/client';
+import { askChat, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
 import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
@@ -110,7 +110,7 @@ export default function AskPage() {
 
       const history = workspace.context ? [] : askMessages.map(m => ({ role: m.role, content: m.content }));
       const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
-      if (fullMessage.length > MAX_AI_INPUT_LENGTH) {
+      if (fullMessage.length > MAX_AI_INPUT_LENGTH || !isAskMessageWithinBudget(fullMessage)) {
         toast({
           title: t('ask.inputTooLargeTitle', 'Message is too large'),
           description: t('ask.inputTooLargeDesc', 'Remove some attachment text or shorten your question before sending.'),

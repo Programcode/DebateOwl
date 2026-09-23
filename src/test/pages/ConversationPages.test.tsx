@@ -92,6 +92,7 @@ vi.mock('@/lib/ai/client', () => ({
   askChat: (...args: unknown[]) => (mockAskChat as (...callArgs: unknown[]) => unknown)(...args),
   brainstorm: (...args: unknown[]) => (mockBrainstorm as (...callArgs: unknown[]) => unknown)(...args),
   factoids: (...args: unknown[]) => (mockFactoids as (...callArgs: unknown[]) => unknown)(...args),
+  isAskMessageWithinBudget: (message: string) => new TextEncoder().encode(message).byteLength <= 80_000,
   isTimeoutError: (...args: unknown[]) => (mockIsTimeoutError as (...callArgs: unknown[]) => unknown)(...args),
 }));
 
@@ -111,6 +112,7 @@ vi.mock('@/components/features/ask/AskChat', () => ({
     <div>
       <button type="button" onClick={() => void onSend('How do I frame this?', 'general', true, true, true, true)} data-testid="ask-send">send</button>
       <button type="button" onClick={() => void onSend('What should I clarify?', 'clarify', false, false, false, false)} data-testid="ask-clarify">clarify</button>
+      <button type="button" onClick={() => void onSend('😀'.repeat(30_000), 'clarify', false, false, false, false)} data-testid="ask-oversized">oversized</button>
       <button type="button" onClick={onClear} data-testid="ask-clear">clear</button>
       <button type="button" onClick={() => onLoadChat?.('saved-chat')} data-testid="ask-load-chat">load-chat</button>
       <button type="button" onClick={onSaveChat} data-testid="ask-save-chat">save-chat</button>
@@ -257,6 +259,21 @@ describe('Conversation Pages', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Request Timed Out' }));
     });
+  });
+
+  it('AskPage rejects an oversized multibyte message before calling AI', async () => {
+    render(
+      <BrowserRouter>
+        <AskPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('ask-oversized'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Message is too large' }));
+    });
+    expect(mockAskChat).not.toHaveBeenCalled();
   });
 
   it('AskPage streams basic ask replies when supported', async () => {

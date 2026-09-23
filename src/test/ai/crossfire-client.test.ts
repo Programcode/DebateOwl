@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
   },
   session: {
     sourceLibrary: [
-      { title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
     ],
   },
 }));
@@ -96,8 +96,8 @@ describe('Crossfire AI client', () => {
     vi.clearAllMocks();
     mocks.settings.outputLanguage = 'hu';
     mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
-      { title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
     );
     mocks.getSession.mockResolvedValue({ data: { session: { access_token: 'token' } } });
   });
@@ -109,21 +109,20 @@ describe('Crossfire AI client', () => {
       body: expect.objectContaining({
         feature: 'crossfire',
         input: expect.objectContaining({ language: 'hu' }),
-        sources: [],
+        sourceIds: [],
         customSystemPrompt: null,
       }),
     }));
 
     await crossfire(nextTurnInput(true), config);
     const secondCall = mocks.invoke.mock.calls[1][1];
-    expect(secondCall.body.sources).toEqual([
-      expect.objectContaining({ title: 'Active source', content: 'Grounded evidence' }),
-    ]);
+    expect(secondCall.body.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
   });
 
-  it('bounds active Crossfire sources before serializing non-ASCII content', async () => {
+  it('sends only bounded Crossfire source IDs when stored content is large', async () => {
     mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
       ...Array.from({ length: 12 }, (_, index) => ({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
         title: `Source ${index}`,
         content: '界'.repeat(9_000),
         origin: `https://example.com/${index}`,
@@ -135,10 +134,8 @@ describe('Crossfire AI client', () => {
 
     await crossfire(nextTurnInput(true), config);
 
-    const sources = mocks.invoke.mock.calls[0][1].body.sources as Array<{ content: string }>;
-    expect(sources).toHaveLength(3);
-    expect(sources.every((source) => source.content.length <= 8_000)).toBe(true);
-    expect(sources.reduce((sum, source) => sum + source.content.length, 0)).toBe(24_000);
+    const sourceIds = mocks.invoke.mock.calls[0][1].body.sourceIds as string[];
+    expect(sourceIds).toHaveLength(10);
     expect(new TextEncoder().encode(JSON.stringify(mocks.invoke.mock.calls[0][1].body)).byteLength).toBeLessThan(200_000);
   });
 

@@ -45,9 +45,14 @@ import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 export const CROSSFIRE_REQUEST_TIMEOUT_MS = 75 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
-const MAX_CROSSFIRE_SOURCE_COUNT = 10;
-const MAX_CROSSFIRE_SOURCE_CHARS = 8_000;
-const MAX_CROSSFIRE_SOURCE_TOTAL_CHARS = 24_000;
+const MAX_CLIENT_REQUEST_BODY_BYTES = 190_000;
+const MAX_REQUEST_SOURCE_IDS = 10;
+const MAX_ASK_HISTORY_ITEMS = 8;
+const MAX_ASK_HISTORY_CONTENT_BYTES = 6_000;
+const MAX_ASK_HISTORY_TOTAL_BYTES = 48_000;
+const MAX_ASK_MESSAGE_BYTES = 80_000;
+const MAX_CUSTOM_SYSTEM_PROMPT_BYTES = 32_000;
+const SOURCE_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;
@@ -67,35 +72,51 @@ export function withOutputLanguage(input: Record<string, unknown>): Record<strin
   return { ...input, language: selectedOutputLanguage() };
 }
 
+function utf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}
+
+function truncateUtf8(value: string, maxBytes: number): string {
+  const encoded = new TextEncoder().encode(value);
+  if (encoded.byteLength <= maxBytes) return value;
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  for (let end = maxBytes; end > Math.max(0, maxBytes - 4); end -= 1) {
+    try {
+      return decoder.decode(encoded.subarray(0, end));
+    } catch {
+      // Move to the prior complete UTF-8 code point.
+    }
+  }
+  return '';
+}
+
+export function boundAskMessage(message: string): string {
+  if (!isAskMessageWithinBudget(message)) {
+    throw new AIError('Message is too large. Shorten it before sending.', { statusCode: 413 });
+  }
+  return message;
+}
+
+export function isAskMessageWithinBudget(message: string): boolean {
+  return utf8ByteLength(message) <= MAX_ASK_MESSAGE_BYTES;
+}
+
+export function boundAskHistory(history: { role: 'user' | 'assistant'; content: string }[]) {
+  let remaining = MAX_ASK_HISTORY_TOTAL_BYTES;
+  return history.slice(-MAX_ASK_HISTORY_ITEMS).reverse().flatMap((message) => {
+    if (remaining <= 0) return [];
+    const content = truncateUtf8(message.content, Math.min(MAX_ASK_HISTORY_CONTENT_BYTES, remaining));
+    remaining -= utf8ByteLength(content);
+    return content ? [{ ...message, content }] : [];
+  }).reverse();
+}
+
 function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(new DOMException('The request was canceled.', 'AbortError'));
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
     signal.addEventListener('abort', onAbort, { once: true });
     Promise.resolve().then(operation).then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
-  });
-}
-
-interface AIRequestSource {
-  id?: string;
-  title: string;
-  content: string;
-  origin?: string;
-  type: string;
-  metadata?: SourceProvenance;
-}
-
-function boundCrossfireRequestSources(sources: AIRequestSource[]): AIRequestSource[] {
-  let remaining = MAX_CROSSFIRE_SOURCE_TOTAL_CHARS;
-  return sources.slice(0, MAX_CROSSFIRE_SOURCE_COUNT).flatMap((source) => {
-    if (remaining <= 0) return [];
-    const title = source.title.trim().slice(0, 240);
-    const content = source.content.trim().slice(0, Math.min(MAX_CROSSFIRE_SOURCE_CHARS, remaining));
-    const type = source.type.trim().slice(0, 64);
-    if (!title || !content || !type) return [];
-    remaining -= content.length;
-    const origin = source.origin?.trim().slice(0, 240);
-    return [{ title, content, type, ...(origin ? { origin } : {}) }];
   });
 }
 
@@ -425,21 +446,13 @@ async function callSupabaseAI<T = unknown>(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const selectedSources = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
+  const sourceIds = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
     ? []
     : session.sourceLibrary
       .filter((s) => s.isActive)
-      .map((s) => ({
-        ...(s.id ? { id: s.id } : {}),
-        title: s.title,
-        content: s.content,
-        ...(s.origin ? { origin: s.origin } : {}),
-        type: s.type,
-        ...(s.metadata ? { metadata: s.metadata } : {}),
-      }));
-  const activeSources = feature === 'crossfire'
-    ? boundCrossfireRequestSources(selectedSources)
-    : selectedSources;
+      .map((s) => s.id)
+      .filter((id) => SOURCE_UUID_PATTERN.test(id))
+      .slice(0, MAX_REQUEST_SOURCE_IDS);
 
   const provider = 'openrouter';
   captureProductEvent('ai_request_started', {
@@ -479,7 +492,7 @@ async function callSupabaseAI<T = unknown>(
         provider,
         model: config.model,
         hasAccessToken: !!accessToken,
-        activeSources: activeSources.length,
+        activeSources: sourceIds.length,
       });
     }
 
@@ -494,10 +507,16 @@ async function callSupabaseAI<T = unknown>(
       model: config.model,
       temperature: config.temperature,
       reasoningEffort: config.reasoningEffort ?? 'low',
-      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false ? null : settings.customSystemPrompt || null,
-      sources: activeSources,
+      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false
+        ? null
+        : settings.customSystemPrompt ? truncateUtf8(settings.customSystemPrompt, MAX_CUSTOM_SYSTEM_PROMPT_BYTES) : null,
+      sourceIds,
       workspaceContext: options.workspaceContext,
     };
+
+    if (utf8ByteLength(JSON.stringify(requestBody)) > MAX_CLIENT_REQUEST_BODY_BYTES) {
+      throw new AIError('Request is too large. Shorten the input and try again.', { statusCode: 413, requestId });
+    }
 
     const { data, error } = await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -1309,8 +1328,8 @@ export async function askChat(
   options: AskChatOptions = {}
 ): Promise<AskOutput> {
   return await callSupabaseAI<AskOutput>('ask', withOutputLanguage({
-    message,
-    history,
+    message: boundAskMessage(message),
+    history: boundAskHistory(history),
     mode,
     citationMode: Boolean(options.citationMode),
     webSearch: Boolean(options.webSearch),

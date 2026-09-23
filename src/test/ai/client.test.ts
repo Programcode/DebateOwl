@@ -19,8 +19,8 @@ const clientMocks = vi.hoisted(() => ({
     },
     session: {
         sourceLibrary: [
-            { title: 'Source 1', content: 'Content 1', origin: 'url1', type: 'web', isActive: true },
-            { title: 'Source 2', content: 'Content 2', origin: 'url2', type: 'web', isActive: false },
+            { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Source 1', content: 'Content 1', origin: 'url1', type: 'web', isActive: true },
+            { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Source 2', content: 'Content 2', origin: 'url2', type: 'web', isActive: false },
         ],
         addSource: vi.fn(),
     },
@@ -121,15 +121,12 @@ describe('AI Client Integration', () => {
                     temperature: 0.8,
                     input: expect.objectContaining(input),
                     customSystemPrompt: 'test-system-prompt',
-                    sources: expect.arrayContaining([
-                        expect.objectContaining({ title: 'Source 1' }) // Only active source
-                    ])
+                    sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
                 }),
             }));
 
-            // Verify sources count
             const callArgs = (supabaseMock.functions.invoke.mock.calls[0] as any[])[1];
-            expect(callArgs.body.sources).toHaveLength(1);
+            expect(callArgs.body.sources).toBeUndefined();
         });
 
         it('sends the configured reasoning effort in the non-streaming request', async () => {
@@ -293,7 +290,7 @@ describe('AI Client Integration', () => {
         await askChat('Question', [], 'general', mockConfig, { workspaceContext });
 
         expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
-            body: expect.objectContaining({ customSystemPrompt: null, sources: [], workspaceContext }),
+            body: expect.objectContaining({ customSystemPrompt: null, sourceIds: [], workspaceContext }),
         }));
     });
 
