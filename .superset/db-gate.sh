@@ -61,8 +61,15 @@ if [ -n "${WORKSPACE_GATE_ARTIFACT_ROOT:-}" ]; then
 else
   runtime_dir="$(mktemp -d)"
 fi
-supabase start >"$runtime_dir/supabase.log" 2>&1
+# Shared CI runners intermittently hit registry rate limits while pulling images.
 stack_started=true
+for attempt in 1 2 3; do
+  if supabase start >>"$runtime_dir/supabase.log" 2>&1; then break; fi
+  if [ "$attempt" -eq 3 ]; then exit 1; fi
+  echo "supabase start failed (attempt $attempt); retrying after $((attempt * 30))s"
+  supabase stop --no-backup >/dev/null 2>&1 || true
+  sleep $((attempt * 30))
+done
 npm run test:db
 
 status_json="$(supabase status -o json 2>/dev/null)"
