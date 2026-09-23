@@ -628,6 +628,18 @@ input:focus, textarea:focus, select:focus {
   transition: width 0.5s var(--motion-ease-fluid);
 }
 
+/* Sonner's mobile toaster sets width: 100% plus a left offset, which pushes
+   it past the viewport and widens the whole page on phones. */
+@media (max-width: 600px) {
+  [data-sonner-toaster] {
+    width: auto !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast] {
+    width: 100% !important;
+  }
+}
+
 /* Toast slide-in */
 [data-sonner-toaster] [data-sonner-toast] {
   animation: toast-slide-in 0.3s var(--motion-ease-fluid) both !important;

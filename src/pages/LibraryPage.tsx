@@ -709,7 +709,7 @@ export default function LibraryPage() {
           </Card>
         )}
 
-        <div className="grid gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader className="space-y-4">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
