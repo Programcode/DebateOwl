@@ -12,6 +12,7 @@ import {
 } from "../_shared/cost.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
+import { OPENROUTER_API_URL } from "../_shared/research.ts";
 import {
   AUTO_PRO,
   DEFAULT_MODEL,
@@ -242,7 +243,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         };
         if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const response = await fetch(`${OPENROUTER_API_URL}/v1/chat/completions`, {
           method: "POST",
           headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json" },
           body: JSON.stringify(payload),

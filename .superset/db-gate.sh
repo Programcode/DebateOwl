@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the Docker-backed Supabase, database, collaboration, and real-Auth browser gate
+# Runs the Docker-backed Supabase, database, collaboration, and full-stack browser gate
 # with exclusive access across
 # Superset workspaces of this repo. `supabase/config.toml` sets no
 # project_id or custom port block, so `supabase db start` always binds the
@@ -13,6 +13,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib/lock.sh"
 
 DB_LOCK="$HOME/.superset/debatelab-db.lock"
+FAKE_PROVIDER=debatelab-fake-openrouter
 stack_started=false
 runtime_dir=""
 owned_pids=()
@@ -32,6 +33,7 @@ cleanup() {
   trap - EXIT
 
   stop_owned_processes
+  docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
 
   if [ -n "$runtime_dir" ] && [ -f "$runtime_dir/function.env" ]; then
     rm -- "$runtime_dir/function.env"
@@ -82,7 +84,13 @@ LOCAL_SERVICE_ROLE_KEY="$service_role_key" \
 LOCAL_MAILER_HOST="$mailer_host" \
   node scripts/workspace-test-env.mjs .superset/workspace-test.env "$runtime_dir/function.env"
 
-setsid supabase functions serve workspace-invites --no-verify-jwt \
+# Edge Functions reach the fake provider by container name on the stack network.
+docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
+docker run -d --rm --name "$FAKE_PROVIDER" --network "supabase_network_$project_id" \
+  -p 127.0.0.1:18090:8787 -v "$(pwd)/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
+  node:22-alpine node /fake.mjs >/dev/null
+
+setsid supabase functions serve --no-verify-jwt \
   --env-file "$runtime_dir/function.env" >"$runtime_dir/functions.log" 2>&1 &
 owned_pids+=("$!")
 
@@ -94,19 +102,21 @@ VITE_COLLABORATION_URL=ws://127.0.0.1:12345 \
 owned_pids+=("$!")
 
 mailer_url="$(status_value MAILPIT_URL)"
-for url in "$mailer_url/api/v1/messages" "$app_origin"; do
+for url in "$mailer_url/api/v1/messages" "$app_origin" "http://127.0.0.1:18090/__requests"; do
   for _ in $(seq 1 200); do
     if curl --fail --silent --output /dev/null "$url"; then break; fi
     sleep 0.1
   done
   curl --fail --silent --output /dev/null "$url"
 done
-function_url="$api_url/functions/v1/workspace-invites"
-for _ in $(seq 1 200); do
-  if curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"; then break; fi
-  sleep 0.1
+for function_name in workspace-invites ai ai-stream demo-code-login; do
+  function_url="$api_url/functions/v1/$function_name"
+  for _ in $(seq 1 200); do
+    if curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"; then break; fi
+    sleep 0.1
+  done
+  curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"
 done
-curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"
 
 LOCAL_SUPABASE_URL="$api_url" \
 LOCAL_SUPABASE_ANON_KEY="$anon_key" \
@@ -117,5 +127,7 @@ COLLABORATION_PORT=12345 \
 COLLABORATION_ALLOWED_ORIGINS="$app_origin" \
 SUPABASE_URL="$api_url" \
 SUPABASE_ANON_KEY="$anon_key" \
+FAKE_OPENROUTER_URL=http://127.0.0.1:18090 \
+DEMO_CODE_PEPPER="$(sed -n 's/^DEMO_CODE_PEPPER=//p' .superset/workspace-test.env)" \
 PLAYWRIGHT_BASE_URL="$app_origin" \
   npx playwright test --config=playwright.workspace.config.ts

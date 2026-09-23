@@ -78,8 +78,9 @@ describe('security hardening regressions', () => {
     expect(stream).toContain('const OPENROUTER_PROVIDER = "openrouter"');
     expect(entitlements).not.toContain('api.anthropic.com');
     expect(entitlements).not.toContain('api.openai.com');
-    expect(ai).toContain('https://openrouter.ai/api/v1/chat/completions');
-    expect(stream).toContain('https://openrouter.ai/api/v1/chat/completions');
+    expect(ai).toContain('`${OPENROUTER_API_URL}/v1/chat/completions`');
+    expect(stream).toContain('`${OPENROUTER_API_URL}/v1/chat/completions`');
+    expect(read('supabase/functions/_shared/research.ts')).toContain('Deno.env.get("OPENROUTER_API_URL") || "https://openrouter.ai/api"');
     expect(ai).not.toContain('api.anthropic.com');
     expect(ai).not.toContain('api.openai.com');
     expect(stream).not.toContain('api.anthropic.com');

@@ -43,17 +43,17 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop-chromium',
-      testIgnore: /staging\//,
+      testIgnore: /(staging|full-stack)\//,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
     {
       name: 'mobile-chromium',
-      testIgnore: /staging\//,
+      testIgnore: /(staging|full-stack)\//,
       use: { ...devices['Pixel 5'] },
     },
     {
       name: 'webkit',
-      testIgnore: /staging\//,
+      testIgnore: /(staging|full-stack)\//,
       use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 800 } },
     },
     ...(stagingEnabled ? [{

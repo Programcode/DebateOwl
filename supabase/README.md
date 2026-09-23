@@ -133,7 +133,7 @@ Run focused tests while changing one function, then run the complete Edge Functi
 Document names, never values. Depending on deployed features, server-side configuration includes categories such as:
 
 - Supabase URL, anon key, and service-role key;
-- `OPENROUTER_API_KEY` for all model requests;
+- `OPENROUTER_API_KEY` for all model requests, plus `OPENROUTER_API_URL`, which only the local full-stack gate sets to reach its fake provider (leave it unset everywhere else);
 - research provider keys;
 - Stripe secret, webhook secret, and price configuration;
 - demo-code hashing material;
