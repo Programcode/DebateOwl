@@ -75,6 +75,7 @@ for attempt in 1 2 3; do
   if supabase start >>"$runtime_dir/supabase.log" 2>&1; then break; fi
   if [ "$attempt" -eq 3 ]; then exit 1; fi
   echo "supabase start failed (attempt $attempt); retrying after $((attempt * 30))s"
+  tail -n 3 "$runtime_dir/supabase.log"
   supabase stop --no-backup >/dev/null 2>&1 || true
   sleep $((attempt * 30))
 done
