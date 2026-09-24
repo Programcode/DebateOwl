@@ -198,7 +198,7 @@ A live failure means the pipeline broke with this model. It does not prove how p
 LIVE_PROVIDERS=1 LIVE_MODEL=as-requested LIVE_OPENROUTER_API_KEY=... LIVE_EXA_API_KEY=... ./.superset/db-gate.sh
 ```
 
-`LIVE_MODEL=as-requested` switches the gate to `e2e/model-matrix/`. The proxy forwards whatever model the Edge Function chose, and the spec picks each model in `MODEL_CATALOG` from the Generate page's model menu and generates one researched case. A model that times out against the `ai` function's 60-second provider limit or returns invalid JSON fails its test. Each test prints the provider latency (`latency <model>: <ms>`) so the run log shows how close each model gets to the limit.
+`LIVE_MODEL=as-requested` switches the gate to `e2e/model-matrix/`. The proxy forwards whatever model the Edge Function chose, and the spec picks each model in `MODEL_CATALOG` from the Generate page's model menu and generates one researched case. A model that exhausts the `ai` function's shared 130-second request budget or returns invalid JSON fails its test. Each test prints the provider latency (`latency <model>: <ms>`) so the run log shows how close each model gets to the budget.
 
 `.github/workflows/model-matrix.yml` runs this on Mondays at 04:29 UTC, on demand, and on pull requests that change `supabase/functions/_shared/`, `supabase/functions/ai/`, or `src/lib/ai/`. It is not a required check, because it runs only on those paths. One run costs about $1 in model and search usage.
 

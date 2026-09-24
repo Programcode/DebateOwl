@@ -23,7 +23,7 @@ for (const model of MODEL_CATALOG) {
     const generate = calls.filter((call) => call.feature === "generate");
     expect(generate.map((call) => call.model), "the case came from the selected model").toContain(model.id);
     expect(generate.filter((call) => call.status !== 200), "failed provider calls").toEqual([]);
-    // The ai function gives the provider 60 s; print how close each model runs.
+    // The ai function shares a 130 s request budget; print the provider portion.
     console.log(`latency ${model.id}: ${generate.map((call) => call.ms).join(", ")} ms`);
   });
 }
