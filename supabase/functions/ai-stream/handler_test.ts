@@ -163,6 +163,13 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     if (streamOptions?.include_usage !== true) {
       throw new Error("streaming handler did not request terminal usage");
     }
+    const routing = providerRequest?.provider;
+    if (!routing || typeof routing !== "object" || Array.isArray(routing)) throw new Error("provider preferences were missing");
+    const preferences = routing as Record<string, unknown>;
+    if (preferences.require_parameters !== true) throw new Error("parameter support was not required");
+    if ("sort" in preferences || "order" in preferences) {
+      throw new Error(`sort/order disables OpenRouter balanced routing: ${JSON.stringify(preferences)}`);
+    }
     const system = messages?.find((message) => message.role === "system")?.content ?? "";
     assertIncludes(system, "Answer in clear Markdown that can stream smoothly token by token.");
     assertIncludes(system, "Follow any explicit output-language instruction.");

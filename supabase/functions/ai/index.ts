@@ -743,6 +743,13 @@ async function callAIOnce(
 // source-usage check (its own 8 s Jev timeout), logging, and saving.
 const REQUEST_BUDGET_MS = 130_000;
 
+export function createRequestBudgetSignal(
+  requestSignal: AbortSignal,
+  deadlineSignal = AbortSignal.timeout(REQUEST_BUDGET_MS),
+): AbortSignal {
+  return AbortSignal.any([requestSignal, deadlineSignal]);
+}
+
 async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
   model: string,
@@ -760,6 +767,7 @@ async function callOpenRouter(
     max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
     response_format: { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },
+    // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
     provider: { require_parameters: true },
   };
   if (modelEntry.supportsTemperature) payload.temperature = temperature;
@@ -845,7 +853,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-  const workSignal = AbortSignal.any([req.signal, AbortSignal.timeout(REQUEST_BUDGET_MS)]);
+  const workSignal = createRequestBudgetSignal(req.signal);
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
   }

@@ -237,6 +237,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           messages,
           max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
           reasoning: { effort: reasoningEffort, exclude: true },
+          // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
           provider: { require_parameters: true },
           stream: true,
           stream_options: { include_usage: true },
