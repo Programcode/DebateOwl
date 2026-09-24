@@ -7,11 +7,17 @@ test.describe.configure({ timeout: LIVE_TIMEOUT + 60_000 });
 test("Ask streams a live answer", async ({ signedIn: page }) => {
   await page.goto("/app/ask");
   await page.getByPlaceholder("Ask your debate coach...").fill("In two sentences, how should I weigh access against cost?");
+  const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: LIVE_TIMEOUT });
   await page.getByRole("button", { name: "Send message" }).click();
 
-  await expect.poll(async () => (await fake.requests()).some((call) => call.feature === "ask-stream" && (call as { status?: number }).status === 200), { timeout: LIVE_TIMEOUT }).toBe(true);
+  // A 200 stream can still end early; only the final event proves a complete answer.
+  const response = await stream;
+  expect(response.status()).toBe(200);
+  const body = await response.text();
+  expect(body).toContain("event: final");
+  expect(body).not.toContain("event: error");
+  await expect(page.getByText("Response was interrupted")).toHaveCount(0);
   // The client falls back to the structured endpoint if streaming fails.
-  await expect(page.getByRole("button", { name: "Send message" })).toBeVisible({ timeout: LIVE_TIMEOUT });
   expect((await fake.requests()).map((call) => call.feature)).not.toContain("ask");
   await expectProviderCallsHealthy(["ask-stream"]);
 });
@@ -67,12 +73,23 @@ test("Crossfire answers live and produces a debrief", async ({ signedIn: page })
 
   await page.getByTestId("crossfire-input").fill("What evidence links fewer private cars to safer streets?");
   const turn = aiResponse(page, "crossfire");
+  const signal = page.waitForResponse((response) => {
+    if (!response.url().includes("/functions/v1/ai")) return false;
+    try {
+      return (response.request().postDataJSON() as { input?: { operation?: string } }).input?.operation === "signal";
+    } catch {
+      return false;
+    }
+  }, { timeout: LIVE_TIMEOUT });
   await page.getByTestId("submit-turn").click();
   const answer = (await turn).output as { type: string; text: string };
   expect(answer.type).toBe("answer");
   await expect(page.getByText(answer.text.slice(0, 40), { exact: false })).toBeVisible();
+  // The answer's signal is judged by a live Jev decision, recorded by the proxy.
+  expect((await signal).status()).toBe(200);
+  await expect.poll(async () => (await fake.requests()).some((call) => call.feature === "jev")).toBe(true);
 
   await page.getByTestId("end-crossfire").click();
   await expect(page.getByTestId("crossfire-debrief")).toBeVisible({ timeout: LIVE_TIMEOUT });
-  await expectProviderCallsHealthy(["crossfire"]);
+  await expectProviderCallsHealthy(["crossfire", "jev"]);
 });

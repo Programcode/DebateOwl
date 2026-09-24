@@ -42,6 +42,8 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # db-gate.sh fails before starting anything when either key is missing.
+      # Accepted risk (2026-09-24): pull-request code runs with these keys, so
+      # anyone who can push a branch here could read them. Keep them low-limit.
       - name: Live provider journeys
         env:
           LIVE_PROVIDERS: 1
