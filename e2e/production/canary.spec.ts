@@ -96,11 +96,15 @@ test("the canary account gets a streamed answer from a real model", async ({ pag
   const response = await stream;
   expect(response.status()).toBe(200);
   // ai-stream emits SSE blocks of `event: delta` with `data: {"text": ...}`.
-  const text = (await response.text()).split("\n\n")
+  const body = await response.text();
+  expect(body).toContain("event: final");
+  expect(body).not.toContain("event: error");
+  const text = body.split("\n\n")
     .filter((block) => block.includes("event: delta"))
     .map((block) => JSON.parse(block.split("\n").find((line) => line.startsWith("data:"))!.slice(5)).text as string)
     .join("");
   expect(text.trim().length, "streamed answer text").toBeGreaterThan(0);
+  await expect(page.getByText("Response was interrupted")).toHaveCount(0);
 });
 
 test("the canary account generates a case", async ({ page }) => {
