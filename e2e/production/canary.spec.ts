@@ -28,11 +28,24 @@ test("the production site loads and guards the app", async ({ page, baseURL }) =
   expect(errors).toEqual([]);
 });
 
-test("every browser-facing Edge Function is deployed and allows the site origin", async ({ request, baseURL }) => {
+test("every browser-facing Edge Function is deployed and passes the browser's preflight", async ({ request, baseURL }) => {
+  // The same preflight Chromium sends before supabase-js POSTs with a session.
+  const requestedHeaders = ["authorization", "apikey", "content-type", "x-client-info"];
   for (const name of functions) {
-    const response = await request.fetch(`${supabaseUrl}/functions/v1/${name}`, { method: "OPTIONS", headers: { Origin: baseURL! } });
+    const response = await request.fetch(`${supabaseUrl}/functions/v1/${name}`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: baseURL!,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": requestedHeaders.join(", "),
+      },
+    });
     expect(response.status(), `${name} preflight`).toBeLessThan(300);
-    expect(response.headers()["access-control-allow-origin"], `${name} CORS origin`).toBe(baseURL);
+    const headers = response.headers();
+    expect(headers["access-control-allow-origin"], `${name} allowed origin`).toBe(baseURL);
+    expect(headers["access-control-allow-methods"], `${name} allowed methods`).toMatch(/\bPOST\b/);
+    const allowed = (headers["access-control-allow-headers"] ?? "").toLowerCase().split(/\s*,\s*/);
+    expect(allowed, `${name} allowed headers`).toEqual(expect.arrayContaining(requestedHeaders));
   }
 });
 
