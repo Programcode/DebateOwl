@@ -7,11 +7,13 @@
 // With UPSTREAM set, it becomes a recording proxy for the live gate instead:
 // every chat call goes to the real provider with the model pinned to
 // LIVE_MODEL, and calls past MAX_UPSTREAM_CALLS are refused to bound cost.
+// LIVE_MODEL=as-requested forwards the model the Edge Function chose.
 import { createServer } from "node:http";
 
 const port = Number(process.env.PORT ?? 8787);
 const upstream = process.env.UPSTREAM;
 const liveModel = process.env.LIVE_MODEL;
+const chatModel = (requested) => (liveModel === "as-requested" ? requested : liveModel);
 const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
 if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
 const requests = [];
@@ -212,7 +214,7 @@ async function proxy(req, res, path) {
   const body = JSON.parse(await readBody(req));
   const chat = path === "/api/v1/chat/completions";
   const record = chat
-    ? { ...classify(body), requestedModel: body.model, model: liveModel, stream: body.stream === true }
+    ? { ...classify(body), requestedModel: body.model, model: chatModel(body.model), stream: body.stream === true }
     : { feature: "jev", model: body.model };
   delete record.output;
   requests.push(record);
@@ -224,7 +226,7 @@ async function proxy(req, res, path) {
   const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
     method: "POST",
     headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
-    body: JSON.stringify(chat ? { ...body, model: liveModel } : body),
+    body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
   });
   record.status = response.status;
   res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });

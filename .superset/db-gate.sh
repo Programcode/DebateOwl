@@ -16,6 +16,7 @@ DB_LOCK="$HOME/.superset/debatelab-db.lock"
 FAKE_PROVIDER=debatelab-fake-openrouter
 # LIVE_PROVIDERS=1 runs e2e/live against real OpenRouter, Jev, and Exa instead of
 # the fake provider. It needs LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY.
+# LIVE_MODEL=as-requested runs e2e/model-matrix instead: one case per catalog model.
 LIVE_PROVIDERS="${LIVE_PROVIDERS:-0}"
 LIVE_MODEL="${LIVE_MODEL:-meta/muse-spark-1.3-contributor}"  # empty also means default
 if [ "$LIVE_PROVIDERS" = 1 ] && { [ -z "${LIVE_OPENROUTER_API_KEY:-}" ] || [ -z "${LIVE_EXA_API_KEY:-}" ]; }; then
@@ -143,7 +144,9 @@ for function_name in workspace-invites ai ai-stream demo-code-login admin announ
   curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"
 done
 
-if [ "$LIVE_PROVIDERS" = 1 ]; then
+if [ "$LIVE_PROVIDERS" = 1 ] && [ "$LIVE_MODEL" = as-requested ]; then
+  test_selection=(e2e/model-matrix --project=desktop-chromium)
+elif [ "$LIVE_PROVIDERS" = 1 ]; then
   test_selection=(e2e/live --project=desktop-chromium)
 else
   test_selection=(e2e/workspace-collaboration.spec.ts e2e/full-stack)
