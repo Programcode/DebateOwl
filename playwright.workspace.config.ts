@@ -4,7 +4,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:18081";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /(workspace-collaboration|full-stack\/.+)\.spec\.ts$/,
+  testMatch: /(workspace-collaboration|(full-stack|live|model-matrix)\/.+)\.spec\.ts$/,
   fullyParallel: false,
   workers: 1,
   reporter: "list",

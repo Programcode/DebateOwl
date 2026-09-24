@@ -1,0 +1,49 @@
+name: Production canary
+
+# Checks the live site after every Vercel production deployment and daily.
+# Read-only on deployments. The daily and manual runs also make two real AI
+# requests (a streamed Ask and a case) as the dedicated canary account.
+on:
+  deployment_status:
+  schedule:
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Production canary
+        env:
+          PROD_SUPABASE_ANON_KEY: ${{ vars.PROD_SUPABASE_ANON_KEY }}
+          PROD_CANARY_EMAIL: ${{ secrets.PROD_CANARY_EMAIL }}
+          PROD_CANARY_PASSWORD: ${{ secrets.PROD_CANARY_PASSWORD }}
+          CANARY_AI_REQUESTS: ${{ github.event_name != 'deployment_status' }}
+        run: npx playwright test --config=playwright.production.config.ts

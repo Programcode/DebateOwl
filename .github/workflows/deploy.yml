@@ -93,6 +93,8 @@ jobs:
 
       - name: Database and real workspace journey
         env:
+          # ghcr.io rate-limits shared runners; the same images are on ECR.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
           WORKSPACE_GATE_ARTIFACT_ROOT: ${{ runner.temp }}/workspace-gate
         run: ./.superset/db-gate.sh
 

@@ -3,11 +3,22 @@
 // OPENROUTER_API_URL, so their auth, quota, source loading, prompt building,
 // and output validation all run for real. Unknown prompts fail loudly: a prompt
 // change must update this file rather than silently receive a generic answer.
+//
+// With UPSTREAM set, it becomes a recording proxy for the live gate instead:
+// every chat call goes to the real provider with the model pinned to
+// LIVE_MODEL, and calls past MAX_UPSTREAM_CALLS are refused to bound cost.
+// LIVE_MODEL=as-requested forwards the model the Edge Function chose.
 import { createServer } from "node:http";
 
 const port = Number(process.env.PORT ?? 8787);
+const upstream = process.env.UPSTREAM;
+const liveModel = process.env.LIVE_MODEL;
+const chatModel = (requested) => (liveModel === "as-requested" ? requested : liveModel);
+const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
+if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
 const requests = [];
 let failures = [];
+let upstreamCalls = 0;
 
 const MARK = "FAKE-PROVIDER";
 
@@ -166,6 +177,17 @@ function classify(body) {
   return { feature: route[0], system, user, output: route[2](user) };
 }
 
+function jevAnswers(questions) {
+  return Object.fromEntries(Object.entries(questions).map(([id, question]) => {
+    if (question.type === "noul") return [id, { type: "noul", noul: 0.8 }];
+    const labels = question.type === "choice" ? Object.keys(question.criteria) : question.criteria.map((_, index) => String(index));
+    const probabilities = Object.fromEntries(labels.map((label, index) => [label, index === 0 ? 0.9 : 0.1 / (labels.length - 1)]));
+    if (question.type === "choice") return [id, { type: "choice", choice: labels[0], confidence: 0.9, probabilities }];
+    const legend = Object.fromEntries(question.criteria.map((criterion, index) => [String(index), criterion]));
+    return [id, { type: "score", score: 0, confidence: 0.9, probabilities, legend }];
+  }));
+}
+
 function json(res, status, value) {
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(value));
@@ -188,6 +210,40 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+async function proxy(req, res, path) {
+  const body = JSON.parse(await readBody(req));
+  const chat = path === "/api/v1/chat/completions";
+  const record = chat
+    ? { ...classify(body), requestedModel: body.model, model: chatModel(body.model), stream: body.stream === true }
+    : { feature: "jev", model: body.model };
+  delete record.output;
+  requests.push(record);
+  if (++upstreamCalls > maxUpstreamCalls) {
+    record.status = 429;
+    return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
+  }
+  const started = Date.now();
+  try {
+    const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
+      method: "POST",
+      headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
+      body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
+    });
+    record.status = response.status;
+    res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
+    for await (const chunk of response.body ?? []) res.write(chunk);
+    res.end();
+  } catch (error) {
+    record.status = 502;
+    const message = error instanceof Error ? error.message : "upstream connection failed";
+    console.error(`live provider request failed: ${message}`);
+    if (!res.headersSent) json(res, 502, { error: { message: "Live provider request failed" } });
+    else res.destroy();
+  } finally {
+    record.ms = Date.now() - started;
+  }
+}
+
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://fake");
   if (url.pathname === "/__requests" && req.method === "GET") return json(res, 200, requests);
@@ -201,10 +257,15 @@ createServer(async (req, res) => {
     failures.push({ feature, count, status });
     return json(res, 200, { ok: true });
   }
-  if (url.pathname === "/api/alpha/decisions") {
-    // Jev is optional: callers fall back to deterministic ranking and signals.
-    requests.push({ feature: "jev", path: url.pathname });
-    return json(res, 503, { error: { message: "Jev is not faked" } });
+  if (upstream && req.method === "POST" && (url.pathname === "/api/v1/chat/completions" || url.pathname === "/api/alpha/decisions")) {
+    return proxy(req, res, url.pathname);
+  }
+  if (url.pathname === "/api/alpha/decisions" && req.method === "POST") {
+    // Confident, schema-valid answers so Jev-dependent paths (Crossfire
+    // signals, source ranking) run end to end instead of falling back.
+    const body = JSON.parse(await readBody(req));
+    requests.push({ feature: "jev", model: body.model, status: 200 });
+    return json(res, 200, { model: body.model, answers: jevAnswers(body.questions ?? {}), usage: { input_tokens: 40, output_tokens: 8, cost: 0.00001 } });
   }
   if (url.pathname !== "/api/v1/chat/completions" || req.method !== "POST") {
     return json(res, 404, { error: { message: `Unexpected ${req.method} ${url.pathname}` } });
@@ -228,4 +289,4 @@ createServer(async (req, res) => {
     choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(output) } }],
     usage,
   });
-}).listen(port, "0.0.0.0", () => console.log(`fake OpenRouter listening on ${port}`));
+}).listen(port, "0.0.0.0", () => console.log(`${upstream ? "live proxy" : "fake OpenRouter"} listening on ${port}`));

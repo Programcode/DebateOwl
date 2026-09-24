@@ -1,0 +1,75 @@
+name: Model matrix
+
+# Generates one case with every model in the catalog, unpinned, so a model that
+# times out or returns invalid JSON fails here before users hit it. One run
+# costs about $1, so it runs weekly and when model routing, prompts, or the ai
+# function change.
+on:
+  pull_request:
+    paths:
+      - supabase/functions/_shared/**
+      - supabase/functions/ai/**
+      - src/lib/ai/**
+      - e2e/model-matrix/**
+      - .github/workflows/model-matrix.yml
+  schedule:
+    - cron: "29 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  model-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.116.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # db-gate.sh fails before starting anything when either key is missing.
+      # Accepted risk (2026-09-24): pull-request code runs with these keys, so
+      # anyone who can push a branch here could read them. Keep them low-limit.
+      - name: Case generation with every catalog model
+        env:
+          LIVE_PROVIDERS: 1
+          LIVE_MODEL: as-requested
+          LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
+          LIVE_EXA_API_KEY: ${{ secrets.LIVE_EXA_API_KEY }}
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+          WORKSPACE_GATE_ARTIFACT_ROOT: ${{ runner.temp }}/workspace-gate
+        run: ./.superset/db-gate.sh
+
+      - name: Upload live failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: model-matrix-failure-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/workspace-gate/
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

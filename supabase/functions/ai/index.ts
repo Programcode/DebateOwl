@@ -737,6 +737,19 @@ async function callAIOnce(
   );
 }
 
+// Supabase answers 504 when a function has not responded within 150 s. Every
+// provider call shares one budget below that, so a slow model can use the time
+// research left instead of a fixed 60 s. The margin covers the post-generation
+// source-usage check (its own 8 s Jev timeout), logging, and saving.
+const REQUEST_BUDGET_MS = 130_000;
+
+export function createRequestBudgetSignal(
+  requestSignal: AbortSignal,
+  deadlineSignal = AbortSignal.timeout(REQUEST_BUDGET_MS),
+): AbortSignal {
+  return AbortSignal.any([requestSignal, deadlineSignal]);
+}
+
 async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
   model: string,
@@ -754,6 +767,7 @@ async function callOpenRouter(
     max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
     response_format: { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },
+    // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
     provider: { require_parameters: true },
   };
   if (modelEntry.supportsTemperature) payload.temperature = temperature;
@@ -762,7 +776,7 @@ async function callOpenRouter(
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
-  }, 60000, signal);
+  }, REQUEST_BUDGET_MS, signal);
   if (!response.ok) throw new Error(`OpenRouter error: ${errorBody ?? ""}`);
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
@@ -839,6 +853,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  const workSignal = createRequestBudgetSignal(req.signal);
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
   }
@@ -1054,7 +1069,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     const evaluated = await evaluateCrossfireExchange({
       transcript: crossfireInput.transcript,
       reply: crossfireInput.reply,
-      signal: req.signal,
+      signal: workSignal,
     });
     const signalUsage = evaluated.jev?.usage ?? evaluated.jevUsage;
     if (signalUsage) await logUsage(userId, "jev_crossfire_signal", provider, JEV_MODEL, signalUsage, undefined, evaluated.jevUsage ? "error" : "success", evaluated.jevUsage ? "jev_incomplete" : undefined);
@@ -1235,7 +1250,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       canAccessProModels: Boolean(rateLimit.canAccessProModels),
       reasoningEffort: requestedReasoningEffort,
       sourceCount: Array.isArray(rawSources) ? rawSources.length : 0,
-      signal: req.signal,
+      signal: workSignal,
     });
     model = resolution.resolvedModel;
     modelEntry = resolution.modelEntry;
@@ -1285,7 +1300,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         feature,
         requestText: JSON.stringify(sanitizedInput),
         sources: sourceDecisionCandidates,
-        signal: req.signal,
+        signal: workSignal,
       });
       sourceAssessments = ranked.assessments;
       sources = ranked.sources.map(({ title, content, origin, type }) => ({ title, content, ...(origin ? { origin } : {}), type }));
@@ -1314,7 +1329,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     provider,
     model,
     reasoningEffort,
-    signal: req.signal,
+    signal: workSignal,
     onTimeout: () => {
       researchAccountingIncomplete = true;
     },
@@ -1376,7 +1391,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature);
       const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
       const output = cleanGeneratedText(aiResult.output);
       const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
       const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);
@@ -1445,7 +1460,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         [{ role: "user", content: userPrompt }],
         temperature,
         reasoningEffort,
-        req.signal,
+        workSignal,
       ));
       const cleanedOutput = cleanGeneratedText(aiResult.output);
       const output = crossfireInput.operation === "next-turn"
@@ -1487,7 +1502,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
 
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
       const output = cleanGeneratedText(aiResult.output);
 
       // Post-process: quality floor. Only citations whose URL matches fetched,
@@ -1545,7 +1560,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       let urlContext = "";
       if (urls.size > 0) {
         const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
-          const content = await exaGetContents(u, req.signal);
+          const content = await exaGetContents(u, workSignal);
           return content.trim()
             ? `--- Content from ${u} ---\n${content.slice(0, 8000)}\n--- End of ${u} ---`
             : "";
@@ -1600,7 +1615,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
       const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
       const messages = [...history, { role: "user", content: prompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
       const output = cleanGeneratedText(aiResult.output);
 
       if (output && typeof output === "object") {
@@ -1688,7 +1703,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         feature,
         requestText: JSON.stringify(sanitizedInput),
         sources: discoveredCandidates,
-        signal: req.signal,
+        signal: workSignal,
       });
       const discoveredRankingUsage = discoveredRanking.jev?.usage ?? discoveredRanking.jevUsage;
       if (discoveredRankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, discoveredRankingUsage, undefined, discoveredRanking.jevUsage ? "error" : "success", discoveredRanking.jevUsage ? "jev_incomplete" : undefined);
@@ -1717,7 +1732,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
       const output = cleanGeneratedText(aiResult.output);
 
       // Preserve model evidence warnings when research exists. If research
@@ -1762,6 +1777,8 @@ export async function handleRequest(req: Request): Promise<Response> {
           strength: discoveredAssessmentByKey.get(source.key)?.strength ?? 0,
         })),
       ].slice(0, 10);
+      // The case is already complete, so this optional check must not inherit
+      // an almost spent request budget and turn a finished case into a 500.
       const caseUsage = await identifyCaseSourceUsage({
         caseText: JSON.stringify(output),
         sources: usageCandidates,
@@ -1812,7 +1829,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
       const output = cleanGeneratedText(aiResult.output);
       enforceBrainstormControls(output, side, outputMode);
 
@@ -1840,7 +1857,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       const systemPrompt = await buildSystemPromptFor(feature, research);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
       const messages = [{ role: "user", content: userPrompt }];
-      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+      const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
       const output = cleanGeneratedText(aiResult.output);
       enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
@@ -1856,7 +1873,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     const systemPrompt = await buildSystemPromptFor(feature);
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, req.signal));
+    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
     const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;
@@ -1890,7 +1907,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       : undefined;
     // A successful main call takes precedence over usage attached to a later
     // post-processing error. This avoids counting its repair attempts twice.
-    const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, req.signal?.aborted === true);
+    const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, workSignal?.aborted === true);
     await logUsage(
       userId,
       feature,

@@ -71,7 +71,11 @@ CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webk
 
 - Start bug fixes with a failing test or repeatable browser reproduction when a suitable test layer exists.
 - Stub sessions prove rendering only. Do not call them authenticated backend proof.
-- Never put staging or production credentials in jobs, logs, traces, screenshots, commits, comments, or docs.
+- Never put staging or production credentials in jobs, logs, traces, screenshots, commits, comments, or docs. Two scoped exceptions reach jobs only through GitHub Actions secrets:
+  - the protected staging values;
+  - the dedicated production canary account (`PROD_CANARY_EMAIL` and `PROD_CANARY_PASSWORD`, a regular user capped at 10 AI requests a day), which Adam approved on 2026-09-24.
+
+  Neither exception may appear in logs, traces, or screenshots. No other production credential may enter a job.
 - Never substitute the production project when local or staging access is unavailable.
 - Production deployments, data changes, migrations, Edge Function deployments, and secret changes require explicit authorization.
 - A local pass proves only the local commit. Check the current-head GitHub run before calling CI green.

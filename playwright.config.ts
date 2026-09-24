@@ -43,17 +43,17 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop-chromium',
-      testIgnore: /(staging|full-stack)\//,
+      testIgnore: /(staging|full-stack|live|model-matrix|production)\//,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
     {
       name: 'mobile-chromium',
-      testIgnore: /(staging|full-stack)\//,
+      testIgnore: /(staging|full-stack|live|model-matrix|production)\//,
       use: { ...devices['Pixel 5'] },
     },
     {
       name: 'webkit',
-      testIgnore: /(staging|full-stack)\//,
+      testIgnore: /(staging|full-stack|live|model-matrix|production)\//,
       use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 800 } },
     },
     ...(stagingEnabled ? [{

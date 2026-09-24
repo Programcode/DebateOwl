@@ -1,4 +1,4 @@
-import { admin, expect, MARK, providerCall, signIn, stackReady, test } from "./stack";
+import { admin, createDemoUser, deleteDemoUser, expect, MARK, providerCall, signIn, stackReady, test } from "./stack";
 import type { Page } from "@playwright/test";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
@@ -35,6 +35,41 @@ test("only active Library sources ground AI requests, and deletions persist", as
 
   const { data } = await admin.from("sources").select("title").eq("user_id", await user.userId());
   expect(data?.map((row) => row.title)).toEqual(["Active study"]);
+});
+
+test("Delete All My Data erases the account's saved work and nobody else's", async ({ signedIn: page, user }) => {
+  const other = await createDemoUser("bystander");
+  try {
+    // A signed-in session creates the bystander's rows, so this also proves the erase is scoped by user.
+    const bystander = await (await page.context().browser()!.newContext()).newPage();
+    await bystander.addInitScript(() => localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 })));
+    await signIn(bystander, other);
+    await bystander.goto("/app/library");
+    await addSource(bystander, "Bystander study", "Kept after another account erases its data.");
+    await bystander.context().close();
+
+    await page.goto("/app/library");
+    await addSource(page, "My study", "Erased with the account data.");
+    const userId = await user.userId();
+    const otherId = await other.userId();
+
+    await page.goto("/app/settings");
+    await page.getByRole("button", { name: "Delete All My Data" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Type your email to confirm").fill(user.email);
+    await dialog.getByRole("button", { name: "Delete All My Data" }).click();
+    await expect(page.getByText("Data Deleted").first()).toBeVisible();
+
+    const { data: mine } = await admin.from("sources").select("id").eq("user_id", userId);
+    expect(mine).toEqual([]);
+    const { data: theirs } = await admin.from("sources").select("title").eq("user_id", otherId);
+    expect(theirs?.map((row) => row.title)).toEqual(["Bystander study"]);
+
+    await page.goto("/app/library");
+    await expect(page.getByRole("switch", { name: "Toggle My study" })).toHaveCount(0);
+  } finally {
+    await deleteDemoUser(other);
+  }
 });
 
 test("the output language setting follows the account and reaches the model", async ({ signedIn: page, user, browser }) => {

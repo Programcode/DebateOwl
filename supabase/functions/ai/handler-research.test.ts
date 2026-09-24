@@ -15,9 +15,35 @@ const environment = {
 
 for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value);
 
-const { handleRequest } = await import("./index.ts");
+const { createRequestBudgetSignal, handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
 const { MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+
+Deno.test("AI request work shares one deadline signal", () => {
+  const caller = new AbortController();
+  const deadline = new AbortController();
+  const signal = createRequestBudgetSignal(caller.signal, deadline.signal);
+  const reason = new DOMException("Budget exhausted", "TimeoutError");
+
+  deadline.abort(reason);
+
+  if (!signal.aborted || signal.reason !== reason) {
+    throw new Error("shared work did not stop at the request deadline");
+  }
+});
+
+Deno.test("AI request work keeps caller cancellation", () => {
+  const caller = new AbortController();
+  const deadline = new AbortController();
+  const signal = createRequestBudgetSignal(caller.signal, deadline.signal);
+  const reason = new DOMException("Caller disconnected", "AbortError");
+
+  caller.abort(reason);
+
+  if (!signal.aborted || signal.reason !== reason) {
+    throw new Error("shared work ignored caller cancellation");
+  }
+});
 
 Deno.test("AI handlers reject malformed controls before quota or provider work", async () => {
   const originalFetch = globalThis.fetch;
@@ -653,6 +679,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const provider = body.provider as Record<string, unknown>;
       if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
       if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
+      if ("sort" in provider || "order" in provider) throw new Error(`sort/order disabled balanced routing for ${entry.id}`);
       if ((body.response_format as Record<string, unknown>)?.type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
       if (entry.supportsTemperature !== ("temperature" in body)) throw new Error(`temperature support mismatch for ${entry.id}`);
     }
