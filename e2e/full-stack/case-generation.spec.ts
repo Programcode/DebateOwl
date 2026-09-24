@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { admin, expect, fake, MARK, providerCall, signIn, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
@@ -83,4 +84,21 @@ test("a saved case persists to the account and reloads from History", async ({ s
   await other.goto("/app/history");
   await expect(other.getByText(title)).toBeVisible();
   await fresh.close();
+});
+
+test("a generated case exports to PDF and DOCX files", async ({ signedIn: page }) => {
+  await page.goto("/app/generate");
+  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+
+  // PDF files start with "%PDF"; DOCX files are ZIP archives starting with "PK".
+  for (const [button, extension, magic] of [["PDF", ".pdf", "%PDF"], ["DOCX", ".docx", "PK"]] as const) {
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: button, exact: true }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(new RegExp(`\\${extension}$`));
+    const bytes = await readFile((await file.path())!);
+    expect(bytes.subarray(0, magic.length).toString("latin1"), `${button} file signature`).toBe(magic);
+  }
 });
