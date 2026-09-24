@@ -3,11 +3,20 @@
 // OPENROUTER_API_URL, so their auth, quota, source loading, prompt building,
 // and output validation all run for real. Unknown prompts fail loudly: a prompt
 // change must update this file rather than silently receive a generic answer.
+//
+// With UPSTREAM set, it becomes a recording proxy for the live gate instead:
+// every chat call goes to the real provider with the model pinned to
+// LIVE_MODEL, and calls past MAX_UPSTREAM_CALLS are refused to bound cost.
 import { createServer } from "node:http";
 
 const port = Number(process.env.PORT ?? 8787);
+const upstream = process.env.UPSTREAM;
+const liveModel = process.env.LIVE_MODEL;
+const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
+if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
 const requests = [];
 let failures = [];
+let upstreamCalls = 0;
 
 const MARK = "FAKE-PROVIDER";
 
@@ -188,6 +197,31 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+async function proxy(req, res, path) {
+  const body = JSON.parse(await readBody(req));
+  const chat = path === "/api/v1/chat/completions";
+  const record = chat
+    ? { ...classify(body), requestedModel: body.model, model: liveModel, stream: body.stream === true }
+    : { feature: "jev", model: body.model };
+  delete record.output;
+  requests.push(record);
+  if (++upstreamCalls > maxUpstreamCalls) {
+    record.status = 429;
+    return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
+  }
+  const started = Date.now();
+  const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
+    method: "POST",
+    headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
+    body: JSON.stringify(chat ? { ...body, model: liveModel } : body),
+  });
+  record.status = response.status;
+  res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
+  for await (const chunk of response.body ?? []) res.write(chunk);
+  res.end();
+  record.ms = Date.now() - started;
+}
+
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://fake");
   if (url.pathname === "/__requests" && req.method === "GET") return json(res, 200, requests);
@@ -200,6 +234,9 @@ createServer(async (req, res) => {
     const { feature, count = 1, status = 500 } = JSON.parse(await readBody(req) || "{}");
     failures.push({ feature, count, status });
     return json(res, 200, { ok: true });
+  }
+  if (upstream && req.method === "POST" && (url.pathname === "/api/v1/chat/completions" || url.pathname === "/api/alpha/decisions")) {
+    return proxy(req, res, url.pathname);
   }
   if (url.pathname === "/api/alpha/decisions") {
     // Jev is optional: callers fall back to deterministic ranking and signals.
@@ -228,4 +265,4 @@ createServer(async (req, res) => {
     choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(output) } }],
     usage,
   });
-}).listen(port, "0.0.0.0", () => console.log(`fake OpenRouter listening on ${port}`));
+}).listen(port, "0.0.0.0", () => console.log(`${upstream ? "live proxy" : "fake OpenRouter"} listening on ${port}`));

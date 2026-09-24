@@ -14,6 +14,14 @@ source "$DIR/lib/lock.sh"
 
 DB_LOCK="$HOME/.superset/debatelab-db.lock"
 FAKE_PROVIDER=debatelab-fake-openrouter
+# LIVE_PROVIDERS=1 runs e2e/live against real OpenRouter, Jev, and Exa instead of
+# the fake provider. It needs LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY.
+LIVE_PROVIDERS="${LIVE_PROVIDERS:-0}"
+LIVE_MODEL="${LIVE_MODEL:-meta/muse-spark-1.3-contributor}"  # empty also means default
+if [ "$LIVE_PROVIDERS" = 1 ] && { [ -z "${LIVE_OPENROUTER_API_KEY:-}" ] || [ -z "${LIVE_EXA_API_KEY:-}" ]; }; then
+  echo "LIVE_PROVIDERS=1 requires LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY" >&2
+  exit 1
+fi
 stack_started=false
 runtime_dir=""
 owned_pids=()
@@ -70,7 +78,7 @@ for attempt in 1 2 3; do
   supabase stop --no-backup >/dev/null 2>&1 || true
   sleep $((attempt * 30))
 done
-npm run test:db
+if [ "$LIVE_PROVIDERS" != 1 ]; then npm run test:db; fi
 
 status_json="$(supabase status -o json 2>/dev/null)"
 status_value() {
@@ -90,11 +98,20 @@ fi
 LOCAL_SERVICE_ROLE_KEY="$service_role_key" \
 LOCAL_MAILER_HOST="$mailer_host" \
   node scripts/workspace-test-env.mjs .superset/workspace-test.env "$runtime_dir/function.env"
+provider_mode=()
+if [ "$LIVE_PROVIDERS" = 1 ]; then
+  # printf is a builtin, so the keys never appear in a process list or log.
+  grep -v '^OPENROUTER_API_KEY=' "$runtime_dir/function.env" >"$runtime_dir/function.env.next"
+  printf 'OPENROUTER_API_KEY=%s\nEXA_API_KEY=%s\n' "$LIVE_OPENROUTER_API_KEY" "$LIVE_EXA_API_KEY" >>"$runtime_dir/function.env.next"
+  mv -- "$runtime_dir/function.env.next" "$runtime_dir/function.env"
+  chmod 600 "$runtime_dir/function.env"
+  provider_mode=(-e UPSTREAM=https://openrouter.ai/api -e "LIVE_MODEL=$LIVE_MODEL")
+fi
 
 # Edge Functions reach the fake provider by container name on the stack network.
 docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
 docker run -d --rm --name "$FAKE_PROVIDER" --network "supabase_network_$project_id" \
-  -p 127.0.0.1:18090:8787 -v "$(pwd)/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
+  "${provider_mode[@]}" -p 127.0.0.1:18090:8787 -v "$(pwd)/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
   node:22-alpine node /fake.mjs >/dev/null
 
 setsid supabase functions serve --no-verify-jwt \
@@ -125,6 +142,11 @@ for function_name in workspace-invites ai ai-stream demo-code-login admin announ
   curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"
 done
 
+if [ "$LIVE_PROVIDERS" = 1 ]; then
+  test_selection=(e2e/live --project=desktop-chromium)
+else
+  test_selection=(e2e/workspace-collaboration.spec.ts e2e/full-stack)
+fi
 LOCAL_SUPABASE_URL="$api_url" \
 LOCAL_SUPABASE_ANON_KEY="$anon_key" \
 LOCAL_SUPABASE_SERVICE_ROLE_KEY="$service_role_key" \
@@ -135,6 +157,7 @@ COLLABORATION_ALLOWED_ORIGINS="$app_origin" \
 SUPABASE_URL="$api_url" \
 SUPABASE_ANON_KEY="$anon_key" \
 FAKE_OPENROUTER_URL=http://127.0.0.1:18090 \
+LIVE_MODEL="$LIVE_MODEL" \
 DEMO_CODE_PEPPER="$(sed -n 's/^DEMO_CODE_PEPPER=//p' .superset/workspace-test.env)" \
 PLAYWRIGHT_BASE_URL="$app_origin" \
-  npx playwright test --config=playwright.workspace.config.ts
+  npx playwright test --config=playwright.workspace.config.ts "${test_selection[@]}"

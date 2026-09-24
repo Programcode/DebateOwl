@@ -172,6 +172,43 @@ Tests assert the rendered result, what the Edge Function sent upstream (read bac
 
 These journeys do not prove live provider behavior, web research (the local stack has no search key), Jev decisions (the fake returns 503 and callers use their fallbacks), Stripe, or Google export.
 
+### Live provider journeys
+
+```bash
+LIVE_PROVIDERS=1 LIVE_OPENROUTER_API_KEY=... LIVE_EXA_API_KEY=... ./.superset/db-gate.sh
+```
+
+Live mode uses the same locked stack but skips pgTAP and the fake-provider specs. It runs `e2e/live/` on desktop Chromium against real OpenRouter, Jev, and Exa. Imported web pages are fetched live too. The fake provider becomes a recording proxy. It forwards every chat call to OpenRouter with the model pinned to `LIVE_MODEL` (default `meta/muse-spark-1.3-contributor`; CI reads the `LIVE_MODEL` repository variable), passes Jev decisions through unchanged, and refuses calls past `MAX_UPSTREAM_CALLS` (200). Contributor models only serve accounts that allow paid model training in OpenRouter privacy settings.
+
+The specs cover web-researched case generation, verified Factoids citations, Ask with web search, URL import, streamed Ask, Attack, Brainstorm, a judged sparring round, and Crossfire with live Jev signals. Outputs vary, so tests assert structure rather than text:
+
+- the Edge Function response is 200 and has the expected shape;
+- research returned `http(s)` sources and the UI rendered them;
+- database rows were written;
+- every provider call returned 200 and used the pinned model.
+
+A live failure means the pipeline broke with this model. It does not prove how production models behave, because each model has its own latency and JSON quality.
+
+`.github/workflows/live-e2e.yml` runs this on pull requests, nightly at 03:17 UTC, and on demand, using the `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY` repository secrets. The gate exits before starting anything when either key is missing, so a misconfigured job fails instead of skipping.
+
+## Production canary
+
+```bash
+PROD_SUPABASE_ANON_KEY=... PROD_CANARY_EMAIL=... PROD_CANARY_PASSWORD=... \
+npx playwright test --config=playwright.production.config.ts
+```
+
+`e2e/production/canary.spec.ts` checks `https://debate.pi-stack.org` directly:
+
+- the site loads and signed-out app routes redirect to Login;
+- every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);
+- `ai` returns 401, not a 5xx, to an unauthenticated call;
+- the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`.
+
+The last check is the only production write: one `ai_requests` usage row per run. The canary account (`debatelab-canary@example.com`) has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
+
+`.github/workflows/prod-canary.yml` runs after every successful Vercel `Production` deployment, daily at 06:41 UTC, and on demand. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
+
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 
 Never substitute a staging or production project for this gate.
@@ -232,6 +269,8 @@ A skipped staging workflow is not a pass. Missing credentials or provider access
 
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging conditions.
 
+[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. Branch protection on `main` requires `quality`, `database-tests`, `browser-tests`, and `live-e2e`. It also requires a pull request, and administrators are not exempt.
+
 Before calling CI green:
 
 1. identify the current head commit;
@@ -247,3 +286,5 @@ Before calling CI green:
 - Local browser pass: no current-head CI proof.
 - Credential-free E2E: no staging synchronization proof.
 - Staging pass: no authorization to deploy or mutate production.
+- Live provider pass: no proof for the production models, only for the pinned test model.
+- Canary pass: production was healthy at that moment; it covers one AI path, not every feature.
