@@ -165,12 +165,13 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - case generation grounded in a 250 KB Library source, provider failure with retry, a zero quota, and a saved case that a fresh browser loads from History;
 - Attack, Brainstorm, Factoids, streamed Ask (it fails if the client falls back to the non-streaming path), and Ask with citations;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
-- Library activation and deletion, output-language sync across devices, and flowchart saves;
+- Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
+- a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;
 - admin announcements seen by another user, denied admin access, and a public share link.
 
 Tests assert the rendered result, what the Edge Function sent upstream (read back from the fake provider), and the resulting database rows. They also fail on any uncaught page error or horizontal page overflow. The fake provider rejects prompts it does not recognize, so a prompt change must update it.
 
-These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe, or Google export.
+These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe Checkout and the billing portal (they call the Stripe API; the local key is a placeholder), the `checkout.session.completed` and `invoice.payment_succeeded` webhooks (they fetch the subscription from Stripe), or Google export.
 
 ### Live provider journeys
 
@@ -191,6 +192,16 @@ A live failure means the pipeline broke with this model. It does not prove how p
 
 `.github/workflows/live-e2e.yml` runs this on pull requests, nightly at 03:17 UTC, and on demand, using the `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY` repository secrets. The gate exits before starting anything when either key is missing, so a misconfigured job fails instead of skipping.
 
+### Model matrix
+
+```bash
+LIVE_PROVIDERS=1 LIVE_MODEL=as-requested LIVE_OPENROUTER_API_KEY=... LIVE_EXA_API_KEY=... ./.superset/db-gate.sh
+```
+
+`LIVE_MODEL=as-requested` switches the gate to `e2e/model-matrix/`. The proxy forwards whatever model the Edge Function chose, and the spec picks each model in `MODEL_CATALOG` from the Generate page's model menu and generates one researched case. A model that times out against the `ai` function's 60-second provider limit or returns invalid JSON fails its test. Each test prints the provider latency (`latency <model>: <ms>`) so the run log shows how close each model gets to the limit.
+
+`.github/workflows/model-matrix.yml` runs this daily at 04:29 UTC, on demand, and on pull requests that change `supabase/functions/_shared/`, `supabase/functions/ai/`, or `src/lib/ai/`. It is not a required check, because it runs only on those paths.
+
 ## Production canary
 
 ```bash
@@ -203,11 +214,12 @@ npx playwright test --config=playwright.production.config.ts
 - the site loads and signed-out app routes redirect to Login;
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);
 - `ai` returns 401, not a 5xx, to an unauthenticated call;
-- the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`.
+- the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`;
+- the canary account generates a three-contention case with GPT-5.6 Luna through `ai`.
 
-The last check is the only production write: one `ai_requests` usage row per run. The canary account (`debatelab-canary@example.com`) has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
+The last two checks are the only production writes, and they touch only the canary account: its `ai_requests` usage rows and whatever the Generate page saves for it. The canary account (`debatelab-canary@example.com`) has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
 
-`.github/workflows/prod-canary.yml` runs after every successful Vercel `Production` deployment, daily at 06:41 UTC, and on demand. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
+`.github/workflows/prod-canary.yml` runs after every successful Vercel `Production` deployment, daily at 06:41 UTC, and on demand. Main can deploy more than 10 times a day, so deployment runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 

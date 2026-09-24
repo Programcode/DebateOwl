@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-// Production canary. Everything here is read-only except the last test, which
-// makes one small real AI request as the dedicated canary account.
+// Production canary. Everything here is read-only except the last two tests,
+// which make real AI requests as the dedicated canary account.
 const supabaseUrl = process.env.PROD_SUPABASE_URL ?? "https://uziwdtkzofptihahfooo.supabase.co";
 const anonKey = process.env.PROD_SUPABASE_ANON_KEY;
 const email = process.env.PROD_CANARY_EMAIL;
@@ -15,6 +15,27 @@ const functions = [
 ];
 
 if (process.env.CI && !(anonKey && email && password)) throw new Error("Production canary secrets are incomplete");
+// The canary account allows 10 AI requests a day and main can deploy more often
+// than that, so the workflow sets this to false for deployment runs.
+const aiRequests = process.env.CANARY_AI_REQUESTS !== "false";
+
+async function signInAsCanary(page: Page) {
+  test.skip(!aiRequests, "Real AI requests run only on the daily and manual canary");
+  test.skip(!(anonKey && email && password), "Canary credentials are not configured");
+  const client = createClient(supabaseUrl, anonKey!, { auth: { persistSession: false } });
+  const { data, error } = await client.auth.signInWithPassword({ email: email!, password: password! });
+  if (error || !data.session) throw error ?? new Error("Canary sign-in failed");
+  await page.addInitScript((session) => {
+    localStorage.setItem("debate-auth-production", JSON.stringify(session));
+    localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 }));
+  }, data.session);
+}
+
+// GPT-5.6 Luna is the Basic default, so this is the path most users take.
+async function pickLuna(page: Page, feature: string) {
+  await page.getByRole("combobox", { name: `Select AI model for ${feature}` }).click();
+  await page.getByRole("option", { name: /GPT-5\.6 Luna/ }).first().click();
+}
 
 test("the production site loads and guards the app", async ({ page, baseURL }) => {
   const errors: string[] = [];
@@ -55,19 +76,9 @@ test("the AI function rejects unauthenticated calls instead of crashing", async 
 });
 
 test("the canary account gets a streamed answer from a real model", async ({ page }) => {
-  test.skip(!(anonKey && email && password), "Canary credentials are not configured");
-  const client = createClient(supabaseUrl, anonKey!, { auth: { persistSession: false } });
-  const { data, error } = await client.auth.signInWithPassword({ email: email!, password: password! });
-  if (error || !data.session) throw error ?? new Error("Canary sign-in failed");
-  await page.addInitScript((session) => {
-    localStorage.setItem("debate-auth-production", JSON.stringify(session));
-    localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 }));
-  }, data.session);
-
+  await signInAsCanary(page);
   await page.goto("/app/ask");
-  // GPT-5.6 Luna is the Basic default, so this is the path most users take.
-  await page.getByRole("combobox", { name: "Select AI model for ask" }).click();
-  await page.getByRole("option", { name: /GPT-5\.6 Luna/ }).first().click();
+  await pickLuna(page, "ask");
   await page.getByPlaceholder("Ask your debate coach...").fill("Reply with one short sentence: what is a rebuttal?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: 90_000 });
   await page.getByRole("button", { name: "Send message" }).click();
@@ -79,4 +90,18 @@ test("the canary account gets a streamed answer from a real model", async ({ pag
     .map((block) => JSON.parse(block.split("\n").find((line) => line.startsWith("data:"))!.slice(5)).text as string)
     .join("");
   expect(text.trim().length, "streamed answer text").toBeGreaterThan(0);
+});
+
+test("the canary account generates a case", async ({ page }) => {
+  test.setTimeout(180_000);
+  await signInAsCanary(page);
+  await page.goto("/app/generate");
+  await pickLuna(page, "generate");
+  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
+  const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  const response = await generated;
+  expect(response.status(), "ai generate status").toBe(200);
+  const body = await response.json() as { output: { contentions?: unknown[] } };
+  expect(body.output.contentions, "generated contentions").toHaveLength(3);
 });
