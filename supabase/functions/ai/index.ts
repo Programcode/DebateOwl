@@ -739,8 +739,9 @@ async function callAIOnce(
 
 // Supabase answers 504 when a function has not responded within 150 s. Every
 // provider call shares one budget below that, so a slow model can use the time
-// research left instead of a fixed 60 s. The margin covers logging and saving.
-const REQUEST_BUDGET_MS = 140_000;
+// research left instead of a fixed 60 s. The margin covers the post-generation
+// source-usage check (its own 8 s Jev timeout), logging, and saving.
+const REQUEST_BUDGET_MS = 130_000;
 
 async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
@@ -1768,10 +1769,12 @@ export async function handleRequest(req: Request): Promise<Response> {
           strength: discoveredAssessmentByKey.get(source.key)?.strength ?? 0,
         })),
       ].slice(0, 10);
+      // The case is already complete, so this optional check must not inherit
+      // an almost spent request budget and turn a finished case into a 500.
       const caseUsage = await identifyCaseSourceUsage({
         caseText: JSON.stringify(output),
         sources: usageCandidates,
-        signal: workSignal,
+        signal: req.signal,
       });
       const caseUsageCost = caseUsage.jev?.usage ?? caseUsage.jevUsage;
       if (caseUsageCost) await logUsage(userId, "jev_source_usage", provider, JEV_MODEL, caseUsageCost, undefined, caseUsage.jevUsage ? "error" : "success", caseUsage.jevUsage ? "jev_incomplete" : undefined);
