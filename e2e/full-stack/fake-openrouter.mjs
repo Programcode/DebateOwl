@@ -223,16 +223,25 @@ async function proxy(req, res, path) {
     return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
   }
   const started = Date.now();
-  const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
-    method: "POST",
-    headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
-    body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
-  });
-  record.status = response.status;
-  res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
-  for await (const chunk of response.body ?? []) res.write(chunk);
-  res.end();
-  record.ms = Date.now() - started;
+  try {
+    const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
+      method: "POST",
+      headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
+      body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
+    });
+    record.status = response.status;
+    res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
+    for await (const chunk of response.body ?? []) res.write(chunk);
+    res.end();
+  } catch (error) {
+    record.status = 502;
+    const message = error instanceof Error ? error.message : "upstream connection failed";
+    console.error(`live provider request failed: ${message}`);
+    if (!res.headersSent) json(res, 502, { error: { message: "Live provider request failed" } });
+    else res.destroy();
+  } finally {
+    record.ms = Date.now() - started;
+  }
 }
 
 createServer(async (req, res) => {
