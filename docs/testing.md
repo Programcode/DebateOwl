@@ -164,13 +164,13 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - sign-in, reload, sign-out, a rejected code, and an expired token that refreshes before an AI request;
 - case generation grounded in a 250 KB Library source, provider failure with retry, a zero quota, and a saved case that a fresh browser loads from History;
 - Attack, Brainstorm, Factoids, streamed Ask (it fails if the client falls back to the non-streaming path), and Ask with citations;
-- a judged Lincoln-Douglas sparring round and a Crossfire debrief;
+- a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
 - Library activation and deletion, output-language sync across devices, and flowchart saves;
 - admin announcements seen by another user, denied admin access, and a public share link.
 
 Tests assert the rendered result, what the Edge Function sent upstream (read back from the fake provider), and the resulting database rows. They also fail on any uncaught page error or horizontal page overflow. The fake provider rejects prompts it does not recognize, so a prompt change must update it.
 
-These journeys do not prove live provider behavior, web research (the local stack has no search key), Jev decisions (the fake returns 503 and callers use their fallbacks), Stripe, or Google export.
+These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe, or Google export.
 
 ### Live provider journeys
 

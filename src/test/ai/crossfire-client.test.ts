@@ -119,6 +119,28 @@ describe('Crossfire AI client', () => {
     expect(secondCall.body.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
   });
 
+  it('strips client-only turn signals from every transcript it sends', async () => {
+    const signal = {
+      answerTurnId: 'T2',
+      answerQuality: 'direct',
+      answerQualityConfidence: 0.9,
+      concession: 'none',
+      concessionConfidence: 0.8,
+      followUpOpportunity: 0.7,
+    } as const;
+    const input = debriefInput();
+    input.transcript[1] = { ...input.transcript[1], signal };
+    mocks.invoke.mockResolvedValue({ data: { output: validDebrief }, error: null });
+
+    await crossfire(input, config);
+    await crossfireSignal({ config: input.config, transcript: input.transcript, reply: { type: 'question', text: 'Which count?' }, signalToken: 'token' }, config);
+
+    // The Edge Function rejects any turn key beyond the ones it signs.
+    for (const [, request] of mocks.invoke.mock.calls) {
+      for (const turn of request.body.input.transcript) expect(turn).not.toHaveProperty('signal');
+    }
+  });
+
   it('sends only bounded Crossfire source IDs when stored content is large', async () => {
     mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
       ...Array.from({ length: 12 }, (_, index) => ({

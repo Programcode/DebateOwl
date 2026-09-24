@@ -765,7 +765,7 @@ export async function crossfire(
 
   return await callSupabaseAI<CrossfireReply | CrossfireDebrief>(
     'crossfire',
-    withOutputLanguage(input.data as unknown as Record<string, unknown>),
+    withOutputLanguage({ ...input.data, transcript: serverTranscript(input.data.transcript) }),
     config,
     {
       includeActiveSources: input.data.config.useSourceLibrary,
@@ -804,6 +804,12 @@ export async function crossfire(
   );
 }
 
+// Turn signals are client annotations. The Edge Function accepts only the
+// turn fields it signs and prompts with, so strip them from every request.
+function serverTranscript(turns: CrossfireAIInput['transcript']) {
+  return turns.map(({ signal: _signal, ...turn }) => turn);
+}
+
 export async function crossfireSignal(
   rawInput: CrossfireSignalInput,
   config: ProviderConfig,
@@ -815,7 +821,7 @@ export async function crossfireSignal(
   }
   return await callSupabaseAI<CrossfireTurnSignal | undefined>(
     'crossfire',
-    withOutputLanguage({ operation: 'signal', ...input.data }),
+    withOutputLanguage({ operation: 'signal', ...input.data, transcript: serverTranscript(input.data.transcript) }),
     config,
     {
       includeActiveSources: false,

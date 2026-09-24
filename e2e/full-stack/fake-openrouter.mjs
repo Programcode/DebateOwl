@@ -175,6 +175,17 @@ function classify(body) {
   return { feature: route[0], system, user, output: route[2](user) };
 }
 
+function jevAnswers(questions) {
+  return Object.fromEntries(Object.entries(questions).map(([id, question]) => {
+    if (question.type === "noul") return [id, { type: "noul", noul: 0.8 }];
+    const labels = question.type === "choice" ? Object.keys(question.criteria) : question.criteria.map((_, index) => String(index));
+    const probabilities = Object.fromEntries(labels.map((label, index) => [label, index === 0 ? 0.9 : 0.1 / (labels.length - 1)]));
+    if (question.type === "choice") return [id, { type: "choice", choice: labels[0], confidence: 0.9, probabilities }];
+    const legend = Object.fromEntries(question.criteria.map((criterion, index) => [String(index), criterion]));
+    return [id, { type: "score", score: 0, confidence: 0.9, probabilities, legend }];
+  }));
+}
+
 function json(res, status, value) {
   res.writeHead(status, { "content-type": "application/json" });
   res.end(JSON.stringify(value));
@@ -238,10 +249,12 @@ createServer(async (req, res) => {
   if (upstream && req.method === "POST" && (url.pathname === "/api/v1/chat/completions" || url.pathname === "/api/alpha/decisions")) {
     return proxy(req, res, url.pathname);
   }
-  if (url.pathname === "/api/alpha/decisions") {
-    // Jev is optional: callers fall back to deterministic ranking and signals.
-    requests.push({ feature: "jev", path: url.pathname });
-    return json(res, 503, { error: { message: "Jev is not faked" } });
+  if (url.pathname === "/api/alpha/decisions" && req.method === "POST") {
+    // Confident, schema-valid answers so Jev-dependent paths (Crossfire
+    // signals, source ranking) run end to end instead of falling back.
+    const body = JSON.parse(await readBody(req));
+    requests.push({ feature: "jev", model: body.model, status: 200 });
+    return json(res, 200, { model: body.model, answers: jevAnswers(body.questions ?? {}), usage: { input_tokens: 40, output_tokens: 8, cost: 0.00001 } });
   }
   if (url.pathname !== "/api/v1/chat/completions" || req.method !== "POST") {
     return json(res, 404, { error: { message: `Unexpected ${req.method} ${url.pathname}` } });

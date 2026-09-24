@@ -44,6 +44,9 @@ test("Crossfire answers a question and produces a debrief", async ({ signedIn: p
   await page.getByTestId("submit-turn").click();
   await expect(page.getByText(`${MARK} crossfire answer`)).toBeVisible({ timeout: 30_000 });
   expect((await providerCall("crossfire")).user).toContain("What evidence supports the safety mechanism?");
+  // The Jev signal attaches to the answer turn, which every later request resends.
+  await expect(page.getByText("Direct answer")).toBeVisible();
+  await providerCall("jev");
 
   await page.getByTestId("end-crossfire").click();
   await expect(page.getByTestId("crossfire-debrief")).toBeVisible({ timeout: 30_000 });
