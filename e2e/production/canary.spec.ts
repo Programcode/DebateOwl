@@ -2,7 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 // Production canary. Everything here is read-only except the last two tests,
-// which make real AI requests as the dedicated canary account.
+// which make real AI requests as the dedicated canary account and run only on
+// the daily and manual canary.
 const supabaseUrl = process.env.PROD_SUPABASE_URL ?? "https://uziwdtkzofptihahfooo.supabase.co";
 const anonKey = process.env.PROD_SUPABASE_ANON_KEY;
 const email = process.env.PROD_CANARY_EMAIL;
@@ -19,8 +20,8 @@ if (process.env.CI && !(anonKey && email && password)) throw new Error("Producti
 // than that, so the workflow sets this to false for deployment runs.
 const aiRequests = process.env.CANARY_AI_REQUESTS !== "false";
 
-async function signInAsCanary(page: Page) {
-  test.skip(!aiRequests, "Real AI requests run only on the daily and manual canary");
+async function signInAsCanary(page: Page, { aiRequest }: { aiRequest: boolean }) {
+  test.skip(aiRequest && !aiRequests, "Real AI requests run only on the daily and manual canary");
   test.skip(!(anonKey && email && password), "Canary credentials are not configured");
   const client = createClient(supabaseUrl, anonKey!, { auth: { persistSession: false } });
   const { data, error } = await client.auth.signInWithPassword({ email: email!, password: password! });
@@ -75,8 +76,18 @@ test("the AI function rejects unauthenticated calls instead of crashing", async 
   expect(response.status()).toBe(401);
 });
 
+// Runs on every deployment without spending quota. The Pro badge comes from a
+// row-level-security read, so it appears only for a working session.
+test("the canary account signs in and loads its account", async ({ page }) => {
+  await signInAsCanary(page, { aiRequest: false });
+  await page.goto("/app/generate");
+  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeVisible();
+  await page.goto("/app/settings");
+  await expect(page.getByText("Pro", { exact: true })).toBeVisible();
+});
+
 test("the canary account gets a streamed answer from a real model", async ({ page }) => {
-  await signInAsCanary(page);
+  await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/ask");
   await pickLuna(page, "ask");
   await page.getByPlaceholder("Ask your debate coach...").fill("Reply with one short sentence: what is a rebuttal?");
@@ -94,7 +105,7 @@ test("the canary account gets a streamed answer from a real model", async ({ pag
 
 test("the canary account generates a case", async ({ page }) => {
   test.setTimeout(180_000);
-  await signInAsCanary(page);
+  await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/generate");
   await pickLuna(page, "generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");

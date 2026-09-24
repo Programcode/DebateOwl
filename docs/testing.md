@@ -214,12 +214,13 @@ npx playwright test --config=playwright.production.config.ts
 - the site loads and signed-out app routes redirect to Login;
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);
 - `ai` returns 401, not a 5xx, to an unauthenticated call;
+- the canary account signs in, opens Generate, and Settings shows its Pro plan (a row-level-security read), without spending an AI request;
 - the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`;
 - the canary account generates a three-contention case with GPT-5.6 Luna through `ai`.
 
 The last two checks are the only production writes, and they touch only the canary account: its `ai_requests` usage rows and whatever the Generate page saves for it. The canary account (`debatelab-canary@example.com`) has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
 
-`.github/workflows/prod-canary.yml` runs after every successful Vercel `Production` deployment, daily at 06:41 UTC, and on demand. Main can deploy more than 10 times a day, so deployment runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
+`.github/workflows/prod-canary.yml` runs after every successful Vercel `Production` deployment, daily at 06:41 UTC, and on demand. Main can deploy more than 10 times a day, so deployment runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. The signed-in session check still runs on every deployment. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 
