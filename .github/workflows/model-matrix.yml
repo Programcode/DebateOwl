@@ -1,9 +1,9 @@
 name: Model matrix
 
 # Generates one case with every model in the catalog, unpinned, so a model that
-# times out or returns invalid JSON fails here before users hit it. It costs
-# more than the pinned live suite, so it runs daily and when model routing,
-# prompts, or the ai function change.
+# times out or returns invalid JSON fails here before users hit it. One run
+# costs about $1, so it runs weekly and when model routing, prompts, or the ai
+# function change.
 on:
   pull_request:
     paths:
@@ -13,7 +13,7 @@ on:
       - e2e/model-matrix/**
       - .github/workflows/model-matrix.yml
   schedule:
-    - cron: "29 4 * * *"
+    - cron: "29 4 * * 1"
   workflow_dispatch:
 
 permissions:
