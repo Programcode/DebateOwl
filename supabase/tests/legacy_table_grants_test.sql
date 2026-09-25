@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(5);
+SELECT plan(6);
 
 SELECT ok(
   has_table_privilege('authenticated', 'public.flowcharts', 'SELECT')
@@ -26,13 +26,29 @@ SELECT ok(
 );
 SELECT ok(
   has_table_privilege('authenticated', 'public.subscriptions', 'SELECT')
-    AND has_table_privilege('authenticated', 'public.user_promos', 'SELECT'),
-  'subscription status and redeemed promos remain client-readable'
+    AND has_table_privilege('authenticated', 'public.user_promos', 'SELECT')
+    AND has_table_privilege('authenticated', 'public.ai_requests', 'SELECT'),
+  'subscription status, redeemed promos, and usage remain client-readable'
 );
 SELECT ok(
   has_sequence_privilege('anon', 'public.keepalive_events_id_seq', 'USAGE'),
   'anonymous keepalive inserts can generate an event id'
 );
+
+INSERT INTO auth.users (id) VALUES
+  ('f1111111-1111-4111-8111-111111111111'),
+  ('f2222222-2222-4222-8222-222222222222');
+INSERT INTO public.ai_requests (user_id, feature, provider, model) VALUES
+  ('f1111111-1111-4111-8111-111111111111', 'ask', 'test', 'test'),
+  ('f2222222-2222-4222-8222-222222222222', 'ask', 'test', 'test');
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', true);
+SELECT is(
+  (SELECT count(*) FROM public.ai_requests),
+  1::bigint,
+  'signed-in usage reads see only their own requests'
+);
+RESET ROLE;
 
 SELECT * FROM finish();
 ROLLBACK;

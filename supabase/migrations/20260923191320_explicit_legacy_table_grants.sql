@@ -21,7 +21,7 @@ TO authenticated;
 
 GRANT SELECT ON TABLE
   public.user_roles, public.rate_limits, public.subscriptions,
-  public.user_promos, public.admin_grants
+  public.user_promos, public.admin_grants, public.ai_requests
 TO authenticated;
 
 -- Settings keep their existing SELECT and column-limited UPDATE grants;
