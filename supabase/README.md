@@ -97,6 +97,7 @@ Do not use wildcard origins to hide a failed browser test. Before protected stag
 ## Migrations and database tests
 
 Migration filenames define execution order. Never edit an applied migration to change production history; add a new forward migration.
+When creating a table in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Fresh projects and database resets cannot rely on automatic table or sequence grants.
 
 Local gate:
 
