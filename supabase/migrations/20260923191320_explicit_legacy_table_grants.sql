@@ -25,8 +25,7 @@ GRANT SELECT ON TABLE
 TO authenticated;
 
 -- Settings keep their existing SELECT and column-limited UPDATE grants;
--- trusted usage and shared items remain server-owned.
-GRANT SELECT ON TABLE public.global_prompts TO anon, authenticated;
+-- shared items and global prompts remain server-owned.
 
 -- The existing anonymous keepalive insert uses this sequence's nextval().
 GRANT USAGE ON SEQUENCE public.keepalive_events_id_seq TO anon, service_role;
