@@ -193,6 +193,7 @@ describe('LibraryPage', () => {
         type: 'url',
         origin: 'https://example.com/article',
         folder: 'General',
+        debateId: TEST_DEBATE_ID,
       });
     });
   });

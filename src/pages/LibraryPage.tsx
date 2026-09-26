@@ -219,7 +219,8 @@ export default function LibraryPage() {
       toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
       return;
     }
-    await addSource(newSource);
+    // The Library always shows the Current Debate, even while tools run one-off.
+    await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
     setNewSource({ title: '', content: '', type: 'text', origin: '', folder: newSource.folder });
     setIsAdding(false);
     toast({ title: t('libraryPage.sourceAdded'), description: t('libraryPage.sourceAddedDesc') });
@@ -298,6 +299,7 @@ export default function LibraryPage() {
       type: importPreview.type,
       origin: importPreview.origin,
       folder: newSource.folder,
+      debateId: currentDebate?.id ?? null,
     });
     setImportPreview(null);
     setImportUrl('');
@@ -321,10 +323,18 @@ export default function LibraryPage() {
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
   const hasActiveSources = activeSourceCount > 0;
+  // Folder names are account-wide; hide the ones only other debates use, but keep new empty ones.
+  const otherDebateFolders = new Set(allSources.filter((source) => source.debateId !== currentDebate?.id).map((source) => source.folder || 'General'));
+  const thisDebateFolders = sourceLibrary.map(s => s.folder || 'General').filter(Boolean);
   const folders = Array.from(new Set([
-    ...(sourceFolders || ['General']),
-    ...sourceLibrary.map(s => s.folder || 'General').filter(Boolean),
+    ...(sourceFolders || ['General']).filter((folder) => folder === 'General' || !otherDebateFolders.has(folder) || thisDebateFolders.includes(folder)),
+    ...thisDebateFolders,
   ])).sort();
+  const folderKey = folders.join('\n');
+  useEffect(() => {
+    // A folder picked in another debate may not exist here.
+    if (selectedFolder !== 'all' && !folderKey.split('\n').includes(selectedFolder)) setSelectedFolder('all');
+  }, [folderKey, selectedFolder]);
   const visibleSources = sourceLibrary
     .filter((source) => selectedFolder === 'all' || (source.folder || 'General') === selectedFolder)
     .filter((source) => {

@@ -1203,6 +1203,70 @@ describe("session-store", () => {
         .rejects.toThrow('Select or create a debate before adding sources');
     });
 
+    it('keeps a tool source out of the retained debate in one-off mode', async () => {
+      useDebateStore.setState({ oneOff: true });
+      await expect(useSessionStore.getState().addSource({ title: 'Loose', content: 'x', type: 'text' }))
+        .rejects.toThrow('Select or create a debate before adding sources');
+      expect(useSessionStore.getState().sourceLibrary).toEqual([]);
+    });
+
+    it('clears the Library of the debate it was confirmed in', async () => {
+      seedSources({ id: 'mine', folder: 'General' });
+      useSessionStore.setState((state) => ({
+        sourceLibrary: [...state.sourceLibrary, { ...state.sourceLibrary[0], id: 'theirs', debateId: 'debate-b' }],
+      }));
+      let releaseUser!: () => void;
+      supabaseMock.auth.getUser.mockImplementationOnce(() => new Promise((resolve) => {
+        releaseUser = () => resolve({ data: { user: { id: 'user_1' } } } as never);
+      }));
+      const pending = useSessionStore.getState().clearLibrary();
+      await vi.waitFor(() => expect(releaseUser).toBeTypeOf('function'));
+      useDebateStore.setState({ currentDebateId: 'debate-b' });
+      releaseUser();
+      await pending;
+
+      expect(useSessionStore.getState().sourceLibrary.map((source) => source.id)).toEqual(['theirs']);
+    });
+
+    it('does not let an older debate load undo a switch made while it ran', async () => {
+      const row = (id: string, motion: string) => ({ id, motion, settings: {}, instructions: '', last_activity_at: nowIso, created_at: nowIso });
+      const server = { debates: [row('debate-a', 'A'), row('debate-b', 'B')], current: 'debate-a' };
+      let releaseFirstLoad!: () => void;
+      const firstLoad = new Promise<void>((resolve) => { releaseFirstLoad = resolve; });
+      let debateLoads = 0;
+      const originalFrom = supabaseMock.from.getMockImplementation();
+      // A chainable query whose result is read when awaited, so it reflects server state at that time.
+      const query = (read: () => unknown, gate?: Promise<void>) => {
+        const builder: Record<string, unknown> = {};
+        for (const method of ['select', 'order', 'eq', 'update', 'upsert', 'maybeSingle']) builder[method] = () => builder;
+        builder.then = (resolve: (value: unknown) => void) => (gate ?? Promise.resolve()).then(() => resolve({ data: read(), error: null }));
+        return builder;
+      };
+      supabaseMock.from.mockImplementation(((table: string) => {
+        if (table === 'debates') {
+          debateLoads += 1;
+          const snapshot = server.debates;
+          return query(() => snapshot, debateLoads === 2 ? firstLoad : undefined);
+        }
+        const snapshot = server.current;
+        return { ...query(() => ({ debate_id: snapshot })), upsert: (value: { debate_id: string }) => { server.current = value.debate_id; return query(() => null); } };
+      }) as never);
+      try {
+        resetDebatesForTest();
+        await useDebateStore.getState().hydrate();
+        expect(useDebateStore.getState().currentDebateId).toBe('debate-a');
+        // A refresh starts, then the user switches before it returns.
+        const loading = useDebateStore.getState().hydrate();
+        await vi.waitFor(() => expect(debateLoads).toBe(2));
+        await useDebateStore.getState().switchDebate('debate-b');
+        releaseFirstLoad();
+        await loading;
+        expect(useDebateStore.getState().currentDebateId).toBe('debate-b');
+      } finally {
+        supabaseMock.from.mockImplementation(originalFrom as never);
+      }
+    });
+
     it('drops server-backed lists persisted by older clients', () => {
       const migrate = useSessionStore.persist.getOptions().migrate!;
       const migrated = migrate({ savedCases: [{ id: 'old' }], sourceLibrary: [{ id: 'legacy' }], askMessages: [{ id: 'm' }], generateForm: { motion: 'kept' } }, 0) as Record<string, unknown>;

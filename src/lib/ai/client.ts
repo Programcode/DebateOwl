@@ -1261,7 +1261,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
       return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'generate', debateId);
+  await autosaveDiscoveredSources(response.discoveredSources, 'generate', workspaceContext ? null : debateId);
   return response;
 }
 
@@ -1277,7 +1277,7 @@ export async function attackCase(input: AttackInput, config: ProviderConfig, wor
       };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'attack', debateId);
+  await autosaveDiscoveredSources(response.discoveredSources, 'attack', workspaceContext ? null : debateId);
   return response;
 }
 
@@ -1293,7 +1293,7 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig,
       };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'brainstorm', debateId);
+  await autosaveDiscoveredSources(response.discoveredSources, 'brainstorm', workspaceContext ? null : debateId);
   return response;
 }
 
@@ -1328,7 +1328,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig, wor
       };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'factoids', debateId);
+  await autosaveDiscoveredSources(response.discoveredSources, 'factoids', workspaceContext ? null : debateId);
   return response;
 }
 

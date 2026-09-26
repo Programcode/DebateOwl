@@ -108,6 +108,8 @@ async function setCurrentPointer(userId: string, debateId: string) {
 
 // Invalidates a hydrate that started before sign-out or an account switch.
 let hydrationEpoch = 0;
+// Counts debate writes so a load that started earlier cannot overwrite them.
+let debateWrites = 0;
 
 export const useDebateStore = create<DebateState>()(
   persist(
@@ -127,11 +129,17 @@ export const useDebateStore = create<DebateState>()(
         if (get().ownerUserId !== user.id) {
           set({ ownerUserId: user.id, debates: [], currentDebateId: null, oneOff: false, hydrated: false });
         }
+        const writesBefore = debateWrites;
         const [debatesResult, currentResult] = await Promise.all([
           supabase.from('debates').select('id,motion,settings,instructions,last_activity_at,created_at').order('last_activity_at', { ascending: false }),
           supabase.from('current_debates').select('debate_id').maybeSingle(),
         ]);
         if (epoch !== hydrationEpoch) return;
+        if (writesBefore !== debateWrites) {
+          // A create, switch, edit or delete landed mid-load; this snapshot is older than it.
+          await get().hydrate();
+          return;
+        }
         if (debatesResult.error || currentResult.error) {
           console.warn('[DebateStore] Failed to hydrate debates:', debatesResult.error?.message ?? currentResult.error?.message);
           return;
@@ -162,6 +170,7 @@ export const useDebateStore = create<DebateState>()(
         if (error || !data) throw new Error(error?.message ?? 'Could not create debate');
         const debate = fromRow(data as DebateRow);
         await setCurrentPointer(userId, debate.id);
+        debateWrites += 1;
         set((state) => ({
           ownerUserId: userId,
           debates: sortDebates([debate, ...state.debates.filter((item) => item.id !== debate.id)]),
@@ -179,6 +188,7 @@ export const useDebateStore = create<DebateState>()(
         // Choosing a debate is a deliberate confirmation that it is still being prepared.
         const now = Date.now();
         await supabase.from('debates').update({ last_activity_at: new Date(now).toISOString() }).eq('id', id);
+        debateWrites += 1;
         set((state) => ({
           currentDebateId: id,
           oneOff: false,
@@ -200,12 +210,14 @@ export const useDebateStore = create<DebateState>()(
           .update({ motion: next.motion, settings: next.settings, instructions: next.instructions, updated_at: new Date().toISOString() })
           .eq('id', id);
         if (error) throw new Error(error.message);
+        debateWrites += 1;
         set((state) => ({ debates: state.debates.map((item) => item.id === id ? next : item) }));
       },
 
       deleteDebate: async (id) => {
         const { error } = await supabase.from('debates').delete().eq('id', id);
         if (error) throw new Error(error.message);
+        debateWrites += 1;
         set((state) => ({
           debates: state.debates.filter((item) => item.id !== id),
           currentDebateId: state.currentDebateId === id ? null : state.currentDebateId,

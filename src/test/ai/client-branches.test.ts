@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { seedCurrentDebate } from '@/test/helpers/debate';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
+import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 
 const {
@@ -290,6 +291,30 @@ describe('AI client branch coverage', () => {
     await generateCase(validGenerateInput, config);
     expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({ body: expect.objectContaining({ sourceIds: [sourceId] }) }));
     expect(sessionState.applySourceAssessments).toHaveBeenCalledWith([expect.objectContaining({ id: sourceId, usedInCase: true })]);
+  });
+
+  it('keeps workspace research out of the personal debate', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { output: validGenerateOutput, discoveredSources: [{ title: 'Source A', url: 'https://a.com', content: 'A content', qualityLabel: 'strong' }] },
+      error: null,
+    });
+    const workspaceContext: WorkspaceToolContext = {
+      documentEpoch: 1,
+      documentId: '11111111-1111-4111-8111-111111111111',
+      documentIds: ['11111111-1111-4111-8111-111111111111'],
+      documentText: 'Accepted text',
+      documentTitle: 'R1',
+      motion: 'Motion',
+      requestId: '22222222-2222-4222-8222-222222222222',
+      returnUrl: '/app/workspaces/33333333-3333-4333-8333-333333333333',
+      side: 'pro' as const,
+      sourceIds: [],
+      threadRequest: null,
+      threadId: null,
+      workspaceId: '33333333-3333-4333-8333-333333333333',
+    };
+    await generateCase(validGenerateInput, config, workspaceContext);
+    expect(addSourceMock).not.toHaveBeenCalled();
   });
 
   it('does not autosave a semantically irrelevant discovered source', async () => {

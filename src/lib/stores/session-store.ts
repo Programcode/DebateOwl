@@ -489,7 +489,8 @@ export const useSessionStore = create<SessionState>()(
       addSource: async (source) => {
         const folder = normalizeFolder(source.folder);
         const isActive = source.isActive ?? true;
-        const debateId = source.debateId ?? useDebateStore.getState().currentDebateId;
+        // An omitted debate means the tool's scope, which is none in one-off mode.
+        const debateId = source.debateId !== undefined ? source.debateId : activeDebateId();
         if (!debateId) throw new DebateRequiredError();
         const localItem: Source = { ...source, folder, debateId, id: generateId(), createdAt: Date.now(), isActive };
         const userId = await getUserId();
@@ -777,13 +778,14 @@ export const useSessionStore = create<SessionState>()(
         }));
       },
       clearLibrary: async () => {
+        // The Library belongs to the Current Debate; other debates keep their sources.
+        // Read it before any wait so a switch mid-clear cannot redirect the delete.
+        const debateId = useDebateStore.getState().currentDebateId;
+        if (!debateId) throw new DebateRequiredError();
         const userId = await getUserId();
         if (!userId) {
           throw new Error('Cannot clear library: No authenticated user');
         }
-        // The Library belongs to the Current Debate; other debates keep their sources.
-        const debateId = useDebateStore.getState().currentDebateId;
-        if (!debateId) throw new DebateRequiredError();
         throwOnWriteError(
           await supabase.from('sources').delete().eq('user_id', userId).eq('debate_id', debateId),
           'clear debate sources',
