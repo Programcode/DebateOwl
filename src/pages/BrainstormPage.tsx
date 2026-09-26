@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
 
@@ -42,7 +43,7 @@ export default function BrainstormPage() {
       setBrainstormResult(result);
       await workspace.attach(data, result);
       if (target.debateId) {
-        await recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side });
+        await recordInDebate(() => recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
       }
       toast({ title: t('brainstorm.complete', 'Brainstorm complete'), description: t('brainstorm.completeDesc', 'Your argument angles are ready.'), variant: 'success' });
     } catch (error) {

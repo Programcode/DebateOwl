@@ -10,7 +10,7 @@ import {
 vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from "@/lib/stores/session-store";
-import { seedCurrentDebate, TEST_DEBATE_ID } from "@/test/helpers/debate";
+import { resetDebates as resetDebatesForTest, seedCurrentDebate, TEST_DEBATE_ID } from "@/test/helpers/debate";
 import i18n from "@/i18n";
 
 import type { GenerateOutput } from "@/lib/ai/schemas/generate";
@@ -1042,5 +1042,65 @@ describe("session-store", () => {
       qualityLabel: "strong",
       semantic: expect.objectContaining({ useCount: 1, caseUseCount: 1, lastUsedInCase: true }),
     }));
+  });
+
+  describe('Current Debate attachment', () => {
+    it('records a result into the debate with its side and newest first', async () => {
+      setMockTableResponse('cases', {
+        insert: { id: 'case-1', title: 'Motion', output: sampleGenerate, created_at: nowIso, debate_id: TEST_DEBATE_ID, side: 'pro' },
+      });
+      const id = await useSessionStore.getState().recordResult('case', {
+        title: 'Motion', input: { motion: 'Motion' }, output: sampleGenerate, debateId: TEST_DEBATE_ID, side: 'pro',
+      });
+      expect(id).toBe('case-1');
+      const insert = supabaseMock.from.mock.results.find((result) => result.value.insert.mock.calls.length > 0)!.value.insert;
+      expect(insert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user_1', debate_id: TEST_DEBATE_ID, side: 'pro', title: 'Motion' }));
+      expect(useSessionStore.getState().savedCases[0]).toEqual(expect.objectContaining({ id: 'case-1', debateId: TEST_DEBATE_ID, side: 'pro' }));
+    });
+
+    it('attaches one-off work only through the ownership-checked RPC', async () => {
+      useSessionStore.setState({ savedAttacks: [{ id: 'a1', title: 'One-off', createdAt: 1, data: sampleAttack, debateId: null }] });
+      await useSessionStore.getState().attachItem('attack', 'a1', TEST_DEBATE_ID, 'con');
+      expect(supabaseMock.rpc).toHaveBeenCalledWith('attach_to_debate', { p_kind: 'attack', p_id: 'a1', p_debate_id: TEST_DEBATE_ID, p_side: 'con' });
+      expect(useSessionStore.getState().savedAttacks[0]).toEqual(expect.objectContaining({ debateId: TEST_DEBATE_ID, side: 'con' }));
+    });
+
+    it('records an Ask conversation as one chat and appends later messages to it', async () => {
+      setMockTableResponse('chats', { insert: { id: 'chat-1', title: 'Question', created_at: nowIso, debate_id: TEST_DEBATE_ID, side: 'neutral' } });
+      const store = useSessionStore.getState();
+      store.addAskMessage({ role: 'user', content: 'Question' });
+      store.addAskMessage({ role: 'assistant', content: 'Answer' });
+      await Promise.all([store.syncAskChat(TEST_DEBATE_ID), store.syncAskChat(TEST_DEBATE_ID)]);
+
+      const chatInserts = supabaseMock.from.mock.calls.filter(([table]) => table === 'chats');
+      expect(chatInserts).toHaveLength(1);
+      expect(useSessionStore.getState().askChatId).toBe('chat-1');
+      expect(useSessionStore.getState().askPersistedCount).toBe(2);
+
+      useSessionStore.getState().addAskMessage({ role: 'user', content: 'Follow-up' });
+      useSessionStore.getState().addAskMessage({ role: 'assistant', content: 'More' });
+      await useSessionStore.getState().syncAskChat(TEST_DEBATE_ID);
+      expect(supabaseMock.from.mock.calls.filter(([table]) => table === 'chats')).toHaveLength(1);
+      const messageInserts = supabaseMock.from.mock.results
+        .filter((_, index) => supabaseMock.from.mock.calls[index][0] === 'messages')
+        .map((result) => result.value.insert.mock.calls[0][0]);
+      expect(messageInserts.map((rows: Array<{ content: string }>) => rows.map((row) => row.content)))
+        .toEqual([['Question', 'Answer'], ['Follow-up', 'More']]);
+      expect(useSessionStore.getState().savedChats[0]).toEqual(expect.objectContaining({ id: 'chat-1', debateId: TEST_DEBATE_ID }));
+    });
+
+    it('refuses to save a source without a debate', async () => {
+      resetDebatesForTest();
+      await expect(useSessionStore.getState().addSource({ title: 'Loose', content: 'x', type: 'text' }))
+        .rejects.toThrow('Select or create a debate before adding sources');
+    });
+
+    it('drops server-backed lists persisted by older clients', () => {
+      const migrate = useSessionStore.persist.getOptions().migrate!;
+      const migrated = migrate({ savedCases: [{ id: 'old' }], sourceLibrary: [{ id: 'legacy' }], generateForm: { motion: 'kept' } }, 0) as Record<string, unknown>;
+      expect(migrated).not.toHaveProperty('savedCases');
+      expect(migrated).not.toHaveProperty('sourceLibrary');
+      expect(migrated.generateForm).toEqual({ motion: 'kept' });
+    });
   });
 });

@@ -32,12 +32,15 @@ vi.mock('react-router-dom', async () => {
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: mockToast }),
+    toast: (...args: unknown[]) => mockToast(...args),
 }));
 
 // Mock stores
 const mockSetGenerateLoading = vi.fn();
 const mockSetGenerateResult = vi.fn();
 const mockSaveCurrentCase = vi.fn();
+const mockRecordResult = vi.fn(async () => 'recorded-case');
+const mockUpdateRecordedResult = vi.fn(async () => undefined);
 const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
 let mockGenerateResult: any = null;
@@ -56,6 +59,8 @@ vi.mock('@/lib/stores/session-store', () => ({
         setAskLoading: mockSetAskLoading,
         askMessages: [] as any[],
         setPendingFlowchartData: vi.fn(),
+        recordResult: mockRecordResult,
+        updateRecordedResult: mockUpdateRecordedResult,
     }),
 }));
 
@@ -70,7 +75,7 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
     GenerateForm: ({ onSubmit, isLoading }: { onSubmit: (data: unknown) => void, isLoading: boolean }) => (
         <div data-testid="generate-form">
             <button
-                onClick={() => onSubmit({ topic: 'Test Topic' })}
+                onClick={() => onSubmit({ topic: 'Test Topic', motion: 'Test Topic', side: 'con' })}
                 disabled={isLoading}
                 data-testid="submit-button"
             >
@@ -94,11 +99,11 @@ vi.mock('@/components/features/generate/GenerateResults', () => ({
 }));
 
 import { generateCase } from '@/lib/ai/client';
-import { enableOneOffMode } from '@/test/helpers/debate';
+import { enableOneOffMode, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
 
 describe('GeneratePage Integration', () => {
     beforeEach(() => {
-      enableOneOffMode();
+        enableOneOffMode();
         vi.clearAllMocks();
         mockGenerateResult = null;
         mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
@@ -265,5 +270,51 @@ describe('GeneratePage Integration', () => {
             expect(screen.getByTestId('discovered-sources')).toHaveTextContent('Fresh source');
         });
         expect(screen.getByTestId('discovered-sources')).not.toHaveTextContent('Old source');
+    });
+
+    it('records the case in the Current Debate with its side automatically', async () => {
+        seedCurrentDebate({ motion: 'Test Topic' });
+        const result = { caseStructure: { thesis: 'Debate thesis' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[] };
+        (generateCase as Mock).mockResolvedValue({ result, discoveredSources: [] });
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('submit-button'));
+
+        await waitFor(() => expect(mockRecordResult).toHaveBeenCalledWith('case', expect.objectContaining({
+            title: 'Test Topic',
+            debateId: TEST_DEBATE_ID,
+            side: 'con',
+            output: result,
+        })));
+        // Sources come from the same debate.
+        expect((generateCase as Mock).mock.calls[0][3]).toBe(TEST_DEBATE_ID);
+        expect(screen.getByTestId('current-debate-strip')).toHaveTextContent('Working in: Test Topic');
+    });
+
+    it('keeps one-off results out of every debate', async () => {
+        const result = { caseStructure: { thesis: 'One-off' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[] };
+        (generateCase as Mock).mockResolvedValue({ result, discoveredSources: [] });
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('submit-button'));
+
+        await waitFor(() => expect(mockSetGenerateResult).toHaveBeenCalledWith(result));
+        expect(mockRecordResult).not.toHaveBeenCalled();
+        expect((generateCase as Mock).mock.calls[0][3]).toBeNull();
+    });
+
+    it('keeps a successful case on screen when saving it to the debate fails', async () => {
+        seedCurrentDebate({ motion: 'Test Topic' });
+        mockRecordResult.mockRejectedValueOnce(new Error('offline'));
+        const result = { caseStructure: { thesis: 'Kept' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[] };
+        (generateCase as Mock).mockResolvedValue({ result, discoveredSources: [] });
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('submit-button'));
+
+        await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Could not save this result to the debate' })));
+        expect(mockSetGenerateResult).toHaveBeenCalledWith(result);
+        expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Generate complete' }));
+        expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive', title: expect.stringMatching(/Generation Failed/i) }));
     });
 });

@@ -17,6 +17,7 @@ import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromAttack } from '@/lib/crossfire/prefill';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
+import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { activeDebateId } from '@/lib/stores/debate-store';
 
@@ -43,7 +44,7 @@ export default function AttackPage() {
       await workspace.attach(data, result);
       if (debateId) {
         const title = result.overallAssessment?.summary?.slice(0, 80) || data.caseText.slice(0, 80);
-        await recordResult('attack', { title, input: data, output: result, debateId, side: 'neutral' });
+        await recordInDebate(() => recordResult('attack', { title, input: data, output: result, debateId, side: 'neutral' }));
       }
       toast({ title: t('attack.complete', 'Attack analysis complete'), description: t('attack.completeDesc', 'The critique is ready.'), variant: 'success' });
     } catch (error) {

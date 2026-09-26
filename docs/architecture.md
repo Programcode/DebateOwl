@@ -17,13 +17,15 @@ Browser or Capacitor
 
 [`src/bootstrap.ts`](../src/bootstrap.ts) imports the application entry immediately, then schedules Jam after window load and idle time. [`src/main.tsx`](../src/main.tsx) mounts the application before starting native runtime handling, observability, native URL handling, and service-worker registration. Vercel browser telemetry is disabled inside the native shell and loaded behind a separate Suspense boundary.
 
-[`src/App.tsx`](../src/App.tsx) owns routes and top-level providers. Pages are lazy loaded. Public routes cover marketing, legal pages, login, sources, and shared content. `/app/*` routes pass through `RequireAuth` and include the main tools, history, library, timer, sparring, flowchart, settings, and administration.
+[`src/App.tsx`](../src/App.tsx) owns routes and top-level providers. Pages are lazy loaded. Public routes cover marketing, legal pages, login, sources, and shared content. `/app/*` routes pass through `RequireAuth` and include the main tools, the Current Debate dashboard (`/app/debate`), history, library, timer, sparring, flowchart, settings, and administration. The header holds only Home, the Current debate menu, Library, History, and the language, theme, and Settings controls; tools are launched from Home and the dashboard.
 
 `AuthProvider`, TanStack Query, theme and motion providers, toast systems, the offline indicator, and the route error boundary wrap the routed application.
 
 ## Client state
 
 [`src/lib/stores/session-store.ts`](../src/lib/stores/session-store.ts) owns active AI results, conversations, saved work, sources, folders, flowcharts, autosave state, and persisted form state. It persists selected local state and hydrates authenticated rows from Supabase.
+
+[`src/lib/stores/debate-store.ts`](../src/lib/stores/debate-store.ts) owns the signed-in user's debates, the Current Debate pointer, session-only one-off mode, and the shared Switch and Start dialogs. Every source and every automatically recorded result carries a `debateId`; one-off work and unsorted legacy rows have none. The Library, History, the AI source context, and discovered-source autosave all read from one debate at a time, so material never crosses debates. Motion-bearing tools confirm a motion that differs from the Current Debate (switch, create, or use once) before submitting, and the app blocks with Continue, Start new, or Switch after five days without work in the Current Debate.
 
 [`src/lib/stores/settings-store.ts`](../src/lib/stores/settings-store.ts) owns language, theme, feature provider settings, prompts, and research preferences. It persists locally and synchronizes authenticated settings.
 
@@ -68,9 +70,9 @@ Shared research, source ranking, URL validation, and prompt construction live un
 
 The import endpoint validates public HTTP URLs, resolves redirect targets, blocks private networks, and enforces response timeout, content type, and size limits. Research paths bound source count and content before prompt construction.
 
-Authenticated personal AI requests carry stable source IDs instead of source content. The Edge Function loads matching active rows for the authenticated user, bounds their title, content, origin, and type, then passes that context to ranking and prompt construction. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
+Authenticated personal AI requests carry stable source IDs instead of source content, drawn only from the target debate's active sources; one-off requests send none. The Edge Function loads matching active rows for the authenticated user, bounds their title, content, origin, and type, then passes that context to ranking and prompt construction. Jev scores relevance, importance, and evidence strength after the existing deterministic quality floor, while failures preserve the prior order. Generate also records a bounded source-use snapshot in the saved case output. Semantic counts and the latest case-use flag live in the existing source `metadata` JSON, so the Library can default to Smart ordering without a schema migration.
 
-Ordinary Ask remains stateless while a conversation is in progress. The browser sends only the newest eight messages within a UTF-8 byte budget. Pressing Save persists the chat and its messages in Supabase; Workspace threads use their separate durable server-side context path. Legacy local-only sources are not sent to the authenticated AI endpoint because they have no persisted UUID to authorize and load.
+Ordinary Ask remains stateless while a conversation is in progress. The browser sends only the newest eight messages within a UTF-8 byte budget. Inside a debate, each finished exchange is recorded into one chat for that debate; in one-off mode, pressing Save persists the chat and its messages; Workspace threads use their separate durable server-side context path. Legacy local-only sources are not sent to the authenticated AI endpoint because they have no persisted UUID to authorize and load.
 
 ## Database boundary
 

@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
 
 const locales = ['en', 'es', 'hu'] as const;
 const titledRoutes = ['generate', 'attack', 'brainstorm', 'factoids', 'ask'] as const;
-const mobileNavigationNames = {
-  en: 'Mobile navigation',
-  es: 'Navegación móvil',
-  hu: 'Mobil navigáció',
+const toolsHeadings = {
+  en: 'Prepare and practice',
+  es: 'Preparar y practicar',
+  hu: 'Felkészülés és gyakorlás',
 } as const;
 
 test('Sources does not show the stale consultation date', async ({ page }) => {
@@ -17,7 +17,7 @@ test('Sources does not show the stale consultation date', async ({ page }) => {
 });
 
 for (const locale of locales) {
-  test(`navigation and page titles agree in ${locale}`, async ({ page }, testInfo) => {
+  test(`navigation and page titles agree in ${locale}`, async ({ page }) => {
     await setLocale(page, locale);
     await stubSupabaseSession(page);
     await page.addInitScript(() => {
@@ -26,27 +26,17 @@ for (const locale of locales) {
         version: 0,
       }));
     });
-    await page.goto('/app');
+    await seedCurrentDebate(page, 'This House would make public transport free.');
 
+    // The Current Debate dashboard lists every tool under its navigation label.
     for (const route of titledRoutes) {
-      const desktopLink = page.locator(`[data-tour="nav-${route}"]`).first();
-      const label = await desktopLink.getAttribute('aria-label');
+      await page.goto('/app/debate');
+      const toolLink = page.getByRole('region', { name: toolsHeadings[locale] }).locator(`a[href="/app/${route}"]`);
+      const label = (await toolLink.innerText()).trim();
       expect(label).toBeTruthy();
-      if (testInfo.project.name === 'mobile-chromium') {
-        await page.locator('header button.lg\\:hidden[aria-expanded]').click();
-        await page.getByRole('navigation', { name: mobileNavigationNames[locale] })
-          .getByRole('link')
-          .filter({ hasText: label! })
-          .first()
-          .click();
-      } else {
-        if (!await desktopLink.isVisible()) {
-          await page.locator('summary[data-tour="nav-more"]').click();
-        }
-        await desktopLink.click();
-      }
+      await toolLink.click();
       await expect(page).toHaveURL(new RegExp(`/app/${route}$`));
-      await expect(page.getByRole('heading', { level: 1, name: label!, exact: true }).last()).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: label, exact: true }).last()).toBeVisible();
     }
   });
 }

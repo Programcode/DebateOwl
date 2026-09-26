@@ -22,7 +22,6 @@ interface PendingChoice {
  * to. A motion other than the Current Debate's asks the user to switch to a
  * matching debate, create a new one, or use the motion once.
  */
-// eslint-disable-next-line react-refresh/only-export-components
 export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
   /** Calls `proceed` right away when the target is clear, or after the user chooses. Cancelling never calls it. */
   run: (motion: string, proceed: (target: DebateTarget) => void) => void;

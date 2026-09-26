@@ -70,3 +70,27 @@ export async function setLocale(page: Page, locale: 'en' | 'es' | 'hu') {
     }
   }, locale);
 }
+
+/**
+ * Seed a Current Debate for a stub session. Stub sessions cannot reach the
+ * server, so the app keeps this persisted copy; it proves rendering only.
+ */
+export async function seedCurrentDebate(page: Page, motion: string, opts: { userId?: string } = {}) {
+  const userId = opts.userId ?? '00000000-0000-0000-0000-000000000001';
+  const now = Date.now();
+  const debate = {
+    id: '00000000-0000-4000-8000-00000000d001',
+    motion,
+    settings: {},
+    instructions: '',
+    lastActivityAt: now,
+    createdAt: now,
+  };
+  await page.addInitScript(({ value }) => {
+    try {
+      window.localStorage.setItem('debatelab-current-debate', JSON.stringify(value));
+    } catch {
+      /* ignore */
+    }
+  }, { value: { state: { ownerUserId: userId, debates: [debate], currentDebateId: debate.id }, version: 1 } });
+}

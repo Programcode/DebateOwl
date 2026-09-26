@@ -68,6 +68,8 @@ test('completes an LD sparring round through mocked opponent turns and judging',
   await page.getByRole('combobox', { name: 'Round format' }).click();
   await page.getByRole('option', { name: /Lincoln-Douglas · 5 speeches/ }).click();
   await page.getByRole('button', { name: 'Start round' }).click();
+  // No Current Debate yet: run this round once without saving it to a debate.
+  await page.getByRole('button', { name: 'Use once without saving to a debate' }).click();
 
   const userSpeeches = [
     ['Affirmative constructive', 'Universal access removes the direct price barrier to participation.'],
@@ -110,6 +112,8 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await page.getByLabel('Motion').fill('This House would require community service for graduation.');
   await page.getByRole('button', { name: 'Start round' }).click();
+  // No Current Debate yet: run this round once without saving it to a debate.
+  await page.getByRole('button', { name: 'Use once without saving to a debate' }).click();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
   const introductor = page.getByRole('textbox', { name: 'Draft for Pro Introductor' });

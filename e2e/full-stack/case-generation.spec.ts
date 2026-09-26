@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { admin, expect, fake, MARK, providerCall, signIn, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, fake, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -7,6 +7,7 @@ const motion = "This House would make public transport free";
 
 test("a signed-in user generates a case grounded in a saved Library source", async ({ signedIn: page, user }) => {
   const marker = `SOURCE-${Date.now()}`;
+  await startDebate(page, motion);
   await page.goto("/app/library");
   await page.getByRole("button", { name: "Add Source" }).click();
   await page.getByRole("textbox", { name: "Source title..." }).fill("Tallinn fare study");
@@ -40,6 +41,7 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
 
 test("a provider failure shows an error and lets the user retry", async ({ signedIn: page }) => {
   await fake.fail("generate", 500);
+  await startDebate(page, motion);
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
@@ -53,6 +55,7 @@ test("a provider failure shows an error and lets the user retry", async ({ signe
 
 test("an account without quota is told why generation is blocked", async ({ signedIn: page, user }) => {
   await admin.from("user_settings").update({ daily_limit_override: 0 }).eq("user_id", await user.userId());
+  await startDebate(page, motion);
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
@@ -61,10 +64,11 @@ test("an account without quota is told why generation is blocked", async ({ sign
   expect((await fake.requests()).filter((request) => request.feature === "generate")).toEqual([]);
 });
 
-test("a saved case persists to the account and reloads from History", async ({ signedIn: page, user }) => {
+test("a saved one-off case persists to the account and reloads from History", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await chooseForMotion(page, "once");
   await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
 
   const title = `Saved case ${Date.now()}`;
@@ -87,6 +91,7 @@ test("a saved case persists to the account and reloads from History", async ({ s
 });
 
 test("a generated case exports to PDF and DOCX files", async ({ signedIn: page }) => {
+  await startDebate(page, motion);
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate Debate Case" }).click();

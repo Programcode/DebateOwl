@@ -839,6 +839,27 @@ describe('AI client branch coverage', () => {
     }));
   });
 
+  it('never sends another debate\'s sources', async () => {
+    sessionState.sourceLibrary.push({ id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', title: 'Zoo source', content: 'Other debate', origin: 'https://zoo.example', type: 'url', isActive: true, debateId: 'other-debate' } as any);
+    invokeMock.mockResolvedValueOnce({ data: { output: validGenerateOutput }, error: null });
+
+    await generateCase(validGenerateInput, config);
+
+    expect(invokeMock.mock.calls[0][1].body.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
+  });
+
+  it('uses no debate sources and keeps no research for one-off work', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { output: validGenerateOutput, discoveredSources: [{ title: 'Source A', url: 'https://a.com', content: 'A content', qualityLabel: 'strong' }] },
+      error: null,
+    });
+
+    await generateCase(validGenerateInput, config, undefined, null);
+
+    expect(invokeMock.mock.calls[0][1].body.sourceIds).toEqual([]);
+    expect(addSourceMock).not.toHaveBeenCalled();
+  });
+
   it('throws generic AIError for edge payload errors that are not classified', async () => {
     invokeMock.mockResolvedValueOnce({
       data: {

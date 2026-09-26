@@ -25,6 +25,7 @@ import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { useReducedMotion } from 'framer-motion';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
+import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
 
@@ -86,7 +87,7 @@ export default function GeneratePage() {
       setRecordedCaseId(null);
       await workspace.attach(data, result);
       if (target.debateId) {
-        setRecordedCaseId(await recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
+        setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
       }
       setSuccessfulGenerationSequence((sequence) => sequence + 1);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });

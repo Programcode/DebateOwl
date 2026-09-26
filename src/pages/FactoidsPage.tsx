@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { activeDebateId } from '@/lib/stores/debate-store';
 import { DebateRequiredError } from '@/lib/stores/session-store';
@@ -41,7 +42,7 @@ export default function FactoidsPage() {
       setFactoidsResult(result);
       await workspace.attach(data, result);
       if (debateId) {
-        await recordResult('factoids', { title: data.claim, input: data, output: result, debateId, side: 'neutral' });
+        await recordInDebate(() => recordResult('factoids', { title: data.claim, input: data, output: result, debateId, side: 'neutral' }));
       }
       toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
     } catch (error) {
