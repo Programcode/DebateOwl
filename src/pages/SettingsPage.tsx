@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { useDebateStore } from '@/lib/stores/debate-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { supabase } from '@/lib/supabase/client';
@@ -77,6 +78,7 @@ export default function SettingsPage() {
     void clearAllData().then(() => {
       clearSession();
       resetSparringLocalData();
+      useDebateStore.setState({ debates: [], currentDebateId: null, oneOff: false });
       localStorage.removeItem('debate-trainer-storage');
       setDeleteDialogOpen(false);
       setDeleteEmail('');

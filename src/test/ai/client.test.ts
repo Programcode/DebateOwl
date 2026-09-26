@@ -8,6 +8,7 @@ import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 import type { AttackInput, AttackOutput } from '@/lib/ai/schemas/attack';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import i18n from '@/i18n';
+import { seedCurrentDebate } from '@/test/helpers/debate';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 
 const clientMocks = vi.hoisted(() => ({
@@ -19,8 +20,8 @@ const clientMocks = vi.hoisted(() => ({
     },
     session: {
         sourceLibrary: [
-            { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Source 1', content: 'Content 1', origin: 'url1', type: 'web', isActive: true },
-            { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Source 2', content: 'Content 2', origin: 'url2', type: 'web', isActive: false },
+            { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Source 1', content: 'Content 1', origin: 'url1', type: 'web', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+            { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Source 2', content: 'Content 2', origin: 'url2', type: 'web', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
         ],
         addSource: vi.fn(),
     },
@@ -60,6 +61,7 @@ describe('AI Client Integration', () => {
     };
 
     beforeEach(async () => {
+        seedCurrentDebate();
         resetMockState();
         setMockSessionToken('valid-token');
         vi.clearAllMocks();

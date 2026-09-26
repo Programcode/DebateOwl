@@ -5,6 +5,7 @@ import { setActiveAccessToken, supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
+import { useDebateStore } from '@/lib/stores/debate-store';
 import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 import { setJamUserId } from '@/lib/jam-metadata';
 import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
@@ -104,6 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetSessionStore = useSessionStore((state) => state.resetLocalData);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
   const resetSparringStore = useSparringStore((state) => state.resetLocalData);
+  const hydrateDebateStore = useDebateStore((state) => state.hydrate);
+  const resetDebateStore = useDebateStore((state) => state.resetLocalData);
   const currentUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -116,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
       Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
       Promise.resolve(hydrateSparringStore()).catch((err) => console.warn('[Auth] hydrateSparringStore failed:', err));
+      Promise.resolve(hydrateDebateStore()).catch((err) => console.warn('[Auth] hydrateDebateStore failed:', err));
     };
 
     // Older clients persisted these credentials across browser sessions.
@@ -229,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSessionStore();
         resetSettingsStore(!prevUserId);
         resetSparringStore();
+        resetDebateStore();
         sessionStorage.removeItem('google_provider_token');
         localStorage.removeItem('google_provider_token');
         // Remove refresh tokens written by older clients as well; this client
@@ -242,6 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSessionStore();
         resetSettingsStore();
         resetSparringStore();
+        resetDebateStore();
       }
 
       hydrateStores(nextUserId);
@@ -251,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }, [hydrateDebateStore, hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,

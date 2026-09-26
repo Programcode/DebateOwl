@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { seedCurrentDebate } from '@/test/helpers/debate';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 
@@ -16,8 +17,8 @@ const {
   const applySourceAssessmentsMock = vi.fn();
   const sessionState = {
     sourceLibrary: [
-      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
     ],
     addSource: addSourceMock,
     applySourceAssessments: applySourceAssessmentsMock,
@@ -118,10 +119,11 @@ const validGenerateOutput: GenerateOutput = {
 
 describe('AI client branch coverage', () => {
   beforeEach(() => {
+    seedCurrentDebate();
     vi.clearAllMocks();
     sessionState.sourceLibrary = [
-      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
     ];
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'token-123' } },
@@ -269,7 +271,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://a.com/',
       folder: 'Auto-saved',
-      isActive: true,
+      isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com/' }),
     });
   });
@@ -364,7 +366,7 @@ describe('AI client branch coverage', () => {
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Source with malformed metadata',
       origin: 'https://example.com/source',
-      isActive: false,
+      isActive: false, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: { url: 'https://example.com/source', capturedVia: 'generate' },
     }));
   });
@@ -387,7 +389,7 @@ describe('AI client branch coverage', () => {
 
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Weak fallback',
-      isActive: false,
+      isActive: false, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ qualityLabel: 'weak', qualityScore: 20 }),
     }));
   });
@@ -468,7 +470,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://c.com/',
       folder: 'Auto-saved',
-      isActive: true,
+      isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com/' }),
     });
   });
@@ -580,7 +582,7 @@ describe('AI client branch coverage', () => {
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Factoids source',
       origin: 'https://example.com/factoids',
-      isActive: true,
+      isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ capturedVia: 'factoids', qualityLabel: 'moderate' }),
     }));
   });

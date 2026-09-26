@@ -15,10 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
 
 export default function BrainstormPage() {
   const workspace = useWorkspaceToolScope('brainstorm');
-  const { brainstormResult, brainstormLoading, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
+  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages, recordResult } = useSessionStore();
+  const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('brainstorm');
   const askConfig = getFeatureConfig('ask');
@@ -28,13 +31,19 @@ export default function BrainstormPage() {
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   const { t } = useTranslation();
 
-  const handleSubmit = async (data: BrainstormInput) => {
+  const handleSubmit = (data: BrainstormInput) => debateGate.run(data.motion, (target) => void submitBrainstorm(data, target.debateId));
+
+  const submitBrainstorm = async (data: BrainstormInput, debateId: string | null) => {
+    const target = { debateId };
     setBrainstormLoading(true);
     try {
-      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined);
+      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId);
       setDiscoveredSources(discoveredSources);
       setBrainstormResult(result);
       await workspace.attach(data, result);
+      if (target.debateId) {
+        await recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side });
+      }
       toast({ title: t('brainstorm.complete', 'Brainstorm complete'), description: t('brainstorm.completeDesc', 'Your argument angles are ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to brainstorm:', error);
@@ -103,11 +112,12 @@ export default function BrainstormPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.brainstorm')}</h1>
           </div>
         </AnimatedSection>
+        <CurrentDebateStrip side={brainstormForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
           {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
-            <BrainstormForm onSubmit={handleSubmit} isLoading={brainstormLoading} />
+            <BrainstormForm onSubmit={handleSubmit} isLoading={brainstormLoading} debatePrefill={!workspace.context} />
           </AnimatedSection>
 
           {/* Results */}
@@ -133,6 +143,7 @@ export default function BrainstormPage() {
         </div>
       </div>
 
+      {debateGate.dialog}
       <LimitReachedModal
         open={subError.limitModalOpen}
         onOpenChange={subError.setLimitModalOpen}

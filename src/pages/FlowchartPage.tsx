@@ -68,6 +68,8 @@ import { toPng } from 'html-to-image';
 import { formatRelativeDate } from '@/lib/date-format';
 import { toast } from 'sonner';
 import type { TFunction } from 'i18next';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { useDebateStore } from '@/lib/stores/debate-store';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 
 // Custom node types
@@ -208,9 +210,12 @@ export default function FlowchartPage() {
         pendingFlowchartData,
         setPendingFlowchartData,
         saveFlowchart,
-        savedFlowcharts,
+        savedFlowcharts: allSavedFlowcharts,
         deleteSavedFlowchart
     } = useSessionStore();
+    // Saved flowcharts follow the Current Debate; one-off mode shows one-off flowcharts.
+    const flowchartScope = useDebateStore((state) => state.oneOff ? null : state.currentDebateId);
+    const savedFlowcharts = allSavedFlowcharts.filter((item) => (item.debateId ?? null) === flowchartScope);
 
     const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes(t));
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -303,7 +308,7 @@ export default function FlowchartPage() {
         if (!saveTitle.trim()) return;
 
         try {
-            await saveFlowchart(saveTitle, { nodes, edges });
+            await saveFlowchart(saveTitle, { nodes, edges }, workspace.context ? null : undefined);
             await workspace.attach({ title: saveTitle }, { nodes, edges });
             setIsSaveDialogOpen(false);
             setSaveTitle('');
@@ -632,6 +637,7 @@ export default function FlowchartPage() {
                             </Button>
                         </div>
                     </div>
+                    <CurrentDebateStrip hidden={Boolean(workspace.context)} className="mt-3" />
                 </CardHeader>
                 <CardContent className="p-0">
                     {/* Stats Bar */}

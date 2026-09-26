@@ -35,10 +35,19 @@ vi.mock('@/lib/source-import', () => ({
 
 import LibraryPage from '@/pages/LibraryPage';
 
+// Fixtures belong to the seeded Current Debate unless a test says otherwise.
+let rawSources: any[] = [];
+Object.defineProperty(mockStore, 'sourceLibrary', {
+  get: () => rawSources,
+  set: (sources: any[]) => { rawSources = sources.map((source) => ({ debateId: TEST_DEBATE_ID, ...source })); },
+});
+import { resetDebates, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
+
 describe('LibraryPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage('en');
+    seedCurrentDebate({ motion: 'This House would ban homework' });
     mockStore.sourceLibrary = [];
     mockStore.sourceFolders = ['General'];
     mockStore.addSource.mockResolvedValue(undefined);
@@ -319,5 +328,23 @@ describe('LibraryPage', () => {
     await waitFor(() => {
       expect(mockStore.setFolderActive).toHaveBeenCalledWith('Round 1', false);
     });
+  });
+
+  it('shows only the Current Debate sources', () => {
+    mockStore.sourceLibrary = [
+      { id: 's1', title: 'Homework study', content: 'x', type: 'text', isActive: true, createdAt: 1 },
+      { id: 's2', title: 'Zoo study', content: 'y', type: 'text', isActive: true, createdAt: 2, debateId: 'other-debate' },
+    ];
+    render(<LibraryPage />);
+    expect(screen.getByTestId('library-debate')).toHaveTextContent('This House would ban homework');
+    expect(screen.getAllByText('Homework study').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Zoo study')).toBeNull();
+  });
+
+  it('requires a debate before adding or importing sources', () => {
+    resetDebates();
+    render(<LibraryPage />);
+    expect(screen.getByText('Select or create a debate before adding or importing sources.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add Source/ })).toBeDisabled();
   });
 });

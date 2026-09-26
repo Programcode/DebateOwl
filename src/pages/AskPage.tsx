@@ -13,6 +13,9 @@ import { AnimatedSection } from '@/components/ui/animated-section';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { activeDebateId, useDebateStore } from '@/lib/stores/debate-store';
+import { DebateRequiredError } from '@/lib/stores/session-store';
 
 const MAX_AI_INPUT_LENGTH = 50000;
 
@@ -31,7 +34,11 @@ export default function AskPage() {
     loadSavedChat,
     savedChats,
     addSource,
+    askChatId,
+    askPersistedCount,
+    syncAskChat,
   } = useSessionStore();
+  const chatScope = useDebateStore((state) => state.oneOff ? null : state.currentDebateId);
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
@@ -56,6 +63,19 @@ export default function AskPage() {
   useEffect(() => () => {
     abortActiveRequest();
   }, [abortActiveRequest]);
+
+  // Each finished exchange is recorded into the Current Debate automatically,
+  // including conversations started from another tool's Discuss button.
+  const lastRole = askMessages[askMessages.length - 1]?.role;
+  useEffect(() => {
+    if (workspace.context || askLoading || lastRole !== 'assistant' || askPersistedCount >= askMessages.length) return;
+    const debateId = activeDebateId();
+    if (!debateId) return;
+    syncAskChat(debateId).catch((error) => {
+      console.error('Failed to record chat in debate:', error);
+      toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' });
+    });
+  }, [askLoading, askMessages.length, askPersistedCount, lastRole, syncAskChat, t, toast, workspace.context]);
 
   const handleSend = async (
     message: string,
@@ -283,9 +303,11 @@ export default function AskPage() {
   const handleSaveToLibrary = (title: string, content: string) => {
       const saveResult = addSource({ title, content, type: 'text', folder: 'Ask' });
       const showSuccess = () => toast({ title: t('ask.saved'), description: t('ask.savedDesc') });
-      const showFailure = () => toast({
+      const showFailure = (error?: unknown) => toast({
           title: t('ask.saveFailed', 'Save failed'),
-          description: t('ask.saveFailedDesc', 'The source could not be saved. Please try again.'),
+          description: error instanceof DebateRequiredError
+            ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
+            : t('ask.saveFailedDesc', 'The source could not be saved. Please try again.'),
           variant: 'destructive',
         });
       if (saveResult && typeof saveResult.then === 'function') {
@@ -313,14 +335,15 @@ export default function AskPage() {
         <AnimatedSection className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">{t('nav.ask')}</h1>
         </AnimatedSection>
+        <CurrentDebateStrip hidden={Boolean(workspace.context)} />
         <AnimatedSection delay={75}>
           <AskChat
             messages={visibleMessages}
             isLoading={askLoading}
             onSend={handleSend}
             onClear={handleClear}
-            onSaveChat={handleSaveChat}
-            savedChats={savedChats.map((chat) => ({
+            onSaveChat={askChatId ? undefined : handleSaveChat}
+            savedChats={savedChats.filter((chat) => (chat.debateId ?? null) === chatScope).map((chat) => ({
               id: chat.id,
               title: chat.title,
               createdAt: chat.createdAt,

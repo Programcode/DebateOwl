@@ -17,10 +17,12 @@ import { AnimatedSection } from '@/components/ui/animated-section';
 import { prefillFromAttack } from '@/lib/crossfire/prefill';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { activeDebateId } from '@/lib/stores/debate-store';
 
 export default function AttackPage() {
   const workspace = useWorkspaceToolScope('attack');
-  const { attackResult, attackLoading, attackForm, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages } = useSessionStore();
+  const { attackResult, attackLoading, attackForm, setAttackResult, setAttackLoading, addAskMessage, setAskLoading, askMessages, recordResult } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('attack'); // Actually we should use 'ask' config for the chat part
   const askConfig = getFeatureConfig('ask');
@@ -32,11 +34,17 @@ export default function AttackPage() {
 
   const handleSubmit = async (data: AttackInput) => {
     setAttackLoading(true);
+    // Attack critiques pasted text, not a motion, so it follows the Current Debate directly.
+    const debateId = workspace.context ? null : activeDebateId();
     try {
-      const { result, discoveredSources } = await attackCase(data, config, workspace.context ?? undefined);
+      const { result, discoveredSources } = await attackCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId);
       setDiscoveredSources(discoveredSources);
       setAttackResult(result);
       await workspace.attach(data, result);
+      if (debateId) {
+        const title = result.overallAssessment?.summary?.slice(0, 80) || data.caseText.slice(0, 80);
+        await recordResult('attack', { title, input: data, output: result, debateId, side: 'neutral' });
+      }
       toast({ title: t('attack.complete', 'Attack analysis complete'), description: t('attack.completeDesc', 'The critique is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to attack case:', error);
@@ -116,6 +124,7 @@ export default function AttackPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.attack')}</h1>
           </div>
         </AnimatedSection>
+        <CurrentDebateStrip hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
           {/* Form */}

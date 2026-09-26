@@ -15,6 +15,7 @@ import {
 } from './schemas/sparring';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
+import { activeDebateId } from '../stores/debate-store';
 import {
   type SourceAssessmentUpdate,
   type SourceProvenance,
@@ -61,6 +62,8 @@ interface AIRequestOptions<T = unknown> {
   signal?: AbortSignal;
   transformResponse?: (data: unknown) => T;
   workspaceContext?: WorkspaceToolContext;
+  /** Debate whose sources ground this request; null for one-off work. Defaults to the active debate. */
+  debateId?: string | null;
 }
 
 function selectedOutputLanguage(): AppLanguage {
@@ -446,10 +449,12 @@ async function callSupabaseAI<T = unknown>(
   const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
-  const sourceIds = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring'
+  const debateId = options.debateId !== undefined ? options.debateId : activeDebateId();
+  // Sources never cross debates, and one-off work uses none of them.
+  const sourceIds = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring' || !debateId
     ? []
     : session.sourceLibrary
-      .filter((s) => s.isActive)
+      .filter((s) => s.isActive && s.debateId === debateId)
       .map((s) => s.id)
       .filter((id) => SOURCE_UUID_PATTERN.test(id))
       .slice(0, MAX_REQUEST_SOURCE_IDS);
@@ -754,7 +759,7 @@ function validateCrossfireTurnReferences(input: CrossfireAIInput, debrief: Cross
 export async function crossfire(
   rawInput: CrossfireAIInput,
   config: ProviderConfig,
-  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext'> = {},
+  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext' | 'debateId'> = {},
 ): Promise<(CrossfireReply & { signalToken?: string }) | CrossfireDebrief> {
   const input = CrossfireAIInputSchema.safeParse(rawInput);
   if (!input.success) {
@@ -773,6 +778,7 @@ export async function crossfire(
       timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
       signal: options.signal,
       workspaceContext: options.workspaceContext,
+      debateId: options.debateId,
       transformResponse: (rawData) => {
         const data = rawData as { output: unknown; signalToken?: unknown };
         if (input.data.operation === 'next-turn') {
@@ -1185,7 +1191,10 @@ function validateGenerateOutput(output: unknown): GenerateOutput {
 
 type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
-async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature): Promise<void> {
+async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature, debateId: string | null | undefined): Promise<void> {
+  const targetDebateId = debateId !== undefined ? debateId : activeDebateId();
+  // Every source belongs to one debate, so one-off research is not kept.
+  if (!targetDebateId) return;
   const retainedSources = sources.filter((source) => !source.semantic ||
     (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
     source.semantic.lastUsedInCase === true);
@@ -1200,6 +1209,7 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
         type: 'url',
         origin: source.url,
         folder: 'Auto-saved',
+        debateId: targetDebateId,
         isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
         metadata: {
           url: source.url,
@@ -1234,10 +1244,11 @@ function expectedContentionCount(length: GenerateInput['length']): number {
   }
 }
 
-export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<GenerateOutput>> {
+export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<GenerateOutput>> {
   const inputWithLanguage = withOutputLanguage(input as unknown as Record<string, unknown>);
   const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
     workspaceContext,
+    debateId,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
@@ -1250,13 +1261,14 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
       return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'generate');
+  await autosaveDiscoveredSources(response.discoveredSources, 'generate', debateId);
   return response;
 }
 
-export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<AttackOutput>> {
+export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<AttackOutput>> {
   const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
+    debateId,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1265,13 +1277,14 @@ export async function attackCase(input: AttackInput, config: ProviderConfig, wor
       };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'attack');
+  await autosaveDiscoveredSources(response.discoveredSources, 'attack', debateId);
   return response;
 }
 
-export async function brainstorm(input: BrainstormInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<BrainstormOutput>> {
+export async function brainstorm(input: BrainstormInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<BrainstormOutput>> {
   const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
+    debateId,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1280,11 +1293,11 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig,
       };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'brainstorm');
+  await autosaveDiscoveredSources(response.discoveredSources, 'brainstorm', debateId);
   return response;
 }
 
-export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext): Promise<ResultWithSources<FactoidsOutput>> {
+export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<FactoidsOutput>> {
   const inputWithLanguage = withOutputLanguage({
     ...input,
     region: input.region?.trim() || 'Global',
@@ -1292,6 +1305,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig, wor
   });
   const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
     workspaceContext,
+    debateId,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const parsed = FactoidsOutputSchema.safeParse(data.output);
@@ -1314,7 +1328,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig, wor
       };
     },
   });
-  await autosaveDiscoveredSources(response.discoveredSources, 'factoids');
+  await autosaveDiscoveredSources(response.discoveredSources, 'factoids', debateId);
   return response;
 }
 

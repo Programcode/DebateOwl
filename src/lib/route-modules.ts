@@ -20,6 +20,7 @@ export const routeLoaders = {
   "/login": cacheLoader(() => import("@/pages/LoginPage")),
   "/share/:code": cacheLoader(() => import("@/pages/SharedPage")),
   "/app": cacheLoader(() => import("@/pages/HomePage")),
+  "/app/debate": cacheLoader(() => import("@/pages/CurrentDebatePage")),
   "/app/workspaces": cacheLoader(() => import("@/pages/WorkspacesPage")),
   "/app/workspaces/invite": cacheLoader(() => import("@/pages/WorkspaceInvitePage")),
   "/app/workspaces/:workspaceId": cacheLoader(() => import("@/pages/WorkspacePage")),

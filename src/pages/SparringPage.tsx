@@ -11,6 +11,9 @@ import { SparringRound } from '@/components/features/sparring/SparringRound';
 import { SparringScorecard } from '@/components/features/sparring/SparringScorecard';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
+import { toast } from '@/hooks/use-toast';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
 
@@ -26,6 +29,7 @@ function estimateAiTimeUsedSeconds(content: string, limit: number) {
 
 export default function SparringPage() {
   const workspace = useWorkspaceToolScope('sparring');
+  const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -205,7 +209,12 @@ export default function SparringPage() {
       .then((result) => {
         if (judgeRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
-        completeSession(result.scorecard);
+        const completed = completeSession(result.scorecard);
+        // The server has now stored the judged round; file it in its debate.
+        if (completed?.debateId && !workspace.context) {
+          useSparringStore.getState().attachSessionToDebate(completed.id, completed.debateId)
+            .catch(() => toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' }));
+        }
       })
       .catch((error: unknown) => {
         if (judgeRequestRef.current !== requestKey) return;
@@ -231,9 +240,12 @@ export default function SparringPage() {
     });
   }, [session, workspace.context]);
 
-  const handleStart = (values: SparringSetupValues) => {
+  const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => beginRound(values, target.debateId));
+
+  const beginRound = (values: SparringSetupValues, debateId: string | null) => {
+    const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
-    startSession(values);
+    startSession({ ...values, debateId: target.debateId });
     setAiError(null);
     setJudgingError(null);
     setRetryNonce(0);
@@ -277,7 +289,10 @@ export default function SparringPage() {
         <SparringSetup
           initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
           onStart={handleStart}
+          debatePrefill={!workspace.context}
+          banner={<CurrentDebateStrip hidden={Boolean(workspace.context)} className="" />}
         />
+        {debateGate.dialog}
       </div>
     );
   }

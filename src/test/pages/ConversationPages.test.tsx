@@ -158,9 +158,11 @@ vi.mock('@/components/features/factoids/FactoidsResults', () => ({
 import AskPage from '@/pages/AskPage';
 import BrainstormPage from '@/pages/BrainstormPage';
 import FactoidsPage from '@/pages/FactoidsPage';
+import { enableOneOffMode } from '@/test/helpers/debate';
 
 describe('Conversation Pages', () => {
   beforeEach(() => {
+    enableOneOffMode();
     vi.clearAllMocks();
 
     sessionState.askMessages = [];

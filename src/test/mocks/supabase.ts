@@ -19,6 +19,24 @@ const defaultInvokeResponse: { data: any; error: unknown } = {
   error: null,
 };
 
+type FilterResult = { data: unknown; error: unknown };
+type FilterChain = PromiseLike<FilterResult> & {
+  eq: (...args: unknown[]) => FilterChain;
+  in: (...args: unknown[]) => FilterChain;
+  neq: (...args: unknown[]) => FilterChain;
+};
+
+/** A filter chain that can be awaited after any number of .eq/.in/.neq calls. */
+const filterChain = (result: () => FilterResult): FilterChain => {
+  const chain: FilterChain = {
+    eq: vi.fn(() => chain),
+    in: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
+    then: (resolve, reject) => Promise.resolve(result()).then(resolve, reject),
+  };
+  return chain;
+};
+
 const createQuery = (table: string) => {
   const responses = tableResponses[table] || {};
 
@@ -39,14 +57,8 @@ const createQuery = (table: string) => {
       })),
     })),
     upsert: vi.fn(async () => ({ data: null, error: null })),
-    update: vi.fn(() => ({
-      eq: vi.fn(async () => ({ data: responses.update ?? null, error: null })),
-    })),
-    delete: vi.fn(() => ({
-      eq: vi.fn(async () => ({ data: null, error: null })),
-      in: vi.fn(async () => ({ data: null, error: null })),
-      neq: vi.fn(async () => ({ data: null, error: null })),
-    })),
+    update: vi.fn(() => filterChain(() => ({ data: responses.update ?? null, error: null }))),
+    delete: vi.fn(() => filterChain(() => ({ data: null, error: null }))),
     eq: vi.fn(async () => ({ data: responses.select ?? null, error: null })),
     neq: vi.fn(async () => ({ data: null, error: null })),
     in: vi.fn(() => ({

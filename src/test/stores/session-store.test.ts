@@ -10,6 +10,7 @@ import {
 vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from "@/lib/stores/session-store";
+import { seedCurrentDebate, TEST_DEBATE_ID } from "@/test/helpers/debate";
 import i18n from "@/i18n";
 
 import type { GenerateOutput } from "@/lib/ai/schemas/generate";
@@ -58,6 +59,7 @@ describe("session-store", () => {
   beforeEach(() => {
     resetMockState();
     localStorage.clear();
+    seedCurrentDebate();
     useSessionStore.setState({
       generateResult: null,
       generateLoading: false,
@@ -92,6 +94,7 @@ describe("session-store", () => {
   beforeEach(() => {
     resetMockState();
     localStorage.clear();
+    seedCurrentDebate();
     useSessionStore.setState({
       generateResult: null,
       generateLoading: false,
@@ -473,6 +476,7 @@ describe("session-store", () => {
         type: 'text' as const,
         folder: s.folder,
         isActive: s.isActive ?? true,
+        debateId: TEST_DEBATE_ID,
         createdAt: Date.now(),
       })),
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
@@ -797,7 +801,7 @@ describe("session-store", () => {
     expect(supabaseMock.from).toHaveBeenCalledWith('source_folders');
   });
 
-  it('does not overwrite local state when server has no persisted data', async () => {
+  it('replaces local saved work with the server so purged rows cannot reappear', async () => {
     useSessionStore.setState({
       savedCases: [{ id: 'local-case', title: 'Local', createdAt: Date.now(), data: { x: 1 } as any }],
     } as Partial<ReturnType<typeof useSessionStore.getState>>);
@@ -813,7 +817,7 @@ describe("session-store", () => {
 
     await useSessionStore.getState().hydrateFromServer();
 
-    expect(useSessionStore.getState().savedCases[0].id).toBe('local-case');
+    expect(useSessionStore.getState().savedCases).toEqual([]);
   });
 
   it('hydrates safely when Supabase query responses contain null data arrays', async () => {
@@ -1017,6 +1021,7 @@ describe("session-store", () => {
       origin: "https://example.com/source",
       createdAt: 1,
       isActive: true,
+      debateId: TEST_DEBATE_ID,
       metadata: { url: "https://example.com/source", query: "original query", qualityLabel: "strong" },
     }] });
 

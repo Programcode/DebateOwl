@@ -94,9 +94,11 @@ vi.mock('@/components/features/generate/GenerateResults', () => ({
 }));
 
 import { generateCase } from '@/lib/ai/client';
+import { enableOneOffMode } from '@/test/helpers/debate';
 
 describe('GeneratePage Integration', () => {
     beforeEach(() => {
+      enableOneOffMode();
         vi.clearAllMocks();
         mockGenerateResult = null;
         mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };

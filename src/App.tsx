@@ -24,6 +24,7 @@ const LandingPage = lazy(routeLoaders["/"]);
 const TermsPage = lazy(routeLoaders["/terms"]);
 const PrivacyPage = lazy(routeLoaders["/privacy"]);
 const HomePage = lazy(routeLoaders["/app"]);
+const CurrentDebatePage = lazy(routeLoaders["/app/debate"]);
 const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
 const WorkspaceInvitePage = lazy(routeLoaders["/app/workspaces/invite"]);
 const WorkspacePage = lazy(routeLoaders["/app/workspaces/:workspaceId"]);
@@ -97,6 +98,7 @@ const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
   "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
   "/app": { variant: "home-grid", label: "Home", labelKey: "nav.home" },
+  "/app/debate": { variant: "settings/list", label: "Current debate", labelKey: "nav.currentDebate" },
   "/app/workspaces": { variant: "settings/list", label: "Workspaces", labelKey: "nav.workspaces" },
   "/app/generate": { variant: "tool-form", label: "Generate", labelKey: "nav.generate" },
   "/app/attack": { variant: "tool-form", label: "Attack", labelKey: "nav.attack" },
@@ -240,6 +242,7 @@ function AppRoutes() {
             }
           >
             <Route path="/app" element={<RouteContent><HomePage /></RouteContent>} />
+            <Route path="/app/debate" element={<RouteContent><CurrentDebatePage /></RouteContent>} />
             {COLLABORATION_URL && (
               <>
                 <Route path="/app/workspaces" element={<RouteContent><WorkspacesPage /></RouteContent>} />

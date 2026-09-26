@@ -4,6 +4,7 @@ import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { UserAnnouncement } from '@/lib/announcements';
 import i18n from '@/i18n';
+import { resetDebates, seedCurrentDebate } from '@/test/helpers/debate';
 
 const { mockAuth, mockDismissAnnouncement, mockListActiveAnnouncements } = vi.hoisted(() => ({
   mockAuth: { user: { id: 'user-a' } },
@@ -258,58 +259,36 @@ describe('AppLayout announcements', () => {
     expect(mockListActiveAnnouncements).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps all tool destinations reachable across desktop and mobile navigation', async () => {
+  it('keeps features out of the header and puts Current debate after Home', async () => {
+    seedCurrentDebate({ motion: 'This House would ban homework' });
     renderLayout();
     await screen.findByText('Scheduled maintenance');
 
-    const expectDestinations = (links: HTMLElement[], expected: readonly (readonly [string, string])[]) => {
-      const destinations = links.map((link) => ({
-        name: link.textContent?.trim() ?? '',
-        href: link.getAttribute('href'),
-      }));
-      for (const [label, path] of expected) {
-        expect(destinations).toContainEqual(expect.objectContaining({
-          name: expect.stringContaining(label),
-          href: path,
-        }));
-      }
-    };
-
     const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
-    fireEvent.click(within(mainNavigation).getByText('More'));
-    expectDestinations(within(mainNavigation).getAllByRole('link'), [
-      ['Home', '/app'],
-      ['Generate', '/app/generate'],
-      ['Attack', '/app/attack'],
-      ['Ask', '/app/ask'],
-      ['Crossfire', '/app/crossfire'],
-      ['Sparring', '/app/sparring'],
-      ['Brainstorm', '/app/brainstorm'],
-      ['Factoids', '/app/factoids'],
-      ['Flowchart', '/app/flowchart'],
-      ['Library', '/app/library'],
-      ['Timer', '/app/timer'],
-      ['History', '/app/history'],
-    ]);
-
+    const links = within(mainNavigation).getAllByRole('link').map((link) => [link.textContent?.trim(), link.getAttribute('href')]);
+    expect(links).toEqual([['Home', '/app'], ['Library', '/app/library'], ['History', '/app/history']]);
+    for (const feature of ['Generate', 'Attack', 'Ask', 'Crossfire', 'Sparring', 'More']) {
+      expect(within(mainNavigation).queryByText(feature)).not.toBeInTheDocument();
+    }
+    const control = within(mainNavigation).getByRole('button', { name: 'Current debate: This House would ban homework' });
+    expect(control).toHaveTextContent('Current debate');
+    // Home, then Current debate, then Library.
+    const order = Array.from(mainNavigation.querySelectorAll('a, button')).map((node) => node.textContent?.trim());
+    expect(order.slice(0, 3)).toEqual(['Home', 'Current debate', 'Library']);
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/app/settings');
 
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
-    expectDestinations(within(mobileNavigation).getAllByRole('link'), [
-      ['Home', '/app'],
-      ['Generate', '/app/generate'],
-      ['Attack', '/app/attack'],
-      ['Brainstorm', '/app/brainstorm'],
-      ['Factoids', '/app/factoids'],
-      ['Ask', '/app/ask'],
-      ['Crossfire', '/app/crossfire'],
-      ['Library', '/app/library'],
-      ['Timer', '/app/timer'],
-      ['Sparring', '/app/sparring'],
-      ['Flowchart', '/app/flowchart'],
-      ['History', '/app/history'],
-    ]);
+    expect(within(mobileNavigation).getAllByRole('link').map((link) => link.getAttribute('href')))
+      .toEqual(['/app', '/app/debate', '/app/library', '/app/history', '/app/settings']);
+  });
+
+  it('offers Start debate when the user has no debate', async () => {
+    resetDebates();
+    renderLayout();
+    await screen.findByText('Scheduled maintenance');
+    const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(mainNavigation).getByRole('button', { name: 'Start debate' })).toBeInTheDocument();
   });
 
   it('localizes desktop and mobile navigation labels in Hungarian', async () => {
@@ -323,23 +302,14 @@ describe('AppLayout announcements', () => {
     expect(screen.getByAltText('DebateLab logó')).toBeInTheDocument();
   });
 
-  it('closes menus on Escape and returns focus to the trigger', async () => {
+  it('closes the mobile menu on Escape and returns focus to the trigger', async () => {
     renderLayout();
     await screen.findByText('Scheduled maintenance');
-
-    const mainNavigation = screen.getByRole('navigation', { name: 'Main navigation' });
-    const moreSummary = within(mainNavigation).getByText('More');
-    fireEvent.click(moreSummary);
-    within(mainNavigation).getByRole('link', { name: 'Brainstorm' }).focus();
-    fireEvent.keyDown(document, { key: 'Escape' });
-
-    expect(moreSummary.closest('details')).not.toHaveAttribute('open');
-    expect(moreSummary).toHaveFocus();
 
     const menuTrigger = screen.getByRole('button', { name: 'Open menu' });
     fireEvent.click(menuTrigger);
     const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
-    within(mobileNavigation).getByRole('link', { name: /^Brainstorm/ }).focus();
+    within(mobileNavigation).getByRole('link', { name: /^Library/ }).focus();
     fireEvent.keyDown(document, { key: 'Escape' });
 
     expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();

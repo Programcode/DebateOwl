@@ -14,10 +14,13 @@ import { useToast } from '@/hooks/use-toast';
 import { StreamingIndicator } from '@/components/ui/streaming-indicator';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { activeDebateId } from '@/lib/stores/debate-store';
+import { DebateRequiredError } from '@/lib/stores/session-store';
 
 export default function FactoidsPage() {
   const workspace = useWorkspaceToolScope('factoids');
-  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource, setFactoidsForm } = useSessionStore();
+  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource, setFactoidsForm, recordResult } = useSessionStore();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
   const askConfig = getFeatureConfig('ask');
@@ -30,11 +33,16 @@ export default function FactoidsPage() {
   const handleSubmit = async (data: FactoidsInput) => {
     setDiscoveredSources([]);
     setFactoidsLoading(true);
+    // Factoids research a claim, not the motion, so it follows the Current Debate directly.
+    const debateId = workspace.context ? null : activeDebateId();
     try {
-      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined);
+      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId);
       setDiscoveredSources(sources);
       setFactoidsResult(result);
       await workspace.attach(data, result);
+      if (debateId) {
+        await recordResult('factoids', { title: data.claim, input: data, output: result, debateId, side: 'neutral' });
+      }
       toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
     } catch (error) {
       console.error('Failed to find factoids:', error);
@@ -67,8 +75,12 @@ export default function FactoidsPage() {
     try {
       await addSource({ title, content, type: 'url', origin: url, folder: 'Factoids' });
       toast({ title: t('factoids.savedToLibrary'), description: t('factoids.savedToLibraryDesc') });
-    } catch {
-      toast({ title: t('common.error', 'Error'), description: t('factoids.saveFailed', 'Could not save source.'), variant: 'destructive' });
+    } catch (error) {
+      toast({
+        title: t('common.error', 'Error'),
+        description: error instanceof DebateRequiredError ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.') : t('factoids.saveFailed', 'Could not save source.'),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -118,6 +130,7 @@ export default function FactoidsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.factoids')}</h1>
           </div>
         </AnimatedSection>
+        <CurrentDebateStrip hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
           {/* Form */}

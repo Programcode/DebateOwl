@@ -17,8 +17,12 @@ import {
 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { cn } from '@/lib/utils';
+import { formatRelativeDate } from '@/lib/date-format';
+import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
+import { useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
 
 type Tool = {
   key: string;
@@ -100,6 +104,47 @@ function ToolGroup({ title, tools, t }: { title: string; tools: readonly Tool[];
   );
 }
 
+function CurrentDebateSummary({ t }: { t: TFunction }) {
+  const debate = useCurrentDebate();
+  const openDialog = useDebateStore((state) => state.openDialog);
+  const oneOff = useDebateStore((state) => state.oneOff);
+  const counts = useDebateCounts(debate?.id);
+
+  if (!debate) {
+    return (
+      <Card className="mb-6 border-dashed border-border bg-card/60" data-testid="home-current-debate">
+        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">{t('debate.noCurrentTitle', 'No current debate')}</p>
+            <p className="text-sm text-muted-foreground">{t('debate.noCurrentDesc', 'Start a debate to keep one motion, its sources, and your results together.')}</p>
+          </div>
+          <Button onClick={() => openDialog('create')}>{t('debate.startDebate', 'Start debate')}</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-6 border-primary/25 bg-primary/5" data-testid="home-current-debate">
+      <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('nav.currentDebate', 'Current debate')}</p>
+          <p className="break-words text-lg font-semibold leading-snug">{debate.motion}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
+            {' · '}
+            {t('debate.counts', { sources: counts.sources, outputs: counts.outputs, defaultValue: '{{sources}} sources · {{outputs}} outputs' })}
+          </p>
+          {oneOff && <p className="text-sm font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
+        </div>
+        <Button asChild className="shrink-0">
+          <Link to="/app/debate">{t('debate.open', 'Open debate')}<ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" /></Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function HomePage() {
   const { t } = useTranslation();
 
@@ -109,6 +154,8 @@ export default function HomePage() {
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground">{t('home.title')}</h1>
         </div>
+
+        <CurrentDebateSummary t={t} />
 
         <div className="grid gap-6 md:grid-cols-2">
           <ToolGroup title={t('home.prepare', 'Prepare')} tools={prepareTools} t={t} />

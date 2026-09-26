@@ -480,9 +480,9 @@ describe('sparring-store', () => {
 
     supabaseMock.from.mockImplementationOnce(() => ({
       delete: () => ({
-        eq: async () => ({ data: null, error: { message: 'delete unavailable' } }),
+        eq: async () => ({ data: null as unknown, error: { message: 'delete unavailable' } }),
       }),
-    } as ReturnType<typeof supabaseMock.from>));
+    } as unknown as ReturnType<typeof supabaseMock.from>));
 
     await expect(useSparringStore.getState().deleteSavedSession(session.id))
       .rejects.toThrow('delete unavailable');

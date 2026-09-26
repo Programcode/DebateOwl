@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { importSourceFromUrl } from '@/lib/source-import';
+import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { importSourceFile, SourceFileImportError } from '@/lib/source-file-import';
 import {
   AlertDialog,
@@ -157,7 +158,7 @@ export default function LibraryPage() {
       ? t('aiClient.autoSavedFolder')
       : folder;
   const {
-    sourceLibrary,
+    sourceLibrary: allSources,
     sourceFolders,
     addSource,
     createSourceFolder,
@@ -170,6 +171,10 @@ export default function LibraryPage() {
     clearLibrary,
   } = useSessionStore();
   const { toast } = useToast();
+  // The Library shows only the Current Debate's sources; switching debates switches the Library.
+  const currentDebate = useCurrentDebate();
+  const openDebateDialog = useDebateStore((state) => state.openDialog);
+  const sourceLibrary = currentDebate ? allSources.filter((source) => source.debateId === currentDebate.id) : [];
 
   const [isAdding, setIsAdding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -459,9 +464,22 @@ export default function LibraryPage() {
         <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
+            {currentDebate ? (
+              <p className="mt-2 text-sm text-muted-foreground" data-testid="library-debate">
+                {t('debate.librarySources', 'Sources for')}{' '}
+                <span className="break-words font-medium text-foreground">{currentDebate.motion}</span>{' '}
+                <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDebateDialog('switch')}>{t('debate.change', 'Change')}</Button>
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3 text-sm" data-testid="library-debate">
+                <span className="text-muted-foreground">{t('debate.libraryNeedsDebate', 'Select or create a debate before adding or importing sources.')}</span>
+                <Button size="sm" onClick={() => openDebateDialog('create')}>{t('debate.startDebate', 'Start debate')}</Button>
+                <Button size="sm" variant="outline" onClick={() => openDebateDialog('switch')}>{t('debate.switch', 'Switch debate')}</Button>
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsAdding(!isAdding)}>
+              <Button variant="outline" size="sm" disabled={!currentDebate} onClick={() => setIsAdding(!isAdding)}>
                 <Plus className="h-4 w-4 mr-1" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
               </Button>
               <Select value={selectedFolder} onValueChange={setSelectedFolder}>
@@ -567,7 +585,7 @@ export default function LibraryPage() {
           </div>
         </div>
 
-        {isAdding && (
+        {isAdding && currentDebate && (
           <Card className="mb-8 border-primary/20 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

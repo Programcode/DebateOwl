@@ -33,6 +33,8 @@ export interface SparringSession {
   timerRunning: boolean;
   timerDeadline: number | null;
   scorecard?: SparringScorecard;
+  /** Debate the round attaches to once judged; null for one-off rounds. */
+  debateId?: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -42,6 +44,7 @@ interface StartSessionInput {
   userSide: SparringSide;
   format: SparringFormat;
   difficulty: SparringDifficulty;
+  debateId?: string | null;
 }
 
 interface SparringStoreState {
@@ -62,6 +65,7 @@ interface SparringStoreState {
   submitUserSpeech: (content: string, now?: number) => SparringSession | null;
   appendAiSpeech: (speech: SparringSpeech, now?: number) => SparringSession | null;
   completeSession: (scorecard: SparringScorecard, now?: number) => SparringSession | null;
+  attachSessionToDebate: (id: string, debateId: string) => Promise<void>;
   hydrateSavedSessions: () => Promise<void>;
   prepareForUser: (userId: string) => void;
   loadSavedSession: (id: string) => void;
@@ -83,6 +87,7 @@ const SavedRowsSchema = z.array(z.object({
   turns: z.unknown(),
   final_evaluation: z.unknown(),
   status: z.string(),
+  debate_id: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 }));
@@ -102,6 +107,7 @@ const PersistedSparringSessionSchema = z.object({
   timerRunning: z.boolean(),
   timerDeadline: z.number().nullable(),
   scorecard: SparringScorecardSchema.optional(),
+  debateId: z.string().nullable().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -277,6 +283,7 @@ function parseSavedRows(value: unknown): SparringSession[] {
       timerRunning: false,
       timerDeadline: null,
       scorecard: scorecard.data,
+      debateId: row.debate_id ?? null,
       createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
       updatedAt: Number.isFinite(updatedAt) ? updatedAt : Date.now(),
     }];
@@ -316,6 +323,7 @@ export const useSparringStore = create<SparringStoreState>()(
           phase: 'round',
           draft: '',
           ...timerForTurn(turns[0], now),
+          debateId: input.debateId ?? null,
           createdAt: now,
           updatedAt: now,
         };
@@ -433,6 +441,22 @@ export const useSparringStore = create<SparringStoreState>()(
         return completed;
       },
 
+      attachSessionToDebate: async (id, debateId) => {
+        const session = get().savedSessions.find((item) => item.id === id) ?? get().currentSession;
+        const { error } = await supabase.rpc('attach_to_debate', {
+          p_kind: 'sparring',
+          p_id: id,
+          p_debate_id: debateId,
+          p_side: session?.id === id ? session.userSide : null,
+        });
+        if (error) throw new Error(error.message);
+        const attach = (item: SparringSession) => item.id === id ? { ...item, debateId } : item;
+        set((state) => ({
+          savedSessions: state.savedSessions.map(attach),
+          currentSession: state.currentSession ? attach(state.currentSession) : null,
+        }));
+      },
+
       prepareForUser: (userId) => {
         if (get().ownerUserId === userId) return;
         hydrationEpoch += 1;
@@ -450,7 +474,7 @@ export const useSparringStore = create<SparringStoreState>()(
         }
         const { data, error } = await supabase
           .from('sparring_sessions')
-          .select('id,motion,user_side,format,difficulty,turns,final_evaluation,status,created_at,updated_at')
+          .select('id,motion,user_side,format,difficulty,turns,final_evaluation,status,debate_id,created_at,updated_at')
           .order('updated_at', { ascending: false });
         if (epoch !== hydrationEpoch) return;
         if (error) {

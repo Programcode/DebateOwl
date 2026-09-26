@@ -4,13 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { useDebateStore } from '@/lib/stores/debate-store';
 
 export function AutoSavedSourcesUndo() {
   const { t } = useTranslation();
   const sourceLibrary = useSessionStore((state) => state.sourceLibrary);
   const removeSource = useSessionStore((state) => state.removeSource);
   const [removing, setRemoving] = useState(false);
-  const autoSavedSources = sourceLibrary.filter((source) => source.folder === 'Auto-saved');
+  const currentDebateId = useDebateStore((state) => state.currentDebateId);
+  // Undo only this debate's auto-saved research; other debates keep theirs.
+  const autoSavedSources = sourceLibrary.filter((source) => source.folder === 'Auto-saved' && source.debateId === currentDebateId);
 
   if (autoSavedSources.length === 0) return null;
 

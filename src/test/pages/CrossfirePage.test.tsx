@@ -32,6 +32,7 @@ vi.mock('@/lib/ai/client', () => ({
 import CrossfirePage from '@/pages/CrossfirePage';
 import { createCrossfireSetupState } from '@/lib/crossfire/reducer';
 import { loadCrossfireDraft, saveCrossfireDraft } from '@/lib/crossfire/storage';
+import { enableOneOffMode } from '@/test/helpers/debate';
 
 function renderPage() {
   return render(
@@ -43,6 +44,7 @@ function renderPage() {
 
 describe('CrossfirePage', () => {
   beforeEach(() => {
+    enableOneOffMode();
     mocks.userId = 'user-a';
     mocks.crossfire.mockReset();
     mocks.crossfire.mockImplementation(() => new Promise(() => undefined));

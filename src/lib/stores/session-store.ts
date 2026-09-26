@@ -8,6 +8,7 @@ import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
 import i18n from '@/i18n';
+import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
 
 interface Message {
   id: string;
@@ -67,15 +68,51 @@ export interface Source {
   origin?: string;
   folder?: string;
   metadata?: SourceProvenance;
+  /** The one debate this source belongs to; null only for unsorted legacy sources. */
+  debateId?: string | null;
   createdAt: number;
   isActive: boolean;
 }
 
-interface SavedItem<T> {
+export interface SavedItem<T> {
   id: string;
   data: T;
   createdAt: number;
   title: string;
+  /** Null for one-off work and unsorted legacy material. */
+  debateId?: string | null;
+  side?: DebateSide | null;
+}
+
+/** Tool results that DebateLab records automatically inside a debate. */
+export type ResultKind = 'case' | 'attack' | 'brainstorm' | 'factoids' | 'crossfire';
+/** Everything that can later be attached from one-off or Unsorted into a debate. */
+export type AttachKind = ResultKind | 'chat' | 'flowchart' | 'source';
+
+const RESULT_TABLES = {
+  case: 'cases',
+  attack: 'attacks',
+  brainstorm: 'brainstorms',
+  factoids: 'factoids',
+  crossfire: 'crossfires',
+} as const;
+
+const RESULT_LISTS = {
+  case: 'savedCases',
+  attack: 'savedAttacks',
+  brainstorm: 'savedBrainstorms',
+  factoids: 'savedFactoids',
+  crossfire: 'savedCrossfires',
+} as const;
+
+const ATTACH_LISTS = { ...RESULT_LISTS, chat: 'savedChats', flowchart: 'savedFlowcharts', source: 'sourceLibrary' } as const;
+
+export interface RecordResultInput {
+  title: string;
+  input: unknown;
+  output: unknown;
+  debateId: string;
+  side: DebateSide;
 }
 
 export interface FlowchartData {
@@ -99,6 +136,9 @@ interface SessionState {
   askMessages: Message[];
   askLoading: boolean;
   askStreamingAssistant: StreamingAskMessage | null;
+  /** Server chat that the current Ask conversation is being recorded into. */
+  askChatId: string | null;
+  askPersistedCount: number;
 
   savedCases: SavedItem<GenerateOutput>[];
   savedAttacks: SavedItem<AttackOutput>[];
@@ -106,6 +146,7 @@ interface SessionState {
   savedFactoids: SavedItem<FactoidsOutput>[];
   savedChats: SavedItem<Message[]>[];
   savedFlowcharts: SavedItem<FlowchartData>[];
+  savedCrossfires: SavedItem<unknown>[];
   autosavedCases: SavedItem<GenerateOutput>[];
   autosavedAttacks: SavedItem<AttackOutput>[];
   autosavedBrainstorms: SavedItem<BrainstormOutput>[];
@@ -153,7 +194,12 @@ interface SessionState {
   saveCurrentChat: (title: string) => Promise<void>;
   loadSavedChat: (id: string) => void;
 
-  saveFlowchart: (title: string, data: FlowchartData) => Promise<void>;
+  saveFlowchart: (title: string, data: FlowchartData, debateId?: string | null) => Promise<void>;
+
+  recordResult: (kind: ResultKind, input: RecordResultInput) => Promise<string>;
+  updateRecordedResult: (kind: ResultKind, id: string, output: unknown) => Promise<void>;
+  attachItem: (kind: AttachKind, id: string, debateId: string, side?: DebateSide) => Promise<void>;
+  syncAskChat: (debateId: string) => Promise<void>;
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean }) => Promise<void>;
@@ -215,22 +261,6 @@ function settledData<T>(label: string, result: PromiseSettledResult<{ data?: T |
   return result.value.data ?? null;
 }
 
-function mergeSavedItems<T>(localItems: SavedItem<T>[], serverItems: SavedItem<T>[]) {
-  const merged = new Map<string, SavedItem<T>>();
-  [...localItems, ...serverItems].forEach((item) => {
-    merged.set(item.id, item);
-  });
-  return Array.from(merged.values()).sort((a, b) => b.createdAt - a.createdAt);
-}
-
-function mergeSources(localSources: Source[], serverSources: Source[]) {
-  const merged = new Map<string, Source>();
-  [...localSources, ...serverSources].forEach((source) => {
-    merged.set(source.id, { ...source, folder: normalizeFolder(source.folder) });
-  });
-  return Array.from(merged.values()).sort((a, b) => b.createdAt - a.createdAt);
-}
-
 function normalizeFolder(folder?: string | null) {
   const trimmed = folder?.trim();
   return trimmed || 'General';
@@ -279,14 +309,19 @@ function throwOnWriteError(result: unknown, action: string): void {
   if (error) throw new Error(`[SessionStore] Failed to ${action}: ${error.message || 'Unknown error'}`);
 }
 
-interface SupabaseSavedRow<T> {
+interface DebateColumns {
+  debate_id?: string | null;
+  side?: DebateSide | null;
+}
+
+interface SupabaseSavedRow<T> extends DebateColumns {
   id: string;
   title: string;
   output: T;
   created_at: string;
 }
 
-interface SupabaseFlowchartRow {
+interface SupabaseFlowchartRow extends DebateColumns {
   id: string;
   title: string;
   nodes: Node[];
@@ -294,7 +329,7 @@ interface SupabaseFlowchartRow {
   created_at: string;
 }
 
-interface SupabaseChatRow {
+interface SupabaseChatRow extends DebateColumns {
   id: string;
   title: string;
   created_at: string;
@@ -318,6 +353,7 @@ interface SupabaseSourceRow {
   folder?: string | null;
   is_active: boolean;
   metadata?: unknown | null;
+  debate_id?: string | null;
   created_at: string;
 }
 
@@ -325,6 +361,29 @@ interface SupabaseSourceFolderRow {
   id: string;
   name: string;
   created_at: string;
+}
+
+/** Thrown when a source would be saved without a debate to belong to. */
+export class DebateRequiredError extends Error {
+  constructor() {
+    super('Select or create a debate before adding sources');
+    this.name = 'DebateRequiredError';
+  }
+}
+
+function savedFromRow<T>(row: SupabaseSavedRow<T>): SavedItem<T> {
+  return {
+    id: row.id,
+    data: row.output,
+    createdAt: toTimestamp(row.created_at),
+    title: row.title,
+    debateId: row.debate_id ?? null,
+    side: row.side ?? null,
+  };
+}
+
+function markDebateActivity(debateId: string | null | undefined) {
+  if (debateId) useDebateStore.getState().markActivity(debateId);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -393,6 +452,8 @@ export const useSessionStore = create<SessionState>()(
       askMessages: [] as Message[],
       askLoading: false,
       askStreamingAssistant: null as StreamingAskMessage | null,
+      askChatId: null as string | null,
+      askPersistedCount: 0,
 
       savedCases: [] as SavedItem<GenerateOutput>[],
       savedAttacks: [] as SavedItem<AttackOutput>[],
@@ -400,6 +461,7 @@ export const useSessionStore = create<SessionState>()(
       savedFactoids: [] as SavedItem<FactoidsOutput>[],
       savedChats: [] as SavedItem<Message[]>[],
       savedFlowcharts: [] as SavedItem<FlowchartData>[],
+      savedCrossfires: [] as SavedItem<unknown>[],
       autosavedCases: [] as SavedItem<GenerateOutput>[],
       autosavedAttacks: [] as SavedItem<AttackOutput>[],
       autosavedBrainstorms: [] as SavedItem<BrainstormOutput>[],
@@ -423,7 +485,9 @@ export const useSessionStore = create<SessionState>()(
       addSource: async (source) => {
         const folder = normalizeFolder(source.folder);
         const isActive = source.isActive ?? true;
-        const localItem: Source = { ...source, folder, id: generateId(), createdAt: Date.now(), isActive };
+        const debateId = source.debateId ?? useDebateStore.getState().currentDebateId;
+        if (!debateId) throw new DebateRequiredError();
+        const localItem: Source = { ...source, folder, debateId, id: generateId(), createdAt: Date.now(), isActive };
         const userId = await getUserId();
         if (!userId) {
           set((state) => ({
@@ -441,6 +505,7 @@ export const useSessionStore = create<SessionState>()(
           .from('sources')
           .insert({
             user_id: userId,
+            debate_id: debateId,
             title: source.title,
             content: source.content,
             type: source.type,
@@ -462,6 +527,7 @@ export const useSessionStore = create<SessionState>()(
           origin: data.origin || undefined,
           folder: normalizeFolder(data.folder || localItem.folder),
           metadata: parseSourceProvenance(data.metadata),
+          debateId: data.debate_id ?? debateId,
           isActive: data.is_active,
           createdAt: toTimestamp(data.created_at),
         };
@@ -469,6 +535,7 @@ export const useSessionStore = create<SessionState>()(
           sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]),
           sourceLibrary: [savedSource, ...state.sourceLibrary],
         }));
+        markDebateActivity(debateId);
       },
       createSourceFolder: async (folder) => {
         const normalized = normalizeFolder(folder);
@@ -539,9 +606,13 @@ export const useSessionStore = create<SessionState>()(
       applySourceAssessments: async (assessments) => {
         if (assessments.length === 0) return;
         const previous = get().sourceLibrary;
+        const debateId = activeDebateId();
+        if (!debateId) return;
+        // A URL can be saved in several debates; only this debate's copy was used.
+        const candidates = previous.filter((source) => source.debateId === debateId);
         const updates = new Map<string, Source>();
         for (const assessment of assessments.slice(0, 10)) {
-          const source = previous.find((candidate) => candidate.id === assessment.id || candidate.id === assessment.key || candidate.origin === assessment.key || candidate.metadata?.url === assessment.key);
+          const source = candidates.find((candidate) => candidate.id === assessment.id || candidate.id === assessment.key || candidate.origin === assessment.key || candidate.metadata?.url === assessment.key);
           if (!source) continue;
           const prior = source.metadata?.semantic;
           const usedInCase = assessment.usedInCase;
@@ -656,16 +727,19 @@ export const useSessionStore = create<SessionState>()(
       },
       setFolderActive: async (folder, isActive) => {
         const normalized = normalizeFolder(folder);
+        const debateId = useDebateStore.getState().currentDebateId;
+        if (!debateId) throw new DebateRequiredError();
         const userId = await getUserId();
         if (userId) {
           throwOnWriteError(
-            await applyUserScopedColumnFilter(supabase.from('sources').update({ is_active: isActive }), userId, 'folder', normalized),
+            await supabase.from('sources').update({ is_active: isActive })
+              .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
             'update source folder activity',
           );
         }
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) =>
-            normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
+            source.debateId === debateId && normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
           ),
         }));
       },
@@ -697,12 +771,14 @@ export const useSessionStore = create<SessionState>()(
         if (!userId) {
           throw new Error('Cannot clear library: No authenticated user');
         }
-        set({ sourceLibrary: [], sourceFolders: ['General'] });
-        await supabase.from('sources').delete().eq('user_id', userId);
-        await supabase.from('source_folders').delete().eq('user_id', userId);
-        await supabase
-          .from('source_folders')
-          .upsert({ user_id: userId, name: 'General' }, { onConflict: 'user_id,name' });
+        // The Library belongs to the Current Debate; other debates keep their sources.
+        const debateId = useDebateStore.getState().currentDebateId;
+        if (!debateId) throw new DebateRequiredError();
+        throwOnWriteError(
+          await supabase.from('sources').delete().eq('user_id', userId).eq('debate_id', debateId),
+          'clear debate sources',
+        );
+        set((state) => ({ sourceLibrary: state.sourceLibrary.filter((source) => source.debateId !== debateId) }));
       },
 
       setGenerateResult: (result) => {
@@ -852,7 +928,7 @@ export const useSessionStore = create<SessionState>()(
           ? { ...state.askStreamingAssistant, content: `${state.askStreamingAssistant.content}${text}` }
           : state.askStreamingAssistant,
       })),
-      clearAskMessages: () => set({ askMessages: [], askStreamingAssistant: null, askLoading: false }),
+      clearAskMessages: () => set({ askMessages: [], askStreamingAssistant: null, askLoading: false, askChatId: null, askPersistedCount: 0 }),
       saveCurrentChat: async (title) => {
         const current = get().askMessages;
         if (current.length === 0) return;
@@ -884,11 +960,12 @@ export const useSessionStore = create<SessionState>()(
       },
       loadSavedChat: (id) => {
         const item = get().savedChats.find((c) => c.id === id);
-        if (item) set({ askMessages: item.data });
+        // Continuing a debate chat appends to it; a one-off chat stays one-off.
+        if (item) set({ askMessages: item.data, askChatId: item.debateId ? item.id : null, askPersistedCount: item.debateId ? item.data.length : 0 });
       },
 
-      saveFlowchart: async (title, data) => {
-        const localItem = { id: generateId(), data, createdAt: Date.now(), title };
+      saveFlowchart: async (title, data, debateId = activeDebateId()) => {
+        const localItem = { id: generateId(), data, createdAt: Date.now(), title, debateId, side: 'neutral' as const };
         const userId = await getUserId();
         if (!userId) {
           set((state) => ({ savedFlowcharts: [localItem, ...state.savedFlowcharts] }));
@@ -898,6 +975,8 @@ export const useSessionStore = create<SessionState>()(
           .from('flowcharts')
           .insert({
             user_id: userId,
+            debate_id: debateId,
+            side: 'neutral',
             title,
             nodes: data.nodes,
             edges: data.edges,
@@ -911,8 +990,63 @@ export const useSessionStore = create<SessionState>()(
           data: { nodes: saved.nodes, edges: saved.edges },
           createdAt: toTimestamp(saved.created_at),
           title: saved.title,
+          debateId: saved.debate_id ?? null,
+          side: saved.side ?? null,
         };
         set((state) => ({ savedFlowcharts: [savedItem, ...state.savedFlowcharts] }));
+        markDebateActivity(debateId);
+      },
+
+      recordResult: async (kind, { title, input, output, debateId, side }) => {
+        const userId = await getUserId();
+        if (!userId) throw new Error('[SessionStore] Sign in to save results to a debate');
+        const { data, error } = await supabase
+          .from(RESULT_TABLES[kind])
+          .insert({ user_id: userId, debate_id: debateId, side, title: title.slice(0, 300) || 'Untitled', input: input ?? {}, output })
+          .select('id,title,output,created_at,debate_id,side')
+          .single();
+        throwOnWriteError({ error }, `save ${kind} to debate`);
+        if (!data) throw new Error(`[SessionStore] Failed to save ${kind}: No record returned`);
+        const item = savedFromRow(data as SupabaseSavedRow<unknown>);
+        const list = RESULT_LISTS[kind];
+        set((state) => ({ [list]: [item, ...(state[list] as SavedItem<unknown>[])] }) as Partial<SessionState>);
+        markDebateActivity(debateId);
+        return item.id;
+      },
+
+      updateRecordedResult: async (kind, id, output) => {
+        const userId = await getUserId();
+        if (!userId) return;
+        throwOnWriteError(
+          await applyUserScopedIdFilter(supabase.from(RESULT_TABLES[kind]).update({ output }), userId, id),
+          `update ${kind}`,
+        );
+        const list = RESULT_LISTS[kind];
+        set((state) => ({
+          [list]: (state[list] as SavedItem<unknown>[]).map((item) => item.id === id ? { ...item, data: output } : item),
+        }) as Partial<SessionState>);
+      },
+
+      attachItem: async (kind, id, debateId, side) => {
+        const { error } = await supabase.rpc('attach_to_debate', {
+          p_kind: kind,
+          p_id: id,
+          p_debate_id: debateId,
+          ...(side ? { p_side: side } : {}),
+        });
+        throwOnWriteError({ error }, `attach ${kind} to debate`);
+        const list = ATTACH_LISTS[kind];
+        set((state) => ({
+          [list]: (state[list] as Array<{ id: string; side?: DebateSide | null }>).map((item) =>
+            item.id === id ? { ...item, debateId, ...(kind !== 'source' ? { side: side ?? item.side ?? null } : {}) } : item),
+        }) as Partial<SessionState>);
+        markDebateActivity(debateId);
+      },
+
+      syncAskChat: (debateId): Promise<void> => {
+        // Serialized so two quick replies cannot create two chats.
+        askSyncQueue = askSyncQueue.catch((): void => undefined).then((): Promise<void> => syncAskChatNow(debateId));
+        return askSyncQueue;
       },
 
       deleteSavedFlowchart: async (id) => {
@@ -931,6 +1065,7 @@ export const useSessionStore = create<SessionState>()(
           supabase.from('flowcharts').select('*').order('created_at', { ascending: false }),
           supabase.from('sources').select('*').order('created_at', { ascending: false }),
           supabase.from('source_folders').select('*').order('created_at', { ascending: true }),
+          supabase.from('crossfires').select('id,title,output,created_at,debate_id,side').order('created_at', { ascending: false }),
         ]);
 
         const [
@@ -942,6 +1077,7 @@ export const useSessionStore = create<SessionState>()(
           flowchartsRes,
           sourcesRes,
           sourceFoldersRes,
+          crossfiresRes,
         ] = results;
 
         const casesData = settledData<SupabaseSavedRow<GenerateOutput>[]>('cases', casesRes);
@@ -952,6 +1088,7 @@ export const useSessionStore = create<SessionState>()(
         const flowchartsData = settledData<SupabaseFlowchartRow[]>('flowcharts', flowchartsRes);
         const sourcesData = settledData<SupabaseSourceRow[]>('sources', sourcesRes);
         const sourceFoldersData = settledData<SupabaseSourceFolderRow[]>('source_folders', sourceFoldersRes);
+        const crossfiresData = settledData<SupabaseSavedRow<unknown>[]>('crossfires', crossfiresRes);
 
         const chatRows = chatsData || [];
         const chatIds = chatRows.map((c) => c.id);
@@ -961,44 +1098,14 @@ export const useSessionStore = create<SessionState>()(
           ]).then(([result]) => result))
           : [];
 
-        const caseRows = casesData || [];
-        const serverCases = caseRows.map((row) => ({
-          id: row.id,
-          data: row.output,
-          createdAt: toTimestamp(row.created_at),
-          title: row.title,
-        }));
-
-        const attackRows = attacksData || [];
-        const serverAttacks = attackRows.map((row) => ({
-          id: row.id,
-          data: row.output,
-          createdAt: toTimestamp(row.created_at),
-          title: row.title,
-        }));
-
-        const brainstormRows = brainstormsData || [];
-        const serverBrainstorms = brainstormRows.map((row) => ({
-          id: row.id,
-          data: row.output,
-          createdAt: toTimestamp(row.created_at),
-          title: row.title,
-        }));
-
-        const factoidRows = factoidsData || [];
-        const serverFactoids = factoidRows.map((row) => ({
-          id: row.id,
-          data: row.output,
-          createdAt: toTimestamp(row.created_at),
-          title: row.title,
-        }));
-
         const flowchartRows = flowchartsData || [];
         const serverFlowcharts = flowchartRows.map((row) => ({
           id: row.id,
           data: { nodes: row.nodes, edges: row.edges },
           createdAt: toTimestamp(row.created_at),
           title: row.title,
+          debateId: row.debate_id ?? null,
+          side: row.side ?? null,
         }));
 
         const messageMap = new Map<string, Message[]>();
@@ -1020,6 +1127,8 @@ export const useSessionStore = create<SessionState>()(
           title: row.title,
           createdAt: toTimestamp(row.created_at),
           data: messageMap.get(row.id) || [],
+          debateId: row.debate_id ?? null,
+          side: row.side ?? null,
         }));
 
         const sourceRows = sourcesData || [];
@@ -1032,33 +1141,25 @@ export const useSessionStore = create<SessionState>()(
           origin: row.origin || undefined,
           folder: normalizeFolder(row.folder),
           metadata: parseSourceProvenance(row.metadata),
+          debateId: row.debate_id ?? null,
           isActive: row.is_active,
           createdAt: toTimestamp(row.created_at),
         }));
         const serverSourceFolders = sourceFolderRows.map((row) => normalizeFolder(row.name));
 
-        const hasServerData = [
-          serverCases.length,
-          serverAttacks.length,
-          serverBrainstorms.length,
-          serverFactoids.length,
-          serverChats.length,
-          serverFlowcharts.length,
-          serverSources.length,
-          serverSourceFolders.length,
-        ].some((count) => count > 0);
-
-        if (!hasServerData) return;
-
+        // The server is the source of truth for signed-in users. Replacing (not
+        // merging) keeps purged legacy rows and other accounts' rows out of
+        // debates; a list whose query failed keeps its last known state.
         set((state) => ({
-          savedCases: mergeSavedItems(state.savedCases, serverCases),
-          savedAttacks: mergeSavedItems(state.savedAttacks, serverAttacks),
-          savedBrainstorms: mergeSavedItems(state.savedBrainstorms, serverBrainstorms),
-          savedFactoids: mergeSavedItems(state.savedFactoids, serverFactoids),
-          savedChats: mergeSavedItems(state.savedChats, serverChats),
-          savedFlowcharts: mergeSavedItems(state.savedFlowcharts, serverFlowcharts),
-          sourceFolders: mergeSourceFolders([...state.sourceFolders, ...serverSourceFolders], serverSources),
-          sourceLibrary: mergeSources(state.sourceLibrary, serverSources),
+          savedCases: casesData ? casesData.map(savedFromRow) : state.savedCases,
+          savedAttacks: attacksData ? attacksData.map(savedFromRow) : state.savedAttacks,
+          savedBrainstorms: brainstormsData ? brainstormsData.map(savedFromRow) : state.savedBrainstorms,
+          savedFactoids: factoidsData ? factoidsData.map(savedFromRow) : state.savedFactoids,
+          savedCrossfires: crossfiresData ? crossfiresData.map(savedFromRow) : state.savedCrossfires,
+          savedChats: chatsData ? serverChats : state.savedChats,
+          savedFlowcharts: flowchartsData ? serverFlowcharts : state.savedFlowcharts,
+          sourceFolders: mergeSourceFolders([...(sourceFoldersData ? [] : state.sourceFolders), ...serverSourceFolders], sourcesData ? serverSources : state.sourceLibrary),
+          sourceLibrary: sourcesData ? serverSources : state.sourceLibrary,
         }));
       },
 
@@ -1080,12 +1181,15 @@ export const useSessionStore = create<SessionState>()(
           savedFactoids: [],
           savedChats: [],
           savedFlowcharts: [],
+          savedCrossfires: [],
           autosavedCases: [],
           autosavedAttacks: [],
           autosavedBrainstorms: [],
           autosavedFactoids: [],
           sourceFolders: ['General'],
           sourceLibrary: [],
+          askChatId: null,
+          askPersistedCount: 0,
         });
       },
       resetLocalData: () => set({
@@ -1095,6 +1199,13 @@ export const useSessionStore = create<SessionState>()(
         savedFactoids: [],
         savedChats: [],
         savedFlowcharts: [],
+        savedCrossfires: [],
+        autosavedCases: [],
+        autosavedAttacks: [],
+        autosavedBrainstorms: [],
+        autosavedFactoids: [],
+        askChatId: null,
+        askPersistedCount: 0,
         sourceFolders: ['General'],
         sourceLibrary: [],
         generateResult: null,
@@ -1112,6 +1223,8 @@ export const useSessionStore = create<SessionState>()(
         factoidsResult: null,
         askMessages: [],
         askStreamingAssistant: null,
+        askChatId: null,
+        askPersistedCount: 0,
         pendingFlowchartData: null,
         generateForm: {},
         attackForm: {},
@@ -1122,6 +1235,18 @@ export const useSessionStore = create<SessionState>()(
     {
       name: 'debate-trainer-storage',
       storage: createJSONStorage(() => localStorage),
+      // v1 scopes saved work and sources to debates. Drop lists persisted by
+      // older clients: the server replaces them on hydrate, and keeping them
+      // would resurrect purged legacy rows and debate-less sources.
+      version: 1,
+      migrate: (persistedState) => {
+        const state = { ...(persistedState as Record<string, unknown>) };
+        for (const key of [
+          'savedCases', 'savedAttacks', 'savedBrainstorms', 'savedFactoids', 'savedChats', 'savedFlowcharts',
+          'autosavedCases', 'autosavedAttacks', 'autosavedBrainstorms', 'autosavedFactoids', 'sourceLibrary', 'sourceFolders',
+        ]) delete state[key];
+        return state as unknown as SessionState;
+      },
       partialize: ({
         generateLoading,
         attackLoading,
@@ -1135,3 +1260,45 @@ export const useSessionStore = create<SessionState>()(
     }
   )
 );
+
+let askSyncQueue: Promise<void> = Promise.resolve();
+
+async function syncAskChatNow(debateId: string): Promise<void> {
+  const get = useSessionStore.getState;
+  const set = useSessionStore.setState;
+  const { askMessages, askChatId, askPersistedCount } = get();
+  if (askMessages.length === 0 || askPersistedCount >= askMessages.length) return;
+  const userId = await getUserId();
+  if (!userId) return;
+  let chatId = askChatId;
+  if (!chatId) {
+    const title = askMessages.find((message) => message.role === 'user')?.content.slice(0, 60) || 'Chat';
+    const { data: chat, error } = await supabase
+      .from('chats')
+      .insert({ user_id: userId, debate_id: debateId, side: 'neutral', title })
+      .select('id,title,created_at,debate_id,side')
+      .single();
+    throwOnWriteError({ error }, 'save chat to debate');
+    if (!chat) throw new Error('[SessionStore] Failed to save chat: No record returned');
+    chatId = chat.id as string;
+    set((state) => ({
+      askChatId: chatId,
+      savedChats: [{ id: chatId!, title: chat.title, createdAt: toTimestamp(chat.created_at), data: askMessages, debateId, side: 'neutral' }, ...state.savedChats],
+    }));
+  }
+  const pending = askMessages.slice(askPersistedCount);
+  const result = await supabase.from('messages').insert(pending.map((message) => ({
+    chat_id: chatId,
+    role: message.role,
+    content: message.content,
+    output: message.output || null,
+    created_at: new Date(message.timestamp).toISOString(),
+  })));
+  throwOnWriteError(result, 'save chat messages');
+  set((state) => ({
+    // A cleared or replaced conversation must not inherit this count.
+    ...(state.askChatId === chatId ? { askPersistedCount: askPersistedCount + pending.length } : {}),
+    savedChats: state.savedChats.map((chat) => chat.id === chatId ? { ...chat, data: askMessages } : chat),
+  }));
+  markDebateActivity(debateId);
+}
