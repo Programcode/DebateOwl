@@ -1331,15 +1331,19 @@ function removedDebateIds(debates: Array<{ id: string }>, previous: Array<{ id: 
   return new Set(previous.filter((debate) => !debates.some((next) => next.id === debate.id)).map((debate) => debate.id));
 }
 
-// A switch starts a fresh Ask conversation in the new debate, and a deleted
-// debate takes its local work with it (the server already cascaded it).
+// A change of scope (another debate, or one-off mode on or off) starts a fresh
+// Ask conversation, and a deleted debate takes its local work with it (the
+// server already cascaded it).
+const askScope = (state: { oneOff: boolean; currentDebateId: string | null }) => state.oneOff ? null : state.currentDebateId;
 useDebateStore.subscribe((state, previous) => {
   const removed = removedDebateIds(state.debates, previous.debates);
   const session = useSessionStore.getState();
-  const leftAskDebate = session.askChatId !== null
-    && (state.currentDebateId !== previous.currentDebateId || (session.askChatDebateId !== null && removed.has(session.askChatDebateId)))
-    && session.askChatDebateId !== state.currentDebateId;
-  if (removed.size === 0 && !leftAskDebate) return;
+  const scope = askScope(state);
+  const openChatStays = session.askChatId !== null && session.askChatDebateId !== null
+    && session.askChatDebateId === scope && !removed.has(session.askChatDebateId);
+  const leftAskScope = session.askMessages.length > 0 && !openChatStays
+    && (scope !== askScope(previous) || (session.askChatDebateId !== null && removed.has(session.askChatDebateId)));
+  if (removed.size === 0 && !leftAskScope) return;
   const keep = <T extends { debateId?: string | null }>(list: T[]) => list.filter((item) => !item.debateId || !removed.has(item.debateId));
   useSessionStore.setState((current) => ({
     ...(removed.size > 0 ? {
@@ -1352,6 +1356,6 @@ useDebateStore.subscribe((state, previous) => {
       savedCrossfires: keep(current.savedCrossfires),
       sourceLibrary: keep(current.sourceLibrary),
     } : {}),
-    ...(leftAskDebate ? { askMessages: [], askStreamingAssistant: null, askChatId: null, askChatDebateId: null, askPersistedCount: 0 } : {}),
+    ...(leftAskScope ? { askMessages: [], askStreamingAssistant: null, askLoading: false, askChatId: null, askChatDebateId: null, askPersistedCount: 0 } : {}),
   }));
 });

@@ -1147,6 +1147,25 @@ describe("session-store", () => {
       expect(useSessionStore.getState()).toEqual(expect.objectContaining({ askMessages: [], askChatId: null, askChatDebateId: null, askPersistedCount: 0 }));
     });
 
+    it('never carries an Ask conversation across one-off mode', async () => {
+      // A one-off conversation must not be saved into the debate on return.
+      useDebateStore.setState({ oneOff: true });
+      useSessionStore.getState().addAskMessage({ role: 'user', content: 'One-off question' });
+      useSessionStore.getState().addAskMessage({ role: 'assistant', content: 'One-off answer' });
+      useDebateStore.setState({ oneOff: false });
+      expect(useSessionStore.getState().askMessages).toEqual([]);
+
+      // And an open debate chat does not continue in one-off mode.
+      useSessionStore.setState({
+        askMessages: [{ id: 'm1', role: 'user', content: 'In debate', timestamp: 1 }],
+        askChatId: 'chat-a',
+        askChatDebateId: TEST_DEBATE_ID,
+        askPersistedCount: 1,
+      });
+      useDebateStore.setState({ oneOff: true });
+      expect(useSessionStore.getState()).toEqual(expect.objectContaining({ askMessages: [], askChatId: null, askPersistedCount: 0 }));
+    });
+
     it('drops local work of a deleted debate and keeps unsorted work', () => {
       useSessionStore.setState({
         savedCases: [

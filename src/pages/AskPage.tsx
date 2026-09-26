@@ -65,6 +65,15 @@ export default function AskPage() {
     abortActiveRequest();
   }, [abortActiveRequest]);
 
+  // A reply still in flight belongs to the scope it was asked in; a new debate
+  // or one-off mode starts a fresh conversation, so drop the late answer.
+  const askedScopeRef = useRef(chatScope);
+  useEffect(() => {
+    if (askedScopeRef.current === chatScope) return;
+    askedScopeRef.current = chatScope;
+    abortActiveRequest();
+  }, [abortActiveRequest, chatScope]);
+
   // Each finished exchange is recorded into the Current Debate automatically,
   // including conversations started from another tool's Discuss button.
   const lastRole = askMessages[askMessages.length - 1]?.role;
