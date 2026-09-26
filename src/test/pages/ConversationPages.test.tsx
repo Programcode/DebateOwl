@@ -203,7 +203,7 @@ describe('Conversation Pages', () => {
       [],
       'general',
       { provider: 'openai', model: 'gpt-4o', temperature: 0.7 },
-      { citationMode: true, webSearch: true, prosConsMode: true, argumentMapMode: true }
+      { citationMode: true, webSearch: true, prosConsMode: true, argumentMapMode: true, debateId: null }
     );
     expect(sessionState.addAskMessage).toHaveBeenCalledWith({ role: 'user', content: 'How do I frame this?' });
     expect(sessionState.addAskMessage).toHaveBeenCalledWith({
@@ -331,7 +331,7 @@ describe('Conversation Pages', () => {
         [],
         'clarify',
         { provider: 'openai', model: 'gpt-4o', temperature: 0.7 },
-        { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false },
+        { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false, debateId: null },
       );
     });
     expect(mockStreamAskChat).not.toHaveBeenCalled();
@@ -413,7 +413,7 @@ describe('Conversation Pages', () => {
       [],
       'clarify',
       { provider: 'openai', model: 'gpt-4o', temperature: 0.7 },
-      { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false },
+      { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false, debateId: null },
     ));
 
     sessionState.setAskLoading.mockClear();

@@ -26,7 +26,7 @@ async function addSource(page: Page, title: string, content: string) {
 
 async function switchDebate(page: Page, motion: string) {
   await debateControl(page).click();
-  await page.getByRole("button", { name: "Switch debate" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Switch debate" }).click();
   await page.getByRole("dialog").getByRole("button", { name: `Switch to ${motion}` }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(debateControl(page)).toHaveAttribute("aria-label", `Current debate: ${motion}`);
@@ -42,6 +42,7 @@ async function latestCall(feature: string) {
 }
 
 test("two debates keep their motions, sources, and results apart", async ({ signedIn: page, user }) => {
+  test.setTimeout(120_000);
   const userId = await user.userId();
 
   // First debate: its source grounds a Brainstorm that fills in the motion by itself.

@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(27);
+SELECT plan(31);
 
 INSERT INTO auth.users (id) VALUES
   ('d1111111-1111-4111-8111-111111111111'),
@@ -169,37 +169,92 @@ SELECT is(
 );
 RESET ROLE;
 
--- The one-time cleanup keeps recent legacy work and any debate work.
-INSERT INTO public.cases (user_id, title, input, output, created_at) VALUES
-  ('d1111111-1111-4111-8111-111111111111', 'Legacy old', '{}', '{}', now() - interval '31 days'),
-  ('d1111111-1111-4111-8111-111111111111', 'Legacy recent', '{}', '{}', now() - interval '29 days');
-INSERT INTO public.cases (user_id, debate_id, title, input, output, created_at) VALUES
-  ('d1111111-1111-4111-8111-111111111111', 'da000000-0000-4000-8000-000000000001', 'Debate old', '{}', '{}', now() - interval '90 days');
-ALTER TABLE public.sources DISABLE TRIGGER sources_require_debate;
-INSERT INTO public.sources (user_id, title, content, type, created_at) VALUES
-  ('d1111111-1111-4111-8111-111111111111', 'Legacy old source', 'x', 'text', now() - interval '31 days'),
-  ('d1111111-1111-4111-8111-111111111111', 'Legacy recent source', 'x', 'text', now() - interval '2 days');
-ALTER TABLE public.sources ENABLE TRIGGER sources_require_debate;
-INSERT INTO public.chats (id, user_id, title, created_at) VALUES
-  ('dc000000-0000-4000-8000-000000000003', 'd1111111-1111-4111-8111-111111111111', 'Legacy old chat', now() - interval '45 days');
-INSERT INTO public.messages (chat_id, role, content) VALUES
-  ('dc000000-0000-4000-8000-000000000003', 'user', 'old message');
-
-SELECT private.purge_legacy_debate_material(now() - interval '30 days');
-
+-- The one-time cleanup. Pretend Current Debate shipped 60 days ago, so legacy
+-- work is anything created before that and quiet since 90 days ago.
 SELECT is(
-  (SELECT array_agg(title ORDER BY title) FROM public.cases WHERE user_id = 'd1111111-1111-4111-8111-111111111111'),
-  ARRAY['Debate old', 'Legacy recent'],
-  'the cutoff removes only unsorted cases older than 30 days'
-);
-SELECT is(
-  (SELECT array_agg(title ORDER BY title) FROM public.sources WHERE debate_id IS NULL),
-  ARRAY['Legacy recent source'],
-  'recent unsorted sources remain for the user to confirm'
+  (SELECT count(*) FROM private.current_debate_rollout),
+  1::bigint,
+  'the schema migration records exactly one rollout time'
 );
 SELECT ok(
-  NOT EXISTS (SELECT 1 FROM public.messages WHERE chat_id = 'dc000000-0000-4000-8000-000000000003'),
-  'old chats are removed with their messages'
+  NOT has_table_privilege('authenticated', 'private.current_debate_rollout', 'SELECT,UPDATE,DELETE'),
+  'clients cannot read or move the rollout time'
+);
+
+INSERT INTO public.cases (user_id, title, input, output, created_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old', '{}', '{}', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge recent', '{}', '{}', now() - interval '70 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge after rollout', '{}', '{}', now() - interval '40 days');
+INSERT INTO public.attacks (user_id, title, input, output, created_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old', '{}', '{}', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge recent', '{}', '{}', now() - interval '70 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge after rollout', '{}', '{}', now() - interval '40 days');
+INSERT INTO public.brainstorms (user_id, title, input, output, created_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old', '{}', '{}', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge recent', '{}', '{}', now() - interval '70 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge after rollout', '{}', '{}', now() - interval '40 days');
+INSERT INTO public.factoids (user_id, title, input, output, created_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old', '{}', '{}', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge recent', '{}', '{}', now() - interval '70 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge after rollout', '{}', '{}', now() - interval '40 days');
+INSERT INTO public.cases (user_id, debate_id, title, input, output, created_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'da000000-0000-4000-8000-000000000001', 'Purge debate work', '{}', '{}', now() - interval '200 days');
+ALTER TABLE public.sources DISABLE TRIGGER sources_require_debate;
+INSERT INTO public.sources (user_id, title, content, type, created_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old source', 'x', 'text', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge recent source', 'x', 'text', now() - interval '70 days');
+ALTER TABLE public.sources ENABLE TRIGGER sources_require_debate;
+INSERT INTO public.flowcharts (user_id, title, created_at, updated_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old flow', now() - interval '100 days', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge edited flow', now() - interval '100 days', now() - interval '5 days');
+INSERT INTO public.sparring_sessions (user_id, motion, user_side, persona, status, created_at, updated_at) VALUES
+  ('d1111111-1111-4111-8111-111111111111', 'Purge old round', 'pro', 'coach', 'complete', now() - interval '100 days', now() - interval '100 days'),
+  ('d1111111-1111-4111-8111-111111111111', 'Purge resumed round', 'pro', 'coach', 'complete', now() - interval '100 days', now() - interval '80 days');
+INSERT INTO public.chats (id, user_id, title, created_at) VALUES
+  ('dc000000-0000-4000-8000-000000000003', 'd1111111-1111-4111-8111-111111111111', 'Purge old chat', now() - interval '100 days'),
+  ('dc000000-0000-4000-8000-000000000004', 'd1111111-1111-4111-8111-111111111111', 'Purge active chat', now() - interval '100 days');
+INSERT INTO public.messages (chat_id, role, content, created_at) VALUES
+  ('dc000000-0000-4000-8000-000000000003', 'user', 'old message', now() - interval '95 days'),
+  ('dc000000-0000-4000-8000-000000000004', 'user', 'first message', now() - interval '100 days'),
+  ('dc000000-0000-4000-8000-000000000004', 'user', 'recent message', now() - interval '1 day');
+
+SELECT private.purge_legacy_debate_material(now() - interval '60 days');
+
+SELECT is(
+  (SELECT array_agg(kind || ': ' || title ORDER BY kind, title) FROM (
+    SELECT 'attacks' AS kind, title FROM public.attacks WHERE title LIKE 'Purge %'
+    UNION ALL SELECT 'brainstorms', title FROM public.brainstorms WHERE title LIKE 'Purge %'
+    UNION ALL SELECT 'cases', title FROM public.cases WHERE title LIKE 'Purge %'
+    UNION ALL SELECT 'factoids', title FROM public.factoids WHERE title LIKE 'Purge %'
+  ) AS survivors),
+  ARRAY[
+    'attacks: Purge after rollout', 'attacks: Purge recent',
+    'brainstorms: Purge after rollout', 'brainstorms: Purge recent',
+    'cases: Purge after rollout', 'cases: Purge debate work', 'cases: Purge recent',
+    'factoids: Purge after rollout', 'factoids: Purge recent'
+  ],
+  'only legacy results quiet for 30 days before rollout go; recent, later one-off, and debate work stay'
+);
+SELECT is(
+  (SELECT array_agg(title ORDER BY title) FROM public.sources WHERE title LIKE 'Purge %'),
+  ARRAY['Purge recent source'],
+  'recent unsorted sources remain for the user to confirm'
+);
+SELECT is(
+  (SELECT array_agg(title ORDER BY title) FROM public.flowcharts WHERE title LIKE 'Purge %'),
+  ARRAY['Purge edited flow'],
+  'an old flowchart edited recently is kept'
+);
+SELECT is(
+  (SELECT array_agg(motion ORDER BY motion) FROM public.sparring_sessions WHERE motion LIKE 'Purge %'),
+  ARRAY['Purge resumed round'],
+  'an old sparring round with recent activity is kept'
+);
+SELECT ok(
+  NOT EXISTS (SELECT 1 FROM public.chats WHERE id = 'dc000000-0000-4000-8000-000000000003')
+    AND NOT EXISTS (SELECT 1 FROM public.messages WHERE chat_id = 'dc000000-0000-4000-8000-000000000003')
+    AND (SELECT count(*) FROM public.messages WHERE chat_id = 'dc000000-0000-4000-8000-000000000004') = 2,
+  'quiet old chats go with their messages; an old chat with a recent message stays whole'
 );
 
 SELECT * FROM finish();

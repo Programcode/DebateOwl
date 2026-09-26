@@ -35,6 +35,7 @@ export default function AskPage() {
     savedChats,
     addSource,
     askChatId,
+    askChatDebateId,
     askPersistedCount,
     syncAskChat,
   } = useSessionStore();
@@ -69,13 +70,14 @@ export default function AskPage() {
   const lastRole = askMessages[askMessages.length - 1]?.role;
   useEffect(() => {
     if (workspace.context || askLoading || lastRole !== 'assistant' || askPersistedCount >= askMessages.length) return;
+    // A loaded chat keeps recording where it lives; a new one needs a Current Debate.
     const debateId = activeDebateId();
-    if (!debateId) return;
+    if (!askChatId && !debateId) return;
     syncAskChat(debateId).catch((error) => {
       console.error('Failed to record chat in debate:', error);
       toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' });
     });
-  }, [askLoading, askMessages.length, askPersistedCount, lastRole, syncAskChat, t, toast, workspace.context]);
+  }, [askChatId, askLoading, askMessages.length, askPersistedCount, lastRole, syncAskChat, t, toast, workspace.context]);
 
   const handleSend = async (
     message: string,
@@ -149,6 +151,8 @@ export default function AskPage() {
         prosConsMode,
         argumentMapMode,
         workspaceContext: workspace.context ?? undefined,
+        // A loaded chat stays grounded in its own debate's sources.
+        debateId: askChatId ? askChatDebateId : activeDebateId(),
       };
 
       let result: AskOutput;

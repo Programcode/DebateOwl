@@ -253,3 +253,13 @@ $$;
 
 REVOKE ALL ON FUNCTION public.clear_current_user_data() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.clear_current_user_data() TO authenticated;
+
+-- When Current Debate shipped here. The one-time legacy cleanup measures its
+-- 30-day window back from this moment and never touches anything created
+-- after it, however late that cleanup is applied.
+CREATE TABLE private.current_debate_rollout (
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  started_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO private.current_debate_rollout DEFAULT VALUES;
+REVOKE ALL ON private.current_debate_rollout FROM PUBLIC, anon, authenticated;

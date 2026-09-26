@@ -25,6 +25,7 @@ import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { useReducedMotion } from 'framer-motion';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
+import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
@@ -35,6 +36,8 @@ export default function GeneratePage() {
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   // The debate row this page's current result was recorded into, if any.
   const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
+  // Debate the current result belongs to (null for one-off); undefined after a reload.
+  const [resultDebateId, setResultDebateId] = useState<string | null | undefined>(undefined);
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
   const askConfig = getFeatureConfig('ask');
@@ -85,6 +88,7 @@ export default function GeneratePage() {
       setDiscoveredSources(sources);
       setGenerateResult(result);
       setRecordedCaseId(null);
+      setResultDebateId(target.debateId);
       await workspace.attach(data, result);
       if (target.debateId) {
         setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
@@ -127,8 +131,13 @@ export default function GeneratePage() {
       tone: generateForm.tone || 'formal',
     };
 
+    // Regenerate against the result's own debate, never whichever is current now.
+    const current = selectCurrentDebate(useDebateStore.getState());
+    const debateId = resultDebateId !== undefined
+      ? resultDebateId
+      : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
     setGenerateLoading(true);
-    void generateCase(data, config, workspace.context ?? undefined)
+    void generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId)
       .then(async ({ result: next, discoveredSources: sources }) => {
         const regenerated = {
           ...generateResult,

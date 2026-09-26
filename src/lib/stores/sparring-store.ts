@@ -15,6 +15,7 @@ import {
 } from '@/lib/ai/schemas/sparring';
 import { buildSparringTurns, type SparringTurn } from '@/lib/sparring/formats';
 import { captureProductEvent } from '@/lib/observability';
+import { useDebateStore } from './debate-store';
 
 export type SparringPhase = 'round' | 'judging' | 'complete';
 
@@ -526,3 +527,15 @@ export const useSparringStore = create<SparringStoreState>()(
     },
   ),
 );
+
+// A deleted debate takes its sessions with it on the server; mirror that locally.
+useDebateStore.subscribe((state, previous) => {
+  const removed = new Set(previous.debates.filter((debate) => !state.debates.some((next) => next.id === debate.id)).map((debate) => debate.id));
+  if (removed.size === 0) return;
+  useSparringStore.setState((current) => ({
+    savedSessions: current.savedSessions.filter((session) => !session.debateId || !removed.has(session.debateId)),
+    currentSession: current.currentSession?.debateId && removed.has(current.currentSession.debateId)
+      ? { ...current.currentSession, debateId: null }
+      : current.currentSession,
+  }));
+});

@@ -10,6 +10,7 @@ import {
 vi.mock("@/lib/supabase/client", () => ({ supabase: supabaseMock }));
 
 import { useSessionStore } from "@/lib/stores/session-store";
+import { useDebateStore } from "@/lib/stores/debate-store";
 import { resetDebates as resetDebatesForTest, seedCurrentDebate, TEST_DEBATE_ID } from "@/test/helpers/debate";
 import i18n from "@/i18n";
 
@@ -71,6 +72,9 @@ describe("session-store", () => {
       factoidsLoading: false,
       askMessages: [],
       askLoading: false,
+      askChatId: null,
+      askChatDebateId: null,
+      askPersistedCount: 0,
       savedCases: [],
       savedAttacks: [],
       savedBrainstorms: [],
@@ -106,6 +110,9 @@ describe("session-store", () => {
       factoidsLoading: false,
       askMessages: [],
       askLoading: false,
+      askChatId: null,
+      askChatDebateId: null,
+      askPersistedCount: 0,
       savedCases: [],
       savedAttacks: [],
       savedBrainstorms: [],
@@ -1089,6 +1096,88 @@ describe("session-store", () => {
       expect(useSessionStore.getState().savedChats[0]).toEqual(expect.objectContaining({ id: 'chat-1', debateId: TEST_DEBATE_ID }));
     });
 
+    it('continues a loaded unsorted chat in place instead of copying it into the debate', async () => {
+      const earlier = [
+        { id: 'm1', role: 'user' as const, content: 'Old question', timestamp: 1 },
+        { id: 'm2', role: 'assistant' as const, content: 'Old answer', timestamp: 2 },
+      ];
+      useSessionStore.setState({ savedChats: [{ id: 'old-chat', title: 'Old', createdAt: 1, data: earlier, debateId: null }] });
+      useSessionStore.getState().loadSavedChat('old-chat');
+      useSessionStore.getState().addAskMessage({ role: 'user', content: 'New question' });
+      useSessionStore.getState().addAskMessage({ role: 'assistant', content: 'New answer' });
+      await useSessionStore.getState().syncAskChat(TEST_DEBATE_ID);
+
+      expect(supabaseMock.from.mock.calls.filter(([table]) => table === 'chats')).toHaveLength(0);
+      const messages = supabaseMock.from.mock.results.find((_, index) => supabaseMock.from.mock.calls[index][0] === 'messages')!.value.insert.mock.calls[0][0];
+      expect(messages.map((row: { chat_id: string; content: string }) => [row.chat_id, row.content]))
+        .toEqual([['old-chat', 'New question'], ['old-chat', 'New answer']]);
+    });
+
+    it('does not hand an in-flight chat to a conversation started after clearing', async () => {
+      setMockTableResponse('chats', { insert: { id: 'chat-1', title: 'First', created_at: nowIso, debate_id: TEST_DEBATE_ID, side: 'neutral' } });
+      useSessionStore.getState().addAskMessage({ role: 'user', content: 'First' });
+      useSessionStore.getState().addAskMessage({ role: 'assistant', content: 'Reply' });
+      let releaseUser!: () => void;
+      supabaseMock.auth.getUser.mockImplementationOnce(() => new Promise((resolve) => {
+        releaseUser = () => resolve({ data: { user: { id: 'user_1' } } } as never);
+      }));
+      const pending = useSessionStore.getState().syncAskChat(TEST_DEBATE_ID);
+      await vi.waitFor(() => expect(releaseUser).toBeTypeOf('function'));
+      // The save has captured the first conversation and is waiting on the server.
+      useSessionStore.getState().clearAskMessages();
+      useSessionStore.getState().addAskMessage({ role: 'user', content: 'Second' });
+      releaseUser();
+      await pending;
+
+      expect(useSessionStore.getState().askChatId).toBeNull();
+      expect(useSessionStore.getState().askPersistedCount).toBe(0);
+      expect(useSessionStore.getState().savedChats[0]).toEqual(expect.objectContaining({ id: 'chat-1' }));
+    });
+
+    it('starts a fresh Ask conversation when the Current Debate changes', () => {
+      useSessionStore.setState({
+        askMessages: [{ id: 'm1', role: 'user', content: 'In A', timestamp: 1 }],
+        askChatId: 'chat-a',
+        askChatDebateId: TEST_DEBATE_ID,
+        askPersistedCount: 1,
+      });
+      const other = { ...useDebateStore.getState().debates[0], id: 'debate-b', motion: 'Other motion' };
+      useDebateStore.setState((state) => ({ debates: [...state.debates, other], currentDebateId: 'debate-b' }));
+
+      expect(useSessionStore.getState()).toEqual(expect.objectContaining({ askMessages: [], askChatId: null, askChatDebateId: null, askPersistedCount: 0 }));
+    });
+
+    it('drops local work of a deleted debate and keeps unsorted work', () => {
+      useSessionStore.setState({
+        savedCases: [
+          { id: 'in-debate', title: 'A', createdAt: 1, data: sampleGenerate, debateId: TEST_DEBATE_ID },
+          { id: 'unsorted', title: 'B', createdAt: 1, data: sampleGenerate, debateId: null },
+        ],
+      });
+      seedSources({ id: 'src_1', folder: 'General' });
+      useDebateStore.setState({ debates: [], currentDebateId: null });
+
+      expect(useSessionStore.getState().savedCases.map((item) => item.id)).toEqual(['unsorted']);
+      expect(useSessionStore.getState().sourceLibrary).toEqual([]);
+    });
+
+    it('renames and deletes a folder only for the Current Debate', async () => {
+      seedSources({ id: 'mine', folder: 'Auto-saved' });
+      useSessionStore.setState((state) => ({
+        sourceLibrary: [...state.sourceLibrary, { ...state.sourceLibrary[0], id: 'theirs', debateId: 'debate-b' }],
+      }));
+
+      await useSessionStore.getState().renameSourceFolder('Auto-saved', 'Research');
+      const folderOf = (id: string) => useSessionStore.getState().sourceLibrary.find((source) => source.id === id)!.folder;
+      expect([folderOf('mine'), folderOf('theirs')]).toEqual(['Research', 'Auto-saved']);
+      expect(useSessionStore.getState().sourceFolders).toEqual(expect.arrayContaining(['Auto-saved', 'Research']));
+
+      // Empty in this debate, even though another debate still uses the name.
+      await useSessionStore.getState().renameSourceFolder('Research', 'Auto-saved');
+      await expect(useSessionStore.getState().deleteSourceFolder('Research', 'empty-only')).resolves.toBeUndefined();
+      expect(folderOf('theirs')).toBe('Auto-saved');
+    });
+
     it('refuses to save a source without a debate', async () => {
       resetDebatesForTest();
       await expect(useSessionStore.getState().addSource({ title: 'Loose', content: 'x', type: 'text' }))
@@ -1097,8 +1186,9 @@ describe("session-store", () => {
 
     it('drops server-backed lists persisted by older clients', () => {
       const migrate = useSessionStore.persist.getOptions().migrate!;
-      const migrated = migrate({ savedCases: [{ id: 'old' }], sourceLibrary: [{ id: 'legacy' }], generateForm: { motion: 'kept' } }, 0) as Record<string, unknown>;
+      const migrated = migrate({ savedCases: [{ id: 'old' }], sourceLibrary: [{ id: 'legacy' }], askMessages: [{ id: 'm' }], generateForm: { motion: 'kept' } }, 0) as Record<string, unknown>;
       expect(migrated).not.toHaveProperty('savedCases');
+      expect(migrated).not.toHaveProperty('askMessages');
       expect(migrated).not.toHaveProperty('sourceLibrary');
       expect(migrated.generateForm).toEqual({ motion: 'kept' });
     });

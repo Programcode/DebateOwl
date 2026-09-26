@@ -54,7 +54,7 @@ import { cn } from '@/lib/utils';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { CurrentDebateStrip, useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
-import { activeDebateId, useDebateStore } from '@/lib/stores/debate-store';
+import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { toast } from '@/hooks/use-toast';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
 
@@ -292,8 +292,15 @@ export default function CrossfirePage() {
     : 0);
   const recordResult = useSessionStore((session) => session.recordResult);
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
-  // Debate chosen when the round started; undefined after a reload means "the active one".
+  // Debate chosen when the round started; undefined after a reload.
   const debateTargetRef = useRef<string | null | undefined>(undefined);
+  // After a reload, a restored round belongs to the Current Debate only when the
+  // motions match; otherwise it runs one-off so another debate's sources stay out.
+  const roundDebateId = useCallback((resolution: string): string | null => {
+    if (debateTargetRef.current !== undefined) return debateTargetRef.current;
+    const current = selectCurrentDebate(useDebateStore.getState());
+    return sameMotion(current?.motion, resolution) ? activeDebateId() : null;
+  }, []);
   useDebateMotionPrefill(
     () => state.phase === 'setup' ? state.config.resolution : undefined,
     (resolution) => dispatch({ type: 'config-patched', patch: { resolution } }),
@@ -349,7 +356,7 @@ export default function CrossfirePage() {
     const finishedHere = recordedPhaseRef.current === 'debriefing' && state.phase === 'complete';
     recordedPhaseRef.current = state.phase;
     if (!finishedHere || state.phase !== 'complete' || workspace.context) return;
-    const debateId = debateTargetRef.current !== undefined ? debateTargetRef.current : activeDebateId();
+    const debateId = roundDebateId(state.config.resolution);
     if (!debateId) return;
     void recordResult('crossfire', {
       title: state.config.resolution,
@@ -358,7 +365,7 @@ export default function CrossfirePage() {
       debateId,
       side: 'neutral',
     }).catch(() => toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' }));
-  }, [recordResult, state, t, workspace.context]);
+  }, [recordResult, roundDebateId, state, t, workspace.context]);
 
   useEffect(() => {
     if (state.phase !== 'active') return;
@@ -380,7 +387,7 @@ export default function CrossfirePage() {
         config: snapshot.config,
         transcript: snapshot.turns,
         expectedReply,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : debateTargetRef.current });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
         dispatch({
@@ -416,7 +423,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig, workspace.context]);
+  }, [modelConfig, roundDebateId, workspace.context]);
 
   const runDebrief = useCallback(async (snapshot: Extract<CrossfireState, { phase: 'debriefing' }>) => {
     requestRef.current?.abort();
@@ -427,7 +434,7 @@ export default function CrossfirePage() {
         operation: 'debrief',
         config: snapshot.config,
         transcript: snapshot.turns,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : debateTargetRef.current });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
       if (controller.signal.aborted) return;
       if ('type' in result) {
         dispatch({
@@ -443,7 +450,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig, workspace.context]);
+  }, [modelConfig, roundDebateId, workspace.context]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;

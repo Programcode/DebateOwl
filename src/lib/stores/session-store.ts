@@ -138,6 +138,8 @@ interface SessionState {
   askStreamingAssistant: StreamingAskMessage | null;
   /** Server chat that the current Ask conversation is being recorded into. */
   askChatId: string | null;
+  /** Debate that `askChatId` belongs to; null for an unsorted chat. */
+  askChatDebateId: string | null;
   askPersistedCount: number;
 
   savedCases: SavedItem<GenerateOutput>[];
@@ -199,7 +201,8 @@ interface SessionState {
   recordResult: (kind: ResultKind, input: RecordResultInput) => Promise<string>;
   updateRecordedResult: (kind: ResultKind, id: string, output: unknown) => Promise<void>;
   attachItem: (kind: AttachKind, id: string, debateId: string, side?: DebateSide) => Promise<void>;
-  syncAskChat: (debateId: string) => Promise<void>;
+  /** Records new Ask messages: into the loaded chat, or a new chat in `debateId`. */
+  syncAskChat: (debateId: string | null) => Promise<void>;
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean }) => Promise<void>;
@@ -453,6 +456,7 @@ export const useSessionStore = create<SessionState>()(
       askLoading: false,
       askStreamingAssistant: null as StreamingAskMessage | null,
       askChatId: null as string | null,
+      askChatDebateId: null as string | null,
       askPersistedCount: 0,
 
       savedCases: [] as SavedItem<GenerateOutput>[],
@@ -653,23 +657,24 @@ export const useSessionStore = create<SessionState>()(
           throw error;
         }
       },
+      // Folders are per account, but renaming or deleting one only moves the
+      // Current Debate's sources. The folder name survives while another debate uses it.
       renameSourceFolder: async (oldName, newName) => {
         const from = normalizeFolder(oldName);
         const to = normalizeFolder(newName);
         if (from === 'General' || from === to) return;
+        const debateId = useDebateStore.getState().currentDebateId;
+        if (!debateId) throw new DebateRequiredError();
+        const inThisDebate = (source: Source) => source.debateId === debateId && normalizeFolder(source.folder) === from;
+        const usedElsewhere = get().sourceLibrary.some((source) => source.debateId !== debateId && normalizeFolder(source.folder) === from);
 
         const applyRename = (): void => {
           set((state) => {
-            const renamedSources = state.sourceLibrary.map((source) =>
-              normalizeFolder(source.folder) === from ? { ...source, folder: to } : source
-            );
-            return {
-              sourceFolders: mergeSourceFolders(
-                state.sourceFolders.map((folder) => normalizeFolder(folder) === from ? to : folder),
-                renamedSources,
-              ),
-              sourceLibrary: renamedSources,
-            };
+            const renamedSources = state.sourceLibrary.map((source) => inThisDebate(source) ? { ...source, folder: to } : source);
+            const folders = usedElsewhere
+              ? [...state.sourceFolders, to]
+              : state.sourceFolders.map((folder) => normalizeFolder(folder) === from ? to : folder);
+            return { sourceFolders: mergeSourceFolders(folders, renamedSources), sourceLibrary: renamedSources };
           });
         };
 
@@ -680,49 +685,54 @@ export const useSessionStore = create<SessionState>()(
           .upsert({ user_id: userId, name: to }, { onConflict: 'user_id,name' });
         throwOnWriteError(folderResult, 'create renamed source folder');
         throwOnWriteError(
-          await applyUserScopedColumnFilter(supabase.from('sources').update({ folder: to }), userId, 'folder', from),
+          await supabase.from('sources').update({ folder: to }).eq('user_id', userId).eq('debate_id', debateId).eq('folder', from),
           'move sources to renamed folder',
         );
-        throwOnWriteError(
-          await applyUserScopedColumnFilter(supabase.from('source_folders').delete(), userId, 'name', from),
-          'delete renamed source folder',
-        );
+        if (!usedElsewhere) {
+          throwOnWriteError(
+            await applyUserScopedColumnFilter(supabase.from('source_folders').delete(), userId, 'name', from),
+            'delete renamed source folder',
+          );
+        }
         applyRename();
       },
       deleteSourceFolder: async (name, mode) => {
         const folder = normalizeFolder(name);
         if (folder === 'General') return;
-        const affected = get().sourceLibrary.filter((source) => normalizeFolder(source.folder) === folder);
+        const debateId = useDebateStore.getState().currentDebateId;
+        if (!debateId) throw new DebateRequiredError();
+        const inThisDebate = (source: Source) => source.debateId === debateId && normalizeFolder(source.folder) === folder;
+        const affected = get().sourceLibrary.filter(inThisDebate);
+        const usedElsewhere = get().sourceLibrary.some((source) => source.debateId !== debateId && normalizeFolder(source.folder) === folder);
         if (affected.length > 0 && mode === 'empty-only') {
           throw new Error('Folder is not empty');
         }
 
         const applyDelete = (): void => {
-          set((state) => ({
-            sourceFolders: mergeSourceFolders(
-              state.sourceFolders.filter((existing) => normalizeFolder(existing) !== folder),
-              state.sourceLibrary.map((source) =>
-                normalizeFolder(source.folder) === folder ? { ...source, folder: 'General' } : source
-              ),
-            ).filter((existing) => existing !== folder),
-            sourceLibrary: state.sourceLibrary.map((source) =>
-              normalizeFolder(source.folder) === folder ? { ...source, folder: 'General' } : source
-            ),
-          }));
+          set((state) => {
+            const movedSources = state.sourceLibrary.map((source) => inThisDebate(source) ? { ...source, folder: 'General' } : source);
+            const folders = mergeSourceFolders(state.sourceFolders, movedSources);
+            return {
+              sourceFolders: usedElsewhere ? folders : folders.filter((existing) => normalizeFolder(existing) !== folder),
+              sourceLibrary: movedSources,
+            };
+          });
         };
 
         const userId = await getUserId();
         if (!userId) return applyDelete();
         if (affected.length > 0) {
           throwOnWriteError(
-            await applyUserScopedColumnFilter(supabase.from('sources').update({ folder: 'General' }), userId, 'folder', folder),
+            await supabase.from('sources').update({ folder: 'General' }).eq('user_id', userId).eq('debate_id', debateId).eq('folder', folder),
             'move sources from deleted folder',
           );
         }
-        throwOnWriteError(
-          await applyUserScopedColumnFilter(supabase.from('source_folders').delete(), userId, 'name', folder),
-          'delete source folder',
-        );
+        if (!usedElsewhere) {
+          throwOnWriteError(
+            await applyUserScopedColumnFilter(supabase.from('source_folders').delete(), userId, 'name', folder),
+            'delete source folder',
+          );
+        }
         applyDelete();
       },
       setFolderActive: async (folder, isActive) => {
@@ -928,7 +938,7 @@ export const useSessionStore = create<SessionState>()(
           ? { ...state.askStreamingAssistant, content: `${state.askStreamingAssistant.content}${text}` }
           : state.askStreamingAssistant,
       })),
-      clearAskMessages: () => set({ askMessages: [], askStreamingAssistant: null, askLoading: false, askChatId: null, askPersistedCount: 0 }),
+      clearAskMessages: () => set({ askMessages: [], askStreamingAssistant: null, askLoading: false, askChatId: null, askChatDebateId: null, askPersistedCount: 0 }),
       saveCurrentChat: async (title) => {
         const current = get().askMessages;
         if (current.length === 0) return;
@@ -960,8 +970,9 @@ export const useSessionStore = create<SessionState>()(
       },
       loadSavedChat: (id) => {
         const item = get().savedChats.find((c) => c.id === id);
-        // Continuing a debate chat appends to it; a one-off chat stays one-off.
-        if (item) set({ askMessages: item.data, askChatId: item.debateId ? item.id : null, askPersistedCount: item.debateId ? item.data.length : 0 });
+        // Continuing a chat appends to it where it already lives; an unsorted
+        // chat stays unsorted until the user attaches it.
+        if (item) set({ askMessages: item.data, askChatId: item.id, askChatDebateId: item.debateId ?? null, askPersistedCount: item.data.length });
       },
 
       saveFlowchart: async (title, data, debateId = activeDebateId()) => {
@@ -1189,6 +1200,7 @@ export const useSessionStore = create<SessionState>()(
           sourceFolders: ['General'],
           sourceLibrary: [],
           askChatId: null,
+          askChatDebateId: null,
           askPersistedCount: 0,
         });
       },
@@ -1205,6 +1217,7 @@ export const useSessionStore = create<SessionState>()(
         autosavedBrainstorms: [],
         autosavedFactoids: [],
         askChatId: null,
+        askChatDebateId: null,
         askPersistedCount: 0,
         sourceFolders: ['General'],
         sourceLibrary: [],
@@ -1224,6 +1237,7 @@ export const useSessionStore = create<SessionState>()(
         askMessages: [],
         askStreamingAssistant: null,
         askChatId: null,
+        askChatDebateId: null,
         askPersistedCount: 0,
         pendingFlowchartData: null,
         generateForm: {},
@@ -1244,6 +1258,8 @@ export const useSessionStore = create<SessionState>()(
         for (const key of [
           'savedCases', 'savedAttacks', 'savedBrainstorms', 'savedFactoids', 'savedChats', 'savedFlowcharts',
           'autosavedCases', 'autosavedAttacks', 'autosavedBrainstorms', 'autosavedFactoids', 'sourceLibrary', 'sourceFolders',
+          // An open pre-upgrade conversation would otherwise be copied into the first debate.
+          'askMessages',
         ]) delete state[key];
         return state as unknown as SessionState;
       },
@@ -1263,14 +1279,22 @@ export const useSessionStore = create<SessionState>()(
 
 let askSyncQueue: Promise<void> = Promise.resolve();
 
-async function syncAskChatNow(debateId: string): Promise<void> {
+async function syncAskChatNow(debateId: string | null): Promise<void> {
   const get = useSessionStore.getState;
   const set = useSessionStore.setState;
-  const { askMessages, askChatId, askPersistedCount } = get();
+  const { askMessages, askChatId, askChatDebateId, askPersistedCount } = get();
   if (askMessages.length === 0 || askPersistedCount >= askMessages.length) return;
+  if (!askChatId && !debateId) return;
   const userId = await getUserId();
   if (!userId) return;
+  // Clearing or replacing the conversation while a write is in flight must not
+  // hand this chat or its count to the next conversation.
+  const sameConversation = () => {
+    const current = get().askMessages;
+    return askMessages.every((message, index) => current[index] === message);
+  };
   let chatId = askChatId;
+  let chatDebateId = askChatId ? askChatDebateId : debateId;
   if (!chatId) {
     const title = askMessages.find((message) => message.role === 'user')?.content.slice(0, 60) || 'Chat';
     const { data: chat, error } = await supabase
@@ -1281,8 +1305,9 @@ async function syncAskChatNow(debateId: string): Promise<void> {
     throwOnWriteError({ error }, 'save chat to debate');
     if (!chat) throw new Error('[SessionStore] Failed to save chat: No record returned');
     chatId = chat.id as string;
+    chatDebateId = debateId;
     set((state) => ({
-      askChatId: chatId,
+      ...(sameConversation() ? { askChatId: chatId, askChatDebateId: debateId } : {}),
       savedChats: [{ id: chatId!, title: chat.title, createdAt: toTimestamp(chat.created_at), data: askMessages, debateId, side: 'neutral' }, ...state.savedChats],
     }));
   }
@@ -1296,9 +1321,37 @@ async function syncAskChatNow(debateId: string): Promise<void> {
   })));
   throwOnWriteError(result, 'save chat messages');
   set((state) => ({
-    // A cleared or replaced conversation must not inherit this count.
-    ...(state.askChatId === chatId ? { askPersistedCount: askPersistedCount + pending.length } : {}),
+    ...(state.askChatId === chatId && sameConversation() ? { askPersistedCount: askPersistedCount + pending.length } : {}),
     savedChats: state.savedChats.map((chat) => chat.id === chatId ? { ...chat, data: askMessages } : chat),
   }));
-  markDebateActivity(debateId);
+  markDebateActivity(chatDebateId);
 }
+
+function removedDebateIds(debates: Array<{ id: string }>, previous: Array<{ id: string }>): Set<string> {
+  return new Set(previous.filter((debate) => !debates.some((next) => next.id === debate.id)).map((debate) => debate.id));
+}
+
+// A switch starts a fresh Ask conversation in the new debate, and a deleted
+// debate takes its local work with it (the server already cascaded it).
+useDebateStore.subscribe((state, previous) => {
+  const removed = removedDebateIds(state.debates, previous.debates);
+  const session = useSessionStore.getState();
+  const leftAskDebate = session.askChatId !== null
+    && (state.currentDebateId !== previous.currentDebateId || (session.askChatDebateId !== null && removed.has(session.askChatDebateId)))
+    && session.askChatDebateId !== state.currentDebateId;
+  if (removed.size === 0 && !leftAskDebate) return;
+  const keep = <T extends { debateId?: string | null }>(list: T[]) => list.filter((item) => !item.debateId || !removed.has(item.debateId));
+  useSessionStore.setState((current) => ({
+    ...(removed.size > 0 ? {
+      savedCases: keep(current.savedCases),
+      savedAttacks: keep(current.savedAttacks),
+      savedBrainstorms: keep(current.savedBrainstorms),
+      savedFactoids: keep(current.savedFactoids),
+      savedChats: keep(current.savedChats),
+      savedFlowcharts: keep(current.savedFlowcharts),
+      savedCrossfires: keep(current.savedCrossfires),
+      sourceLibrary: keep(current.sourceLibrary),
+    } : {}),
+    ...(leftAskDebate ? { askMessages: [], askStreamingAssistant: null, askChatId: null, askChatDebateId: null, askPersistedCount: 0 } : {}),
+  }));
+});

@@ -117,7 +117,7 @@ The stack begins at port `54321` and is not parallel-safe across worktrees. Coor
 
 The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
 
-`20260926090100_legacy_debate_cleanup.sql` is destructive and one-time: it deletes legacy results, chats, sparring rounds, and sources that belong to no debate and are older than 30 days. Keep it separate from the additive `20260926090000_current_debates.sql`, and apply it to a remote project only with explicit authorization for that environment.
+`20260926090100_legacy_debate_cleanup.sql` is destructive and one-time: it deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. Work created after that time is never touched, however late the cleanup runs. Keep it separate from the additive `20260926090000_current_debates.sql`, and apply it to a remote project only with explicit authorization for that environment.
 
 ## Edge Function tests
 

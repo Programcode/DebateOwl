@@ -303,6 +303,42 @@ describe('GeneratePage Integration', () => {
         expect((generateCase as Mock).mock.calls[0][3]).toBeNull();
     });
 
+    it('regenerates a one-off case without another debate\'s sources', async () => {
+        const result = { caseStructure: { thesis: 'One-off' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[], metadata: {} };
+        (generateCase as Mock).mockResolvedValue({ result, discoveredSources: [] });
+        const view = render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('submit-button'));
+        await waitFor(() => expect(mockSetGenerateResult).toHaveBeenCalledWith(result));
+
+        // The student then starts a debate on the same motion as the stored form.
+        seedCurrentDebate({ motion: 'Existing motion' });
+        mockGenerateResult = result;
+        view.rerender(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(2));
+        expect((generateCase as Mock).mock.calls[1][3]).toBeNull();
+    });
+
+    it('after a reload, regenerates in the Current Debate only when the motion matches', async () => {
+        const result = { caseStructure: { thesis: 'Restored' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[], metadata: {} };
+        (generateCase as Mock).mockResolvedValue({ result, discoveredSources: [] });
+        mockGenerateResult = result;
+
+        seedCurrentDebate({ motion: 'Existing motion' });
+        const view = render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(1));
+        expect((generateCase as Mock).mock.calls[0][3]).toBe(TEST_DEBATE_ID);
+        view.unmount();
+
+        seedCurrentDebate({ motion: 'A different motion' });
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(2));
+        expect((generateCase as Mock).mock.calls[1][3]).toBeNull();
+    });
+
     it('keeps a successful case on screen when saving it to the debate fails', async () => {
         seedCurrentDebate({ motion: 'Test Topic' });
         mockRecordResult.mockRejectedValueOnce(new Error('offline'));

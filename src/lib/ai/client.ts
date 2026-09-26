@@ -1338,6 +1338,8 @@ export interface AskChatOptions {
   prosConsMode?: boolean;
   argumentMapMode?: boolean;
   workspaceContext?: WorkspaceToolContext;
+  /** Debate whose sources ground the answer; defaults to the active debate. */
+  debateId?: string | null;
 }
 
 export async function askChat(
@@ -1357,6 +1359,7 @@ export async function askChat(
     argumentMapMode: Boolean(options.argumentMapMode),
   }), config, {
     workspaceContext: options.workspaceContext,
+    debateId: options.debateId,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown };
       const parsed = AskOutputSchema.safeParse(data.output);

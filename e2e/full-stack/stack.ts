@@ -88,7 +88,7 @@ export async function startDebate(page: Page, motion: string) {
     await control.click();
   } else {
     await control.click();
-    await page.getByRole("button", { name: "Start new debate" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Start new debate" }).click();
   }
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Motion").fill(motion);
@@ -99,7 +99,8 @@ export async function startDebate(page: Page, motion: string) {
 
 /** Answers "Which debate is this for?" after submitting a motion that is not the Current Debate. */
 export async function chooseForMotion(page: Page, choice: "create" | "once") {
-  const dialog = page.getByRole("dialog");
+  // Scope to the motion choice: the next step may open its own dialog, such as the paywall.
+  const dialog = page.getByRole("dialog", { name: /^(Which debate is this for\?|This is a different motion)$/ });
   await dialog.getByRole("button", {
     name: choice === "create" ? "Create a new debate for this motion" : "Use once without saving to a debate",
   }).click();
