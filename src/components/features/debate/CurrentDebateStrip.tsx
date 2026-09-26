@@ -58,7 +58,7 @@ export function CurrentDebateStrip({ side, hidden = false, className = 'mb-6' }:
   if (oneOff) {
     return (
       <div className={`${base} border-dashed border-border bg-muted/40`} data-testid="current-debate-strip">
-        <span className="min-w-0 flex-1 text-muted-foreground">{t('debate.oneOffStrip', 'One-off mode: nothing here uses or saves to a debate.')}</span>
+        <span className="min-w-0 flex-1 basis-48 text-muted-foreground">{t('debate.oneOffStrip', 'One-off mode: nothing here uses or saves to a debate.')}</span>
         {debate && <Button size="sm" variant="outline" onClick={() => setOneOff(false)}>{t('debate.returnToDebate', 'Return to debate')}</Button>}
       </div>
     );
@@ -67,7 +67,7 @@ export function CurrentDebateStrip({ side, hidden = false, className = 'mb-6' }:
   if (!debate) {
     return (
       <div className={`${base} border-border bg-card/60`} data-testid="current-debate-strip">
-        <span className="min-w-0 flex-1 text-muted-foreground">{t('debate.noCurrentStrip', 'No current debate. Results stay one-off until you start one.')}</span>
+        <span className="min-w-0 flex-1 basis-48 text-muted-foreground">{t('debate.noCurrentStrip', 'No current debate. Results stay one-off until you start one.')}</span>
         <Button size="sm" onClick={() => openDialog('create')}>{t('debate.startDebate', 'Start debate')}</Button>
       </div>
     );
@@ -75,7 +75,7 @@ export function CurrentDebateStrip({ side, hidden = false, className = 'mb-6' }:
 
   return (
     <div className={`${base} border-primary/20 bg-primary/5`} data-testid="current-debate-strip">
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0 flex-1 basis-48">
         <span className="text-muted-foreground">{t('debate.workingIn', 'Working in:')} </span>
         <span className="break-words font-medium text-foreground">{debate.motion}</span>
       </span>
