@@ -196,6 +196,10 @@ Tests assert the rendered result, what the Edge Function sent upstream (read bac
 
 These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe Checkout, the billing portal, and subscription cancellation during account deletion (they call the Stripe API; the local key is a placeholder, and the Deno tests cover the cancellation logic), the `checkout.session.completed` and `invoice.payment_succeeded` webhooks (they fetch the subscription from Stripe), or Google export.
 
+### Interactive verification stack
+
+To check one feature by hand, or keep evidence for a change, use the same stack as a long-lived instance through [`.claude/skills/verify-debatelab/`](../.claude/skills/verify-debatelab/SKILL.md). `bin/verify.sh up` starts it, and `doctor` proves the client resolved to the local project. `drive <recipe>` runs a Playwright recipe and keeps screenshots, ARIA snapshots, provider calls and database rows in `.verify/artifacts/`. `down` stops everything. It holds the same `~/.superset/debatelab-db.lock` as the gate, so the gate waits while it is up. It proves the same things as the full-stack journeys and nothing more.
+
 ### Live provider journeys
 
 ```bash

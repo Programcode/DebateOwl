@@ -31,6 +31,9 @@ coverage/
 .vite/
 .playwright-cli/
 
+# Verification skill state, logs, and evidence
+.verify/
+
 # Playwright artifacts
 test-results/
 playwright-report/
@@ -52,8 +55,9 @@ deno.lock
 # Personal Superset workspace overrides
 .superset/config.local.json
 
-# Local agent/task files
-.claude/
+# Local agent/task files (project skills under .claude/skills are tracked)
+.claude/*
+!.claude/skills/
 .codex/
 tasks.txt
 humanizer.md
@@ -67,6 +71,7 @@ humanizer.md
 !**/README.md
 !docs/**/*.md
 !plans/**/*.md
+!.claude/skills/**/*.md
 .vercel
 .env*
 .worktrees/
