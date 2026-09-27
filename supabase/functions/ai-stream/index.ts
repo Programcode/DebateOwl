@@ -4,7 +4,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
 import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
-import { buildStreamingAskSystemPrompt } from "../_shared/prompts.ts";
+import { boundPromptSources, buildStreamingAskSystemPrompt, type StreamingAskMaterial } from "../_shared/prompts.ts";
+import { parseDebateContextRequest } from "../_shared/debate-context.ts";
+import {
+  type DebateContextDatabase,
+  debateContextMeta,
+  DebateContextNotFoundError,
+  debatePromptContextFor,
+  loadDebateContext,
+} from "../_shared/debate-context-loader.ts";
 import {
   markIncompleteUsage,
   normalizeOpenRouterUsage,
@@ -72,8 +80,8 @@ function normalizeHistory(value: unknown): ChatMessage[] {
   });
 }
 
-export function buildMessages(message: string, history: ChatMessage[], mode: string, language: unknown = "en") {
-  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode), language);
+export function buildMessages(message: string, history: ChatMessage[], mode: string, language: unknown = "en", material: StreamingAskMaterial = {}) {
+  const system = buildStreamingAskSystemPrompt(getAskModeGuidance(mode), language, material);
   return [
     { role: "system", content: system },
     ...history,
@@ -144,6 +152,28 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   const userMessage = sanitizeText(input.message, MAX_INPUT_LENGTH);
   if (!userMessage.trim()) return jsonResponse({ error: "Message is required" }, 400, corsHeaders);
+
+  // Current Debate context arrives as IDs only and is loaded for this user
+  // and this debate before any quota is reserved.
+  let material: StreamingAskMaterial = {};
+  let debateMeta: ReturnType<typeof debateContextMeta> | undefined;
+  if (body.debateContext !== undefined && body.debateContext !== null) {
+    const parsedDebateContext = parseDebateContextRequest(body.debateContext);
+    if ("error" in parsedDebateContext) return jsonResponse({ error: parsedDebateContext.error }, 400, corsHeaders);
+    try {
+      const loaded = await loadDebateContext(supabase as unknown as DebateContextDatabase, user.id, parsedDebateContext.value);
+      const sources = boundPromptSources(loaded.sources);
+      const sourceCounts = {
+        omittedForSize: loaded.sources.length - sources.length,
+        shortened: sources.filter((source, index) => source.content.length < loaded.sources[index].content.length).length,
+      };
+      material = { sources, debateContext: debatePromptContextFor(loaded, "ask") };
+      debateMeta = debateContextMeta(loaded, "ask", sources.length, sourceCounts);
+    } catch (error) {
+      if (error instanceof DebateContextNotFoundError) return jsonResponse({ error: "Debate not found" }, 404, corsHeaders);
+      return jsonResponse({ error: "Unable to load debate context" }, 500, corsHeaders);
+    }
+  }
 
   const rateLimit = await checkRateLimit(user.id, requestedModel);
   if (!rateLimit.allowed) {
@@ -230,7 +260,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       try {
         if (req.signal.aborted) throw new DOMException("Client aborted", "AbortError");
-        const messages = buildMessages(userMessage, history, mode, input.language);
+        const messages = buildMessages(userMessage, history, mode, input.language, material);
 
         const payload: Record<string, unknown> = {
           model,
@@ -319,7 +349,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         };
 
         if (!req.signal.aborted) {
-          try { emit("final", { output, meta: { requestedModel, resolvedModel: model } }); } catch { /* client disconnected after provider completion */ }
+          try { emit("final", { output, meta: { requestedModel, resolvedModel: model, ...(debateMeta ? { debateContext: debateMeta } : {}) } }); } catch { /* client disconnected after provider completion */ }
         }
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {

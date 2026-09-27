@@ -54,6 +54,15 @@ import {
   type RateLimitResult,
 } from "../_shared/entitlements.ts";
 import { isWorkspaceMember, loadAuthorizedWorkspaceContext } from "../_shared/workspace-context.ts";
+import { type DebateContextRequest, parseDebateContextRequest } from "../_shared/debate-context.ts";
+import {
+  type DebateContextDatabase,
+  debateContextMeta,
+  DebateContextNotFoundError,
+  debatePromptContextFor,
+  type LoadedDebateContext,
+  loadDebateContext,
+} from "../_shared/debate-context-loader.ts";
 import {
   badRequest,
   generateRequestId,
@@ -80,7 +89,6 @@ import {
   readBoundedJsonBody,
   RequestBodyTooLargeError,
   sanitizeInput,
-  sanitizePromptInput,
 } from "./request.ts";
 import { cleanGeneratedText, getCurrentDateContext } from "./text.ts";
 import {
@@ -151,16 +159,26 @@ export async function handleRequest(req: Request): Promise<Response> {
     : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
   if (requestedReasoningEffort === null) return badRequest("Invalid reasoning effort", corsHeaders);
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
-  // Crossfire has non-overridable transcript-grounding and typed-session
-  // safety rules. Ignore both user and admin custom prompts for this feature.
-  const customSystemPrompt = feature === "crossfire"
-    ? null
-    : body.customSystemPrompt as string | null | undefined;
+  // The per-user custom system prompt was replaced by each Current Debate's
+  // settings and instructions. A customSystemPrompt field from an older
+  // client is ignored.
   let rawSources = body.sources;
   const sourceIdsResult = parsePersonalSourceIds(body.sourceIds);
   if ("error" in sourceIdsResult) return badRequest(sourceIdsResult.error, corsHeaders);
   if (sourceIdsResult.value !== undefined && body.sources !== undefined) {
     return badRequest("Send sourceIds instead of source content", corsHeaders);
+  }
+  // Current Debate context arrives as IDs only. When present it replaces the
+  // legacy sourceIds field, which clients also send for older servers.
+  let debateContextRequest: DebateContextRequest | undefined;
+  if (body.debateContext !== undefined && body.debateContext !== null) {
+    const parsedDebateContext = parseDebateContextRequest(body.debateContext);
+    if ("error" in parsedDebateContext) return badRequest(parsedDebateContext.error, corsHeaders);
+    if (body.workspaceContext !== undefined) {
+      return badRequest("Debate context cannot be mixed with workspace context", corsHeaders);
+    }
+    if (body.sources !== undefined) return badRequest("Send debate source IDs instead of source content", corsHeaders);
+    debateContextRequest = parsedDebateContext.value;
   }
 
   // Log incoming request
@@ -168,7 +186,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     feature,
     provider,
     model: requestedModel,
-    sourcesCount: sourceIdsResult.value?.length ?? (Array.isArray(rawSources) ? rawSources.length : 0),
+    sourcesCount: debateContextRequest?.sourceIds.length ?? sourceIdsResult.value?.length ?? (Array.isArray(rawSources) ? rawSources.length : 0),
+    debateContext: Boolean(debateContextRequest),
   });
 
   if (!feature) return badRequest("Missing feature", corsHeaders);
@@ -202,14 +221,6 @@ export async function handleRequest(req: Request): Promise<Response> {
   let sources: PromptSource[] = feature === "crossfire"
     ? crossfireSources
     : Array.isArray(rawSources) ? rawSources as PromptSource[] : [];
-  if (customSystemPrompt) {
-    const promptResult = sanitizePromptInput(customSystemPrompt, "customSystemPrompt");
-    if ("rejected" in promptResult) {
-      log(requestId, "WARN", "Custom prompt rejected", { reason: promptResult.rejected });
-      return badRequest(promptResult.rejected, corsHeaders);
-    }
-    responseTruncated = responseTruncated || promptResult.truncated;
-  }
   let validatedSparringRequest: SparringRequest | undefined;
   if (feature === "sparring") {
     const sparringResult = parseSparringRequest(sanitizedInput);
@@ -228,6 +239,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     workspaceId: string;
   } | null = null;
   let workspaceThreadSettled = false;
+  let loadedDebate: LoadedDebateContext | null = null;
+  let debateSourceCounts = { omittedForSize: 0, shortened: 0 };
   const successBody = async (payload: Record<string, unknown>) => {
     if (workspaceAccess && !await isWorkspaceMember(workspaceDatabase, userId, workspaceAccess.workspaceId)) {
       throw new Error("Workspace access revoked");
@@ -250,6 +263,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       ...(responseTruncated ? { truncated: true } : {}),
       ...(resolvedModelMeta ? { requestedModel, resolvedModel: resolvedModelMeta } : {}),
       ...(workspaceAccess ? { workspaceContext: workspaceAccess.meta } : {}),
+      ...(loadedDebate ? { debateContext: debateContextMeta(loadedDebate, feature, sources.length, debateSourceCounts, validatedSparringRequest?.action) } : {}),
     };
     const enriched = sourceAssessments.length > 0 ? { ...payload, sourceAssessments } : payload;
     return Object.keys(meta).length > 0 ? { ...enriched, meta } : enriched;
@@ -280,7 +294,31 @@ export async function handleRequest(req: Request): Promise<Response> {
   const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
 
-  if (sourceIdsResult.value !== undefined) {
+  if (debateContextRequest) {
+    try {
+      loadedDebate = await loadDebateContext(supabase as unknown as DebateContextDatabase, userId, debateContextRequest);
+    } catch (error) {
+      if (error instanceof DebateContextNotFoundError) {
+        log(requestId, "WARN", "Rejected debate context for a debate the caller does not own");
+        return badRequest("Debate not found", corsHeaders, 404);
+      }
+      log(requestId, "ERROR", "Unable to load debate context", { error: error instanceof Error ? error.message : "Unknown error" });
+      return badRequest("Unable to load debate context", corsHeaders, 500);
+    }
+    // A live sparring round stays transcript-only: no Library evidence.
+    const debateSources = feature === "sparring" ? [] : loadedDebate.sources;
+    const bounded = boundPromptSources(debateSources);
+    debateSourceCounts = {
+      omittedForSize: debateSources.length - bounded.length,
+      shortened: bounded.filter((source, index) => source.content.length < debateSources[index].content.length).length,
+    };
+    rawSources = bounded.map((source, index) => ({
+      ...source,
+      id: debateSources[index].id,
+      ...(debateSources[index].metadata ? { metadata: debateSources[index].metadata } : {}),
+    }));
+    sources = bounded;
+  } else if (sourceIdsResult.value !== undefined) {
     if (body.workspaceContext !== undefined && sourceIdsResult.value.length > 0) {
       return badRequest("Personal sources cannot be mixed with workspace context", corsHeaders);
     }
@@ -633,8 +671,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       feature,
       dateContext: getCurrentDateContext(),
       globalPrompt: await getGlobalPrompt(feature),
-      // User-authored system overrides must not influence a persisted judge.
-      customPrompt: feature === "sparring" ? null : customSystemPrompt ?? null,
+      debateContext: debatePromptContextFor(loadedDebate, feature, validatedSparringRequest?.action),
       // Sparring is transcript-only. Do not let unrelated saved evidence alter
       // an opponent response or a judge's scorecard.
       sources: feature === "sparring" && !workspaceAccess ? [] : promptSources,
@@ -683,6 +720,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           input: crossfireInput,
           sources: crossfireSources,
           workspaceSources: workspaceAccess ? sources : null,
+          debateContext: debatePromptContextFor(loadedDebate, feature),
         });
       case "factoids":
         return await handleFactoids(ctx);

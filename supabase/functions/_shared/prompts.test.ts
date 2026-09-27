@@ -15,6 +15,7 @@ import {
   MAX_PROMPT_SOURCE_COUNT,
   MAX_PROMPT_SOURCE_TOTAL_CHARS,
   type Feature,
+  UNTRUSTED_CONTENT_RULES,
 } from "./prompts.ts";
 
 const FEATURES: Feature[] = ["generate", "attack", "brainstorm", "factoids", "ask", "sparring", "crossfire"];
@@ -100,17 +101,35 @@ Deno.test("research rules are absent when no research was provided", () => {
   }
 });
 
-Deno.test("admin and custom prompt sections are appended after the task layer", () => {
+Deno.test("admin, library, debate, and student-material rules follow the task layer in order", () => {
   const prompt = buildSystemPrompt({
     feature: "generate",
     globalPrompt: "ADMIN RULE",
-    customPrompt: "CUSTOM RULE",
+    sources: [{ title: "Library study", content: "LIBRARY TEXT", type: "text" }],
+    debateContext: {
+      motion: "This House would ban homework",
+      side: "pro",
+      settings: { format: "4-6-6-3" },
+      instructions: "STUDENT INSTRUCTION",
+      outputs: [],
+    },
   });
   const taskIndex = prompt.indexOf(GENERATE_PROMPT.slice(0, 40));
   const adminIndex = prompt.indexOf("ADMIN-CONFIGURED INSTRUCTIONS:\nADMIN RULE");
-  const customIndex = prompt.indexOf("CUSTOM SYSTEM PROMPT:\nCUSTOM RULE");
-  if (taskIndex === -1 || adminIndex === -1 || customIndex === -1) throw new Error("section missing");
-  if (!(taskIndex < adminIndex && adminIndex < customIndex)) throw new Error("section order wrong");
+  const libraryIndex = prompt.indexOf("LIBRARY TEXT");
+  const debateIndex = prompt.indexOf("STUDENT INSTRUCTION");
+  const rulesIndex = prompt.indexOf(UNTRUSTED_CONTENT_RULES);
+  if ([taskIndex, adminIndex, libraryIndex, debateIndex, rulesIndex].includes(-1)) throw new Error("section missing");
+  if (!(taskIndex < adminIndex && adminIndex < libraryIndex && libraryIndex < debateIndex && debateIndex < rulesIndex)) {
+    throw new Error("section order wrong");
+  }
+  if (!prompt.endsWith(UNTRUSTED_CONTENT_RULES)) throw new Error("student-material rules must close the prompt");
+});
+
+Deno.test("the retired per-user custom prompt has no prompt layer", () => {
+  const prompt = buildSystemPrompt({ feature: "ask", globalPrompt: "ADMIN RULE" });
+  if (prompt.includes("CUSTOM SYSTEM PROMPT")) throw new Error("custom prompt layer still rendered");
+  if (prompt.includes("STUDENT MATERIAL RULES")) throw new Error("material rules added without student material");
 });
 
 Deno.test("date context replaces the placeholder in every feature task prompt", () => {

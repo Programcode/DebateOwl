@@ -4,10 +4,11 @@
 
 export * from "./prompts/common.ts";
 export * from "./prompts/system.ts";
-export { ASK_PROMPT, buildStreamingAskSystemPrompt } from "./prompts/ask.ts";
+export { ASK_PROMPT, buildStreamingAskSystemPrompt, type StreamingAskMaterial } from "./prompts/ask.ts";
 export { ATTACK_PROMPT } from "./prompts/attack.ts";
 export { BRAINSTORM_PROMPT } from "./prompts/brainstorm.ts";
 export { CROSSFIRE_PROMPT } from "./prompts/crossfire.ts";
 export { FACTOIDS_PROMPT } from "./prompts/factoids.ts";
 export { GENERATE_PROMPT } from "./prompts/generate.ts";
 export { SPARRING_PROMPT } from "./prompts/sparring.ts";
+export { type DebatePromptContext, neutralizeStructureTags, UNTRUSTED_CONTENT_RULES } from "./prompts/context.ts";

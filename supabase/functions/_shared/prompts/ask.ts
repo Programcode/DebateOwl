@@ -1,6 +1,12 @@
 // Ask: a coaching chat answer in the requested mode, JSON or streamed.
 
-import { ASK_COMMON_RULES, asString, outputLanguageInstruction } from "./common.ts";
+import { ASK_COMMON_RULES, asString, outputLanguageInstruction, type PromptSource } from "./common.ts";
+import {
+  type DebatePromptContext,
+  renderDebateContext,
+  renderKnowledgeBase,
+  UNTRUSTED_CONTENT_RULES,
+} from "./context.ts";
 
 export const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
 
@@ -60,8 +66,13 @@ Argument Map: ${input.argumentMapMode ? "ON - include argumentMap" : "OFF - omit
 Research Context: ${input.researchAvailable ? "AVAILABLE" : "NONE"}`;
 }
 
-export function buildStreamingAskSystemPrompt(modeGuidance: string, language: unknown = "en"): string {
-  return [
+export interface StreamingAskMaterial {
+  sources?: PromptSource[];
+  debateContext?: DebatePromptContext | null;
+}
+
+export function buildStreamingAskSystemPrompt(modeGuidance: string, language: unknown = "en", material: StreamingAskMaterial = {}): string {
+  const base = [
     ASK_COMMON_RULES,
     outputLanguageInstruction(language),
     "Answer in clear Markdown that can stream smoothly token by token.",
@@ -69,11 +80,20 @@ export function buildStreamingAskSystemPrompt(modeGuidance: string, language: un
     "If the user asks for sources, explain that citation/search mode should be used.",
     `Mode guidance: ${modeGuidance}`,
   ].join("\n");
+  const hasSources = Boolean(material.sources && material.sources.length > 0);
+  if (!hasSources && !material.debateContext) return base;
+  return [
+    base,
+    "Use the student's Library sources and Current Debate material below when they help answer. Say which Library source a factual claim relies on by its title.",
+    hasSources && renderKnowledgeBase(material.sources!),
+    material.debateContext && renderDebateContext(material.debateContext),
+    UNTRUSTED_CONTENT_RULES,
+  ].filter(Boolean).join("\n\n");
 }
 
 export function buildAskUserPrompt(input: Record<string, unknown>): string {
-const mode = asString(input.mode, "general");
-return `Message: ${asString(input.message)}
+  const mode = asString(input.mode, "general");
+  return `Message: ${asString(input.message)}
 Mode: ${mode}
 Mode Guidance: ${getAskModeGuidance(mode)}
 ${outputLanguageInstruction(input.language)}`;

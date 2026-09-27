@@ -2,7 +2,7 @@ import { logUsage } from "../../_shared/entitlements.ts";
 import { callAI } from "../provider.ts";
 import { cleanGeneratedText, getCurrentDateContext } from "../text.ts";
 import { buildCrossfireNextTurnPrompt, buildCrossfireDebriefPrompt } from "../prompt-builder.ts";
-import { buildSystemPrompt, type PromptSource } from "../../_shared/prompts.ts";
+import { buildSystemPrompt, type DebatePromptContext, type PromptSource } from "../../_shared/prompts.ts";
 import { validateCrossfireDebrief } from "../../_shared/crossfire-response.ts";
 import {
   createCrossfireSignalToken,
@@ -18,6 +18,8 @@ export interface CrossfireHandlerOptions {
   sources: PromptSource[];
   /** Authorized workspace context, when the request came from a workspace. */
   workspaceSources: PromptSource[] | null;
+  /** Current Debate material without free-form instructions. */
+  debateContext: DebatePromptContext | null;
 }
 
 // CROSSFIRE: transcript-grounded next turns and debriefs. Custom prompts never
@@ -40,6 +42,7 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     sources: workspaceSources
       ? workspaceSources.map((source) => ({ ...source, content: source.content.slice(0, 8_000) }))
       : crossfireSources,
+    debateContext: options.debateContext,
   });
   if (systemPrompt.length + userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
     throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);

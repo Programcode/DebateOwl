@@ -4,12 +4,14 @@
 //   1. PRODUCT_IDENTITY  who the assistant is (includes humanizer rules)
 //   2. feature task      what this feature produces (per-feature schema)
 //   3. OUTPUT RULES      JSON-only contract, single-sourced
-//   4. admin/custom      operator overrides
-//   5. knowledge base    user's saved sources
-//   6. RESEARCH_RULES    citation honesty, present only when research ran
+//   4. admin             operator instructions from global_prompts
+//   5. knowledge base    the student's Library sources for this debate
+//   6. current debate    motion, side, settings, instructions, saved results
+//   7. RESEARCH_RULES    citation honesty, present only when research ran
+//   8. student material  untrusted-content rules, last so nothing above
+//                        them in student material can countermand them
 
 import {
-  boundPromptSources,
   type Feature,
   JSON_RULES,
   PRODUCT_IDENTITY,
@@ -22,6 +24,12 @@ import { buildCrossfireUserPrompt, CROSSFIRE_PROMPT } from "./crossfire.ts";
 import { buildFactoidsUserPrompt, FACTOIDS_PROMPT } from "./factoids.ts";
 import { buildGenerateUserPrompt, GENERATE_PROMPT } from "./generate.ts";
 import { buildSparringUserPrompt, SPARRING_PROMPT } from "./sparring.ts";
+import {
+  type DebatePromptContext,
+  renderDebateContext,
+  renderKnowledgeBase,
+  UNTRUSTED_CONTENT_RULES,
+} from "./context.ts";
 
 export const FEATURE_PROMPTS: Record<Feature, string> = {
   generate: GENERATE_PROMPT,
@@ -39,10 +47,10 @@ export interface SystemPromptOptions {
   dateContext?: string;
   /** Admin-configured instruction from global_prompts. */
   globalPrompt?: string | null;
-  /** User's custom system prompt. */
-  customPrompt?: string | null;
   /** Saved local sources acting as primary knowledge base. */
   sources?: Array<{ title: string; content: string; origin?: string; type: string }>;
+  /** The Current Debate material this request may use. */
+  debateContext?: DebatePromptContext | null;
   /** Marker that web research accompanies this request; adds RESEARCH_RULES. */
   researchContext?: string;
 }
@@ -58,18 +66,13 @@ export function buildSystemPrompt(options: SystemPromptOptions): string {
   if (options.globalPrompt) {
     sections.push(`ADMIN-CONFIGURED INSTRUCTIONS:\n${options.globalPrompt}`);
   }
-  if (options.customPrompt) {
-    sections.push(`CUSTOM SYSTEM PROMPT:\n${options.customPrompt}`);
-  }
-  if (options.sources && options.sources.length > 0) {
-    const boundedSources = boundPromptSources(options.sources);
-    sections.push(`LOCAL KNOWLEDGE BASE (use as primary factual source):\n${
-      boundedSources.map((s) => `--- ${s.title} (${s.origin || s.type}) ---\n${s.content}\n`).join("\n")
-    }`);
-  }
+  const hasSources = Boolean(options.sources && options.sources.length > 0);
+  if (hasSources) sections.push(renderKnowledgeBase(options.sources!));
+  if (options.debateContext) sections.push(renderDebateContext(options.debateContext));
   if (options.researchContext) {
     sections.push(`${options.researchContext}\n\n${RESEARCH_RULES}`);
   }
+  if (hasSources || options.debateContext) sections.push(UNTRUSTED_CONTENT_RULES);
 
   return sections.join("\n\n");
 }
