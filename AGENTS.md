@@ -75,6 +75,24 @@ npx playwright install --with-deps webkit
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webkit
 ```
 
+## Verifying features in the real app
+
+To prove that a user-facing change works, drive the real app with the `verify-debatelab` skill ([SKILL.md](.claude/skills/verify-debatelab/SKILL.md)). It runs the React client, local Supabase Auth, Postgres, and Edge Functions, and signs in real demo users. Each run keeps screenshots, ARIA snapshots, provider calls, and database rows in `.verify/artifacts/`.
+
+```bash
+H=.claude/skills/verify-debatelab/bin/verify.sh
+$H up                  # fake model provider, free
+$H up --live           # real AI: OpenRouter pinned to meta/muse-spark-1.3-contributor, real Exa
+$H doctor              # proves the stack is local, ours, and (live) pinned
+$H drive all           # every recipe; or recipes/<name>, e2e/<path>; add --project desktop-chromium
+$H down                # always, including after failures
+```
+
+- Use `--live` when the change touches prompts, model output handling, web research, citations, or URL import. The fake mode cannot prove those. Every chat call is rewritten to the Muse Spark contributor model, so a full run costs cents plus Exa searches, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content: the contributor model may keep prompts.
+- Live keys come from `~/.config/debatelab/live-verify.env` (mode 600, `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY`). On Adam's VPS it holds copies of the Hermes keys in `~/.hermes/.env`. Never print them.
+- The stack holds the same lock as `./.superset/db-gate.sh`, so only one worktree can run it at a time.
+- Neither mode proves Stripe Checkout, Google sign-in or export, staging, or production.
+
 ## Hard boundaries
 
 - Start bug fixes with a failing test or repeatable browser reproduction when a suitable test layer exists.

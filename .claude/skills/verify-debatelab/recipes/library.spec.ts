@@ -36,7 +36,8 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await page.reload();
   await expect(page.getByRole("switch", { name: "Toggle Active study" })).toBeVisible();
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
-  const { data } = await admin.from("sources").select("title,is_active").eq("user_id", await user.userId());
+  // Live research can save the web sources it found, so check only the two added here.
+  const { data } = await admin.from("sources").select("title,is_active").eq("user_id", await user.userId()).in("title", ["Active study", "Paused study"]);
   expect(data?.map((row) => row.title)).toEqual(["Active study"]);
   await evidence.json("03-sources-rows", data);
   await evidence.shot("03-after-delete");
