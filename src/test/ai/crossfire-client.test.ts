@@ -112,13 +112,15 @@ describe('Crossfire AI client', () => {
         feature: 'crossfire',
         input: expect.objectContaining({ language: 'hu' }),
         sourceIds: [],
-        customSystemPrompt: null,
+        debateContext: expect.objectContaining({ sourceIds: [] }),
       }),
     }));
+    expect(mocks.invoke.mock.calls[0][1].body).not.toHaveProperty('customSystemPrompt');
 
     await crossfire(nextTurnInput(true), config);
     const secondCall = mocks.invoke.mock.calls[1][1];
     expect(secondCall.body.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
+    expect(secondCall.body.debateContext.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
   });
 
   it('strips client-only turn signals from every transcript it sends', async () => {

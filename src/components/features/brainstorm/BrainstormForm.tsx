@@ -21,6 +21,8 @@ import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDeba
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
 import { ModelSelector } from '@/components/ModelSelector';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
+import { requestSide } from '../../../../supabase/functions/_shared/debate-context';
 
 interface BrainstormFormProps {
   onSubmit: (data: BrainstormInput) => void;
@@ -140,6 +142,8 @@ export function BrainstormForm({ onSubmit, isLoading, debatePrefill = true }: Br
               className="min-h-[100px] resize-y"
             />
           </div>
+
+          <DebateContextControl feature="brainstorm" side={requestSide('brainstorm', currentValues)} hidden={!debatePrefill} />
 
           {/* Submit Button */}
           <Button

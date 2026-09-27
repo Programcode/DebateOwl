@@ -122,13 +122,14 @@ describe('AI Client Integration', () => {
                     model: 'gpt-4o',
                     temperature: 0.8,
                     input: expect.objectContaining(input),
-                    customSystemPrompt: 'test-system-prompt',
                     sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+                    debateContext: expect.objectContaining({ sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'] }),
                 }),
             }));
 
             const callArgs = (supabaseMock.functions.invoke.mock.calls[0] as any[])[1];
             expect(callArgs.body.sources).toBeUndefined();
+            expect(callArgs.body).not.toHaveProperty('customSystemPrompt');
         });
 
         it('sends the configured reasoning effort in the non-streaming request', async () => {
@@ -292,8 +293,11 @@ describe('AI Client Integration', () => {
         await askChat('Question', [], 'general', mockConfig, { workspaceContext });
 
         expect(supabaseMock.functions.invoke).toHaveBeenCalledWith('ai', expect.objectContaining({
-            body: expect.objectContaining({ customSystemPrompt: null, sourceIds: [], workspaceContext }),
+            body: expect.objectContaining({ sourceIds: [], workspaceContext }),
         }));
+        const workspaceBody = (supabaseMock.functions.invoke.mock.calls[0] as any[])[1].body;
+        expect(workspaceBody).not.toHaveProperty('customSystemPrompt');
+        expect(workspaceBody).not.toHaveProperty('debateContext');
     });
 
     describe('Error Handling', () => {

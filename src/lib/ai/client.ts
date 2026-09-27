@@ -16,6 +16,9 @@ import {
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
 import { activeDebateId } from '../stores/debate-store';
+import { parseDebateContextUsage, useDebateContextStore } from '../stores/debate-context-store';
+import { currentDebateContextPlan } from '../debate/context-state';
+import { requestSide, type DebateContextRequest } from '../../../supabase/functions/_shared/debate-context';
 import {
   type SourceAssessmentUpdate,
   type SourceProvenance,
@@ -47,23 +50,34 @@ export const REQUEST_TIMEOUT_MS = 200 * 1000;
 export const CROSSFIRE_REQUEST_TIMEOUT_MS = 75 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
 const MAX_CLIENT_REQUEST_BODY_BYTES = 190_000;
-const MAX_REQUEST_SOURCE_IDS = 10;
 const MAX_ASK_HISTORY_ITEMS = 8;
 const MAX_ASK_HISTORY_CONTENT_BYTES = 6_000;
 const MAX_ASK_HISTORY_TOTAL_BYTES = 48_000;
 const MAX_ASK_MESSAGE_BYTES = 80_000;
-const MAX_CUSTOM_SYSTEM_PROMPT_BYTES = 32_000;
-const SOURCE_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;
-  includeCustomSystemPrompt?: boolean;
   timeoutMs?: number;
   signal?: AbortSignal;
   transformResponse?: (data: unknown) => T;
   workspaceContext?: WorkspaceToolContext;
-  /** Debate whose sources ground this request; null for one-off work. Defaults to the active debate. */
+  /** Debate whose material grounds this request; null for one-off work. Defaults to the active debate. */
   debateId?: string | null;
+}
+
+/**
+ * The Current Debate context a request sends: IDs and preferences only. The
+ * server loads and authorizes the text. One-off and Workspace requests send none.
+ */
+export function debateContextForRequest(
+  feature: Parameters<typeof requestSide>[0],
+  input: unknown,
+  debateId: string | null,
+  options: { includeSources?: boolean; workspace?: boolean } = {},
+): DebateContextRequest | undefined {
+  if (!debateId || options.workspace) return undefined;
+  const record = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : {};
+  return currentDebateContextPlan(feature, requestSide(feature, record), debateId, { includeSources: options.includeSources }).request;
 }
 
 function selectedOutputLanguage(): AppLanguage {
@@ -446,18 +460,16 @@ async function callSupabaseAI<T = unknown>(
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const startTime = performance.now();
 
-  const settings = useSettingsStore.getState();
   const session = useSessionStore.getState();
 
   const debateId = options.debateId !== undefined ? options.debateId : activeDebateId();
-  // Sources never cross debates, and one-off work uses none of them.
-  const sourceIds = options.workspaceContext || options.includeActiveSources === false || feature === 'sparring' || !debateId
-    ? []
-    : session.sourceLibrary
-      .filter((s) => s.isActive && s.debateId === debateId)
-      .map((s) => s.id)
-      .filter((id) => SOURCE_UUID_PATTERN.test(id))
-      .slice(0, MAX_REQUEST_SOURCE_IDS);
+  // Material never crosses debates, and one-off work uses none of it.
+  const debateContext = debateContextForRequest(feature, input, debateId, {
+    includeSources: options.includeActiveSources !== false,
+    workspace: Boolean(options.workspaceContext),
+  });
+  // Servers from before Current Debate context read only this field.
+  const sourceIds = debateContext?.sourceIds ?? [];
 
   const provider = 'openrouter';
   captureProductEvent('ai_request_started', {
@@ -512,10 +524,8 @@ async function callSupabaseAI<T = unknown>(
       model: config.model,
       temperature: config.temperature,
       reasoningEffort: config.reasoningEffort ?? 'low',
-      customSystemPrompt: options.workspaceContext || options.includeCustomSystemPrompt === false
-        ? null
-        : settings.customSystemPrompt ? truncateUtf8(settings.customSystemPrompt, MAX_CUSTOM_SYSTEM_PROMPT_BYTES) : null,
       sourceIds,
+      ...(debateContext ? { debateContext } : {}),
       workspaceContext: options.workspaceContext,
     };
 
@@ -624,6 +634,12 @@ async function callSupabaseAI<T = unknown>(
       ? responseMeta.resolvedModel
       : config.model;
     const response = options.transformResponse ? options.transformResponse(data) : data as T;
+    if (debateContext) {
+      // Review choices cover one request; the next one starts from the defaults.
+      const contextStore = useDebateContextStore.getState();
+      contextStore.recordUsage(feature, parseDebateContextUsage(responseMeta?.debateContext));
+      contextStore.resetOverride(feature);
+    }
     captureProductEvent('ai_request_succeeded', {
       feature,
       provider,
@@ -774,7 +790,6 @@ export async function crossfire(
     config,
     {
       includeActiveSources: input.data.config.useSourceLibrary,
-      includeCustomSystemPrompt: false,
       timeoutMs: CROSSFIRE_REQUEST_TIMEOUT_MS,
       signal: options.signal,
       workspaceContext: options.workspaceContext,
@@ -831,7 +846,7 @@ export async function crossfireSignal(
     config,
     {
       includeActiveSources: false,
-      includeCustomSystemPrompt: false,
+      debateId: null,
       timeoutMs: 5_000,
       signal: options.signal,
       transformResponse: (rawData) => {
@@ -1407,9 +1422,10 @@ function sparringRequestKey(
   input: SparringRespondInput | SparringScoreInput,
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
+  debateId: string | null = null,
 ): string {
   const authScope = getActiveUserId() ?? getActiveAccessToken() ?? 'signed-out';
-  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
+  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, debateId, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
 }
 
 /** Generate the opponent's next speech for a validated sparring turn. */
@@ -1417,6 +1433,8 @@ export async function generateSparringTurn(
   input: SparringRespondInput,
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
+  /** The debate this round belongs to; null for a one-off round. */
+  debateId: string | null = null,
 ): Promise<SparringTurnResponse> {
   const requestInput: SparringRespondInput = {
     ...input,
@@ -1428,11 +1446,11 @@ export async function generateSparringTurn(
       details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext, debateId);
   const pending = pendingSparringTurns.get(requestKey);
   if (pending) return pending;
 
-  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext);
+  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext, debateId);
   pendingSparringTurns.set(requestKey, request);
   try {
     return await request;
@@ -1444,7 +1462,8 @@ export async function generateSparringTurn(
 async function generateSparringTurnOnce(
   input: SparringRespondInput,
   config: ProviderConfig,
-  workspaceContext?: WorkspaceToolContext,
+  workspaceContext: WorkspaceToolContext | undefined,
+  debateId: string | null,
 ): Promise<SparringTurnResponse> {
   const requestInput: SparringRespondInput = {
     ...input,
@@ -1459,6 +1478,7 @@ async function generateSparringTurnOnce(
 
   return await callSupabaseAI<SparringTurnResponse>('sparring', inputResult.data, config, {
     workspaceContext,
+    debateId,
     transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
   });
 }
@@ -1468,6 +1488,8 @@ export async function judgeSparringSession(
   input: SparringScoreInput,
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
+  /** The debate this round belongs to; null for a one-off round. */
+  debateId: string | null = null,
 ): Promise<SparringScoreResponse> {
   const requestInput: SparringScoreInput = {
     ...input,
@@ -1479,11 +1501,11 @@ export async function judgeSparringSession(
       details: { issues: inputResult.success ? [{ message: 'Expected score action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext, debateId);
   const pending = pendingSparringScores.get(requestKey);
   if (pending) return pending;
 
-  const request = judgeSparringSessionOnce(inputResult.data, config, workspaceContext);
+  const request = judgeSparringSessionOnce(inputResult.data, config, workspaceContext, debateId);
   pendingSparringScores.set(requestKey, request);
   try {
     return await request;
@@ -1495,7 +1517,8 @@ export async function judgeSparringSession(
 async function judgeSparringSessionOnce(
   input: SparringScoreInput,
   config: ProviderConfig,
-  workspaceContext?: WorkspaceToolContext,
+  workspaceContext: WorkspaceToolContext | undefined,
+  debateId: string | null,
 ): Promise<SparringScoreResponse> {
   const requestInput: SparringScoreInput = {
     ...input,
@@ -1510,6 +1533,7 @@ async function judgeSparringSessionOnce(
 
   return await callSupabaseAI<SparringScoreResponse>('sparring', inputResult.data, config, {
     workspaceContext,
+    debateId,
     transformResponse: (rawData) => validateSparringScoreResponse((rawData as { output: unknown }).output),
   });
 }

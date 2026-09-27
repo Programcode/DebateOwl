@@ -130,7 +130,7 @@ export default function AttackPage() {
         <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
           {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
-            <AttackForm onSubmit={handleSubmit} isLoading={attackLoading} />
+            <AttackForm onSubmit={handleSubmit} isLoading={attackLoading} debateContext={!workspace.context} />
           </AnimatedSection>
 
           {/* Results */}

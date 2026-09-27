@@ -6,6 +6,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
+import { useDebateContextStore } from '@/lib/stores/debate-context-store';
 import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 import { setJamUserId } from '@/lib/jam-metadata';
 import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
@@ -234,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSettingsStore(!prevUserId);
         resetSparringStore();
         resetDebateStore();
+        useDebateContextStore.getState().resetLocalData();
         sessionStorage.removeItem('google_provider_token');
         localStorage.removeItem('google_provider_token');
         // Remove refresh tokens written by older clients as well; this client
@@ -248,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSettingsStore();
         resetSparringStore();
         resetDebateStore();
+        useDebateContextStore.getState().resetLocalData();
       }
 
       hydrateStores(nextUserId);

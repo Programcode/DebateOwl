@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AnimatedSection } from '@/components/ui/animated-section';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AskOutput } from '@/lib/ai/schemas/ask';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { activeDebateId, useDebateStore } from '@/lib/stores/debate-store';
@@ -364,6 +365,14 @@ export default function AskPage() {
             }))}
             onLoadChat={handleLoadChat}
             onSaveSource={handleSaveToLibrary}
+            contextControl={(
+              <DebateContextControl
+                feature="ask"
+                side="both"
+                debateId={askChatId ? askChatDebateId : undefined}
+                hidden={Boolean(workspace.context)}
+              />
+            )}
           />
         </AnimatedSection>
       </div>

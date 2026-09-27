@@ -45,6 +45,8 @@ interface AskChatProps {
   savedChats?: SavedChatSummary[];
   onLoadChat?: (id: string) => void;
   onSaveSource?: (title: string, content: string) => void;
+  /** Shown directly above the message box, e.g. which debate material Ask will use. */
+  contextControl?: React.ReactNode;
 }
 
 interface SavedChatSummary {
@@ -354,7 +356,7 @@ function SavedChatsPanel({
   );
 }
 
-export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, savedChats = [], onLoadChat, onSaveSource }: AskChatProps) {
+export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, savedChats = [], onLoadChat, onSaveSource, contextControl }: AskChatProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
@@ -658,6 +660,8 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
               : t('voice.startFailed', 'Dictation could not start. Check your microphone and try again.')}
           </p>
         )}
+
+        {contextControl}
 
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input

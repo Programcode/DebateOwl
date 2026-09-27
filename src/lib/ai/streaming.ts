@@ -1,6 +1,7 @@
 import { getActiveAccessToken, supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
-import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, mapAIError, reportAIFailure, withOutputLanguage } from './client';
+import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, debateContextForRequest, mapAIError, reportAIFailure, withOutputLanguage } from './client';
+import { parseDebateContextUsage, useDebateContextStore } from '@/lib/stores/debate-context-store';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 
@@ -10,6 +11,8 @@ export interface AskStreamOptions {
   webSearch?: boolean;
   prosConsMode?: boolean;
   argumentMapMode?: boolean;
+  /** Debate whose material grounds the answer; null for one-off work. */
+  debateId?: string | null;
 }
 
 export interface AskStreamHandlers {
@@ -184,6 +187,16 @@ export async function streamAskChat(
     mapAIError({ message, context: { status } }, requestId, provider, config.model, payload);
 
   try {
+    const input = withOutputLanguage({
+      message: boundAskMessage(message),
+      history: boundAskHistory(history),
+      mode,
+      citationMode: Boolean(options.citationMode),
+      webSearch: Boolean(options.webSearch),
+      prosConsMode: Boolean(options.prosConsMode),
+      argumentMapMode: Boolean(options.argumentMapMode),
+    });
+    const debateContext = debateContextForRequest('ask', input, options.debateId ?? null);
     const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-stream`, {
       method: 'POST',
       headers: {
@@ -192,15 +205,8 @@ export async function streamAskChat(
       },
       body: JSON.stringify({
         feature: 'ask',
-        input: withOutputLanguage({
-          message: boundAskMessage(message),
-          history: boundAskHistory(history),
-          mode,
-          citationMode: Boolean(options.citationMode),
-          webSearch: Boolean(options.webSearch),
-          prosConsMode: Boolean(options.prosConsMode),
-          argumentMapMode: Boolean(options.argumentMapMode),
-        }),
+        input,
+        ...(debateContext ? { debateContext } : {}),
         provider,
         model: config.model,
         temperature: config.temperature,
@@ -237,6 +243,11 @@ export async function streamAskChat(
             ? finalEvent.meta as Record<string, unknown>
             : undefined;
           if (typeof meta?.resolvedModel === 'string') resolvedModel = meta.resolvedModel;
+          if (debateContext) {
+            const contextStore = useDebateContextStore.getState();
+            contextStore.recordUsage('ask', parseDebateContextUsage(meta?.debateContext));
+            contextStore.resetOverride('ask');
+          }
           const enrichedOutput = finalEvent.output && typeof finalEvent.output === 'object' && !Array.isArray(finalEvent.output)
             ? { ...finalEvent.output, model: resolvedModel, provider }
             : finalEvent.output;

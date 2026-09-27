@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -239,6 +240,8 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
                 <Label className="flex h-5 items-center gap-2 text-sm font-medium"><Cpu className="h-4 w-4 text-muted-foreground" aria-hidden="true" />{t('sparring.setup.aiModel', 'AI model')}</Label>
                 <ModelSelector feature="sparring" />
               </div>
+
+              <DebateContextControl feature="sparring" side={userSide} hidden={!debatePrefill} />
 
               <Button type="submit" className="h-12 w-full" disabled={!canStart}>
                 {isStarting ? t('sparring.setup.openingRoom', 'Opening room…') : t('sparring.setup.startRound', 'Start round')}

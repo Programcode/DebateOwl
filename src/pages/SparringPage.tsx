@@ -153,7 +153,7 @@ export default function SparringPage() {
       currentTurn: turnInput,
     };
 
-    void generateSparringTurn(input, config, workspace.context ?? undefined)
+    void generateSparringTurn(input, config, workspace.context ?? undefined, session.debateId ?? null)
       .then((result) => {
         if (aiRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
@@ -205,7 +205,7 @@ export default function SparringPage() {
       speeches: session.speeches,
       language: outputLanguage,
     };
-    void judgeSparringSession(input, config, workspace.context ?? undefined)
+    void judgeSparringSession(input, config, workspace.context ?? undefined, session.debateId ?? null)
       .then((result) => {
         if (judgeRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
