@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20260819000000_security_hardening.sql');
 const advisorMigration = read('supabase/migrations/20260820090000_advisor_security_cleanup.sql');
-const ai = read('supabase/functions/ai/index.ts');
+// The ai function is split into an entrypoint and focused modules; check
+// every non-test source file it ships.
+const ai = (readdirSync(resolve(root, 'supabase/functions/ai'), { recursive: true }) as string[])
+  .filter((path) => path.endsWith('.ts') && !/[._]test\.ts$/.test(path))
+  .sort()
+  .map((path) => read(`supabase/functions/ai/${path}`))
+  .join('\n');
 const stream = read('supabase/functions/ai-stream/index.ts');
 const modelCatalog = read('supabase/functions/_shared/model-catalog.ts');
 const importer = read('supabase/functions/import-source/index.ts');
