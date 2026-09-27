@@ -2,7 +2,7 @@
 // OpenRouter model and writes the raw outputs for side-by-side review.
 //
 //   OPENROUTER_API_KEY=... deno run --allow-read --allow-write --allow-env=OPENROUTER_API_KEY \
-//     --allow-net=openrouter.ai scripts/prompt-examples.ts <functions-dir> <out.json> [model]
+//     --allow-net=openrouter.ai scripts/prompt-examples.ts <functions-dir> <out.json> [model] [id,id,...]
 //
 // <functions-dir> is a directory holding _shared/prompts.ts and
 // ai/prompt-builder.ts, so an older copy of the prompts can be compared with
@@ -11,7 +11,8 @@
 
 import { PROMPT_EXAMPLES } from "../supabase/functions/_shared/prompts/prompt-examples.ts";
 
-const [functionsDir, outPath, model = "openai/gpt-5.6-luna"] = Deno.args;
+const [functionsDir, outPath, model = "openai/gpt-5.6-luna", only] = Deno.args;
+const selected = only ? new Set(only.split(",")) : null;
 if (!functionsDir || !outPath) {
   console.error("usage: prompt-examples.ts <functions-dir> <out.json> [model]");
   Deno.exit(2);
@@ -27,7 +28,7 @@ const prompts = await import(new URL("_shared/prompts.ts", root).href);
 const builder = await import(new URL("ai/prompt-builder.ts", root).href);
 
 const results = [];
-for (const example of PROMPT_EXAMPLES) {
+for (const example of PROMPT_EXAMPLES.filter((item) => !selected || selected.has(item.id))) {
   const sparringScore = example.feature === "sparring" && example.input.action === "score";
   const context = example.debateContext && {
     ...example.debateContext,
