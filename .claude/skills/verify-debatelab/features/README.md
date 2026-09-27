@@ -7,22 +7,24 @@ This directory is the maintained source for verifying DebateLab's user-facing be
 - `bin/verify.sh up` has printed `READY http://127.0.0.1:18081`, and `bin/verify.sh doctor` exits 0.
 - The browser client is the `up` instance at `http://127.0.0.1:18081`. Never use the `debatelab` container on `:8080` or a plain `npm run dev`, because both reach production.
 - Each scripted test signs in with its own fresh demo-code user (a Pro account with a daily limit of 999) and deletes it afterwards.
-- Model answers come from the fake provider and contain the marker `FAKE-PROVIDER`.
+- In fake mode, model answers come from the fake provider and contain the marker `FAKE-PROVIDER`. In live mode (`up --live`), every chat call goes to real OpenRouter pinned to `meta/muse-spark-1.3-contributor`, research uses real Exa, and answers are real model text.
+- The feature files quote fake-mode text such as `FAKE-PROVIDER case thesis`. Recipes never assert it: they read the `ai` response body with `aiResponse()` and check that its fields are on screen, so the same recipe passes in both modes.
 
 ## Driving conventions
 
-- Scripted runs go in `recipes/<feature>.spec.ts`, import from `./fixtures`, and run with `bin/verify.sh drive <feature>`.
+- Scripted runs go in `recipes/<feature>.spec.ts`, import from `./fixtures`, and run with `bin/verify.sh drive recipes/<feature>`.
 - Interactive runs use `bin/verify.sh user` to get a code, then sign in on `/login`.
 - Prefer roles and accessible names. Crossfire's `data-testid` handles are the exception.
-- Wait for the `FAKE-PROVIDER` text or a named element, never a fixed sleep. AI calls can take up to about 30 s on a cold function.
+- Wait for `aiResponse()` or a named element, never a fixed sleep. Use `AI_TIMEOUT` (30 s fake, 240 s live) for anything behind a model call.
 - Run both `desktop-chromium` and `mobile-chromium` when the change touches layout.
 
 ## Proof and skip reporting
 
 - UI proof is an ARIA snapshot plus a screenshot before and after the action, with `steps.log` naming each action.
-- Side-effect proof is `providerCall("<feature>")` (what the Edge Function sent upstream) plus the rows read back through `admin`.
+- Side-effect proof is `expectProviderCalls([...])` (what the Edge Function sent upstream) plus the rows read back through `admin`. Every test writes `provider-calls.json`; in live mode the fixture fails the test if any chat call was answered by a model other than the pin.
 - Record the feature ID and entry point with every artifact.
-- Report as unverified anything that needs live models, Exa web research, real Jev judgement, Stripe Checkout, Google export, staging, or production. Local runs cannot prove those.
+- Tests that need live mode record an `unverified` annotation in fake mode instead of passing silently. Report those as unverified.
+- Never verifiable here: Stripe Checkout and the billing portal, Google sign-in and Google Docs export, staging, production, and the deployed host. Jev decisions are real only in live mode and use Jev's own model, not the pin.
 - Do not report a skipped entry point as verified through a different path.
 
 ## Feature entry contract
@@ -36,10 +38,13 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 
 ## Features
 
-- [Demo-code sign-in](./auth-demo-login.md) covers sign-in, session persistence, a rejected code, and sign-out.
-- [Case generation](./case-generation.md) covers generating, provider failure and retry, quota block, saving to History, and export. It has a recipe: `recipes/case-generation.spec.ts`.
-- [Library sources](./library-sources.md) covers adding, toggling, and deleting sources, and grounding AI prompts in active sources.
-- [AI tools](./ai-tools.md) covers Attack, Brainstorm, Factoids, and Ask, both streamed and cited.
-- [Practice](./practice.md) covers Sparring rounds and Crossfire.
+- [Demo-code sign-in](./auth-demo-login.md): sign-in, reload, rejected code, sign-out (`e2e/full-stack/auth.spec.ts`), and email one-time-code sign-in through Mailpit (`recipes/auth.spec.ts`).
+- [Case generation](./case-generation.md): generate, web research, save and reopen from History on a fresh device, PDF and DOCX export, provider failure and retry, quota block (`recipes/case-generation.spec.ts`).
+- [Library sources](./library-sources.md): add, pause, delete, grounding, and URL import (`recipes/library.spec.ts`).
+- [AI tools](./ai-tools.md): Attack, Brainstorm, Factoids, and Ask streamed, cited, and with web search (`recipes/ai-tools.spec.ts`).
+- [Practice](./practice.md): a full Lincoln-Douglas sparring round with verdict, and Crossfire in both directions with debrief (`recipes/practice.spec.ts`).
+- Account: output language reaching the model from a new device, flowchart node delete, save and load, and the speech timer (`recipes/account.spec.ts`); Delete All My Data scoped against a bystander (`e2e/full-stack/account-data.spec.ts`).
+- Billing: expired account blocked, promo code restores access (`recipes/billing.spec.ts`); signed, forged, and replayed Stripe webhooks (`e2e/full-stack/billing.spec.ts`).
+- Admin announcements and the non-admin block (`e2e/full-stack/admin.spec.ts`), public share links (`e2e/full-stack/public.spec.ts`), and Workspaces with live collaboration and invites (`e2e/workspace-collaboration.spec.ts`).
 
-Not yet mapped: Workspaces and collaboration (needs `up --collab`; see `e2e/workspace-collaboration.spec.ts`), Flowchart, Timer, Settings, billing and promo codes, Admin announcements, public share links, and the public landing pages.
+Not yet mapped: theme and UI language, the public landing and SEO pages, and share-link creation (the app has no client caller for the `share` function).

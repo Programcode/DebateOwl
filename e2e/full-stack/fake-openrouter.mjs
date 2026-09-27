@@ -223,6 +223,13 @@ async function proxy(req, res, path) {
     : { feature: "jev", model: body.model };
   delete record.output;
   requests.push(record);
+  // Forced failures (fake.fail) apply in live mode too, before any spend.
+  const failure = chat && failures.find((item) => item.count > 0 && (!item.feature || item.feature === record.feature));
+  if (failure) {
+    failure.count -= 1;
+    record.status = failure.status;
+    return json(res, failure.status, { error: { message: `Forced ${failure.status} for ${record.feature}` } });
+  }
   if (++upstreamCalls > maxUpstreamCalls) {
     record.status = 429;
     return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
@@ -236,8 +243,16 @@ async function proxy(req, res, path) {
     });
     record.status = response.status;
     res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
-    for await (const chunk of response.body ?? []) res.write(chunk);
+    // Keep the head of the reply: OpenRouter's own `model` and `provider`
+    // fields prove which model answered, independent of the rewrite above.
+    let head = "";
+    for await (const chunk of response.body ?? []) {
+      if (head.length < 8192) head += Buffer.from(chunk).toString("utf8");
+      res.write(chunk);
+    }
     res.end();
+    record.upstreamModel = /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+    record.upstreamProvider = /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
   } catch (error) {
     record.status = 502;
     const message = error instanceof Error ? error.message : "upstream connection failed";
@@ -252,6 +267,9 @@ async function proxy(req, res, path) {
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://fake");
   if (url.pathname === "/__requests" && req.method === "GET") return json(res, 200, requests);
+  if (url.pathname === "/__stats" && req.method === "GET") {
+    return json(res, 200, { mode: upstream ? "live" : "fake", liveModel: liveModel ?? null, upstreamCalls, maxUpstreamCalls });
+  }
   if (url.pathname === "/__reset" && req.method === "POST") {
     requests.length = 0;
     failures = [];

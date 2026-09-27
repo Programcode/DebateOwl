@@ -20,7 +20,7 @@ A signed-in user enters a motion on Generate and receives a structured debate ca
 
 Preconditions:
 
-- Doctor passes. The recipe `recipes/case-generation.spec.ts` covers `gen-create` and `gen-save`: `bin/verify.sh drive case-generation`.
+- Doctor passes. The recipe `recipes/case-generation.spec.ts` covers every sub-feature below: `bin/verify.sh drive recipes/case-generation`.
 
 - **Generate.** Fill the textbox named `Motion / Topic *` and click the button named `Generate Debate Case`. The text `FAKE-PROVIDER case thesis` and `FAKE-PROVIDER contention 3` appear, along with a toast `Generate complete`.
 - **Provider side effect.** `providerCall("generate")`'s `user` contains `Motion: <motion>`. `ai_requests` for the user contains `{feature: "generate", status: "success"}`.

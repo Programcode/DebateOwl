@@ -4,11 +4,16 @@
 # OpenRouter provider, and a Vite client pinned to the local stack, then holds
 # the shared stack lock until `down`.
 #
-#   verify.sh up [--collab]   start everything; prints READY <url>
+#   verify.sh up [--live [--max-calls N]] [--collab]
+#                             start everything; prints READY <url>. --live sends
+#                             every model call to real OpenRouter pinned to
+#                             $LIVE_MODEL, and research to real Exa.
 #   verify.sh doctor          read-only health and isolation check
 #   verify.sh user [label]    mint a disposable local demo-code user
-#   verify.sh drive <recipe> [playwright args...]
-#                             run a recipe from recipes/ and keep its evidence
+#   verify.sh drive <filter> [playwright args...]
+#                             run recipes (`all`, `recipes/<name>`) or a maintained
+#                             suite (`e2e/live/`, `e2e/workspace-collaboration`)
+#                             and keep the evidence
 #   verify.sh down            stop what `up` started; evidence is kept
 set -euo pipefail
 
@@ -29,6 +34,9 @@ STATE="$STATE_DIR/stack.env"
 USERS="$STATE_DIR/users.tsv"
 ARTIFACTS="$VERIFY_ROOT/artifacts"  # evidence; never removed by this script
 PROJECT_ID="$(basename "$REPO")"   # supabase/config.toml has no project_id
+# Adam's standing choice for live verification: the cheap contributor tier.
+LIVE_MODEL="${VERIFY_LIVE_MODEL:-meta/muse-spark-1.3-contributor}"
+LIVE_KEYS_FILE="${VERIFY_LIVE_KEYS_FILE:-$HOME/.config/debatelab/live-verify.env}"
 
 say() { printf '%s\n' "$*"; }
 fail() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
@@ -47,9 +55,37 @@ wait_url() {
 }
 
 cmd_up() {
-  local collab=false
-  [ "${1:-}" = "--collab" ] && collab=true
+  local collab=false live=false max_calls=400
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --collab) collab=true ;;
+      --live) live=true ;;
+      --max-calls) max_calls="${2:?--max-calls needs a number}"; shift ;;
+      *) fail "unknown up option $1" ;;
+    esac
+    shift
+  done
   [ ! -f "$STATE" ] || fail "a verification stack is already recorded in $STATE; run doctor, or down first"
+
+  # Live keys come from the environment or a 0600 key file. They are read, never printed.
+  local or_key="" exa_key="" stripe_key="" stripe_price=""
+  if [ "$live" = true ]; then
+    or_key="${LIVE_OPENROUTER_API_KEY:-}"; exa_key="${LIVE_EXA_API_KEY:-}"
+    stripe_key="${STRIPE_TEST_SECRET_KEY:-}"; stripe_price="${STRIPE_TEST_PRICE_ID:-}"
+    if [ -f "$LIVE_KEYS_FILE" ]; then
+      [ "$(stat -c %a "$LIVE_KEYS_FILE")" = 600 ] || fail "$LIVE_KEYS_FILE must be mode 600"
+      key_from_file() { sed -n "s/^$1=//p" "$LIVE_KEYS_FILE" | tail -1; }
+      [ -n "$or_key" ] || or_key="$(key_from_file LIVE_OPENROUTER_API_KEY)"
+      [ -n "$exa_key" ] || exa_key="$(key_from_file LIVE_EXA_API_KEY)"
+      [ -n "$stripe_key" ] || stripe_key="$(key_from_file STRIPE_TEST_SECRET_KEY)"
+      [ -n "$stripe_price" ] || stripe_price="$(key_from_file STRIPE_TEST_PRICE_ID)"
+    fi
+    [ -n "$or_key" ] && [ -n "$exa_key" ] || fail "--live needs LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY (environment or $LIVE_KEYS_FILE)"
+    if [ -n "$stripe_key" ]; then
+      case "$stripe_key" in sk_test_*|rk_test_*) ;; *) fail "refusing a Stripe key that is not test mode";; esac
+      [ -n "$stripe_price" ] || fail "STRIPE_TEST_SECRET_KEY needs STRIPE_TEST_PRICE_ID"
+    fi
+  fi
 
   # The stack uses the CLI's default ports and shared container names, so only
   # one worktree may run it. Refuse instead of waiting or double-driving.
@@ -70,6 +106,9 @@ cmd_up() {
   record PROJECT_ID "$PROJECT_ID"
   record LOG_DIR "$log_dir"
   record HEAD "$(git rev-parse HEAD)"
+  record MODE "$([ "$live" = true ] && echo live || echo fake)"
+  record LIVE_MODEL "$([ "$live" = true ] && echo "$LIVE_MODEL")"
+  record STRIPE_MODE "$([ -n "$stripe_key" ] && echo test || echo placeholder)"
 
   # lock_acquire wrote this shell's pid, which dies when `up` returns and would
   # let another worktree reclaim the lock. Hand ownership to a holder we kill in down.
@@ -94,6 +133,18 @@ cmd_up() {
 
   LOCAL_SERVICE_ROLE_KEY="$service_key" LOCAL_MAILER_HOST="$mailer_host" \
     node scripts/workspace-test-env.mjs .superset/workspace-test.env "$STATE_DIR/function.env"
+  if [ "$live" = true ]; then
+    # printf is a builtin, so keys never reach a process list or log.
+    grep -vE '^(OPENROUTER_API_KEY|EXA_API_KEY)=' "$STATE_DIR/function.env" >"$STATE_DIR/function.env.next"
+    printf 'OPENROUTER_API_KEY=%s\nEXA_API_KEY=%s\n' "$or_key" "$exa_key" >>"$STATE_DIR/function.env.next"
+    if [ -n "$stripe_key" ]; then
+      grep -vE '^(STRIPE_SECRET_KEY|STRIPE_PRICE_ID)=' "$STATE_DIR/function.env.next" >"$STATE_DIR/function.env.tmp"
+      printf 'STRIPE_SECRET_KEY=%s\nSTRIPE_PRICE_ID=%s\n' "$stripe_key" "$stripe_price" >>"$STATE_DIR/function.env.tmp"
+      mv -- "$STATE_DIR/function.env.tmp" "$STATE_DIR/function.env.next"
+    fi
+    mv -- "$STATE_DIR/function.env.next" "$STATE_DIR/function.env"
+    chmod 600 "$STATE_DIR/function.env"
+  fi
   # Values the recipes and `user` need. Local, test-only, but never echo them.
   (
     umask 077
@@ -105,14 +156,26 @@ cmd_up() {
       printf 'WORKSPACE_TEST_MAILER_URL=%s\n' "$mailer_url"
       printf 'DEMO_CODE_PEPPER=%s\n' "$(sed -n 's/^DEMO_CODE_PEPPER=//p' .superset/workspace-test.env)"
       printf 'PLAYWRIGHT_BASE_URL=%s\n' "$APP_ORIGIN"
+      printf 'VERIFY_MODE=%s\n' "$([ "$live" = true ] && echo live || echo fake)"
+      printf 'LIVE_MODEL=%s\n' "$([ "$live" = true ] && echo "$LIVE_MODEL")"
+      printf 'VERIFY_STRIPE=%s\n' "$([ -n "$stripe_key" ] && echo test || echo placeholder)"
+      [ -z "$stripe_key" ] || printf 'STRIPE_TEST_SECRET_KEY=%s\n' "$stripe_key"
+      # e2e/workspace-collaboration.spec.ts starts its own collaboration process with these.
+      printf 'COLLABORATION_DATABASE_URL=%s\n' "$db_url"
+      printf 'COLLABORATION_PORT=%s\n' "$COLLAB_PORT"
+      printf 'COLLABORATION_ALLOWED_ORIGINS=%s\n' "$APP_ORIGIN"
+      printf 'SUPABASE_URL=%s\n' "$api_url"
+      printf 'SUPABASE_ANON_KEY=%s\n' "$anon_key"
     } >"$STATE_DIR/drive.env"
   )
   record API_URL "$api_url"
 
   # Edge Functions reach the fake provider by container name on the stack network.
   docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
+  local provider_mode=()
+  [ "$live" = true ] && provider_mode=(-e UPSTREAM=https://openrouter.ai/api -e "LIVE_MODEL=$LIVE_MODEL" -e "MAX_UPSTREAM_CALLS=$max_calls")
   docker run -d --rm --name "$FAKE_PROVIDER" --network "supabase_network_$PROJECT_ID" \
-    -p "127.0.0.1:$FAKE_PORT:8787" -v "$REPO/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
+    "${provider_mode[@]}" -p "127.0.0.1:$FAKE_PORT:8787" -v "$REPO/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
     node:22-alpine node /fake.mjs >/dev/null
   record FAKE_STARTED true
 
@@ -148,7 +211,7 @@ cmd_up() {
     grep -q "Collaboration service listening" "$log_dir/collaboration.log"
   fi
   trap - ERR
-  say "READY $APP_ORIGIN (run: $0 doctor)"
+  say "READY $APP_ORIGIN mode=$([ "$live" = true ] && echo "live model=$LIVE_MODEL max-calls=$max_calls" || echo fake) (run: $0 doctor)"
 }
 
 cmd_doctor() {
@@ -168,6 +231,18 @@ cmd_doctor() {
   check "demo-code-login answers CORS for $APP_ORIGIN" "curl --fail -s -o /dev/null -X OPTIONS -H 'Origin: $APP_ORIGIN' '$API_URL/functions/v1/demo-code-login'"
   check "fake OpenRouter answers on $FAKE_PORT" "curl --fail -s -o /dev/null http://127.0.0.1:$FAKE_PORT/__requests"
   check "Supabase containers for project $PROJECT_ID running" "docker ps --format '{{.Names}}' | grep -q '^supabase_db_$PROJECT_ID\$'"
+  local stats; stats="$(curl -s "http://127.0.0.1:$FAKE_PORT/__stats" || true)"
+  if [ "$MODE" = live ]; then
+    local proxy_env; proxy_env="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$FAKE_PROVIDER" 2>/dev/null || true)"
+    check "provider proxy forwards to real OpenRouter" "grep -qx 'UPSTREAM=https://openrouter.ai/api' <<<\"\$proxy_env\""
+    check "every chat call is pinned to $LIVE_MODEL" "grep -qx 'LIVE_MODEL=$LIVE_MODEL' <<<\"\$proxy_env\""
+    check "Edge Functions hold a real OpenRouter key (not the placeholder)" "! grep -qxF \"\$(grep '^OPENROUTER_API_KEY=' .superset/workspace-test.env)\" '$STATE_DIR/function.env'"
+    check "Edge Functions hold an Exa key" "grep -q '^EXA_API_KEY=.' '$STATE_DIR/function.env'"
+    say "info live calls used: $(node -e 'const s=JSON.parse(process.argv[1]); process.stdout.write(`${s.upstreamCalls}/${s.maxUpstreamCalls}`)' "$stats" 2>/dev/null || echo '?')"
+  else
+    check "provider is the deterministic fake (no network, no spend)" "grep -q '\"mode\":\"fake\"' <<<\"\$stats\""
+  fi
+  say "info stripe: $STRIPE_MODE"
   if [ -n "${COLLAB_PID:-}" ]; then check "collaboration service $COLLAB_PID alive" "kill -0 $COLLAB_PID"; fi
   say "info started at commit $HEAD; worktree now at $(git rev-parse HEAD)$(git diff --quiet || echo ' (+ uncommitted changes; Vite serves them live)')"
   say "info logs in $LOG_DIR"
@@ -182,15 +257,18 @@ cmd_user() {
 
 cmd_drive() {
   load_state
-  local recipe="${1:?usage: verify.sh drive <recipe.spec.ts> [playwright args]}"; shift
+  local recipe="${1:?usage: verify.sh drive <all|recipes/<name>|e2e/<path>> [playwright args]}"; shift
   cmd_doctor >/dev/null || { cmd_doctor || true; fail "doctor failed; not driving a broken stack (fix it, or down + up)"; }
-  local name; name="$(basename "$recipe" .spec.ts)"
+  # Filters are path substrings: `recipes/ai-tools`, `e2e/live/`, `all` (every recipe).
+  local filter="${recipe%.spec.ts}"
+  [ "$recipe" = all ] && filter="verify-debatelab/recipes/"
+  local name; name="$(basename "$filter")"
   local run_id; run_id="$(date -u +%Y%m%dT%H%M%SZ)-$name"
   set -a; source "$STATE_DIR/drive.env"; set +a
   export VERIFY_ARTIFACT_DIR="$ARTIFACTS/$run_id" VERIFY_HEAD="$(git rev-parse HEAD)"
   mkdir -p "$VERIFY_ARTIFACT_DIR"
   local status=0
-  npx playwright test --config "$SKILL_DIR/playwright.verify.config.ts" "$name" "$@" || status=$?
+  npx playwright test --config "$SKILL_DIR/playwright.verify.config.ts" "$filter" "$@" || status=$?
   say "EVIDENCE $VERIFY_ARTIFACT_DIR (exit $status)"
   return "$status"
 }
@@ -228,5 +306,5 @@ case "${1:-}" in
   user) shift; cmd_user "$@" ;;
   drive) shift; cmd_drive "$@" ;;
   down) cmd_down ;;
-  *) sed -n '2,13p' "$0"; exit 2 ;;
+  *) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 2 ;;
 esac

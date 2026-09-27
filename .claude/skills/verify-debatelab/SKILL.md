@@ -1,19 +1,23 @@
 ---
 name: verify-debatelab
-description: Launch and drive the real DebateLab web app (React client + local Supabase Auth/Postgres/Edge Functions + fake model provider) to prove a user-facing feature works, with screenshots, ARIA snapshots, provider calls, and database rows as evidence. Use when asked to verify, demo, reproduce, or screenshot DebateLab behavior in a browser, or before calling a DebateLab UI/Edge Function change done.
+description: Launch and drive the real DebateLab web app (React client + local Supabase Auth/Postgres/Edge Functions, with either a fake model provider or real OpenRouter pinned to the cheap meta/muse-spark-1.3-contributor model plus real Exa research) to prove a user-facing feature works, with screenshots, ARIA snapshots, provider calls, and database rows as evidence. Use when asked to verify, demo, reproduce, or screenshot DebateLab behavior in a browser, or before calling a DebateLab UI/Edge Function change done.
 ---
 
 # Verify DebateLab
 
-DebateLab is a web app. The surface a user touches is the browser client at `/login` and `/app/*`, backed by Supabase Auth, Postgres/RLS, and Deno Edge Functions. This skill runs all of that locally. Only the paid model provider is swapped out, for `e2e/full-stack/fake-openrouter.mjs`. You then drive the app with Playwright.
+DebateLab is a web app. The surface a user touches is the browser client at `/login` and `/app/*`, backed by Supabase Auth, Postgres/RLS, and Deno Edge Functions. This skill runs all of that locally and drives it with Playwright. It has two modes:
+
+- **Fake (default, free).** `e2e/full-stack/fake-openrouter.mjs` answers every model call with canned text. Proves wiring, rows, and UI, not model behavior.
+- **Live (`up --live`, costs money).** The same container becomes a recording proxy to real OpenRouter. It rewrites every chat call to `meta/muse-spark-1.3-contributor` (override with `VERIFY_LIVE_MODEL`), records OpenRouter's reply model as proof, and stops forwarding after `--max-calls` (default 400). Edge Functions also get a real Exa key, so web research, verified citations, and URL import are real.
 
 Everything goes through one helper, run from the repository root (`git rev-parse --show-toplevel`):
 
 ```bash
 H=.claude/skills/verify-debatelab/bin/verify.sh
-$H up            # start the stack; add --collab to also start the Workspaces collaboration service
+$H up            # fake mode; add --collab to also start the Workspaces collaboration service
+$H up --live [--max-calls N]   # real OpenRouter (pinned) + real Exa
 $H doctor        # read-only: is this instance ours, local, and healthy?
-$H drive <recipe> [--project desktop-chromium|mobile-chromium]
+$H drive <all|recipes/<name>|e2e/<path>> [--project desktop-chromium|mobile-chromium] [-g <title regex>]
 $H user [label]  # mint a demo-code login for interactive driving
 $H down          # stop everything `up` started; evidence stays
 ```
@@ -25,6 +29,19 @@ $H down          # stop everything `up` started; evidence stays
 - The local Supabase stack uses fixed ports (54321+) and shared container names, so only one worktree can run it at a time. `up` takes `~/.superset/debatelab-db.lock` (the lock `.superset/db-gate.sh` uses) and refuses to start if the lock is held, if any `supabase_*` container is running, or if port 18081 or 18090 is busy. Don't work around a refusal. Another worktree owns the stack.
 - Recipes abort any request to `*.supabase.co` and fail the test if one is attempted.
 - Never print values from `.verify/state/` (`drive.env`, `function.env`). They are local test keys, but treat them as secrets.
+
+## Live mode keys and cost
+
+`up --live` reads keys from the environment or from `~/.config/debatelab/live-verify.env` (override with `VERIFY_LIVE_KEYS_FILE`; keep it `chmod 600`):
+
+```bash
+LIVE_OPENROUTER_API_KEY=...   # required
+LIVE_EXA_API_KEY=...          # required
+STRIPE_TEST_SECRET_KEY=sk_test_...   # optional; live keys are refused
+STRIPE_TEST_PRICE_ID=price_...       # required with the Stripe key
+```
+
+It prints nothing about the values. Ask Adam before the first live run: it spends money and sends prompts to a contributor model that may use them for training, so never put real user data in a live run. Costs: Muse Spark 1.3 contributor is $0.10 per million prompt tokens and $0.20 per million completion tokens, so a full `drive all` is cents of model spend. Exa bills per search and is usually the larger part. Jev decisions go to `/api/alpha/decisions` with Jev's own model and are not pinned. `doctor` shows `live calls used N/max`; once the cap is hit the proxy answers 429 and tests fail rather than spend more.
 
 ## Launch
 
@@ -62,14 +79,20 @@ It also prints the commit the stack started at and whether there are uncommitted
 - A fresh demo-code user per test, signed in through the real Login page and `demo-code-login`, and deleted afterwards. Use the `signedIn` fixture for the page and `user` for `user.email` and `await user.userId()`.
 - `admin`: a service-role client for reading rows as a second view.
 - `fake` / `providerCall(feature)`: what the Edge Function actually sent upstream. Use `fake.fail(feature, status)` to force a provider error.
-- `MARK` (`"FAKE-PROVIDER"`): every fake answer contains it, so assert on `${MARK} ...` text.
+- `aiResponse(page, feature, operation?)`: the parsed body of the next `ai` Edge Function response. Assert that its fields reach the screen, never on model wording, so a recipe passes in both modes. `LIVE` and `AI_TIMEOUT` (30 s fake, 240 s live) let a recipe branch where a check only makes sense live, and a fake-mode branch adds an `unverified` annotation instead of passing silently.
+- `expectProviderCalls([...])`: what reached the provider. Each test writes `provider-calls.json`, and in live mode the fixture fails the test if any chat call was answered by a model other than the pin.
 - `evidence`: `step(line)`, `aria(name, locator?)`, `shot(name)` and `json(name, value)`.
 - Automatic failure on any uncaught page error, horizontal overflow, or remote Supabase request.
 
 ```bash
-$H drive case-generation                              # both projects
-$H drive case-generation --project desktop-chromium   # one viewport
+$H drive all                                           # every recipe, both viewports
+$H drive recipes/ai-tools --project desktop-chromium   # one file, one viewport
+$H drive e2e/full-stack/billing                        # a maintained full-stack spec
+$H drive e2e/workspace-collaboration                   # starts its own collaboration process; do not use up --collab
+$H drive e2e/live/ --project desktop-chromium          # live mode only
 ```
+
+Fake mode also runs `e2e/full-stack/`. Live mode runs the recipes, `e2e/live/`, and only the provider-free `e2e/full-stack/` tests (the config's `grepInvert` skips the ones asserting fake text).
 
 To prove a feature without a recipe, copy `recipes/case-generation.spec.ts` to `recipes/<feature>.spec.ts` and use the selectors from the matching file in `features/`. Recipes are maintained files. Keep the ones worth keeping.
 
@@ -92,14 +115,11 @@ A proof must meet these standards:
 - Verify side effects as well as the screen: the `providerCall(...)` payload, and the rows in `ai_requests`, `cases`, `sources`, `sparring_sessions` and so on, read through `admin`.
 - Mocks are allowed only at the model-provider boundary, which is the fake provider. Everything else is real.
 
-These things are **not proven locally**, and must not be reported as verified:
+What each mode proves:
 
-- Live model output quality.
-- Web research and citations (no Exa key, so Factoids drops every unverified source).
-- Real Jev judgement (the fake always answers confidently).
-- Stripe Checkout and the portal.
-- Google Docs export.
-- Anything about staging, production, or the deployed host.
+- Fake mode does not prove model output, web research and citations (no Exa key, so Factoids drops every unverified source), URL import of real pages, or real Jev judgement. The affected tests add an `unverified` annotation.
+- Live mode proves those with one cheap model. It does not prove how the production models (per-feature routing in `supabase/functions/_shared/`) behave, and model text varies run to run.
+- Neither mode proves Stripe Checkout or the billing portal UI, Google sign-in, Google Docs export, or anything about staging, production, or the deployed host.
 
 For those, see `docs/testing.md` (the live-provider gate and the production canary).
 
@@ -124,6 +144,7 @@ It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run 
 
 ## Gotchas
 
+- Live runs are slow: sparring and crossfire take several minutes each because the model must reason. Use `-g` to run one test while iterating.
 - The fake provider rejects prompts it doesn't recognize. If a prompt change makes a feature fail with a provider error, update `e2e/full-stack/fake-openrouter.mjs`. Don't mock around it.
 - Once, the fake-provider container was SIGKILLed about 20 seconds after `up`, and the cause was never found. Doctor catches this, and `drive` refuses to run until you `down && up`.
 - Demo-code users are Pro with a daily limit of 999. To test quota or tier paths, change `user_settings` through `admin` inside the recipe, as `e2e/full-stack/case-generation.spec.ts` does.
