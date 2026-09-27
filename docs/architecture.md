@@ -19,6 +19,8 @@ Browser or Capacitor
 
 [`src/App.tsx`](../src/App.tsx) owns routes and top-level providers. Pages are lazy loaded. Public routes cover marketing, legal pages, login, sources, and shared content. `/app/*` routes pass through `RequireAuth` and include the main tools, the Current Debate dashboard (`/app/debate`), history, library, timer, sparring, flowchart, settings, and administration. The header holds only Home, the Current debate menu, Library, History, and the language, theme, and Settings controls; tools are launched from Home and the dashboard.
 
+Collaborative Workspace (`/app/workspaces/*`, the `workspace-invites` function, and `services/collaboration/`) is hidden and on hold. Its routes register only when `VITE_COLLABORATION_URL` is set, which production does not do.
+
 `AuthProvider`, TanStack Query, theme and motion providers, toast systems, the offline indicator, and the route error boundary wrap the routed application.
 
 ## Client state
@@ -95,13 +97,11 @@ Supabase Auth owns user sessions. Protected routes provide a client navigation b
 
 ## Billing and usage
 
-Checkout and portal functions create Stripe sessions after authenticated ownership and redirect validation. The webhook updates subscription state and records event processing for idempotency. AI handlers record provider usage and calculated cost using shared pricing logic.
+Checkout and portal functions create Stripe sessions after authenticated ownership and redirect validation. The webhook updates subscription state and records event processing for idempotency. AI handlers record the provider-reported usage and charge for each request.
 
 All model requests use the single OpenRouter backend route and `OPENROUTER_API_KEY`. The shared ten-model catalog, Luna Basic default, Pro-only entries, and request controls live in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts). OpenRouter usage remains raw in the audit row, and the reported charge is unknown when the provider does not return a complete cost.
 
 `Auto Fast` and `Auto Pro` are virtual selections, not provider model IDs. The Edge Functions resolve them through TypeSafe Jev on OpenRouter before calling the concrete writing model. Auto Fast is available to Basic accounts and normally resolves to GLM 5.3 Flash; manual GLM selection keeps its Pro restriction. Auto Pro remains Pro-only. Provider calls, usage rows, and response metadata record the concrete resolved model, while response metadata also retains the requested automatic selection. A Jev router call uses the same OpenRouter key and does not consume a second daily quota unit.
-
-Historical provider pricing evidence is retained under [`docs/pricing-snapshots/`](pricing-snapshots/). Those snapshots support legacy calculator records and are evidence, not runtime configuration for the OpenRouter route.
 
 ## Observability
 
@@ -121,6 +121,6 @@ OAuth still travels through the provider and Supabase HTTPS callback before retu
 
 ## Deployment boundary
 
-[`Dockerfile`](../Dockerfile) builds `dist/` with Node 22 and serves it through Nginx. [`nginx.conf`](../nginx.conf) owns SPA fallback, cache policy, crawler restrictions, and response security headers. GitHub workflow files own quality, staging, and packaging automation.
+Vercel builds `dist/` with Node 22 and serves it. [`vercel.json`](../vercel.json) owns SPA fallback, cache policy, crawler restrictions, and response security headers. Merging to `main` deploys the frontend to production; Supabase migrations and Edge Functions deploy separately. GitHub workflow files own quality, live-provider, staging, and canary automation.
 
 Read [operations.md](operations.md) before changing deployment behavior and [testing.md](testing.md) before claiming a boundary works.

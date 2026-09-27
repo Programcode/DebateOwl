@@ -17,9 +17,15 @@ The local Supabase stack still uses shared default ports and container names. In
 
 - `src/` is the React 18 and TypeScript client. Routes and lazy page entry points live in `src/App.tsx`.
 - `src/lib/stores/` owns browser state and Supabase hydration. `src/lib/ai/client.ts` is the client AI boundary.
-- `supabase/functions/` contains Deno Edge Functions. Shared auth, CORS, research, pricing, and validation code lives in `supabase/functions/_shared/`.
+- `supabase/functions/` contains Deno Edge Functions. Shared auth, CORS, research, prompts, cost, and validation code lives in `supabase/functions/_shared/`.
 - `supabase/migrations/` is the database history and schema source of truth.
-- `.github/workflows/` owns CI behavior. `Dockerfile` and `nginx.conf` own production packaging.
+- `src/lib/stores/debate-store.ts` owns the Current Debate: every source and saved result belongs to one debate or to one-off work, and nothing crosses debates.
+- Collaborative Workspace is hidden. Its routes render only when `VITE_COLLABORATION_URL` is set, and production does not set it. Do not extend it unless Adam asks.
+- `.github/workflows/` owns CI behavior. `vercel.json` owns production hosting: build output, SPA fallback, cache policy, and security headers.
+
+## Deployment
+
+The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed by that merge; they are separate authorized operations.
 
 ## Normal ports
 
@@ -43,6 +49,8 @@ CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 ```
 
 `npm run verify` runs the complete credential-free ladder, including desktop and mobile Chromium against a fresh Vite server.
+
+When GitHub Actions cannot run (for example, the account is out of Actions minutes), run `npm run verify` and the database gate locally at the final head and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
 
 Database migrations and pgTAP policies use a separate Docker-backed gate. In Superset, use the locking wrapper:
 
@@ -93,9 +101,9 @@ Open only what the task needs:
 - [docs/architecture.md](docs/architecture.md): runtime boundaries, request flows, state, auth, billing, observability, PWA, and iOS.
 - [docs/development.md](docs/development.md): setup, environment behavior, worktrees, and common workflows.
 - [docs/testing.md](docs/testing.md): what each gate proves, browser matrices, staging, artifacts, and cleanup.
-- [docs/operations.md](docs/operations.md): CI, Docker, Nginx, staging, deployment, rollback, and live verification.
+- [docs/operations.md](docs/operations.md): CI, Vercel hosting, staging, deployment, rollback, and live verification.
 - [supabase/README.md](supabase/README.md): Edge Functions, shared backend modules, migrations, auth boundaries, and required secret names.
-- [plans/README.md](plans/README.md): active plans. Revalidate every plan against current source before executing it.
+- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Detailed plans live in `.hermes/plans/`. Revalidate every plan against current source before executing it.
 - [docs/README.md](docs/README.md): complete documentation index and freshness labels.
 
 When commands, ports, workflows, or runtime boundaries change, update the owning focused document in the same change. Do not copy large source trees, schemas, dependency lists, or model catalogs into documentation.
