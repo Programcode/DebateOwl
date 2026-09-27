@@ -220,7 +220,9 @@ export function debateContextMeta(
   sparringAction?: "respond" | "score",
 ) {
   const prompt = debatePromptContextFor(loaded, feature, sparringAction);
-  const outputsUsed = prompt?.outputs.length ? loaded.outputs.map(({ kind, id }) => ({ kind, id })) : [];
+  // Sparring never reads saved results, so none count as used or set aside.
+  const readsOutputs = feature !== "sparring";
+  const outputsUsed = readsOutputs ? loaded.outputs.map(({ kind, id }) => ({ kind, id })) : [];
   return {
     debateId: loaded.debateId,
     sourcesUsed,
@@ -228,7 +230,7 @@ export function debateContextMeta(
     sourcesShortened: sourceCounts.shortened,
     sourcesUnavailable: loaded.sourcesUnavailable,
     outputsUsed,
-    outputsOmittedForSize: prompt?.outputs.length ? loaded.outputsOmittedForSize : [],
+    outputsOmittedForSize: readsOutputs ? loaded.outputsOmittedForSize : [],
     outputsUnavailable: loaded.outputsUnavailable,
     instructionsUsed: Boolean(prompt?.instructions?.trim()),
   };

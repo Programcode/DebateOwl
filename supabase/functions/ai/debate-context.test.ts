@@ -57,8 +57,8 @@ interface Harness {
   restore: () => void;
 }
 
-function install(options: { stream?: boolean } = {}): Harness {
-  const rest = createFakeRest(tables);
+function install(options: { stream?: boolean; tables?: typeof tables; reply?: unknown } = {}): Harness {
+  const rest = createFakeRest(options.tables ?? tables);
   const originalFetch = globalThis.fetch;
   const harness: Harness = { providerBodies: [], calls: [], restore: () => { globalThis.fetch = originalFetch; } };
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
@@ -112,7 +112,7 @@ function install(options: { stream?: boolean } = {}): Harness {
         }), { headers: { "Content-Type": "text/event-stream" } });
       }
       return jsonResponse({
-        choices: [{ message: { content: JSON.stringify({ response: "ok", followUpQuestions: [], uncertainties: [] }) } }],
+        choices: [{ message: { content: JSON.stringify(options.reply ?? { response: "ok", followUpQuestions: [], uncertainties: [] }) } }],
         usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.000001 },
       });
     }
@@ -264,5 +264,73 @@ Deno.test("streamed Ask receives the same debate context and rejects a foreign d
     assert(!foreign.calls.some((path) => path.includes("consume_daily_quota") || path.includes("/chat/completions")), "foreign stream reached paid work");
   } finally {
     foreign.restore();
+  }
+});
+
+Deno.test("a near-maximum Crossfire round sets saved results aside instead of failing, and says so", async () => {
+  const bigCases = Array.from({ length: 3 }, (_, index) => ({
+    id: `cccccccc-cccc-4ccc-8ccc-00000000000${index}`,
+    user_id: USER,
+    debate_id: DEBATE,
+    side: "pro",
+    title: `Long case ${index}`,
+    output: {
+      caseStructure: { thesis: "t".repeat(400) },
+      contentions: Array.from({ length: 4 }, () => ({ claim: "c".repeat(200), reasoning: "r".repeat(320), impact: "i".repeat(240) })),
+    },
+  }));
+  const bigSources = Array.from({ length: 10 }, (_, index) => ({
+    id: `aaaaaaaa-aaaa-4aaa-8aaa-0000000000${String(index).padStart(2, "0")}`,
+    user_id: USER,
+    debate_id: DEBATE,
+    title: `Long source ${index}`,
+    content: "s".repeat(8_000),
+    type: "text",
+    origin: null,
+    metadata: null,
+  }));
+  const harness = install({
+    tables: { ...tables, sources: [...tables.sources, ...bigSources], cases: [...tables.cases, ...bigCases] },
+    reply: { type: "answer", text: "A short answer." },
+  });
+  try {
+    const transcript = Array.from({ length: 12 }, (_, index) => ({
+      id: `T${index + 1}`,
+      sequence: index + 1,
+      speaker: index % 2 === 0 ? "user" : "ai",
+      kind: index % 2 === 0 ? "question" : "answer",
+      text: "w".repeat(1_999),
+      createdAt: index + 1,
+    }));
+    const sourceIds = bigSources.map((source) => source.id);
+    const response = await handleRequest(aiRequest({
+      feature: "crossfire",
+      input: {
+        operation: "next-turn",
+        config: {
+          resolution: "This House would ban homework ".padEnd(500, "."),
+          argument: "a".repeat(16_000),
+          mode: "question-ai",
+          style: "cooperative",
+          durationSeconds: 480,
+          useSourceLibrary: true,
+          seedQuestions: Array.from({ length: 10 }, () => "q".repeat(2_000)),
+        },
+        transcript: [...transcript, { id: "T13", sequence: 13, speaker: "user", kind: "question", text: "Why?", createdAt: 13 }],
+        expectedReply: "answer",
+      },
+      sourceIds,
+      debateContext: { debateId: DEBATE, side: "both", sourceIds, outputs: bigCases.map((item) => ({ kind: "case", id: item.id })) },
+    }));
+    const raw = await response.text();
+    assert(response.status === 200, `near-maximum Crossfire returned ${response.status}: ${raw}`);
+    const prompt = harness.providerBodies[0].messages.map((message) => message.content).join("");
+    assert(prompt.length <= 100_000, `Crossfire prompt was ${prompt.length} characters`);
+    assert(!prompt.includes("Long case"), "saved results reached a prompt that could not fit them");
+    const meta = (JSON.parse(raw) as { meta?: { debateContext?: { outputsUsed: unknown[]; outputsOmittedForSize: unknown[] } } }).meta?.debateContext;
+    assert(meta?.outputsUsed.length === 0, `omitted results were reported as used: ${JSON.stringify(meta)}`);
+    assert(meta.outputsOmittedForSize.length === bigCases.length, `omitted results were not reported: ${JSON.stringify(meta)}`);
+  } finally {
+    harness.restore();
   }
 });

@@ -15,7 +15,7 @@ import {
 } from './schemas/sparring';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
-import { activeDebateId } from '../stores/debate-store';
+import { activeDebateId, useDebateStore } from '../stores/debate-store';
 import { parseDebateContextUsage, useDebateContextStore } from '../stores/debate-context-store';
 import { currentDebateContextPlan } from '../debate/context-state';
 import { requestSide, type DebateContextRequest } from '../../../supabase/functions/_shared/debate-context';
@@ -63,6 +63,12 @@ interface AIRequestOptions<T = unknown> {
   workspaceContext?: WorkspaceToolContext;
   /** Debate whose material grounds this request; null for one-off work. Defaults to the active debate. */
   debateId?: string | null;
+  /**
+   * Keep the Review choices after this request. Crossfire and Sparring show
+   * Review once before a round, so its choices cover every turn; the request
+   * that ends the round leaves this off and clears them.
+   */
+  keepContextChoices?: boolean;
 }
 
 /**
@@ -78,6 +84,16 @@ export function debateContextForRequest(
   if (!debateId || options.workspace) return undefined;
   const record = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : {};
   return currentDebateContextPlan(feature, requestSide(feature, record), debateId, { includeSources: options.includeSources }).request;
+}
+
+/**
+ * A debate request that comes back 404 means the debate is gone, usually
+ * deleted on another device. Reload the list so the app stops using it.
+ */
+export function refreshDebatesIfMissing(error: unknown, debateContext: DebateContextRequest | undefined): void {
+  if (debateContext && error instanceof AIError && error.statusCode === 404) {
+    void useDebateStore.getState().hydrate();
+  }
 }
 
 function selectedOutputLanguage(): AppLanguage {
@@ -635,10 +651,10 @@ async function callSupabaseAI<T = unknown>(
       : config.model;
     const response = options.transformResponse ? options.transformResponse(data) : data as T;
     if (debateContext) {
-      // Review choices cover one request; the next one starts from the defaults.
+      // Review choices cover one request (or one round); the next starts from the defaults.
       const contextStore = useDebateContextStore.getState();
       contextStore.recordUsage(feature, parseDebateContextUsage(responseMeta?.debateContext));
-      contextStore.resetOverride(feature);
+      if (!options.keepContextChoices) contextStore.resetOverride(feature);
     }
     captureProductEvent('ai_request_succeeded', {
       feature,
@@ -651,6 +667,7 @@ async function callSupabaseAI<T = unknown>(
   } catch (err) {
     // Re-throw our custom errors
     if (err instanceof AIError) {
+      refreshDebatesIfMissing(err, debateContext);
       reportFailure(err);
       throw err;
     }
@@ -794,6 +811,8 @@ export async function crossfire(
       signal: options.signal,
       workspaceContext: options.workspaceContext,
       debateId: options.debateId,
+      // Turns keep the round's Review choices; the debrief ends the round.
+      keepContextChoices: input.data.operation === 'next-turn',
       transformResponse: (rawData) => {
         const data = rawData as { output: unknown; signalToken?: unknown };
         if (input.data.operation === 'next-turn') {
@@ -1479,6 +1498,8 @@ async function generateSparringTurnOnce(
   return await callSupabaseAI<SparringTurnResponse>('sparring', inputResult.data, config, {
     workspaceContext,
     debateId,
+    // Turns keep the round's Review choices; judging ends the round.
+    keepContextChoices: true,
     transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
   });
 }

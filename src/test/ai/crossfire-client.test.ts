@@ -38,6 +38,7 @@ vi.mock('@/lib/stores/session-store', () => ({
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 
 import { AIResponseError, crossfire, crossfireSignal } from '@/lib/ai/client';
+import { useDebateContextStore } from '@/lib/stores/debate-context-store';
 
 const config: ProviderConfig = {
   provider: 'google',
@@ -121,6 +122,25 @@ describe('Crossfire AI client', () => {
     const secondCall = mocks.invoke.mock.calls[1][1];
     expect(secondCall.body.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
     expect(secondCall.body.debateContext.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
+  });
+
+  it('keeps Review choices for every turn of a round and clears them after the debrief', async () => {
+    const debateId = '11111111-2222-4333-8444-555555555555';
+    const excluded = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    useDebateContextStore.getState().resetLocalData();
+    useDebateContextStore.getState().setSourceChoice('crossfire', debateId, excluded, false);
+    mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'A turn.' } }, error: null });
+
+    await crossfire(nextTurnInput(true), config, { debateId });
+    await crossfire(nextTurnInput(true), config, { debateId });
+    expect(mocks.invoke.mock.calls[0][1].body.debateContext.sourceIds).toEqual([]);
+    expect(mocks.invoke.mock.calls[1][1].body.debateContext.sourceIds).toEqual([]);
+
+    mocks.invoke.mockResolvedValue({ data: { output: validDebrief }, error: null });
+    const debrief = debriefInput();
+    await crossfire({ ...debrief, config: { ...debrief.config, useSourceLibrary: true } }, config, { debateId });
+    expect(mocks.invoke.mock.calls[2][1].body.debateContext.sourceIds).toEqual([]);
+    expect(useDebateContextStore.getState().overrides.crossfire).toBeUndefined();
   });
 
   it('strips client-only turn signals from every transcript it sends', async () => {

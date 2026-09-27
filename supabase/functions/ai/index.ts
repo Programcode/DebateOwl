@@ -721,6 +721,17 @@ export async function handleRequest(req: Request): Promise<Response> {
           sources: crossfireSources,
           workspaceSources: workspaceAccess ? sources : null,
           debateContext: debatePromptContextFor(loadedDebate, feature),
+          onOutputsOmittedForSize: () => {
+            if (!loadedDebate) return;
+            loadedDebate = {
+              ...loadedDebate,
+              outputs: [],
+              outputsOmittedForSize: [
+                ...loadedDebate.outputs.map(({ kind, id }) => ({ kind, id })),
+                ...loadedDebate.outputsOmittedForSize,
+              ],
+            };
+          },
         });
       case "factoids":
         return await handleFactoids(ctx);

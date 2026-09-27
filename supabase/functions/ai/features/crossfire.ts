@@ -20,6 +20,8 @@ export interface CrossfireHandlerOptions {
   workspaceSources: PromptSource[] | null;
   /** Current Debate material without free-form instructions. */
   debateContext: DebatePromptContext | null;
+  /** Called when saved results are left out so the prompt fits its budget. */
+  onOutputsOmittedForSize: () => void;
 }
 
 // CROSSFIRE: transcript-grounded next turns and debriefs. Custom prompts never
@@ -36,14 +38,21 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
   if (userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
     throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
   }
-  const systemPrompt = buildSystemPrompt({
+  const buildPrompt = (debateContext: DebatePromptContext | null) => buildSystemPrompt({
     feature: "crossfire",
     dateContext: getCurrentDateContext(),
     sources: workspaceSources
       ? workspaceSources.map((source) => ({ ...source, content: source.content.slice(0, 8_000) }))
       : crossfireSources,
-    debateContext: options.debateContext,
+    debateContext,
   });
+  let systemPrompt = buildPrompt(options.debateContext);
+  // A full round can leave no room for saved results. The transcript and the
+  // student's sources matter more, so the results go and the response says so.
+  if (systemPrompt.length + userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS && options.debateContext?.outputs.length) {
+    systemPrompt = buildPrompt({ ...options.debateContext, outputs: [] });
+    options.onOutputsOmittedForSize();
+  }
   if (systemPrompt.length + userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
     throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
   }

@@ -17,6 +17,7 @@ import { planDebateContext, type DebateContextInputs } from '@/lib/debate/contex
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { brainstorm } from '@/lib/ai/client';
 import { useDebateContextStore } from '@/lib/stores/debate-context-store';
+import { useDebateStore } from '@/lib/stores/debate-store';
 import { useSessionStore, type SavedItem, type Source } from '@/lib/stores/session-store';
 import { enableOneOffMode, resetDebates, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
 
@@ -142,6 +143,20 @@ describe('Current Debate context in requests and the Review control', () => {
     useDebateContextStore.getState().setSourceChoice('brainstorm', TEST_DEBATE_ID, uuid(1), false);
     await expect(brainstorm(brainstormInput, config)).rejects.toThrow();
     expect(useDebateContextStore.getState().overrides.brainstorm?.sources[uuid(1)]).toBe(false);
+  });
+
+  it('reloads the debate list when the debate was deleted on another device', async () => {
+    seedCurrentDebate();
+    const hydrate = vi.fn(async () => undefined);
+    const original = useDebateStore.getState().hydrate;
+    useDebateStore.setState({ hydrate });
+    try {
+      setMockInvokeResponse(null, { message: 'Debate not found', context: { status: 404 } });
+      await expect(brainstorm(brainstormInput, config)).rejects.toThrow();
+      expect(hydrate).toHaveBeenCalledTimes(1);
+    } finally {
+      useDebateStore.setState({ hydrate: original });
+    }
   });
 
   it('sends no debate material in one-off mode and says so above the button', () => {

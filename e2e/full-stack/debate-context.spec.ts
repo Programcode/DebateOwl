@@ -76,10 +76,11 @@ test("every request carries its debate's material, and Review changes exactly on
   expect(brainstormCall.system).not.toContain("RIDERSHIP-SOURCE");
   expect(brainstormCall.system).toContain(`${MARK} case thesis`);
 
-  // The choice covered one request: the next one starts from the defaults again.
-  await expect(control).toContainText("Using 2 sources and 1 saved result");
+  // The choice covered one request: the next one starts from the defaults
+  // again, which now include the brainstorm that request just saved.
+  await expect(control).toContainText("Using 2 sources and 2 saved results: Brainstorm, Case (In favor)");
   await control.getByRole("button", { name: "Review" }).click();
-  await expect(sheet).toContainText("2 sources and 1 saved result reached the model.");
+  await expect(sheet).toContainText("1 source and 1 saved result reached the model.");
   await snap(page, "3-review-after-request");
   await page.keyboard.press("Escape");
 
@@ -103,7 +104,7 @@ test("every request carries its debate's material, and Review changes exactly on
   expect(oneOffCall.system).not.toContain("<current-debate>");
   expect(oneOffCall.system).not.toContain("FARE-SOURCE");
   // A single "use once" run leaves the Current Debate in place; one-off mode says so above the button.
-  await expect(control).toContainText("Using 2 sources and 1 saved result");
+  await expect(control).toContainText("Using 2 sources and 2 saved results");
   await page.getByTestId("current-debate-strip").getByRole("button", { name: "Use once" }).click();
   await expect(control).toContainText("One-off mode: no Current Debate material will be used or saved.");
   await snap(page, "4-one-off-line");

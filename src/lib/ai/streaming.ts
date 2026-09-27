@@ -1,6 +1,6 @@
 import { getActiveAccessToken, supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
-import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, debateContextForRequest, mapAIError, reportAIFailure, withOutputLanguage } from './client';
+import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, debateContextForRequest, mapAIError, refreshDebatesIfMissing, reportAIFailure, withOutputLanguage } from './client';
 import { parseDebateContextUsage, useDebateContextStore } from '@/lib/stores/debate-context-store';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
@@ -186,6 +186,7 @@ export async function streamAskChat(
   const mapStreamingError = (message: string, payload?: Record<string, unknown>, status?: number): ReturnType<typeof mapAIError> =>
     mapAIError({ message, context: { status } }, requestId, provider, config.model, payload);
 
+  let debateContext: ReturnType<typeof debateContextForRequest>;
   try {
     const input = withOutputLanguage({
       message: boundAskMessage(message),
@@ -196,7 +197,7 @@ export async function streamAskChat(
       prosConsMode: Boolean(options.prosConsMode),
       argumentMapMode: Boolean(options.argumentMapMode),
     });
-    const debateContext = debateContextForRequest('ask', input, options.debateId ?? null);
+    debateContext = debateContextForRequest('ask', input, options.debateId ?? null);
     const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-stream`, {
       method: 'POST',
       headers: {
@@ -294,6 +295,7 @@ export async function streamAskChat(
 
     return finalOutput;
   } catch (error) {
+    refreshDebatesIfMissing(error, debateContext);
     const callerAborted = Boolean(handlers.signal?.aborted);
     const reportedError = callerAborted
       ? abortError()
