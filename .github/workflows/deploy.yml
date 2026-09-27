@@ -57,15 +57,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload production assets
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: production-assets-${{ github.sha }}
-          path: dist/
-          if-no-files-found: error
-          retention-days: 1
-
   database-tests:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -148,59 +139,3 @@ jobs:
             playwright-report/
           if-no-files-found: ignore
           retention-days: 7
-
-  docker:
-    if: github.event_name != 'pull_request'
-    needs: quality
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_PUSH: ${{ github.event_name == 'push' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Download production assets
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: production-assets-${{ github.sha }}
-          path: dist/
-
-      - name: Set up QEMU
-        if: env.DOCKER_PUSH == 'true'
-        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
-
-      - name: Set up Docker Buildx
-        if: env.DOCKER_PUSH == 'true'
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-      - name: Login to Docker Hub
-        if: env.DOCKER_PUSH == 'true'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # Create a minimal Dockerfile for multi-arch that just uses pre-built assets
-      - name: Create production Dockerfile
-        if: env.DOCKER_PUSH == 'true'
-        run: |
-          cat > Dockerfile.prod << 'EOF'
-          FROM nginx:alpine
-          RUN rm -rf /usr/share/nginx/html/*
-          COPY dist /usr/share/nginx/html
-          COPY nginx.conf /etc/nginx/conf.d/default.conf
-          EXPOSE 80
-          CMD ["nginx", "-g", "daemon off;"]
-          EOF
-
-      - name: Build and push
-        if: env.DOCKER_PUSH == 'true'
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          file: Dockerfile.prod
-          push: ${{ env.DOCKER_PUSH == 'true' }}
-          tags: adamgaborjaniszabo/debate-trainer:latest
-          platforms: linux/amd64,linux/arm64
