@@ -50,7 +50,7 @@ CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
 
 `npm run verify` runs the complete credential-free ladder, including desktop and mobile Chromium against a fresh Vite server.
 
-When GitHub Actions cannot run (for example, the account is out of Actions minutes), run `npm run verify` and the database gate locally at the final head and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
+If GitHub Actions jobs fail within 2 to 5 seconds with no logs, they did not run: the account is out of Actions minutes (billing), not failing on the code. In that case run the same checks locally at the final head (`npm run verify` and the database gate) and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
 
 Database migrations and pgTAP policies use a separate Docker-backed gate. In Superset, use the locking wrapper:
 
@@ -103,7 +103,7 @@ Open only what the task needs:
 - [docs/testing.md](docs/testing.md): what each gate proves, browser matrices, staging, artifacts, and cleanup.
 - [docs/operations.md](docs/operations.md): CI, Vercel hosting, staging, deployment, rollback, and live verification.
 - [supabase/README.md](supabase/README.md): Edge Functions, shared backend modules, migrations, auth boundaries, and required secret names.
-- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Detailed plans live in `.hermes/plans/`. Revalidate every plan against current source before executing it.
+- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Every plan lives in `plans/`; write new plans there. Revalidate every plan against current source before executing it.
 - [docs/README.md](docs/README.md): complete documentation index and freshness labels.
 
 When commands, ports, workflows, or runtime boundaries change, update the owning focused document in the same change. Do not copy large source trees, schemas, dependency lists, or model catalogs into documentation.

@@ -7,7 +7,7 @@ Start with the smallest document that answers the task instead of loading every 
 - **Current:** maintained guidance. Update it in the same change as the source it describes.
 - **Plan:** intended work. Revalidate it against the current branch before executing it.
 
-`npm run docs:check` checks every Markdown file for broken local links and retired checkout paths, except generated output and plan files under `plans/` and `.hermes/plans/`. The plan index `plans/README.md` is still checked.
+`npm run docs:check` checks every Markdown file for broken local links and retired checkout paths, except generated output and plan files under `plans/`. The plan index `plans/README.md` is still checked.
 
 ## Understand the system
 

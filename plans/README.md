@@ -2,11 +2,11 @@
 
 **Status:** Plan index. Plans describe intended work, not current implementation truth. Reconciled against `main` at `0bda733` on 2026-09-27.
 
-Detailed plans live in [`.hermes/plans/`](../.hermes/plans/). Before executing one, recheck its paths, assumptions, product decisions, and verification commands against current source.
+Every plan lives in this folder. Before executing one, recheck its paths, assumptions, product decisions, and verification commands against current source.
 
 ## In progress
 
-- **Debate-aware AI and smaller modules (PR 2).** Every feature gets server-loaded Current Debate context with a visible Review control, each feature gets its own prompt module, and the 88 KB `supabase/functions/ai/index.ts` is split into per-feature handlers behind the same endpoints. Plan: [2026-09-25 debate AI quality modules](../.hermes/plans/2026-09-25_074255-debate-ai-quality-modules.md).
+- **Debate-aware AI and smaller modules (PR 2).** Every feature gets server-loaded Current Debate context with a visible Review control, each feature gets its own prompt module, and the 88 KB `supabase/functions/ai/index.ts` is split into per-feature handlers behind the same endpoints. Plan: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
 
 ## Backlog
 
@@ -15,13 +15,13 @@ Detailed plans live in [`.hermes/plans/`](../.hermes/plans/). Before executing o
 
 ## On hold
 
-- **Collaborative Workspace.** Hidden in production. Plans: [debate workspace](../.hermes/plans/2026-09-20_131317-debate-workspace.md) and [debate workspace, reduced scope](../.hermes/plans/2026-09-21-debate-workspace-no-bs.md).
+- **Collaborative Workspace.** Hidden in production. Plans: [debate workspace](2026-09-20_131317-debate-workspace.md) and [debate workspace, reduced scope](2026-09-21-debate-workspace-no-bs.md).
 
 ## Shipped
 
 These plans are finished. Their files were removed; git history keeps them.
 
-- Current Debate foundation: #72. Plan kept as the record: [2026-09-25 current debate foundation](../.hermes/plans/2026-09-25_074255-current-debate-foundation.md).
+- Current Debate foundation: #72. Plan kept as the record: [2026-09-25 current debate foundation](2026-09-25_074255-current-debate-foundation.md).
 - Email OTP and demo-code sign-in: #40, #41.
 - AI control enforcement at the edge: #32, #42.
 - System prompt improvement and prompt evaluation: #42.

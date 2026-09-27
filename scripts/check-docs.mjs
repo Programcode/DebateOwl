@@ -12,7 +12,6 @@ const EXCLUDED_PREFIXES = [
   "test-results/",
   "playwright-report/",
   "ios/App/CapApp-SPM/",
-  ".hermes/plans/",
   "plans/",
 ];
 

@@ -83,7 +83,7 @@ scripts/             Build, docs, SEO, and test helpers
 .github/workflows/   Quality, live-provider, model-matrix, staging, and canary CI
 .superset/           Worktree dev server, port allocation, and database gate
 docs/                Architecture, development, testing, and operations guides
-plans/               Plan index; detailed plans live in .hermes/plans/
+plans/               Plan index and every plan
 ```
 
 ## Documentation

@@ -29,7 +29,7 @@ Pull requests also start isolated local Supabase for pgTAP and run desktop plus 
 
 ## When GitHub Actions cannot run
 
-If Actions jobs fail within seconds with no runner and no logs, the account is usually out of Actions minutes or blocked by billing. Nothing ran, so nothing passed or failed. Until Actions is restored, run `npm run verify` and `./.superset/db-gate.sh` locally at the final head, record the exact results in the PR, and say that CI did not run. Do not describe a local pass as green CI.
+If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the account is usually out of Actions minutes or blocked by billing. Nothing ran, so nothing passed or failed. Until Actions is restored, run `npm run verify` and `./.superset/db-gate.sh` locally at the final head, record the exact results in the PR, and say that CI did not run. Do not describe a local pass as green CI.
 
 ## Frontend hosting on Vercel
 
@@ -142,7 +142,7 @@ Do not expose protected data in artifacts. Record the commit, environment, opera
 
 ## Incident clues
 
-- Every Actions job fails in seconds with no logs: Actions minutes or billing, not the code. Verify locally.
+- Every Actions job fails in 2 to 5 seconds with no logs: Actions minutes or billing, not the code. Verify locally.
 - Green local E2E plus staging failure: schema, functions, provider access, demo code, or CORS may differ.
 - New frontend errors against Supabase right after a merge: the matching migration or function may not be applied to production yet.
 - Function returns unauthorized after deploy: check handler auth and environment propagation before changing gateway settings.
