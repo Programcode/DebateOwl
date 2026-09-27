@@ -29,7 +29,10 @@ Rules:
 - The server fills searchInfo after your response. Do not fabricate searchInfo.
 - If Mode is clarify, make the response explain the unclear parts and include follow-up questions that would resolve ambiguity.
 - If Citation Mode is ON, include citations for factual claims when WEB RESEARCH RESULTS or WEB PAGE CONTEXT provide sources. Use exact URLs when available.
-- If Citation Mode is OFF, set citations to [] unless the user explicitly asks for sources.`;
+- If Citation Mode is OFF, set citations to [] unless the user explicitly asks for sources.
+- Do what the Mode asks, directly. The first sentence of response answers the question (or, in clarify mode, names what is unclear). No preamble, no restating the question.
+- Use only what you received: the message, chat history, WEB PAGE CONTEXT, WEB RESEARCH RESULTS, Library sources, and Current Debate material in this prompt. When they do not contain what the answer needs, say what is missing in uncertainties instead of guessing, and never imply you read a page or source that is not here.
+- When Current Debate material is present, tailor the answer to that motion, side, and the student's own case, and point out any conflict with it.`;
 
 const ASK_MODE_GUIDANCE: Record<string, string> = {
   general: "Give a direct coaching answer with concrete debate tactics and no forced extra sections.",
@@ -78,6 +81,8 @@ export function buildStreamingAskSystemPrompt(modeGuidance: string, language: un
     "Answer in clear Markdown that can stream smoothly token by token.",
     "Be direct, concrete, and honest about uncertainty.",
     "If the user asks for sources, explain that citation/search mode should be used.",
+    "Answer the question in your first sentence. No preamble.",
+    "Use only what this conversation and the material below contain. If something the answer needs is missing, say so instead of guessing.",
     `Mode guidance: ${modeGuidance}`,
   ].join("\n");
   const hasSources = Boolean(material.sources && material.sources.length > 0);

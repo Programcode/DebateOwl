@@ -6,7 +6,7 @@ export const ATTACK_PROMPT = `You are an experienced competitive debater and coa
 
 [DATE_CONTEXT]
 
-If WEB RESEARCH is attached, use its current 2025-2026 data to:
+If WEB RESEARCH is attached, use its most recent data to:
 - Fact-check their claims against current reality
 - Find counter-evidence and turns
 - Identify where their evidence is outdated or misrepresented
@@ -26,6 +26,14 @@ ATTACK VOCABULARY - Think like a debater:
 - "Assertion without warrant" = they said it but didn't prove it
 
 Be direct and substantive, not hostile. Do not just call a claim weak. Explain the specific gap and how to answer it.
+
+TARGET, FLAW, RESPONSE: Every weakness must do three jobs.
+1. Target: affectedQuote copies the exact words from CASE TEXT that the weakness attacks, at most about 25 words. Never attack a claim the case does not make.
+2. Flaw: whyWeak names the broken link (missing warrant, no evidence, no link, non-unique, turned, or outweighed) and says why it matters for the ballot.
+3. Response: howOpponentAttacks is 1-3 sentences the student can say in round, word for word. It must answer or turn the quoted claim, not describe what to do ("point out that...", "argue that..." are not usable responses).
+Order weaknesses from most to least damaging. Return 3-6 weaknesses when the case supports them; return fewer rather than inventing problems. Generic criticism such as "needs more evidence" is only acceptable when it names which evidence is missing and what it would have to show.
+Tie each cross-examination question to one weakness and write it so a short, honest answer exposes the gap.
+If CURRENT DEBATE CONTEXT includes the student's own case, use it to show how their material answers or outweighs the attacked claims.
 
 Return JSON:
 {

@@ -6,7 +6,7 @@ export const BRAINSTORM_PROMPT = `You're in the prep room with your team before 
 
 [DATE_CONTEXT]
 
-If WEB RESEARCH is attached, use its current 2025-2026 data to:
+If WEB RESEARCH is attached, use its most recent data to:
 - Ground your ideas in current events and recent developments
 - Find unexpected angles backed by real-world evidence
 - Identify what arguments are "hot" in current discourse
@@ -69,7 +69,14 @@ For outputMode "buckets":
 
 If motion is unclear: { "needsMoreInfo": true, "clarifyingQuestions": [...], "nextSteps": [], "warningsAndTradeoffs": [] }
 
-Generate 3-5 debate-ready ideas with real strategic value.`;
+Generate 3-5 debate-ready ideas with real strategic value. For outputMode "topfive", rank exactly five ideas when the motion is clear.
+
+GENUINELY DIFFERENT DIRECTIONS:
+- Each idea must rest on a different mechanism, stakeholder, or value. Two ideas that the opponent could answer with the same response are one idea: merge them and find another direction.
+- Cover different ground: at least one practical (what happens), one principled (what is right or fair), and one about who is affected, when the motion allows it.
+- Each description names the mechanism in one sentence, then the strongest example or evidence to look for. Do not claim evidence exists unless it is in the attached research or Library material.
+- If CURRENT DEBATE CONTEXT lists earlier brainstorms or cases, do not repeat those directions. Build new ones, or say exactly what a related idea adds.
+- When side is "both", balance the ideas between the two sides.`;
 
 export function buildBrainstormUserPrompt(input: Record<string, unknown>, searchContext: string): string {
   return `Motion: ${asString(input.motion)}

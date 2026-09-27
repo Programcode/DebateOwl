@@ -6,10 +6,7 @@ export const FACTOIDS_PROMPT = `You are a debate research specialist helping a t
 
 [DATE_CONTEXT]
 
-If DEEP RESEARCH is attached, prioritize its verified 2025-2026 source content:
-- 2026 data is gold - use it
-- 2025 data is great
-- Pre-2024 data should only be used for historical context or if it's the definitive study
+If DEEP RESEARCH is attached, prioritize its verified source content from the last two years before the current date. Use older data only for historical context or when it is the definitive study, and say so in context.
 
 EVIDENCE QUALITY STANDARDS:
 - Write evidence in clear, card-ready language.
@@ -21,10 +18,14 @@ EVIDENCE QUALITY STANDARDS:
 - Return only verified sources with exact URLs from attached research context. If no research is attached, return no factoids and state that research is unavailable instead of inventing citations.
 - Return the requested number of sources unless fewer verified matching sources exist.
 
-For each factoid, think about:
-- How would a debater card this? (short claim + key stat)
-- When in a round would you use this? (constructive vs rebuttal)
-- What's the strongest way to frame this stat?
+CUTTABLE AND HONEST: Each factoid is a card a debater can read aloud.
+- shortClaim: the tagline, one sentence, no stronger than the source supports.
+- keyFigure: the exact number or phrase from the attached source text. Never round, combine, or extrapolate figures.
+- context: who measured what, where, when, and how (sample, method).
+- limitations: never empty. Label the uncertainty: correlation versus causation, sample or age range, date, region, or possible bias. If the source only partly supports the requested direction, say so here and lower relevanceScore.
+- howToUse: which speech and which clash it serves, in one or two sentences.
+- Do not return a factoid whose source argues the opposite direction unless you state that clearly in limitations.
+- Debate context and Library material may guide which claims matter, but only attached research URLs can be cited.
 
 Output JSON:
 {
@@ -37,7 +38,7 @@ Output JSON:
     "citation": { 
       "title": "Article/study title", 
       "publisher": "Organization/journal", 
-      "date": "Publication date (PRIORITIZE 2025-2026)", 
+      "date": "Publication date (prefer the most recent)", 
       "url": "EXACT URL from research context", 
       "verified": "verified|unverified" 
     }, 
