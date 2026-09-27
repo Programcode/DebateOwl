@@ -43,6 +43,8 @@ const actor: TestUser = {
 
 const workspaceId = "22222222-2222-4222-8222-222222222222";
 const inviteId = "33333333-3333-4333-8333-333333333333";
+// Pending email invites must still be valid whenever the suite runs.
+const pendingExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 const requestId = "44444444-4444-4444-8444-444444444444";
 
 type RpcResult = Record<string, unknown> | Record<string, unknown>[] | boolean;
@@ -234,7 +236,7 @@ Deno.test("email creation has one uniform response and sends through the injecte
     rpc: {
       create_workspace_invite: [{
         invite_id: inviteId,
-        expires_at: "2026-09-27T12:00:00.000Z",
+        expires_at: pendingExpiry,
         max_uses: 1,
         replayed: false,
         email_delivered: false,
@@ -311,7 +313,7 @@ Deno.test("commit-before-send replay retries pending email delivery", async () =
     rpc: {
       create_workspace_invite: [{
         invite_id: inviteId,
-        expires_at: "2026-09-27T12:00:00.000Z",
+        expires_at: pendingExpiry,
         max_uses: 1,
         replayed: true,
         email_delivered: false,
@@ -362,7 +364,7 @@ Deno.test("sender acceptance with mark failure retries the same relay key", asyn
   const sent: SentMessage[] = [];
   const pendingInvite = {
     invite_id: inviteId,
-    expires_at: "2026-09-27T12:00:00.000Z",
+    expires_at: pendingExpiry,
     max_uses: 1,
     replayed: true,
     email_delivered: false,
@@ -418,7 +420,7 @@ Deno.test("already-delivered replay suppresses email delivery", async () => {
     rpc: {
       create_workspace_invite: [{
         invite_id: inviteId,
-        expires_at: "2026-09-27T12:00:00.000Z",
+        expires_at: pendingExpiry,
         max_uses: 1,
         replayed: true,
         email_delivered: true,
@@ -448,7 +450,7 @@ Deno.test("sender failure leaves delivery pending and retryable", async () => {
     rpc: {
       create_workspace_invite: [{
         invite_id: inviteId,
-        expires_at: "2026-09-27T12:00:00.000Z",
+        expires_at: pendingExpiry,
         max_uses: 1,
         replayed: false,
         email_delivered: false,
@@ -467,7 +469,7 @@ Deno.test("sender failure leaves delivery pending and retryable", async () => {
     rpc: {
       create_workspace_invite: [{
         invite_id: inviteId,
-        expires_at: "2026-09-27T12:00:00.000Z",
+        expires_at: pendingExpiry,
         max_uses: 1,
         replayed: true,
         email_delivered: false,
