@@ -25,10 +25,19 @@ import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { useReducedMotion } from 'framer-motion';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
+import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
+import { recordInDebate } from '@/lib/debate/record';
+import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
+import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
 
 export default function GeneratePage() {
   const workspace = useWorkspaceToolScope('generate');
-  const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases } = useSessionStore();
+  const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore();
+  const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
+  // The debate row this page's current result was recorded into, if any.
+  const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
+  // Debate the current result belongs to (null for one-off); undefined after a reload.
+  const [resultDebateId, setResultDebateId] = useState<string | null | undefined>(undefined);
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
   const askConfig = getFeatureConfig('ask');
@@ -64,10 +73,13 @@ export default function GeneratePage() {
     }
   };
 
-  const handleSubmit = async (data: GenerateInput) => {
+  const handleSubmit = (data: GenerateInput) => debateGate.run(data.motion, (target) => void submitGenerate(data, target.debateId));
+
+  const submitGenerate = async (data: GenerateInput, debateId: string | null) => {
+    const target = { debateId };
     setGenerateLoading(true);
     try {
-      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined);
+      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId);
       // Always stamp with real local time and motion
       if (result.metadata) {
         result.metadata.generatedAt = new Date().toISOString();
@@ -75,7 +87,12 @@ export default function GeneratePage() {
       }
       setDiscoveredSources(sources);
       setGenerateResult(result);
+      setRecordedCaseId(null);
+      setResultDebateId(target.debateId);
       await workspace.attach(data, result);
+      if (target.debateId) {
+        setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
+      }
       setSuccessfulGenerationSequence((sequence) => sequence + 1);
       toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
     } catch (error) {
@@ -114,8 +131,13 @@ export default function GeneratePage() {
       tone: generateForm.tone || 'formal',
     };
 
+    // Regenerate against the result's own debate, never whichever is current now.
+    const current = selectCurrentDebate(useDebateStore.getState());
+    const debateId = resultDebateId !== undefined
+      ? resultDebateId
+      : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
     setGenerateLoading(true);
-    void generateCase(data, config, workspace.context ?? undefined)
+    void generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId)
       .then(async ({ result: next, discoveredSources: sources }) => {
         const regenerated = {
           ...generateResult,
@@ -129,6 +151,7 @@ export default function GeneratePage() {
         setGenerateResult(regenerated);
         setDiscoveredSources(sources);
         await workspace.attach({ ...data, regeneratedSection: section }, regenerated);
+        if (recordedCaseId) await updateRecordedResult('case', recordedCaseId, regenerated);
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {
@@ -342,11 +365,12 @@ export default function GeneratePage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.generate')}</h1>
           </div>
         </AnimatedSection>
+        <CurrentDebateStrip side={generateForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[440px_1fr]">
           {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
-            <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading} />
+            <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading} debatePrefill={!workspace.context} />
           </AnimatedSection>
 
           {/* Results */}
@@ -362,7 +386,7 @@ export default function GeneratePage() {
                   discoveredSources={discoveredSources}
                   onRegenerateSection={handleRegenerateSection}
                   onDiscuss={handleDiscuss}
-                  onSave={handleSave}
+                  onSave={recordedCaseId ? undefined : handleSave}
                   onUndo={handleUndo}
                   onImportFlowchart={handleImportFlowchart}
                   onPracticeCrossfire={handlePracticeCrossfire}
@@ -382,6 +406,7 @@ export default function GeneratePage() {
       </div>
     </div>
 
+    {debateGate.dialog}
     <LimitReachedModal
       open={subError.limitModalOpen}
       onOpenChange={subError.setLimitModalOpen}

@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { seedCurrentDebate } from '@/test/helpers/debate';
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -111,19 +112,20 @@ it('maps a rejected fetch through the Edge Function error contract', async () =>
 });
 
 it('keeps large Ask context below the Edge Function request limit', async () => {
+  seedCurrentDebate();
   setActiveAccessToken('test-access-token');
   sessionState.sourceLibrary = [{
     id: 'local_source_legacy',
     title: 'Local source',
     content: 'local only',
     type: 'text',
-    isActive: true,
+    isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
   }, ...Array.from({ length: 12 }, (_, index) => ({
     id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
     title: `Source ${index}`,
     content: 'source context '.repeat(3_000),
     type: 'text',
-    isActive: true,
+    isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
   }))];
   settingsState.customSystemPrompt = '界'.repeat(50_000);
   const history = Array.from({ length: 12 }, (_, index) => ({

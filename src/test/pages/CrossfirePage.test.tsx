@@ -32,6 +32,7 @@ vi.mock('@/lib/ai/client', () => ({
 import CrossfirePage from '@/pages/CrossfirePage';
 import { createCrossfireSetupState } from '@/lib/crossfire/reducer';
 import { loadCrossfireDraft, saveCrossfireDraft } from '@/lib/crossfire/storage';
+import { enableOneOffMode, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
 
 function renderPage() {
   return render(
@@ -43,6 +44,7 @@ function renderPage() {
 
 describe('CrossfirePage', () => {
   beforeEach(() => {
+    enableOneOffMode();
     mocks.userId = 'user-a';
     mocks.crossfire.mockReset();
     mocks.crossfire.mockImplementation(() => new Promise(() => undefined));
@@ -97,6 +99,44 @@ describe('CrossfirePage', () => {
     expect(writesForUserB.every(([, value]) => !value.includes('What is the mechanism?'))).toBe(true);
     expect(loadCrossfireDraft('user-b', window.localStorage)).toEqual(userBDraft);
     setItemSpy.mockRestore();
+  });
+
+  it('keeps a restored round out of a Current Debate with another motion', async () => {
+    const start = () => {
+      const view = renderPage();
+      fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+      fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+      fireEvent.click(screen.getByTestId('start-crossfire'));
+      view.unmount();
+    };
+    const sendTurn = () => {
+      renderPage();
+      fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
+      fireEvent.click(screen.getByTestId('submit-turn'));
+    };
+    const lastDebateId = () => (mocks.crossfire.mock.calls.at(-1) as unknown[] | undefined)?.[2] as { debateId?: string | null };
+
+    // Started one-off, then the student opens a debate on another motion and comes back.
+    start();
+    seedCurrentDebate({ motion: 'Resolved: something else' });
+    sendTurn();
+    await waitFor(() => expect(mocks.crossfire).toHaveBeenCalled());
+    expect(lastDebateId().debateId).toBeNull();
+  });
+
+  it('keeps a restored round in the Current Debate when the motion matches', async () => {
+    seedCurrentDebate({ motion: 'Resolved: test' });
+    const view = renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: test' } });
+    fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+    view.unmount();
+
+    renderPage();
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+    await waitFor(() => expect(mocks.crossfire).toHaveBeenCalled());
+    expect(((mocks.crossfire.mock.calls.at(-1) as unknown[])[2] as { debateId?: string | null }).debateId).toBe(TEST_DEBATE_ID);
   });
 
   it('moves an unexpected next-turn variant into the retry state', async () => {

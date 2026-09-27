@@ -90,7 +90,7 @@ async function cachePaths(page) {
 async function main() {
   const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
   const entryPath = `/${Object.values(manifest).find((entry) => entry.isEntry).file}`;
-  const generatePath = `/${manifest['src/pages/GeneratePage.tsx'].file}`;
+  const homePath = `/${manifest['src/pages/HomePage.tsx'].file}`;
   const attackPath = `/${manifest['src/pages/AttackPage.tsx'].file}`;
   const port = await freePort();
   const origin = `http://127.0.0.1:${port}`;
@@ -167,34 +167,34 @@ async function main() {
 
     const page = await context.newPage();
     await prepare(page);
-    await page.goto(`${origin}/app/generate`, { waitUntil: 'networkidle' });
-    await page.getByRole('heading', { name: 'Generate', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.goto(`${origin}/app`, { waitUntil: 'networkidle' });
+    await page.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.evaluate(async () => navigator.serviceWorker.ready);
     await page.waitForFunction(async (paths) => {
       const urls = (await Promise.all((await caches.keys()).map(async (key) =>
         (await (await caches.open(key)).keys()).map((request) => new URL(request.url).pathname)
       ))).flat();
       return paths.every((path) => urls.includes(path));
-    }, [entryPath, generatePath, '/favicon-72.png'], { timeout: CONTENT_TIMEOUT_MS });
+    }, [entryPath, homePath, '/favicon-72.png'], { timeout: CONTENT_TIMEOUT_MS });
 
     const firstVisitCache = await cachePaths(page);
     assert.equal(firstVisitCache.includes(attackPath), false, 'unvisited Attack chunk was cached');
     await context.setOffline(true);
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.getByRole('heading', { name: 'Generate', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const logo = page.locator('header a[href="/app"] img');
     assert.equal(await logo.getAttribute('src'), '/favicon-72.png');
     assert.ok(await logo.evaluate((image) => image.naturalWidth > 0), 'offline logo did not load');
 
-    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' }).click();
+    await page.locator('main [data-tour="mode-attack"]').click();
     await page.getByRole('heading', { name: 'Unable to load this page' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
 
     await context.setOffline(false);
     const prefetchedPage = await context.newPage();
     await prepare(prefetchedPage);
-    await prefetchedPage.goto(`${origin}/app/generate`, { waitUntil: 'networkidle' });
-    await prefetchedPage.getByRole('heading', { name: 'Generate', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
-    const attackLink = prefetchedPage.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' });
+    await prefetchedPage.goto(`${origin}/app`, { waitUntil: 'networkidle' });
+    await prefetchedPage.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    const attackLink = prefetchedPage.locator('main [data-tour="mode-attack"]');
     await attackLink.hover();
     await prefetchedPage.waitForFunction(async (path) => {
       const urls = (await Promise.all((await caches.keys()).map(async (key) =>

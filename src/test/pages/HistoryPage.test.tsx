@@ -9,6 +9,9 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const mockStore = {
+  savedFlowcharts: [] as any[],
+  savedCrossfires: [] as any[],
+  sourceLibrary: [] as any[],
   savedCases: [] as any[],
   savedChats: [] as any[],
   savedAttacks: [] as any[],
@@ -22,15 +25,17 @@ const mockStore = {
 };
 
 vi.mock('@/lib/stores/session-store', () => ({
-  useSessionStore: vi.fn(() => mockStore),
+  useSessionStore: vi.fn((selector?: (state: typeof mockStore) => unknown) => selector ? selector(mockStore) : mockStore),
 }));
 
 import HistoryPage from '@/pages/HistoryPage';
+import { resetDebates, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
 
 describe('HistoryPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage('en');
+    seedCurrentDebate();
     mockStore.savedCases = [];
     mockStore.savedChats = [];
     mockStore.savedAttacks = [];
@@ -92,7 +97,7 @@ describe('HistoryPage', () => {
 
   it('renders saved cases when present', () => {
     mockStore.savedCases = [
-      { id: '1', title: 'Test Case', timestamp: Date.now(), data: {} },
+      { id: '1', title: 'Test Case', timestamp: Date.now(), data: {}, debateId: TEST_DEBATE_ID },
     ];
     render(<HistoryPage />);
     expect(screen.getByText('Test Case')).toBeDefined();
@@ -100,7 +105,7 @@ describe('HistoryPage', () => {
 
   it('renders load button for saved cases', () => {
     mockStore.savedCases = [
-      { id: '1', title: 'My Case', timestamp: Date.now(), data: {} },
+      { id: '1', title: 'My Case', timestamp: Date.now(), data: {}, debateId: TEST_DEBATE_ID },
     ];
     render(<HistoryPage />);
     expect(screen.getByText('Load')).toBeDefined();
@@ -113,6 +118,7 @@ describe('HistoryPage', () => {
       title: 'Teszt eset',
       createdAt: Date.now(),
       data: { metadata: { side: 'pro' } },
+      debateId: TEST_DEBATE_ID,
     }];
 
     render(<HistoryPage />);
@@ -129,5 +135,27 @@ describe('HistoryPage', () => {
   it('renders with max-w-5xl container', () => {
     const { container } = render(<HistoryPage />);
     expect(container.querySelector('.max-w-5xl')).not.toBeNull();
+  });
+
+  it('defaults to the Current Debate and never mixes in other debates', () => {
+    mockStore.savedCases = [
+      { id: '1', title: 'Homework case', createdAt: Date.now(), data: {}, debateId: TEST_DEBATE_ID },
+      { id: '2', title: 'Zoo case', createdAt: Date.now(), data: {}, debateId: 'other-debate' },
+      { id: '3', title: 'One-off case', createdAt: Date.now(), data: {}, debateId: null },
+    ];
+    render(<HistoryPage />);
+    expect(screen.getByText('Homework case')).toBeInTheDocument();
+    expect(screen.queryByText('Zoo case')).toBeNull();
+    expect(screen.queryByText('One-off case')).toBeNull();
+  });
+
+  it('shows one-off and unsorted work with an exact-match suggestion when there is no current debate scope', () => {
+    resetDebates();
+    mockStore.savedCases = [
+      { id: '3', title: 'One-off case', createdAt: Date.now(), data: {}, debateId: null },
+    ];
+    render(<HistoryPage />);
+    expect(screen.getByText('One-off case')).toBeInTheDocument();
+    expect(screen.getByText('These results are not in any debate. Nothing moves until you confirm.')).toBeInTheDocument();
   });
 });

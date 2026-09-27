@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
 
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -58,7 +58,7 @@ test.describe('Hungarian parity', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test('renders Hungarian workspace navigation, route titles, and onboarding', async ({ page }, testInfo) => {
+  test('renders Hungarian workspace navigation, route titles, and onboarding', async ({ page }) => {
     const errors = collectRuntimeErrors(page);
     await stubSupabaseSession(page);
     await page.addInitScript(() => {
@@ -87,18 +87,10 @@ test.describe('Hungarian parity', () => {
       ['factoids', 'Tények'],
       ['ask', 'Kérdezés'],
     ] as const) {
-      const link = page.locator(`[data-tour="nav-${route}"]`).first();
-      if (testInfo.project.name === 'mobile-chromium') {
-        await page.getByRole('button', { name: 'Menü megnyitása' }).click();
-        await page.getByRole('navigation', { name: 'Mobil navigáció' })
-          .getByRole('link')
-          .filter({ hasText: heading })
-          .first()
-          .click();
-      } else {
-        if (!await link.isVisible()) await page.locator('summary[data-tour="nav-more"]').click();
-        await link.click();
-      }
+      // Tools open from Home; the header keeps only Home, Current debate, Library and History.
+      // Navigate in-app: a reload would rerun the init script and restart the tour.
+      await page.locator('header a[href="/app"]').first().click();
+      await page.locator(`main [data-tour="mode-${route}"]`).click();
       await expect(page).toHaveURL(new RegExp(`/app/${route}$`));
       await expect(page.getByRole('heading', { name: heading, exact: true }).last()).toBeVisible();
     }
@@ -111,6 +103,8 @@ test.describe('Hungarian parity', () => {
   test('localizes saved chats, library controls, timer, and close labels', async ({ page }, testInfo) => {
     const errors = collectRuntimeErrors(page);
     await stubSupabaseSession(page);
+    // Library needs a Current Debate before sources can be added.
+    await seedCurrentDebate(page, 'Ez a Ház eltörölné a házi feladatot.');
     await page.addInitScript(() => {
       try {
         window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({

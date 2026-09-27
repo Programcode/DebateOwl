@@ -48,6 +48,7 @@ vi.mock('recharts', () => ({
 
 import SparringPage from '@/pages/SparringPage';
 import { useSparringStore } from '@/lib/stores/sparring-store';
+import { enableOneOffMode } from '@/test/helpers/debate';
 
 const SCORECARD: SparringScorecard = {
   userScore: 78,
@@ -99,6 +100,7 @@ function renderPage() {
 
 describe('SparringPage', () => {
   beforeEach(() => {
+    enableOneOffMode();
     vi.clearAllMocks();
     vi.stubGlobal('scrollTo', vi.fn());
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });

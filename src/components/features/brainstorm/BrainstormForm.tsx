@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BrainstormInputSchema, type BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
+import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
 import { ModelSelector } from '@/components/ModelSelector';
@@ -24,13 +25,15 @@ import { ModelSelector } from '@/components/ModelSelector';
 interface BrainstormFormProps {
   onSubmit: (data: BrainstormInput) => void;
   isLoading: boolean;
+  /** Fill the motion from the Current Debate. */
+  debatePrefill?: boolean;
 }
 
-export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
+export function BrainstormForm({ onSubmit, isLoading, debatePrefill = true }: BrainstormFormProps) {
   const { t } = useTranslation();
   const { brainstormForm, setBrainstormForm } = useSessionStore();
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BrainstormInput>({
+  const { register, handleSubmit, setValue, getValues, watch, formState: { errors } } = useForm<BrainstormInput>({
     resolver: zodResolver(BrainstormInputSchema),
     defaultValues: {
       motion: '',
@@ -48,6 +51,8 @@ export function BrainstormForm({ onSubmit, isLoading }: BrainstormFormProps) {
     });
     return () => subscription.unsubscribe();
   }, [watch, setBrainstormForm]);
+
+  useDebateMotionPrefill(() => getValues('motion'), (motion) => setValue('motion', motion, { shouldValidate: true }), !debatePrefill);
 
   const currentValues = watch();
 

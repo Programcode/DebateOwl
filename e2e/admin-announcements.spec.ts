@@ -110,8 +110,8 @@ test('keeps announcements stable across routes and refreshes on a full reload', 
   await page.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }).click();
   await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toHaveCount(0);
 
-  await openAppNav(page, 'Attack');
-  await expect(page.getByRole('heading', { name: 'Attack', exact: true })).toBeVisible();
+  await openAppNav(page, 'Library');
+  await expect(page.getByRole('heading', { name: 'Source Library', exact: true })).toBeVisible();
   await openAppNav(page, 'Home');
   await expect(page.getByRole('main').getByRole('heading', { name: 'DebateLab', exact: true })).toBeVisible();
   expect(listRequestCount()).toBe(1);

@@ -39,11 +39,6 @@ test('onboarding follows visible home targets when secondary navigation is close
   });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
-  const desktopMoreMenu = page.locator('details').filter({ has: page.locator('summary[aria-label="More"]') });
-  if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    await expect(desktopMoreMenu).not.toHaveAttribute('open');
-  }
-
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
   await page.locator('[data-test-id="button-primary"]').click();
 
@@ -113,11 +108,12 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
 
+  // Mobile keeps the logo, language, theme, and menu on the first row; Settings lives in the menu.
   const languageControl = page.getByRole('button', { name: 'Language' });
   const themeControl = page.getByRole('button', { name: 'Toggle theme' });
-  const settingsControl = page.getByRole('link', { name: 'Settings' });
   const menuControl = page.getByRole('button', { name: 'Open menu' });
-  const controls = [languageControl, themeControl, settingsControl, menuControl];
+  const debateControl = page.getByTestId('current-debate-mobile');
+  const controls = [languageControl, themeControl, menuControl, debateControl];
 
   await expect(page.getByAltText('DebateLab logo')).toBeVisible();
   for (const control of controls) await expect(control).toBeVisible();
@@ -127,22 +123,17 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
 });
 
-test('desktop More menu exposes secondary destinations without horizontal scrolling', async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 1024, 'Desktop-only More menu check');
+test('desktop header holds Home, Current debate, Library, and History with no tool links', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 1024, 'Desktop-only header check');
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await page.locator('summary[aria-label="More"]').click();
 
-  const moreMenu = page.locator('details').filter({ has: page.locator('summary[aria-label="More"]') });
-  for (const [label, href] of [
-    ['Brainstorm', '/app/brainstorm'],
-    ['Factoids', '/app/factoids'],
-    ['Flowchart', '/app/flowchart'],
-    ['Library', '/app/library'],
-    ['Timer', '/app/timer'],
-    ['History', '/app/history'],
-  ] as const) {
-    await expect(moreMenu.getByRole('link', { name: label })).toHaveAttribute('href', href);
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(navigation.getByRole('link')).toHaveText(['Home', 'Library', 'History']);
+  await expect(navigation.getByTestId('current-debate-desktop')).toHaveText('Start debate');
+  for (const tool of ['Generate', 'Attack', 'Ask', 'Crossfire', 'Sparring', 'More']) {
+    await expect(navigation.getByText(tool, { exact: true })).toHaveCount(0);
   }
+  await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
 });
 
@@ -159,17 +150,16 @@ test('desktop header fits without internal or document overflow at supported wid
   }
 });
 
-test('mobile menu exposes every tool destination and closes after navigation', async ({ page }) => {
+test('mobile menu holds only Home, Current debate, Library, History, and Settings', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Open menu' }).click();
 
   const mobileNavigation = page.getByRole('navigation', { name: 'Mobile navigation' });
-  for (const label of ['Home', 'Generate', 'Attack', 'Brainstorm', 'Factoids', 'Ask', 'Crossfire', 'Library', 'Timer', 'Sparring', 'Flowchart', 'History']) {
-    await expect(mobileNavigation.getByRole('link', { name: new RegExp(`^${label}`) })).toBeVisible();
-  }
+  const hrefs = await mobileNavigation.getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(hrefs).toEqual(['/app', '/app/debate', '/app/library', '/app/history', '/app/settings']);
 
-  await mobileNavigation.getByRole('link', { name: /^Brainstorm/ }).click();
-  await expect(page).toHaveURL(/\/app\/brainstorm$/);
+  await mobileNavigation.getByRole('link', { name: /^Library/ }).click();
+  await expect(page).toHaveURL(/\/app\/library$/);
   await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toHaveCount(0);
 });

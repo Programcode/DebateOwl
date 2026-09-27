@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
-import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
+
+const MOTION = 'Resolved: cities should ban private cars downtown.';
+const SEEDED_DEBATE_ID = '00000000-0000-4000-8000-00000000d001';
 
 type CrossfireRequest = {
   feature: string;
@@ -20,6 +23,16 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
     const url = new URL(route.request().url());
     if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
       await route.continue();
+      return;
+    }
+
+    // Serve the seeded debate so hydration keeps it as the Current Debate.
+    const debateRow = url.pathname.endsWith('/rest/v1/debates')
+      ? { id: SEEDED_DEBATE_ID, motion: MOTION, settings: {}, instructions: '', last_activity_at: new Date().toISOString(), created_at: new Date().toISOString() }
+      : url.pathname.endsWith('/rest/v1/current_debates') ? { debate_id: SEEDED_DEBATE_ID } : null;
+    if (debateRow && route.request().method() === 'GET') {
+      const single = (route.request().headers().accept ?? '').includes('vnd.pgrst.object');
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(single ? debateRow : [debateRow]) });
       return;
     }
 
@@ -102,6 +115,7 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
 async function prepare(page: Page, requests: CrossfireRequest[], failFirstAnswer = false) {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
+  await seedCurrentDebate(page, MOTION);
   await page.addInitScript(() => {
     for (const key of Object.keys(window.localStorage)) {
       if (key.startsWith('debatelab-crossfire-draft:')) window.localStorage.removeItem(key);

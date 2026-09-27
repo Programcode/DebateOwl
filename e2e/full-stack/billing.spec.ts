@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
-import { admin, expect, fake, MARK, providerCall, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, fake, MARK, providerCall, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -24,6 +24,7 @@ async function brainstorm(page: Page) {
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await chooseForMotion(page, "once");
 }
 
 function sendWebhook(event: object, signature = true) {

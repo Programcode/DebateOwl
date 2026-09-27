@@ -1,11 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
-
-async function openMobileNavigation(page: Page) {
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
-    await page.getByRole('button', { name: 'Open menu' }).click();
-  }
-}
 
 test('a stalled Jam recorder cannot delay the real application', async ({ page, browserName }) => {
   test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
@@ -70,7 +64,13 @@ test('landing CTA enters the app without replacing the document', async ({ page 
 test('protected sibling navigation keeps AppLayout mounted while the page loads', async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
-  await page.goto('/app/generate');
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: true, isTourRunning: false },
+      version: 0,
+    }));
+  });
+  await page.goto('/app');
   const header = page.locator('header');
   await expect(header).toBeVisible();
   await header.evaluate((element) => { element.dataset.e2eLayout = 'original'; });
@@ -84,8 +84,8 @@ test('protected sibling navigation keeps AppLayout mounted while the page loads'
     await route.continue();
   });
 
-  await openMobileNavigation(page);
-  await page.getByRole('link', { name: 'Attack' }).click();
+  // Tools open from Home; the header no longer lists them.
+  await page.locator('main [data-tour="mode-attack"]').click();
   await expect.poll(() => attackModuleRequested).toBe(true);
   await page.waitForTimeout(250);
 

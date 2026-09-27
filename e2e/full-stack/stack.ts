@@ -75,6 +75,38 @@ export async function signIn(page: Page, user: DemoUser) {
   await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
 }
 
+/** The visible Current Debate control: the header menu on desktop, the second header row on mobile. */
+export function debateControl(page: Page) {
+  return page.locator('[data-testid="current-debate-desktop"]:visible, [data-testid="current-debate-mobile"]:visible').first();
+}
+
+/** Starts a new Current Debate from the header, as a student would. */
+export async function startDebate(page: Page, motion: string) {
+  if (!page.url().includes("/app")) await page.goto("/app");
+  const control = debateControl(page);
+  if ((await control.textContent())?.includes("Start debate")) {
+    await control.click();
+  } else {
+    await control.click();
+    await page.getByRole("dialog").getByRole("button", { name: "Start new debate" }).click();
+  }
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motion").fill(motion);
+  await dialog.getByRole("button", { name: "Start debate" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(debateControl(page)).toHaveAttribute("aria-label", `Current debate: ${motion}`);
+}
+
+/** Answers "Which debate is this for?" after submitting a motion that is not the Current Debate. */
+export async function chooseForMotion(page: Page, choice: "create" | "once") {
+  // Scope to the motion choice: the next step may open its own dialog, such as the paywall.
+  const dialog = page.getByRole("dialog", { name: /^(Which debate is this for\?|This is a different motion)$/ });
+  await dialog.getByRole("button", {
+    name: choice === "create" ? "Create a new debate for this motion" : "Use once without saving to a debate",
+  }).click();
+  await expect(dialog).toBeHidden();
+}
+
 type Fixtures = { user: DemoUser; signedIn: Page };
 
 export const test = base.extend<Fixtures>({

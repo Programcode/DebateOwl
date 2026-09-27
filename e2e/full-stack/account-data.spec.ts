@@ -1,4 +1,4 @@
-import { admin, createDemoUser, deleteDemoUser, expect, MARK, providerCall, signIn, stackReady, test } from "./stack";
+import { admin, createDemoUser, deleteDemoUser, expect, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
 import type { Page } from "@playwright/test";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
@@ -12,6 +12,7 @@ async function addSource(page: Page, title: string, content: string) {
 }
 
 test("only active Library sources ground AI requests, and deletions persist", async ({ signedIn: page, user }) => {
+  await startDebate(page, "Public transport should be free");
   await page.goto("/app/library");
   await addSource(page, "Active study", "ACTIVE-SOURCE-MARKER ridership rose after fares were removed.");
   await addSource(page, "Paused study", "PAUSED-SOURCE-MARKER congestion did not change.");
@@ -44,10 +45,12 @@ test("Delete All My Data erases the account's saved work and nobody else's", asy
     const bystander = await (await page.context().browser()!.newContext()).newPage();
     await bystander.addInitScript(() => localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 })));
     await signIn(bystander, other);
+    await startDebate(bystander, "Bystander motion");
     await bystander.goto("/app/library");
     await addSource(bystander, "Bystander study", "Kept after another account erases its data.");
     await bystander.context().close();
 
+    await startDebate(page, "My motion");
     await page.goto("/app/library");
     await addSource(page, "My study", "Erased with the account data.");
     const userId = await user.userId();
@@ -62,6 +65,8 @@ test("Delete All My Data erases the account's saved work and nobody else's", asy
 
     const { data: mine } = await admin.from("sources").select("id").eq("user_id", userId);
     expect(mine).toEqual([]);
+    const { data: myDebates } = await admin.from("debates").select("id").eq("user_id", userId);
+    expect(myDebates).toEqual([]);
     const { data: theirs } = await admin.from("sources").select("title").eq("user_id", otherId);
     expect(theirs?.map((row) => row.title)).toEqual(["Bystander study"]);
 

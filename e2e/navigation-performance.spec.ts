@@ -41,20 +41,28 @@ async function waitForContent(page: Page, marker: string | ContentMarker) {
   await expect(locator).toBeVisible({ timeout: 15_000 });
 }
 
-async function openAppNav(page: Page, label: string) {
+async function skipOnboarding(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
+      state: { hasCompletedOnboarding: true, isTourRunning: false },
+      version: 0,
+    }));
+  });
+}
+
+// Tools open from Home; the header carries only Home, Current debate, Library and History.
+function homeToolLink(page: Page, tool: string) {
+  return page.locator(`main [data-tour="mode-${tool}"]`);
+}
+
+async function openHome(page: Page) {
   if ((page.viewportSize()?.width ?? 1280) < 1024) {
     await page.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: new RegExp(`^${label}`) }).click();
-    return;
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Home/ }).click();
+  } else {
+    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Home' }).click();
   }
-
-  if (['Flowchart', 'History'].includes(label)) {
-    await page.locator('summary[aria-label="More"]').click();
-    await page.locator('details').getByRole('link', { name: label }).click();
-    return;
-  }
-
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: label }).click();
+  await expect(page).toHaveURL(/\/app$/);
 }
 
 test('cold routes expose real content on both browser profiles', async ({ page }) => {
@@ -110,8 +118,9 @@ test('a delayed public route keeps the main landmark', async ({ page }) => {
 test('a delayed destination chunk exposes the route fallback without replacing the shell', async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
-  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
+  await skipOnboarding(page);
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
 
   await page.evaluate(() => {
     window.__baselineAppLayout = document.querySelector('header')?.parentElement;
@@ -132,7 +141,7 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   });
 
   await startGenericLoaderObservation(page);
-  await openAppNav(page, 'Attack');
+  await homeToolLink(page, 'attack').click();
   await expect.poll(() => destinationRequested).toBe(true);
   const pendingStatus = page.locator('main').getByRole('status', { name: 'Opening Attack', exact: true });
   await expect(pendingStatus).toHaveCount(1);
@@ -205,9 +214,10 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
     await route.continue();
   });
 
-  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
-  await openAppNav(page, 'Attack');
+  await skipOnboarding(page);
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await homeToolLink(page, 'attack').click();
 
   await expect(page.getByRole('heading', { name: 'Unable to load this page' })).toBeVisible();
   await page.getByRole('button', { name: 'Reload' }).click();
@@ -216,15 +226,16 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
   await expect(page.locator('header')).toBeVisible();
 });
 
-for (const [locale, attackLabel, menuLabel, mainNavigationLabel, mobileNavigationLabel, openingLabel] of [
-  ['es', 'Atacar', 'Abrir menú', 'Navegación principal', 'Navegación móvil', 'Abriendo Atacar'],
-  ['hu', 'Támadás', 'Menü megnyitása', 'Fő navigáció', 'Mobil navigáció', 'Támadás megnyitása'],
+for (const [locale, openingLabel] of [
+  ['es', 'Abriendo Atacar'],
+  ['hu', 'Támadás megnyitása'],
 ] as const) {
   test(`${locale} delayed route announces the localized destination`, async ({ page }) => {
     await setLocale(page, locale);
     await stubSupabaseSession(page);
-    await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('header')).toBeVisible();
+    await skipOnboarding(page);
+    await page.goto('/app', { waitUntil: 'domcontentloaded' });
+    await expect(homeToolLink(page, 'attack')).toBeVisible();
 
     let destinationRequested = false;
     await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
@@ -233,12 +244,7 @@ for (const [locale, attackLabel, menuLabel, mainNavigationLabel, mobileNavigatio
       await route.continue();
     });
 
-    if ((page.viewportSize()?.width ?? 1280) < 1024) {
-      await page.getByRole('button', { name: menuLabel }).click();
-      await page.getByRole('navigation', { name: mobileNavigationLabel }).getByRole('link', { name: new RegExp(`^${attackLabel}`) }).click();
-    } else {
-      await page.getByRole('navigation', { name: mainNavigationLabel }).getByRole('link', { name: attackLabel }).click();
-    }
+    await homeToolLink(page, 'attack').click();
 
     await expect.poll(() => destinationRequested).toBe(true);
     const status = page.getByRole('status', { name: openingLabel, exact: true });
@@ -249,19 +255,18 @@ for (const [locale, attackLabel, menuLabel, mainNavigationLabel, mobileNavigatio
   });
 }
 
-async function gotoGenerate(page: Page) {
+async function gotoHome(page: Page) {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
-  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'Generate' });
+  await skipOnboarding(page);
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
 }
 
 async function attackLink(page: Page) {
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    return page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Attack/ });
-  }
-  return page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' });
+  const link = homeToolLink(page, 'attack');
+  await expect(link).toBeVisible();
+  return link;
 }
 
 async function startGenericLoaderObservation(page: Page) {
@@ -312,7 +317,7 @@ async function signalAllowedIntent(page: Page, link: Awaited<ReturnType<typeof a
 
 test('hover intent is limited to fine pointers and click stays in-document', async ({ page }) => {
   const requestCount = countAttackRequests(page);
-  await gotoGenerate(page);
+  await gotoHome(page);
   const link = await attackLink(page);
   expect(requestCount()).toBe(0);
 
@@ -337,7 +342,7 @@ test('hover intent is limited to fine pointers and click stays in-document', asy
 
 test('keyboard focus fetches one destination chunk before click', async ({ page }) => {
   const requestCount = countAttackRequests(page);
-  await gotoGenerate(page);
+  await gotoHome(page);
   const link = await attackLink(page);
   expect(requestCount()).toBe(0);
 
@@ -355,7 +360,7 @@ test('keyboard focus fetches one destination chunk before click', async ({ page 
 
 test('touch intent fetches one destination chunk before click', async ({ page }) => {
   const requestCount = countAttackRequests(page);
-  await gotoGenerate(page);
+  await gotoHome(page);
   const link = await attackLink(page);
   expect(requestCount()).toBe(0);
 
@@ -378,7 +383,7 @@ for (const [label, connection] of [
   test(`${label} skips speculative route requests for the same intent`, async ({ page }) => {
     await setConnection(page, connection);
     const requestCount = countAttackRequests(page);
-    await gotoGenerate(page);
+    await gotoHome(page);
     const link = await attackLink(page);
     expect(requestCount()).toBe(0);
 
@@ -441,7 +446,8 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   await waitForContent(page, { selector: 'main h1', text: 'Generate' });
   await expect.poll(() => subscriptionRequests.filter((name) => name === 'ai_requests').length).toBe(1);
 
-  await openAppNav(page, 'Attack');
+  await openHome(page);
+  await homeToolLink(page, 'attack').click();
   await waitForContent(page, attackContent);
   await page.waitForTimeout(100);
 

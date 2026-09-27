@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { seedCurrentDebate } from '@/test/helpers/debate';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
 import type { CrossfireAIInput, CrossfireDebrief } from '@/lib/crossfire/schemas';
 
@@ -11,8 +12,8 @@ const mocks = vi.hoisted(() => ({
   },
   session: {
     sourceLibrary: [
-      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
     ],
   },
 }));
@@ -93,11 +94,12 @@ const validDebrief: CrossfireDebrief = {
 
 describe('Crossfire AI client', () => {
   beforeEach(() => {
+    seedCurrentDebate();
     vi.clearAllMocks();
     mocks.settings.outputLanguage = 'hu';
     mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
-      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Grounded evidence', origin: 'https://example.com', type: 'url', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Do not send', origin: 'https://inactive.example', type: 'url', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
     );
     mocks.getSession.mockResolvedValue({ data: { session: { access_token: 'token' } } });
   });
@@ -149,7 +151,7 @@ describe('Crossfire AI client', () => {
         content: '界'.repeat(9_000),
         origin: `https://example.com/${index}`,
         type: 'text',
-        isActive: true,
+        isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       })),
     );
     mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'A bounded answer.' } }, error: null });

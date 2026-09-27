@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ModelSelector';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,10 @@ export interface SparringSetupValues {
 }
 
 interface SparringSetupProps {
+  /** Rendered directly below the title, e.g. the Current Debate strip. */
+  banner?: React.ReactNode;
+  /** Fill the motion from the Current Debate. */
+  debatePrefill?: boolean;
   onStart: (values: SparringSetupValues) => void;
   isStarting?: boolean;
   initialValues?: Partial<SparringSetupValues>;
@@ -35,9 +40,12 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, isStarting = false, initialValues }: SparringSetupProps) {
+export function SparringSetup({ onStart, isStarting = false, initialValues, banner, debatePrefill = false }: SparringSetupProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initialValues?.motion ?? '');
+  const motionRef = useRef(motion);
+  motionRef.current = motion;
+  useDebateMotionPrefill(() => motionRef.current, setMotion, !debatePrefill);
   const [userSide, setUserSide] = useState<SparringSide>(initialValues?.userSide ?? 'pro');
   const [format, setFormat] = useState<SparringFormat>('standard');
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('medium');
@@ -69,6 +77,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues }: Sp
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{t('nav.sparring', 'Sparring')}</h1>
+      {banner}
 
       <form onSubmit={handleSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">

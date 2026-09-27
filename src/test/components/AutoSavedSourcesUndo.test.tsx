@@ -10,9 +10,11 @@ const { mockToastError, mockToastSuccess, mockToastWarning, mockRemoveSource } =
 
 const sessionState = {
   sourceLibrary: [
-    { id: 'source-1', folder: 'Auto-saved' },
-    { id: 'source-2', folder: 'Auto-saved', metadata: { capturedVia: 'attack' } },
-    { id: 'source-3', folder: 'Curated', metadata: { capturedVia: 'generate' } },
+    { id: 'source-1', folder: 'Auto-saved', debateId: '11111111-2222-4333-8444-555555555555' },
+    { id: 'source-2', folder: 'Auto-saved', debateId: '11111111-2222-4333-8444-555555555555', metadata: { capturedVia: 'attack' } },
+    { id: 'source-3', folder: 'Curated', debateId: '11111111-2222-4333-8444-555555555555', metadata: { capturedVia: 'generate' } },
+    // Another debate's research is never undone from this one.
+    { id: 'source-4', folder: 'Auto-saved', debateId: 'other-debate' },
   ],
 };
 
@@ -32,10 +34,12 @@ vi.mock('@/lib/stores/session-store', () => ({
 }));
 
 import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
+import { seedCurrentDebate } from '@/test/helpers/debate';
 
 describe('AutoSavedSourcesUndo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    seedCurrentDebate();
     mockRemoveSource.mockRejectedValue(new Error('Removal failed'));
   });
 

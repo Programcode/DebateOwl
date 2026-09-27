@@ -52,6 +52,10 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { cn } from '@/lib/utils';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import { CurrentDebateStrip, useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
+import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
+import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
+import { toast } from '@/hooks/use-toast';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
 
 const SESSION_ID_PREFIX = 'crossfire';
@@ -282,7 +286,26 @@ export default function CrossfirePage() {
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
-  const activeSourceCount = useSessionStore((session) => session.sourceLibrary.filter((source) => source.isActive).length);
+  const sourceDebateId = useDebateStore((debates) => debates.oneOff ? null : debates.currentDebateId);
+  const activeSourceCount = useSessionStore((session) => sourceDebateId
+    ? session.sourceLibrary.filter((source) => source.isActive && source.debateId === sourceDebateId).length
+    : 0);
+  const recordResult = useSessionStore((session) => session.recordResult);
+  const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
+  // Debate chosen when the round started; undefined after a reload.
+  const debateTargetRef = useRef<string | null | undefined>(undefined);
+  // After a reload, a restored round belongs to the Current Debate only when the
+  // motions match; otherwise it runs one-off so another debate's sources stay out.
+  const roundDebateId = useCallback((resolution: string): string | null => {
+    if (debateTargetRef.current !== undefined) return debateTargetRef.current;
+    const current = selectCurrentDebate(useDebateStore.getState());
+    return sameMotion(current?.motion, resolution) ? activeDebateId() : null;
+  }, []);
+  useDebateMotionPrefill(
+    () => state.phase === 'setup' ? state.config.resolution : undefined,
+    (resolution) => dispatch({ type: 'config-patched', patch: { resolution } }),
+    Boolean(workspace.context) || state.phase !== 'setup',
+  );
   const { getFeatureConfig } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
 
@@ -327,6 +350,23 @@ export default function CrossfirePage() {
     });
   }, [state, workspace.context]);
 
+  // A round that finishes on this page is recorded in its debate once.
+  const recordedPhaseRef = useRef(state.phase);
+  useEffect(() => {
+    const finishedHere = recordedPhaseRef.current === 'debriefing' && state.phase === 'complete';
+    recordedPhaseRef.current = state.phase;
+    if (!finishedHere || state.phase !== 'complete' || workspace.context) return;
+    const debateId = roundDebateId(state.config.resolution);
+    if (!debateId) return;
+    void recordResult('crossfire', {
+      title: state.config.resolution,
+      input: state.config,
+      output: { turns: state.turns, debrief: state.debrief, endedReason: state.endedReason },
+      debateId,
+      side: 'neutral',
+    }).catch(() => toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' }));
+  }, [recordResult, roundDebateId, state, t, workspace.context]);
+
   useEffect(() => {
     if (state.phase !== 'active') return;
     setNow(Date.now());
@@ -347,7 +387,7 @@ export default function CrossfirePage() {
         config: snapshot.config,
         transcript: snapshot.turns,
         expectedReply,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
         dispatch({
@@ -383,7 +423,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig, workspace.context]);
+  }, [modelConfig, roundDebateId, workspace.context]);
 
   const runDebrief = useCallback(async (snapshot: Extract<CrossfireState, { phase: 'debriefing' }>) => {
     requestRef.current?.abort();
@@ -394,7 +434,7 @@ export default function CrossfirePage() {
         operation: 'debrief',
         config: snapshot.config,
         transcript: snapshot.turns,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
       if (controller.signal.aborted) return;
       if ('type' in result) {
         dispatch({
@@ -410,7 +450,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig, workspace.context]);
+  }, [modelConfig, roundDebateId, workspace.context]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;
@@ -444,6 +484,12 @@ export default function CrossfirePage() {
       return;
     }
     setFormError('');
+    debateGate.run(parsed.data.resolution, (target) => beginSession(target.debateId));
+  };
+
+  const beginSession = (debateId: string | null) => {
+    if (state.phase !== 'setup') return;
+    debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
     const action = {
       type: 'session-started' as const,
@@ -519,6 +565,8 @@ export default function CrossfirePage() {
             </div>
             <h1 className="text-3xl font-bold tracking-tight">{t('crossfire.title')}</h1>
           </header>
+          <CurrentDebateStrip hidden={Boolean(workspace.context)} />
+          {debateGate.dialog}
 
           {(formError || storageError) && (
             <Alert variant="destructive">

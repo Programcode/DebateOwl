@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { ModelSelector } from '@/components/ModelSelector';
@@ -25,9 +26,11 @@ import { ModelSelector } from '@/components/ModelSelector';
 interface GenerateFormProps {
   onSubmit: (data: GenerateInput) => void;
   isLoading: boolean;
+  /** Fill the motion from the Current Debate. */
+  debatePrefill?: boolean;
 }
 
-export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
+export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: GenerateFormProps) {
   const { t } = useTranslation();
   const { generateForm, setGenerateForm } = useSessionStore();
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -37,7 +40,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
     if (advancedOptionsRef.current) advancedOptionsRef.current.inert = !advancedOpen;
   }, [advancedOpen]);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GenerateInput>({
+  const { register, handleSubmit, setValue, getValues, watch, formState: { errors } } = useForm<GenerateInput>({
     resolver: zodResolver(GenerateInputSchema),
     defaultValues: {
       motion: '',
@@ -58,6 +61,8 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
     });
     return () => subscription.unsubscribe();
   }, [watch, setGenerateForm]);
+
+  useDebateMotionPrefill(() => getValues('motion'), (motion) => setValue('motion', motion, { shouldValidate: true }), !debatePrefill);
 
   // Voice input integration
   const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();

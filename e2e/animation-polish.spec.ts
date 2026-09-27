@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { stubSupabaseSession } from './helpers/auth';
+import { seedCurrentDebate, stubSupabaseSession } from './helpers/auth';
 import { stubAIResponses } from './fixtures/ai-responses';
 
 const featureConfig = { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 };
@@ -8,6 +8,10 @@ const STATE_TIMEOUT_MS = 15_000;
 async function prepareMotionFixture(page: Page, reducedMotion: 'no-preference' | 'reduce') {
   await page.emulateMedia({ reducedMotion });
   await stubSupabaseSession(page);
+  await seedCurrentDebate(page, 'This House would make public transport free.');
+  await page.addInitScript(() => {
+    window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 }));
+  });
   await stubAIResponses(page);
   await page.addInitScript((config) => {
     window.localStorage.setItem('debate-trainer-settings', JSON.stringify({
@@ -54,19 +58,10 @@ async function generateMockCase(page: Page) {
   await expect(page.getByText(/We support the motion/)).toBeVisible({ timeout: STATE_TIMEOUT_MS });
 }
 
+/** Tools open from Home, which is reached from the header. */
 async function openFeatureRoute(page: Page, route: 'brainstorm' | 'factoids' | 'ask') {
-  const desktopLink = page.locator(`[data-tour="nav-${route}"]`).first();
-
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('navigation', { name: 'Mobile navigation' })
-      .locator(`a[href="/app/${route}"]`)
-      .click();
-  } else {
-    if (!await desktopLink.isVisible()) await page.locator('summary[data-tour="nav-more"]').click();
-    await desktopLink.click();
-  }
-
+  await page.locator('header a[href="/app"]').first().click();
+  await page.locator('main').locator(`a[href="/app/${route}"]`).click();
   await expect(page).toHaveURL(new RegExp(`/app/${route}$`));
 }
 
@@ -106,8 +101,8 @@ test('removes non-essential route and state movement for reduced motion', async 
 
 test('keeps a delayed route skeleton static under reduced motion', async ({ page }, testInfo) => {
   await prepareMotionFixture(page, 'reduce');
-  await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Generate', exact: true })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await page.screenshot({ path: testInfo.outputPath('reduced-route-before.png'), fullPage: true });
 
   let destinationRequested = false;
@@ -117,13 +112,7 @@ test('keeps a delayed route skeleton static under reduced motion', async ({ page
     await route.continue();
   });
 
-  const attackLink = (page.viewportSize()?.width ?? 1280) < 1024
-    ? await (async () => {
-      await page.getByRole('button', { name: 'Open menu' }).click();
-      return page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Attack/ });
-    })()
-    : page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Attack' });
-  await attackLink.click();
+  await page.locator('main').locator('a[href="/app/attack"]').click();
   await expect.poll(() => destinationRequested).toBe(true);
 
   const pendingStatus = page.getByRole('status', { name: 'Opening Attack', exact: true });

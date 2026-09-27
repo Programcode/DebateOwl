@@ -22,12 +22,31 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useSparringStore } from '@/lib/stores/sparring-store';
+import { useDebateStore } from '@/lib/stores/debate-store';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UnsortedWork } from '@/components/features/debate/UnsortedWork';
+
+/** History scope value for work that belongs to no debate. */
+const OUTSIDE_DEBATES = 'outside';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useSessionStore();
-  const sparringSessions = useSparringStore((state) => state.savedSessions);
+  const debates = useDebateStore((state) => state.debates);
+  const currentDebateId = useDebateStore((state) => state.currentDebateId);
+  // History defaults to the Current Debate; other debates and one-off work stay reachable.
+  const [scopeChoice, setScopeChoice] = useState<string | null>(null);
+  const scope = scopeChoice && (scopeChoice === OUTSIDE_DEBATES || debates.some((debate) => debate.id === scopeChoice))
+    ? scopeChoice
+    : currentDebateId ?? OUTSIDE_DEBATES;
+  const inScope = <T extends { debateId?: string | null }>(items: T[]) => items.filter((item) => item.debateId === scope);
+  const savedCases = inScope(store.savedCases);
+  const savedChats = inScope(store.savedChats);
+  const savedAttacks = inScope(store.savedAttacks);
+  const savedBrainstorms = inScope(store.savedBrainstorms);
+  const savedFactoids = inScope(store.savedFactoids);
+  const sparringSessions = inScope(useSparringStore((state) => state.savedSessions));
   const hydrateSparringSessions = useSparringStore((state) => state.hydrateSavedSessions);
   const loadSparringSession = useSparringStore((state) => state.loadSavedSession);
   const deleteSparringSession = useSparringStore((state) => state.deleteSavedSession);
@@ -96,10 +115,24 @@ export default function HistoryPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 space-y-4">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('historyPage.title')}</h1>
+          <Select value={scope} onValueChange={setScopeChoice}>
+            <SelectTrigger className="w-full sm:max-w-xl" aria-label={t('debate.historyScope', 'Show work from')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {debates.map((debate) => (
+                <SelectItem key={debate.id} value={debate.id}>
+                  {debate.id === currentDebateId ? `${t('nav.currentDebate', 'Current debate')}: ` : ''}{debate.motion}
+                </SelectItem>
+              ))}
+              <SelectItem value={OUTSIDE_DEBATES}>{t('debate.outsideDebates', 'One-off and unsorted work')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
+        {scope === OUTSIDE_DEBATES ? <UnsortedWork /> : (
         <Tabs defaultValue="cases" className="space-y-6">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
@@ -116,30 +149,12 @@ export default function HistoryPage() {
                 <CardTitle>{t('historyPage.casesTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {(store.autosavedCases?.length ?? 0) > 0 && (
-                  <div className="mb-6">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">{t('historyPage.autosaved', 'Autosaved')}</p>
-                    <div className="space-y-3">
-                      {(store.autosavedCases || []).map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-3 border border-dashed rounded-lg bg-muted/30">
-                          <div className="space-y-1">
-                            <h4 className="font-medium text-sm">{item.title}</h4>
-                            <span className="text-xs text-muted-foreground">{formatEuropeanDateTime(item.createdAt)}</span>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => { store.setGenerateResult(item.data); navigate('/app/generate'); }}>
-                            <Eye className="h-4 w-4 mr-1" /> {t('historyPage.load')}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {store.savedCases.length === 0 && (store.autosavedCases?.length ?? 0) === 0 ? (
+                {savedCases.length === 0 ? (
                   <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4 stagger-enter">
-                      {store.savedCases.map((item) => (
+                      {savedCases.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors motion-list-item">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
@@ -171,11 +186,11 @@ export default function HistoryPage() {
                 <CardTitle>{t('historyPage.chatsTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {store.savedChats.length === 0 ? (
+                {savedChats.length === 0 ? (
                   <EmptyState icon={MessageCircle} title={t('historyPage.emptyChats')} description={t('historyPage.emptyChatsDesc', 'Saved coaching chats will appear here.')} actionLabel={t('historyPage.startChat', 'Start a chat')} onAction={() => navigate('/app/ask')} />
                 ) : (
                   <div className="space-y-4">
-                    {store.savedChats.map((item) => (
+                    {savedChats.map((item) => (
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5">
                         <div className="space-y-1">
                           <h4 className="font-semibold">{item.title}</h4>
@@ -198,12 +213,12 @@ export default function HistoryPage() {
                 <CardTitle>{t('historyPage.attacksTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {store.savedAttacks.length === 0 ? (
+                {savedAttacks.length === 0 ? (
                   <EmptyState icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
-                      {store.savedAttacks.map((item) => (
+                      {savedAttacks.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
@@ -228,12 +243,12 @@ export default function HistoryPage() {
                 <CardTitle>{t('historyPage.brainstormsTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {store.savedBrainstorms.length === 0 ? (
+                {savedBrainstorms.length === 0 ? (
                   <EmptyState icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
-                      {store.savedBrainstorms.map((item) => (
+                      {savedBrainstorms.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
@@ -258,12 +273,12 @@ export default function HistoryPage() {
                 <CardTitle>{t('historyPage.factoidsTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {store.savedFactoids.length === 0 ? (
+                {savedFactoids.length === 0 ? (
                   <EmptyState icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
                 ) : (
                   <ScrollArea className="h-[500px] pr-4">
                     <div className="space-y-4">
-                      {store.savedFactoids.map((item) => (
+                      {savedFactoids.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
@@ -333,6 +348,7 @@ export default function HistoryPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        )}
         <AlertDialog open={Boolean(caseToDelete)} onOpenChange={(open) => !open && setCaseToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>

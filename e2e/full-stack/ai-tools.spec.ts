@@ -1,4 +1,4 @@
-import { admin, expect, MARK, fake, providerCall, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, MARK, fake, providerCall, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -15,6 +15,7 @@ test("Brainstorm returns ranked angles", async ({ signedIn: page }) => {
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("Universal basic income should replace targeted welfare");
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await chooseForMotion(page, "create");
 
   await expect(page.getByText(`${MARK} idea 1`)).toBeVisible({ timeout: 30_000 });
   expect((await providerCall("brainstorm")).user).toContain("Motion: Universal basic income should replace targeted welfare");

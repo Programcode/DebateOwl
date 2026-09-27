@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { seedCurrentDebate } from '@/test/helpers/debate';
 import type { ProviderConfig } from '@/lib/ai/providers/types';
+import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import type { GenerateInput, GenerateOutput } from '@/lib/ai/schemas/generate';
 
 const {
@@ -16,8 +18,8 @@ const {
   const applySourceAssessmentsMock = vi.fn();
   const sessionState = {
     sourceLibrary: [
-      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
     ],
     addSource: addSourceMock,
     applySourceAssessments: applySourceAssessmentsMock,
@@ -118,10 +120,11 @@ const validGenerateOutput: GenerateOutput = {
 
 describe('AI client branch coverage', () => {
   beforeEach(() => {
+    seedCurrentDebate();
     vi.clearAllMocks();
     sessionState.sourceLibrary = [
-      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true },
-      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Active source', content: 'Useful evidence', origin: 'https://example.com', type: 'url', isActive: true, debateId: '11111111-2222-4333-8444-555555555555' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Inactive source', content: 'Ignore me', origin: 'https://example.com/2', type: 'url', isActive: false, debateId: '11111111-2222-4333-8444-555555555555' },
     ];
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'token-123' } },
@@ -269,7 +272,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://a.com/',
       folder: 'Auto-saved',
-      isActive: true,
+      isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ capturedVia: 'generate', url: 'https://a.com/' }),
     });
   });
@@ -288,6 +291,30 @@ describe('AI client branch coverage', () => {
     await generateCase(validGenerateInput, config);
     expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({ body: expect.objectContaining({ sourceIds: [sourceId] }) }));
     expect(sessionState.applySourceAssessments).toHaveBeenCalledWith([expect.objectContaining({ id: sourceId, usedInCase: true })]);
+  });
+
+  it('keeps workspace research out of the personal debate', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { output: validGenerateOutput, discoveredSources: [{ title: 'Source A', url: 'https://a.com', content: 'A content', qualityLabel: 'strong' }] },
+      error: null,
+    });
+    const workspaceContext: WorkspaceToolContext = {
+      documentEpoch: 1,
+      documentId: '11111111-1111-4111-8111-111111111111',
+      documentIds: ['11111111-1111-4111-8111-111111111111'],
+      documentText: 'Accepted text',
+      documentTitle: 'R1',
+      motion: 'Motion',
+      requestId: '22222222-2222-4222-8222-222222222222',
+      returnUrl: '/app/workspaces/33333333-3333-4333-8333-333333333333',
+      side: 'pro' as const,
+      sourceIds: [],
+      threadRequest: null,
+      threadId: null,
+      workspaceId: '33333333-3333-4333-8333-333333333333',
+    };
+    await generateCase(validGenerateInput, config, workspaceContext);
+    expect(addSourceMock).not.toHaveBeenCalled();
   });
 
   it('does not autosave a semantically irrelevant discovered source', async () => {
@@ -364,7 +391,7 @@ describe('AI client branch coverage', () => {
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Source with malformed metadata',
       origin: 'https://example.com/source',
-      isActive: false,
+      isActive: false, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: { url: 'https://example.com/source', capturedVia: 'generate' },
     }));
   });
@@ -387,7 +414,7 @@ describe('AI client branch coverage', () => {
 
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Weak fallback',
-      isActive: false,
+      isActive: false, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ qualityLabel: 'weak', qualityScore: 20 }),
     }));
   });
@@ -468,7 +495,7 @@ describe('AI client branch coverage', () => {
       type: 'url',
       origin: 'https://c.com/',
       folder: 'Auto-saved',
-      isActive: true,
+      isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ capturedVia: 'brainstorm', url: 'https://c.com/' }),
     });
   });
@@ -580,7 +607,7 @@ describe('AI client branch coverage', () => {
     expect(addSourceMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Factoids source',
       origin: 'https://example.com/factoids',
-      isActive: true,
+      isActive: true, debateId: '11111111-2222-4333-8444-555555555555',
       metadata: expect.objectContaining({ capturedVia: 'factoids', qualityLabel: 'moderate' }),
     }));
   });
@@ -835,6 +862,27 @@ describe('AI client branch coverage', () => {
         sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
       }),
     }));
+  });
+
+  it('never sends another debate\'s sources', async () => {
+    sessionState.sourceLibrary.push({ id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', title: 'Zoo source', content: 'Other debate', origin: 'https://zoo.example', type: 'url', isActive: true, debateId: 'other-debate' } as any);
+    invokeMock.mockResolvedValueOnce({ data: { output: validGenerateOutput }, error: null });
+
+    await generateCase(validGenerateInput, config);
+
+    expect(invokeMock.mock.calls[0][1].body.sourceIds).toEqual(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
+  });
+
+  it('uses no debate sources and keeps no research for one-off work', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { output: validGenerateOutput, discoveredSources: [{ title: 'Source A', url: 'https://a.com', content: 'A content', qualityLabel: 'strong' }] },
+      error: null,
+    });
+
+    await generateCase(validGenerateInput, config, undefined, null);
+
+    expect(invokeMock.mock.calls[0][1].body.sourceIds).toEqual([]);
+    expect(addSourceMock).not.toHaveBeenCalled();
   });
 
   it('throws generic AIError for edge payload errors that are not classified', async () => {
