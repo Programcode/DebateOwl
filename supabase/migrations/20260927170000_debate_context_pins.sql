@@ -23,5 +23,8 @@ CREATE POLICY debate_context_pins_own ON public.debate_context_pins
   USING (user_id = (SELECT auth.uid()))
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+-- Default privileges would also grant anon access and UPDATE; a pin is only
+-- ever added or removed, so grant exactly that.
+REVOKE ALL ON TABLE public.debate_context_pins FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, DELETE ON TABLE public.debate_context_pins TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.debate_context_pins TO service_role;
