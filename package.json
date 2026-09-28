@@ -105,6 +105,7 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.60.0",
+    "@sentry/vite-plugin": "^5.4.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",
@@ -131,7 +132,8 @@
   "allowScripts": {
     "@swc/core@1.16.1": true,
     "esbuild@0.28.2": true,
-    "core-js": false
+    "core-js": false,
+    "@sentry/cli@2.58.6": false
   },
   "overrides": {
     "uuid": "11.1.1"

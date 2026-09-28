@@ -31,6 +31,37 @@ export function filterObservabilityBreadcrumb<T extends ConsoleBreadcrumb>(bread
   return isReactCaughtRenderError ? null : breadcrumb;
 }
 
+const SAFE_ERROR_NAME = /^[A-Z][A-Za-z]{0,40}Error$/;
+const CODE_LOCATION = String.raw`(?:[a-z][a-z0-9+.-]*:\/\/|\/)[^\s()]+:\d+:\d+`;
+const V8_STACK_FRAME = new RegExp(String.raw`^\s+at (?:.+ \(${CODE_LOCATION}\)|${CODE_LOCATION})$`);
+const GECKO_STACK_FRAME = new RegExp(String.raw`^[^\s@]*@${CODE_LOCATION}$`);
+
+/** Removes V8's leading `name: message` block, which can span several lines. */
+function stackWithoutMessage(error: Error): string {
+  const stack = error.stack ?? "";
+  const header = String(error);
+  if (stack.startsWith(header)) return stack.slice(header.length);
+  const messageEnd = error.message ? stack.indexOf(error.message) : -1;
+  return messageEnd === -1 ? stack : stack.slice(messageEnd + error.message.length);
+}
+
+/**
+ * Keeps an error's type and code locations but replaces its message, which can
+ * carry user-controlled text. The original message block is cut off, and only
+ * lines that point at a URL or path survive. `cause` is dropped so linked-error
+ * capture cannot reach the original message.
+ */
+export function toTelemetrySafeError(error: unknown, message: string): Error {
+  const name = error instanceof Error && SAFE_ERROR_NAME.test(error.name) ? error.name : "Error";
+  const frames = error instanceof Error
+    ? stackWithoutMessage(error).split("\n").filter((line) => V8_STACK_FRAME.test(line) || GECKO_STACK_FRAME.test(line))
+    : [];
+  const safeError = new Error(message);
+  safeError.name = name;
+  safeError.stack = [`${name}: ${message}`, ...frames].join("\n");
+  return safeError;
+}
+
 const PRODUCT_EVENT_NAMES = new Set([
   "ai_request_failed",
   "ai_request_started",
@@ -106,7 +137,8 @@ async function loadSentry(): Promise<SentryModule | null> {
     sentryModulePromise = import("@sentry/react").then((Sentry) => {
       Sentry.init({
       dsn: sentryDsn,
-      environment: import.meta.env.MODE,
+      release: import.meta.env.VITE_SENTRY_RELEASE || undefined,
+      environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
       ignoreErrors: [/^Synthetic observability verification$/],
       // No sendDefaultPii: deprecated, and Sentry ignores it whenever
       // dataCollection is set. The block below is the only PII control.
