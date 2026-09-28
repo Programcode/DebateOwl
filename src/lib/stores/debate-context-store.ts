@@ -40,8 +40,8 @@ interface DebateContextState {
   lastUsage: Partial<Record<DebateContextFeature, DebateContextUsage>>;
 
   loadPins: (debateId: string) => Promise<void>;
-  /** `pinnedCount` is how many pins still point at an existing result. */
-  togglePin: (debateId: string, ref: DebateOutputRef, pinnedCount?: number) => Promise<void>;
+  /** Only pins on `resultKeys`, the debate's existing results, count toward the limit. */
+  togglePin: (debateId: string, ref: DebateOutputRef, resultKeys?: ReadonlySet<string>) => Promise<void>;
   setSourceChoice: (feature: DebateContextFeature, debateId: string, sourceId: string, include: boolean) => void;
   setOutputChoice: (feature: DebateContextFeature, debateId: string, ref: DebateOutputRef, include: boolean) => void;
   resetOverride: (feature: DebateContextFeature) => void;
@@ -98,10 +98,11 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     }));
   },
 
-  togglePin: async (debateId, ref, pinnedCount) => {
+  togglePin: async (debateId, ref, resultKeys) => {
     const current = get().pins[debateId] ?? [];
     const pinned = current.some((item) => outputKey(item) === outputKey(ref));
-    if (!pinned && (pinnedCount ?? current.length) >= MAX_PINNED_OUTPUTS) throw new Error('pin_limit');
+    const counted = resultKeys ? current.filter((item) => resultKeys.has(outputKey(item))) : current;
+    if (!pinned && counted.length >= MAX_PINNED_OUTPUTS) throw new Error('pin_limit');
     const change: PinChange = { seq: ++pinSeq, ref, pinned: !pinned, saving: true };
     (pinChanges[debateId] ??= []).push(change);
     set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, !pinned) } }));

@@ -116,7 +116,7 @@ function DebateContextReview({ plan, motion, usage, pinsReady }: { plan: DebateC
 
   const onPin = async (output: ContextOutputItem) => {
     try {
-      await togglePin(plan.debateId, output.ref, plan.pinnedCount);
+      await togglePin(plan.debateId, output.ref, plan.resultKeys);
     } catch (error) {
       toast({
         title: error instanceof Error && error.message === 'pin_limit'

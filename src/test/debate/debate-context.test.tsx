@@ -96,13 +96,14 @@ describe('Current Debate context plan', () => {
     expect(plan.outputs.map((item) => item.ref.id)).not.toContain(uuid(20));
   });
 
-  it('counts only pins whose result still exists, including the chat open in Ask', () => {
-    const deleted = { kind: 'case' as const, id: uuid(40) };
+  it('lists every result in the debate for the pin limit, including the chat open in Ask', () => {
     const plan = planDebateContext('ask', 'both', TEST_DEBATE_ID, inputs({
-      pins: [{ kind: 'case', id: uuid(10) }, { kind: 'chat', id: uuid(20) }, deleted],
+      pins: [{ kind: 'case', id: uuid(10) }, { kind: 'chat', id: uuid(20) }, { kind: 'case', id: uuid(40) }],
       excludeChatId: uuid(20),
     }));
-    expect(plan.pinnedCount).toBe(2);
+    expect(plan.resultKeys.has(`case:${uuid(10)}`)).toBe(true);
+    expect(plan.resultKeys.has(`chat:${uuid(20)}`)).toBe(true);
+    expect(plan.resultKeys.has(`case:${uuid(40)}`)).toBe(false);
   });
 });
 
@@ -264,10 +265,14 @@ describe('Pinned results', () => {
   });
 
   it('does not count pins on deleted results toward the limit', async () => {
-    const gone = [40, 41, 42].map((n) => ({ kind: 'case' as const, id: uuid(n) }));
-    useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: gone } });
+    const live = [12, 14].map((n) => ({ kind: 'case' as const, id: uuid(n) }));
+    const existing = new Set([...live, caseRef, attackRef].map((ref) => `${ref.kind}:${ref.id}`));
+    useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: [{ kind: 'case', id: uuid(40) }, ...live] } });
 
-    await expect(useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef, 2)).resolves.toBeUndefined();
-    await expect(useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef, 3)).rejects.toThrow('pin_limit');
+    // Two quick clicks share one rendered plan; the second must see the first.
+    const first = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef, existing);
+    const second = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef, existing);
+    await expect(first).resolves.toBeUndefined();
+    await expect(second).rejects.toThrow('pin_limit');
   });
 });
