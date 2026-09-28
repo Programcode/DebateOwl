@@ -858,10 +858,12 @@ describe('AI client branch coverage', () => {
     expect(invokeMock).toHaveBeenCalledWith('ai', expect.objectContaining({
       body: expect.objectContaining({
         provider: 'openrouter',
-        customSystemPrompt: 'custom-system-prompt',
         sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+        debateContext: expect.objectContaining({ sourceIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'] }),
       }),
     }));
+    // The retired per-user custom prompt never leaves the browser.
+    expect(invokeMock.mock.calls[0][1].body).not.toHaveProperty('customSystemPrompt');
   });
 
   it('never sends another debate\'s sources', async () => {

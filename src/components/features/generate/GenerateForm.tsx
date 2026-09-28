@@ -21,6 +21,8 @@ import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDeba
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { ModelSelector } from '@/components/ModelSelector';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
+import { requestSide } from '../../../../supabase/functions/_shared/debate-context';
 
 
 interface GenerateFormProps {
@@ -273,6 +275,8 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
           </div>
 
 
+
+          <DebateContextControl feature="generate" side={requestSide('generate', currentValues)} hidden={!debatePrefill} />
 
           {/* Submit Button */}
           <Button type="submit" className="w-full h-12 relative overflow-hidden group" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">

@@ -120,7 +120,7 @@ export interface FlowchartData {
   edges: Edge[];
 }
 
-interface SessionState {
+export interface SessionState {
   generateResult: GenerateOutput | null;
   generateLoading: boolean;
 

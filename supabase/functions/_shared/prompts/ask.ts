@@ -1,0 +1,105 @@
+// Ask: a coaching chat answer in the requested mode, JSON or streamed.
+
+import { ASK_COMMON_RULES, asString, outputLanguageInstruction, type PromptSource } from "./common.ts";
+import {
+  type DebatePromptContext,
+  renderDebateContext,
+  renderKnowledgeBase,
+  UNTRUSTED_CONTENT_RULES,
+} from "./context.ts";
+
+export const ASK_PROMPT = `You are a debate coach chat bot. Answer the user's question.
+
+[DATE_CONTEXT]
+
+Output JSON matching:
+{
+  "response": "string (markdown supported)",
+  "citations": [{ "claim": "string", "source": "string", "verified": boolean, "note": "string" }],
+  "searchInfo": { "webSearchUsed": boolean, "queries": ["string"], "sources": [{ "title": "string", "url": "string", "verified": boolean }] },
+  "followUpQuestions": ["string"],
+  "uncertainties": ["string"],
+  "prosConsAnalysis": { "pros": ["string"], "cons": ["string"] },
+  "argumentMap": { "mainClaim": "string", "supportingPoints": ["string"], "counterpoints": ["string"], "assumptions": ["string"] }
+}
+
+Rules:
+- Always return valid JSON with response, followUpQuestions, and uncertainties. Use [] when there are no follow-up questions or uncertainties.
+- Answer the user's question first in plain language. Add detail only when it helps.
+- The server fills searchInfo after your response. Do not fabricate searchInfo.
+- If Mode is clarify, make the response explain the unclear parts and include follow-up questions that would resolve ambiguity.
+- If Citation Mode is ON, include citations for factual claims when WEB RESEARCH RESULTS or WEB PAGE CONTEXT provide sources. Use exact URLs when available.
+- If Citation Mode is OFF, set citations to [] unless the user explicitly asks for sources.
+- Do what the Mode asks, directly. The first sentence of response answers the question (or, in clarify mode, names what is unclear). No preamble, no restating the question.
+- Use only what you received: the message, chat history, WEB PAGE CONTEXT, WEB RESEARCH RESULTS, Library sources, and Current Debate material in this prompt. When they do not contain what the answer needs, say what is missing in uncertainties instead of guessing, and never imply you read a page or source that is not here.
+- When Current Debate material is present, tailor the answer to that motion, side, and the student's own case, and point out any conflict with it.`;
+
+const ASK_MODE_GUIDANCE: Record<string, string> = {
+  general: "Give a direct coaching answer with concrete debate tactics and no forced extra sections.",
+  clarify: "Define unclear terms, identify ambiguities, explain what changes based on each interpretation, and include follow-up questions.",
+  summarize: "Provide a concise summary with key takeaways and no new claims.",
+  proscons: "Structure the response around clear pros and cons and include prosConsAnalysis.",
+  argumentmap: "Map the claim, supports, counters, and assumptions explicitly and include argumentMap.",
+};
+
+export function getAskModeGuidance(mode: string): string {
+  return ASK_MODE_GUIDANCE[mode] || ASK_MODE_GUIDANCE.general;
+}
+
+export interface AskBasePromptInput {
+  message: string;
+  mode: string;
+  citationMode: boolean;
+  webSearchEnabled: boolean;
+  prosConsMode: boolean;
+  argumentMapMode: boolean;
+  researchAvailable: boolean;
+}
+
+/** The per-request control block for Ask. Every visible toggle appears here verbatim. */
+export function buildAskBasePrompt(input: AskBasePromptInput): string {
+  const modeGuidance = getAskModeGuidance(input.mode);
+  return `Message: ${input.message}
+Mode: ${input.mode}
+Mode Guidance: ${modeGuidance}
+Citation Mode: ${input.citationMode ? "ON - cite sourced factual claims using the research or page context below" : "OFF"}
+Web Search: ${input.webSearchEnabled ? "ENABLED" : "DISABLED"}
+Pros/Cons: ${input.prosConsMode ? "ON - include prosConsAnalysis" : "OFF - omit prosConsAnalysis"}
+Argument Map: ${input.argumentMapMode ? "ON - include argumentMap" : "OFF - omit argumentMap"}
+Research Context: ${input.researchAvailable ? "AVAILABLE" : "NONE"}`;
+}
+
+export interface StreamingAskMaterial {
+  sources?: PromptSource[];
+  debateContext?: DebatePromptContext | null;
+}
+
+export function buildStreamingAskSystemPrompt(modeGuidance: string, language: unknown = "en", material: StreamingAskMaterial = {}): string {
+  const base = [
+    ASK_COMMON_RULES,
+    outputLanguageInstruction(language),
+    "Answer in clear Markdown that can stream smoothly token by token.",
+    "Be direct, concrete, and honest about uncertainty.",
+    "If the user asks for sources, explain that citation/search mode should be used.",
+    "Answer the question in your first sentence. No preamble.",
+    "Use only what this conversation and the material below contain. If something the answer needs is missing, say so instead of guessing.",
+    `Mode guidance: ${modeGuidance}`,
+  ].join("\n");
+  const hasSources = Boolean(material.sources && material.sources.length > 0);
+  if (!hasSources && !material.debateContext) return base;
+  return [
+    base,
+    "Use the student's Library sources and Current Debate material below when they help answer. Say which Library source a factual claim relies on by its title.",
+    hasSources && renderKnowledgeBase(material.sources!),
+    material.debateContext && renderDebateContext(material.debateContext),
+    UNTRUSTED_CONTENT_RULES,
+  ].filter(Boolean).join("\n\n");
+}
+
+export function buildAskUserPrompt(input: Record<string, unknown>): string {
+  const mode = asString(input.mode, "general");
+  return `Message: ${asString(input.message)}
+Mode: ${mode}
+Mode Guidance: ${getAskModeGuidance(mode)}
+${outputLanguageInstruction(input.language)}`;
+}

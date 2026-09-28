@@ -31,6 +31,10 @@ supabase/tests/            pgTAP database and policy tests
 - `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity.
 - `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
 
+`ai/index.ts` is the entrypoint and dispatcher; `ai/features/` holds one handler per feature, `ai/provider.ts` the OpenRouter call and JSON repair, `ai/request.ts` input hygiene, and `ai/runtime.ts` the environment and service clients. Each feature's prompt lives in `_shared/prompts/<feature>.ts`, with shared rules in `_shared/prompts/common.ts` and composition in `_shared/prompts/system.ts`.
+
+Both endpoints accept an optional `debateContext` of IDs (`debateId`, `side`, `sourceIds`, `outputs`). `_shared/debate-context-loader.ts` loads the matching material with the service role, filtering every query by the caller's user ID and the one debate, and returns 404 for a debate the caller does not own before any quota is reserved. Requests without it still accept the legacy `sourceIds` field.
+
 Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. GPT-5.6 Luna is the Basic default; Pro-only models require active Pro access.
 
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, cost, entitlement, CORS, and control logic lives in `_shared`.
@@ -116,6 +120,8 @@ Requirements:
 The stack begins at port `54321` and is not parallel-safe across worktrees. Coordinate before starting it. Stop the stack before finishing, including after failures when safe.
 
 The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
+
+`20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 
 `20260926090100_legacy_debate_cleanup.sql` is destructive and one-time: it deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. Work created after that time is never touched, however late the cleanup runs. Keep it separate from the additive `20260926090000_current_debates.sql`, and apply it to a remote project only with explicit authorization for that environment.
 

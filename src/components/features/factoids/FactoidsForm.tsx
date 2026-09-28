@@ -21,13 +21,17 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useEffect } from 'react';
 import { ModelSelector } from '@/components/ModelSelector';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
+import { requestSide } from '../../../../supabase/functions/_shared/debate-context';
 
 interface FactoidsFormProps {
+  /** Show which Current Debate material the request will use; off in Workspace. */
+  debateContext?: boolean;
   onSubmit: (data: FactoidsInput) => void;
   isLoading: boolean;
 }
 
-export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
+export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: FactoidsFormProps) {
   const { t } = useTranslation();
   const { factoidsForm, setFactoidsForm } = useSessionStore();
 
@@ -169,6 +173,8 @@ export function FactoidsForm({ onSubmit, isLoading }: FactoidsFormProps) {
             <ModelSelector feature="factoids" showLabel />
           </div>
 
+
+          <DebateContextControl feature="factoids" side={requestSide('factoids', currentValues)} hidden={!debateContext} />
 
           {/* Submit Button */}
           <Button type="submit" className="w-full h-12" disabled={isLoading}>

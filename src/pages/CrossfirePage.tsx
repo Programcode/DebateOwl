@@ -53,6 +53,8 @@ import { useAuth } from '@/lib/supabase/AuthProvider';
 import { cn } from '@/lib/utils';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { CurrentDebateStrip, useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
+import { useDebateContextStore } from '@/lib/stores/debate-context-store';
 import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGate';
 import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { toast } from '@/hooks/use-toast';
@@ -456,6 +458,7 @@ export default function CrossfirePage() {
     if (state.phase !== 'active') return;
     requestRef.current?.abort();
     if (state.turns.length === 0) {
+      useDebateContextStore.getState().resetOverride('crossfire');
       dispatch({
         type: 'session-reset',
         prefill: {
@@ -539,6 +542,8 @@ export default function CrossfirePage() {
     requestRef.current?.abort();
     abortSignalRequests();
     if (user?.id) clearCrossfireDraft(user.id);
+    // The round is over, so its Review choices go with it.
+    useDebateContextStore.getState().resetOverride('crossfire');
     artifactRequestIdRef.current = crypto.randomUUID();
     dispatch({ type: 'session-reset' });
     setDraftTurn('');
@@ -750,6 +755,13 @@ export default function CrossfirePage() {
                   {activeSourceCount === 0 && <p className="text-xs text-muted-foreground">{t('crossfire.sourceLibraryEmpty')}</p>}
                 </div>
               </div>
+
+              <DebateContextControl
+                feature="crossfire"
+                side="both"
+                includeSources={state.config.useSourceLibrary}
+                hidden={Boolean(workspace.context)}
+              />
 
               <Button data-testid="start-crossfire" size="lg" onClick={startSession} className="w-full sm:w-auto">
                 <Flame className="mr-2 h-4 w-4" />

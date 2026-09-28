@@ -66,6 +66,19 @@ This uses Deno directly for `supabase/functions/`, including tests that import d
 
 A browser-oriented Vitest pass does not replace native Deno tests. The stream accounting handler tests use synthetic OpenRouter responses and inspect audit inserts for complete, interrupted, and truncated streams. The permission list includes the OpenRouter key name because the handler reads it, but these tests require no real provider credentials.
 
+Current Debate context has focused Deno tests: `_shared/debate-context.test.ts` covers selection rules, the IDs-only request parser, digest budgets, per-feature policy, and loader isolation against real PostgREST query shapes; `ai/debate-context.test.ts` drives the `ai` and `ai-stream` handlers with forged debates, cross-debate IDs, a retired custom prompt, and stored text that tries to close its block.
+
+`_shared/prompts/prompt-examples.test.ts` checks the two representative examples per feature in [`supabase/functions/_shared/prompts/prompt-examples.ts`](../supabase/functions/_shared/prompts/prompt-examples.ts) against each feature's quality rules and the fake provider's routing lines.
+
+### Prompt example comparison
+
+```bash
+OPENROUTER_API_KEY=... deno run --allow-read --allow-write --allow-env=OPENROUTER_API_KEY \
+  --allow-net=openrouter.ai scripts/prompt-examples.ts supabase/functions /tmp/after.json
+```
+
+This sends the fourteen prompt examples to one real model (GPT-5.6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
+
 ### Live Jev contract smoke
 
 ```bash
@@ -164,6 +177,7 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - sign-in, reload, sign-out, a rejected code, and an expired token that refreshes before an AI request;
 - case generation grounded in a 250 KB Library source, provider failure with retry, a zero quota, and a saved case that a fresh browser loads from History;
 - Attack, Brainstorm, Factoids, streamed Ask (it fails if the client falls back to the non-streaming path), and Ask with citations;
+- Current Debate context: every request carries the debate's motion, instructions, and sources; Review drops a source and pins a saved case for exactly one request; the pin is stored; Crossfire leaves instructions out; and one-off work sends nothing;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
 - Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
 - a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;

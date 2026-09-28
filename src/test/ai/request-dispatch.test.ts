@@ -30,13 +30,20 @@ vi.mock('@/lib/stores/session-store', () => ({
   ),
 }));
 
-vi.mock('@/lib/stores/sparring-store', () => ({
-  useSparringStore: (selector: (state: Record<string, unknown>) => unknown) => selector({
+vi.mock('@/lib/stores/sparring-store', () => {
+  const sparringState = {
     hydrateSavedSessions: vi.fn(),
     prepareForUser: vi.fn(),
     resetLocalData: vi.fn(),
-  }),
-}));
+    savedSessions: [] as unknown[],
+  };
+  return {
+    useSparringStore: Object.assign(
+      (selector: (state: Record<string, unknown>) => unknown) => selector(sparringState),
+      { getState: () => sparringState },
+    ),
+  };
+});
 
 vi.mock('@/lib/observability', () => ({
   captureException: vi.fn(),
@@ -155,20 +162,23 @@ it('keeps large Ask context below the Edge Function request limit', async () => 
   })).resolves.toMatchObject({ response: 'Mock AI response.' });
 
   const body = JSON.parse(sentBody) as {
-    customSystemPrompt: string;
+    customSystemPrompt?: string;
+    debateContext?: { sourceIds: string[] };
     input: { history: Array<{ content: string }>; message: string };
     sourceIds: string[];
     sources?: unknown;
   };
   expect(new TextEncoder().encode(sentBody).byteLength).toBeLessThanOrEqual(200_000);
   expect(body.sourceIds).toHaveLength(10);
+  expect(body.debateContext?.sourceIds).toEqual(body.sourceIds);
   expect(body.sourceIds).not.toContain('local_source_legacy');
   expect(body.sources).toBeUndefined();
   expect(body.input.history).toHaveLength(8);
   expect(body.input.history.every((message) => new TextEncoder().encode(message.content).byteLength <= 6_000)).toBe(true);
   expect(body.input.history.reduce((total, message) => total + new TextEncoder().encode(message.content).byteLength, 0)).toBeLessThanOrEqual(48_000);
   expect(new TextEncoder().encode(body.input.message).byteLength).toBeLessThanOrEqual(80_000);
-  expect(new TextEncoder().encode(body.customSystemPrompt).byteLength).toBeLessThanOrEqual(32_000);
+  // The retired per-user custom prompt is no longer sent at all.
+  expect(body.customSystemPrompt).toBeUndefined();
 });
 
 it('rejects an oversized multibyte Ask message instead of shortening it silently', async () => {

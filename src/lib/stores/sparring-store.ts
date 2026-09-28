@@ -16,6 +16,7 @@ import {
 import { buildSparringTurns, type SparringTurn } from '@/lib/sparring/formats';
 import { captureProductEvent } from '@/lib/observability';
 import { useDebateStore } from './debate-store';
+import { useDebateContextStore } from './debate-context-store';
 
 export type SparringPhase = 'round' | 'judging' | 'complete';
 
@@ -503,7 +504,11 @@ export const useSparringStore = create<SparringStoreState>()(
         }
       },
 
-      abandonSession: () => set({ currentSession: null }),
+      abandonSession: () => {
+        // The round is over, so its Review choices go with it.
+        useDebateContextStore.getState().resetOverride('sparring');
+        set({ currentSession: null });
+      },
       resetLocalData: () => {
         hydrationEpoch += 1;
         set({ ownerUserId: null, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false });

@@ -21,14 +21,18 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 import { useSessionStore } from '@/lib/stores/session-store';
 import { ModelSelector } from '@/components/ModelSelector';
+import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
+import { requestSide } from '../../../../supabase/functions/_shared/debate-context';
 
 interface AttackFormProps {
+  /** Show which Current Debate material the request will use; off in Workspace. */
+  debateContext?: boolean;
   onSubmit: (data: AttackInput) => void;
   isLoading: boolean;
   importedCase?: string;
 }
 
-export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProps) {
+export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = true }: AttackFormProps) {
   const { t } = useTranslation();
   const { attackForm, setAttackForm } = useSessionStore();
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -191,6 +195,8 @@ export function AttackForm({ onSubmit, isLoading, importedCase }: AttackFormProp
             </div>
           </div>
 
+
+          <DebateContextControl feature="attack" side={requestSide('attack', currentValues)} hidden={!debateContext} />
 
           {/* Submit Button */}
           <Button type="submit" className="w-full h-12" disabled={isLoading}>
