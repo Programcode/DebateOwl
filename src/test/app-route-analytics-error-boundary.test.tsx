@@ -162,12 +162,13 @@ describe("App route observability", () => {
   });
 
   it("captures route errors with a fixed, non-sensitive boundary context", () => {
-    const error = new Error("route failed");
+    let error = new Error("route failed");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const suppressWindowError = (event: ErrorEvent) => event.preventDefault();
     window.addEventListener("error", suppressWindowError);
 
     function ExplodingRoute(): ReactNode {
+      error = new Error("route failed");
       throw error;
     }
 
@@ -184,6 +185,10 @@ describe("App route observability", () => {
         { boundary: "route" },
       );
       expect(JSON.stringify(observability.captureException.mock.calls)).not.toContain(error.message);
+      const captured = observability.captureException.mock.calls[0][0] as Error;
+      expect(captured.stack).toMatch(/^Error: Route rendering failed\n/);
+      expect(captured.stack).toContain("ExplodingRoute");
+      expect(captured.stack).not.toContain(error.message);
       expect(observability.captureException.mock.calls[0][1]).not.toHaveProperty("componentStack");
       expect(JSON.stringify(consoleError.mock.calls)).not.toContain(error.message);
       const retainedBreadcrumbs = consoleError.mock.calls

@@ -105,7 +105,7 @@ Historical provider pricing evidence is retained under [`docs/pricing-snapshots/
 
 ## Observability
 
-Client startup loads Sentry and PostHog asynchronously when configured. Product events and exceptions use the privacy-filtering facade in [`src/lib/observability.ts`](../src/lib/observability.ts), so SDK loading or failure cannot block rendering. Vercel Analytics and Speed Insights run only in the web build and load outside the application render boundary.
+Client startup loads Sentry and PostHog asynchronously when configured. Product events and exceptions use the privacy-filtering facade in [`src/lib/observability.ts`](../src/lib/observability.ts), so SDK loading or failure cannot block rendering. Sentry events carry the build's commit SHA as the release and the Vercel environment name. Route crashes keep the original error type and stack frames but replace the message, which can carry user text. Vercel Analytics and Speed Insights run only in the web build and load outside the application render boundary.
 
 CI and staging must not upload authenticated browser captures. Logging must not expose tokens, provider keys, user content, or protected staging values.
 

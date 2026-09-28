@@ -13,7 +13,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
-import { captureException, captureProductEvent } from "@/lib/observability";
+import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { routeLoaders } from "@/lib/route-modules";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
@@ -141,9 +141,9 @@ export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { fai
     return { failed: true };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
+  componentDidCatch(error: Error, _info: ErrorInfo) {
     console.error('Route rendering failed');
-    captureException(new Error("Route rendering failed"), { boundary: "route" });
+    captureException(toTelemetrySafeError(error, "Route rendering failed"), { boundary: "route" });
   }
 
   render() {

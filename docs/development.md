@@ -57,6 +57,8 @@ The checked-in [`.env.example`](../.env.example) contains optional client observ
 - `VITE_POSTHOG_KEY`
 - `VITE_POSTHOG_HOST`
 
+Production builds also read the Sentry build variables `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT`. Local builds leave them unset and skip source map upload. See [operations.md](operations.md#secrets).
+
 The frontend Supabase environment is resolved by [`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts), not by those variables. Public browser configuration is distinct from server secrets.
 
 Never put service-role keys, AI provider keys, Stripe secrets, webhook secrets, demo-code peppers, or integrity secrets in Vite variables. Any `VITE_*` value can reach the browser bundle.

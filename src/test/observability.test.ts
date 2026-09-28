@@ -47,6 +47,7 @@ import {
   filterObservabilityBreadcrumb,
   initializeObservability,
   resetObservabilityForTests,
+  toTelemetrySafeError,
 } from "@/lib/observability";
 
 describe("observability primitives", () => {
@@ -56,6 +57,8 @@ describe("observability primitives", () => {
     vi.stubEnv("VITE_POSTHOG_KEY", undefined);
     vi.stubEnv("VITE_POSTHOG_HOST", undefined);
     vi.stubEnv("VITE_SENTRY_DSN", undefined);
+    vi.stubEnv("VITE_SENTRY_RELEASE", undefined);
+    vi.stubEnv("VITE_SENTRY_ENVIRONMENT", undefined);
   });
 
   afterEach(() => {
@@ -255,5 +258,104 @@ describe("observability primitives", () => {
       advanced_disable_flags: true,
       persistence: "memory",
     }));
+  });
+
+  it("tags Sentry events with the build release and deployment environment", async () => {
+    vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
+    vi.stubEnv("VITE_SENTRY_RELEASE", "abc123");
+    vi.stubEnv("VITE_SENTRY_ENVIRONMENT", "preview");
+
+    await initializeObservability();
+
+    expect(sentryInitMock).toHaveBeenCalledWith(expect.objectContaining({
+      release: "abc123",
+      environment: "preview",
+    }));
+  });
+
+  it("falls back to the build mode when no deployment environment is known", async () => {
+    vi.stubEnv("VITE_SENTRY_DSN", "https://public-test@sentry.example/1");
+
+    await initializeObservability();
+
+    expect(sentryInitMock.mock.calls[0][0].release).toBeUndefined();
+    expect(sentryInitMock.mock.calls[0][0].environment).toBe(import.meta.env.MODE);
+  });
+
+  it("keeps V8 stack frames but drops a multi-line private message", () => {
+    const original = new TypeError("secret debate text\n    still secret");
+    original.stack = [
+      "TypeError: secret debate text",
+      "    still secret",
+      "    at ExplodingRoute (https://debate.example/assets/index.js:10:5)",
+      "    at renderWithHooks (https://debate.example/assets/vendor.js:20:7)",
+    ].join("\n");
+
+    const safe = toTelemetrySafeError(original, "Route rendering failed");
+
+    expect(safe.name).toBe("TypeError");
+    expect(safe.message).toBe("Route rendering failed");
+    expect(safe.stack).toBe([
+      "TypeError: Route rendering failed",
+      "    at ExplodingRoute (https://debate.example/assets/index.js:10:5)",
+      "    at renderWithHooks (https://debate.example/assets/vendor.js:20:7)",
+    ].join("\n"));
+    expect(safe).not.toHaveProperty("cause");
+  });
+
+  it("drops message lines shaped like stack frames", () => {
+    const original = new TypeError("my speech\n    at the rally 10:30:45\n  at secret (native)\nme@home.org:12:30\n    at leak (https://evil.example/a.js:1:2)");
+    original.stack = [
+      "TypeError: my speech",
+      "    at the rally 10:30:45",
+      "  at secret (native)",
+      "me@home.org:12:30",
+      "    at leak (https://evil.example/a.js:1:2)",
+      "    at ExplodingRoute (https://debate.example/assets/index.js:10:5)",
+    ].join("\n");
+
+    expect(toTelemetrySafeError(original, "Route rendering failed").stack).toBe([
+      "TypeError: Route rendering failed",
+      "    at ExplodingRoute (https://debate.example/assets/index.js:10:5)",
+    ].join("\n"));
+  });
+
+  it("drops frame-shaped text that is not a code location when the header is unknown", () => {
+    const original = new Error("changed later");
+    original.stack = [
+      "    at the rally 10:30:45",
+      "  at secret (native)",
+      "me@home.org:12:30",
+      "    at ExplodingRoute (https://debate.example/assets/index.js:10:5)",
+    ].join("\n");
+
+    expect(toTelemetrySafeError(original, "Route rendering failed").stack).toBe([
+      "Error: Route rendering failed",
+      "    at ExplodingRoute (https://debate.example/assets/index.js:10:5)",
+    ].join("\n"));
+  });
+
+  it("keeps Firefox and Safari stack frames", () => {
+    const original = new Error("secret");
+    original.stack = [
+      "ExplodingRoute@https://debate.example/assets/index.js:10:5",
+      "@https://debate.example/assets/vendor.js:20:7",
+    ].join("\n");
+
+    expect(toTelemetrySafeError(original, "Route rendering failed").stack).toBe([
+      "Error: Route rendering failed",
+      "ExplodingRoute@https://debate.example/assets/index.js:10:5",
+      "@https://debate.example/assets/vendor.js:20:7",
+    ].join("\n"));
+  });
+
+  it("replaces custom or non-error names and ignores non-error values", () => {
+    const named = new Error("secret");
+    named.name = "secret user text";
+    expect(toTelemetrySafeError(named, "Route rendering failed").name).toBe("Error");
+
+    const safe = toTelemetrySafeError("secret thrown string", "Route rendering failed");
+    expect(safe.name).toBe("Error");
+    expect(safe.stack).toBe("Error: Route rendering failed");
   });
 });
