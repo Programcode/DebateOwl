@@ -95,6 +95,15 @@ describe('Current Debate context plan', () => {
     const plan = planDebateContext('ask', 'both', TEST_DEBATE_ID, inputs({ pins: [{ kind: 'chat', id: uuid(20) }], excludeChatId: uuid(20) }));
     expect(plan.outputs.map((item) => item.ref.id)).not.toContain(uuid(20));
   });
+
+  it('counts only pins whose result still exists, including the chat open in Ask', () => {
+    const deleted = { kind: 'case' as const, id: uuid(40) };
+    const plan = planDebateContext('ask', 'both', TEST_DEBATE_ID, inputs({
+      pins: [{ kind: 'case', id: uuid(10) }, { kind: 'chat', id: uuid(20) }, deleted],
+      excludeChatId: uuid(20),
+    }));
+    expect(plan.pinnedCount).toBe(2);
+  });
 });
 
 describe('Current Debate context in requests and the Review control', () => {
@@ -215,10 +224,50 @@ describe('Pinned results', () => {
     useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: [caseRef] } });
 
     const pinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef);
-    await useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    const unpinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
     insert.resolve({ error: { message: 'offline' } });
     await expect(pinning).rejects.toThrow('offline');
+    await unpinning;
 
     expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([]);
+  });
+
+  it('keeps saved pins when the student pins before the first load returns', async () => {
+    const load = deferred<{ data: unknown; error: null }>();
+    supabaseMock.from.mockImplementationOnce((() => ({ select: () => ({ eq: () => load.promise }) })) as never);
+
+    const loading = useDebateContextStore.getState().loadPins(TEST_DEBATE_ID);
+    await useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef);
+    load.resolve({ data: [{ item_kind: 'case', item_id: caseRef.id }], error: null });
+    await loading;
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef, attackRef]);
+  });
+
+  it('saves a quick pin and unpin of the same result in the order they were made', async () => {
+    const insert = deferred<{ error: null }>();
+    const calls: string[] = [];
+    const deleted = { eq: () => deleted, then: (done: (value: { error: null }) => void) => { calls.push('delete'); done({ error: null }); } };
+    supabaseMock.from
+      .mockImplementationOnce((() => ({ insert: () => { calls.push('insert'); return insert.promise; } })) as never)
+      .mockImplementationOnce((() => ({ delete: () => deleted })) as never);
+
+    const pinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    const unpinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    await new Promise((done) => setTimeout(done, 0));
+    expect(calls).toEqual(['insert']);
+    insert.resolve({ error: null });
+    await Promise.all([pinning, unpinning]);
+
+    expect(calls).toEqual(['insert', 'delete']);
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([]);
+  });
+
+  it('does not count pins on deleted results toward the limit', async () => {
+    const gone = [40, 41, 42].map((n) => ({ kind: 'case' as const, id: uuid(n) }));
+    useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: gone } });
+
+    await expect(useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef, 2)).resolves.toBeUndefined();
+    await expect(useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef, 3)).rejects.toThrow('pin_limit');
   });
 });

@@ -64,6 +64,8 @@ export interface DebateContextPlan {
   policy: DebateContextPolicy;
   sources: ContextSourceItem[];
   outputs: ContextOutputItem[];
+  /** Pins that still point at a result in this debate, the open Ask chat included. */
+  pinnedCount: number;
   request: DebateContextRequest;
 }
 
@@ -153,6 +155,9 @@ export function planDebateContext(
 
   const pinnedKeys = new Set(inputs.pins.map(outputKey));
   const candidates = policy.outputs ? outputCandidates(debateId, inputs) : [];
+  // A pin on a deleted result is never shown, so it must not use up the limit.
+  const pinnedCount = outputCandidates(debateId, { ...inputs, excludeChatId: null })
+    .filter((item) => pinnedKeys.has(outputKey(item.ref))).length;
   const defaults = selectDefaultOutputs(
     candidates.map((item) => ({ ...item.ref, side: item.side, createdAt: item.createdAt, pinned: pinnedKeys.has(outputKey(item.ref)) })),
     feature,
@@ -194,6 +199,7 @@ export function planDebateContext(
     policy,
     sources,
     outputs,
+    pinnedCount,
     request: {
       debateId,
       side,
