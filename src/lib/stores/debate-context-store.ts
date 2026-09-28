@@ -52,6 +52,15 @@ function ensureOverride(current: DebateContextOverride | undefined, debateId: st
   return current && current.debateId === debateId ? current : { debateId, sources: {}, outputs: {} };
 }
 
+// Counts pin changes per debate, so a load that started before a change
+// cannot bring back what the student just pinned or unpinned.
+const pinChanges: Record<string, number> = {};
+
+function withPin(pins: DebateOutputRef[], ref: DebateOutputRef, pinned: boolean): DebateOutputRef[] {
+  const without = pins.filter((item) => outputKey(item) !== outputKey(ref));
+  return pinned ? [...without, ref] : without;
+}
+
 export const useDebateContextStore = create<DebateContextState>()((set, get) => ({
   pins: {},
   pinsLoaded: {},
@@ -59,13 +68,14 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
   lastUsage: {},
 
   loadPins: async (debateId) => {
+    const changesBefore = pinChanges[debateId] ?? 0;
     const { data, error } = await supabase
       .from('debate_context_pins')
       .select('item_kind,item_id')
       .eq('debate_id', debateId);
     // Pins are an optional preference. Until the table exists everywhere, or
     // if it cannot be read, requests fall back to the automatic selection.
-    if (error) {
+    if (error || (pinChanges[debateId] ?? 0) !== changesBefore) {
       set((state) => ({ pinsLoaded: { ...state.pinsLoaded, [debateId]: true } }));
       return;
     }
@@ -83,8 +93,8 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     const current = get().pins[debateId] ?? [];
     const pinned = current.some((item) => outputKey(item) === outputKey(ref));
     if (!pinned && current.length >= MAX_PINNED_OUTPUTS) throw new Error('pin_limit');
-    const next = pinned ? current.filter((item) => outputKey(item) !== outputKey(ref)) : [...current, ref];
-    set((state) => ({ pins: { ...state.pins, [debateId]: next } }));
+    pinChanges[debateId] = (pinChanges[debateId] ?? 0) + 1;
+    set((state) => ({ pins: { ...state.pins, [debateId]: withPin(current, ref, !pinned) } }));
     const { data } = await supabase.auth.getUser();
     const userId = data.user?.id;
     const result = !userId
@@ -94,7 +104,8 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
           .eq('user_id', userId).eq('debate_id', debateId).eq('item_kind', ref.kind).eq('item_id', ref.id)
         : await supabase.from('debate_context_pins').insert({ user_id: userId, debate_id: debateId, item_kind: ref.kind, item_id: ref.id });
     if (result.error) {
-      set((state) => ({ pins: { ...state.pins, [debateId]: current } }));
+      // Undo only this change; other pins may have changed in the meantime.
+      set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, pinned) } }));
       throw new Error(result.error.message ?? 'Could not save the pin');
     }
   },

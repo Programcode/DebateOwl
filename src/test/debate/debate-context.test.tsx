@@ -179,3 +179,46 @@ describe('Current Debate context in requests and the Review control', () => {
     expect(within(sheet).getByRole('button', { name: /Pin Result 10/ })).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+describe('Pinned results', () => {
+  const caseRef = { kind: 'case' as const, id: uuid(10) };
+  const attackRef = { kind: 'attack' as const, id: uuid(11) };
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((done) => { resolve = done; });
+    return { promise, resolve };
+  }
+
+  beforeEach(() => {
+    resetMockState();
+    useDebateContextStore.getState().resetLocalData();
+  });
+
+  it('keeps an unpin made while an older pin load was still in flight', async () => {
+    const load = deferred<{ data: unknown; error: null }>();
+    supabaseMock.from.mockImplementationOnce((() => ({ select: () => ({ eq: () => load.promise }) })) as never);
+    useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: [caseRef] } });
+
+    const loading = useDebateContextStore.getState().loadPins(TEST_DEBATE_ID);
+    await useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    load.resolve({ data: [{ item_kind: 'case', item_id: caseRef.id }], error: null });
+    await loading;
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([]);
+    expect(useDebateContextStore.getState().pinsLoaded[TEST_DEBATE_ID]).toBe(true);
+  });
+
+  it('undoes only its own change when a pin fails to save', async () => {
+    const insert = deferred<{ error: { message: string } }>();
+    supabaseMock.from.mockImplementationOnce((() => ({ insert: () => insert.promise })) as never);
+    useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: [caseRef] } });
+
+    const pinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef);
+    await useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    insert.resolve({ error: { message: 'offline' } });
+    await expect(pinning).rejects.toThrow('offline');
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([]);
+  });
+});
