@@ -99,14 +99,14 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
-          <DebateContextReview plan={plan} motion={debate?.id === debateId ? debate.motion : undefined} usage={usage} />
+          <DebateContextReview plan={plan} motion={debate?.id === debateId ? debate.motion : undefined} usage={usage} pinsReady={Boolean(pinsLoaded)} />
         </SheetContent>
       </Sheet>
     </div>
   );
 }
 
-function DebateContextReview({ plan, motion, usage }: { plan: DebateContextPlan; motion?: string; usage?: DebateContextUsage }) {
+function DebateContextReview({ plan, motion, usage, pinsReady }: { plan: DebateContextPlan; motion?: string; usage?: DebateContextUsage; pinsReady: boolean }) {
   const { t } = useTranslation();
   const setSourceChoice = useDebateContextStore((state) => state.setSourceChoice);
   const setOutputChoice = useDebateContextStore((state) => state.setOutputChoice);
@@ -116,7 +116,7 @@ function DebateContextReview({ plan, motion, usage }: { plan: DebateContextPlan;
 
   const onPin = async (output: ContextOutputItem) => {
     try {
-      await togglePin(plan.debateId, output.ref);
+      await togglePin(plan.debateId, output.ref, plan.pinnedCount);
     } catch (error) {
       toast({
         title: error instanceof Error && error.message === 'pin_limit'
@@ -180,6 +180,7 @@ function DebateContextReview({ plan, motion, usage }: { plan: DebateContextPlan;
                   output={output}
                   onChange={(include) => setOutputChoice(plan.feature, plan.debateId, output.ref, include)}
                   onPin={() => void onPin(output)}
+                  pinDisabled={!pinsReady}
                 />
               ))}
             </ul>
@@ -221,7 +222,7 @@ function SourceRow({ source, onChange }: { source: ContextSourceItem; onChange: 
   );
 }
 
-function OutputRow({ output, onChange, onPin }: { output: ContextOutputItem; onChange: (include: boolean) => void; onPin: () => void }) {
+function OutputRow({ output, onChange, onPin, pinDisabled }: { output: ContextOutputItem; onChange: (include: boolean) => void; onPin: () => void; pinDisabled: boolean }) {
   const { t } = useTranslation();
   const id = `debate-context-output-${output.ref.kind}-${output.ref.id}`;
   const note = output.included ? statusNote(output, t) : null;
@@ -247,6 +248,7 @@ function OutputRow({ output, onChange, onPin }: { output: ContextOutputItem; onC
           ? t('debateContext.unpinAria', { title: output.title || kind })
           : t('debateContext.pinAria', { title: output.title || kind })}
         onClick={onPin}
+        disabled={pinDisabled}
       >
         {output.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
       </Button>
