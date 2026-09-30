@@ -45,9 +45,11 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
   const plan = useDebateContextPlan(feature, side, debateId, { includeSources });
   const pinsLoaded = useDebateContextStore((state) => (debateId ? state.pinsLoaded[debateId] : true));
   // The pin limit discounts pins on results that are not listed. Until saved
-  // results have loaded, a missing result may just not be here yet.
-  const sessionHydrated = useSessionStore((state) => state.serverHydrated);
+  // results have loaded, a missing result may just not be here yet; if a list
+  // failed to load, every pin counts.
+  const serverHydration = useSessionStore((state) => state.serverHydration);
   const sparringHydrated = useSparringStore((state) => state.hydrated);
+  const sparringComplete = useSparringStore((state) => state.historyComplete);
   const loadPins = useDebateContextStore((state) => state.loadPins);
   const usage = useDebateContextStore((state) => state.lastUsage[feature]);
   const [open, setOpen] = useState(false);
@@ -105,14 +107,26 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
-          <DebateContextReview plan={plan} motion={debate?.id === debateId ? debate.motion : undefined} usage={usage} pinsReady={Boolean(pinsLoaded) && sessionHydrated && sparringHydrated} />
+          <DebateContextReview
+            plan={plan}
+            motion={debate?.id === debateId ? debate.motion : undefined}
+            usage={usage}
+            pinsReady={Boolean(pinsLoaded) && serverHydration !== 'pending' && sparringHydrated}
+            resultsComplete={serverHydration === 'complete' && sparringComplete}
+          />
         </SheetContent>
       </Sheet>
     </div>
   );
 }
 
-function DebateContextReview({ plan, motion, usage, pinsReady }: { plan: DebateContextPlan; motion?: string; usage?: DebateContextUsage; pinsReady: boolean }) {
+function DebateContextReview({ plan, motion, usage, pinsReady, resultsComplete }: {
+  plan: DebateContextPlan;
+  motion?: string;
+  usage?: DebateContextUsage;
+  pinsReady: boolean;
+  resultsComplete: boolean;
+}) {
   const { t } = useTranslation();
   const setSourceChoice = useDebateContextStore((state) => state.setSourceChoice);
   const setOutputChoice = useDebateContextStore((state) => state.setOutputChoice);
@@ -122,7 +136,7 @@ function DebateContextReview({ plan, motion, usage, pinsReady }: { plan: DebateC
 
   const onPin = async (output: ContextOutputItem) => {
     try {
-      await togglePin(plan.debateId, output.ref, plan.resultKeys);
+      await togglePin(plan.debateId, output.ref, resultsComplete ? plan.resultKeys : undefined);
     } catch (error) {
       toast({
         title: error instanceof Error && error.message === 'pin_limit'

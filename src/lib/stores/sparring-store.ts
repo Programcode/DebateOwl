@@ -55,6 +55,8 @@ interface SparringStoreState {
   privateSessionBackup: SparringSession | null;
   savedSessions: SparringSession[];
   hydrated: boolean;
+  /** False until saved history has loaded successfully; hydration can finish without it. */
+  historyComplete: boolean;
   beginWorkspaceSession: () => void;
   endWorkspaceSession: () => void;
   startSession: (input: StartSessionInput) => SparringSession;
@@ -300,6 +302,7 @@ export const useSparringStore = create<SparringStoreState>()(
       privateSessionBackup: null as SparringSession | null,
       savedSessions: [] as SparringSession[],
       hydrated: false,
+      historyComplete: false,
 
       beginWorkspaceSession: () => set((state) => ({
         currentSession: null,
@@ -462,7 +465,7 @@ export const useSparringStore = create<SparringStoreState>()(
       prepareForUser: (userId) => {
         if (get().ownerUserId === userId) return;
         hydrationEpoch += 1;
-        set({ ownerUserId: userId, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false });
+        set({ ownerUserId: userId, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false, historyComplete: false });
       },
 
       hydrateSavedSessions: async () => {
@@ -484,7 +487,7 @@ export const useSparringStore = create<SparringStoreState>()(
           set({ hydrated: true });
           return;
         }
-        set((state) => ({ savedSessions: mergeSessions(state.savedSessions, parseSavedRows(data)), hydrated: true }));
+        set((state) => ({ savedSessions: mergeSessions(state.savedSessions, parseSavedRows(data)), hydrated: true, historyComplete: true }));
       },
 
       loadSavedSession: (id) => {
@@ -511,7 +514,7 @@ export const useSparringStore = create<SparringStoreState>()(
       },
       resetLocalData: () => {
         hydrationEpoch += 1;
-        set({ ownerUserId: null, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false });
+        set({ ownerUserId: null, currentSession: null, privateSessionBackup: null, savedSessions: [], hydrated: false, historyComplete: false });
       },
     }),
     {

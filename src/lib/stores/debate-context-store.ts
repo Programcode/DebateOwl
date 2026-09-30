@@ -55,7 +55,9 @@ function ensureOverride(current: DebateContextOverride | undefined, debateId: st
 
 // Every local pin change, per debate and in order. A load replays the changes
 // it may have missed: ones made after it started, and ones still saving.
-interface PinChange { seq: number; ref: DebateOutputRef; pinned: boolean; saving: boolean }
+// `before` is the result's state before this change; if the change fails, the
+// result goes back to it.
+interface PinChange { seq: number; ref: DebateOutputRef; pinned: boolean; before: boolean; saving: boolean }
 const pinChanges: Record<string, PinChange[]> = {};
 let pinSeq = 0;
 // Each debate's pin writes run one at a time, so the database ends in the
@@ -109,7 +111,7 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     const counted = resultKeys ? current.filter((item) => resultKeys.has(outputKey(item))) : current;
     if (!pinned && counted.length >= MAX_PINNED_OUTPUTS) throw new Error('pin_limit');
     const generation = pinGeneration;
-    const change: PinChange = { seq: ++pinSeq, ref, pinned: !pinned, saving: true };
+    const change: PinChange = { seq: ++pinSeq, ref, pinned: !pinned, before: pinned, saving: true };
     (pinChanges[debateId] ??= []).push(change);
     set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, !pinned) } }));
     const save = async (): Promise<{ error: { message?: string; code?: string } | null }> => {
@@ -130,15 +132,19 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     change.saving = false;
     if (generation !== pinGeneration) return;
     // The row already exists, so the result is pinned as asked.
-    if (!pinned && result.error?.code === '23505') return;
+    if (change.pinned && result.error?.code === '23505') return;
     if (result.error) {
       // Undo only this change; other pins may have changed in the meantime. A
       // later change to the same result is queued behind this one and decides
-      // its final state, so this failure no longer matters.
-      const superseded = pinChanges[debateId].some((item) => item.seq > change.seq && outputKey(item.ref) === outputKey(ref));
+      // its final state. It assumed this change was saved, so if it fails too
+      // it must go back to the state before this one.
+      const next = pinChanges[debateId].find((item) => item.seq > change.seq && outputKey(item.ref) === outputKey(ref));
       pinChanges[debateId] = pinChanges[debateId].filter((item) => item !== change);
-      if (superseded) return;
-      set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, pinned) } }));
+      if (next) {
+        next.before = change.before;
+        return;
+      }
+      set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, change.before) } }));
       throw new Error(result.error.message ?? 'Could not save the pin');
     }
   },

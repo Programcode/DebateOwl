@@ -118,9 +118,9 @@ describe('Current Debate context in requests and the Review control', () => {
       sourceLibrary: [source(1), source(2, { isActive: false })],
       savedCases: [result(10, caseData) as SavedItem<never>],
       savedAttacks: [], savedBrainstorms: [], savedFactoids: [], savedChats: [], savedCrossfires: [],
-      serverHydrated: true,
+      serverHydration: 'complete',
     });
-    useSparringStore.setState({ hydrated: true });
+    useSparringStore.setState({ hydrated: true, historyComplete: true });
   });
   afterEach(() => {
     resetDebates();
@@ -195,8 +195,8 @@ describe('Current Debate context in requests and the Review control', () => {
   it('keeps pin buttons disabled until saved results have loaded', async () => {
     // Pins on results that have not loaded yet cannot be counted toward the limit.
     seedCurrentDebate();
-    useSessionStore.setState({ serverHydrated: false });
-    useSparringStore.setState({ hydrated: false });
+    useSessionStore.setState({ serverHydration: 'pending' });
+    useSparringStore.setState({ hydrated: false, historyComplete: false });
     render(<DebateContextControl feature="generate" side="pro" />);
     fireEvent.click(within(screen.getByTestId('debate-context-control')).getByRole('button', { name: 'Review' }));
     const sheet = await screen.findByRole('dialog');
@@ -204,10 +204,32 @@ describe('Current Debate context in requests and the Review control', () => {
     const pin = within(sheet).getByRole('button', { name: /Pin Result 10/ });
 
     expect(pin).toBeDisabled();
-    act(() => useSessionStore.setState({ serverHydrated: true }));
+    act(() => useSessionStore.setState({ serverHydration: 'complete' }));
     expect(pin).toBeDisabled();
-    act(() => useSparringStore.setState({ hydrated: true }));
+    act(() => useSparringStore.setState({ hydrated: true, historyComplete: true }));
     expect(pin).toBeEnabled();
+  });
+
+  it.each([
+    ['a saved-result query', () => useSessionStore.setState({ serverHydration: 'partial' })],
+    ['the sparring history query', () => useSparringStore.setState({ historyComplete: false })],
+  ])('counts every pin toward the limit when %s failed', async (_name, failHydration) => {
+    // A result missing because its list failed to load may still exist.
+    seedCurrentDebate();
+    failHydration();
+    render(<DebateContextControl feature="generate" side="pro" />);
+    fireEvent.click(within(screen.getByTestId('debate-context-control')).getByRole('button', { name: 'Review' }));
+    const sheet = await screen.findByRole('dialog');
+    await waitFor(() => expect(useDebateContextStore.getState().pinsLoaded[TEST_DEBATE_ID]).toBe(true));
+    const unlisted = [40, 41, 42].map((n) => ({ kind: 'case' as const, id: uuid(n) }));
+    act(() => useDebateContextStore.setState((state) => ({ pins: { ...state.pins, [TEST_DEBATE_ID]: unlisted } })));
+
+    const pin = within(sheet).getByRole('button', { name: /Pin Result 10/ });
+    expect(pin).toBeEnabled();
+    fireEvent.click(pin);
+    await new Promise((done) => setTimeout(done, 0));
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual(unlisted);
   });
 });
 
@@ -313,6 +335,20 @@ describe('Pinned results', () => {
 
     expect(calls).toEqual(['insert', 'delete', 'insert']);
     expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef]);
+  });
+
+  it('ends unpinned when a quick pin and unpin both fail to save', async () => {
+    const deleted = { eq: () => deleted, then: (done: (value: { error: { message: string } }) => void) => done({ error: { message: 'offline' } }) };
+    supabaseMock.from
+      .mockImplementationOnce((() => ({ insert: () => Promise.resolve({ error: { message: 'offline' } }) })) as never)
+      .mockImplementationOnce((() => ({ delete: () => deleted })) as never);
+
+    const pinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    const unpinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    await Promise.allSettled([pinning, unpinning]);
+
+    // Neither save reached the database, so the result was never pinned.
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([]);
   });
 
   it('treats pinning a result that is already saved as pinned', async () => {

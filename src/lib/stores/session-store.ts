@@ -217,8 +217,11 @@ export interface SessionState {
   clearLibrary: () => Promise<void>;
 
   hydrateFromServer: () => Promise<void>;
-  /** True once this page load's server hydration has finished. Not persisted. */
-  serverHydrated: boolean;
+  /**
+   * This page load's server hydration: `partial` when a saved-result list
+   * failed to load and may be missing results. Not persisted.
+   */
+  serverHydration: 'pending' | 'partial' | 'complete';
   clearAllData: () => Promise<void>;
   resetLocalData: () => void;
   clearSession: () => void;
@@ -486,7 +489,7 @@ export const useSessionStore = create<SessionState>()(
       setFactoidsForm: (data) => set((state) => ({ factoidsForm: mergeFormState(state.factoidsForm, data) })),
 
       pendingFlowchartData: null as FlowchartData | null,
-      serverHydrated: false,
+      serverHydration: 'pending',
       setPendingFlowchartData: (data) => set({ pendingFlowchartData: data }),
 
       addSource: async (source) => {
@@ -1176,7 +1179,7 @@ export const useSessionStore = create<SessionState>()(
           savedFlowcharts: flowchartsData ? serverFlowcharts : state.savedFlowcharts,
           sourceFolders: mergeSourceFolders([...(sourceFoldersData ? [] : state.sourceFolders), ...serverSourceFolders], sourcesData ? serverSources : state.sourceLibrary),
           sourceLibrary: sourcesData ? serverSources : state.sourceLibrary,
-          serverHydrated: true,
+          serverHydration: casesData && attacksData && brainstormsData && factoidsData && chatsData && crossfiresData ? 'complete' : 'partial',
         }));
       },
 
@@ -1211,7 +1214,7 @@ export const useSessionStore = create<SessionState>()(
         });
       },
       resetLocalData: () => set({
-        serverHydrated: false,
+        serverHydration: 'pending',
         savedCases: [],
         savedAttacks: [],
         savedBrainstorms: [],
@@ -1278,7 +1281,7 @@ export const useSessionStore = create<SessionState>()(
         askLoading,
         askStreamingAssistant,
         pendingFlowchartData,
-        serverHydrated,
+        serverHydration,
         ...persisted
       }) => persisted,
     }
