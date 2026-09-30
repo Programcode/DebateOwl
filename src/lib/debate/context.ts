@@ -155,7 +155,9 @@ export function planDebateContext(
 
   const pinnedKeys = new Set(inputs.pins.map(outputKey));
   const candidates = policy.outputs ? outputCandidates(debateId, inputs) : [];
-  // A pin on a deleted result is never shown, so it must not use up the limit.
+  // A pin on a result that isn't loaded here, because it was deleted or is
+  // older than local history keeps, is never shown or sent. It must not use up
+  // the limit, or the student could never free that slot.
   const resultKeys = new Set(outputCandidates(debateId, { ...inputs, excludeChatId: null }).map((item) => outputKey(item.ref)));
   const defaults = selectDefaultOutputs(
     candidates.map((item) => ({ ...item.ref, side: item.side, createdAt: item.createdAt, pinned: pinnedKeys.has(outputKey(item.ref)) })),

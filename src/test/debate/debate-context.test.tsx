@@ -275,4 +275,42 @@ describe('Pinned results', () => {
     await expect(first).resolves.toBeUndefined();
     await expect(second).rejects.toThrow('pin_limit');
   });
+
+  it('drops pin writes left over from before a sign-out', async () => {
+    const oldInsert = deferred<{ error: { message: string } }>();
+    const calls: string[] = [];
+    supabaseMock.from
+      .mockImplementationOnce((() => ({ insert: () => { calls.push('old'); return oldInsert.promise; } })) as never)
+      .mockImplementationOnce((() => ({ insert: () => { calls.push('new'); return Promise.resolve({ error: null }); } })) as never);
+
+    const oldPin = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    const oldQueued = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, attackRef);
+    await new Promise((done) => setTimeout(done, 0));
+    useDebateContextStore.getState().resetLocalData();
+
+    // The next account's change must not wait behind the old one.
+    await useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    expect(calls).toEqual(['old', 'new']);
+
+    // The old failure must not undo the new account's pin, and the queued old
+    // write must never run under the new account.
+    oldInsert.resolve({ error: { message: 'offline' } });
+    await expect(oldPin).resolves.toBeUndefined();
+    await expect(oldQueued).resolves.toBeUndefined();
+    expect(calls).toEqual(['old', 'new']);
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef]);
+  });
+
+  it('ignores a pin load that returns after a sign-out', async () => {
+    const load = deferred<{ data: unknown; error: null }>();
+    supabaseMock.from.mockImplementationOnce((() => ({ select: () => ({ eq: () => load.promise }) })) as never);
+
+    const loading = useDebateContextStore.getState().loadPins(TEST_DEBATE_ID);
+    useDebateContextStore.getState().resetLocalData();
+    load.resolve({ data: [{ item_kind: 'case', item_id: caseRef.id }], error: null });
+    await loading;
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toBeUndefined();
+    expect(useDebateContextStore.getState().pinsLoaded[TEST_DEBATE_ID]).toBeUndefined();
+  });
 });

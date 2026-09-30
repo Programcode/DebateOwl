@@ -61,6 +61,9 @@ let pinSeq = 0;
 // Each debate's pin writes run one at a time, so the database ends in the
 // same state as the screen even after a quick pin and unpin.
 const pinWrites: Record<string, Promise<unknown>> = {};
+// Bumped when local data is reset on sign-out. Pin work started before that
+// belongs to the previous account, so it must not write or change state.
+let pinGeneration = 0;
 
 function withPin(pins: DebateOutputRef[], ref: DebateOutputRef, pinned: boolean): DebateOutputRef[] {
   const without = pins.filter((item) => outputKey(item) !== outputKey(ref));
@@ -75,10 +78,12 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
 
   loadPins: async (debateId) => {
     const startedAt = pinSeq;
+    const generation = pinGeneration;
     const { data, error } = await supabase
       .from('debate_context_pins')
       .select('item_kind,item_id')
       .eq('debate_id', debateId);
+    if (generation !== pinGeneration) return;
     // Pins are an optional preference. Until the table exists everywhere, or
     // if it cannot be read, requests fall back to the automatic selection.
     if (error) {
@@ -103,12 +108,15 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     const pinned = current.some((item) => outputKey(item) === outputKey(ref));
     const counted = resultKeys ? current.filter((item) => resultKeys.has(outputKey(item))) : current;
     if (!pinned && counted.length >= MAX_PINNED_OUTPUTS) throw new Error('pin_limit');
+    const generation = pinGeneration;
     const change: PinChange = { seq: ++pinSeq, ref, pinned: !pinned, saving: true };
     (pinChanges[debateId] ??= []).push(change);
     set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, !pinned) } }));
     const save = async (): Promise<{ error: { message?: string } | null }> => {
+      if (generation !== pinGeneration) return { error: null };
       const { data } = await supabase.auth.getUser();
       const userId = data.user?.id;
+      if (generation !== pinGeneration) return { error: null };
       if (!userId) return { error: { message: 'Sign in to pin results' } };
       return pinned
         ? await supabase.from('debate_context_pins').delete()
@@ -119,6 +127,7 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     pinWrites[debateId] = write.catch((): void => undefined);
     const result = await write.catch((error: unknown) => ({ error: { message: error instanceof Error ? error.message : undefined } }));
     change.saving = false;
+    if (generation !== pinGeneration) return;
     if (result.error) {
       // Undo only this change; other pins may have changed in the meantime.
       pinChanges[debateId] = pinChanges[debateId].filter((item) => item !== change);
@@ -152,7 +161,9 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
   }),
 
   resetLocalData: () => {
+    pinGeneration += 1;
     for (const debateId of Object.keys(pinChanges)) delete pinChanges[debateId];
+    for (const debateId of Object.keys(pinWrites)) delete pinWrites[debateId];
     set({ pins: {}, pinsLoaded: {}, overrides: {}, lastUsage: {} });
   },
 }));
