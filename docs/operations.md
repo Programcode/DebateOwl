@@ -1,6 +1,6 @@
 # Operations and deployment
 
-**Status:** Current. Workflow, packaging, and runtime configuration files remain authoritative.
+**Status:** Current. Workflow, hosting, and runtime configuration files remain authoritative.
 
 ## Authorization boundary
 
@@ -10,7 +10,7 @@ Never infer authorization from access. Never use production to replace missing l
 
 ## CI workflows
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) owns credential-free quality, pull-request database and browser tests, asset upload, and conditional Docker packaging.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow) owns credential-free quality plus pull-request database and browser tests. It does not deploy anything; Vercel does.
 
 The quality job uses Node 22, `npm ci`, and Deno 2.9.6, then runs:
 
@@ -23,28 +23,29 @@ The quality job uses Node 22, `npm ci`, and Deno 2.9.6, then runs:
 
 Pull requests also start isolated local Supabase for pgTAP and run desktop plus mobile Chromium on port `18080`.
 
-Non-PR runs upload `dist/` briefly and may build a `linux/amd64` and `linux/arm64` Docker image when registry credentials are present. A successful quality run does not by itself prove that an image was pushed.
-
 [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the local stack against real providers on pull requests and nightly. [`.github/workflows/model-matrix.yml`](../.github/workflows/model-matrix.yml) generates a case with every catalog model weekly and when AI code changes. [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) checks production after each Vercel production deployment and daily. See [testing.md](testing.md) for all three. Both Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
 
-[`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging. It accepts eligible successful main-branch quality runs or a manual dispatch from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist.
+[`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging. It accepts eligible successful main-branch `Quality` runs or a manual dispatch from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist.
 
-## Production image
+## When GitHub Actions cannot run
 
-[`Dockerfile`](../Dockerfile) has two stages:
+If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the account is usually out of Actions minutes or blocked by billing. Nothing ran, so nothing passed or failed. Until Actions is restored, run `npm run verify` and `./.superset/db-gate.sh` locally at the final head, record the exact results in the PR, and say that CI did not run. Do not describe a local pass as green CI.
 
-1. Node 22 Alpine installs the locked dependency tree and runs the production build.
-2. Nginx Alpine serves the resulting `dist/` directory on port 80.
+## Frontend hosting on Vercel
 
-[`nginx.conf`](../nginx.conf) owns:
+Vercel builds and serves the frontend from the Git repository. Merging to `main` starts a production deployment to `https://debate.pi-stack.org`; pull requests may get preview deployments. The production canary runs after each successful Vercel `Production` deployment.
 
-- SPA fallback routing;
-- cache policy for HTML, runtime configuration, hashed assets, and media;
-- crawler restrictions for authenticated routes;
-- sensitive-file and hidden-path blocking;
-- Content Security Policy and response security headers.
+[`vercel.json`](../vercel.json) owns:
 
-Update documentation when these files change. Do not paste their full configuration into another guide.
+- the Vite build command and `dist` output;
+- SPA fallback to `index.html`;
+- no-cache headers for `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
+- `noindex` headers for `/app`, `/login`, and `/share` routes;
+- Content Security Policy and the other response security headers.
+
+[`src/test/vercel-deployment-config.test.ts`](../src/test/vercel-deployment-config.test.ts) guards these rules. Update it together with `vercel.json`, and do not paste the full configuration into another guide.
+
+A Vercel deploy ships only the frontend. Supabase migrations and Edge Functions are separate operations with their own authorization, so a frontend that depends on new schema must wait until that schema is applied to production.
 
 ## Staging contract
 
@@ -121,7 +122,7 @@ Vercel build variables for Sentry source maps: `SENTRY_AUTH_TOKEN` (an organizat
 
 Choose rollback before changing production:
 
-- Frontend image: retain the prior known-good image digest or deployment reference.
+- Frontend: promote the previous known-good Vercel production deployment, or revert the commit on `main` and let Vercel redeploy.
 - Edge Function: retain the deployed source or artifact baseline and its environment assumptions.
 - Migration: prefer forward corrective migrations. Do not assume an irreversible schema or data change can be rolled back.
 - Configuration: record the prior value without exposing secrets.
@@ -143,10 +144,11 @@ Do not expose protected data in artifacts. Record the commit, environment, opera
 
 ## Incident clues
 
-- Green quality plus missing image: Docker credentials may have been absent, so packaging was skipped.
+- Every Actions job fails in 2 to 5 seconds with no logs: Actions minutes or billing, not the code. Verify locally.
 - Green local E2E plus staging failure: schema, functions, provider access, demo code, or CORS may differ.
+- New frontend errors against Supabase right after a merge: the matching migration or function may not be applied to production yet.
 - Function returns unauthorized after deploy: check handler auth and environment propagation before changing gateway settings.
-- Browser works on one route only: check Nginx SPA fallback and cache behavior.
+- Browser works on one route only: check the `vercel.json` SPA rewrite and cache headers.
 - Native callback fails while web works: check Capacitor scheme and Supabase redirect allowlist.
 
 Read [testing.md](testing.md) for evidence rules and [`../supabase/README.md`](../supabase/README.md) for backend ownership.

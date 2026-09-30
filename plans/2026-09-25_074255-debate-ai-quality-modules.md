@@ -67,7 +67,7 @@ GitHub Actions are currently unreliable. Record local results and distinguish fi
 
 ## Agent prompt
 
-After PR 1 merges, implement PR 2 from `.hermes/plans/2026-09-25_074255-debate-ai-quality-modules.md` in a fresh worktree from current `origin/main`.
+After PR 1 merges, implement PR 2 from `plans/2026-09-25_074255-debate-ai-quality-modules.md` in a fresh worktree from current `origin/main`.
 
 Adam wants every existing feature to understand the Current Debate without silently dumping everything into the model. Add server-authorized automatic context selection and the visible Review control exactly where the plan specifies. Improve all seven feature prompts using two representative examples each. Split the oversized AI entrypoint and prompt file into focused internal modules, but keep the deployed `ai` and `ai-stream` endpoints stable.
 

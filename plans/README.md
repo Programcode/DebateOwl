@@ -1,34 +1,34 @@
 # Plans
 
-**Status:** Plan index. Plans describe proposed work, not current implementation truth.
+**Status:** Plan index. Plans describe intended work, not current implementation truth. Reconciled against `main` at `0bda733` on 2026-09-27.
 
-Last reconciled against `origin/main` at `c7d3437` on 2026-09-06.
+Every plan lives in this folder. Before executing one, recheck its paths, assumptions, product decisions, and verification commands against current source.
 
-Before executing any plan, recheck its branch, commit, paths, assumptions, product decisions, and verification commands against current source. Do not treat an old line number or completed review as fresh evidence.
+## In progress
 
-## Active plans
-
-- [Email and demo-code sign-in](auth-email-and-demo-code-sign-in.plan)
-- [Control honesty and deterministic toggles](control-honesty.md)
-- [Model cost accounting](model-cost-accounting.md)
-- [PR 11 salvage work](pr11-salvage.md)
-- [Rate-limit UI cleanup](rate-limit-ui-cleanup.md)
-- [Supabase staging](supabase-staging.md)
-- [System prompt improvement](system-prompt-improvement.md)
-- [Startup and navigation performance](startup-navigation-performance.md)
+- **Debate-aware AI and smaller modules (PR 2).** Every feature gets server-loaded Current Debate context with a visible Review control, each feature gets its own prompt module, and the 88 KB `supabase/functions/ai/index.ts` is split into per-feature handlers behind the same endpoints. Plan: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
 
 ## Backlog
 
-- [Bug and polish cleanup](bugs.md), four items reverified on 2026-09-06.
+- **Admin staging switcher.** `src/lib/supabase/env.ts` already resolves staging from the `debate-supabase-env` localStorage key, but no admin UI sets it. Staging migration and function sync remain operations that need Adam's authorization.
+- **Document portability PR.** [Programcode/DebateLab#63](https://github.com/Programcode/DebateLab/pull/63) adds Workspace import and export. Workspace is on hold and the PR has open P1 review findings, so decide whether to close or park it.
 
-## Shipped reference
+## On hold
 
-The following work was removed from active plans after merged implementation was verified on `origin/main` at the time recorded:
+- **Collaborative Workspace.** Hidden in production. Plans: [debate workspace](2026-09-20_131317-debate-workspace.md) and [debate workspace, reduced scope](2026-09-21-debate-workspace-no-bs.md).
 
-- Admin announcements, PR 19, with deactivation and dismissal history in PR 26.
-- Agent verification loop, PR 21, with CI gating in PRs 26 and 27.
-- Analytics and error tracking, PRs 16, 18, 22, 23, 24, 25, and 28.
-- Animation polish, PR 20.
-- Ask and sitewide search quality, PR 17.
+## Shipped
 
-These entries are historical pointers. Inspect current source and GitHub before relying on their behavior or status.
+These plans are finished. Their files were removed; git history keeps them.
+
+- Current Debate foundation: #72. Plan kept as the record: [2026-09-25 current debate foundation](2026-09-25_074255-current-debate-foundation.md).
+- Email OTP and demo-code sign-in: #40, #41.
+- AI control enforcement at the edge: #32, #42.
+- System prompt improvement and prompt evaluation: #42.
+- Model cost accounting: #46; the direct-provider pricing table was later removed because OpenRouter reports the charge.
+- Separate source-import quota (PR #11 salvage): #50.
+- Startup and navigation performance: #49, #51, #57.
+- Hungarian parity and Jev decisions: merged together before the Workspace release.
+- Rate-limit UI cleanup: Settings no longer shows the numeric daily limit.
+- Bug backlog of 2026-09-06: the stale source date, the Factoids save label, and Flowchart node-delete feedback are fixed; the nav-versus-heading mismatch went away when the header dropped feature links.
+- Earlier: admin announcements (#19, #26), agent verification loop (#21, #26, #27), analytics and error tracking (#16, #18, #22–#25, #28), animation polish (#20), Ask and search quality (#17).

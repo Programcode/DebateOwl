@@ -8,7 +8,7 @@ Supabase provides:
 
 - user sessions and OAuth;
 - PostgreSQL persistence and Row Level Security;
-- RPCs, triggers, quotas, subscriptions, sharing, sparring, announcements, and usage accounting;
+- debates and the per-user Current Debate (`debates`, `current_debates`, and the `attach_to_debate` RPC), plus RPCs, triggers, quotas, subscriptions, sharing, sparring, announcements, and usage accounting;
 - Edge Functions that protect privileged credentials and integrate with external services;
 - local migration replay and pgTAP policy tests.
 
@@ -43,7 +43,7 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 - `import-source`: authenticated public-URL import with SSRF protection on redirects, timeout, content-type and size limits, readable-text extraction, quota checks, and logging.
 - `share`: authenticated creation of expiring share codes for supported saved content.
-- `workspace-invites`: authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
+- `workspace-invites`: part of the hidden Workspace. Authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
 - `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
 
 ### Authentication and administration
@@ -68,7 +68,7 @@ Other shared modules own:
 - prompt construction and source bounds;
 - research orchestration and source ranking;
 - public URL validation;
-- model pricing and normalized cost calculations;
+- normalization of provider-reported usage and cost;
 - control enforcement;
 - crossfire response validation;
 - the pinned OpenRouter Jev Decisions client, automatic model routing, semantic source decisions, and Crossfire signals;

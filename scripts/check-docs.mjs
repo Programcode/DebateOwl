@@ -2,7 +2,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-// These paths are generated, vendored, immutable evidence, or plan history.
+// These paths are generated, vendored, or plan history.
 // Everything else is checked by default so new maintained docs cannot opt out silently.
 const EXCLUDED_PREFIXES = [
   ".git/",
@@ -12,9 +12,6 @@ const EXCLUDED_PREFIXES = [
   "test-results/",
   "playwright-report/",
   "ios/App/CapApp-SPM/",
-  "docs/pricing-snapshots/",
-  "security/scans/",
-  "docs/superpowers/",
   "plans/",
 ];
 

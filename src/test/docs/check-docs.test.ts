@@ -74,9 +74,6 @@ describe("checkDocs", () => {
     "test-results/report.md",
     "playwright-report/report.md",
     "ios/App/CapApp-SPM/README.md",
-    "docs/pricing-snapshots/openai.md",
-    "security/scans/old/README.md",
-    "docs/superpowers/specs/old.md",
   ])("excludes %s", async (relativePath) => {
     const root = await createRoot();
     await write(root, relativePath, "Run `cd debate-navigator`.\n");

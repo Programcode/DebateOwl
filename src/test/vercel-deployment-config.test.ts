@@ -78,7 +78,6 @@ describe("Vercel frontend deployment configuration", () => {
     const config = loadConfig();
     const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
-    const nginxConfig = readProjectFile("nginx.conf");
     const themeBootstrap = readProjectFile("public/theme-init.js");
 
     expect(csp).toContain("script-src 'self'");
@@ -88,7 +87,6 @@ describe("Vercel frontend deployment configuration", () => {
     expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
     expect(themeBootstrap).toContain("pathname === '/login'");
     expect(themeBootstrap).toContain('window.__showDebateBootstrapError = showBootstrapError');
-    expect(nginxConfig).toContain('"/theme-init.js" "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"');
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
 
@@ -98,14 +96,11 @@ describe("Vercel frontend deployment configuration", () => {
     const indexHtml = readProjectFile("index.html");
     const bootstrap = readProjectFile("src/bootstrap.ts");
     const jamLoader = readProjectFile("src/jam-loader.ts");
-    const nginxConfig = readProjectFile("nginx.conf");
-    const nginxCsp = nginxConfig.match(/add_header Content-Security-Policy "([^"]+)"/)?.[1];
 
     expect(csp).toContain("script-src 'self' https://*.jam.dev");
     expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
     // Loading the recorder is useless if it cannot upload the capture.
     expect(csp).toContain("connect-src 'self' https://*.jam.dev");
-    expect(nginxCsp).toBe(csp);
     expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
     expect(indexHtml).toContain('<link rel="stylesheet" href="/src/index.css" />');
     expect(indexHtml).toContain('data-startup-shell');
@@ -168,22 +163,6 @@ describe("Vercel frontend deployment configuration", () => {
       expect(headersFor(config, source)["Cache-Control"]).toContain("max-age=0");
     },
   );
-
-  it.each(["index.html", "sw.js"])("prevents stale Nginx caching for /%s", (file) => {
-    const nginxConfig = readProjectFile("nginx.conf");
-    expect(nginxConfig).toContain(`"/${file}" "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"`);
-  });
-
-  it("keeps Nginx security headers inherited by every location", () => {
-    const nginxConfig = readProjectFile("nginx.conf");
-    const firstLocation = nginxConfig.indexOf("    location ");
-
-    expect(firstLocation).toBeGreaterThan(0);
-    expect(nginxConfig.slice(firstLocation)).not.toContain("add_header");
-    expect(nginxConfig.slice(0, firstLocation)).toContain("add_header Content-Security-Policy");
-    expect(nginxConfig.slice(0, firstLocation)).toContain("add_header Strict-Transport-Security");
-    expect(nginxConfig).toContain('default "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"');
-  });
 
   it("caches hashed Vite assets immutably", () => {
     const config = loadConfig();

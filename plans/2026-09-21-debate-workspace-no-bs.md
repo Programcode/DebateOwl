@@ -4,7 +4,7 @@ Adam's first working journey: sign in, enter a motion once, land in Intro, invit
 
 **First-milestone done means** that journey works against real local Auth, PostgreSQL and the collaboration service through a private Tailscale URL. Saved survives a service restart; undo leaves the teammate's work intact; removal blocks subsequent reads and writes. File controls, history/restore, human suggestions and comments work on desktop and mobile. A shell, mocked session, or passing spike is not this deliverable.
 
-This supersedes the old 20-slice execution plan in `.hermes/plans/2026-09-20_131317-debate-workspace.md`. Keep that file as evidence. There are **three vertical milestones and three new PRs**, plus finishing the already-open #55, for four PRs total. No additional spike, research milestone, component PR, or follow-on planning document.
+This supersedes the old 20-slice execution plan in `plans/2026-09-20_131317-debate-workspace.md`. Keep that file as evidence. There are **three vertical milestones and three new PRs**, plus finishing the already-open #55, for four PRs total. No additional spike, research milestone, component PR, or follow-on planning document.
 
 This file contains future implementation instructions. This planning task authorizes only this Markdown file. No implementation, PR mutation, commit, push, merge, deployment, migration, credential configuration, or staging/production operation was performed.
 

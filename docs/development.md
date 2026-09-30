@@ -81,7 +81,7 @@ Run the closest unit or component test while changing behavior. Run lint, type c
 
 ## Collaboration service
 
-The local PostgreSQL-backed Hocuspocus service lives under `services/collaboration/`. Run its focused tests with:
+The local PostgreSQL-backed Hocuspocus service lives under `services/collaboration/`. It backs the collaborative Workspace, which is hidden and on hold; its routes register only when `VITE_COLLABORATION_URL` is set. Run its focused tests with:
 
 ```bash
 npm run test:collaboration

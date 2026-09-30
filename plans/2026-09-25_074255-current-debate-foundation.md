@@ -94,7 +94,7 @@ GitHub Actions are currently unreliable. Record local results in the PR and do n
 
 ## Agent prompt
 
-Implement PR 1 from `.hermes/plans/2026-09-25_074255-current-debate-foundation.md` in a fresh worktree from current `origin/main`.
+Implement PR 1 from `plans/2026-09-25_074255-current-debate-foundation.md` in a fresh worktree from current `origin/main`.
 
 Adam wants DebateLab's existing tools to feel like one product. Build a personal Current Debate that carries the whole motion, both sides, debate-specific sources, and automatically saved results across every existing feature. Follow the plan's header, mobile, Home, debate-dashboard, feature-strip, Library, History, five-day gate, one-off, and migration behavior exactly. Preserve DebateLab's current visual style.
 

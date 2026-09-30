@@ -292,7 +292,7 @@ A skipped staging workflow is not a pass. Missing credentials or provider access
 
 ## CI evidence
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) runs documentation, lint, type, coverage, Edge Function, and build checks. Pull requests also run database and Chromium jobs.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), the `Quality` workflow, runs documentation, lint, type, coverage, collaboration, Edge Function, and build checks. Pull requests also run database and Chromium jobs.
 
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging conditions.
 
@@ -304,6 +304,8 @@ Before calling CI green:
 2. inspect the workflow run for that commit;
 3. wait for every required check to reach a terminal state;
 4. report billing, minutes, provider, or infrastructure failures as external exceptions rather than passes.
+
+When Actions cannot run at all, the local `npm run verify` and `./.superset/db-gate.sh` results at the final head are the evidence. Record them in the PR and state that CI did not run. See [operations.md](operations.md#when-github-actions-cannot-run).
 
 ## What each result does not prove
 
