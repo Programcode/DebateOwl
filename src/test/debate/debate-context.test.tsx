@@ -288,6 +288,25 @@ describe('Pinned results', () => {
     expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef, attackRef]);
   });
 
+  it('keeps a pin that finished saving while an older load was in flight', async () => {
+    const insert = deferred<{ error: null }>();
+    const load = deferred<{ data: unknown; error: null }>();
+    supabaseMock.from
+      .mockImplementationOnce((() => ({ insert: () => insert.promise })) as never)
+      .mockImplementationOnce((() => ({ select: () => ({ eq: () => load.promise }) })) as never);
+
+    const pinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    await new Promise((done) => setTimeout(done, 0));
+    // The load reads the table before the insert commits, then answers after it.
+    const loading = useDebateContextStore.getState().loadPins(TEST_DEBATE_ID);
+    insert.resolve({ error: null });
+    await pinning;
+    load.resolve({ data: [], error: null });
+    await loading;
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef]);
+  });
+
   it('saves a quick pin and unpin of the same result in the order they were made', async () => {
     const insert = deferred<{ error: null }>();
     const calls: string[] = [];

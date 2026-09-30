@@ -54,7 +54,8 @@ function ensureOverride(current: DebateContextOverride | undefined, debateId: st
 }
 
 // Every local pin change, per debate and in order. A load replays the changes
-// it may have missed: ones made after it started, and ones still saving.
+// it may have missed: ones made after it started, and ones that were still
+// saving at any point during the load, because its read may predate them.
 // `before` is the result's state before this change; if the change fails, the
 // result goes back to it.
 interface PinChange { seq: number; ref: DebateOutputRef; pinned: boolean; before: boolean; saving: boolean }
@@ -81,6 +82,7 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
   loadPins: async (debateId) => {
     const startedAt = pinSeq;
     const generation = pinGeneration;
+    const savingAtStart = new Set((pinChanges[debateId] ?? []).filter((change) => change.saving));
     const { data, error } = await supabase
       .from('debate_context_pins')
       .select('item_kind,item_id')
@@ -97,7 +99,7 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
         ? [{ kind: row.item_kind as DebateContextOutputKind, id: row.item_id }]
         : []);
     for (const change of pinChanges[debateId] ?? []) {
-      if (change.seq > startedAt || change.saving) pins = withPin(pins, change.ref, change.pinned);
+      if (change.seq > startedAt || change.saving || savingAtStart.has(change)) pins = withPin(pins, change.ref, change.pinned);
     }
     set((state) => ({
       pins: { ...state.pins, [debateId]: pins },
