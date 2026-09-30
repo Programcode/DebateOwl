@@ -1,14 +1,19 @@
--- DESTRUCTIVE, ONE-TIME: remove legacy material that predates Current Debate
--- and had no activity in the 30 days before it shipped. Recent legacy material
--- stays, without a debate, in the Unsorted view until the user confirms where
--- it belongs.
+-- One-time purge of legacy material that predates Current Debate and had no
+-- activity in the 30 days before it shipped. This migration only defines the
+-- function; it does not run it. Adam chose on 2026-09-30 to keep production's
+-- legacy material, so any purge is a separate, explicitly authorized call:
 --
--- Only rows with no debate that were created before the rollout are candidates,
--- so neither debate work nor later one-off work can be removed, however late
--- this runs. Nothing schedules it; this migration calls it once. Activity is
--- the latest edit where a table records one (flowcharts, sparring sessions) and
--- the latest message for chats. Chat messages and source files go with their
--- parents through ON DELETE CASCADE; evidence cards keep a null source.
+--   SELECT private.purge_legacy_debate_material(
+--     (SELECT started_at FROM private.current_debate_rollout)
+--   );
+--
+-- Until then, legacy material stays, without a debate, in the Unsorted view.
+-- Only rows with no debate that were created before the rollout are
+-- candidates, so neither debate work nor later one-off work can be removed,
+-- however late it runs. Activity is the latest edit where a table records one
+-- (flowcharts, sparring sessions) and the latest message for chats. Chat
+-- messages and source files go with their parents through ON DELETE CASCADE;
+-- evidence cards keep a null source.
 
 CREATE FUNCTION private.purge_legacy_debate_material(p_rollout timestamptz)
 RETURNS void
@@ -39,7 +44,3 @@ $$;
 
 REVOKE ALL ON FUNCTION private.purge_legacy_debate_material(timestamptz)
   FROM PUBLIC, anon, authenticated, service_role;
-
-SELECT private.purge_legacy_debate_material(
-  (SELECT started_at FROM private.current_debate_rollout)
-);

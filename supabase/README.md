@@ -123,7 +123,7 @@ The database gate proves migration replay and pgTAP assertions locally. It does 
 
 `20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 
-`20260926090100_legacy_debate_cleanup.sql` is destructive and one-time: it deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. Work created after that time is never touched, however late the cleanup runs. Keep it separate from the additive `20260926090000_current_debates.sql`, and apply it to a remote project only with explicit authorization for that environment.
+`20260926090100_legacy_debate_cleanup.sql` defines `private.purge_legacy_debate_material`, which deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. The migration does not call it, so applying it deletes nothing; legacy rows stay in the Unsorted view. Running the purge on a remote project is a separate, destructive step that needs explicit authorization for that environment. Work created after the rollout is never touched, however late it runs.
 
 ## Edge Function tests
 
