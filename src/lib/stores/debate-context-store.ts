@@ -112,7 +112,7 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     const change: PinChange = { seq: ++pinSeq, ref, pinned: !pinned, saving: true };
     (pinChanges[debateId] ??= []).push(change);
     set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, !pinned) } }));
-    const save = async (): Promise<{ error: { message?: string } | null }> => {
+    const save = async (): Promise<{ error: { message?: string; code?: string } | null }> => {
       if (generation !== pinGeneration) return { error: null };
       const { data } = await supabase.auth.getUser();
       const userId = data.user?.id;
@@ -125,12 +125,19 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     };
     const write = (pinWrites[debateId] ?? Promise.resolve()).then(save);
     pinWrites[debateId] = write.catch((): void => undefined);
-    const result = await write.catch((error: unknown) => ({ error: { message: error instanceof Error ? error.message : undefined } }));
+    const result: Awaited<ReturnType<typeof save>> = await write
+      .catch((error: unknown) => ({ error: { message: error instanceof Error ? error.message : undefined } }));
     change.saving = false;
     if (generation !== pinGeneration) return;
+    // The row already exists, so the result is pinned as asked.
+    if (!pinned && result.error?.code === '23505') return;
     if (result.error) {
-      // Undo only this change; other pins may have changed in the meantime.
+      // Undo only this change; other pins may have changed in the meantime. A
+      // later change to the same result is queued behind this one and decides
+      // its final state, so this failure no longer matters.
+      const superseded = pinChanges[debateId].some((item) => item.seq > change.seq && outputKey(item.ref) === outputKey(ref));
       pinChanges[debateId] = pinChanges[debateId].filter((item) => item !== change);
+      if (superseded) return;
       set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, pinned) } }));
       throw new Error(result.error.message ?? 'Could not save the pin');
     }

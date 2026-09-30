@@ -276,6 +276,39 @@ describe('Pinned results', () => {
     await expect(second).rejects.toThrow('pin_limit');
   });
 
+  it('keeps a later pin when an earlier save of the same result fails', async () => {
+    const firstInsert = deferred<{ error: { message: string } }>();
+    const calls: string[] = [];
+    const deleted = { eq: () => deleted, then: (done: (value: { error: null }) => void) => { calls.push('delete'); done({ error: null }); } };
+    supabaseMock.from
+      .mockImplementationOnce((() => ({ insert: () => { calls.push('insert'); return firstInsert.promise; } })) as never)
+      .mockImplementationOnce((() => ({ delete: () => deleted })) as never)
+      .mockImplementationOnce((() => ({ insert: () => { calls.push('insert'); return Promise.resolve({ error: null }); } })) as never);
+
+    // Pin, unpin and pin again while the first save is still pending.
+    const toggles = [0, 1, 2].map(() => useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef));
+    firstInsert.resolve({ error: { message: 'offline' } });
+    await Promise.all(toggles);
+
+    expect(calls).toEqual(['insert', 'delete', 'insert']);
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef]);
+  });
+
+  it('treats pinning a result that is already saved as pinned', async () => {
+    const deleted = { eq: () => deleted, then: (done: (value: { error: { message: string } }) => void) => done({ error: { message: 'offline' } }) };
+    supabaseMock.from
+      .mockImplementationOnce((() => ({ delete: () => deleted })) as never)
+      .mockImplementationOnce((() => ({ insert: () => Promise.resolve({ error: { code: '23505', message: 'duplicate key' } }) })) as never);
+    useDebateContextStore.setState({ pins: { [TEST_DEBATE_ID]: [caseRef] } });
+
+    // The unpin fails, so the row stays; pinning again must not unpin locally.
+    const unpinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    const pinning = useDebateContextStore.getState().togglePin(TEST_DEBATE_ID, caseRef);
+    await Promise.all([unpinning, pinning]);
+
+    expect(useDebateContextStore.getState().pins[TEST_DEBATE_ID]).toEqual([caseRef]);
+  });
+
   it('drops pin writes left over from before a sign-out', async () => {
     const oldInsert = deferred<{ error: { message: string } }>();
     const calls: string[] = [];
