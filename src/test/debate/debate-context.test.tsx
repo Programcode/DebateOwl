@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { resetMockState, setMockInvokeResponse, setMockSessionToken, supabaseMock } from '@/test/mocks/supabase';
 
 vi.mock('@/lib/supabase/client', async () => {
@@ -19,6 +19,7 @@ import { brainstorm } from '@/lib/ai/client';
 import { useDebateContextStore } from '@/lib/stores/debate-context-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
 import { useSessionStore, type SavedItem, type Source } from '@/lib/stores/session-store';
+import { useSparringStore } from '@/lib/stores/sparring-store';
 import { enableOneOffMode, resetDebates, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
 
 const OTHER_DEBATE = '99999999-2222-4333-8444-555555555555';
@@ -117,7 +118,9 @@ describe('Current Debate context in requests and the Review control', () => {
       sourceLibrary: [source(1), source(2, { isActive: false })],
       savedCases: [result(10, caseData) as SavedItem<never>],
       savedAttacks: [], savedBrainstorms: [], savedFactoids: [], savedChats: [], savedCrossfires: [],
+      serverHydrated: true,
     });
+    useSparringStore.setState({ hydrated: true });
   });
   afterEach(() => {
     resetDebates();
@@ -187,6 +190,24 @@ describe('Current Debate context in requests and the Review control', () => {
     fireEvent.click(within(sheet).getByRole('checkbox', { name: /Source 2/ }));
     await waitFor(() => expect(control).toHaveTextContent('Using 2 sources and 1 saved result'));
     expect(within(sheet).getByRole('button', { name: /Pin Result 10/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('keeps pin buttons disabled until saved results have loaded', async () => {
+    // Pins on results that have not loaded yet cannot be counted toward the limit.
+    seedCurrentDebate();
+    useSessionStore.setState({ serverHydrated: false });
+    useSparringStore.setState({ hydrated: false });
+    render(<DebateContextControl feature="generate" side="pro" />);
+    fireEvent.click(within(screen.getByTestId('debate-context-control')).getByRole('button', { name: 'Review' }));
+    const sheet = await screen.findByRole('dialog');
+    await waitFor(() => expect(useDebateContextStore.getState().pinsLoaded[TEST_DEBATE_ID]).toBe(true));
+    const pin = within(sheet).getByRole('button', { name: /Pin Result 10/ });
+
+    expect(pin).toBeDisabled();
+    act(() => useSessionStore.setState({ serverHydrated: true }));
+    expect(pin).toBeDisabled();
+    act(() => useSparringStore.setState({ hydrated: true }));
+    expect(pin).toBeEnabled();
   });
 });
 

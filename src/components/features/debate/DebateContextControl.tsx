@@ -9,6 +9,8 @@ import { useDebateContextPlan } from '@/lib/debate/context-state';
 import type { ContextOutputItem, ContextSourceItem, DebateContextPlan } from '@/lib/debate/context';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { outputKey, useDebateContextStore, type DebateContextUsage } from '@/lib/stores/debate-context-store';
+import { useSessionStore } from '@/lib/stores/session-store';
+import { useSparringStore } from '@/lib/stores/sparring-store';
 import type { DebateContextFeature, DebateContextSide } from '../../../../supabase/functions/_shared/debate-context';
 
 interface DebateContextControlProps {
@@ -42,6 +44,10 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
   const debateId = debateIdOverride !== undefined ? debateIdOverride : (oneOff ? null : debate?.id ?? null);
   const plan = useDebateContextPlan(feature, side, debateId, { includeSources });
   const pinsLoaded = useDebateContextStore((state) => (debateId ? state.pinsLoaded[debateId] : true));
+  // The pin limit discounts pins on results that are not listed. Until saved
+  // results have loaded, a missing result may just not be here yet.
+  const sessionHydrated = useSessionStore((state) => state.serverHydrated);
+  const sparringHydrated = useSparringStore((state) => state.hydrated);
   const loadPins = useDebateContextStore((state) => state.loadPins);
   const usage = useDebateContextStore((state) => state.lastUsage[feature]);
   const [open, setOpen] = useState(false);
@@ -99,7 +105,7 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
-          <DebateContextReview plan={plan} motion={debate?.id === debateId ? debate.motion : undefined} usage={usage} pinsReady={Boolean(pinsLoaded)} />
+          <DebateContextReview plan={plan} motion={debate?.id === debateId ? debate.motion : undefined} usage={usage} pinsReady={Boolean(pinsLoaded) && sessionHydrated && sparringHydrated} />
         </SheetContent>
       </Sheet>
     </div>
