@@ -218,9 +218,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     // The status is enough to diagnose; the provider's body is not forwarded.
     await logUsage(userId, usageFeature, ELEVENLABS_PROVIDER, model, { billedCharacters: 0 }, Date.now() - startedAt, "error", `elevenlabs_${providerResponse.status}`);
     // A refused request is not billed, so the clip goes back. A request that
-    // timed out, was aborted, or was cut off above may have been billed and
-    // keeps its clip: refunding it would let a caller that aborts early run
-    // up provider charges without ever reaching the cap.
+    // timed out, was aborted, or had its audio cut off may have been billed
+    // and keeps its clip: refunding it would let a caller that aborts early
+    // run up provider charges without ever reaching the cap.
     await refundVoiceClip(userId);
     return errorResponse(502, "The voice provider rejected the request.", corsHeaders, "voice_provider_error");
   }

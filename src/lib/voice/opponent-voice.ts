@@ -170,7 +170,7 @@ class OpponentVoice {
     if (this.state.notice) this.setState({ notice: null });
   };
 
-  /** Forget session-level fallbacks, for tests. */
+  /** Forget the round's fallbacks and the audio context, for tests. */
   reset(): void {
     this.stop();
     this.providerOff = false;
