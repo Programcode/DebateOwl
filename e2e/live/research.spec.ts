@@ -1,4 +1,4 @@
-import { admin, expect, stackReady, test } from "../full-stack/stack";
+import { admin, chooseForMotion, expect, stackReady, startDebate, test } from "../full-stack/stack";
 import { aiResponse, expectProviderCallsHealthy, LIVE_TIMEOUT } from "./live";
 
 test.skip(!stackReady, "Live gate is required (LIVE_PROVIDERS=1 ./.superset/db-gate.sh)");
@@ -11,6 +11,7 @@ test("case generation researches the web and cites what it found", async ({ sign
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
   const response = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await chooseForMotion(page, "once");
   const body = await response;
 
   // Standard length asks for exactly three contentions.
@@ -63,6 +64,8 @@ test("Ask with web search shows the sources it used", async ({ signedIn: page })
 
 test("a web page imports into the Library", async ({ signedIn: page, user }) => {
   const url = "https://en.wikipedia.org/wiki/Free_public_transport";
+  // Sources belong to a debate, so the Library needs a Current Debate first.
+  await startDebate(page, "This House would make public transport free");
   await page.goto("/app/library");
   await page.getByRole("button", { name: "Add Source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
