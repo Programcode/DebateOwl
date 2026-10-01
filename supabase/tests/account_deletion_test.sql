@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(27);
+SELECT plan(28);
 
 -- The leaver deletes their account; the stayer shares workspaces, announcements,
 -- and grants with them and must keep everything of their own.
@@ -159,8 +159,8 @@ INSERT INTO public.workspace_members (workspace_id, user_id) VALUES
 UPDATE public.workspace_documents SET assignee_id = 'ac000000-0000-4000-8000-00000000000a'
   WHERE id = current_setting('test.stayer_document')::uuid;
 -- Invite redemption attempts name the actor without a foreign key.
-INSERT INTO private.workspace_invite_attempts (actor_id, success, failure_reason)
-  VALUES ('ac000000-0000-4000-8000-00000000000a', false, 'invalid_code');
+INSERT INTO private.workspace_invite_attempts (actor_id, ip_hash, success, failure_reason)
+  VALUES ('ac000000-0000-4000-8000-00000000000a', decode(repeat('ac', 32), 'hex'), false, 'unavailable');
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'ac000000-0000-4000-8000-00000000000a', true);
@@ -364,6 +364,12 @@ SELECT lives_ok(
 SELECT is_empty(
   $$SELECT * FROM pg_temp.tables_mentioning('ac000000-0000-4000-8000-00000000000a')$$,
   'after deletion no row in any public or private table contains the user id'
+);
+SELECT is(
+  (SELECT count(*)::int FROM private.workspace_invite_attempts
+    WHERE ip_hash = decode(repeat('ac', 32), 'hex') AND success = false),
+  1,
+  'failed invite attempts still count toward the IP limit after the account is gone'
 );
 SELECT is(
   (SELECT array_agg(title ORDER BY title) FROM public.sources),

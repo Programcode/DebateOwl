@@ -83,8 +83,12 @@ BEGIN
   DELETE FROM public.workspace_threads WHERE created_by = p_user_id;
   DELETE FROM public.workspace_artifacts WHERE created_by = p_user_id;
   DELETE FROM public.workspace_sources WHERE created_by = p_user_id;
-  -- Invite rate-limit history names the actor without a foreign key.
-  DELETE FROM private.workspace_invite_attempts WHERE actor_id = p_user_id;
+  -- Invite attempts name the actor without a foreign key. Keep the rows,
+  -- because the per-IP limit counts them, but drop the user id; the redeem
+  -- function purges them after a day.
+  UPDATE private.workspace_invite_attempts
+  SET actor_id = '00000000-0000-0000-0000-000000000000'
+  WHERE actor_id = p_user_id;
 END;
 $$;
 
