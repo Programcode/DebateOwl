@@ -288,6 +288,32 @@ describe('opponent voice', () => {
     expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
   });
 
+  it('abandons a request the student speaks over, and still asks ElevenLabs for the next reply', async () => {
+    // The request stays open until it is aborted, like a voice function that has not answered yet.
+    fetchMock.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    }));
+    const onEnd = vi.fn();
+    opponentVoice.speak(TWO_SEGMENTS, onEnd);
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(opponentVoice.getState().status).toBe('loading');
+
+    opponentVoice.stop();
+    await settle();
+    expect(fetchMock.mock.calls[0][1].signal?.aborted).toBe(true);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(opponentVoice.getState().status).toBe('idle');
+    expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
+
+    // An abandoned request is not a refusal, so the provider stays on.
+    fetchMock.mockImplementation(async () => audioResponse());
+    opponentVoice.speak(TWO_SEGMENTS);
+    await settle();
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+    expect(opponentVoice.getState()).toMatchObject({ status: 'speaking', engine: 'elevenlabs' });
+  });
+
   it('a new reply replaces the one still playing', async () => {
     fetchMock.mockImplementation(async () => audioResponse());
     const firstEnd = vi.fn();

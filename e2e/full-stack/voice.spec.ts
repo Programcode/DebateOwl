@@ -37,6 +37,8 @@ test("a spoken sparring round runs on the browser voice, and no audio tag is sho
     ["First affirmative rebuttal", "Targeted discounts preserve eligibility gaps and administrative friction."],
     ["Second affirmative rebuttal", "The universal policy covers every marginal trip, so it is more reliable."],
   ] as const;
+  const reply = `${MARK} opponent speech: the policy needs a stronger comparative case. It is not there yet.`;
+  let replies = 0;
   for (const [turn, words] of speeches) {
     const draft = page.getByRole("textbox", { name: `Draft for ${turn}` });
     await expect(draft).toBeVisible({ timeout: 30_000 });
@@ -46,7 +48,13 @@ test("a spoken sparring round runs on the browser voice, and no audio tag is sho
     await expect(draft).toHaveValue(words);
     await page.getByRole("button", { name: "Submit speech" }).click();
     if (turn !== "Second affirmative rebuttal") {
+      replies += 1;
       await expect(page.getByText(`${MARK} opponent speech`).last()).toBeVisible({ timeout: 30_000 });
+      // The student lets the opponent finish. Turning the microphone on any
+      // sooner speaks over the opponent, which stops its voice and abandons
+      // the voice request before the answer arrives.
+      await expect.poll(() => voiceAnswers.length, { timeout: 30_000 }).toBe(1);
+      await expect.poll(async () => (await spokenByBrowser(page)).split(reply).length - 1, { timeout: 30_000 }).toBe(replies);
     }
   }
   await expect(page.getByText(`${MARK} verdict: the user had the edge.`)).toBeVisible({ timeout: 30_000 });
@@ -57,12 +65,13 @@ test("a spoken sparring round runs on the browser voice, and no audio tag is sho
   expect(requests.some((request) => request.feature === "sparring" && request.system.includes("SPOKEN ROUND:"))).toBe(true);
   const segments = aiVoice.flatMap((body) => body.voice?.segments ?? []);
   expect(segments.length).toBeGreaterThan(0);
-  expect(segments[0].text).toBe(`[sighs] ${MARK} opponent speech: the policy needs a stronger comparative case. It is not there yet.`);
+  expect(segments[0].text).toBe(`[sighs] ${reply}`);
   expect(segments[0].token).toMatch(/^\d+\.[a-f0-9]{64}$/);
 
-  // With no key the voice function says so, once, and the browser voice reads the clean text.
+  // With no key the voice function says so, once, and the browser voice reads
+  // the clean text of both replies: the second without asking the function again.
   expect(voiceAnswers).toEqual([{ status: 503, code: "voice_unavailable" }]);
-  await expect.poll(() => spokenByBrowser(page)).toContain(`${MARK} opponent speech: the policy needs a stronger comparative case. It is not there yet.`);
+  expect(await spokenByBrowser(page)).toBe(`${reply} ${reply}`);
   expect(await spokenByBrowser(page)).not.toContain("[");
 
   // The judge was given the measured facts and the rule against claiming to have heard anything.
@@ -84,10 +93,7 @@ test("a spoken sparring round runs on the browser voice, and no audio tag is sho
     return data?.map((row) => row.status);
   }).toEqual(["complete"]);
   const turns = saved!.turns;
-  expect(turns.filter((turn) => turn.speaker === "ai").map((turn) => turn.content)).toEqual([
-    `${MARK} opponent speech: the policy needs a stronger comparative case. It is not there yet.`,
-    `${MARK} opponent speech: the policy needs a stronger comparative case. It is not there yet.`,
-  ]);
+  expect(turns.filter((turn) => turn.speaker === "ai").map((turn) => turn.content)).toEqual([reply, reply]);
   expect(turns[0].delivery).toMatchObject({ wordCount: 10, fillerCount: 1 });
   expect(turns[1].delivery).toBeUndefined();
 
