@@ -56,7 +56,7 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 ### Billing
 
-- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated.
+- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
 - `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
 - `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling with idempotency state.
 

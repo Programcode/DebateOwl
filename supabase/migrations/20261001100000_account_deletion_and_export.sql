@@ -25,6 +25,19 @@ ALTER TABLE public.shared_items
 
 ALTER TABLE public.admin_announcements ALTER COLUMN created_by DROP NOT NULL;
 
+-- Stripe customers created for a user, recorded by create-checkout before it
+-- opens a session. Subscription rows arrive later through the webhook, so
+-- deletion cannot rely on them alone to find everything Stripe may bill.
+CREATE TABLE public.stripe_customers (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  customer_id text NOT NULL CHECK (customer_id LIKE 'cus\_%'),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, customer_id)
+);
+ALTER TABLE public.stripe_customers ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.stripe_customers FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, DELETE ON TABLE public.stripe_customers TO service_role;
+
 -- Announcements name their author and recipients without foreign keys.
 CREATE FUNCTION private.clear_deleted_user_announcements()
 RETURNS trigger
@@ -86,6 +99,9 @@ AS $$
 DECLARE
   -- Credentials and server-side integrity values are not the user's data to carry away.
   v_redacted constant text[] := ARRAY['key_ciphertext', 'claim_token', 'request_fingerprint'];
+  -- Admin catalog work rather than the user's personal data, and admin grants,
+  -- which RLS hides from the user and which are exported below without notes.
+  v_skipped constant text[] := ARRAY['admin_grants', 'curated_sources', 'demo_access_codes', 'global_prompts', 'promo_codes'];
   v_account jsonb;
   v_data jsonb := '{}'::jsonb;
   v_rows jsonb;
@@ -120,6 +136,7 @@ BEGIN
       AND fk.confrelid = 'auth.users'::regclass
       AND cardinality(fk.conkey) = 1
       AND schema.nspname = 'public'
+      AND NOT owner.relname = ANY (v_skipped)
     GROUP BY owner.oid, owner.relname
     ORDER BY owner.relname
   LOOP
@@ -135,6 +152,20 @@ BEGIN
       v_data := v_data || jsonb_build_object(v_table.name, v_rows);
     END IF;
   END LOOP;
+
+  -- Access the user was granted, without the admin's identity or notes.
+  SELECT jsonb_agg(jsonb_build_object(
+    'grant_type', grant_row.grant_type,
+    'starts_at', grant_row.starts_at,
+    'ends_at', grant_row.ends_at,
+    'created_at', grant_row.created_at
+  ))
+  INTO v_rows
+  FROM public.admin_grants AS grant_row
+  WHERE grant_row.target_user_id = p_user_id;
+  IF v_rows IS NOT NULL THEN
+    v_data := v_data || jsonb_build_object('access_grants', v_rows);
+  END IF;
 
   -- Chat messages belong to the user through their chat.
   SELECT jsonb_agg(to_jsonb(message))
@@ -175,7 +206,7 @@ END;
 $$;
 
 -- What the Edge Function must clear outside Postgres before deleting the auth
--- user: Stripe customers to cancel and Storage objects to remove. Storage
+-- user, namely the Stripe customers to cancel and the Storage objects to remove. Storage
 -- forbids deleting objects with SQL, so the function uses the Storage API.
 CREATE FUNCTION public.account_deletion_plan(p_user_id uuid)
 RETURNS jsonb
@@ -186,17 +217,21 @@ SET search_path = ''
 AS $$
   SELECT jsonb_build_object(
     'stripe_customer_ids', (
-      SELECT coalesce(jsonb_agg(DISTINCT subscription.stripe_customer_id), '[]'::jsonb)
-      FROM public.subscriptions AS subscription
-      WHERE subscription.user_id = p_user_id
-        AND subscription.stripe_customer_id IS NOT NULL
+      SELECT coalesce(jsonb_agg(DISTINCT customer.id ORDER BY customer.id), '[]'::jsonb)
+      FROM (
+        SELECT subscription.stripe_customer_id AS id
+        FROM public.subscriptions AS subscription
+        WHERE subscription.user_id = p_user_id AND subscription.stripe_customer_id IS NOT NULL
+        UNION
+        SELECT recorded.customer_id FROM public.stripe_customers AS recorded WHERE recorded.user_id = p_user_id
+      ) AS customer
     ),
     'storage_objects', (
       SELECT coalesce(jsonb_agg(jsonb_build_object('bucket_id', object.bucket_id, 'name', object.name)), '[]'::jsonb)
       FROM storage.objects AS object
-      WHERE object.owner = p_user_id
-        OR object.owner_id = p_user_id::text
-        OR object.name IN (SELECT file.storage_key FROM public.source_files AS file WHERE file.user_id = p_user_id)
+      -- Storage sets the owner from the uploader's session. source_files.storage_key
+      -- is user-writable, so it must never select objects for deletion.
+      WHERE object.owner = p_user_id OR object.owner_id = p_user_id::text
     )
   );
 $$;

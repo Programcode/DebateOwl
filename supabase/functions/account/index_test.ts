@@ -7,7 +7,7 @@ for (const [key, value] of Object.entries({
 })) Deno.env.set(key, value);
 
 const { HttpError } = await import("../_shared/auth.ts");
-const { cancelLiveSubscriptions, createHandler } = await import("./index.ts");
+const { createHandler, stopBillingFor } = await import("./index.ts");
 type AccountDeps = import("./index.ts").AccountDeps;
 
 const caller = { id: "11111111-1111-4111-8111-111111111111", email: "student@example.test" };
@@ -28,7 +28,7 @@ function harness(overrides: Partial<AccountDeps> = {}) {
         storage_objects: [{ bucket_id: "files", name: `${userId}/a.pdf` }],
       });
     },
-    cancelSubscriptions: (customerIds) => {
+    stopBilling: (customerIds) => {
       calls.push(`cancel:${customerIds.join(",")}`);
       return Promise.resolve(1);
     },
@@ -94,7 +94,7 @@ Deno.test("an account without an email confirms with DELETE", async () => {
 
 Deno.test("a billing failure stops deletion before any data is touched", async () => {
   const { calls, post } = harness({
-    cancelSubscriptions: () => Promise.reject(new HttpError(502, "Could not cancel your subscription")),
+    stopBilling: () => Promise.reject(new HttpError(502, "Could not cancel your subscription")),
   });
   const response = await post({ action: "delete", confirmation: caller.email });
   assertEquals(response.status, 502);
@@ -135,8 +135,17 @@ Deno.test("only POST export and delete are accepted", async () => {
   assertEquals(calls, []);
 });
 
-Deno.test("cancellation stops every live subscription and skips ended ones", async () => {
-  const canceled: string[] = [];
+function iterate<T>(items: T[]): AsyncIterable<T> {
+  return {
+    [Symbol.asyncIterator]: () => {
+      let index = 0;
+      return { next: () => Promise.resolve(index < items.length ? { value: items[index++], done: false } : { value: undefined, done: true }) };
+    },
+  };
+}
+
+Deno.test("billing stops open checkouts, then every live subscription, and skips ended ones", async () => {
+  const actions: string[] = [];
   const subscriptions: Record<string, Array<{ id: string; status: string }>> = {
     cus_1: [
       { id: "sub_active", status: "active" },
@@ -145,23 +154,28 @@ Deno.test("cancellation stops every live subscription and skips ended ones", asy
     ],
     cus_2: [{ id: "sub_past_due", status: "past_due" }, { id: "sub_trial", status: "trialing" }],
   };
-  const count = await cancelLiveSubscriptions({
-    list: async function* (customerId) {
-      yield* subscriptions[customerId];
-    },
-    cancel: (id) => Promise.resolve(canceled.push(id)),
+  const count = await stopBillingFor({
+    listOpenCheckouts: (customerId) => iterate(customerId === "cus_2" ? [{ id: "cs_open" }] : []),
+    expireCheckout: (id) => Promise.resolve(actions.push(`expire:${id}`)),
+    listSubscriptions: (customerId) => iterate(subscriptions[customerId]),
+    cancelSubscription: (id) => Promise.resolve(actions.push(`cancel:${id}`)),
   }, ["cus_1", "cus_2"]);
   assertEquals(count, 3);
-  assertEquals(canceled, ["sub_active", "sub_past_due", "sub_trial"]);
+  assertEquals(actions, ["cancel:sub_active", "expire:cs_open", "cancel:sub_past_due", "cancel:sub_trial"]);
 });
 
-Deno.test("cancellation skips customers Stripe already deleted but fails on other errors", async () => {
+Deno.test("billing skips customers Stripe already deleted but fails on other errors", async () => {
   const missing = Object.assign(new Error("No such customer"), { code: "resource_missing" });
   const outage = Object.assign(new Error("Stripe is down"), { code: "api_error" });
-  const api = (error: Error) => ({
-    list: () => ({ [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(error) }) }),
-    cancel: () => Promise.resolve(),
+  const failing = (error: Error): AsyncIterable<never> => ({
+    [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(error) }),
   });
-  assertEquals(await cancelLiveSubscriptions(api(missing), ["cus_gone"]), 0);
-  await assertRejects(() => cancelLiveSubscriptions(api(outage), ["cus_1"]), Error, "Stripe is down");
+  const api = (error: Error) => ({
+    listOpenCheckouts: () => failing(error),
+    expireCheckout: () => Promise.resolve(),
+    listSubscriptions: () => iterate([]),
+    cancelSubscription: () => Promise.resolve(),
+  });
+  assertEquals(await stopBillingFor(api(missing), ["cus_gone"]), 0);
+  await assertRejects(() => stopBillingFor(api(outage), ["cus_1"]), Error, "Stripe is down");
 });

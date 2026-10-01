@@ -86,12 +86,12 @@ Do not infer current schema from old README examples or store query names. Repla
 
 ## Account export and deletion
 
-Settings offers three controls. "Download my data" calls the `account` Edge Function, which returns `export_account_data`: the auth profile plus every row reached through a foreign key into `auth.users`, chat messages, and announcements addressed to the user, with credential and integrity columns left out. "Delete All My Data" calls `clear_current_user_data` and keeps the account. "Delete account" asks the user to type their email (or DELETE for an account without one), then calls the `account` function.
+Settings offers three controls. "Download my data" calls the `account` Edge Function, which returns `export_account_data`, which holds the auth profile, every row reached through a foreign key into `auth.users`, chat messages, and announcements addressed to or written by the user. It leaves out credential and integrity columns and admin catalog work (promo codes, curated sources, global prompts, demo codes). Admin grants appear as grant type and dates only, because RLS hides their notes and author from the user. "Delete All My Data" calls `clear_current_user_data` and keeps the account. "Delete account" asks the user to type their email (or DELETE for an account without one), then calls the `account` function.
 
 Deletion runs in a fixed order, and a failure at any step leaves the account in place:
 
-1. Cancel every live Stripe subscription immediately, without a refund. If Stripe cannot be reached, nothing is deleted.
-2. Remove the user's Storage objects through the Storage API, because Storage forbids deleting objects with SQL.
+1. Stop Stripe billing for every customer in `subscriptions` or `stripe_customers`: expire open Checkout sessions, then cancel live subscriptions immediately, without a refund. If Stripe cannot be reached, nothing is deleted. `create-checkout` records the customer in `stripe_customers` before it opens a session, so a subscription the webhook has not recorded yet is still found.
+2. Remove Storage objects whose owner is the user through the Storage API, because Storage forbids deleting objects with SQL. `source_files.storage_key` is user-writable, so it never selects an object for deletion.
 3. Call `prepare_account_deletion`, which deletes the workspaces the user owns and the user's own sources, threads, messages, and results in other workspaces. Those foreign keys stay `RESTRICT` so that a raw delete of an auth user cannot remove shared work by accident.
 4. Delete the auth user with the Auth admin API. Every other foreign key into `auth.users` cascades or sets null, and the `on_auth_user_deleted` trigger clears the user from announcements, which have no foreign key.
 

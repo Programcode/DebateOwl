@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(25);
+SELECT plan(26);
 
 -- The leaver deletes their account; the stayer shares workspaces, announcements,
 -- and grants with them and must keep everything of their own.
@@ -82,8 +82,9 @@ INSERT INTO public.current_debates (user_id, debate_id) VALUES
 INSERT INTO public.sources (id, user_id, debate_id, title, content, type) VALUES
   ('ac200000-0000-4000-8000-00000000000a', 'ac000000-0000-4000-8000-00000000000a', 'ac100000-0000-4000-8000-00000000000a', 'Leaver study', 'LEAVER-PRIVATE evidence', 'text'),
   ('ac200000-0000-4000-8000-00000000000b', 'ac000000-0000-4000-8000-00000000000b', 'ac100000-0000-4000-8000-00000000000b', 'Stayer study', 'STAYER-PRIVATE evidence', 'text');
+-- source_files is user-writable, so this key names the stayer's object to try to get it deleted.
 INSERT INTO public.source_files (user_id, source_id, filename, storage_key) VALUES
-  ('ac000000-0000-4000-8000-00000000000a', 'ac200000-0000-4000-8000-00000000000a', 'study.pdf', 'leaver/study.pdf');
+  ('ac000000-0000-4000-8000-00000000000a', 'ac200000-0000-4000-8000-00000000000a', 'notes.txt', 'stayer/notes.txt');
 INSERT INTO public.source_folders (user_id, name) VALUES ('ac000000-0000-4000-8000-00000000000a', 'Folder');
 INSERT INTO public.cases (user_id, debate_id, side, title, input, output)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'ac100000-0000-4000-8000-00000000000a', 'pro', 'Case', '{}', '{}');
@@ -115,6 +116,8 @@ INSERT INTO public.user_roles (user_id, role) VALUES ('ac000000-0000-4000-8000-0
 INSERT INTO public.user_data_clear_markers (user_id, cleared_at) VALUES ('ac000000-0000-4000-8000-00000000000a', now());
 INSERT INTO public.subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_start, current_period_end)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'cus_leaver', 'sub_leaver', 'active', now(), now() + interval '30 days');
+-- A checkout customer whose subscription the webhook has not recorded yet.
+INSERT INTO public.stripe_customers (user_id, customer_id) VALUES ('ac000000-0000-4000-8000-00000000000a', 'cus_leaver_checkout');
 
 -- Admin-authored rows: the leaver is an admin whose catalog work must survive.
 INSERT INTO public.promo_codes (id, code, type, created_by)
@@ -124,9 +127,9 @@ INSERT INTO public.curated_sources (title, content, created_by) VALUES ('Curated
 INSERT INTO public.global_prompts (feature, prompt_text, created_by) VALUES ('brainstorm', 'Prompt', 'ac000000-0000-4000-8000-00000000000a');
 INSERT INTO public.demo_access_codes (code_hash, label, email, created_by)
   VALUES ('leaver-hash', 'Leaver code', 'demo@example.test', 'ac000000-0000-4000-8000-00000000000a');
-INSERT INTO public.admin_grants (admin_user_id, target_user_id, grant_type, starts_at, ends_at) VALUES
-  ('ac000000-0000-4000-8000-00000000000a', 'ac000000-0000-4000-8000-00000000000b', 'pro', now(), now() + interval '1 day'),
-  ('ac000000-0000-4000-8000-00000000000b', 'ac000000-0000-4000-8000-00000000000a', 'pro', now(), now() + interval '1 day');
+INSERT INTO public.admin_grants (admin_user_id, target_user_id, grant_type, starts_at, ends_at, notes) VALUES
+  ('ac000000-0000-4000-8000-00000000000a', 'ac000000-0000-4000-8000-00000000000b', 'pro', now(), now() + interval '1 day', 'NOTE-BY-LEAVER'),
+  ('ac000000-0000-4000-8000-00000000000b', 'ac000000-0000-4000-8000-00000000000a', 'pro', now(), now() + interval '1 day', 'ADMIN-ONLY-NOTE');
 INSERT INTO public.shared_items (share_code, item_type, item_data, title, created_by)
   VALUES ('LEAVERSHARE', 'case', '{}', 'Shared case', 'ac000000-0000-4000-8000-00000000000a');
 INSERT INTO public.admin_announcements (id, title, body, target_type, target_user_ids, created_by) VALUES
@@ -212,7 +215,6 @@ RESET ROLE;
 INSERT INTO storage.buckets (id, name) VALUES ('account-test', 'account-test');
 INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
   ('account-test', 'leaver/notes.txt', 'ac000000-0000-4000-8000-00000000000a'),
-  ('account-test', 'leaver/study.pdf', NULL),
   ('account-test', 'stayer/notes.txt', 'ac000000-0000-4000-8000-00000000000b');
 
 SELECT is_empty(
@@ -231,13 +233,12 @@ SELECT throws_ok(
 SELECT is(
   public.account_deletion_plan('ac000000-0000-4000-8000-00000000000a'),
   jsonb_build_object(
-    'stripe_customer_ids', jsonb_build_array('cus_leaver'),
+    'stripe_customer_ids', jsonb_build_array('cus_leaver', 'cus_leaver_checkout'),
     'storage_objects', jsonb_build_array(
-      jsonb_build_object('bucket_id', 'account-test', 'name', 'leaver/notes.txt'),
-      jsonb_build_object('bucket_id', 'account-test', 'name', 'leaver/study.pdf')
+      jsonb_build_object('bucket_id', 'account-test', 'name', 'leaver/notes.txt')
     )
   ),
-  'the deletion plan lists the Stripe customer and only the leaver''s Storage objects'
+  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names'
 );
 RESET ROLE;
 
@@ -256,8 +257,9 @@ SELECT is_empty(
       JOIN pg_namespace AS schema ON schema.oid = owner.relnamespace
       WHERE fk.contype = 'f' AND fk.confrelid = 'auth.users'::regclass AND schema.nspname = 'public'
     ) AS tables
-    WHERE NOT (current_setting('test.export')::jsonb -> 'data') ? fk_table$$,
-  'the export has a section for every table that references the user'
+    WHERE NOT (current_setting('test.export')::jsonb -> 'data') ? fk_table
+      AND fk_table NOT IN ('admin_grants', 'curated_sources', 'demo_access_codes', 'global_prompts', 'promo_codes')$$,
+  'the export has a section for every table that references the user, apart from admin catalog work and grants'
 );
 SELECT ok(
   (current_setting('test.export')::jsonb -> 'data') ?& ARRAY['messages', 'announcements_received', 'admin_announcements'],
@@ -275,6 +277,19 @@ SELECT ok(
     AND NOT current_setting('test.export')::jsonb #> '{data,api_keys,0}' ? 'key_ciphertext'
     AND NOT current_setting('test.export')::jsonb #> '{data,sparring_sessions,0}' ? 'claim_token',
   'credentials and integrity tokens are left out of the export'
+);
+SELECT ok(
+  current_setting('test.export')::jsonb #> '{data,access_grants}' = jsonb_build_array(jsonb_build_object(
+    'grant_type', 'pro',
+    'starts_at', (SELECT starts_at FROM public.admin_grants WHERE target_user_id = 'ac000000-0000-4000-8000-00000000000a'),
+    'ends_at', (SELECT ends_at FROM public.admin_grants WHERE target_user_id = 'ac000000-0000-4000-8000-00000000000a'),
+    'created_at', (SELECT created_at FROM public.admin_grants WHERE target_user_id = 'ac000000-0000-4000-8000-00000000000a')
+  ))
+    AND current_setting('test.export') NOT LIKE '%ADMIN-ONLY-NOTE%'
+    AND current_setting('test.export') NOT LIKE '%NOTE-BY-LEAVER%'
+    AND current_setting('test.export') NOT LIKE '%LEAVERPROMO%'
+    AND NOT (current_setting('test.export')::jsonb -> 'data') ?| ARRAY['admin_grants', 'promo_codes', 'demo_access_codes'],
+  'the export lists access granted to the user but no admin notes, grants they made, or admin catalog rows'
 );
 SELECT is(
   jsonb_array_length(current_setting('test.export')::jsonb #> '{data,announcements_received}'),
