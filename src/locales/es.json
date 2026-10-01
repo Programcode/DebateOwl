@@ -380,6 +380,7 @@
     "envSwitchTitle": "Cambiar entorno",
     "envSwitchDesc": "Se cerrará tu sesión y la app se recargará apuntando a {{target}}. Tendrás que iniciar sesión de nuevo.",
     "envSwitchConfirm": "Cambiar y cerrar sesión",
+    "stagingBanner": "Backend de staging",
     "dangerZone": "Zona de peligro",
     "dangerDesc": "Elimina permanentemente todos tus datos guardados. Solo afecta a tu cuenta ({{email}}).",
     "deleteAllData": "Eliminar todos mis datos",
@@ -1280,7 +1281,6 @@
   },
   "onboarding": {
     "welcome": "¡Bienvenido a DebateLab! 🎉",
-    "welcomeDesc": "Hagamos un recorrido rápido para ayudarte a crear tu primer caso de debate.",
     "ready": "¡Estás Listo! 🚀",
     "readyDesc": "Explora las otras funciones: Atacar argumentos, Chat con Coach e Investigar datos.",
     "back": "Atrás",
@@ -1290,25 +1290,11 @@
     "nextWithProgress": "Siguiente (Paso {step} de {steps})",
     "skip": "Saltar Tour",
     "generate": "Generar",
-    "generateDesc": "Crea casos completos, organiza argumentos y exporta preparación pulida.",
-    "attack": "Atacar",
-    "attackDesc": "Pon a prueba argumentos y encuentra puntos débiles antes del debate.",
-    "brainstorm": "Lluvia de ideas",
-    "brainstormDesc": "Explora enfoques, ejemplos e intercambios para una moción.",
-    "factoids": "Datos",
-    "factoidsDesc": "Investiga datos listos para evidencia y pistas de fuentes.",
-    "ask": "Preguntar",
-    "askDesc": "Usa el coach de debate para preguntas de seguimiento y estrategia.",
+    "generateDesc": "Construye un caso completo para tu moción. Lluvia de ideas, Datos y Diagrama están a su lado, en Preparar.",
     "library": "Biblioteca",
-    "libraryDesc": "Guarda las fuentes que fundamentan las respuestas de la IA con evidencia real.",
-    "timer": "Cronómetro",
-    "timerDesc": "Practica discursos con tiempos de torneo.",
-    "flowchart": "Diagrama",
-    "flowchartDesc": "Representa visualmente argumentos, ataques y refutaciones.",
-    "history": "Historial",
-    "historyDesc": "Vuelve a casos, chats y sesiones de preparación guardados.",
-    "settings": "Ajustes",
-    "settingsDesc": "Controla el idioma, el tema, la cuenta y las preferencias de modelo."
+    "libraryDesc": "Añade fuentes a tu debate actual. Todas las herramientas basan sus respuestas en ellas.",
+    "debateFirstDesc": "Todo en DebateLab pertenece a un debate: la moción que preparas, sus fuentes y tus resultados. Inicia aquí tu primer debate.",
+    "debateCurrentDesc": "Todo en DebateLab pertenece a tu debate actual: su moción, sus fuentes y tus resultados. Ábrelo o cámbialo aquí."
   },
   "timer": {
     "title": "Temporizador de Debate",
@@ -2093,7 +2079,6 @@
     "gateTitle": "¿Sigues preparando este debate?",
     "gateDesc": "Última actividad {{when}}. Elige cómo continuar.",
     "mismatchTitle": "Esta es una moción diferente",
-    "noDebateTitle": "¿Para qué debate es esto?",
     "mismatchDesc": "Tu debate actual es «{{motion}}».",
     "createFromMotion": "Crear un nuevo debate para esta moción",
     "useOnce": "Usar una vez sin guardar en un debate",
@@ -2151,7 +2136,10 @@
       "bp": "Parlamentario británico",
       "policy": "Policy",
       "classroom": "Aula"
-    }
+    },
+    "offerTitle": "¿Iniciar un debate con esta moción?",
+    "offerDesc": "Un debate mantiene juntos la moción, sus fuentes y tus resultados, y todas las herramientas lo usan.",
+    "offerNotNow": "Ahora no, usarla una vez"
   },
   "debateContext": {
     "using": "Usando {{list}}",

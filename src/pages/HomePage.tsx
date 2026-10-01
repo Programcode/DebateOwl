@@ -112,7 +112,7 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
 
   if (!debate) {
     return (
-      <Card className="mb-6 border-dashed border-border bg-card/60" data-testid="home-current-debate">
+      <Card className="mb-6 border-dashed border-border bg-card/60" data-testid="home-current-debate" data-tour="current-debate">
         <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold">{t('debate.noCurrentTitle', 'No current debate')}</p>
@@ -125,7 +125,7 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
   }
 
   return (
-    <Card className="mb-6 border-primary/25 bg-primary/5" data-testid="home-current-debate">
+    <Card className="mb-6 border-primary/25 bg-primary/5" data-testid="home-current-debate" data-tour="current-debate">
       <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('nav.currentDebate', 'Current debate')}</p>

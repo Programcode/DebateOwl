@@ -97,12 +97,17 @@ export async function startDebate(page: Page, motion: string) {
   await expect(debateControl(page)).toHaveAttribute("aria-label", `Current debate: ${motion}`);
 }
 
-/** Answers "Which debate is this for?" after submitting a motion that is not the Current Debate. */
+/**
+ * Answers the motion check after submitting a motion that is not the Current
+ * Debate: the first-debate offer when none is current, otherwise the switch choice.
+ */
 export async function chooseForMotion(page: Page, choice: "create" | "once") {
   // Scope to the motion choice: the next step may open its own dialog, such as the paywall.
-  const dialog = page.getByRole("dialog", { name: /^(Which debate is this for\?|This is a different motion)$/ });
+  const dialog = page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ });
   await dialog.getByRole("button", {
-    name: choice === "create" ? "Create a new debate for this motion" : "Use once without saving to a debate",
+    name: choice === "create"
+      ? /^(Start debate|Create a new debate for this motion)$/
+      : /^(Not now, use it once|Use once without saving to a debate)$/,
   }).click();
   await expect(dialog).toBeHidden();
 }

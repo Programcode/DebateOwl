@@ -297,10 +297,15 @@ export const useSettingsStore = create<SettingsState>()(
           allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL,
         );
         const configsNeedMigration = !featureConfigsAreCanonical(data.feature_configs, mergedConfigs);
+        // The sign-up trigger provisions the row with defaults and only this client
+        // fills in feature_configs, so an empty object means it was never saved.
+        // Keep what the student already chose instead of the defaults.
+        const savedConfigs = asRecord(data.feature_configs);
+        const neverSaved = savedConfigs !== null && Object.keys(savedConfigs).length === 0;
 
-        const language = isAppLanguage(data.language) ? data.language : 'en';
-        const outputLanguage = isAppLanguage(data.output_language) ? data.output_language : 'en';
-        const theme = (data.theme as 'light' | 'dark' | 'system') || 'system';
+        const language = neverSaved ? get().language : isAppLanguage(data.language) ? data.language : 'en';
+        const outputLanguage = neverSaved ? get().outputLanguage : isAppLanguage(data.output_language) ? data.output_language : 'en';
+        const theme = neverSaved ? get().theme : (data.theme as 'light' | 'dark' | 'system') || 'system';
         const customSystemPrompt = data.custom_system_prompt || undefined;
         await applyAppLanguage(language);
         set({
@@ -311,7 +316,15 @@ export const useSettingsStore = create<SettingsState>()(
           customSystemPrompt,
           wikiResearchEnabled: get().wikiResearchEnabled,
         });
-        if (configsNeedMigration) {
+        if (neverSaved) {
+          await updateSettings({
+            language,
+            output_language: outputLanguage,
+            theme,
+            feature_configs: mergedConfigs,
+            custom_system_prompt: customSystemPrompt ?? null,
+          });
+        } else if (configsNeedMigration) {
           await persistMigratedFeatureConfigs(mergedConfigs);
         }
       },

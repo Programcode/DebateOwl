@@ -380,6 +380,7 @@
     "envSwitchTitle": "Switch Environment",
     "envSwitchDesc": "You'll be signed out and the app will reload pointing at {{target}}. You'll need to sign in again.",
     "envSwitchConfirm": "Switch & Sign Out",
+    "stagingBanner": "Staging backend",
     "dangerZone": "Danger Zone",
     "dangerDesc": "Permanently delete all your saved data. This only affects your account ({{email}}).",
     "deleteAllData": "Delete All My Data",
@@ -1280,27 +1281,10 @@
   },
   "onboarding": {
     "welcome": "Welcome to DebateLab! 🎉",
-    "welcomeDesc": "Let's take a quick tour through every prep mode.",
     "generate": "Generate",
-    "generateDesc": "Create complete cases, organize arguments, and export polished prep.",
-    "attack": "Attack",
-    "attackDesc": "Stress-test arguments and find weak points before round.",
-    "brainstorm": "Brainstorm",
-    "brainstormDesc": "Explore angles, examples, and tradeoffs for a motion.",
-    "factoids": "Factoids",
-    "factoidsDesc": "Research evidence-ready facts and source leads.",
-    "ask": "Ask",
-    "askDesc": "Use the debate coach for follow-up questions and strategy.",
+    "generateDesc": "Build a full case for your motion. Brainstorm, Factoids, and Flowchart sit beside it under Prepare.",
     "library": "Library",
-    "libraryDesc": "Keep sources that ground AI responses in real evidence.",
-    "timer": "Timer",
-    "timerDesc": "Practice speeches with tournament timing.",
-    "flowchart": "Flowchart",
-    "flowchartDesc": "Map arguments, attacks, and rebuttals visually.",
-    "history": "History",
-    "historyDesc": "Return to saved cases, chats, and prep sessions.",
-    "settings": "Settings",
-    "settingsDesc": "Control language, theme, account, and model preferences.",
+    "libraryDesc": "Add sources to your Current Debate. Every tool grounds its answers in them.",
     "ready": "You're Ready! 🚀",
     "readyDesc": "Pick the mode that matches what you need for the next round.",
     "back": "Back",
@@ -1308,7 +1292,9 @@
     "getStarted": "Get Started!",
     "next": "Next",
     "nextWithProgress": "Next (Step {step} of {steps})",
-    "skip": "Skip Tour"
+    "skip": "Skip Tour",
+    "debateFirstDesc": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.",
+    "debateCurrentDesc": "Everything in DebateLab belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
   },
   "timer": {
     "title": "Debate Timer",
@@ -2093,7 +2079,6 @@
     "gateTitle": "Still preparing this debate?",
     "gateDesc": "Last activity {{when}}. Choose how to continue.",
     "mismatchTitle": "This is a different motion",
-    "noDebateTitle": "Which debate is this for?",
     "mismatchDesc": "Your Current Debate is “{{motion}}”.",
     "createFromMotion": "Create a new debate for this motion",
     "useOnce": "Use once without saving to a debate",
@@ -2151,7 +2136,10 @@
       "bp": "British Parliamentary",
       "policy": "Policy",
       "classroom": "Classroom"
-    }
+    },
+    "offerTitle": "Start a debate with this motion?",
+    "offerDesc": "A debate keeps this motion, its sources, and your results together, and every tool uses it.",
+    "offerNotNow": "Not now, use it once"
   },
   "debateContext": {
     "using": "Using {{list}}",

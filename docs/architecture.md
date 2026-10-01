@@ -27,7 +27,7 @@ Collaborative Workspace (`/app/workspaces/*`, the `workspace-invites` function, 
 
 [`src/lib/stores/session-store.ts`](../src/lib/stores/session-store.ts) owns active AI results, conversations, saved work, sources, folders, flowcharts, autosave state, and persisted form state. It persists selected local state and hydrates authenticated rows from Supabase.
 
-[`src/lib/stores/debate-store.ts`](../src/lib/stores/debate-store.ts) owns the signed-in user's debates, the Current Debate pointer, session-only one-off mode, and the shared Switch and Start dialogs. Every source and every automatically recorded result carries a `debateId`; one-off work and unsorted legacy rows have none. The Library, History, the AI source context, and discovered-source autosave all read from one debate at a time, so material never crosses debates. Motion-bearing tools confirm a motion that differs from the Current Debate (switch, create, or use once) before submitting, and the app blocks with Continue, Start new, or Switch after five days without work in the Current Debate.
+[`src/lib/stores/debate-store.ts`](../src/lib/stores/debate-store.ts) owns the signed-in user's debates, the Current Debate pointer, session-only one-off mode, and the shared Switch and Start dialogs. Every source and every automatically recorded result carries a `debateId`; one-off work and unsorted legacy rows have none. The Library, History, the AI source context, and discovered-source autosave all read from one debate at a time, so material never crosses debates. Motion-bearing tools confirm a motion that differs from the Current Debate (switch, create, or use once) before submitting; with no Current Debate they instead offer to start one from the typed motion. The first-run tour starts with the Current Debate card, then points at Library and Generate. The app blocks with Continue, Start new, or Switch after five days without work in the Current Debate.
 
 [`src/lib/stores/settings-store.ts`](../src/lib/stores/settings-store.ts) owns language, theme, feature provider settings, prompts, and research preferences. It persists locally and synchronizes authenticated settings.
 
@@ -43,7 +43,7 @@ Interface language and AI-output language are separate settings. Interface langu
 
 ## Supabase environments and sessions
 
-[`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) resolves production or staging client configuration. Public URLs and anon keys are browser configuration. Do not copy their values into docs.
+[`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) resolves production or staging client configuration. Public URLs and anon keys are browser configuration. Do not copy their values into docs. Admins switch projects from Settings; see [operations.md](operations.md#switching-the-frontend-to-staging).
 
 [`src/lib/supabase/client.ts`](../src/lib/supabase/client.ts) creates the client with persistent sessions, automatic refresh, PKCE, and environment-specific storage keys.
 

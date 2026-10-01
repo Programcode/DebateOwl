@@ -7,7 +7,9 @@ import SettingsPage from '@/pages/SettingsPage';
 const mocks = vi.hoisted(() => ({
   user: { id: 'admin-a', email: 'admin@example.com' } as { id: string; email: string } | null,
   role: vi.fn(),
+  env: 'production' as 'production' | 'staging',
 }));
+vi.mock('@/lib/supabase/env', () => ({ getActiveEnv: () => mocks.env, setActiveEnv: vi.fn() }));
 vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock('@/lib/supabase/client', () => ({
   SUPABASE_URL: 'https://example.invalid',
@@ -36,7 +38,7 @@ function mount(client = new QueryClient({ defaultOptions: { queries: { retry: fa
   const ui = () => <QueryClientProvider client={client}><MemoryRouter><SettingsPage /></MemoryRouter></QueryClientProvider>;
   return { ...render(ui()), client, ui };
 }
-beforeEach(() => { mocks.user = { id: 'admin-a', email: 'admin@example.com' }; mocks.role.mockReset(); });
+beforeEach(() => { mocks.user = { id: 'admin-a', email: 'admin@example.com' }; mocks.env = 'production'; mocks.role.mockReset(); });
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); });
 
 describe('Settings admin navigation', () => {
@@ -92,5 +94,23 @@ describe('Settings admin navigation', () => {
     await act(async () => { resolve({ data: { role: 'admin' }, error: null }); });
     await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading...' })).not.toBeInTheDocument());
     expect(screen.queryByRole('link', { name: 'Open Admin Panel' })).not.toBeInTheDocument();
+  });
+
+  it('shows the environment switcher to admins only, and to everyone on staging', async () => {
+    mocks.role.mockResolvedValue({ data: { role: 'user' }, error: null });
+    const view = mount();
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading...' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Switch to Staging' })).not.toBeInTheDocument();
+    view.unmount();
+
+    mocks.role.mockResolvedValue({ data: { role: 'admin' }, error: null });
+    const admin = mount();
+    expect(await screen.findByRole('button', { name: 'Switch to Staging' })).toBeInTheDocument();
+    admin.unmount();
+
+    mocks.env = 'staging';
+    mocks.role.mockResolvedValue({ data: null, error: null });
+    mount();
+    expect(screen.getByRole('button', { name: 'Switch to Production' })).toBeInTheDocument();
   });
 });
