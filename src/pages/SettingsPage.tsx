@@ -1,9 +1,9 @@
 // src/pages/SettingsPage.tsx
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Download, UserX } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
+import { deleteAccount, downloadAccountData } from '@/lib/account';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -50,6 +51,13 @@ export default function SettingsPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [accountConfirmation, setAccountConfirmation] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const navigate = useNavigate();
+  // Must match deletionConfirmation in supabase/functions/account/index.ts.
+  const expectedAccountConfirmation = user?.email || 'DELETE';
 
   const adminRole = useQuery({
     queryKey: ['admin-role', user?.id],
@@ -69,6 +77,13 @@ export default function SettingsPage() {
   });
   const isAdmin = Boolean(user) && adminRole.isSuccess && adminRole.data;
 
+  const clearLocalData = () => {
+    clearSession();
+    resetSparringLocalData();
+    useDebateStore.setState({ debates: [], currentDebateId: null, oneOff: false });
+    localStorage.removeItem('debate-trainer-storage');
+  };
+
   const handleDeleteAllData = () => {
     if (deleteEmail !== user?.email) {
       toast({ title: t('settings.deleteCancelled'), description: t('settings.deleteCancelledDesc') });
@@ -76,10 +91,7 @@ export default function SettingsPage() {
     }
 
     void clearAllData().then(() => {
-      clearSession();
-      resetSparringLocalData();
-      useDebateStore.setState({ debates: [], currentDebateId: null, oneOff: false });
-      localStorage.removeItem('debate-trainer-storage');
+      clearLocalData();
       setDeleteDialogOpen(false);
       setDeleteEmail('');
       toast({ title: t('settings.deleteSuccess'), description: t('settings.deleteSuccessDesc') });
@@ -87,6 +99,43 @@ export default function SettingsPage() {
       console.error('Failed to delete data:', error);
       toast({ title: t('settings.deleteFailed'), description: t('settings.deleteFailedDesc'), variant: "destructive" });
     });
+  };
+
+  const handleDownloadData = async () => {
+    setExporting(true);
+    try {
+      await downloadAccountData();
+    } catch (error) {
+      toast({
+        title: t('settings.downloadDataFailed'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (accountConfirmation !== expectedAccountConfirmation || deletingAccount) return;
+    setDeletingAccount(true);
+    try {
+      await deleteAccount(accountConfirmation);
+    } catch (error) {
+      setDeletingAccount(false);
+      toast({
+        title: t('settings.deleteAccountFailed'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    clearLocalData();
+    // The account is gone, so a server sign-out may fail; the local session must still end.
+    await signOut().catch(() => supabase.auth.signOut({ scope: 'local' }));
+    toast({ title: t('settings.deleteAccountSuccess'), description: t('settings.deleteAccountSuccessDesc') });
+    navigate('/', { replace: true });
   };
 
   const handleSignOut = () => {
@@ -256,6 +305,16 @@ export default function SettingsPage() {
                 {t('settings.signOut')}
               </Button>
             </div>
+            <div className="flex flex-col gap-3 border-t border-primary/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{t('settings.yourData')}</p>
+                <p className="text-sm text-muted-foreground">{t('settings.yourDataDesc')}</p>
+              </div>
+              <Button variant="outline" onClick={() => void handleDownloadData()} disabled={exporting} className="shrink-0">
+                <Download className="h-4 w-4 mr-2" />
+                {exporting ? t('settings.downloadingData') : t('settings.downloadData')}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -297,11 +356,18 @@ export default function SettingsPage() {
               {t('settings.dangerDesc', { email: user?.email })}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
               {t('settings.deleteAllData')}
             </Button>
+            <div className="space-y-3 border-t border-destructive/20 pt-6">
+              <p className="text-sm text-muted-foreground">{t('settings.deleteAccountDesc')}</p>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteAccountOpen(true)}>
+                <UserX className="h-4 w-4 mr-2" />
+                {t('settings.deleteAccount')}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -335,6 +401,49 @@ export default function SettingsPage() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
             <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email}>
               {t('settings.deleteAllData')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={deleteAccountOpen}
+        onOpenChange={(open) => {
+          if (deletingAccount) return;
+          setDeleteAccountOpen(open);
+          if (!open) setAccountConfirmation('');
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('settings.deleteAccountDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('settings.deleteAccountDialogDesc', { email: user?.email || t('settings.unknownUser') })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="delete-account-confirmation">
+              {user?.email ? t('settings.typeEmailConfirm') : t('settings.typeDeleteConfirm')}
+            </Label>
+            <Input
+              id="delete-account-confirmation"
+              value={accountConfirmation}
+              autoComplete="off"
+              onChange={(event) => setAccountConfirmation(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') void handleDeleteAccount(); }}
+              placeholder={expectedAccountConfirmation}
+              disabled={deletingAccount}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteAccountOpen(false)} disabled={deletingAccount}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleDeleteAccount()}
+              disabled={accountConfirmation !== expectedAccountConfirmation || deletingAccount}
+            >
+              {deletingAccount ? t('settings.deletingAccount') : t('settings.deleteAccount')}
             </Button>
           </DialogFooter>
         </DialogContent>

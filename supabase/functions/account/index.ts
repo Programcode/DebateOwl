@@ -1,0 +1,192 @@
+// Supabase Edge Function: export everything a user owns, or delete the account.
+//
+// POST { action: "export" } returns the account and its rows as one JSON document.
+// POST { action: "delete", confirmation } cancels Stripe billing, removes the
+// user's Storage objects, clears their workspaces, then deletes the auth user.
+// Foreign keys and the auth.users delete trigger remove every remaining row in
+// that delete; see supabase/migrations/20261001100000_account_deletion_and_export.sql.
+//
+// Billing is canceled first and immediately, without a refund. If Stripe
+// cannot be reached, nothing is deleted and the user can try again.
+
+import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
+import { createAdminClient, HttpError, jsonError, requireUser } from "../_shared/auth.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+
+export type AccountUser = { id: string; email?: string | null };
+export type StorageObject = { bucket_id: string; name: string };
+export type DeletionPlan = { stripe_customer_ids: string[]; storage_objects: StorageObject[] };
+
+export type AccountDeps = {
+  authenticate: (req: Request) => Promise<AccountUser>;
+  exportData: (userId: string) => Promise<unknown>;
+  deletionPlan: (userId: string) => Promise<DeletionPlan>;
+  /** Cancels every live subscription and returns how many it canceled. */
+  cancelSubscriptions: (customerIds: string[]) => Promise<number>;
+  removeStorageObjects: (objects: StorageObject[]) => Promise<void>;
+  /** Clears rows that deliberately block a raw auth user delete. */
+  prepareDeletion: (userId: string) => Promise<void>;
+  deleteAuthUser: (userId: string) => Promise<void>;
+};
+
+/** The text a user types to confirm deletion: their email, or DELETE without one. */
+export function deletionConfirmation(user: AccountUser) {
+  return user.email || "DELETE";
+}
+
+// Subscriptions in these states no longer bill.
+const ENDED_SUBSCRIPTION_STATUSES = new Set(["canceled", "incomplete_expired"]);
+
+export type SubscriptionApi = {
+  list: (customerId: string) => AsyncIterable<{ id: string; status: string }>;
+  cancel: (subscriptionId: string) => Promise<unknown>;
+};
+
+export async function cancelLiveSubscriptions(api: SubscriptionApi, customerIds: string[]) {
+  let canceled = 0;
+  for (const customerId of customerIds) {
+    try {
+      for await (const subscription of api.list(customerId)) {
+        if (ENDED_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
+        await api.cancel(subscription.id);
+        canceled += 1;
+      }
+    } catch (error) {
+      // A customer already deleted in Stripe has nothing left to bill.
+      if ((error as { code?: string }).code === "resource_missing") continue;
+      throw error;
+    }
+  }
+  return canceled;
+}
+
+async function readBody(req: Request): Promise<Record<string, unknown>> {
+  try {
+    const body = await req.json();
+    return body && typeof body === "object" ? body as Record<string, unknown> : {};
+  } catch {
+    throw new HttpError(400, "Request body must be valid JSON");
+  }
+}
+
+export function createHandler(deps: AccountDeps) {
+  return async (req: Request) => {
+    const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+    if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+
+    try {
+      // The account is always the caller's own. No user id is read from the body.
+      const user = await deps.authenticate(req);
+      const body = await readBody(req);
+
+      if (body.action === "export") {
+        return Response.json(await deps.exportData(user.id), { headers: corsHeaders });
+      }
+
+      if (body.action === "delete") {
+        if (body.confirmation !== deletionConfirmation(user)) {
+          throw new HttpError(400, "The confirmation does not match, so the account was not deleted");
+        }
+        const plan = await deps.deletionPlan(user.id);
+        const canceledSubscriptions = await deps.cancelSubscriptions(plan.stripe_customer_ids);
+        await deps.removeStorageObjects(plan.storage_objects);
+        await deps.prepareDeletion(user.id);
+        await deps.deleteAuthUser(user.id);
+        console.log(`[ACCOUNT] Deleted account ${user.id}`);
+        return Response.json({ deleted: true, canceledSubscriptions }, { headers: corsHeaders });
+      }
+
+      throw new HttpError(400, 'action must be "export" or "delete"');
+    } catch (error) {
+      if (error instanceof HttpError) return jsonError(error, corsHeaders);
+      console.error("[ACCOUNT] Error:", error instanceof Error ? error.message : "unknown");
+      return jsonError(new HttpError(500, "Something went wrong. Please try again."), corsHeaders);
+    }
+  };
+}
+
+function liveDeps(): AccountDeps {
+  const admin = createAdminClient();
+
+  return {
+    authenticate: async (req) => (await requireUser(req)).user,
+
+    exportData: async (userId) => {
+      const { data, error } = await admin.rpc("export_account_data", { p_user_id: userId });
+      if (error) {
+        console.error("[ACCOUNT] Export failed", error.code);
+        throw new HttpError(500, "Could not export your data. Please try again.");
+      }
+      return data;
+    },
+
+    deletionPlan: async (userId) => {
+      const { data, error } = await admin.rpc("account_deletion_plan", { p_user_id: userId });
+      if (error) {
+        console.error("[ACCOUNT] Deletion plan failed", error.code);
+        throw new HttpError(500, "Could not delete your account. Please try again.");
+      }
+      return data as DeletionPlan;
+    },
+
+    cancelSubscriptions: async (customerIds) => {
+      if (customerIds.length === 0) return 0;
+      const billingError = new HttpError(
+        502,
+        "Could not cancel your subscription, so your account was not deleted. Please try again.",
+      );
+      const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!secretKey) throw billingError;
+      const stripe = new Stripe(secretKey, {
+        apiVersion: "2023-10-16",
+        httpClient: Stripe.createFetchHttpClient(),
+      });
+      try {
+        return await cancelLiveSubscriptions({
+          list: (customer) => stripe.subscriptions.list({ customer, status: "all", limit: 100 }),
+          cancel: (subscriptionId) => stripe.subscriptions.cancel(subscriptionId),
+        }, customerIds);
+      } catch (error) {
+        console.error("[ACCOUNT] Stripe cancellation failed", (error as { code?: string }).code ?? "unknown");
+        throw billingError;
+      }
+    },
+
+    removeStorageObjects: async (objects) => {
+      const byBucket = new Map<string, string[]>();
+      for (const object of objects) {
+        byBucket.set(object.bucket_id, [...(byBucket.get(object.bucket_id) ?? []), object.name]);
+      }
+      for (const [bucket, names] of byBucket) {
+        for (let start = 0; start < names.length; start += 100) {
+          const { error } = await admin.storage.from(bucket).remove(names.slice(start, start + 100));
+          if (error) {
+            console.error("[ACCOUNT] Storage removal failed", error.message);
+            throw new HttpError(500, "Could not delete your stored files, so your account was not deleted. Please try again.");
+          }
+        }
+      }
+    },
+
+    prepareDeletion: async (userId) => {
+      const { error } = await admin.rpc("prepare_account_deletion", { p_user_id: userId });
+      if (error) {
+        console.error("[ACCOUNT] Deletion preparation failed", error.code);
+        throw new HttpError(500, "Could not delete your account. Please try again.");
+      }
+    },
+
+    deleteAuthUser: async (userId) => {
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      if (error) {
+        console.error("[ACCOUNT] Auth user deletion failed", error.status ?? "unknown");
+        throw new HttpError(500, "Could not delete your account. Please try again.");
+      }
+    },
+  };
+}
+
+if (import.meta.main) {
+  Deno.serve(createHandler(liveDeps()));
+}

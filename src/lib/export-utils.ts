@@ -16,7 +16,7 @@ import {
 } from './export-sparring-labels';
 
 /** Triggers a browser download from a Blob. */
-function saveBlob(blob: Blob, filename: string): void {
+export function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
