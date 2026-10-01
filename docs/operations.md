@@ -63,17 +63,35 @@ The staging browser suite disables trace, screenshot, and video capture. It crea
 
 Do not enable the staging repository variable before every prerequisite is present. A skipped staging job is not a pass.
 
+## Backend drift check
+
+`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the linked project; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role unless `SUPABASE_DB_PASSWORD` is set.
+
+The comparison uses the committed tree at `HEAD`, so commit or stash local edits first. It reports:
+
+- migrations on this commit that the project has not applied, and applied migrations the commit does not have;
+- functions that are not deployed, or that were deployed before the last commit that touched them or a file they import;
+- functions whose deployed `verify_jwt` differs from [`supabase/config.toml`](../supabase/config.toml);
+- deployed functions that the commit does not have.
+
+Function change dates come from first-parent git history, which dates a merged change by its merge. A function deployed from a branch before its merge therefore shows as changed until it is redeployed from `main`. A shallow clone skips the function date check.
+
+`--check` exits 1 when a migration on this commit is not applied, and exit code 2 means the check itself failed. A scheduled CI step could use it against production, but it would need a Supabase access token and database access in GitHub Actions. That is a production credential, so it waits for Adam's decision.
+
+`workspace-invites` is not deployed to production, because Collaborative Workspace is hidden there. Expect it in the not-deployed list.
+
 ## Supabase changes
 
 Before applying a migration or deploying a function:
 
-1. resolve the linked project and confirm whether it is local, staging, or production;
-2. inspect the exact migration or function diff;
-3. capture the current remote baseline needed for rollback;
-4. run the relevant local tests;
-5. confirm CORS and authentication behavior;
-6. apply one scoped operation;
-7. verify the live result before continuing.
+1. run `npm run backend:status` on the commit you are deploying and confirm that the pending list matches what you are about to apply;
+2. resolve the linked project and confirm whether it is local, staging, or production;
+3. inspect the exact migration or function diff;
+4. capture the current remote baseline needed for rollback;
+5. run the relevant local tests;
+6. confirm CORS and authentication behavior;
+7. apply one scoped operation;
+8. verify the live result before continuing, then rerun `npm run backend:status` to confirm nothing you meant to ship is still pending.
 
 Stop when the project target is ambiguous, rollback is unproven, or the operation exceeds authorization.
 
@@ -146,7 +164,7 @@ Do not expose protected data in artifacts. Record the commit, environment, opera
 
 - Every Actions job fails in 2 to 5 seconds with no logs: Actions minutes or billing, not the code. Verify locally.
 - Green local E2E plus staging failure: schema, functions, provider access, demo code, or CORS may differ.
-- New frontend errors against Supabase right after a merge: the matching migration or function may not be applied to production yet.
+- New frontend errors against Supabase right after a merge: the matching migration or function may not be applied to production yet. Run `npm run backend:status` from the linked checkout.
 - Function returns unauthorized after deploy: check handler auth and environment propagation before changing gateway settings.
 - Browser works on one route only: check the `vercel.json` SPA rewrite and cache headers.
 - Native callback fails while web works: check Capacitor scheme and Supabase redirect allowlist.
