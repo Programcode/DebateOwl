@@ -80,7 +80,7 @@ Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production
    A migration with a local version and no remote version is pending. A function whose folder changed (`git log -- supabase/functions/<name> supabase/functions/_shared`) after its remote `updated_at` is stale. Save both lists as the rollback baseline.
 3. Apply migrations. Run `supabase db push --project-ref brifeyypjauyusmkptkx --dry-run` and check that it lists exactly the pending files from step 2. Then run it without `--dry-run`. Never use `--include-all` to paper over divergent history.
 4. Deploy functions, one at a time, only the ones step 2 marked stale: `supabase functions deploy <name> --project-ref brifeyypjauyusmkptkx --use-api`. [`supabase/config.toml`](../supabase/config.toml) supplies each function's JWT setting. Never use `--prune`.
-5. Verify. Rerun step 2; it must show nothing pending. Then start the staging browser suite: dispatch `Protected staging E2E` from `main` with `gh workflow run staging-e2e.yml --ref main`, or, when Actions cannot run, run it locally with the protected values as described in [testing.md](testing.md#protected-staging). For a manual check in the browser, an admin can switch the deployed frontend to staging from Settings.
+5. Verify. Rerun step 2; it must show nothing pending. Then start the staging browser suite: dispatch `Protected staging E2E` from `main` with `gh workflow run staging-e2e.yml --ref main`, or, when Actions cannot run, run it locally with the protected values as described in [testing.md](testing.md#protected-staging). For a manual check in the browser, an admin can switch the deployed frontend to staging from Settings and sign in there with a staging demo code. Google and email sign-in on staging work only if the staging Auth redirect URLs include the frontend origin.
 
 Production then follows [Supabase changes](#supabase-changes) with the same list of migrations and functions.
 
@@ -89,6 +89,8 @@ Production then follows [Supabase changes](#supabase-changes) with the same list
 [`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) reads the `debate-supabase-env` localStorage key once at startup. The value `staging` selects staging, and anything else selects production. Each project keeps its own auth session under `debate-auth-<env>`.
 
 Admins see a **Developer** card in Settings that signs out, sets the key, and reloads. While staging is active, every page shows a staging strip with **Switch to Production**, and the Settings card is shown to everyone. A new staging session starts signed out, and an admin on production may not be an admin on staging, so the way back cannot depend on that role. The switch is a convenience, not an access control. Staging RLS and its separate user accounts are the boundary.
+
+The switch only works while the `connect-src` directive in [`vercel.json`](../vercel.json) allows the staging project origin. Today the `*.supabase.co` wildcard covers it. If you narrow that wildcard, list both project origins explicitly.
 
 ## Supabase changes
 
