@@ -7,18 +7,20 @@ const mocks = vi.hoisted(() => ({
   env: 'production' as 'local' | 'production' | 'staging',
   setActiveEnv: vi.fn(),
   signOut: vi.fn(),
+  discard: vi.fn(),
 }));
 vi.mock('@/lib/supabase/env', () => ({
   ENV_STORAGE_KEY: 'debate-supabase-env',
   getActiveEnv: () => mocks.env,
   setActiveEnv: mocks.setActiveEnv,
 }));
-vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ leaveEnvironment: mocks.signOut }) }));
+vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ leaveEnvironment: mocks.signOut, discardLocalState: mocks.discard }) }));
 
 beforeEach(() => {
   mocks.env = 'production';
   mocks.setActiveEnv.mockReset();
   mocks.signOut.mockReset().mockResolvedValue(undefined);
+  mocks.discard.mockReset();
 });
 afterEach(cleanup);
 
@@ -107,7 +109,10 @@ describe('StagingBanner', () => {
     changeTo(null, 'debate-trainer-storage');
     changeTo(null);
     expect(reload).not.toHaveBeenCalled();
+    expect(mocks.discard).not.toHaveBeenCalled();
+    mocks.discard.mockImplementation(() => expect(reload).not.toHaveBeenCalled());
     changeTo('staging');
+    expect(mocks.discard).toHaveBeenCalledOnce();
     expect(reload).toHaveBeenCalledOnce();
     localStorage.removeItem('debate-supabase-env');
   });

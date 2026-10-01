@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { AUTH_STORAGE_KEY, setActiveAccessToken, supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -22,6 +22,8 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   /** Ends the session and clears this project's local data before an environment switch. Never hangs. */
   leaveEnvironment: () => Promise<void>;
+  /** Clears this tab's session and user data for the active project without contacting the server. */
+  discardLocalState: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -269,6 +271,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [hydrateDebateStore, hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
+  // The persisted stores are shared by both projects, and sessionStorage holds
+  // this tab's Google token and sparring state. Drop this project's stored
+  // session and clear every user-specific store so nothing crosses projects.
+  const discardLocalState = useCallback(() => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
+    clearGoogleTokens();
+    clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
+    resetSessionStore();
+    clearSessionStore();
+    resetSettingsStore(true);
+    resetSparringStore();
+    resetDebateStore();
+    useDebateContextStore.getState().resetLocalData();
+  }, [session, clearSessionStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+
   const value = useMemo<AuthContextValue>(() => ({
     session,
     user: session?.user ?? null,
@@ -349,21 +367,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.warn('Sign-out before environment switch failed:', error);
       }
-      // A hung sign-out never fires SIGNED_OUT, and the persisted stores are
-      // shared by both projects. Drop this project's stored session and clear
-      // every user-specific store so nothing crosses into the other project.
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
-      clearGoogleTokens();
-      clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
-      resetSessionStore();
-      clearSessionStore();
-      resetSettingsStore(true);
-      resetSparringStore();
-      resetDebateStore();
-      useDebateContextStore.getState().resetLocalData();
+      // A hung sign-out never fires SIGNED_OUT, so clear local state directly.
+      discardLocalState();
     },
-  }), [session, loading, clearSessionStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+    discardLocalState,
+  }), [session, loading, discardLocalState, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

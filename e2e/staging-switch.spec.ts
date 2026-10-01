@@ -24,6 +24,12 @@ for (const path of ['/', '/login']) {
 
     const strip = page.getByRole('status').filter({ hasText: 'Staging backend' });
     await expect(strip).toBeVisible();
+    if (landing) {
+      // The fixed navigation must sit below the strip, not underneath it.
+      const stripBox = await strip.boundingBox();
+      const navBox = await page.locator('nav.fixed').boundingBox();
+      expect(navBox!.y).toBeGreaterThanOrEqual(stripBox!.y + stripBox!.height - 1);
+    }
     await strip.getByRole('button', { name: 'Switch to Production' }).click({ timeout: 5_000 });
 
     await expect(strip).toHaveCount(0);
