@@ -371,7 +371,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     leaveEnvironment: async () => {
       try {
-        await withAuthTimeout(supabase.auth.signOut(), 'Sign-out timed out');
+        // Local scope: switching backends must not sign the account out on other devices.
+        await withAuthTimeout(supabase.auth.signOut({ scope: 'local' }), 'Sign-out timed out');
       } catch (error) {
         console.warn('Sign-out before environment switch failed:', error);
       }

@@ -644,7 +644,8 @@ describe('AuthProvider behavior', () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
 
       expect(left).toBe(true);
-      expect(signOutMock).toHaveBeenCalled();
+      // Leaving must end only this browser's session, not the account's sessions on other devices.
+      expect(signOutMock).toHaveBeenCalledWith({ scope: 'local' });
       expect(localStorage.getItem('debate-auth-production')).toBeNull();
       expect(localStorage.getItem('debate-auth-production-user')).toBeNull();
       expect(localStorage.getItem('debate-auth-staging')).toBe('other-project-session');
