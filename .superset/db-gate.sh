@@ -18,9 +18,9 @@ FAKE_PROVIDER=debatelab-fake-openrouter
 # the fake provider. It needs LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY.
 # LIVE_MODEL=as-requested runs e2e/model-matrix instead: one case per catalog model.
 LIVE_PROVIDERS="${LIVE_PROVIDERS:-0}"
-# GLM Flash is inexpensive and has broad endpoint coverage, so OpenRouter's
-# default balanced routing can fail over between providers during this gate.
-LIVE_MODEL="${LIVE_MODEL:-z-ai/glm-5.3-flash}"  # empty also means default
+# Muse Spark 1.3 Contributor is the cheapest model that supports every request
+# parameter the app sends. It is a test-only model: it is not in the app catalog.
+LIVE_MODEL="${LIVE_MODEL:-meta/muse-spark-1.3-contributor}"  # empty also means default
 if [ "$LIVE_PROVIDERS" = 1 ] && { [ -z "${LIVE_OPENROUTER_API_KEY:-}" ] || [ -z "${LIVE_EXA_API_KEY:-}" ]; }; then
   echo "LIVE_PROVIDERS=1 requires LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY" >&2
   exit 1

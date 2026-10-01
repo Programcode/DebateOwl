@@ -1,4 +1,4 @@
-import { admin, expect, fake, stackReady, test } from "../full-stack/stack";
+import { admin, chooseForMotion, expect, fake, stackReady, test } from "../full-stack/stack";
 import { aiResponse, expectProviderCallsHealthy, LIVE_TIMEOUT } from "./live";
 
 test.skip(!stackReady, "Live gate is required (LIVE_PROVIDERS=1 ./.superset/db-gate.sh)");
@@ -33,6 +33,7 @@ test("Attack and Brainstorm return valid structured analyses", async ({ signedIn
   await page.getByLabel("Motion / Topic *").fill("Universal basic income should replace targeted welfare");
   const brainstorm = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await chooseForMotion(page, "once");
   expect(((await brainstorm).output.topFive as unknown[]).length).toBeGreaterThan(0);
   await expectProviderCallsHealthy(["attack", "brainstorm"]);
 });
@@ -43,6 +44,7 @@ test("a live sparring round is judged and saved", async ({ signedIn: page, user 
   await page.getByRole("combobox", { name: "Round format" }).click();
   await page.getByRole("option", { name: /Lincoln-Douglas · 5 speeches/ }).click();
   await page.getByRole("button", { name: "Start round" }).click();
+  await chooseForMotion(page, "create");
 
   const speeches = [
     ["Affirmative constructive", "Universal access removes the direct price barrier to participation in work, school, and civic life."],
@@ -70,6 +72,7 @@ test("Crossfire answers live and produces a debrief", async ({ signedIn: page })
   await page.getByTestId("crossfire-argument").fill("Private cars create congestion and unsafe streets.");
   await page.getByTestId("mode-question-ai").click();
   await page.getByTestId("start-crossfire").click();
+  await chooseForMotion(page, "create");
 
   await page.getByTestId("crossfire-input").fill("What evidence links fewer private cars to safer streets?");
   const turn = aiResponse(page, "crossfire");

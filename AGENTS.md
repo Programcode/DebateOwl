@@ -25,7 +25,7 @@ The local Supabase stack still uses shared default ports and container names. In
 
 ## Deployment
 
-The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed by that merge; they are separate authorized operations.
+The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed by that merge; they are separate authorized operations. `npm run backend:status` (read-only) lists what the linked project is missing; run it before any backend deploy.
 
 ## Normal ports
 

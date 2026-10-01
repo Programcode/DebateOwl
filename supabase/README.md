@@ -184,7 +184,7 @@ Read [`../docs/operations.md`](../docs/operations.md) before changing remote sta
 For an authorized backend change:
 
 1. Confirm the current worktree and commit.
-2. Resolve the linked Supabase project and environment.
+2. Resolve the linked Supabase project and environment, and run `npm run backend:status` to see what is pending there. See [`../docs/operations.md`](../docs/operations.md#backend-drift-check).
 3. Inspect the exact migration or function diff.
 4. Capture the remote baseline needed for rollback.
 5. Run focused tests, `npm run test:edge`, and database tests when schema or RLS changes.
