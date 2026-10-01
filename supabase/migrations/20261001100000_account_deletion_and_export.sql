@@ -130,7 +130,16 @@ BEGIN
     SELECT
       owner.oid::regclass AS relation,
       owner.relname AS name,
-      string_agg(format('%I = $1', reference.attname), ' OR ' ORDER BY reference.attname) AS predicate
+      string_agg(format('%I = $1', reference.attname), ' OR ' ORDER BY reference.attname) AS predicate,
+      -- Workspace rows are shared work. Like their read policies, export them
+      -- only while the user is still a member of that workspace.
+      CASE
+        WHEN owner.relname = 'workspaces' THEN 'id'
+        WHEN EXISTS (
+          SELECT 1 FROM pg_attribute AS scope
+          WHERE scope.attrelid = owner.oid AND scope.attname = 'workspace_id' AND NOT scope.attisdropped
+        ) THEN 'workspace_id'
+      END AS workspace_column
     FROM pg_constraint AS fk
     JOIN pg_class AS owner ON owner.oid = fk.conrelid
     JOIN pg_namespace AS schema ON schema.oid = owner.relnamespace
@@ -145,9 +154,13 @@ BEGIN
     ORDER BY owner.relname
   LOOP
     EXECUTE format(
-      'SELECT jsonb_agg(to_jsonb(owned) - $2) FROM %s AS owned WHERE %s',
+      'SELECT jsonb_agg(to_jsonb(owned) - $2) FROM %s AS owned WHERE (%s)%s',
       v_table.relation,
-      v_table.predicate
+      v_table.predicate,
+      CASE WHEN v_table.workspace_column IS NULL THEN '' ELSE format(
+        ' AND EXISTS (SELECT 1 FROM public.workspace_members AS member WHERE member.workspace_id = owned.%I AND member.user_id = $1)',
+        v_table.workspace_column
+      ) END
     )
     INTO v_rows
     USING p_user_id, v_redacted;

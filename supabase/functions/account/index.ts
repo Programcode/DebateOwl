@@ -47,6 +47,32 @@ export type BillingApi = {
   cancelSubscription: (subscriptionId: string) => Promise<unknown>;
 };
 
+function isMissing(error: unknown) {
+  return (error as { code?: string }).code === "resource_missing";
+}
+
+async function listUnlessCustomerMissing<T>(items: AsyncIterable<T>): Promise<T[] | null> {
+  const listed: T[] = [];
+  try {
+    for await (const item of items) listed.push(item);
+  } catch (error) {
+    if (isMissing(error)) return null;
+    throw error;
+  }
+  return listed;
+}
+
+/** Runs one Stripe change; a session or subscription that has disappeared needs none. */
+async function unlessAlreadyGone(change: () => Promise<unknown>) {
+  try {
+    await change();
+    return true;
+  } catch (error) {
+    if (isMissing(error)) return false;
+    throw error;
+  }
+}
+
 export async function stopBillingFor(api: BillingApi, userId: string, knownCustomerIds: string[]) {
   // Recorded customers cover the minute Stripe search can lag a new customer;
   // search covers customers created before create-checkout recorded them.
@@ -57,20 +83,18 @@ export async function stopBillingFor(api: BillingApi, userId: string, knownCusto
 
   let canceled = 0;
   for (const customerId of [...customerIds].sort()) {
-    try {
-      // An open Checkout session could otherwise start a subscription after deletion.
-      for await (const session of api.listOpenCheckouts(customerId)) {
-        await api.expireCheckout(session.id);
-      }
-      for await (const subscription of api.listSubscriptions(customerId)) {
-        if (ENDED_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
-        await api.cancelSubscription(subscription.id);
-        canceled += 1;
-      }
-    } catch (error) {
-      // A customer already deleted in Stripe has nothing left to bill.
-      if ((error as { code?: string }).code === "resource_missing") continue;
-      throw error;
+    // Listing reports resource_missing only when the customer itself is gone,
+    // and a deleted customer has nothing left to bill.
+    const sessions = await listUnlessCustomerMissing(api.listOpenCheckouts(customerId));
+    if (sessions === null) continue;
+    // An open Checkout session could otherwise start a subscription after deletion.
+    for (const session of sessions) await unlessAlreadyGone(() => api.expireCheckout(session.id));
+
+    const subscriptions = await listUnlessCustomerMissing(api.listSubscriptions(customerId));
+    if (subscriptions === null) continue;
+    for (const subscription of subscriptions) {
+      if (ENDED_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
+      if (await unlessAlreadyGone(() => api.cancelSubscription(subscription.id))) canceled += 1;
     }
   }
   return canceled;

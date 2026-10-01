@@ -213,6 +213,25 @@ SELECT public.create_workspace_version(
 );
 RESET ROLE;
 
+-- A workspace the leaver contributed to and was then removed from.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'ac000000-0000-4000-8000-00000000000b', true);
+SELECT public.create_workspace('Former motion', 'Former workspace', 'en', 'ac600000-0000-4000-8000-00000000000c');
+RESET ROLE;
+SELECT set_config('test.former_workspace', (SELECT id::text FROM public.workspaces WHERE create_request_id = 'ac600000-0000-4000-8000-00000000000c'), true);
+INSERT INTO public.workspace_members (workspace_id, user_id)
+  VALUES (current_setting('test.former_workspace')::uuid, 'ac000000-0000-4000-8000-00000000000a');
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'ac000000-0000-4000-8000-00000000000a', true);
+SELECT public.save_workspace_source(
+  current_setting('test.former_workspace')::uuid, 'ac700000-0000-4000-8000-00000000000c',
+  'FORMER-MEMBER-SOURCE', 'Shared evidence', 'text', '{}', '{}'
+);
+RESET ROLE;
+DELETE FROM public.workspace_members
+  WHERE workspace_id = current_setting('test.former_workspace')::uuid
+    AND user_id = 'ac000000-0000-4000-8000-00000000000a';
+
 -- Something outside Postgres for the plan to report.
 INSERT INTO storage.buckets (id, name) VALUES ('account-test', 'account-test');
 INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
@@ -269,8 +288,10 @@ SELECT ok(
   current_setting('test.export')::jsonb #> '{data,workspace_comments}' @> '[{"body": "Leaver comment"}]'
     AND NOT current_setting('test.export')::jsonb #> '{data,workspace_comments}' @> '[{"body": "Stayer comment"}]'
     AND NOT (current_setting('test.export')::jsonb -> 'data') ? 'workspace_audit_events'
-    AND current_setting('test.export') NOT LIKE '%SCHEDULED-ANNOUNCEMENT%',
-  'a comment the user only resolved, audit events naming them as actor, and scheduled announcements stay out of the export'
+    AND current_setting('test.export') NOT LIKE '%SCHEDULED-ANNOUNCEMENT%'
+    AND current_setting('test.export') LIKE '%Leaver evidence%'
+    AND current_setting('test.export') NOT LIKE '%FORMER-MEMBER-SOURCE%',
+  'the export leaves out a comment the user only resolved, audit events naming them, scheduled announcements, and work in a workspace they left'
 );
 SELECT ok(
   (current_setting('test.export')::jsonb -> 'data') ?& ARRAY['messages', 'announcements_received', 'admin_announcements'],

@@ -215,3 +215,34 @@ Deno.test("a failed Stripe search stops deletion", async () => {
     cancelSubscription: () => Promise.resolve(),
   }, "user-1", []), Error, "Stripe is down");
 });
+
+Deno.test("a subscription that disappears mid-cancellation does not skip the customer's others", async () => {
+  const gone = Object.assign(new Error("No such subscription"), { code: "resource_missing" });
+  const attempted: string[] = [];
+  const count = await stopBillingFor({
+    searchCustomers: () => iterate([]),
+    listOpenCheckouts: () => iterate([{ id: "cs_gone" }, { id: "cs_open" }]),
+    expireCheckout: (id) => {
+      attempted.push(`expire:${id}`);
+      return id === "cs_gone" ? Promise.reject(gone) : Promise.resolve();
+    },
+    listSubscriptions: () => iterate([{ id: "sub_gone", status: "active" }, { id: "sub_live", status: "active" }]),
+    cancelSubscription: (id) => {
+      attempted.push(`cancel:${id}`);
+      return id === "sub_gone" ? Promise.reject(gone) : Promise.resolve();
+    },
+  }, "user-1", ["cus_1"]);
+  assertEquals(attempted, ["expire:cs_gone", "expire:cs_open", "cancel:sub_gone", "cancel:sub_live"]);
+  assertEquals(count, 1);
+});
+
+Deno.test("a failed cancellation stops deletion", async () => {
+  const declined = Object.assign(new Error("Stripe is down"), { code: "api_error" });
+  await assertRejects(() => stopBillingFor({
+    searchCustomers: () => iterate([]),
+    listOpenCheckouts: () => iterate([]),
+    expireCheckout: () => Promise.resolve(),
+    listSubscriptions: () => iterate([{ id: "sub_live", status: "active" }]),
+    cancelSubscription: () => Promise.reject(declined),
+  }, "user-1", ["cus_1"]), Error, "Stripe is down");
+});
