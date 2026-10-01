@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { setActiveAccessToken, supabase } from './client';
+import { AUTH_STORAGE_KEY, setActiveAccessToken, supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
@@ -20,6 +20,8 @@ interface AuthContextValue {
   verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signInWithDemoCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Ends the session and clears this project's local data before an environment switch. Never hangs. */
+  leaveEnvironment: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -336,7 +338,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetSettingsStore();
       resetSparringStore();
     },
-  }), [session, loading, resetSessionStore, resetSettingsStore, resetSparringStore]);
+    leaveEnvironment: async () => {
+      try {
+        await withAuthTimeout(supabase.auth.signOut(), 'Sign-out timed out');
+      } catch (error) {
+        console.warn('Sign-out before environment switch failed:', error);
+      }
+      // A hung sign-out never fires SIGNED_OUT, and the persisted stores are
+      // shared by both projects. Drop this project's stored session and clear
+      // every user-specific store so nothing crosses into the other project.
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
+      clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
+      resetSessionStore();
+      resetSettingsStore(true);
+      resetSparringStore();
+      resetDebateStore();
+      useDebateContextStore.getState().resetLocalData();
+    },
+  }), [session, loading, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

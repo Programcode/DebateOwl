@@ -73,6 +73,7 @@ const {
 });
 
 vi.mock('@/lib/supabase/client', () => ({
+  AUTH_STORAGE_KEY: 'debate-auth-production',
   SUPABASE_URL: 'https://example.supabase.co',
   setActiveAccessToken: vi.fn(),
   supabase: {
@@ -121,6 +122,7 @@ vi.mock('@/lib/stores/sparring-store', () => ({
 
 import { AuthProvider, useAuth } from '@/lib/supabase/AuthProvider';
 import { crossfireStorageKey } from '@/lib/crossfire/storage';
+import { useDebateStore } from '@/lib/stores/debate-store';
 
 function AuthConsumer() {
   const { loading, user, signInWithGoogle, signOut } = useAuth();
@@ -614,6 +616,38 @@ describe('AuthProvider behavior', () => {
 
     expect(resetSessionStoreMock).toHaveBeenCalled();
     expect(resetSettingsStoreMock).toHaveBeenCalled();
+  });
+
+  it('leaveEnvironment clears this project\'s session and data even when sign-out hangs', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      signOutMock.mockReturnValue(new Promise(() => {}));
+      localStorage.setItem('debate-auth-production', 'session');
+      localStorage.setItem('debate-auth-production-user', 'user');
+      localStorage.setItem('debate-auth-staging', 'other-project-session');
+      useDebateStore.setState({ currentDebateId: 'debate-1', oneOff: true });
+      let left = false;
+      function Leaver() {
+        const { leaveEnvironment } = useAuth();
+        return <button type="button" onClick={() => void leaveEnvironment().then(() => { left = true; })}>leave</button>;
+      }
+      render(<AuthProvider><Leaver /></AuthProvider>);
+
+      fireEvent.click(screen.getByRole('button', { name: 'leave' }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
+
+      expect(left).toBe(true);
+      expect(signOutMock).toHaveBeenCalled();
+      expect(localStorage.getItem('debate-auth-production')).toBeNull();
+      expect(localStorage.getItem('debate-auth-production-user')).toBeNull();
+      expect(localStorage.getItem('debate-auth-staging')).toBe('other-project-session');
+      expect(resetSessionStoreMock).toHaveBeenCalled();
+      expect(resetSettingsStoreMock).toHaveBeenCalled();
+      expect(resetSparringStoreMock).toHaveBeenCalled();
+      expect(useDebateStore.getState()).toMatchObject({ currentDebateId: null, oneOff: false });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('unsubscribes auth listener on unmount', async () => {

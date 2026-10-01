@@ -4,25 +4,13 @@ export type RemoteEnv = 'production' | 'staging';
 
 export const reloadPage = () => window.location.reload();
 
-// Matches AuthProvider's auth operation timeout.
-const SIGN_OUT_WAIT_MS = 4000;
-
-// Each project keeps its own auth storage key, so a failed or stalled sign-out
-// cannot leak a session across projects. Switch anyway so a broken or
-// unresponsive project cannot trap anyone.
-export async function switchEnv(target: RemoteEnv, signOut: () => Promise<void>, reload: () => void) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+// leaveEnvironment is bounded and clears this project's local session and data
+// itself, so a failure here cannot trap anyone or leak data across projects.
+export async function switchEnv(target: RemoteEnv, leaveEnvironment: () => Promise<void>, reload: () => void) {
   try {
-    await Promise.race([
-      signOut(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('sign-out timed out')), SIGN_OUT_WAIT_MS);
-      }),
-    ]);
+    await leaveEnvironment();
   } catch (error) {
-    console.warn('Sign-out before environment switch failed:', error);
-  } finally {
-    clearTimeout(timer);
+    console.warn('Leaving the current environment failed:', error);
   }
   setActiveEnv(target);
   reload();

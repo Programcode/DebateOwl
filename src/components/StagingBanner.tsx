@@ -12,7 +12,7 @@ import { reloadPage, switchEnv } from '@/lib/supabase/switch-env';
  */
 export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) {
   const { t } = useTranslation();
-  const { signOut } = useAuth();
+  const { leaveEnvironment } = useAuth();
   const [switching, setSwitching] = useState(false);
   if (getActiveEnv() !== 'staging') return null;
 
@@ -30,7 +30,7 @@ export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) 
         disabled={switching}
         onClick={() => {
           setSwitching(true);
-          void switchEnv('production', signOut, reload);
+          void switchEnv('production', leaveEnvironment, reload);
         }}
       >
         {t('settings.switchToProduction')}

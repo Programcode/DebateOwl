@@ -14,7 +14,7 @@ type SwitchProps = { reload?: () => void };
 /** Admin control in Settings. The caller decides who sees it. */
 export function EnvironmentSwitcher({ reload = reloadPage }: SwitchProps) {
   const { t } = useTranslation();
-  const { signOut } = useAuth();
+  const { leaveEnvironment } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
   const active = getActiveEnv();
@@ -50,7 +50,7 @@ export function EnvironmentSwitcher({ reload = reloadPage }: SwitchProps) {
               disabled={switching}
               onClick={() => {
                 setSwitching(true);
-                void switchEnv(target, signOut, reload);
+                void switchEnv(target, leaveEnvironment, reload);
               }}
             >
               {t('settings.envSwitchConfirm')}
