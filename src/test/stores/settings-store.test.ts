@@ -75,6 +75,40 @@ describe("settings-store", () => {
     expect(state.featureConfigs.attack.model).toBe("openai/gpt-5.6-luna");
   });
 
+  it("keeps the language and theme a new account chose before its first sign-in", async () => {
+    setMockAuthUser({ id: "user_1" } as any);
+    useSettingsStore.getState().setLanguage("hu");
+    useSettingsStore.getState().setOutputLanguage("hu");
+    useSettingsStore.getState().setTheme("dark");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    resetMockState();
+    setMockAuthUser({ id: "user_1" } as any);
+    // The sign-up trigger provisions this row; the client has never saved it.
+    setMockTableResponse("user_settings", {
+      single: { language: "en", output_language: "en", theme: "system", custom_system_prompt: null, feature_configs: {} },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().language).toBe("hu");
+    expect(useSettingsStore.getState().outputLanguage).toBe("hu");
+    expect(i18n.language).toBe("hu");
+    const settingsWrite = supabaseMock.from.mock.results.find(({ value }) => value.update.mock.calls.length)?.value;
+    expect(useSettingsStore.getState().theme).toBe("dark");
+    expect(settingsWrite.update).toHaveBeenCalledWith(expect.objectContaining({ language: "hu", output_language: "hu", theme: "dark" }));
+  });
+
+  it("applies the server language once the account has saved settings", async () => {
+    useSettingsStore.getState().setLanguage("hu");
+    setMockTableResponse("user_settings", {
+      single: { language: "es", output_language: "es", theme: "system", feature_configs: { generate: { temperature: 0.4 } } },
+    });
+
+    await useSettingsStore.getState().hydrateFromServer();
+
+    expect(useSettingsStore.getState().language).toBe("es");
+  });
+
   it("resetLocalData restores defaults", () => {
     const store = useSettingsStore.getState();
     store.setTheme("dark");

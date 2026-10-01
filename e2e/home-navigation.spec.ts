@@ -40,17 +40,18 @@ test('onboarding follows visible home targets when secondary navigation is close
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
-  await page.locator('[data-test-id="button-primary"]').click();
 
-  const tourTargets = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'crossfire', 'sparring', 'library', 'timer', 'flowchart', 'history'];
+  // Current Debate first, then Library and one Prepare tool, all on Home.
+  const tourTargets = ['current-debate', 'mode-library', 'mode-generate'];
   for (const [index, key] of tourTargets.entries()) {
-    await expect(page.locator(`[data-tour="mode-${key}"]`)).toBeVisible();
+    await expect(page.locator(`[data-tour="${key}"]`)).toBeVisible();
     const nextButton = page.locator('[data-test-id="button-primary"]');
-    await expect(nextButton).toHaveAccessibleName(new RegExp(`Step ${index + 2} of 14`));
+    await expect(nextButton).toHaveAccessibleName(new RegExp(`Step ${index + 1} of 4`));
     await nextButton.click();
   }
 
-  await page.locator('[data-test-id="button-skip"]').click();
+  await page.locator('[data-test-id="button-primary"]').click();
+  await expect(page.locator('.react-joyride__tooltip')).toHaveCount(0);
 });
 
 test('onboarding keeps its original start schedule after a delayed lazy chunk', async ({ page }) => {

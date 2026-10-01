@@ -1,84 +1,49 @@
 // src/components/features/onboarding/OnboardingTour.tsx
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
+import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/hooks/use-onboarding';
+import { useDebateStore } from '@/lib/stores/debate-store';
 
 export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
     const { t } = useTranslation();
     const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
     const location = useLocation();
+    const currentDebateId = useDebateStore((state) => state.currentDebateId);
+    const debateDialog = useDebateStore((state) => state.dialog);
+    const openDebateDialog = useDebateStore((state) => state.openDialog);
+    const [stepIndex, setStepIndex] = useState(0);
 
+    // The tour starts with the Current Debate, because every tool works inside it.
     const allTourSteps = useMemo<Step[]>(() => [
         {
-            target: 'body',
+            target: '[data-tour="current-debate"]',
             content: (
-                <div className="text-center">
+                <div>
                     <h2 className="text-xl font-bold mb-2">{t('onboarding.welcome')}</h2>
                     <p className="text-muted-foreground">
-                        {t('onboarding.welcomeDesc')}
+                        {currentDebateId ? t('onboarding.debateCurrentDesc') : t('onboarding.debateFirstDesc')}
                     </p>
+                    {!currentDebateId && (
+                        // Joyride lets clicks through its highlight only after a mouse move, so touch needs this button.
+                        <Button className="mt-3" onClick={() => openDebateDialog('create')}>{t('debate.startDebate')}</Button>
+                    )}
                 </div>
             ),
-            placement: 'center',
+            placement: 'bottom',
             disableBeacon: true,
-        },
-        {
-            target: '[data-tour="mode-generate"], [data-tour="nav-generate"]',
-            content: (
-                <div>
-                    <h3 className="font-semibold mb-1">{t('onboarding.generate')}</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {t('onboarding.generateDesc')}
-                    </p>
-                </div>
-            ),
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-attack"], [data-tour="nav-attack"]',
-            content: (
-                <div>
-                    <h3 className="font-semibold mb-1">{t('onboarding.attack')}</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {t('onboarding.attackDesc')}
-                    </p>
-                </div>
-            ),
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-brainstorm"], [data-tour="nav-brainstorm"]',
-            content: (
-                <div>
-                    <h3 className="font-semibold mb-1">{t('onboarding.brainstorm')}</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {t('onboarding.brainstormDesc')}
-                    </p>
-                </div>
-            ),
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-factoids"], [data-tour="nav-factoids"]',
-            content: <TourCopy title={t('onboarding.factoids')} description={t('onboarding.factoidsDesc')} />,
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-ask"], [data-tour="nav-ask"]',
-            content: <TourCopy title={t('onboarding.ask')} description={t('onboarding.askDesc')} />,
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-crossfire"], [data-tour="nav-crossfire"]',
-            content: <TourCopy title={t('onboarding.crossfire')} description={t('onboarding.crossfireDesc')} />,
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-sparring"], [data-tour="nav-sparring"]',
-            content: <TourCopy title={t('onboarding.sparring')} description={t('onboarding.sparringDesc')} />,
-            placement: 'bottom',
+            // One primary action per step: before a debate exists that is Start debate.
+            ...(currentDebateId ? {} : {
+                styles: {
+                    buttonNext: {
+                        backgroundColor: 'transparent',
+                        border: '1px solid hsl(var(--border))',
+                        color: 'hsl(var(--foreground))',
+                    },
+                },
+            }),
         },
         {
             target: '[data-tour="mode-library"], [data-tour="nav-library"]',
@@ -86,23 +51,8 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             placement: 'bottom',
         },
         {
-            target: '[data-tour="mode-timer"], [data-tour="nav-timer"]',
-            content: <TourCopy title={t('onboarding.timer')} description={t('onboarding.timerDesc')} />,
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-flowchart"], [data-tour="nav-flowchart"]',
-            content: <TourCopy title={t('onboarding.flowchart')} description={t('onboarding.flowchartDesc')} />,
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="mode-history"], [data-tour="nav-history"]',
-            content: <TourCopy title={t('onboarding.history')} description={t('onboarding.historyDesc')} />,
-            placement: 'bottom',
-        },
-        {
-            target: '[data-tour="nav-settings"]',
-            content: <TourCopy title={t('onboarding.settings')} description={t('onboarding.settingsDesc')} />,
+            target: '[data-tour="mode-generate"], [data-tour="nav-generate"]',
+            content: <TourCopy title={t('onboarding.generate')} description={t('onboarding.generateDesc')} />,
             placement: 'bottom',
         },
         {
@@ -117,7 +67,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             ),
             placement: 'center',
         },
-    ], [t]);
+    ], [currentDebateId, openDebateDialog, t]);
 
     const resolveTourSteps = useCallback(() => {
         if (typeof document === 'undefined') return allTourSteps;
@@ -140,6 +90,12 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         });
     }, [allTourSteps]);
     const [tourSteps, setTourSteps] = useState(allTourSteps);
+    // Joyride scrolls a target to 20px from the top, which hides it under the sticky header.
+    const [scrollOffset, setScrollOffset] = useState(20);
+    const prepareTour = useCallback(() => {
+        setTourSteps(resolveTourSteps());
+        setScrollOffset((document.querySelector('header')?.getBoundingClientRect().height ?? 0) + 24);
+    }, [resolveTourSteps]);
 
     // Start tour automatically for new users
     useEffect(() => {
@@ -150,15 +106,15 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             ? 500
             : Math.max(0, 500 - (performance.now() - eligibleAt));
         const timer = setTimeout(() => {
-            setTourSteps(resolveTourSteps());
+            prepareTour();
             startTour();
         }, autoStartDelay);
         return () => clearTimeout(timer);
-    }, [eligibleAt, hasCompletedOnboarding, location.pathname, resolveTourSteps, startTour]);
+    }, [eligibleAt, hasCompletedOnboarding, location.pathname, prepareTour, startTour]);
 
     useEffect(() => {
-        if (isTourRunning) setTourSteps(resolveTourSteps());
-    }, [isTourRunning, location.pathname, resolveTourSteps]);
+        if (isTourRunning) prepareTour();
+    }, [isTourRunning, location.pathname, prepareTour]);
 
     // Prevent broken tooltips if user navigates away from the app mid-tour
     useEffect(() => {
@@ -167,20 +123,40 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         }
     }, [isTourRunning, location.pathname, stopTour]);
 
+    // Starting a debate from the first step pauses the tour while its dialog is
+    // open, then moves on once the new debate is current.
+    const debateBeforeDialog = useRef<string | null | undefined>(undefined);
+    useEffect(() => {
+        if (debateDialog === 'create') {
+            if (debateBeforeDialog.current === undefined) debateBeforeDialog.current = currentDebateId;
+            return;
+        }
+        if (debateDialog !== null || debateBeforeDialog.current === undefined) return;
+        const started = currentDebateId !== null && currentDebateId !== debateBeforeDialog.current;
+        debateBeforeDialog.current = undefined;
+        if (started && isTourRunning) setStepIndex((index) => (index === 0 ? 1 : index));
+    }, [currentDebateId, debateDialog, isTourRunning]);
+
     const handleJoyrideCallback = useCallback((data: CallBackProps) => {
-        const { status } = data;
+        const { action, index, status, type } = data;
         const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
 
         if (finishedStatuses.includes(status)) {
             setOnboardingComplete();
+            setStepIndex(0);
+        } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
+            setStepIndex(index + (action === ACTIONS.PREV ? -1 : 1));
         }
     }, [setOnboardingComplete]);
 
     return (
         <Joyride
             steps={tourSteps}
-            run={isTourRunning}
+            stepIndex={stepIndex}
+            run={isTourRunning && debateDialog === null}
             continuous
+            scrollOffset={scrollOffset}
+            scrollToFirstStep
             showSkipButton
             showProgress
             callback={handleJoyrideCallback}
@@ -191,6 +167,8 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                     overlayColor: 'hsl(var(--background) / 0.72)',
                     primaryColor: 'hsl(var(--primary))',
                     textColor: 'hsl(var(--popover-foreground))',
+                    // Hungarian footer labels wrap at Joyride's default 380px.
+                    width: 'min(440px, calc(100vw - 2rem))',
                     zIndex: 10000,
                 },
                 tooltip: {
@@ -200,6 +178,9 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                     boxShadow: '0 20px 45px hsl(var(--foreground) / 0.18)',
                     color: 'hsl(var(--popover-foreground))',
                     padding: '1rem',
+                },
+                tooltipContent: {
+                    textAlign: 'left',
                 },
                 buttonClose: {
                     color: 'hsl(var(--muted-foreground))',
@@ -215,6 +196,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                 },
                 buttonSkip: {
                     color: 'hsl(var(--muted-foreground))',
+                    whiteSpace: 'nowrap',
                 },
             }}
             locale={{
