@@ -93,4 +93,22 @@ describe('StagingBanner', () => {
     expect(mocks.setActiveEnv).toHaveBeenCalledWith('production');
     expect(reload).toHaveBeenCalledOnce();
   });
+
+  it('switches back even when sign-out hangs on an unresponsive project', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.env = 'staging';
+      mocks.signOut.mockReturnValue(new Promise(() => {}));
+      const reload = vi.fn();
+      render(<StagingBanner reload={reload} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(3999); });
+      expect(reload).not.toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(mocks.setActiveEnv).toHaveBeenCalledWith('production');
+      expect(reload).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
