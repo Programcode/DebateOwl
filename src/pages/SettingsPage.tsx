@@ -21,10 +21,12 @@ import { useDebateStore } from '@/lib/stores/debate-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { supabase } from '@/lib/supabase/client';
+import { getActiveEnv } from '@/lib/supabase/env';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { redirectToPortal } from '@/lib/stripe';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
+import { EnvironmentSwitcher } from '@/components/features/settings/EnvironmentSwitcher';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -288,6 +290,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+        {(isAdmin || getActiveEnv() === 'staging') && <EnvironmentSwitcher />}
 
         {/* Danger Zone */}
         <Card className="border-destructive/20 bg-destructive/5 mt-8">

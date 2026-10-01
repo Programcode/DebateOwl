@@ -380,6 +380,7 @@
     "envSwitchTitle": "Cambiar entorno",
     "envSwitchDesc": "Se cerrará tu sesión y la app se recargará apuntando a {{target}}. Tendrás que iniciar sesión de nuevo.",
     "envSwitchConfirm": "Cambiar y cerrar sesión",
+    "stagingBanner": "Backend de staging",
     "dangerZone": "Zona de peligro",
     "dangerDesc": "Elimina permanentemente todos tus datos guardados. Solo afecta a tu cuenta ({{email}}).",
     "deleteAllData": "Eliminar todos mis datos",
