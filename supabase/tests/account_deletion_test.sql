@@ -158,6 +158,9 @@ INSERT INTO public.workspace_members (workspace_id, user_id) VALUES
   (current_setting('test.stayer_workspace')::uuid, 'ac000000-0000-4000-8000-00000000000a');
 UPDATE public.workspace_documents SET assignee_id = 'ac000000-0000-4000-8000-00000000000a'
   WHERE id = current_setting('test.stayer_document')::uuid;
+-- Invite redemption attempts name the actor without a foreign key.
+INSERT INTO private.workspace_invite_attempts (actor_id, success, failure_reason)
+  VALUES ('ac000000-0000-4000-8000-00000000000a', false, 'invalid_code');
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'ac000000-0000-4000-8000-00000000000a', true);

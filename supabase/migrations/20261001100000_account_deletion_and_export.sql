@@ -83,6 +83,8 @@ BEGIN
   DELETE FROM public.workspace_threads WHERE created_by = p_user_id;
   DELETE FROM public.workspace_artifacts WHERE created_by = p_user_id;
   DELETE FROM public.workspace_sources WHERE created_by = p_user_id;
+  -- Invite rate-limit history names the actor without a foreign key.
+  DELETE FROM private.workspace_invite_attempts WHERE actor_id = p_user_id;
 END;
 $$;
 
