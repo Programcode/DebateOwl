@@ -27,7 +27,7 @@ interface Options {
   settings?: Record<string, unknown> | null;
   rateLimit?: { limit_value: number } | null;
   quota?: { allowed: boolean; current_count: number };
-  /** The clip counter row a refund reads. */
+  /** The clip counter row a refund would read. */
   counter?: { usage_date: string; request_count: number } | null;
   provider?: () => Response | Promise<Response>;
 }
@@ -265,23 +265,14 @@ Deno.test("a provider failure returns a fallback code without the provider's bod
   });
 });
 
-Deno.test("a clip the provider refused is given back", async () => {
+Deno.test("a clip stays counted however the provider call ends", async () => {
   for (const status of [401, 429, 500]) {
     await withVoice({ provider: () => new Response("busy", { status }), counter: { usage_date: "2026-10-01", request_count: 5 } }, async (harness) => {
-      const response = await handleRequest(await voiceRequest());
-      assertEquals(response.status, 502, `${status}: status`);
-      assertEquals(harness.counterWrites.length, 1, `${status}: counter writes`);
-      const [write] = harness.counterWrites;
-      // Compare-and-swap on the value read, for this user's voice counter only.
-      if (!write.startsWith("PATCH ") || !write.includes("request_count=eq.5") || !write.includes("quota_key=eq.voice") ||
-        !write.includes(`user_id=eq.${USER_ID}`) || !write.endsWith('{"request_count":4}')) {
-        throw new Error(`${status}: wrong refund: ${write}`);
-      }
+      assertEquals((await handleRequest(await voiceRequest())).status, 502, `${status}: status`);
+      // A refund would let replayed tokens reach the provider without limit while it refuses.
+      assertEquals(harness.counterWrites.length, 0, `${status}: counter writes`);
     });
   }
-});
-
-Deno.test("a clip that may have been billed is not given back", async () => {
   const broken = () => new Response(new ReadableStream({
     start(controller) {
       controller.error(new TypeError("connection reset"));
