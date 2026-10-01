@@ -98,6 +98,14 @@ function withAuthTimeout<T>(operation: Promise<T>, message: string, timeoutMs = 
   ]);
 }
 
+function clearGoogleTokens() {
+  sessionStorage.removeItem('google_provider_token');
+  localStorage.removeItem('google_provider_token');
+  // Remove refresh tokens written by older clients as well; this client
+  // never persists them because they are long-lived credentials.
+  localStorage.removeItem('google_provider_refresh_token');
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hydrateSparringStore = useSparringStore((state) => state.hydrateSavedSessions);
   const prepareSparringStore = useSparringStore((state) => state.prepareForUser);
   const resetSessionStore = useSessionStore((state) => state.resetLocalData);
+  const clearSessionStore = useSessionStore((state) => state.clearSession);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
   const resetSparringStore = useSparringStore((state) => state.resetLocalData);
   const hydrateDebateStore = useDebateStore((state) => state.hydrate);
@@ -238,11 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSparringStore();
         resetDebateStore();
         useDebateContextStore.getState().resetLocalData();
-        sessionStorage.removeItem('google_provider_token');
-        localStorage.removeItem('google_provider_token');
-        // Remove refresh tokens written by older clients as well; this client
-        // never persists them because they are long-lived credentials.
-        localStorage.removeItem('google_provider_refresh_token');
+        clearGoogleTokens();
         return;
       }
 
@@ -349,14 +354,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // every user-specific store so nothing crosses into the other project.
       localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
+      clearGoogleTokens();
       clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
       resetSessionStore();
+      clearSessionStore();
       resetSettingsStore(true);
       resetSparringStore();
       resetDebateStore();
       useDebateContextStore.getState().resetLocalData();
     },
-  }), [session, loading, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }), [session, loading, clearSessionStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -17,6 +17,7 @@ const {
   hydrateSessionStoreMock,
   hydrateSettingsStoreMock,
   resetSessionStoreMock,
+  clearSessionStoreMock,
   resetSettingsStoreMock,
   hydrateSparringStoreMock,
   prepareSparringStoreMock,
@@ -37,6 +38,7 @@ const {
   const hydrateSessionStoreMock = vi.fn();
   const hydrateSettingsStoreMock = vi.fn();
   const resetSessionStoreMock = vi.fn();
+  const clearSessionStoreMock = vi.fn();
   const resetSettingsStoreMock = vi.fn();
   const hydrateSparringStoreMock = vi.fn();
   const prepareSparringStoreMock = vi.fn();
@@ -63,6 +65,7 @@ const {
     hydrateSessionStoreMock,
     hydrateSettingsStoreMock,
     resetSessionStoreMock,
+    clearSessionStoreMock,
     resetSettingsStoreMock,
     hydrateSparringStoreMock,
     prepareSparringStoreMock,
@@ -102,6 +105,7 @@ vi.mock('@/lib/stores/session-store', () => ({
   useSessionStore: (selector: (state: any) => any) => selector({
     hydrateFromServer: hydrateSessionStoreMock,
     resetLocalData: resetSessionStoreMock,
+    clearSession: clearSessionStoreMock,
   }),
 }));
 
@@ -625,6 +629,9 @@ describe('AuthProvider behavior', () => {
       localStorage.setItem('debate-auth-production', 'session');
       localStorage.setItem('debate-auth-production-user', 'user');
       localStorage.setItem('debate-auth-staging', 'other-project-session');
+      sessionStorage.setItem('google_provider_token', 'production-google-token');
+      localStorage.setItem('google_provider_token', 'legacy-google-token');
+      localStorage.setItem('google_provider_refresh_token', 'legacy-refresh-token');
       useDebateStore.setState({ currentDebateId: 'debate-1', oneOff: true });
       let left = false;
       function Leaver() {
@@ -641,7 +648,11 @@ describe('AuthProvider behavior', () => {
       expect(localStorage.getItem('debate-auth-production')).toBeNull();
       expect(localStorage.getItem('debate-auth-production-user')).toBeNull();
       expect(localStorage.getItem('debate-auth-staging')).toBe('other-project-session');
+      expect(sessionStorage.getItem('google_provider_token')).toBeNull();
+      expect(localStorage.getItem('google_provider_token')).toBeNull();
+      expect(localStorage.getItem('google_provider_refresh_token')).toBeNull();
       expect(resetSessionStoreMock).toHaveBeenCalled();
+      expect(clearSessionStoreMock).toHaveBeenCalled();
       expect(resetSettingsStoreMock).toHaveBeenCalled();
       expect(resetSparringStoreMock).toHaveBeenCalled();
       expect(useDebateStore.getState()).toMatchObject({ currentDebateId: null, oneOff: false });
