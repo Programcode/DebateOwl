@@ -172,7 +172,7 @@ The stack replays migrations and runs pgTAP tests. The browser portion creates i
 
 ### Full-stack feature journeys
 
-The same gate serves every Edge Function and runs `e2e/full-stack/` on desktop and mobile Chromium. Only the paid model provider is replaced: [`e2e/full-stack/fake-openrouter.mjs`](../e2e/full-stack/fake-openrouter.mjs) runs as a `node:22-alpine` container on the Supabase Docker network, and the functions reach it through `OPENROUTER_API_URL`. Real code handles everything else: Auth, demo-code sign-in, RLS, quota, source loading, prompt building, output validation, streaming, and persistence.
+The same gate serves every Edge Function and runs `e2e/full-stack/` on desktop and mobile Chromium. Only the paid model provider is replaced: [`e2e/full-stack/fake-openrouter.mjs`](../e2e/full-stack/fake-openrouter.mjs) runs as a `node:22-alpine` container on the Supabase Docker network, and the functions reach it through `OPENROUTER_API_URL`. It also answers the Stripe customer search that account deletion runs, which the `account` function reaches through `STRIPE_API_URL`. Real code handles everything else: Auth, demo-code sign-in, RLS, quota, source loading, prompt building, output validation, streaming, and persistence.
 
 Each test signs in through the Login page with a fresh demo code and deletes that user afterwards. The specs cover:
 
@@ -183,12 +183,13 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - Current Debate context: every request carries the debate's motion, instructions, and sources; Review drops a source and pins a saved case for exactly one request; the pin is stored; Crossfire leaves instructions out; and one-off work sends nothing;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
 - Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
+- Download my data (only the caller's rows, even when the request names another user) and Delete account (no row in any `public` or `private` table mentions the user afterwards, another account is untouched, and a call without a session or with another user's confirmation deletes nothing);
 - a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;
 - admin announcements seen by another user, denied admin access, and a public share link.
 
 Tests assert the rendered result, what the Edge Function sent upstream (read back from the fake provider), and the resulting database rows. They also fail on any uncaught page error or horizontal page overflow. The fake provider rejects prompts it does not recognize, so a prompt change must update it.
 
-These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe Checkout and the billing portal (they call the Stripe API; the local key is a placeholder), the `checkout.session.completed` and `invoice.payment_succeeded` webhooks (they fetch the subscription from Stripe), or Google export.
+These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe Checkout, the billing portal, and subscription cancellation during account deletion (they call the Stripe API; the local key is a placeholder, and the Deno tests cover the cancellation logic), the `checkout.session.completed` and `invoice.payment_succeeded` webhooks (they fetch the subscription from Stripe), or Google export.
 
 ### Live provider journeys
 

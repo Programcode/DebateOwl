@@ -137,7 +137,7 @@ for url in "$mailer_url/api/v1/messages" "$app_origin" "http://127.0.0.1:18090/_
   done
   curl --fail --silent --output /dev/null "$url"
 done
-for function_name in workspace-invites ai ai-stream demo-code-login admin announcements; do
+for function_name in workspace-invites ai ai-stream demo-code-login admin announcements account; do
   function_url="$api_url/functions/v1/$function_name"
   for _ in $(seq 1 200); do
     if curl --fail --silent --output /dev/null --request OPTIONS --header "Origin: $app_origin" "$function_url"; then break; fi

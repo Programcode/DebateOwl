@@ -84,6 +84,19 @@ The browser uses user-scoped Supabase access. Privileged Edge Function operation
 
 Do not infer current schema from old README examples or store query names. Replay migrations and run pgTAP tests for database proof.
 
+## Account export and deletion
+
+Settings offers three controls. "Download my data" calls the `account` Edge Function, which returns `export_account_data`, which holds the auth profile, every row whose ownership column (`user_id`, `owner_id`, `author_id`, `created_by`, or `recipient_id`) references the user, chat messages, published announcements addressed to the user, and announcements they wrote. Columns that only mention the user, such as `actor_id` or `resolved_by`, never select a row, and workspace rows are exported only while the user is still a member, as their read policies require. It leaves out credential and integrity columns and admin catalog work (promo codes, curated sources, global prompts, demo codes). Admin grants appear as grant type and dates only, because RLS hides their notes and author from the user. "Delete All My Data" calls `clear_current_user_data` and keeps the account. "Delete account" asks the user to type their email (or DELETE for an account without one), then calls the `account` function.
+
+Deletion runs in a fixed order, and a failure at any step leaves the account in place:
+
+1. Stop Stripe billing for every customer in `subscriptions`, in `stripe_customers`, or found by a Stripe search on `metadata.user_id`. The function expires open Checkout sessions, then cancels live subscriptions immediately, without a refund. If Stripe cannot be reached, nothing is deleted. `create-checkout` records the customer in `stripe_customers` before it opens a session, because Stripe search can lag a new customer by up to a minute. A Checkout session opened in another tab during the few seconds deletion takes is not stopped.
+2. Remove Storage objects whose owner is the user through the Storage API, because Storage forbids deleting objects with SQL. `source_files.storage_key` is user-writable, so it never selects an object for deletion.
+3. Call `prepare_account_deletion`, which deletes the workspaces the user owns and the user's own sources, threads, messages, and results in other workspaces. Those foreign keys stay `RESTRICT` so that a raw delete of an auth user cannot remove shared work by accident.
+4. Delete the auth user with the Auth admin API. Every other foreign key into `auth.users` cascades or sets null, and the `on_auth_user_deleted` trigger clears the user from announcements, which have no foreign key.
+
+Admin-authored rows such as promo codes, curated sources, announcements, and grants to other users survive with the author cleared. Stripe keeps its own invoices and payments for tax and accounting. A new foreign key to `auth.users` must cascade, set null, or be cleared by `prepare_account_deletion`. `supabase/tests/account_deletion_test.sql` fails if its fixture has no row in that table or if any row still mentions the deleted user.
+
 ## Authentication and authorization
 
 Supabase Auth owns user sessions. Protected routes provide a client navigation boundary, but server authorization is decisive.

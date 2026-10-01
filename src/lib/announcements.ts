@@ -16,7 +16,7 @@ export interface AdminAnnouncement extends UserAnnouncement {
   targetType: AnnouncementTargetType;
   targetUserIds: string[] | null;
   deactivatedAt: string | null;
-  createdBy: string;
+  createdBy: string | null;
 }
 
 export interface CreateAnnouncementInput {
@@ -41,7 +41,8 @@ const AdminAnnouncementRowSchema = AnnouncementRowSchema.extend({
   target_type: z.enum(['all', 'users']),
   target_user_ids: z.array(z.uuid()).nullable(),
   deactivated_at: z.iso.datetime({ offset: true }).nullable(),
-  created_by: z.uuid(),
+  // Null once the author's account is deleted.
+  created_by: z.uuid().nullable(),
 });
 
 const ActiveAnnouncementsResponseSchema = z.object({
