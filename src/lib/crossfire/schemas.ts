@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SpeechDeliverySchema } from '@/lib/voice/delivery';
 
 export const MAX_CROSSFIRE_RESOLUTION_CHARS = 500;
 export const MAX_CROSSFIRE_ARGUMENT_CHARS = 16_000;
@@ -65,7 +66,12 @@ export const CrossfireTurnSchema = z.object({
   text: boundedText(1, MAX_CROSSFIRE_TURN_CHARS),
   createdAt: z.number().int().nonnegative(),
   signal: CrossfireTurnSignalSchema.optional(),
+  /** Measured facts for a user turn that was spoken aloud in a voice round. */
+  delivery: SpeechDeliverySchema.optional(),
 }).strict().superRefine((turn, context) => {
+  if (turn.delivery && turn.speaker !== 'user') {
+    context.addIssue({ code: 'custom', path: ['delivery'], message: 'Only user turns carry delivery facts' });
+  }
   if (!turn.signal) return;
   if (turn.kind !== 'answer' || turn.signal.answerTurnId !== turn.id) {
     context.addIssue({ code: 'custom', path: ['signal', 'answerTurnId'], message: 'Signal must reference this answer turn' });
@@ -173,9 +179,12 @@ export const CrossfireRequestStateSchema = z.discriminatedUnion('status', [
 ]);
 export type CrossfireRequestState = z.infer<typeof CrossfireRequestStateSchema>;
 
+// `voice` marks a spoken round. It is optional so drafts and saved rounds
+// from before voice rounds still load, as typed.
 const SetupStateSchema = z.object({
   phase: z.literal('setup'),
   config: CrossfireSetupConfigSchema,
+  voice: z.boolean().optional(),
 }).strict();
 
 const ActiveStateSchema = z.object({
@@ -186,6 +195,7 @@ const ActiveStateSchema = z.object({
   startedAt: z.number().int().nonnegative(),
   endsAt: z.number().int().positive(),
   request: CrossfireRequestStateSchema,
+  voice: z.boolean().optional(),
 }).strict();
 
 const DebriefingStateSchema = z.object({
@@ -199,6 +209,7 @@ const DebriefingStateSchema = z.object({
   requestStatus: z.enum(['pending', 'failed']),
   errorKind: z.enum(['timeout', 'response', 'request']).optional(),
   errorMessage: z.string().trim().min(1).max(1_000).optional(),
+  voice: z.boolean().optional(),
 }).strict();
 
 const CompleteStateSchema = z.object({
@@ -210,6 +221,7 @@ const CompleteStateSchema = z.object({
   endedAt: z.number().int().nonnegative(),
   endedReason: z.enum(['manual', 'timer']),
   debrief: CrossfireDebriefSchema,
+  voice: z.boolean().optional(),
 }).strict();
 
 export const CrossfireStateSchema = z.discriminatedUnion('phase', [

@@ -159,6 +159,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
   if (requestedReasoningEffort === null) return badRequest("Invalid reasoning effort", corsHeaders);
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
+  // A voice round. It sits beside `input` so servers from before voice ignore it.
+  const voiceRequested = body.voice === true;
   // The per-user custom system prompt was replaced by each Current Debate's
   // settings and instructions. A customSystemPrompt field from an older
   // client is ignored.
@@ -672,6 +674,13 @@ export async function handleRequest(req: Request): Promise<Response> {
       dateContext: getCurrentDateContext(),
       globalPrompt: await getGlobalPrompt(feature),
       debateContext: debatePromptContextFor(loadedDebate, feature, validatedSparringRequest?.action),
+      sparringVoice: validatedSparringRequest
+        ? {
+          spokenReplies: voiceRequested && validatedSparringRequest.action === "respond",
+          measuredDelivery: validatedSparringRequest.action === "score" &&
+            validatedSparringRequest.speeches.some((speech) => speech.delivery !== undefined),
+        }
+        : undefined,
       // Sparring is transcript-only. Do not let unrelated saved evidence alter
       // an opponent response or a judge's scorecard.
       sources: feature === "sparring" && !workspaceAccess ? [] : promptSources,
@@ -688,6 +697,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       temperature,
       reasoningEffort,
       workSignal,
+      voice: voiceRequested,
       input: sanitizedInput,
       sources,
       sourceAssessments,

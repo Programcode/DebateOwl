@@ -44,6 +44,7 @@ import {
   type CrossfireTurnSignal,
 } from '@/lib/crossfire/schemas';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
+import { parseVoicePayload, type VoicePayload } from '@/lib/voice/payload';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -69,6 +70,8 @@ interface AIRequestOptions<T = unknown> {
    * that ends the round leaves this off and clears them.
    */
   keepContextChoices?: boolean;
+  /** A voice round: ask for a reply the opponent's voice can perform. */
+  voice?: boolean;
 }
 
 /**
@@ -543,6 +546,8 @@ async function callSupabaseAI<T = unknown>(
       sourceIds,
       ...(debateContext ? { debateContext } : {}),
       workspaceContext: options.workspaceContext,
+      // Beside `input`, so a server from before voice rounds ignores it.
+      ...(options.voice ? { voice: true } : {}),
     };
 
     if (utf8ByteLength(JSON.stringify(requestBody)) > MAX_CLIENT_REQUEST_BODY_BYTES) {
@@ -792,8 +797,8 @@ function validateCrossfireTurnReferences(input: CrossfireAIInput, debrief: Cross
 export async function crossfire(
   rawInput: CrossfireAIInput,
   config: ProviderConfig,
-  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext' | 'debateId'> = {},
-): Promise<(CrossfireReply & { signalToken?: string }) | CrossfireDebrief> {
+  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext' | 'debateId' | 'voice'> = {},
+): Promise<(CrossfireReply & { signalToken?: string; voice?: VoicePayload }) | CrossfireDebrief> {
   const input = CrossfireAIInputSchema.safeParse(rawInput);
   if (!input.success) {
     throw new AIResponseError('Crossfire request did not match the expected schema.', {
@@ -811,10 +816,11 @@ export async function crossfire(
       signal: options.signal,
       workspaceContext: options.workspaceContext,
       debateId: options.debateId,
+      voice: options.voice && input.data.operation === 'next-turn',
       // Turns keep the round's Review choices; the debrief ends the round.
       keepContextChoices: input.data.operation === 'next-turn',
       transformResponse: (rawData) => {
-        const data = rawData as { output: unknown; signalToken?: unknown };
+        const data = rawData as { output: unknown; signalToken?: unknown; voice?: unknown };
         if (input.data.operation === 'next-turn') {
           const reply = CrossfireReplySchema.safeParse(data.output);
           if (!reply.success || reply.data.type !== input.data.expectedReply) {
@@ -824,11 +830,14 @@ export async function crossfire(
                 : { issues: reply.error.issues },
             });
           }
-          if (data.signalToken === undefined) return reply.data;
+          // A missing or malformed voice payload only means the browser voice reads the reply.
+          const voice = options.voice ? parseVoicePayload(data.voice) : undefined;
+          const spoken = voice ? { ...reply.data, voice } : reply.data;
+          if (data.signalToken === undefined) return spoken;
           if (typeof data.signalToken !== 'string' || !data.signalToken.trim() || data.signalToken.length > 128) {
             throw new AIResponseError('Crossfire signal token was invalid.');
           }
-          return { ...reply.data, signalToken: data.signalToken };
+          return { ...spoken, signalToken: data.signalToken };
         }
 
         const debrief = CrossfireDebriefSchema.safeParse(data.output);
@@ -844,10 +853,11 @@ export async function crossfire(
   );
 }
 
-// Turn signals are client annotations. The Edge Function accepts only the
-// turn fields it signs and prompts with, so strip them from every request.
+// Turn signals and measured delivery facts are client annotations. The Edge
+// Function accepts only the turn fields it signs and prompts with, so strip
+// them from every request.
 function serverTranscript(turns: CrossfireAIInput['transcript']) {
-  return turns.map(({ signal: _signal, ...turn }) => turn);
+  return turns.map(({ signal: _signal, delivery: _delivery, ...turn }) => turn);
 }
 
 export async function crossfireSignal(
@@ -1434,7 +1444,8 @@ function validateSparringScoreResponse(output: unknown): SparringScoreResponse {
 // Page navigation can unmount and remount the sparring screen while a provider
 // request is still running. Keep identical work process-wide so the returning
 // screen joins the original promise instead of consuming a second AI request.
-const pendingSparringTurns = new Map<string, Promise<SparringTurnResponse>>();
+export type SparringTurnResult = SparringTurnResponse & { voice?: VoicePayload };
+const pendingSparringTurns = new Map<string, Promise<SparringTurnResult>>();
 const pendingSparringScores = new Map<string, Promise<SparringScoreResponse>>();
 
 function sparringRequestKey(
@@ -1442,9 +1453,10 @@ function sparringRequestKey(
   config: ProviderConfig,
   workspaceContext?: WorkspaceToolContext,
   debateId: string | null = null,
+  voice = false,
 ): string {
   const authScope = getActiveUserId() ?? getActiveAccessToken() ?? 'signed-out';
-  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, debateId, input, config.provider, config.model, config.temperature, config.reasoningEffort]);
+  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, debateId, input, config.provider, config.model, config.temperature, config.reasoningEffort, voice]);
 }
 
 /** Generate the opponent's next speech for a validated sparring turn. */
@@ -1454,7 +1466,9 @@ export async function generateSparringTurn(
   workspaceContext?: WorkspaceToolContext,
   /** The debate this round belongs to; null for a one-off round. */
   debateId: string | null = null,
-): Promise<SparringTurnResponse> {
+  /** A voice round: the reply also carries segments the opponent's voice can perform. */
+  voice = false,
+): Promise<SparringTurnResult> {
   const requestInput: SparringRespondInput = {
     ...input,
     language: sparringLanguage(input.language),
@@ -1465,11 +1479,11 @@ export async function generateSparringTurn(
       details: { issues: inputResult.success ? [{ message: 'Expected respond action.' }] : inputResult.error.issues },
     });
   }
-  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext, debateId);
+  const requestKey = sparringRequestKey(inputResult.data, config, workspaceContext, debateId, voice);
   const pending = pendingSparringTurns.get(requestKey);
   if (pending) return pending;
 
-  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext, debateId);
+  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext, debateId, voice);
   pendingSparringTurns.set(requestKey, request);
   try {
     return await request;
@@ -1483,7 +1497,8 @@ async function generateSparringTurnOnce(
   config: ProviderConfig,
   workspaceContext: WorkspaceToolContext | undefined,
   debateId: string | null,
-): Promise<SparringTurnResponse> {
+  voice: boolean,
+): Promise<SparringTurnResult> {
   const requestInput: SparringRespondInput = {
     ...input,
     language: sparringLanguage(input.language),
@@ -1495,12 +1510,19 @@ async function generateSparringTurnOnce(
     });
   }
 
-  return await callSupabaseAI<SparringTurnResponse>('sparring', inputResult.data, config, {
+  return await callSupabaseAI<SparringTurnResult>('sparring', inputResult.data, config, {
     workspaceContext,
     debateId,
+    voice,
     // Turns keep the round's Review choices; judging ends the round.
     keepContextChoices: true,
-    transformResponse: (rawData) => validateSparringTurnResponse((rawData as { output: unknown }).output),
+    transformResponse: (rawData) => {
+      const data = rawData as { output: unknown; voice?: unknown };
+      const response = validateSparringTurnResponse(data.output);
+      // A missing or malformed voice payload only means the browser voice reads the speech.
+      const payload = voice ? parseVoicePayload(data.voice) : undefined;
+      return payload ? { ...response, voice: payload } : response;
+    },
   });
 }
 

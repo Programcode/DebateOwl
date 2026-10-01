@@ -16,6 +16,10 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 import { toast } from '@/hooks/use-toast';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
+import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
+import { useVoiceAvailability } from '@/lib/voice/availability';
+import type { SpeechDelivery } from '@/lib/voice/delivery';
+import { opponentVoice } from '@/lib/voice/opponent-voice';
 
 function readableError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message;
@@ -50,6 +54,8 @@ export default function SparringPage() {
   const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
   const completeSession = useSparringStore((state) => state.completeSession);
   const abandonSession = useSparringStore((state) => state.abandonSession);
+  const pauseTimer = useSparringStore((state) => state.pauseTimer);
+  const resumeTimer = useSparringStore((state) => state.resumeTimer);
   const beginWorkspaceSession = useSparringStore((state) => state.beginWorkspaceSession);
   const endWorkspaceSession = useSparringStore((state) => state.endWorkspaceSession);
   const getFeatureConfig = useSettingsStore((state) => state.getFeatureConfig);
@@ -66,6 +72,11 @@ export default function SparringPage() {
   const judgeInFlightRef = useRef(false);
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   const isOnlineRef = useRef(isOnline);
+  const voiceAvailability = useVoiceAvailability();
+  // A voice round falls back to typing when the microphone is lost.
+  const voiceActive = Boolean(session?.voice) && voiceAvailability.available && !workspace.context;
+
+  useEffect(() => opponentVoice.stop, []);
 
   const workspaceRequestId = workspace.context?.requestId;
   useEffect(() => {
@@ -153,7 +164,7 @@ export default function SparringPage() {
       currentTurn: turnInput,
     };
 
-    void generateSparringTurn(input, config, workspace.context ?? undefined, session.debateId ?? null)
+    void generateSparringTurn(input, config, workspace.context ?? undefined, session.debateId ?? null, voiceActive)
       .then((result) => {
         if (aiRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
@@ -170,7 +181,14 @@ export default function SparringPage() {
           timeUsedSeconds: estimateAiTimeUsedSeconds(generated.content, currentTurn.timeLimitSeconds),
           integrityToken: generated.integrityToken,
         };
-        appendAiSpeech(speech);
+        const next = appendAiSpeech(speech);
+        if (!next || !voiceActive) return;
+        // The student's clock waits while the opponent is speaking.
+        const userIsNext = next.phase === 'round';
+        if (userIsNext) pauseTimer();
+        opponentVoice.speak({ feature: 'sparring', text: generated.content, voice: result.voice, language: outputLanguage }, () => {
+          if (userIsNext && useSparringStore.getState().currentSession?.id === session.id) resumeTimer();
+        });
       })
       .catch((error: unknown) => {
         if (aiRequestRef.current !== requestKey) return;
@@ -182,7 +200,7 @@ export default function SparringPage() {
           setAiLoading(false);
         }
       });
-  }, [appendAiSpeech, config, outputLanguage, retryNonce, session, t, workspace.context]);
+  }, [appendAiSpeech, config, outputLanguage, pauseTimer, resumeTimer, retryNonce, session, t, voiceActive, workspace.context]);
 
   useEffect(() => {
     if (!session || session.phase !== 'judging') return;
@@ -245,6 +263,7 @@ export default function SparringPage() {
   const beginRound = (values: SparringSetupValues, debateId: string | null) => {
     const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
+    opponentVoice.stop();
     startSession({ ...values, debateId: target.debateId });
     setAiError(null);
     setJudgingError(null);
@@ -256,6 +275,7 @@ export default function SparringPage() {
 
   const handleRestart = () => {
     artifactRequestIdRef.current = crypto.randomUUID();
+    opponentVoice.stop();
     abandonSession();
     setAiError(null);
     setJudgingError(null);
@@ -265,8 +285,8 @@ export default function SparringPage() {
     setSubmissionError(null);
   };
 
-  const handleSubmit = (content: string) => {
-    const result = submitUserSpeech(content);
+  const handleSubmit = (content: string, delivery?: SpeechDelivery | null) => {
+    const result = submitUserSpeech(content, undefined, delivery);
     setSubmissionError(result ? null : t('sparring.round.speechRejected', 'This speech could not be submitted. Check the timer and length, then try again.'));
   };
 
@@ -290,6 +310,7 @@ export default function SparringPage() {
           initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
           onStart={handleStart}
           debatePrefill={!workspace.context}
+          voiceAllowed={!workspace.context}
           banner={<CurrentDebateStrip hidden={Boolean(workspace.context)} className="" />}
         />
         {debateGate.dialog}
@@ -301,6 +322,7 @@ export default function SparringPage() {
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8 sm:py-10')}>
         <WorkspaceToolScope context={workspace.context} />
+        {voiceActive && <OpponentVoiceBar className="mx-auto mb-4 max-w-6xl" />}
         <SparringScorecard session={session} scorecard={session.scorecard} onRestart={handleRestart} onExport={handleExportDocx} onExportPdf={handleExportPdf} />
       </div>
     );
@@ -313,8 +335,15 @@ export default function SparringPage() {
         <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/app')} className="-ml-2 text-muted-foreground"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t('sparring.round.backToWorkspace', 'Back to workspace')}</Button>
         <span className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', !isOnline && 'text-amber-600 dark:text-amber-400')}><CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />{t('sparring.round.draftSavedNotice', 'Drafts save in this tab')}</span>
       </div>
+      {session.voice && !workspace.context && !voiceAvailability.available && (
+        <p data-testid="voice-unavailable" className="mx-auto mb-4 max-w-7xl text-xs leading-5 text-muted-foreground">
+          {voiceAvailability.reason === 'denied' ? t('voiceRound.unavailable.denied') : t('voiceRound.unavailable.unsupported')}
+        </p>
+      )}
+      {voiceActive && <OpponentVoiceBar className="mx-auto mb-4 max-w-7xl" />}
       <SparringRound
         session={session}
+        voice={voiceActive ? { language: outputLanguage } : null}
         aiLoading={aiLoading}
         aiError={aiError}
         judging={session.phase === 'judging'}

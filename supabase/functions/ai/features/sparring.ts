@@ -12,6 +12,7 @@ import {
   type SparringRequest,
 } from "../sparring-persistence.ts";
 import { sparringIntegritySecret } from "../runtime.ts";
+import { prepareVoiceReply, type VoicePayload } from "../../_shared/voice-token.ts";
 import type { FeatureContext } from "./types.ts";
 
 export interface SparringHandlerOptions {
@@ -39,6 +40,16 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
   const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
   const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);
   if (!parsedOutput) throw new Error("AI response did not match the expected sparring schema");
+
+  // In a voice round the speech may carry audio tags. They go to the voice
+  // only: the content that is shown, signed, and saved has none.
+  let voice: VoicePayload | undefined;
+  if (parsedOutput.action === "respond" && ctx.voice) {
+    const reply = await prepareVoiceReply(userId, feature, parsedOutput.speech.content);
+    if (!reply.clean) throw new Error("AI response did not match the expected sparring schema");
+    parsedOutput.speech.content = reply.clean;
+    voice = reply.voice;
+  }
 
   if (parsedOutput.action === "score") {
     await completeClaimedSparringScoreSession(
@@ -75,5 +86,6 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
   return await ctx.respond({
     output: responseOutput,
     sessionId: sparringRequest.sessionId,
+    ...(voice ? { voice } : {}),
   });
 }

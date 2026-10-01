@@ -121,12 +121,12 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
   return expired;
 }
 
-export async function getConfiguredDailyLimit(userId: string, fallbackLimit: number): Promise<number> {
+export async function getConfiguredDailyLimit(userId: string, fallbackLimit: number, limitType = "daily_requests"): Promise<number> {
   const { data: userLimit } = await supabase
     .from("rate_limits")
     .select("limit_value")
     .eq("user_id", userId)
-    .eq("limit_type", "daily_requests")
+    .eq("limit_type", limitType)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -137,7 +137,7 @@ export async function getConfiguredDailyLimit(userId: string, fallbackLimit: num
     .from("rate_limits")
     .select("limit_value")
     .is("user_id", null)
-    .eq("limit_type", "daily_requests")
+    .eq("limit_type", limitType)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

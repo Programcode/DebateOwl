@@ -138,6 +138,43 @@ describe('crossfireReducer', () => {
     expect(state.phase).toBe('complete');
   });
 
+  it('carries a voice round from setup to the finished debrief, with measured facts on spoken turns', () => {
+    const delivery = { speakingSeconds: 4, wordCount: 8, wordsPerMinute: 120, fillerCount: 1, fillers: [{ word: 'um', count: 1 }], longPauses: 0, longestPauseSeconds: 0 };
+    let state = crossfireReducer(configured(), { type: 'voice-toggled', voice: true });
+    expect(state.voice).toBe(true);
+    state = crossfireReducer(state, { type: 'session-started', sessionId: 'voice-session', now: 1_000 });
+    expect(state.voice).toBe(true);
+
+    // The toggle belongs to setup; a running round keeps the mode it started in.
+    expect(crossfireReducer(state, { type: 'voice-toggled', voice: false })).toBe(state);
+
+    state = crossfireReducer(state, { type: 'user-turn-submitted', turn: { ...turn(1, 'user', 'question'), delivery }, expectedReply: 'answer' });
+    expect(state.phase === 'active' && state.turns[0].delivery).toEqual(delivery);
+    state = crossfireReducer(state, { type: 'ai-turn-received', turn: turn(2, 'ai', 'answer') });
+    state = crossfireReducer(state, { type: 'session-ended', now: 2_000, reason: 'manual' });
+    expect(state.voice).toBe(true);
+    state = crossfireReducer(state, { type: 'debrief-received', debrief });
+    expect(state.phase).toBe('complete');
+    expect(state.voice).toBe(true);
+    expect(state.phase === 'complete' && state.turns[0].delivery).toEqual(delivery);
+  });
+
+  it('keeps typed rounds free of the voice marker and refuses delivery facts on an AI turn', () => {
+    let state = crossfireReducer(configured(), { type: 'voice-toggled', voice: true });
+    state = crossfireReducer(state, { type: 'voice-toggled', voice: false });
+    state = crossfireReducer(state, { type: 'session-started', sessionId: 'typed-session', now: 1_000 });
+    expect(state).not.toHaveProperty('voice');
+    state = crossfireReducer(state, { type: 'user-turn-submitted', turn: turn(1, 'user', 'question'), expectedReply: 'answer' });
+    const delivery = { speakingSeconds: 4, wordCount: 8, wordsPerMinute: 120, fillerCount: 0, fillers: [] as Array<{ word: string; count: number }>, longPauses: 0, longestPauseSeconds: 0 };
+    const rejected = crossfireReducer(state, { type: 'ai-turn-received', turn: { ...turn(2, 'ai', 'answer'), delivery } });
+    expect(rejected).toBe(state);
+    state = crossfireReducer(state, { type: 'ai-turn-received', turn: turn(2, 'ai', 'answer') });
+    state = crossfireReducer(state, { type: 'session-ended', now: 2_000, reason: 'timer' });
+    expect(state).not.toHaveProperty('voice');
+    state = crossfireReducer(state, { type: 'debrief-received', debrief });
+    expect(state).not.toHaveProperty('voice');
+  });
+
   it('ignores illegal transitions and duplicate turn sequences', () => {
     const setup = createCrossfireSetupState();
     expect(crossfireReducer(setup, { type: 'ai-turn-received', turn: turn(1, 'ai', 'answer') })).toBe(setup);

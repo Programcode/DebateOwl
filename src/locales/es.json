@@ -263,6 +263,58 @@
     "permissionDenied": "El acceso al micrófono está bloqueado. Permite el acceso al micrófono en el navegador e inténtalo de nuevo.",
     "startFailed": "No se pudo iniciar el dictado. Revisa el micrófono e inténtalo de nuevo."
   },
+  "voiceRound": {
+    "mode": {
+      "label": "Ronda con voz",
+      "sparringDescription": "Pronuncia tus discursos y escucha al oponente responder en voz alta. También puedes escribir.",
+      "crossfireDescription": "Di tus preguntas y respuestas en voz alta y escucha la réplica del oponente. También puedes escribir.",
+      "privacyLine": "DebateLab nunca graba ni guarda tu audio."
+    },
+    "unavailable": {
+      "unsupported": "Las rondas con voz no están disponibles aquí porque este navegador no tiene reconocimiento de voz. Puedes escribir como siempre.",
+      "denied": "Las rondas con voz están desactivadas porque el acceso al micrófono está bloqueado. Puedes escribir como siempre."
+    },
+    "notice": {
+      "title": "Antes de activar la voz",
+      "noRecording": "DebateLab nunca graba ni guarda tu audio. Solo se conserva el texto de lo que dijiste, como en una ronda escrita.",
+      "recognition": "Tu navegador convierte tu voz en texto. En Chrome, eso envía tu audio a Google; otros navegadores pueden enviarlo a su propio servicio de voz.",
+      "opponent": "Las respuestas del oponente se envían como texto a ElevenLabs, que produce la voz que escuchas.",
+      "accept": "Activar la voz"
+    },
+    "mic": {
+      "start": "Empezar a hablar",
+      "stop": "Dejar de hablar",
+      "listening": "Escuchando",
+      "draftPlaceholder": "Tus palabras aparecen aquí mientras hablas. También puedes escribir o corregirlas.",
+      "notAllowed": "El acceso al micrófono está bloqueado. Permítelo en la configuración del navegador para hablar en tus turnos.",
+      "noMicrophone": "No se encontró ningún micrófono. Conecta uno e inténtalo de nuevo, o escribe tu turno.",
+      "network": "El reconocimiento de voz perdió la conexión. Inténtalo de nuevo o escribe tu turno.",
+      "startFailed": "No se pudo iniciar el reconocimiento de voz. Inténtalo de nuevo o escribe tu turno."
+    },
+    "opponent": {
+      "loading": "Preparando la voz del oponente",
+      "speaking": "El oponente está hablando",
+      "blocked": "Tu navegador espera a que lo indiques para reproducir sonido.",
+      "play": "Reproducir respuesta",
+      "stop": "Detener la voz",
+      "limit": "La cuota de hoy para la voz de ElevenLabs del oponente se agotó, así que la voz de tu navegador lee las respuestas."
+    },
+    "delivery": {
+      "title": "Presentación oral, medida",
+      "description": "Estas cifras provienen del reloj y de la transcripción que hizo tu navegador de lo que dijiste. Nadie escuchó tu tono, tu seguridad ni tu volumen, y la transcripción puede omitir palabras.",
+      "speakingTime": "Tiempo hablando",
+      "timeOfLimit": "{{used}} de {{limit}}",
+      "pace": "Ritmo",
+      "wordsPerMinute": "{{count}} palabras por minuto",
+      "fillers": "Muletillas",
+      "longPauses": "Pausas de {{seconds}} segundos o más",
+      "pausesWithLongest": "{{count}} (la más larga, {{seconds}} s)"
+    },
+    "scorecard": {
+      "categoryNotesDescription": "Motivos específicos detrás de cada puntuación. En los discursos que pronunciaste, la presentación usa los datos medidos de abajo y la estructura de lo que dijiste, no cómo sonaste.",
+      "measuredOnly": "medido, no escuchado"
+    }
+  },
   "home": {
     "title": "DebateLab",
     "subtitle": "Elige un modo para comenzar.",
@@ -1566,17 +1618,17 @@
   "privacyPage": {
     "title": "Política de Privacidad",
     "lastUpdated": "Última actualización",
-    "date": "31 de agosto de 2026",
+    "date": "1 de octubre de 2026",
     "s1": "Información que Recopilamos",
     "p1": "Recopilamos la información que proporcionas al crear una cuenta, incluido tu nombre y correo electrónico, que pueden proceder del inicio de sesión con Google o por email, además de datos de uso como contenido generado, elementos guardados y patrones de interacción. Si usas un código demo emitido por un administrador, procesamos ese código para autenticar tu cuenta demo.",
     "s2": "Cómo Usamos Tu Información",
     "p2": "Tu información se usa para proporcionar y mejorar nuestros servicios, generar respuestas de IA, mantener tu contenido guardado y comunicar actualizaciones.",
     "s3": "Procesamiento de IA",
-    "p3": "Tus entradas se envían a OpenRouter para el procesamiento de IA con el modelo que selecciones. No usamos tu contenido para entrenar modelos de IA.",
+    "p3": "Tus entradas se envían a OpenRouter para el procesamiento de IA con el modelo que selecciones. No usamos tu contenido para entrenar modelos de IA. En una ronda con voz, el reconocimiento de voz de tu navegador convierte tu voz en texto; en Chrome, eso envía tu audio a Google, y otros navegadores pueden enviarlo a su propio servicio de voz. DebateLab nunca graba ni guarda tu audio. Las respuestas del oponente de IA se envían como texto a ElevenLabs para producir su voz.",
     "s4": "Almacenamiento de Datos",
     "p4": "Tus datos se almacenan de forma segura usando infraestructura de Supabase con cifrado en reposo y en tránsito.",
     "s5": "Compartir Datos",
-    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA y con procesadores de pago para la facturación.",
+    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz y con procesadores de pago para la facturación.",
     "s6": "Tus Derechos",
     "p6": "Puedes acceder, exportar o eliminar tus datos en cualquier momento desde la configuración de tu cuenta.",
     "s7": "Cookies y Seguimiento",

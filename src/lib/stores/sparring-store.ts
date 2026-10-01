@@ -15,6 +15,7 @@ import {
 } from '@/lib/ai/schemas/sparring';
 import { buildSparringTurns, type SparringTurn } from '@/lib/sparring/formats';
 import { captureProductEvent } from '@/lib/observability';
+import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { useDebateStore } from './debate-store';
 import { useDebateContextStore } from './debate-context-store';
 
@@ -37,6 +38,8 @@ export interface SparringSession {
   scorecard?: SparringScorecard;
   /** Debate the round attaches to once judged; null for one-off rounds. */
   debateId?: string | null;
+  /** A voice round: the student speaks and the opponent answers aloud. */
+  voice?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -47,6 +50,7 @@ interface StartSessionInput {
   format: SparringFormat;
   difficulty: SparringDifficulty;
   debateId?: string | null;
+  voice?: boolean;
 }
 
 interface SparringStoreState {
@@ -66,7 +70,7 @@ interface SparringStoreState {
   pauseTimer: (now?: number) => void;
   resumeTimer: (now?: number) => void;
   resetTurnTimer: (now?: number) => void;
-  submitUserSpeech: (content: string, now?: number) => SparringSession | null;
+  submitUserSpeech: (content: string, now?: number, delivery?: SpeechDelivery | null) => SparringSession | null;
   appendAiSpeech: (speech: SparringSpeech, now?: number) => SparringSession | null;
   completeSession: (scorecard: SparringScorecard, now?: number) => SparringSession | null;
   attachSessionToDebate: (id: string, debateId: string) => Promise<void>;
@@ -112,6 +116,7 @@ const PersistedSparringSessionSchema = z.object({
   timerDeadline: z.number().nullable(),
   scorecard: SparringScorecardSchema.optional(),
   debateId: z.string().nullable().optional(),
+  voice: z.boolean().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -329,6 +334,7 @@ export const useSparringStore = create<SparringStoreState>()(
           draft: '',
           ...timerForTurn(turns[0], now),
           debateId: input.debateId ?? null,
+          ...(input.voice ? { voice: true } : {}),
           createdAt: now,
           updatedAt: now,
         };
@@ -383,7 +389,7 @@ export const useSparringStore = create<SparringStoreState>()(
         return { currentSession: { ...session, ...timerForTurn(turn, now) } };
       }),
 
-      submitUserSpeech: (content, now = Date.now()) => {
+      submitUserSpeech: (content, now = Date.now(), delivery = null) => {
         const session = get().currentSession;
         const turn = session ? currentTurn(session) : undefined;
         const cleanContent = content.trim();
@@ -404,6 +410,7 @@ export const useSparringStore = create<SparringStoreState>()(
           createdAt: now,
           timeLimitSeconds: turn.timeLimitSeconds,
           timeUsedSeconds: Math.max(0, turn.timeLimitSeconds - remaining),
+          ...(delivery ? { delivery } : {}),
         };
         const next = advanceSession({ ...session, speeches: [...session.speeches, speech] }, now);
         set({ currentSession: next });

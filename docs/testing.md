@@ -68,6 +68,8 @@ A browser-oriented Vitest pass does not replace native Deno tests. The stream ac
 
 Current Debate context has focused Deno tests: `_shared/debate-context.test.ts` covers selection rules, the IDs-only request parser, digest budgets, per-feature policy, and loader isolation against real PostgREST query shapes; `ai/debate-context.test.ts` drives the `ai` and `ai-stream` handlers with forged debates, cross-debate IDs, a retired custom prompt, and stored text that tries to close its block.
 
+Voice has its own Deno tests. `voice/index_test.ts` drives the `voice` handler against a fake ElevenLabs: a signed segment becomes audio and one costed usage row; a missing key, an invalid or expired token, edited text, another user's token, a reached cap, an expired or banned account, and a provider failure each return their code without reaching paid work they should not. `ai/voice.test.ts` drives the `ai` handler and checks that tags reach only the voice payload, that typed requests and the typed prompt are unchanged, and that measured delivery facts reach the judge and the saved round. `_shared/voice-tags.test.ts`, `_shared/voice-token.test.ts`, and `_shared/cost.test.ts` cover tag stripping and rationing, token binding, and character pricing. The permission list includes `ELEVENLABS_API_KEY` because the handler reads it; no real key is used.
+
 `_shared/prompts/prompt-examples.test.ts` checks the two representative examples per feature in [`supabase/functions/_shared/prompts/prompt-examples.ts`](../supabase/functions/_shared/prompts/prompt-examples.ts) against each feature's quality rules and the fake provider's routing lines.
 
 ### Prompt example comparison
@@ -121,6 +123,8 @@ The server is never reused. CI uses retries and two workers. On failure, traces,
 `src/test/i18n.test.ts` requires identical key sets and non-empty values across all three catalogs. Its explicit identity allowlist is limited to values that should remain canonical, such as product names, file formats, prices, model-facing abbreviations, and debate-format codes. A matching key set and a passing allowlist test prove catalog structure, not Hungarian grammar or natural phrasing.
 
 The speech unit test proves that Hungarian selects `recognition.lang = 'hu-HU'`. Credential-free browser automation has no real microphone or speech service, so it does not prove recognition accuracy or hardware support.
+
+Voice rounds are tested without a microphone, a speech service, or an ElevenLabs key. `src/test/voice/` covers the capture hook against a scripted recogniser (interim words, restart on silence, last words after stop, pause timing, refused microphone), the delivery measurements in all three languages, and the opponent voice player against a scripted Web Audio and `speechSynthesis` (segment order, every fallback path, stop, and blocked autoplay). `src/test/pages/SparringVoice.test.tsx` and `CrossfireVoice.test.tsx` drive both pages through a spoken turn. `e2e/voice-rounds.spec.ts` does the same in Chromium with the scripted recogniser and `speechSynthesis` from `e2e/helpers/voice.ts`, once with the `voice` route returning audio and once with it returning `voice_unavailable`, and asserts that no audio tag reaches the page or storage. None of this proves how ElevenLabs sounds, that a real browser recogniser hears a student, or that the live `voice` function is deployed with a key.
 
 AI client and Edge tests prove that every request path carries a validated language and that prompts require Hungarian output. Provider responses are mocked; only an authorized protected-staging run can prove that a live provider follows the instruction across every prose field.
 
@@ -179,6 +183,7 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - Attack, Brainstorm, Factoids, streamed Ask (it fails if the client falls back to the non-streaming path), and Ask with citations;
 - Current Debate context: every request carries the debate's motion, instructions, and sources; Review drops a source and pins a saved case for exactly one request; the pin is stored; Crossfire leaves instructions out; and one-off work sends nothing;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
+- spoken Sparring and Crossfire rounds against the real `ai` and `voice` functions with no ElevenLabs key: the opponent prompt carries the voice rules, the reply comes back clean with signed segments, `voice` answers `voice_unavailable`, the browser voice reads the clean text, the judge gets the measured facts, and the saved round holds no audio tag (the recogniser and the browser voice are scripted);
 - Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
 - a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;
 - admin announcements seen by another user, denied admin access, and a public share link.

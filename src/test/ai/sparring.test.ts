@@ -55,6 +55,11 @@ const RESPOND_INPUT: SparringRespondInput = {
   },
 };
 
+function firstInvokeBody(): { voice?: boolean; input: { speeches: Array<Record<string, unknown>> } & Record<string, unknown> } {
+  const call = supabaseMock.functions.invoke.mock.calls[0] as unknown as [string, { body: ReturnType<typeof firstInvokeBody> }];
+  return call[1].body;
+}
+
 const SCORE_INPUT: SparringScoreInput = {
   ...SESSION,
   action: 'score',
@@ -115,6 +120,40 @@ describe('sparring AI client', () => {
         }),
       }),
     }));
+  });
+
+  it('asks for a spoken reply in a voice round and returns its signed segments', async () => {
+    const voice = { segments: [{ text: '[sighs] Universal access removes a direct barrier.', token: 'signed-token' }] };
+    setMockInvokeResponse({ output: TURN_RESPONSE, voice });
+
+    await expect(generateSparringTurn(RESPOND_INPUT, CONFIG, undefined, null, true)).resolves.toEqual({ ...TURN_RESPONSE, voice });
+    const body = firstInvokeBody();
+    // The flag sits beside the input, where an older server ignores it.
+    expect(body.voice).toBe(true);
+    expect(body.input).not.toHaveProperty('voice');
+  });
+
+  it('keeps typed rounds free of the voice flag and of any voice payload', async () => {
+    setMockInvokeResponse({ output: TURN_RESPONSE, voice: { segments: [{ text: 'Unrequested.', token: 'signed-token' }] } });
+
+    await expect(generateSparringTurn(RESPOND_INPUT, CONFIG)).resolves.toEqual(TURN_RESPONSE);
+    expect(firstInvokeBody()).not.toHaveProperty('voice');
+  });
+
+  it('still returns the speech when a voice round gets no usable voice payload', async () => {
+    // A server from before voice rounds, or a malformed payload: the browser voice reads the speech.
+    for (const voice of [undefined, { segments: [] }, { segments: [{ text: 'No token.' }] }]) {
+      setMockInvokeResponse({ output: TURN_RESPONSE, voice });
+      const input = { ...RESPOND_INPUT, sessionId: crypto.randomUUID() };
+      await expect(generateSparringTurn(input, CONFIG, undefined, null, true)).resolves.toEqual(TURN_RESPONSE);
+    }
+  });
+
+  it('sends the measured delivery facts of spoken speeches to the judge', async () => {
+    setMockInvokeResponse({ output: SCORE_RESPONSE });
+    const delivery = { speakingSeconds: 75, wordCount: 160, wordsPerMinute: 128, fillerCount: 2, fillers: [{ word: 'um', count: 2 }], longPauses: 1, longestPauseSeconds: 4 };
+    await judgeSparringSession({ ...SCORE_INPUT, speeches: [{ ...SESSION.speeches[0], delivery }] }, CONFIG);
+    expect(firstInvokeBody().input.speeches[0].delivery).toEqual(delivery);
   });
 
   it('shares identical in-flight turn requests across remounts', async () => {

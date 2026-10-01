@@ -70,7 +70,8 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headers["X-Frame-Options"]).toBe("SAMEORIGIN");
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
-    expect(headers["Permissions-Policy"]).toBe("geolocation=(), microphone=(), camera=()");
+    // Dictation and voice rounds need the microphone on this origin only.
+    expect(headers["Permissions-Policy"]).toBe("geolocation=(), microphone=(self), camera=()");
     expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains; preload");
   });
 

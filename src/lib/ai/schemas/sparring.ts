@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SpeechDeliverySchema } from '@/lib/voice/delivery';
 
 export const SparringSideSchema = z.enum(['pro', 'con']);
 export const SparringFormatSchema = z.enum(['standard', 'ld', 'pf']);
@@ -36,6 +37,8 @@ export const SparringSpeechSchema = z.object({
   timeLimitSeconds: z.number().int().positive(),
   timeUsedSeconds: z.number().int().nonnegative(),
   integrityToken: z.string().trim().min(32).max(128).optional(),
+  /** Measured facts for a user speech that was spoken aloud in a voice round. */
+  delivery: SpeechDeliverySchema.optional(),
 });
 
 /** Shared, bounded session context carried by both sparring actions. */

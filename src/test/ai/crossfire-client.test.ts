@@ -165,6 +165,46 @@ describe('Crossfire AI client', () => {
     }
   });
 
+  it('asks for a spoken reply in a voice round, strips delivery facts, and returns the signed segments', async () => {
+    const voice = { segments: [{ text: '[scoffs] Traffic counts show fewer trips.', token: 'signed-token' }] };
+    mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'Traffic counts show fewer trips.' }, signalToken: 'signal-token', voice }, error: null });
+    const input = nextTurnInput(false);
+    input.transcript[0].delivery = { speakingSeconds: 4, wordCount: 6, wordsPerMinute: 90, fillerCount: 0, fillers: [], longPauses: 0, longestPauseSeconds: 0 };
+
+    await expect(crossfire(input, config, { voice: true })).resolves.toEqual({
+      type: 'answer',
+      text: 'Traffic counts show fewer trips.',
+      signalToken: 'signal-token',
+      voice,
+    });
+    const body = mocks.invoke.mock.calls[0][1].body;
+    expect(body.voice).toBe(true);
+    // The server accepts only the turn fields it signs and prompts with.
+    expect(body.input.transcript[0]).not.toHaveProperty('delivery');
+    expect(body.input).not.toHaveProperty('voice');
+
+    // Without a signal token the segments still come back.
+    mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'Traffic counts show fewer trips.' }, voice }, error: null });
+    await expect(crossfire(nextTurnInput(false), config, { voice: true })).resolves.toEqual({ type: 'answer', text: 'Traffic counts show fewer trips.', voice });
+  });
+
+  it('keeps typed rounds and debriefs free of the voice flag and of any voice payload', async () => {
+    const voice = { segments: [{ text: 'Unrequested.', token: 'signed-token' }] };
+    mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'A typed answer.' }, voice }, error: null });
+    await expect(crossfire(nextTurnInput(false), config)).resolves.toEqual({ type: 'answer', text: 'A typed answer.' });
+    expect(mocks.invoke.mock.calls[0][1].body).not.toHaveProperty('voice');
+
+    // A debrief is never spoken, even at the end of a voice round.
+    mocks.invoke.mockResolvedValue({ data: { output: validDebrief }, error: null });
+    await crossfire(debriefInput(), config, { voice: true });
+    expect(mocks.invoke.mock.calls[1][1].body).not.toHaveProperty('voice');
+  });
+
+  it('falls back to the plain reply when a voice round gets a malformed voice payload', async () => {
+    mocks.invoke.mockResolvedValue({ data: { output: { type: 'answer', text: 'A plain answer.' }, voice: { segments: 'nope' } }, error: null });
+    await expect(crossfire(nextTurnInput(false), config, { voice: true })).resolves.toEqual({ type: 'answer', text: 'A plain answer.' });
+  });
+
   it('sends only bounded Crossfire source IDs when stored content is large', async () => {
     mocks.session.sourceLibrary.splice(0, mocks.session.sourceLibrary.length,
       ...Array.from({ length: 12 }, (_, index) => ({

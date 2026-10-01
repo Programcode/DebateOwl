@@ -5,6 +5,17 @@ const MAX_SPEECHES = 12;
 const MAX_SPEECH_CONTENT_LENGTH = 6_000;
 const MAX_ROLE_LENGTH = 120;
 
+/** Facts the browser measured while the user spoke a speech aloud. */
+export type SparringSpeechDelivery = {
+  speakingSeconds: number;
+  wordCount: number;
+  wordsPerMinute: number;
+  fillerCount: number;
+  fillers: Array<{ word: string; count: number }>;
+  longPauses: number;
+  longestPauseSeconds: number;
+};
+
 export type SparringPersistenceSpeech = {
   id: string;
   turnId: string;
@@ -16,6 +27,7 @@ export type SparringPersistenceSpeech = {
   timeLimitSeconds: number;
   timeUsedSeconds: number;
   integrityToken?: string;
+  delivery?: SparringSpeechDelivery;
 };
 
 export type SparringRequest = {
@@ -165,6 +177,29 @@ function integerInRange(value: unknown, min: number, max: number): value is numb
   return finiteNumber(value) && Number.isInteger(value) && value >= min && value <= max;
 }
 
+const MAX_DELIVERY_FILLERS = 12;
+
+// Measurements are optional client annotations. A malformed set is dropped,
+// which leaves the speech judged as typed, rather than failing the round.
+function parseDelivery(value: unknown): SparringSpeechDelivery | undefined {
+  if (!isRecord(value)) return undefined;
+  const { speakingSeconds, wordCount, wordsPerMinute, fillerCount, longPauses, longestPauseSeconds } = value;
+  if (
+    !integerInRange(speakingSeconds, 0, 86_400) || !integerInRange(wordCount, 0, 6_000) ||
+    !integerInRange(wordsPerMinute, 0, 600) || !integerInRange(fillerCount, 0, 6_000) ||
+    !integerInRange(longPauses, 0, 1_000) || !integerInRange(longestPauseSeconds, 0, 86_400)
+  ) return undefined;
+  if (!Array.isArray(value.fillers) || value.fillers.length > MAX_DELIVERY_FILLERS) return undefined;
+  const fillers: SparringSpeechDelivery["fillers"] = [];
+  for (const item of value.fillers) {
+    if (!isRecord(item)) return undefined;
+    const word = cleanString(item.word, 40);
+    if (!word || !integerInRange(item.count, 1, 6_000)) return undefined;
+    fillers.push({ word, count: item.count });
+  }
+  return { speakingSeconds, wordCount, wordsPerMinute, fillerCount, fillers, longPauses, longestPauseSeconds };
+}
+
 function parseSpeech(value: unknown): SparringPersistenceSpeech | null {
   if (!isRecord(value)) return null;
   const id = cleanString(value.id, 120);
@@ -179,6 +214,8 @@ function parseSpeech(value: unknown): SparringPersistenceSpeech | null {
   if (!finiteNumber(value.createdAt) || !integerInRange(value.timeLimitSeconds, 1, 86_400) || !integerInRange(value.timeUsedSeconds, 0, 86_400)) {
     return null;
   }
+  // Only the user speaks into a microphone; the opponent's turns are text.
+  const delivery = speaker === "user" ? parseDelivery(value.delivery) : undefined;
   return {
     id,
     turnId,
@@ -190,6 +227,7 @@ function parseSpeech(value: unknown): SparringPersistenceSpeech | null {
     timeLimitSeconds: value.timeLimitSeconds,
     timeUsedSeconds: value.timeUsedSeconds,
     ...(integrityToken ? { integrityToken } : {}),
+    ...(delivery ? { delivery } : {}),
   };
 }
 

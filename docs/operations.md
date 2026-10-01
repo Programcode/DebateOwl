@@ -41,7 +41,7 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 - SPA fallback to `index.html`;
 - no-cache headers for `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;
-- Content Security Policy and the other response security headers.
+- Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only.
 
 [`src/test/vercel-deployment-config.test.ts`](../src/test/vercel-deployment-config.test.ts) guards these rules. Update it together with `vercel.json`, and do not paste the full configuration into another guide.
 
@@ -92,6 +92,8 @@ Auth patterns include:
 
 A successful deploy command proves upload only. Verify the behavior through the real endpoint or protected staging flow.
 
+Voice rounds span three independent steps, and the frontend works at every stage of them. The frontend alone (a merge) offers voice rounds that speak with the browser's voice. Deploying `ai` adds audio tags and signed segments to voice replies; deploying `voice` adds the endpoint, which answers `voice_unavailable` until `ELEVENLABS_API_KEY` is set. Deploy `ai` and `voice` together, since they share the token code. Once the key is set, check one Sparring and one Crossfire reply in a real browser, and confirm `voice_sparring` and `voice_crossfire` rows with a cost in `ai_requests`. Removing the key returns every round to the browser voice without a deploy.
+
 ## CORS
 
 Current functions mostly use local explicit origin allowlists. The exact list can differ by endpoint. Treat handler code as the source of truth.
@@ -106,6 +108,7 @@ Secret names may be documented; values may not. Server-side categories include:
 
 - Supabase service credentials;
 - AI provider credentials;
+- the ElevenLabs credential for the opponent's voice (`ELEVENLABS_API_KEY`);
 - research provider credentials;
 - Stripe API and webhook credentials;
 - demo-code hashing material;
