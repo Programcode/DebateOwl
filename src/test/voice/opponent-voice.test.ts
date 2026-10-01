@@ -245,6 +245,32 @@ describe('opponent voice', () => {
     expect(opponentVoice.getState().status).toBe('speaking');
   });
 
+  it('ends a reply that was stopped while it waited for a tap', async () => {
+    FakeAudioContext.state = 'suspended';
+    const onEnd = vi.fn();
+    opponentVoice.speak(TWO_SEGMENTS, onEnd);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(opponentVoice.getState().status).toBe('blocked');
+
+    opponentVoice.stop();
+    await settle();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(opponentVoice.getState().status).toBe('idle');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
+  });
+
+  it('moves on when the browser never reports the end of an utterance', async () => {
+    const onEnd = vi.fn();
+    opponentVoice.speak({ feature: 'crossfire', text: 'Which study shows that?', language: 'en' }, onEnd);
+    await settle();
+    expect(opponentVoice.getState()).toMatchObject({ status: 'speaking', engine: 'browser' });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(opponentVoice.getState().status).toBe('idle');
+  });
+
   it('stays silent, and still ends, in a browser with no voice at all', async () => {
     vi.stubGlobal('AudioContext', undefined);
     vi.stubGlobal('speechSynthesis', undefined);

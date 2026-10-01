@@ -48,6 +48,7 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
   const interimRef = useRef('');
   const quickFailuresRef = useRef(0);
   const stoppedRef = useRef<(() => void) | null>(null);
+  const stoppingRef = useRef<Promise<void> | null>(null);
   const onFinalTextRef = useRef(onFinalText);
   onFinalTextRef.current = onFinalText;
 
@@ -173,15 +174,14 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
     return true;
   }, [commitFinal, fail, finishListening, language]);
 
-  const stop = useCallback(async () => {
+  const stop = useCallback((): Promise<void> => {
+    // A second caller (the Stop button, then Submit) joins the stop in progress.
+    if (stoppingRef.current) return stoppingRef.current;
     const recognition = recognitionRef.current;
-    if (!recognition) {
-      wantListeningRef.current = false;
-      return;
-    }
     wantListeningRef.current = false;
+    if (!recognition) return Promise.resolve();
     // The recogniser delivers its last words after stop(), then ends.
-    await new Promise<void>((resolve) => {
+    const stopping = new Promise<void>((resolve) => {
       const timeout = window.setTimeout(() => {
         recognition.onend = () => {};
         try { recognition.abort(); } catch { /* already closed */ }
@@ -189,6 +189,7 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
       }, STOP_GRACE_MS);
       stoppedRef.current = () => {
         window.clearTimeout(timeout);
+        stoppingRef.current = null;
         resolve();
       };
       try {
@@ -197,6 +198,9 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
         finishListening();
       }
     });
+    // finishListening may already have run and cleared the marker.
+    if (stoppedRef.current) stoppingRef.current = stopping;
+    return stopping;
   }, [finishListening]);
 
   const getTake = useCallback((): SpeechTake => ({

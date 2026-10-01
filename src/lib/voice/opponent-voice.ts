@@ -31,6 +31,9 @@ export interface OpponentVoiceState {
 const REQUEST_TIMEOUT_MS = 30_000;
 const RESUME_GRACE_MS = 150;
 const MAX_BROWSER_UTTERANCE_CHARS = 220;
+// Slow speech is about ten characters a second; allow several times that.
+const BROWSER_UTTERANCE_BASE_MS = 5_000;
+const BROWSER_UTTERANCE_MS_PER_CHAR = 250;
 
 type AudioContextConstructor = typeof AudioContext;
 
@@ -160,7 +163,10 @@ class OpponentVoice {
     if (run !== this.run) return;
     // Invalidate the run so late callbacks from this reply are ignored.
     this.run += 1;
+    // Release a reply that was still waiting for a tap, so it can end.
+    const resumeBlocked = this.resumeBlocked;
     this.resumeBlocked = null;
+    resumeBlocked?.();
     const onEnd = this.onEnd;
     this.onEnd = null;
     if (this.state.status !== 'idle') this.setState({ status: 'idle', engine: null });
@@ -271,8 +277,15 @@ class OpponentVoice {
         const utterance = new SpeechSynthesisUtterance(part);
         utterance.lang = locale;
         if (voice) utterance.voice = voice;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        // Some browsers never report the end of an utterance. Without a
+        // limit the reply would look as if it were still being spoken.
+        const limit = setTimeout(resolve, BROWSER_UTTERANCE_BASE_MS + part.length * BROWSER_UTTERANCE_MS_PER_CHAR);
+        const done = () => {
+          clearTimeout(limit);
+          resolve();
+        };
+        utterance.onend = done;
+        utterance.onerror = done;
         window.speechSynthesis.speak(utterance);
       });
     }

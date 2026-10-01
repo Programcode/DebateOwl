@@ -146,6 +146,33 @@ describe('useSpeechCapture', () => {
     expect(result.current.getTake()).toEqual({ text: 'one two', speakingMs: 5_000, pausesMs: [] });
   });
 
+  it('lets two callers stop at once: both wait for the same last words', async () => {
+    const { result } = renderHook(() => useSpeechCapture('en', onFinal));
+    await act(async () => { await result.current.start(); });
+    const recognition = latest();
+    // The browser confirms the stop only later, as a real one does.
+    recognition.stop = vi.fn();
+
+    let first = false;
+    let second = false;
+    await act(async () => {
+      const submit = result.current.stop().then(() => { first = true; });
+      const button = result.current.stop().then(() => { second = true; });
+      recognition.emit([{ text: 'the last words', final: true }]);
+      recognition.onend();
+      await Promise.all([submit, button]);
+    });
+    expect(first && second).toBe(true);
+    expect(recognition.stop).toHaveBeenCalledTimes(1);
+    expect(finals).toEqual(['the last words']);
+
+    // A later take stops normally again.
+    await act(async () => { await result.current.start(); });
+    latest().pendingOnStop = 'again';
+    await act(async () => { await result.current.stop(); });
+    expect(finals).toEqual(['the last words', 'again']);
+  });
+
   it('does not hang when the browser never confirms the stop', async () => {
     const { result } = renderHook(() => useSpeechCapture('en', onFinal));
     await act(async () => { await result.current.start(); });
