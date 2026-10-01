@@ -380,6 +380,7 @@
     "envSwitchTitle": "Switch Environment",
     "envSwitchDesc": "You'll be signed out and the app will reload pointing at {{target}}. You'll need to sign in again.",
     "envSwitchConfirm": "Switch & Sign Out",
+    "stagingBanner": "Staging backend",
     "dangerZone": "Danger Zone",
     "dangerDesc": "Permanently delete all your saved data. This only affects your account ({{email}}).",
     "deleteAllData": "Delete All My Data",

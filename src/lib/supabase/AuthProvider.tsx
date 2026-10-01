@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { setActiveAccessToken, supabase } from './client';
+import { AUTH_STORAGE_KEY, setActiveAccessToken, supabase } from './client';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
@@ -20,6 +20,14 @@ interface AuthContextValue {
   verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signInWithDemoCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Ends the session and clears this project's local data before an environment switch. Never hangs. */
+  leaveEnvironment: () => Promise<void>;
+  /**
+   * Clears only this tab's own storage (Google token, sparring state). For a tab
+   * that reloads because another tab switched projects; it must not touch the
+   * shared stores, which may already belong to the new project.
+   */
+  discardTabState: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -96,6 +104,14 @@ function withAuthTimeout<T>(operation: Promise<T>, message: string, timeoutMs = 
   ]);
 }
 
+function clearGoogleTokens() {
+  sessionStorage.removeItem('google_provider_token');
+  localStorage.removeItem('google_provider_token');
+  // Remove refresh tokens written by older clients as well; this client
+  // never persists them because they are long-lived credentials.
+  localStorage.removeItem('google_provider_refresh_token');
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hydrateSparringStore = useSparringStore((state) => state.hydrateSavedSessions);
   const prepareSparringStore = useSparringStore((state) => state.prepareForUser);
   const resetSessionStore = useSessionStore((state) => state.resetLocalData);
+  const clearSessionStore = useSessionStore((state) => state.clearSession);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
   const resetSparringStore = useSparringStore((state) => state.resetLocalData);
   const hydrateDebateStore = useDebateStore((state) => state.hydrate);
@@ -236,11 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetSparringStore();
         resetDebateStore();
         useDebateContextStore.getState().resetLocalData();
-        sessionStorage.removeItem('google_provider_token');
-        localStorage.removeItem('google_provider_token');
-        // Remove refresh tokens written by older clients as well; this client
-        // never persists them because they are long-lived credentials.
-        localStorage.removeItem('google_provider_refresh_token');
+        clearGoogleTokens();
         return;
       }
 
@@ -261,6 +274,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authListener.subscription.unsubscribe();
     };
   }, [hydrateDebateStore, hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+
+  // sessionStorage holds this tab's Google token and sparring state.
+  const discardTabState = useCallback(() => {
+    clearGoogleTokens();
+    resetSparringStore();
+  }, [resetSparringStore]);
+
+  // The persisted stores are shared by both projects. Drop this project's
+  // stored session and clear every user-specific store so nothing crosses.
+  const discardLocalState = useCallback(() => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
+    discardTabState();
+    clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
+    resetSessionStore();
+    clearSessionStore();
+    resetSettingsStore(true);
+    resetDebateStore();
+    useDebateContextStore.getState().resetLocalData();
+  }, [session, clearSessionStore, discardTabState, resetDebateStore, resetSessionStore, resetSettingsStore]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
@@ -336,7 +369,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetSettingsStore();
       resetSparringStore();
     },
-  }), [session, loading, resetSessionStore, resetSettingsStore, resetSparringStore]);
+    leaveEnvironment: async () => {
+      try {
+        // Local scope: switching backends must not sign the account out on other devices.
+        await withAuthTimeout(supabase.auth.signOut({ scope: 'local' }), 'Sign-out timed out');
+      } catch (error) {
+        console.warn('Sign-out before environment switch failed:', error);
+      }
+      // A hung sign-out never fires SIGNED_OUT, so clear local state directly.
+      discardLocalState();
+    },
+    discardTabState,
+  }), [session, loading, discardLocalState, discardTabState, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

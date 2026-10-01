@@ -63,6 +63,35 @@ The staging browser suite disables trace, screenshot, and video capture. It crea
 
 Do not enable the staging repository variable before every prerequisite is present. A skipped staging job is not a pass.
 
+`STAGING_E2E_ENABLED` has been `true` since 2026-09-18, and the job passed through 2026-09-23. Since then it has been skipped because the `Quality` run it waits for fails before any runner starts (see [When GitHub Actions cannot run](#when-github-actions-cannot-run)). Restoring Actions minutes restores the staging job; nothing in the workflow needs changing.
+
+## Staging sync
+
+Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production is `debate-trainer` (`uziwdtkzofptihahfooo`). Every backend change goes to staging first, passes the staging browser suite, and only then goes to production. Steps 1 and 2 are read-only. Steps 3 and 4 change staging and need Adam's authorization each time.
+
+1. Confirm the target. `supabase projects list` must show the staging ref under the staging name. Stop if a command, link, or environment variable points at the production ref.
+2. Find what is pending. Run `npm run backend:status -- --project-ref brifeyypjauyusmkptkx --check` from a checkout of the commit you mean to ship. It compares staging with the committed tree and exits 1 when a migration is not applied. Where that script is not available, run its two read-only queries directly:
+
+   ```bash
+   supabase migration list --project-ref brifeyypjauyusmkptkx
+   supabase functions list --project-ref brifeyypjauyusmkptkx
+   ```
+
+   A migration with a local version and no remote version is pending. A function whose folder changed (`git log -- supabase/functions/<name> supabase/functions/_shared`) after its remote `updated_at` is stale. Save both lists as the rollback baseline.
+3. Apply migrations. Run `supabase db push --project-ref brifeyypjauyusmkptkx --dry-run` and check that it lists exactly the pending files from step 2. Then run it without `--dry-run`. Never use `--include-all` to paper over divergent history.
+4. Deploy functions, one at a time, only the ones step 2 marked stale: `supabase functions deploy <name> --project-ref brifeyypjauyusmkptkx --use-api`. [`supabase/config.toml`](../supabase/config.toml) supplies each function's JWT setting. Never use `--prune`.
+5. Verify. Rerun step 2; it must show nothing pending. Then start the staging browser suite: dispatch `Protected staging E2E` from `main` with `gh workflow run staging-e2e.yml --ref main`, or, when Actions cannot run, run it locally with the protected values as described in [testing.md](testing.md#protected-staging). For a manual check in the browser, an admin can switch the deployed frontend to staging from Settings and sign in there with a staging demo code. Google and email sign-in on staging work only if the staging Auth redirect URLs include the frontend origin.
+
+Production then follows [Supabase changes](#supabase-changes) with the same list of migrations and functions.
+
+## Switching the frontend to staging
+
+[`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) reads the `debate-supabase-env` localStorage key once at startup. The value `staging` selects staging, and anything else selects production. Each project keeps its own auth session under `debate-auth-<env>`.
+
+Admins see a **Developer** card in Settings that signs out, sets the key, and reloads. The app's persisted stores are shared by both projects, so the switch also clears this project's stored session, its Google token, and all user-specific local data, including saved results and form drafts. It waits at most 4 seconds for the sign-out request, so an unresponsive project cannot block it. Other open tabs clear their own session storage, including their Google token, and reload as soon as the key changes, so no tab keeps talking to the old project while sharing stores with the new one. The strip publishes its height as `--staging-banner-height`, and the landing navigation and app header sit below it. While staging is active, every page shows a staging strip with **Switch to Production**, and the Settings card is shown to everyone. A new staging session starts signed out, and an admin on production may not be an admin on staging, so the way back cannot depend on that role. The switch is a convenience, not an access control. Staging RLS and its separate user accounts are the boundary.
+
+The switch only works while the `connect-src` directive in [`vercel.json`](../vercel.json) allows the staging project origin. Today the `*.supabase.co` wildcard covers it. If you narrow that wildcard, list both project origins explicitly.
+
 ## Backend drift check
 
 `npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the project the Supabase CLI resolves, which is `SUPABASE_PROJECT_ID` when that is set and the linked project otherwise; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role.

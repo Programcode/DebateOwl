@@ -43,7 +43,7 @@ Interface language and AI-output language are separate settings. Interface langu
 
 ## Supabase environments and sessions
 
-[`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) resolves production or staging client configuration. Public URLs and anon keys are browser configuration. Do not copy their values into docs.
+[`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) resolves production or staging client configuration. Public URLs and anon keys are browser configuration. Do not copy their values into docs. Admins switch projects from Settings; see [operations.md](operations.md#switching-the-frontend-to-staging).
 
 [`src/lib/supabase/client.ts`](../src/lib/supabase/client.ts) creates the client with persistent sessions, automatic refresh, PKCE, and environment-specific storage keys.
 

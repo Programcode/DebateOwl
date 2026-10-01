@@ -380,6 +380,7 @@
     "envSwitchTitle": "Környezet váltása",
     "envSwitchDesc": "Kijelentkeztetünk és az app újratöltődik {{target}} felé mutatva. Újra be kell jelentkezned.",
     "envSwitchConfirm": "Váltás és kijelentkezés",
+    "stagingBanner": "Staging háttérrendszer",
     "dangerZone": "Veszélyzóna",
     "dangerDesc": "Véglegesen törli az összes mentett adatodat. Ez csak a fiókodat érinti ({{email}}).",
     "deleteAllData": "Összes adatom törlése",

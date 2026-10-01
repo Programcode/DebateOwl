@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { routeLoaders } from "@/lib/route-modules";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
@@ -278,6 +279,7 @@ const App = () => (
           <TooltipProvider delayDuration={200}>
             <Toaster />
             <OfflineIndicator />
+            <StagingBanner />
             <BrowserRouter useTransitions={false}>
               <LocalizedRouteErrorBoundary>
                 <AppRoutes />
