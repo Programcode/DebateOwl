@@ -158,7 +158,14 @@ export async function handleRequest(req: Request): Promise<Response> {
     return errorResponse(502, "The voice provider rejected the request.", corsHeaders, "voice_provider_error");
   }
 
-  const audio = await providerResponse.arrayBuffer();
+  let audio: ArrayBuffer;
+  try {
+    audio = await providerResponse.arrayBuffer();
+  } catch (error) {
+    // The stream broke after a successful start, so the clip may be billed.
+    await logUsage(userId, usageFeature, ELEVENLABS_PROVIDER, model, { incomplete: true }, Date.now() - startedAt, "error", error instanceof Error ? error.name.slice(0, 100) : "stream_failed");
+    return errorResponse(502, "The voice provider's audio was cut off.", corsHeaders, "voice_provider_error");
+  }
   await logUsage(
     userId,
     usageFeature,

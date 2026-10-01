@@ -218,6 +218,59 @@ describe('CrossfirePage voice rounds', () => {
     expect(screen.queryByTestId('spoken-delivery')).not.toBeInTheDocument();
   });
 
+  it('does not carry words spoken in one round into the measurements of the next', async () => {
+    mocks.crossfire.mockResolvedValue({ type: 'answer', text: 'An answer.' });
+    renderPage();
+    fillSetup();
+    fireEvent.click(screen.getByTestId('voice-mode'));
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+
+    // Spoken, never sent: the student leaves the round instead.
+    fireEvent.click(screen.getByTestId('voice-mic'));
+    await waitFor(() => expect(MockRecognition.instances).toHaveLength(1));
+    act(() => MockRecognition.instances[0].say('Um, a question from the abandoned round'));
+    fireEvent.click(screen.getByTestId('end-crossfire'));
+
+    // A new voice round on the same page, with a typed turn.
+    fillSetup();
+    fireEvent.click(screen.getByTestId('voice-mode'));
+    fireEvent.click(screen.getByTestId('start-crossfire'));
+    // An unsent draft stays in the box, as it does in a typed round. The student replaces it.
+    fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'A new typed question?' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+    await waitFor(() => expect(mocks.crossfire).toHaveBeenCalledTimes(1));
+    const [input] = mocks.crossfire.mock.calls[0] as unknown as [{ transcript: Array<Record<string, unknown>> }];
+    expect(input.transcript[0].text).toBe('A new typed question?');
+    expect(input.transcript[0]).not.toHaveProperty('delivery');
+  });
+
+  it('does not open the microphone on the next turn when permission arrives after the turn was sent', async () => {
+    let grant: (stream: { getTracks: () => Array<{ stop: () => void }> }) => void = () => {};
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: () => new Promise((resolve) => { grant = resolve; }) },
+    });
+    try {
+      mocks.crossfire.mockResolvedValueOnce({ type: 'answer', text: 'First answer.' });
+      renderPage();
+      fillSetup();
+      fireEvent.click(screen.getByTestId('voice-mode'));
+      fireEvent.click(screen.getByTestId('start-crossfire'));
+
+      // The permission prompt is open; the student types and sends instead.
+      fireEvent.click(screen.getByTestId('voice-mic'));
+      fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'A typed question?' } });
+      fireEvent.click(screen.getByTestId('submit-turn'));
+      await screen.findByText('First answer.');
+
+      await act(async () => { grant({ getTracks: () => [{ stop: () => {} }] }); });
+      expect(MockRecognition.instances).toHaveLength(0);
+      expect(screen.getByTestId('voice-mic')).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+    }
+  });
+
   it('falls back to typing with a reason when the microphone is refused mid-round', async () => {
     mocks.crossfire.mockResolvedValueOnce({ type: 'answer', text: 'A typed answer.' });
     renderPage();

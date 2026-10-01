@@ -255,6 +255,24 @@ Deno.test("a provider failure returns a fallback code without the provider's bod
   });
 });
 
+Deno.test("audio that is cut off mid-download is logged with an unknown cost and falls back", async () => {
+  const broken = () => new Response(new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array([0x49, 0x44]));
+      controller.error(new TypeError("connection reset"));
+    },
+  }), { headers: { "Content-Type": "audio/mpeg", "character-cost": "70" } });
+  await withVoice({ provider: broken }, async (harness) => {
+    const response = await handleRequest(await voiceRequest());
+    assertEquals(response.status, 502, "status");
+    assertEquals((await response.json()).code, "voice_provider_error", "code");
+    assertEquals(harness.usageRows.length, 1, "usage rows");
+    assertEquals(harness.usageRows[0].status, "error", "usage status");
+    // The provider may have billed the clip, so the cost is not claimed to be zero.
+    assertEquals(harness.usageRows[0].cost_usd, null, "cost");
+  });
+});
+
 Deno.test("the key never appears in a response", async () => {
   await withVoice({ provider: () => new Response("nope", { status: 500 }) }, async () => {
     const response = await handleRequest(await voiceRequest());

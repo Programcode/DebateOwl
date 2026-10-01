@@ -30,6 +30,12 @@ export interface SpeechCapture {
   start: () => Promise<boolean>;
   /** Stops listening and resolves once the last words have arrived. */
   stop: () => Promise<void>;
+  /**
+   * Drops everything: a start still waiting for permission, the open
+   * recogniser, pending words, and the take. For when a turn or a round ends
+   * some other way than by submitting what was said.
+   */
+  cancel: () => void;
   /** Everything captured since the last reset, across pauses and restarts. */
   getTake: () => SpeechTake;
   resetTake: () => void;
@@ -49,6 +55,9 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
   const quickFailuresRef = useRef(0);
   const stoppedRef = useRef<(() => void) | null>(null);
   const stoppingRef = useRef<Promise<void> | null>(null);
+  // Bumped by every start, stop, and cancel, so a start that was waiting for
+  // the permission prompt can tell it is no longer wanted.
+  const attemptRef = useRef(0);
   const onFinalTextRef = useRef(onFinalText);
   onFinalTextRef.current = onFinalText;
 
@@ -89,6 +98,7 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
     if (!Constructor || wantListeningRef.current) return false;
     setError(null);
     wantListeningRef.current = true;
+    const attempt = ++attemptRef.current;
     try {
       // Ask for the microphone up front so a refusal is reported clearly.
       if (navigator.mediaDevices?.getUserMedia) {
@@ -96,6 +106,7 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
         stream.getTracks().forEach((track) => track.stop());
       }
     } catch (cause) {
+      if (attempt !== attemptRef.current) return false;
       const name = cause instanceof DOMException ? cause.name : '';
       wantListeningRef.current = false;
       const reason: SpeechCaptureError = name === 'NotAllowedError' || name === 'PermissionDeniedError'
@@ -105,7 +116,8 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
       if (reason === 'not-allowed') useVoiceAvailabilityStore.getState().markMicrophoneDenied();
       return false;
     }
-    if (!wantListeningRef.current) return false;
+    // The turn was submitted or ended while the permission prompt was open.
+    if (attempt !== attemptRef.current) return false;
 
     const recognition = new Constructor();
     recognition.continuous = true;
@@ -179,6 +191,7 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
     if (stoppingRef.current) return stoppingRef.current;
     const recognition = recognitionRef.current;
     wantListeningRef.current = false;
+    attemptRef.current += 1;
     if (!recognition) return Promise.resolve();
     // The recogniser delivers its last words after stop(), then ends.
     const stopping = new Promise<void>((resolve) => {
@@ -203,6 +216,28 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
     return stopping;
   }, [finishListening]);
 
+  const cancel = useCallback(() => {
+    attemptRef.current += 1;
+    wantListeningRef.current = false;
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (recognition) {
+      recognition.onresult = () => {};
+      recognition.onerror = () => {};
+      recognition.onend = () => {};
+      try { recognition.abort(); } catch { /* already closed */ }
+    }
+    startedAtRef.current = 0;
+    interimRef.current = '';
+    lastResultAtRef.current = null;
+    takeRef.current = emptyTake();
+    setInterim('');
+    setListening(false);
+    // Anyone waiting on a stop is released; there is nothing left to wait for.
+    stoppedRef.current?.();
+    stoppedRef.current = null;
+  }, []);
+
   const getTake = useCallback((): SpeechTake => ({
     ...takeRef.current,
     pausesMs: [...takeRef.current.pausesMs],
@@ -214,16 +249,7 @@ export function useSpeechCapture(language: AppLanguage, onFinalText: (text: stri
     lastResultAtRef.current = null;
   }, []);
 
-  useEffect(() => () => {
-    const recognition = recognitionRef.current;
-    wantListeningRef.current = false;
-    recognitionRef.current = null;
-    if (!recognition) return;
-    recognition.onresult = () => {};
-    recognition.onerror = () => {};
-    recognition.onend = () => {};
-    try { recognition.abort(); } catch { /* already closed */ }
-  }, []);
+  useEffect(() => cancel, [cancel]);
 
-  return { listening, interim, error, start, stop, getTake, resetTake };
+  return { listening, interim, error, start, stop, cancel, getTake, resetTake };
 }

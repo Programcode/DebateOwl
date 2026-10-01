@@ -173,6 +173,61 @@ describe('useSpeechCapture', () => {
     expect(finals).toEqual(['the last words', 'again']);
   });
 
+  it('withdraws a start that was still waiting for permission when the turn ends', async () => {
+    const prompts: Array<(stream: { getTracks: () => Array<{ stop: () => void }> }) => void> = [];
+    setMediaDevices(vi.fn(() => new Promise((resolve) => { prompts.push(resolve); })));
+    const { result } = renderHook(() => useSpeechCapture('en', onFinal));
+
+    let started: Promise<boolean> | undefined;
+    act(() => { started = result.current.start(); });
+    // The turn is submitted while the permission prompt is still open.
+    await act(async () => { await result.current.stop(); });
+    await act(async () => {
+      prompts[0]({ getTracks: () => [{ stop: vi.fn() }] });
+      expect(await started).toBe(false);
+    });
+    expect(MockRecognition.instances).toHaveLength(0);
+    expect(result.current.listening).toBe(false);
+
+    // A new start works, and a late answer to the old prompt opens nothing.
+    let restarted: Promise<boolean> | undefined;
+    act(() => { restarted = result.current.start(); });
+    await act(async () => {
+      prompts[1]({ getTracks: () => [{ stop: vi.fn() }] });
+      expect(await restarted).toBe(true);
+    });
+    expect(MockRecognition.instances).toHaveLength(1);
+  });
+
+  it('cancel drops the recogniser, the pending words, and the take without sending them on', async () => {
+    const { result } = renderHook(() => useSpeechCapture('en', onFinal));
+    await act(async () => { await result.current.start(); });
+    const recognition = latest();
+    vi.advanceTimersByTime(4_000);
+    act(() => recognition.emit([{ text: 'said and kept', final: true }, { text: 'said but pending', final: false }]));
+    finals.length = 0;
+
+    act(() => result.current.cancel());
+    expect(recognition.abort).toHaveBeenCalled();
+    expect(result.current.listening).toBe(false);
+    expect(result.current.interim).toBe('');
+    // Nothing from the cancelled take reaches the next round's draft or measurements.
+    expect(finals).toEqual([]);
+    expect(result.current.getTake()).toEqual({ text: '', speakingMs: 0, pausesMs: [] });
+
+    // A stop that was waiting when the round ended is released.
+    await act(async () => { await result.current.start(); });
+    const second = latest();
+    second.stop = vi.fn();
+    let released = false;
+    await act(async () => {
+      const stopping = result.current.stop().then(() => { released = true; });
+      result.current.cancel();
+      await stopping;
+    });
+    expect(released).toBe(true);
+  });
+
   it('does not hang when the browser never confirms the stop', async () => {
     const { result } = renderHook(() => useSpeechCapture('en', onFinal));
     await act(async () => { await result.current.start(); });

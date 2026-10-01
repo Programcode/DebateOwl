@@ -350,7 +350,11 @@ export default function CrossfirePage() {
     const draft = draftTurnRef.current;
     setDraft(`${draft}${draft && !/\s$/.test(draft) ? ' ' : ''}${text}`.slice(0, MAX_CROSSFIRE_TURN_CHARS));
   });
-  const { listening, stop: stopCapture } = capture;
+  const { listening, stop: stopCapture, cancel: cancelCapture } = capture;
+  // A take belongs to one round of one account. Anything said but not sent
+  // is dropped when the round or the account changes.
+  const captureScope = `${stateOwnerId ?? ''}:${state.phase === 'setup' ? 'setup' : state.sessionId}`;
+  useEffect(() => cancelCapture, [cancelCapture, captureScope]);
 
   const abortSignalRequests = useCallback(() => {
     signalRequestsRef.current.forEach((controller) => controller.abort());
@@ -553,7 +557,9 @@ export default function CrossfirePage() {
   const submitTurn = async () => {
     // A spoken turn waits for the recogniser's last words, so read the
     // freshest draft and state afterwards rather than this render's copies.
+    // Stopping also withdraws a start that is still waiting for permission.
     if (listening) await stopCapture();
+    else void stopCapture();
     const current = stateRef.current;
     if (current.phase !== 'active') return;
     const kind = expectedUserTurnKind(current);
@@ -582,8 +588,8 @@ export default function CrossfirePage() {
   // The microphone closes when it is no longer the student's turn.
   const awaitingUserTurn = expectedUserTurnKind(state) !== null;
   useEffect(() => {
-    if (listening && !awaitingUserTurn) void stopCapture();
-  }, [awaitingUserTurn, listening, stopCapture]);
+    if (!awaitingUserTurn) void stopCapture();
+  }, [awaitingUserTurn, stopCapture]);
 
   const retryTurn = () => {
     if (state.phase !== 'active' || state.request.status !== 'failed') return;

@@ -250,6 +250,28 @@ describe('SparringPage voice rounds', () => {
     expect(useSparringStore.getState().currentSession!.speeches[0]).not.toHaveProperty('delivery');
   });
 
+  it('does not open the microphone on the next turn when permission arrives after the speech was sent', async () => {
+    let grant: (stream: { getTracks: () => Array<{ stop: () => void }> }) => void = () => {};
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: () => new Promise((resolve) => { grant = resolve; }) },
+    });
+    try {
+      await startVoiceRound();
+      // The permission prompt is open; the student types and submits instead.
+      fireEvent.click(screen.getByTestId('voice-mic'));
+      fireEvent.change(screen.getByRole('textbox', { name: /Draft for Pro Introductor/i }), { target: { value: 'A typed speech.' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
+      await screen.findByRole('textbox', { name: /Draft for Pro R1/i });
+
+      await act(async () => { grant({ getTracks: () => [{ stop: () => {} }] }); });
+      expect(MockRecognition.instances).toHaveLength(0);
+      expect(screen.getByTestId('voice-mic')).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+    }
+  });
+
   it('falls back to typing with a reason when the microphone is refused mid-round', async () => {
     await startVoiceRound();
     fireEvent.click(screen.getByTestId('voice-mic'));

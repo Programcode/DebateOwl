@@ -98,18 +98,18 @@ export function SparringRound({
     const draft = useSparringStore.getState().currentSession?.draft ?? '';
     setDraft(`${draft}${draft && !/\s$/.test(draft) ? ' ' : ''}${text}`.slice(0, MAX_SPEECH_CHARS));
   });
-  const { listening, stop: stopCapture, resetTake } = capture;
-  const currentTurnId = currentTurn?.id;
+  const { listening, stop: stopCapture, cancel: cancelCapture } = capture;
+  const turnKey = `${session.id}:${currentTurn?.id ?? ''}`;
 
-  // Each turn is measured on its own.
-  useEffect(() => {
-    resetTake();
-  }, [currentTurnId, resetTake]);
+  // Each turn of each round is measured on its own, and a microphone start
+  // still waiting for permission does not carry over into the next turn.
+  useEffect(() => cancelCapture, [cancelCapture, turnKey]);
 
   // The microphone closes when the student's time or turn is over.
+  const micAllowed = userTurn && !judging && !timeExpired;
   useEffect(() => {
-    if (listening && (!userTurn || judging || timeExpired)) void stopCapture();
-  }, [judging, listening, stopCapture, timeExpired, userTurn]);
+    if (!micAllowed) void stopCapture();
+  }, [micAllowed, stopCapture]);
 
   const startSpeaking = () => {
     // Speaking over the opponent ends its audio, and the clock runs again.
@@ -119,7 +119,9 @@ export function SparringRound({
   };
 
   const submitSpeech = async () => {
+    // Stopping also withdraws a start that is still waiting for permission.
     if (listening) await stopCapture();
+    else void stopCapture();
     const draft = useSparringStore.getState().currentSession?.draft ?? '';
     if (!draft.trim()) return;
     onSubmit(draft, voice ? measureDelivery(capture.getTake(), voice.language) : null);
