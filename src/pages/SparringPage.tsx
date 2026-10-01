@@ -187,7 +187,10 @@ export default function SparringPage() {
         const userIsNext = next.phase === 'round';
         if (userIsNext) pauseTimer();
         opponentVoice.speak({ feature: 'sparring', text: generated.content, voice: result.voice, language: outputLanguage }, () => {
-          if (userIsNext && useSparringStore.getState().currentSession?.id === session.id) resumeTimer();
+          // Resume only the turn this reply paused. A reply still playing when
+          // the next one arrives ends after that one has paused a later turn.
+          const current = useSparringStore.getState().currentSession;
+          if (userIsNext && current?.id === session.id && current.currentTurnIndex === next.currentTurnIndex) resumeTimer();
         });
       })
       .catch((error: unknown) => {
@@ -263,7 +266,7 @@ export default function SparringPage() {
   const beginRound = (values: SparringSetupValues, debateId: string | null) => {
     const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
-    opponentVoice.stop();
+    opponentVoice.beginRound();
     startSession({ ...values, debateId: target.debateId });
     setAiError(null);
     setJudgingError(null);

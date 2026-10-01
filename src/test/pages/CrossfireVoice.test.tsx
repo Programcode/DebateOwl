@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     speak: vi.fn(),
     stop: vi.fn(),
     unlock: vi.fn(),
+    beginRound: vi.fn(),
     state: { status: 'idle', engine: null as string | null, notice: null as string | null },
   },
 }));
@@ -40,6 +41,7 @@ vi.mock('@/lib/voice/opponent-voice', () => ({
     speak: mocks.voice.speak,
     stop: mocks.voice.stop,
     unlock: mocks.voice.unlock,
+    beginRound: mocks.voice.beginRound,
     subscribe: () => () => {},
     getState: () => mocks.voice.state,
   },
@@ -137,6 +139,8 @@ describe('CrossfirePage voice rounds', () => {
     fireEvent.click(screen.getByTestId('voice-mode'));
     expect(screen.getByTestId('voice-mode')).toHaveAttribute('aria-checked', 'true');
     fireEvent.click(screen.getByTestId('start-crossfire'));
+    // Each new round gives ElevenLabs a fresh chance.
+    expect(mocks.voice.beginRound).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId('voice-mic'));
     await waitFor(() => expect(MockRecognition.instances).toHaveLength(1));

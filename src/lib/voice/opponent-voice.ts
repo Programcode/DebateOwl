@@ -77,6 +77,26 @@ async function requestSegmentAudio(feature: VoiceFeature, segment: VoiceSegment,
   }
 }
 
+// One sentence too long for an utterance is cut after its last clause break
+// that fits (a comma, semicolon, colon, or dash before a space), else at the
+// last space, else at the limit.
+function splitLongSentence(sentence: string): string[] {
+  const parts: string[] = [];
+  let rest = sentence.trim();
+  while (rest.length > MAX_BROWSER_UTTERANCE_CHARS) {
+    const window = rest.slice(0, MAX_BROWSER_UTTERANCE_CHARS + 1);
+    const clauseBreaks = [...window.matchAll(/[,;:—–](?=\s)/gu)];
+    const clauseEnd = (clauseBreaks.at(-1)?.index ?? -1) + 1;
+    const space = window.lastIndexOf(' ');
+    const minimum = MAX_BROWSER_UTTERANCE_CHARS / 3;
+    const cut = clauseEnd > minimum ? clauseEnd : space > minimum ? space : MAX_BROWSER_UTTERANCE_CHARS;
+    parts.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) parts.push(rest);
+  return parts;
+}
+
 /** Cut text into utterances short enough that browsers do not drop the tail. */
 export function browserUtterances(text: string): string[] {
   const sentences = text.match(/[^.!?…\n]+(?:[.!?…]+["'”’)]*|\n+|$)\s*/gu) ?? [];
@@ -86,6 +106,11 @@ export function browserUtterances(text: string): string[] {
     if (current && (current + sentence).length > MAX_BROWSER_UTTERANCE_CHARS) {
       parts.push(current.trim());
       current = '';
+    }
+    // Chrome stops reading partway through a very long utterance.
+    if (sentence.trim().length > MAX_BROWSER_UTTERANCE_CHARS) {
+      parts.push(...splitLongSentence(sentence));
+      continue;
     }
     current += sentence;
   }
@@ -102,7 +127,7 @@ class OpponentVoice {
   private run = 0;
   private onEnd: (() => void) | null = null;
   private resumeBlocked: (() => void) | null = null;
-  /** Set once the server says ElevenLabs cannot serve this session. */
+  /** Set once the server says ElevenLabs cannot serve this round. */
   private providerOff = false;
 
   subscribe = (listener: () => void): (() => void) => {
@@ -131,6 +156,18 @@ class OpponentVoice {
       this.context = null;
     }
     this.resumeBlocked?.();
+  };
+
+  /**
+   * Start a round. A failure that asking again would not fix hands the
+   * opponent to the browser voice for the rest of a round, so a broken or
+   * exhausted provider costs at most one failed request per round. Each new
+   * round gives ElevenLabs another chance.
+   */
+  beginRound = (): void => {
+    this.stop();
+    this.providerOff = false;
+    if (this.state.notice) this.setState({ notice: null });
   };
 
   /** Forget session-level fallbacks, for tests. */
@@ -187,13 +224,13 @@ class OpponentVoice {
         pending = next + 1 < segments.length ? this.load(utterance.feature, segments[next + 1], signal) : Promise.resolve(null);
         if (!(await this.playBuffer(audio, run))) return;
       }
-      if (next >= segments.length) return;
     }
     if (run !== this.run) return;
     // The browser voice reads whatever ElevenLabs did not: the rest of the
-    // segments without their tags, or the whole clean reply.
+    // segments without their tags and any unsigned overflow past the last
+    // segment, or the whole clean reply.
     const remaining = segments.length > 0
-      ? segments.slice(next).map((segment) => stripAudioTags(segment.text)).join(' ')
+      ? [...segments.slice(next).map((segment) => stripAudioTags(segment.text)), utterance.voice?.overflow ?? ''].join(' ').trim()
       : utterance.text;
     await this.speakWithBrowser(remaining, utterance.language, run);
   }
@@ -206,15 +243,15 @@ class OpponentVoice {
       return await this.context.decodeAudioData(bytes);
     } catch (error) {
       if (signal.aborted) return null;
-      if (error instanceof VoiceRequestError) {
-        // Not configured, not deployed, not allowed: asking again will not
-        // help, so the browser voice takes the rest of this session.
-        if (error.code === 'voice_limit_reached') {
-          this.providerOff = true;
-          this.setState({ notice: 'limit' });
-        } else if (error.code === 'voice_unavailable' || error.code === 'banned' || error.status === 404 || error.status === 401) {
-          this.providerOff = true;
-        }
+      // The server answered with a refusal: not configured, not deployed,
+      // not allowed, or ElevenLabs failed. Asking again this round would
+      // likely fail the same way and may spend a clip, so the browser voice
+      // takes the rest of the round. A refused token concerns one reply
+      // only, whose other segments share its age; the next reply has fresh
+      // tokens. A network error is not the server's answer and is retried.
+      if (error instanceof VoiceRequestError && error.code !== 'voice_token_invalid') {
+        this.providerOff = true;
+        if (error.code === 'voice_limit_reached') this.setState({ notice: 'limit' });
       }
       return null;
     }

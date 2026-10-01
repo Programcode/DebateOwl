@@ -542,6 +542,7 @@ export default function CrossfirePage() {
     if (state.phase !== 'setup') return;
     debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
+    opponentVoice.beginRound();
     const action = {
       type: 'session-started' as const,
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,

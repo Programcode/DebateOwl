@@ -12,6 +12,7 @@ const { generateMock, judgeMock, voiceMock } = vi.hoisted(() => ({
     speak: vi.fn(),
     stop: vi.fn(),
     unlock: vi.fn(),
+    beginRound: vi.fn(),
     state: { status: 'idle', engine: null as string | null, notice: null as string | null },
   },
 }));
@@ -30,6 +31,7 @@ vi.mock('@/lib/voice/opponent-voice', () => ({
     speak: voiceMock.speak,
     stop: voiceMock.stop,
     unlock: voiceMock.unlock,
+    beginRound: voiceMock.beginRound,
     subscribe: () => () => {},
     getState: () => voiceMock.state,
   },
@@ -239,6 +241,37 @@ describe('SparringPage voice rounds', () => {
     // The student's clock waits for the opponent to finish, then runs.
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
     act(() => onEnd());
+    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
+  });
+
+  it('gives ElevenLabs a fresh chance in each new round', async () => {
+    await startVoiceRound();
+    expect(voiceMock.beginRound).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the clock paused while a later reply plays, even when an earlier reply ends under it', async () => {
+    // Like the real voice: a new reply stops the one still playing, which ends it.
+    let playing: (() => void) | undefined;
+    voiceMock.speak.mockImplementation((_utterance: unknown, onEnd?: () => void) => {
+      const previous = playing;
+      playing = onEnd;
+      previous?.();
+    });
+    await startVoiceRound();
+    fireEvent.change(screen.getByRole('textbox', { name: /Draft for Pro Introductor/i }), { target: { value: 'The first speech.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
+    await waitFor(() => expect(voiceMock.speak).toHaveBeenCalledTimes(1));
+    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
+
+    // The student types and sends the next speech while the first reply is still playing.
+    generateMock.mockResolvedValue({ ...OPPONENT_RESPONSE, speech: { ...OPPONENT_RESPONSE.speech, content: 'A second reply.' } });
+    fireEvent.change(await screen.findByRole('textbox', { name: /Draft for Pro R1/i }), { target: { value: 'The second speech.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
+    await waitFor(() => expect(voiceMock.speak).toHaveBeenCalledTimes(2));
+
+    // The first reply's end must not start the clock while the second reply plays.
+    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
+    act(() => playing?.());
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
   });
 
