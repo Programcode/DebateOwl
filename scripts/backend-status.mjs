@@ -258,7 +258,7 @@ export function backendStatus({ root, projectRef }) {
 
   const dirty = git(root, ["status", "--porcelain", "--", "supabase/migrations", "supabase/functions", "supabase/config.toml"]).trim();
   if (dirty) notes.push("uncommitted changes under supabase/ are not part of this comparison.");
-  notes.push("function change dates come from git; a function deployed from a branch before its merge shows as changed until it is redeployed from this line.");
+  notes.push("function change dates come from git. A function deployed from a branch before its merge shows as changed; one deployed from an out-of-date checkout looks current.");
 
   const linkedRefFile = join(root, "supabase/.temp/project-ref");
   const ref = projectRef ?? (existsSync(linkedRefFile) ? readFileSync(linkedRefFile, "utf8").trim() : "linked project");

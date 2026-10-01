@@ -65,7 +65,7 @@ Do not enable the staging repository variable before every prerequisite is prese
 
 ## Backend drift check
 
-`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the linked project; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role unless `SUPABASE_DB_PASSWORD` is set.
+`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the linked project; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role.
 
 The comparison uses the committed tree at `HEAD`, so commit or stash local edits first. It reports:
 
@@ -74,9 +74,9 @@ The comparison uses the committed tree at `HEAD`, so commit or stash local edits
 - functions whose deployed `verify_jwt` differs from [`supabase/config.toml`](../supabase/config.toml);
 - deployed functions that the commit does not have.
 
-Function change dates come from first-parent git history, which dates a merged change by its merge. A function deployed from a branch before its merge therefore shows as changed until it is redeployed from `main`. A shallow clone skips the function date check.
+Function change dates come from first-parent git history, which dates a merged change by its merge. A function deployed from a branch before its merge therefore shows as changed until it is redeployed from `main`. The reverse is not caught: a function deployed from an out-of-date checkout gets a fresh deploy date and looks current. Deploy functions only from an up-to-date `main`. A shallow clone skips the function date check.
 
-`--check` exits 1 when a migration on this commit is not applied, and exit code 2 means the check itself failed. A scheduled CI step could use it against production, but it would need a Supabase access token and database access in GitHub Actions. That is a production credential, so it waits for Adam's decision.
+`--check` exits 1 when a migration on this commit is not applied, and exit code 2 means the check itself failed. A scheduled CI step could use it against production, but it would need a Supabase access token and database access in GitHub Actions. That is a production credential, which the hard boundaries in [`AGENTS.md`](../AGENTS.md) do not allow in jobs, so it waits for Adam's decision.
 
 `workspace-invites` is not deployed to production, because Collaborative Workspace is hidden there. Expect it in the not-deployed list.
 
