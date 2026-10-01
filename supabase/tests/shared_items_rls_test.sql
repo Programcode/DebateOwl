@@ -21,9 +21,11 @@ SELECT ok(
     AND NOT has_table_privilege('authenticated', 'public.shared_items', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE'),
   'clients have no direct table access to shares'
 );
+-- A privilege list passed to has_table_privilege means "any of", so check each one.
 SELECT ok(
-  has_table_privilege('service_role', 'public.shared_items', 'SELECT,INSERT,UPDATE,DELETE'),
-  'the share function can write shares with the service role'
+  (SELECT bool_and(has_table_privilege('service_role', 'public.shared_items', privilege))
+    FROM unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) AS privilege),
+  'the share function can read and write shares with the service role'
 );
 SELECT ok(
   NOT EXISTS (

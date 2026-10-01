@@ -35,10 +35,12 @@ SELECT ok(
     AND NOT has_table_privilege('authenticated', 'public.user_data_clear_markers', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE'),
   'clients hold no table privileges on server-only tables'
 );
+-- A privilege list passed to has_table_privilege means "any of", so check each one.
 SELECT ok(
-  has_table_privilege('service_role', 'public.webhook_events', 'SELECT,INSERT,UPDATE,DELETE')
-    AND has_table_privilege('service_role', 'public.user_data_clear_markers', 'SELECT,INSERT,UPDATE,DELETE'),
-  'the service role keeps access to server-only tables'
+  (SELECT bool_and(has_table_privilege('service_role', relation, privilege))
+    FROM unnest(ARRAY['public.webhook_events', 'public.user_data_clear_markers']) AS relation,
+      unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) AS privilege),
+  'the service role keeps every privilege on server-only tables'
 );
 
 INSERT INTO auth.users (id) VALUES ('a1111111-1111-4111-8111-111111111111');
