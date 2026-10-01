@@ -21,7 +21,9 @@ import { isVoiceFeature, verifyVoiceToken, type VoiceFeature } from "../_shared/
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io";
 // "George", the premade voice the ElevenLabs quickstart uses with eleven_v4.
 const DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
-const PROVIDER_TIMEOUT_MS = 45_000;
+// Below the browser's own 30-second wait, so a slow clip ends here with an
+// error the browser acts on rather than being paid for and then discarded.
+const PROVIDER_TIMEOUT_MS = 25_000;
 const MAX_REQUEST_BODY_BYTES = 8_000;
 
 // Full-quality v4 for prepared speeches; Turbo for the quick exchanges of
@@ -54,9 +56,33 @@ function errorResponse(status: number, error: string, corsHeaders: Record<string
   return Response.json({ error, ...(code ? { code } : {}) }, { status, headers: corsHeaders });
 }
 
+// The body is read up to the limit and no further, so an oversized request
+// is refused without being held in memory.
+async function readBoundedBody(req: Request): Promise<string | null> {
+  if (Number(req.headers.get("content-length")) > MAX_REQUEST_BODY_BYTES) return null;
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return text + decoder.decode();
+      received += value.byteLength;
+      if (received > MAX_REQUEST_BODY_BYTES) return null;
+      text += decoder.decode(value, { stream: true });
+    }
+  } catch {
+    return null;
+  } finally {
+    reader.cancel().catch(() => undefined);
+  }
+}
+
 async function readRequest(req: Request): Promise<{ feature: VoiceFeature; text: string; token: string } | null> {
-  const raw = await req.text();
-  if (new TextEncoder().encode(raw).byteLength > MAX_REQUEST_BODY_BYTES) return null;
+  const raw = await readBoundedBody(req);
+  if (raw === null) return null;
   let body: unknown;
   try {
     body = JSON.parse(raw);
@@ -77,6 +103,42 @@ async function dailyClipLimit(userId: string): Promise<number> {
   if (subscription.dailyLimit <= 0) return 0;
   const fallback = subscription.canAccessProModels ? DAILY_VOICE_CLIPS.paid : DAILY_VOICE_CLIPS.trial;
   return await getConfiguredDailyLimit(userId, fallback, VOICE_LIMIT_TYPE);
+}
+
+/**
+ * Give back a clip the provider refused. A refusal is not billed, so it
+ * should not use up the student's allowance either. PostgREST has no atomic
+ * decrement, so this swaps the count only if no other request changed it,
+ * and retries a lost race a few times. Giving up leaves the clip counted,
+ * which errs toward the cap.
+ */
+async function refundVoiceClip(userId: string): Promise<void> {
+  try {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      // The latest row is the one the reservation just wrote, whatever the
+      // database's date is.
+      const { data: rows, error } = await supabase
+        .from("daily_usage_counters")
+        .select("usage_date, request_count")
+        .eq("user_id", userId)
+        .eq("quota_key", VOICE_QUOTA_KEY)
+        .order("usage_date", { ascending: false })
+        .limit(1);
+      const row = rows?.[0] as { usage_date: string; request_count: number } | undefined;
+      if (error || !row || row.request_count <= 0) return;
+      const { data: updated, error: updateError } = await supabase
+        .from("daily_usage_counters")
+        .update({ request_count: row.request_count - 1 })
+        .eq("user_id", userId)
+        .eq("usage_date", row.usage_date)
+        .eq("quota_key", VOICE_QUOTA_KEY)
+        .eq("request_count", row.request_count)
+        .select("request_count");
+      if (updateError || (updated?.length ?? 0) > 0) return;
+    }
+  } catch (error) {
+    console.error("[VOICE] Clip refund failed:", error instanceof Error ? error.message : "Unknown error");
+  }
 }
 
 export async function handleRequest(req: Request): Promise<Response> {
@@ -155,6 +217,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     await providerResponse.body?.cancel();
     // The status is enough to diagnose; the provider's body is not forwarded.
     await logUsage(userId, usageFeature, ELEVENLABS_PROVIDER, model, { billedCharacters: 0 }, Date.now() - startedAt, "error", `elevenlabs_${providerResponse.status}`);
+    // A refused request is not billed, so the clip goes back. A request that
+    // timed out, was aborted, or was cut off above may have been billed and
+    // keeps its clip: refunding it would let a caller that aborts early run
+    // up provider charges without ever reaching the cap.
+    await refundVoiceClip(userId);
     return errorResponse(502, "The voice provider rejected the request.", corsHeaders, "voice_provider_error");
   }
 

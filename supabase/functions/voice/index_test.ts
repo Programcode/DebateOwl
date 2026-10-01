@@ -15,6 +15,8 @@ interface Harness {
   calls: string[];
   usageRows: Array<Record<string, unknown>>;
   quotaRequests: Array<Record<string, unknown>>;
+  /** Writes to the clip counter, as "METHOD ?query body". */
+  counterWrites: string[];
   elevenLabs: Array<{ url: URL; headers: Headers; body: Record<string, unknown> }>;
 }
 
@@ -25,11 +27,13 @@ interface Options {
   settings?: Record<string, unknown> | null;
   rateLimit?: { limit_value: number } | null;
   quota?: { allowed: boolean; current_count: number };
+  /** The clip counter row a refund reads. */
+  counter?: { usage_date: string; request_count: number } | null;
   provider?: () => Response | Promise<Response>;
 }
 
 async function withVoice(options: Options, run: (harness: Harness) => Promise<void>): Promise<void> {
-  const harness: Harness = { calls: [], usageRows: [], quotaRequests: [], elevenLabs: [] };
+  const harness: Harness = { calls: [], usageRows: [], quotaRequests: [], counterWrites: [], elevenLabs: [] };
   const originalFetch = globalThis.fetch;
   const apiKey = options.apiKey === undefined ? "test-elevenlabs-key" : options.apiKey;
   if (apiKey === null) Deno.env.delete("ELEVENLABS_API_KEY");
@@ -67,6 +71,12 @@ async function withVoice(options: Options, run: (harness: Harness) => Promise<vo
     if (url.pathname.endsWith("/rest/v1/rpc/consume_daily_quota")) {
       harness.quotaRequests.push(JSON.parse(String(init?.body)));
       return Response.json([options.quota ?? { allowed: true, current_count: 1 }]);
+    }
+    if (url.pathname.endsWith("/rest/v1/daily_usage_counters")) {
+      const counter = options.counter === undefined ? { usage_date: "2026-10-01", request_count: 1 } : options.counter;
+      if ((init?.method ?? "GET") === "GET") return Response.json(counter ? [counter] : []);
+      harness.counterWrites.push(`${init?.method} ${url.search} ${init?.body}`);
+      return Response.json([{ request_count: JSON.parse(String(init?.body)).request_count }]);
     }
     if (url.pathname.endsWith("/rest/v1/ai_requests")) {
       harness.usageRows.push(JSON.parse(String(init?.body)));
@@ -253,6 +263,64 @@ Deno.test("a provider failure returns a fallback code without the provider's bod
     assertEquals(response.status, 502, "status");
     assertEquals(harness.usageRows[0].cost_usd, null, "an unanswered request has no known cost");
   });
+});
+
+Deno.test("a clip the provider refused is given back", async () => {
+  for (const status of [401, 429, 500]) {
+    await withVoice({ provider: () => new Response("busy", { status }), counter: { usage_date: "2026-10-01", request_count: 5 } }, async (harness) => {
+      const response = await handleRequest(await voiceRequest());
+      assertEquals(response.status, 502, `${status}: status`);
+      assertEquals(harness.counterWrites.length, 1, `${status}: counter writes`);
+      const [write] = harness.counterWrites;
+      // Compare-and-swap on the value read, for this user's voice counter only.
+      if (!write.startsWith("PATCH ") || !write.includes("request_count=eq.5") || !write.includes("quota_key=eq.voice") ||
+        !write.includes(`user_id=eq.${USER_ID}`) || !write.endsWith('{"request_count":4}')) {
+        throw new Error(`${status}: wrong refund: ${write}`);
+      }
+    });
+  }
+});
+
+Deno.test("a clip that may have been billed is not given back", async () => {
+  const broken = () => new Response(new ReadableStream({
+    start(controller) {
+      controller.error(new TypeError("connection reset"));
+    },
+  }), { headers: { "Content-Type": "audio/mpeg" } });
+  for (const provider of [() => { throw new TypeError("network down"); }, broken]) {
+    await withVoice({ provider }, async (harness) => {
+      const response = await handleRequest(await voiceRequest());
+      assertEquals(response.status, 502, "status");
+      assertEquals(harness.counterWrites.length, 0, "counter writes");
+    });
+  }
+  await withVoice({}, async (harness) => {
+    assertEquals((await handleRequest(await voiceRequest())).status, 200, "status");
+    assertEquals(harness.counterWrites.length, 0, "a delivered clip stays counted");
+  });
+});
+
+Deno.test("an oversized body is rejected without being read", async () => {
+  for (const declared of [true, false]) {
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        controller.enqueue(new Uint8Array(1_024).fill(0x20));
+        if (pulls >= 1_000) controller.close();
+      },
+    });
+    await withVoice({}, async (harness) => {
+      const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/voice", {
+        method: "POST",
+        headers: { Authorization: "Bearer user-token", "Content-Type": "application/json", ...(declared ? { "Content-Length": "1024000" } : {}) },
+        body,
+      }));
+      assertEquals(response.status, 400, `status with a declared length: ${declared}`);
+      if (pulls > 20) throw new Error(`read ${pulls} KB of an oversized body (declared length: ${declared})`);
+      if (reachedPaidWork(harness)) throw new Error("an oversized body reached paid work");
+    });
+  }
 });
 
 Deno.test("audio that is cut off mid-download is logged with an unknown cost and falls back", async () => {

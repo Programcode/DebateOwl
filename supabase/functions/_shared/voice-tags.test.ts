@@ -72,9 +72,11 @@ Deno.test("an overlong sentence is cut and a lone trailing tag joins its neighbo
   if (!segments[segments.length - 1].endsWith("[laughs]")) throw new Error("the trailing tag was lost");
 });
 
-Deno.test("segment count is bounded", () => {
+Deno.test("a long reply is split without losing text; signing applies the cap", () => {
   const spoken = `${"word ".repeat(180).trim()}. `.repeat(40);
-  if (splitSpokenSegments(spoken).length !== MAX_VOICE_SEGMENTS) throw new Error("segment cap not applied");
+  const segments = splitSpokenSegments(spoken);
+  if (segments.length <= MAX_VOICE_SEGMENTS) throw new Error("expected more segments than the signing cap");
+  if (segments.join(" ") !== spoken.trim()) throw new Error("text was lost in the split");
 });
 
 Deno.test("text with only tags yields no segment", () => {

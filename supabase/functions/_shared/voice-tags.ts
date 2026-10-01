@@ -29,6 +29,7 @@ export const VOICE_AUDIO_TAGS = [
 export const MAX_VOICE_SEGMENT_CHARS = 1_000;
 /** Segments aim below the limit so a trailing tag still fits. */
 const TARGET_VOICE_SEGMENT_CHARS = 900;
+/** The most segments one reply signs for ElevenLabs, which bounds its cost. */
 export const MAX_VOICE_SEGMENTS = 12;
 
 const ALLOWED_TAGS: ReadonlySet<string> = new Set(VOICE_AUDIO_TAGS);
@@ -107,8 +108,9 @@ function hardSplit(text: string, limit: number): string[] {
 /**
  * Cut spoken text into requests of at most MAX_VOICE_SEGMENT_CHARS at
  * sentence boundaries, so the first audio arrives quickly and a failure costs
- * one segment rather than a whole speech. Text beyond MAX_VOICE_SEGMENTS is
- * left to the browser voice.
+ * one segment rather than a whole speech. Every segment is returned; the
+ * caller signs at most MAX_VOICE_SEGMENTS and leaves the rest to the browser
+ * voice.
  */
 export function splitSpokenSegments(spoken: string): string[] {
   const segments: string[] = [];
@@ -139,5 +141,5 @@ export function splitSpokenSegments(spoken: string): string[] {
       merged.push(segment);
     }
   }
-  return merged.slice(0, MAX_VOICE_SEGMENTS);
+  return merged;
 }

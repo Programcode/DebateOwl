@@ -3,7 +3,7 @@
 // the voice function verifies them before it spends anything. The endpoint
 // can therefore speak only text the server wrote, never arbitrary input.
 
-import { splitSpokenSegments, stripAudioTags, toSpokenText } from "./voice-tags.ts";
+import { MAX_VOICE_SEGMENTS, splitSpokenSegments, stripAudioTags, toSpokenText } from "./voice-tags.ts";
 
 export type VoiceFeature = "sparring" | "crossfire";
 
@@ -15,10 +15,22 @@ export interface VoiceSegment {
 
 export interface VoicePayload {
   segments: VoiceSegment[];
+  /**
+   * Spoken text past the last signed segment, without tags. Only the
+   * browser voice reads it, so a very long reply is heard in full without
+   * raising the ElevenLabs cost of one reply.
+   */
+  overflow?: string;
 }
 
 /** Long enough to cover a full sparring speech played segment by segment. */
 export const VOICE_TOKEN_TTL_MS = 30 * 60_000;
+/**
+ * The ai function signs and the voice function verifies, possibly on hosts
+ * whose clocks differ a little. A token that looks this far ahead of the
+ * verifier's clock still counts as just issued.
+ */
+export const VOICE_TOKEN_CLOCK_SKEW_MS = 30_000;
 
 /** How many audio tags one reply may carry after rationing. */
 export const MAX_VOICE_TAGS: Record<VoiceFeature, number> = {
@@ -64,7 +76,7 @@ export async function verifyVoiceToken(userId: string, feature: VoiceFeature, te
   const issuedAt = Number(rawIssuedAt);
   if (extra.length > 0 || !Number.isInteger(issuedAt) || !/^[a-f0-9]{64}$/.test(suppliedMac ?? "")) return false;
   const age = now - issuedAt;
-  if (age < 0 || age > VOICE_TOKEN_TTL_MS) return false;
+  if (age < -VOICE_TOKEN_CLOCK_SKEW_MS || age > VOICE_TOKEN_TTL_MS) return false;
   const expectedMac = await voiceMac(userId, feature, text, issuedAt);
   let mismatch = expectedMac.length ^ suppliedMac.length;
   for (let index = 0; index < expectedMac.length; index += 1) mismatch |= expectedMac.charCodeAt(index) ^ suppliedMac.charCodeAt(index);
@@ -74,7 +86,8 @@ export async function verifyVoiceToken(userId: string, feature: VoiceFeature, te
 /**
  * Split a model reply into what people read and what the voice performs.
  * `clean` has no audio tag. `voice` holds signed segments for the voice
- * function, or is absent when nothing speakable remains.
+ * function and any unsigned overflow for the browser voice, or is absent
+ * when nothing speakable remains.
  */
 export async function prepareVoiceReply(
   userId: string,
@@ -85,6 +98,8 @@ export async function prepareVoiceReply(
   const texts = splitSpokenSegments(toSpokenText(modelText, MAX_VOICE_TAGS[feature]));
   if (texts.length === 0) return { clean };
   const now = Date.now();
-  const segments = await Promise.all(texts.map(async (text) => ({ text, token: await createVoiceToken(userId, feature, text, now) })));
-  return { clean, voice: { segments } };
+  const signed = texts.slice(0, MAX_VOICE_SEGMENTS);
+  const segments = await Promise.all(signed.map(async (text) => ({ text, token: await createVoiceToken(userId, feature, text, now) })));
+  const overflow = stripAudioTags(texts.slice(MAX_VOICE_SEGMENTS).join(" "));
+  return { clean, voice: { segments, ...(overflow ? { overflow } : {}) } };
 }
