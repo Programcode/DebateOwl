@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
 }));
 vi.mock('@/lib/supabase/env', () => ({
+  ENV_STORAGE_KEY: 'debate-supabase-env',
   getActiveEnv: () => mocks.env,
   setActiveEnv: mocks.setActiveEnv,
 }));
@@ -92,5 +93,32 @@ describe('StagingBanner', () => {
     expect(mocks.signOut).toHaveBeenCalledOnce();
     expect(mocks.setActiveEnv).toHaveBeenCalledWith('production');
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it('reloads this tab when another tab switches to a different project', () => {
+    const reload = vi.fn();
+    render(<StagingBanner reload={reload} />);
+    const changeTo = (value: string | null, key: string | null = 'debate-supabase-env') => {
+      if (value === null) localStorage.removeItem('debate-supabase-env');
+      else localStorage.setItem('debate-supabase-env', value);
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }));
+    };
+
+    changeTo(null, 'debate-trainer-storage');
+    changeTo(null);
+    expect(reload).not.toHaveBeenCalled();
+    changeTo('staging');
+    expect(reload).toHaveBeenCalledOnce();
+    localStorage.removeItem('debate-supabase-env');
+  });
+
+  it('ignores other tabs in local preview', () => {
+    mocks.env = 'local';
+    const reload = vi.fn();
+    render(<StagingBanner reload={reload} />);
+    localStorage.setItem('debate-supabase-env', 'staging');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'debate-supabase-env', newValue: 'staging' }));
+    expect(reload).not.toHaveBeenCalled();
+    localStorage.removeItem('debate-supabase-env');
   });
 });

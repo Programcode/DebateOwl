@@ -1,4 +1,5 @@
-import { setActiveEnv } from '@/lib/supabase/env';
+import { useEffect } from 'react';
+import { ENV_STORAGE_KEY, getActiveEnv, setActiveEnv } from '@/lib/supabase/env';
 
 export type RemoteEnv = 'production' | 'staging';
 
@@ -14,4 +15,23 @@ export async function switchEnv(target: RemoteEnv, leaveEnvironment: () => Promi
   }
   setActiveEnv(target);
   reload();
+}
+
+/**
+ * Every tab shares the persisted stores, but each tab picks its project once at
+ * startup. When another tab switches projects, reload this one before it can
+ * merge the other project's data or send its own to the wrong project.
+ */
+export function useReloadOnEnvChange(reload: () => void = reloadPage) {
+  useEffect(() => {
+    const active = getActiveEnv();
+    if (active === 'local') return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== ENV_STORAGE_KEY) return;
+      const next: RemoteEnv = localStorage.getItem(ENV_STORAGE_KEY) === 'staging' ? 'staging' : 'production';
+      if (next !== active) reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [reload]);
 }

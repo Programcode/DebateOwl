@@ -30,3 +30,24 @@ for (const path of ['/', '/login']) {
     expect(await page.evaluate(() => localStorage.getItem('debate-supabase-env'))).toBeNull();
   });
 }
+
+test('switching in one tab reloads the other tabs onto the same project', async ({ context }) => {
+  await context.route('https://*.supabase.co/**', (route) => route.abort());
+  await context.addInitScript(() => {
+    if (!sessionStorage.getItem('staging-switch-test-started')) {
+      sessionStorage.setItem('staging-switch-test-started', '1');
+      localStorage.setItem('debate-supabase-env', 'staging');
+    }
+  });
+  const switching = await context.newPage();
+  const other = await context.newPage();
+  await switching.goto('/login');
+  await other.goto('/login');
+  const stripIn = (page: typeof other) => page.getByRole('status').filter({ hasText: 'Staging backend' });
+  await expect(stripIn(other)).toBeVisible();
+
+  await stripIn(switching).getByRole('button', { name: 'Switch to Production' }).click();
+
+  await expect(stripIn(switching)).toHaveCount(0);
+  await expect(stripIn(other)).toHaveCount(0);
+});

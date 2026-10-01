@@ -4,16 +4,18 @@ import { FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { getActiveEnv } from '@/lib/supabase/env';
-import { reloadPage, switchEnv } from '@/lib/supabase/switch-env';
+import { reloadPage, switchEnv, useReloadOnEnvChange } from '@/lib/supabase/switch-env';
 
 /**
  * Shown on every route while staging is active. A fresh staging session starts
  * signed out and Settings needs sign-in, so this is the way back that always works.
+ * Mounted at the app root in every environment, it also keeps other tabs in step.
  */
 export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) {
   const { t } = useTranslation();
   const { leaveEnvironment } = useAuth();
   const [switching, setSwitching] = useState(false);
+  useReloadOnEnvChange(reload);
   if (getActiveEnv() !== 'staging') return null;
 
   return (
