@@ -11,7 +11,7 @@ type EnvironmentInput = {
 type StorageReader = { getItem(key: string): string | null };
 type SupabaseConfig = { anonKey: string; env: SupabaseEnv; url: string };
 
-const STORAGE_KEY = "debate-supabase-env";
+export const ENV_STORAGE_KEY = "debate-supabase-env";
 
 const ENVS: Record<Exclude<SupabaseEnv, "local">, { anonKey: string; url: string }> = {
   production: {
@@ -37,7 +37,7 @@ export function resolveSupabaseConfig(environment: EnvironmentInput, storage: St
     return { anonKey, env: "local", url: parsedUrl.href.replace(/\/$/, "") };
   }
 
-  return storage.getItem(STORAGE_KEY) === "staging"
+  return storage.getItem(ENV_STORAGE_KEY) === "staging"
     ? { ...ENVS.staging, env: "staging" }
     : { ...ENVS.production, env: "production" };
 }
@@ -59,8 +59,8 @@ export function getActiveEnv(): SupabaseEnv {
 
 export function setActiveEnv(env: Exclude<SupabaseEnv, "local">): void {
   if (active.env === "local") return;
-  if (env === "production") localStorage.removeItem(STORAGE_KEY);
-  else localStorage.setItem(STORAGE_KEY, env);
+  if (env === "production") localStorage.removeItem(ENV_STORAGE_KEY);
+  else localStorage.setItem(ENV_STORAGE_KEY, env);
 }
 
 export const SUPABASE_URL = active.url;

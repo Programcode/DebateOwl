@@ -129,6 +129,53 @@ describe('motion mismatch choice', () => {
     expect(useDebateStore.getState().debates.map((debate) => debate.motion)).toContain('This House would ban homework');
   });
 
+  const mockCreatedDebate = (id: string, motion: string) => {
+    supabaseMock.from.mockImplementationOnce(() => ({
+      insert: () => ({ select: () => ({ single: async () => ({
+        data: { id, motion, settings: {}, instructions: '', last_activity_at: new Date().toISOString(), created_at: new Date().toISOString() },
+        error: null as unknown,
+      }) }) }),
+    }) as unknown as ReturnType<typeof supabaseMock.from>);
+  };
+
+  it('offers a first debate instead of the switch choice when there is no Current Debate', async () => {
+    mockCreatedDebate('first-debate', 'This House would abolish zoos');
+    const onTarget = vi.fn();
+    render(<GateHarness motion="This House would abolish zoos" onTarget={onTarget} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(onTarget).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog', { name: 'Start a debate with this motion?' });
+    expect(dialog).toHaveTextContent('This House would abolish zoos');
+    expect(dialog).not.toHaveTextContent('different motion');
+    const buttons = Array.from(dialog.querySelectorAll('button')).map((button) => button.textContent).filter((text) => text !== 'Close');
+    expect(buttons).toEqual(['Start debate', 'Not now, use it once']);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Start debate' }));
+    });
+    await waitFor(() => expect(onTarget).toHaveBeenCalledWith({ debateId: 'first-debate' }));
+    expect(useDebateStore.getState().currentDebateId).toBe('first-debate');
+  });
+
+  it('lets a user with no Current Debate decline the offer and run the motion once', () => {
+    const onTarget = vi.fn();
+    render(<GateHarness motion="This House would abolish zoos" onTarget={onTarget} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Not now, use it once' }));
+    expect(onTarget).toHaveBeenCalledWith({ debateId: null });
+    expect(useDebateStore.getState().debates).toHaveLength(0);
+  });
+
+  it('still offers an existing debate with the same motion when none is current', async () => {
+    const zoos = seedCurrentDebate({ motion: 'This House would abolish zoos' });
+    useDebateStore.setState({ currentDebateId: null });
+    const onTarget = vi.fn();
+    render(<GateHarness motion="this house would abolish zoos" onTarget={onTarget} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(screen.getByRole('dialog', { name: 'Start a debate with this motion?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to this existing debate' }));
+    await waitFor(() => expect(onTarget).toHaveBeenCalledWith({ debateId: zoos.id }));
+  });
+
   it('does nothing when the user dismisses the choice', () => {
     seedCurrentDebate({ motion: 'This House would ban homework' });
     const onTarget = vi.fn();

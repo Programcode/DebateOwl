@@ -8,6 +8,9 @@ import { getActiveEnv, SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
 
 export { SUPABASE_URL };
 
+/** Where supabase-js keeps this project's session; each project has its own. */
+export const AUTH_STORAGE_KEY = `debate-auth-${getActiveEnv()}`;
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -15,7 +18,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     // AuthProvider owns the one PKCE exchange and URL cleanup path.
     detectSessionInUrl: false,
     flowType: 'pkce',
-    storageKey: `debate-auth-${getActiveEnv()}`,
+    storageKey: AUTH_STORAGE_KEY,
   },
 });
 

@@ -53,10 +53,11 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 - `admin`: authenticated administrator operations with server-side role checks, including redacted demo-code list/create/disable/reset actions.
 - `announcements`: authenticated announcement listing and dismissal.
 - `redeem-promo`: authenticated atomic promo redemption.
+- `account`: authenticated data export and account deletion for the caller only. It never reads a user ID from the request. Deletion cancels Stripe subscriptions first and stops if that fails, then removes Storage objects, clears the user's workspaces, and deletes the auth user. Export and the deletion plan use service-role-only RPCs. See [Account export and deletion](../docs/architecture.md#account-export-and-deletion).
 
 ### Billing
 
-- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated.
+- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
 - `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
 - `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling with idempotency state.
 
@@ -147,7 +148,7 @@ Document names, never values. Depending on deployed features, server-side config
 - `OPENROUTER_API_KEY` for all model requests, plus `OPENROUTER_API_URL`, which only the local full-stack gate sets to reach its fake provider (leave it unset everywhere else);
 - `ELEVENLABS_API_KEY` for the opponent's voice, and optionally `ELEVENLABS_VOICE_ID` to replace the default voice; without the key, voice rounds use the browser's voice;
 - research provider keys;
-- Stripe secret, webhook secret, and price configuration;
+- Stripe secret, webhook secret, and price configuration, plus `STRIPE_API_URL`, which only the local full-stack gate sets so the `account` function reaches its fake Stripe (leave it unset everywhere else);
 - demo-code hashing material;
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;
@@ -186,7 +187,7 @@ Read [`../docs/operations.md`](../docs/operations.md) before changing remote sta
 For an authorized backend change:
 
 1. Confirm the current worktree and commit.
-2. Resolve the linked Supabase project and environment.
+2. Resolve the linked Supabase project and environment, and run `npm run backend:status` to see what is pending there. See [`../docs/operations.md`](../docs/operations.md#backend-drift-check).
 3. Inspect the exact migration or function diff.
 4. Capture the remote baseline needed for rollback.
 5. Run focused tests, `npm run test:edge`, and database tests when schema or RLS changes.

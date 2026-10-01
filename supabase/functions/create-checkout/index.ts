@@ -270,6 +270,18 @@ Deno.serve(async (req) => {
       customerId = customer.id;
     }
 
+    // Account deletion reads this to cancel billing before the webhook has
+    // recorded a subscription, so no session opens without it.
+    const { error: customerRecordError } = await supabase.from("stripe_customers")
+      .upsert({ user_id: user.id, customer_id: customerId }, { onConflict: "user_id,customer_id", ignoreDuplicates: true });
+    if (customerRecordError) {
+      console.error(`[CHECKOUT] Could not record customer for ${user.id}: ${customerRecordError.code}`);
+      return new Response(JSON.stringify({ error: "Failed to create checkout session" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Build checkout session params
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,

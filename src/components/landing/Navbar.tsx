@@ -24,7 +24,7 @@ const Navbar = () => {
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="fixed left-0 right-0 top-0 z-50 nav-blur"
+            className="fixed left-0 right-0 top-[var(--staging-banner-height,0px)] z-50 nav-blur"
             aria-label={t('nav.mainNavigation')}
         >
             <div className="section-container">

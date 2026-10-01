@@ -20,7 +20,9 @@ interface PendingChoice {
 /**
  * Before a motion-bearing tool submits, confirm which debate the work belongs
  * to. A motion other than the Current Debate's asks the user to switch to a
- * matching debate, create a new one, or use the motion once.
+ * matching debate, create a new one, or use the motion once. With no Current
+ * Debate there is nothing to switch away from, so the user is offered a debate
+ * for the motion they typed instead.
  */
 export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
   /** Calls `proceed` right away when the target is clear, or after the user chooses. Cancelling never calls it. */
@@ -67,14 +69,16 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {current ? t('debate.mismatchTitle', 'This is a different motion') : t('debate.noDebateTitle', 'Which debate is this for?')}
+            {current ? t('debate.mismatchTitle', 'This is a different motion') : t('debate.offerTitle', 'Start a debate with this motion?')}
           </DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2">
-              <p className="break-words font-medium text-foreground">{pending?.motion}</p>
-              {current && (
-                <p className="break-words">{t('debate.mismatchDesc', { motion: current.motion, defaultValue: 'Your Current Debate is “{{motion}}”.' })}</p>
-              )}
+              <p className="break-words border-l-2 border-primary pl-3 text-left font-medium text-foreground">{pending?.motion}</p>
+              <p className="break-words">
+                {current
+                  ? t('debate.mismatchDesc', { motion: current.motion, defaultValue: 'Your Current Debate is “{{motion}}”.' })
+                  : t('debate.offerDesc', 'A debate keeps this motion, its sources, and your results together, and every tool uses it.')}
+              </p>
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -100,10 +104,10 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
               return { debateId: debate.id };
             })}
           >
-            {t('debate.createFromMotion', 'Create a new debate for this motion')}
+            {current ? t('debate.createFromMotion', 'Create a new debate for this motion') : t('debate.startDebate', 'Start debate')}
           </Button>
           <Button variant="ghost" disabled={busy} onClick={() => finish({ debateId: null })}>
-            {t('debate.useOnce', 'Use once without saving to a debate')}
+            {current ? t('debate.useOnce', 'Use once without saving to a debate') : t('debate.offerNotNow', 'Not now, use it once')}
           </Button>
         </div>
       </DialogContent>

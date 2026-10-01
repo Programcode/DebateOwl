@@ -39,6 +39,9 @@ verify_jwt = false
 [functions.workspace-invites]
 verify_jwt = false
 
+[functions.account]
+verify_jwt = false
+
 # Stripe webhook calls come from Stripe (no Supabase JWT), so gateway JWT
 # verification must be disabled for this endpoint.
 [functions.stripe-webhook]

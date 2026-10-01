@@ -120,6 +120,8 @@ The server is never reused. CI uses retries and two workers. On failure, traces,
 
 `e2e/hungarian-parity.spec.ts` is the focused Hungarian browser contract. On desktop and mobile Chromium it checks persisted `<html lang="hu">`, public and authenticated page chrome, route titles, onboarding, saved-chat empty state, Library controls, Timer semantics, localized close labels, and runtime errors. It deliberately does not reject arbitrary English text because source titles, user content, model names, and citations may legitimately remain in their source language.
 
+`e2e/first-run.spec.ts` drives the same first run against stubbed Supabase routes in English and Hungarian, so it proves the client flow only.
+
 `src/test/i18n.test.ts` requires identical key sets and non-empty values across all three catalogs. Its explicit identity allowlist is limited to values that should remain canonical, such as product names, file formats, prices, model-facing abbreviations, and debate-format codes. A matching key set and a passing allowlist test prove catalog structure, not Hungarian grammar or natural phrasing.
 
 The speech unit test proves that Hungarian selects `recognition.lang = 'hu-HU'`. Credential-free browser automation has no real microphone or speech service, so it does not prove recognition accuracy or hardware support.
@@ -174,23 +176,25 @@ The stack replays migrations and runs pgTAP tests. The browser portion creates i
 
 ### Full-stack feature journeys
 
-The same gate serves every Edge Function and runs `e2e/full-stack/` on desktop and mobile Chromium. Only the paid model provider is replaced: [`e2e/full-stack/fake-openrouter.mjs`](../e2e/full-stack/fake-openrouter.mjs) runs as a `node:22-alpine` container on the Supabase Docker network, and the functions reach it through `OPENROUTER_API_URL`. Real code handles everything else: Auth, demo-code sign-in, RLS, quota, source loading, prompt building, output validation, streaming, and persistence.
+The same gate serves every Edge Function and runs `e2e/full-stack/` on desktop and mobile Chromium. Only the paid model provider is replaced: [`e2e/full-stack/fake-openrouter.mjs`](../e2e/full-stack/fake-openrouter.mjs) runs as a `node:22-alpine` container on the Supabase Docker network, and the functions reach it through `OPENROUTER_API_URL`. It also answers the Stripe customer search that account deletion runs, which the `account` function reaches through `STRIPE_API_URL`. Real code handles everything else: Auth, demo-code sign-in, RLS, quota, source loading, prompt building, output validation, streaming, and persistence.
 
 Each test signs in through the Login page with a fresh demo code and deletes that user afterwards. The specs cover:
 
 - sign-in, reload, sign-out, a rejected code, and an expired token that refreshes before an AI request;
 - case generation grounded in a 250 KB Library source, provider failure with retry, a zero quota, and a saved case that a fresh browser loads from History;
 - Attack, Brainstorm, Factoids, streamed Ask (it fails if the client falls back to the non-streaming path), and Ask with citations;
+- a fresh account's first run in English and Hungarian: the tour starts the first debate, the language picked before sign-up survives the first sign-in, and a tool offers a debate from the typed motion when none is current;
 - Current Debate context: every request carries the debate's motion, instructions, and sources; Review drops a source and pins a saved case for exactly one request; the pin is stored; Crossfire leaves instructions out; and one-off work sends nothing;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
 - spoken Sparring and Crossfire rounds against the real `ai` and `voice` functions with no ElevenLabs key: the opponent prompt carries the voice rules, the reply comes back clean with signed segments, `voice` answers `voice_unavailable`, the browser voice reads the clean text, the judge gets the measured facts, and the saved round holds no audio tag (the recogniser and the browser voice are scripted);
 - Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
+- Download my data (only the caller's rows, even when the request names another user) and Delete account (no row in any `public` or `private` table mentions the user afterwards, another account is untouched, and a call without a session or with another user's confirmation deletes nothing);
 - a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;
 - admin announcements seen by another user, denied admin access, and a public share link.
 
 Tests assert the rendered result, what the Edge Function sent upstream (read back from the fake provider), and the resulting database rows. They also fail on any uncaught page error or horizontal page overflow. The fake provider rejects prompts it does not recognize, so a prompt change must update it.
 
-These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe Checkout and the billing portal (they call the Stripe API; the local key is a placeholder), the `checkout.session.completed` and `invoice.payment_succeeded` webhooks (they fetch the subscription from Stripe), or Google export.
+These journeys do not prove live provider behavior, web research (the local stack has no search key), real Jev judgement (the fake answers every Jev question with a fixed confident choice), Stripe Checkout, the billing portal, and subscription cancellation during account deletion (they call the Stripe API; the local key is a placeholder, and the Deno tests cover the cancellation logic), the `checkout.session.completed` and `invoice.payment_succeeded` webhooks (they fetch the subscription from Stripe), or Google export.
 
 ### Live provider journeys
 

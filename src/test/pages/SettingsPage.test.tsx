@@ -17,10 +17,14 @@ const mocks = vi.hoisted(() => ({
     refresh: vi.fn(),
   },
   redirectToPortal: vi.fn(),
+  user: null as { id: string; email: string } | null,
+  signOut: vi.fn(),
+  deleteAccount: vi.fn(),
+  downloadAccountData: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
-  useAuth: () => ({ user: null as { id: string; email: string } | null, signOut: vi.fn() }),
+  useAuth: () => ({ user: mocks.user, signOut: mocks.signOut }),
 }));
 vi.mock('@/lib/supabase/client', () => ({ supabase: { from: vi.fn() } }));
 vi.mock('@/lib/stores/settings-store', () => ({ useSettingsStore: () => ({
@@ -34,6 +38,7 @@ vi.mock('@/components/features/subscription/PricingModal', () => ({
 }));
 vi.mock('@/hooks/use-subscription', () => ({ useSubscription: () => mocks.subscription }));
 vi.mock('@/lib/stripe', () => ({ redirectToPortal: mocks.redirectToPortal }));
+vi.mock('@/lib/account', () => ({ deleteAccount: mocks.deleteAccount, downloadAccountData: mocks.downloadAccountData }));
 
 function renderSettings() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,6 +53,10 @@ beforeEach(async () => {
   await i18n.changeLanguage('en');
   Object.assign(mocks.subscription, { tier: 'trial', loading: false, hasStripeBilling: false });
   mocks.redirectToPortal.mockReset().mockResolvedValue(undefined);
+  mocks.user = null;
+  mocks.signOut.mockReset().mockResolvedValue(undefined);
+  mocks.deleteAccount.mockReset().mockResolvedValue(undefined);
+  mocks.downloadAccountData.mockReset().mockResolvedValue(undefined);
 });
 
 afterEach(() => cleanup());
@@ -98,5 +107,53 @@ describe('Settings subscription card', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage Subscription' }));
 
     await waitFor(() => expect(mocks.redirectToPortal).toHaveBeenCalledOnce());
+  });
+});
+
+describe('Settings account controls', () => {
+  const student = { id: '11111111-1111-4111-8111-111111111111', email: 'student@example.test' };
+
+  function openDeleteAccount() {
+    mocks.user = student;
+    renderSettings();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+    const confirm = screen.getAllByRole('button', { name: 'Delete account' }).at(-1)!;
+    return { confirm, input: screen.getByLabelText('Type your email to confirm') };
+  }
+
+  it('downloads the account data', async () => {
+    mocks.user = student;
+    renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download my data' }));
+
+    await waitFor(() => expect(mocks.downloadAccountData).toHaveBeenCalledTimes(1));
+  });
+
+  it('deletes the account only after the email is typed exactly', async () => {
+    const { confirm, input } = openDeleteAccount();
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: 'STUDENT@example.test' } });
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: student.email } });
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(mocks.signOut).toHaveBeenCalledTimes(1));
+    expect(mocks.deleteAccount).toHaveBeenCalledWith(student.email);
+  });
+
+  it('keeps the user signed in when deletion fails', async () => {
+    mocks.deleteAccount.mockRejectedValue(new Error('Could not cancel your subscription'));
+    const { confirm, input } = openDeleteAccount();
+
+    fireEvent.change(input, { target: { value: student.email } });
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(confirm).toBeEnabled());
+    expect(mocks.deleteAccount).toHaveBeenCalledTimes(1);
+    expect(mocks.signOut).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Delete your account?' })).toBeInTheDocument();
   });
 });

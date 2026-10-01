@@ -116,7 +116,7 @@ async function startVoiceSparring(page: Page) {
 
   await page.getByRole('button', { name: 'Start round' }).click();
   // No Current Debate yet: run this round once without saving it to a debate.
-  await page.getByRole('button', { name: 'Use once without saving to a debate' }).click();
+  await page.getByRole('dialog', { name: 'Start a debate with this motion?' }).getByRole('button', { name: 'Not now, use it once' }).click();
   await expect(page.getByText('Round in progress')).toBeVisible();
 }
 
@@ -213,7 +213,7 @@ test('a spoken Crossfire exchange plays ElevenLabs audio through the voice funct
   await page.getByTestId('voice-mode').click();
   await page.getByRole('button', { name: 'Turn on voice' }).click();
   await page.getByTestId('start-crossfire').click();
-  await page.getByRole('button', { name: 'Use once without saving to a debate' }).click();
+  await page.getByRole('dialog', { name: 'Start a debate with this motion?' }).getByRole('button', { name: 'Not now, use it once' }).click();
 
   await page.getByTestId('voice-mic').click();
   await expect(page.getByText('Listening')).toBeVisible();
