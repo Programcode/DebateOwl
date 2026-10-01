@@ -661,6 +661,28 @@ describe('AuthProvider behavior', () => {
     }
   });
 
+  it('discardTabState clears only this tab\'s own storage, not shared stores', () => {
+    sessionStorage.setItem('google_provider_token', 'old-project-google-token');
+    localStorage.setItem('debate-auth-production', 'session');
+    useDebateStore.setState({ currentDebateId: 'debate-1' });
+    let discard: (() => void) | undefined;
+    function Holder(): null {
+      discard = useAuth().discardTabState;
+      return null;
+    }
+    render(<AuthProvider><Holder /></AuthProvider>);
+
+    act(() => discard!());
+
+    expect(sessionStorage.getItem('google_provider_token')).toBeNull();
+    expect(resetSparringStoreMock).toHaveBeenCalled();
+    expect(localStorage.getItem('debate-auth-production')).toBe('session');
+    expect(resetSessionStoreMock).not.toHaveBeenCalled();
+    expect(clearSessionStoreMock).not.toHaveBeenCalled();
+    expect(resetSettingsStoreMock).not.toHaveBeenCalled();
+    expect(useDebateStore.getState().currentDebateId).toBe('debate-1');
+  });
+
   it('unsubscribes auth listener on unmount', async () => {
     const { unmount } = render(
       <AuthProvider>

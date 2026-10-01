@@ -22,8 +22,12 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   /** Ends the session and clears this project's local data before an environment switch. Never hangs. */
   leaveEnvironment: () => Promise<void>;
-  /** Clears this tab's session and user data for the active project without contacting the server. */
-  discardLocalState: () => void;
+  /**
+   * Clears only this tab's own storage (Google token, sparring state). For a tab
+   * that reloads because another tab switched projects; it must not touch the
+   * shared stores, which may already belong to the new project.
+   */
+  discardTabState: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -271,21 +275,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [hydrateDebateStore, hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
-  // The persisted stores are shared by both projects, and sessionStorage holds
-  // this tab's Google token and sparring state. Drop this project's stored
-  // session and clear every user-specific store so nothing crosses projects.
+  // sessionStorage holds this tab's Google token and sparring state.
+  const discardTabState = useCallback(() => {
+    clearGoogleTokens();
+    resetSparringStore();
+  }, [resetSparringStore]);
+
+  // The persisted stores are shared by both projects. Drop this project's
+  // stored session and clear every user-specific store so nothing crosses.
   const discardLocalState = useCallback(() => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
-    clearGoogleTokens();
+    discardTabState();
     clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
     resetSessionStore();
     clearSessionStore();
     resetSettingsStore(true);
-    resetSparringStore();
     resetDebateStore();
     useDebateContextStore.getState().resetLocalData();
-  }, [session, clearSessionStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }, [session, clearSessionStore, discardTabState, resetDebateStore, resetSessionStore, resetSettingsStore]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
@@ -370,8 +378,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // A hung sign-out never fires SIGNED_OUT, so clear local state directly.
       discardLocalState();
     },
-    discardLocalState,
-  }), [session, loading, discardLocalState, resetSessionStore, resetSettingsStore, resetSparringStore]);
+    discardTabState,
+  }), [session, loading, discardLocalState, discardTabState, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -14,7 +14,7 @@ vi.mock('@/lib/supabase/env', () => ({
   getActiveEnv: () => mocks.env,
   setActiveEnv: mocks.setActiveEnv,
 }));
-vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ leaveEnvironment: mocks.signOut, discardLocalState: mocks.discard }) }));
+vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ leaveEnvironment: mocks.signOut, discardTabState: mocks.discard }) }));
 
 beforeEach(() => {
   mocks.env = 'production';

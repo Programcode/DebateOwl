@@ -15,9 +15,9 @@ const BANNER_HEIGHT = '2.25rem'; // h-9
  */
 export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) {
   const { t } = useTranslation();
-  const { leaveEnvironment, discardLocalState } = useAuth();
+  const { leaveEnvironment, discardTabState } = useAuth();
   const [switching, setSwitching] = useState(false);
-  useReloadOnEnvChange(discardLocalState, reload);
+  useReloadOnEnvChange(discardTabState, reload);
   const staging = getActiveEnv() === 'staging';
   // Fixed and sticky headers offset themselves by this height so the strip
   // never covers them and they never cover it.
