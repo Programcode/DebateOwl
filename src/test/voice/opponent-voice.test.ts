@@ -340,9 +340,12 @@ describe('opponent voice', () => {
     await settle();
     expect(opponentVoice.getState()).toMatchObject({ status: 'speaking', engine: 'browser' });
 
+    const cancelsBefore = speechSynthesisMock.cancel.mock.calls.length;
     await vi.advanceTimersByTimeAsync(60_000);
     expect(onEnd).toHaveBeenCalledTimes(1);
     expect(opponentVoice.getState().status).toBe('idle');
+    // The stalled utterance is dropped, so it cannot play after the clock restarts.
+    expect(speechSynthesisMock.cancel.mock.calls.length).toBeGreaterThan(cancelsBefore);
   });
 
   it('stays silent, and still ends, in a browser with no voice at all', async () => {

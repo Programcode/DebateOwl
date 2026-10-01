@@ -315,8 +315,13 @@ class OpponentVoice {
         utterance.lang = locale;
         if (voice) utterance.voice = voice;
         // Some browsers never report the end of an utterance. Without a
-        // limit the reply would look as if it were still being spoken.
-        const limit = setTimeout(resolve, BROWSER_UTTERANCE_BASE_MS + part.length * BROWSER_UTTERANCE_MS_PER_CHAR);
+        // limit the reply would look as if it were still being spoken. The
+        // stalled utterance is dropped so it cannot play after the clock
+        // restarts.
+        const limit = setTimeout(() => {
+          window.speechSynthesis.cancel();
+          resolve();
+        }, BROWSER_UTTERANCE_BASE_MS + part.length * BROWSER_UTTERANCE_MS_PER_CHAR);
         const done = () => {
           clearTimeout(limit);
           resolve();

@@ -76,7 +76,15 @@ export default function SparringPage() {
   // A voice round falls back to typing when the microphone is lost.
   const voiceActive = Boolean(session?.voice) && voiceAvailability.available && !workspace.context;
 
-  useEffect(() => opponentVoice.stop, []);
+  // A reply that arrives after the student left is saved but not spoken.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      opponentVoice.stop();
+    };
+  }, []);
 
   const workspaceRequestId = workspace.context?.requestId;
   useEffect(() => {
@@ -182,7 +190,7 @@ export default function SparringPage() {
           integrityToken: generated.integrityToken,
         };
         const next = appendAiSpeech(speech);
-        if (!next || !voiceActive) return;
+        if (!next || !voiceActive || !mountedRef.current) return;
         // The student's clock waits while the opponent is speaking.
         const userIsNext = next.phase === 'round';
         if (userIsNext) pauseTimer();

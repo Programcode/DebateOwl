@@ -118,12 +118,13 @@ function renderPage() {
 }
 
 async function startVoiceRound() {
-  renderPage();
+  const view = renderPage();
   fireEvent.change(screen.getByLabelText('Motion'), { target: { value: MOTION } });
   fireEvent.click(screen.getByTestId('voice-mode'));
   fireEvent.click(await screen.findByRole('button', { name: 'Turn on voice' }));
   fireEvent.click(screen.getByRole('button', { name: 'Start round' }));
   await screen.findByText('Round in progress');
+  return view;
 }
 
 describe('SparringPage voice rounds', () => {
@@ -242,6 +243,21 @@ describe('SparringPage voice rounds', () => {
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
     act(() => onEnd());
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
+  });
+
+  it('saves but does not speak a reply that arrives after the student left the page', async () => {
+    let answer: (value: typeof OPPONENT_RESPONSE) => void = () => {};
+    generateMock.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    const view = await startVoiceRound();
+    fireEvent.change(screen.getByRole('textbox', { name: /Draft for Pro Introductor/i }), { target: { value: 'The first speech.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1));
+
+    view.unmount();
+    await act(async () => { answer(OPPONENT_RESPONSE); });
+
+    await waitFor(() => expect(useSparringStore.getState().currentSession?.speeches).toHaveLength(2));
+    expect(voiceMock.speak).not.toHaveBeenCalled();
   });
 
   it('gives ElevenLabs a fresh chance in each new round', async () => {
