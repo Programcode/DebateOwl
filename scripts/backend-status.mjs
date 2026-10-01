@@ -172,6 +172,11 @@ export function lastChange(root, paths) {
   return { sha: sha.slice(0, 7), time: Number(seconds) * 1000, subject };
 }
 
+/** Deploy time in milliseconds, or NaN when the CLI gave none or an unreadable one. */
+function deployTime(updatedAt) {
+  return typeof updatedAt === "number" ? updatedAt : Date.parse(updatedAt);
+}
+
 export function compareBackend({ local, remoteMigrations, deployedFunctions, changeOf }) {
   const applied = new Set(remoteMigrations);
   const known = new Set(local.migrations);
@@ -188,7 +193,8 @@ export function compareBackend({ local, remoteMigrations, deployedFunctions, cha
       continue;
     }
     const change = changeOf(fn);
-    if (change && change.time > remote.updated_at) stale.push({ name: fn.name, deployed: remote, change });
+    // A deploy date we cannot read must not make a changed function look current.
+    if (change && !(change.time <= deployTime(remote.updated_at))) stale.push({ name: fn.name, deployed: remote, change });
     const expected = local.verifyJwt[fn.name] ?? true;
     if (typeof remote.verify_jwt === "boolean" && remote.verify_jwt !== expected) {
       verifyJwt.push({ name: fn.name, deployed: remote.verify_jwt, expected });
@@ -210,6 +216,11 @@ function formatTime(milliseconds) {
   return `${new Date(milliseconds).toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
+function deployedDate(updatedAt) {
+  const time = deployTime(updatedAt);
+  return Number.isFinite(time) ? `deployed ${formatTime(time)}` : "deploy date unknown";
+}
+
 export function formatReport({ target, local, result, deployedCount, notes }) {
   const lines = [`Backend status: ${target} compared with commit ${local.commit}`, ""];
   const list = (title, items) => {
@@ -227,7 +238,7 @@ export function formatReport({ target, local, result, deployedCount, notes }) {
   list(
     "Changed on this commit after the last deploy",
     result.stale.map(({ name, deployed, change }) =>
-      `${name}: deployed ${formatTime(deployed.updated_at)} (v${deployed.version}); changed ${formatTime(change.time)} in ${change.sha} ${change.subject}`),
+      `${name}: ${deployedDate(deployed.updated_at)} (v${deployed.version}); changed ${formatTime(change.time)} in ${change.sha} ${change.subject}`),
   );
   list(
     "verify_jwt differs from supabase/config.toml",
@@ -260,8 +271,11 @@ export function backendStatus({ root, projectRef }) {
   if (dirty) notes.push("uncommitted changes under supabase/ are not part of this comparison.");
   notes.push("function change dates come from git. A function deployed from a branch before its merge shows as changed; one deployed from an out-of-date checkout looks current.");
 
+  // Same order the Supabase CLI uses: the flag, then SUPABASE_PROJECT_ID, then the linked ref.
   const linkedRefFile = join(root, "supabase/.temp/project-ref");
-  const ref = projectRef ?? (existsSync(linkedRefFile) ? readFileSync(linkedRefFile, "utf8").trim() : "linked project");
+  const ref = projectRef
+    ?? (process.env.SUPABASE_PROJECT_ID?.trim() || null)
+    ?? (existsSync(linkedRefFile) ? readFileSync(linkedRefFile, "utf8").trim() : "linked project");
   const label = KNOWN_PROJECTS[ref];
   const target = label ? `${ref} (${label})` : ref;
 

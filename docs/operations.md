@@ -65,7 +65,7 @@ Do not enable the staging repository variable before every prerequisite is prese
 
 ## Backend drift check
 
-`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the linked project; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role.
+`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the project the Supabase CLI resolves, which is `SUPABASE_PROJECT_ID` when that is set and the linked project otherwise; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role.
 
 The comparison uses the committed tree at `HEAD`, so commit or stash local edits first. It reports:
 

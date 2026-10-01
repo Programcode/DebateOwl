@@ -22,12 +22,28 @@ function commit(message: string, seconds: number): void {
   }
 }
 
-function runStatus(args: string[]) {
+function runStatus(args: string[], extraEnv: Record<string, string> = {}) {
+  const { SUPABASE_PROJECT_ID: _ignored, ...env } = process.env;
   return spawnSync("node", [SCRIPT, ...args], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, CALL_LOG: join(root, "calls.log"), PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}` },
+    env: { ...env, CALL_LOG: join(root, "calls.log"), PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`, ...extraEnv },
   });
+}
+
+async function fakeFunctionsList(functions: unknown[]): Promise<void> {
+  const migrations = { migrations: [{ local: "20260101000000", remote: "20260101000000", time: "" }] };
+  await writeFile(
+    join(root, "bin/supabase"),
+    [
+      "#!/usr/bin/env bash",
+      'printf "%s\\n" "$*" >> "$CALL_LOG"',
+      `if [ "$1 $2" = "migration list" ]; then echo '${JSON.stringify(migrations)}'; exit 0; fi`,
+      `if [ "$1 $2" = "functions list" ]; then echo '${JSON.stringify({ functions })}'; exit 0; fi`,
+      "exit 99",
+      "",
+    ].join("\n"),
+  );
 }
 
 beforeEach(async () => {
@@ -117,6 +133,29 @@ it("passes --project-ref to both commands and names known projects", async () =>
     `migration list --project-ref ${STAGING_REF} --output-format json`,
     `functions list --project-ref ${STAGING_REF} --output-format json`,
   ]);
+});
+
+it("names the project chosen by SUPABASE_PROJECT_ID, which the CLI prefers over the linked ref", async () => {
+  await write("supabase/.temp/project-ref", "uziwdtkzofptihahfooo\n");
+
+  const result = runStatus([], { SUPABASE_PROJECT_ID: STAGING_REF });
+
+  expect(result.stdout).toContain(`Backend status: ${STAGING_REF} (staging) compared with commit`);
+});
+
+it("counts a function whose deploy date is missing or unreadable as changed", async () => {
+  await fakeFunctionsList([
+    { slug: "alpha", version: 4, verify_jwt: false },
+    { slug: "beta", version: 2, updated_at: "not a date", verify_jwt: true },
+    { slug: "gamma", version: 3, updated_at: 9_000_000, verify_jwt: true },
+  ]);
+
+  const result = runStatus([]);
+
+  expect(result.status).toBe(0);
+  expect(result.stdout).toMatch(/Changed on this commit after the last deploy:\n {4}alpha: deploy date unknown \(v4\); changed 1970-01-01 00:33 UTC in [0-9a-f]{7} change shared helper\n {4}beta: deploy date unknown \(v2\); changed 1970-01-01 00:16 UTC in [0-9a-f]{7} initial\n/);
+  expect(result.stdout).not.toMatch(/ {4}gamma:/);
+  expect(result.stdout).toContain("3 pending items.");
 });
 
 it("fails --check only when a migration on this commit is not applied", async () => {
