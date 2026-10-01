@@ -267,6 +267,12 @@ createServer(async (req, res) => {
     requests.push({ feature: "jev", model: body.model, status: 200 });
     return json(res, 200, { model: body.model, answers: jevAnswers(body.questions ?? {}), usage: { input_tokens: 40, output_tokens: 8, cost: 0.00001 } });
   }
+  if (url.pathname === "/v1/customers/search" && req.method === "GET") {
+    // Account deletion searches Stripe (through STRIPE_API_URL) for the user's
+    // customers. Test accounts have none.
+    requests.push({ feature: "stripe-customer-search", user: url.searchParams.get("query") ?? "" });
+    return json(res, 200, { object: "search_result", data: [], has_more: false, next_page: null, url: "/v1/customers/search" });
+  }
   if (url.pathname !== "/api/v1/chat/completions" || req.method !== "POST") {
     return json(res, 404, { error: { message: `Unexpected ${req.method} ${url.pathname}` } });
   }

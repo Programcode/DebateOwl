@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import pg from "pg";
 import type { Page } from "@playwright/test";
-import { admin, createDemoUser, deleteDemoUser, expect, signIn, stackReady, startDebate, test } from "./stack";
+import { admin, createDemoUser, deleteDemoUser, expect, fake, signIn, stackReady, startDebate, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -127,6 +127,9 @@ test("Delete account removes every row that references the user and nobody else'
 
     expect((await admin.auth.admin.getUserById(userId)).data.user).toBeNull();
     expect(await tablesMentioning(userId)).toEqual([]);
+    // Billing was checked in Stripe, not only in the database, before anything was deleted.
+    const searches = (await fake.requests()).filter((request) => request.feature === "stripe-customer-search");
+    expect(searches.map((request) => request.user)).toEqual([`metadata['user_id']:'${userId}'`]);
 
     expect((await admin.auth.admin.getUserById(otherId)).data.user?.id).toBe(otherId);
     const { data: theirs } = await admin.from("sources").select("title").eq("user_id", otherId);

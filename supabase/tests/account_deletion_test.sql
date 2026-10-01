@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(26);
+SELECT plan(27);
 
 -- The leaver deletes their account; the stayer shares workspaces, announcements,
 -- and grants with them and must keep everything of their own.
@@ -136,6 +136,8 @@ INSERT INTO public.admin_announcements (id, title, body, target_type, target_use
   ('ac500000-0000-4000-8000-000000000001', 'By leaver', 'Body', 'users', ARRAY['ac000000-0000-4000-8000-00000000000b']::uuid[], 'ac000000-0000-4000-8000-00000000000a'),
   ('ac500000-0000-4000-8000-000000000002', 'Only leaver', 'Body', 'users', ARRAY['ac000000-0000-4000-8000-00000000000a']::uuid[], 'ac000000-0000-4000-8000-00000000000b'),
   ('ac500000-0000-4000-8000-000000000003', 'Both', 'Body', 'users', ARRAY['ac000000-0000-4000-8000-00000000000a', 'ac000000-0000-4000-8000-00000000000b']::uuid[], 'ac000000-0000-4000-8000-00000000000b');
+INSERT INTO public.admin_announcements (id, title, body, target_type, target_user_ids, created_by, starts_at) VALUES
+  ('ac500000-0000-4000-8000-000000000004', 'SCHEDULED-ANNOUNCEMENT', 'Body', 'users', ARRAY['ac000000-0000-4000-8000-00000000000a', 'ac000000-0000-4000-8000-00000000000b']::uuid[], 'ac000000-0000-4000-8000-00000000000b', now() + interval '1 day');
 INSERT INTO public.user_announcement_dismissals (announcement_id, user_id)
   VALUES ('ac500000-0000-4000-8000-000000000003', 'ac000000-0000-4000-8000-00000000000a');
 
@@ -255,11 +257,20 @@ SELECT is_empty(
       FROM pg_constraint AS fk
       JOIN pg_class AS owner ON owner.oid = fk.conrelid
       JOIN pg_namespace AS schema ON schema.oid = owner.relnamespace
+      JOIN pg_attribute AS reference ON reference.attrelid = fk.conrelid AND reference.attnum = fk.conkey[1]
       WHERE fk.contype = 'f' AND fk.confrelid = 'auth.users'::regclass AND schema.nspname = 'public'
+        AND reference.attname IN ('user_id', 'owner_id', 'author_id', 'created_by', 'recipient_id')
     ) AS tables
     WHERE NOT (current_setting('test.export')::jsonb -> 'data') ? fk_table
       AND fk_table NOT IN ('admin_grants', 'curated_sources', 'demo_access_codes', 'global_prompts', 'promo_codes')$$,
-  'the export has a section for every table that references the user, apart from admin catalog work and grants'
+  'the export has a section for every table the user owns rows in, apart from admin catalog work and grants'
+);
+SELECT ok(
+  current_setting('test.export')::jsonb #> '{data,workspace_comments}' @> '[{"body": "Leaver comment"}]'
+    AND NOT current_setting('test.export')::jsonb #> '{data,workspace_comments}' @> '[{"body": "Stayer comment"}]'
+    AND NOT (current_setting('test.export')::jsonb -> 'data') ? 'workspace_audit_events'
+    AND current_setting('test.export') NOT LIKE '%SCHEDULED-ANNOUNCEMENT%',
+  'a comment the user only resolved, audit events naming them as actor, and scheduled announcements stay out of the export'
 );
 SELECT ok(
   (current_setting('test.export')::jsonb -> 'data') ?& ARRAY['messages', 'announcements_received', 'admin_announcements'],
@@ -352,7 +363,7 @@ SELECT is(
 );
 SELECT is(
   (SELECT array_agg(title ORDER BY title) FROM public.admin_announcements),
-  ARRAY['Both', 'By leaver'],
+  ARRAY['Both', 'By leaver', 'SCHEDULED-ANNOUNCEMENT'],
   'an announcement for only the leaver is deleted; others lose the leaver as recipient or author'
 );
 SELECT is(

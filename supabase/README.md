@@ -145,7 +145,7 @@ Document names, never values. Depending on deployed features, server-side config
 - Supabase URL, anon key, and service-role key;
 - `OPENROUTER_API_KEY` for all model requests, plus `OPENROUTER_API_URL`, which only the local full-stack gate sets to reach its fake provider (leave it unset everywhere else);
 - research provider keys;
-- Stripe secret, webhook secret, and price configuration;
+- Stripe secret, webhook secret, and price configuration, plus `STRIPE_API_URL`, which only the local full-stack gate sets so the `account` function reaches its fake Stripe (leave it unset everywhere else);
 - demo-code hashing material;
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;

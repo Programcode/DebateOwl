@@ -86,9 +86,11 @@ BEGIN
 END;
 $$;
 
--- Everything the user owns, as one JSON document. Rows are found through every
--- single-column foreign key into auth.users, so a new user-owned table is
--- exported without changing this function.
+-- Everything the user owns, as one JSON document. Rows are found through
+-- single-column foreign keys into auth.users named for ownership, so a new
+-- user-owned table is exported without changing this function. Columns that
+-- only mention the user, such as actor_id or resolved_by, would pull in rows
+-- other people own, so they never select a row.
 CREATE FUNCTION public.export_account_data(p_user_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -102,6 +104,7 @@ DECLARE
   -- Admin catalog work rather than the user's personal data, and admin grants,
   -- which RLS hides from the user and which are exported below without notes.
   v_skipped constant text[] := ARRAY['admin_grants', 'curated_sources', 'demo_access_codes', 'global_prompts', 'promo_codes'];
+  v_ownership constant name[] := ARRAY['user_id', 'owner_id', 'author_id', 'created_by', 'recipient_id']::name[];
   v_account jsonb;
   v_data jsonb := '{}'::jsonb;
   v_rows jsonb;
@@ -137,6 +140,7 @@ BEGIN
       AND cardinality(fk.conkey) = 1
       AND schema.nspname = 'public'
       AND NOT owner.relname = ANY (v_skipped)
+      AND reference.attname = ANY (v_ownership)
     GROUP BY owner.oid, owner.relname
     ORDER BY owner.relname
   LOOP
@@ -186,11 +190,14 @@ BEGIN
     v_data := v_data || jsonb_build_object('admin_announcements', v_rows);
   END IF;
 
-  -- Announcements addressed to the user, without the other recipients.
+  -- Announcements published to the user, without the other recipients. Like
+  -- the read policy, this hides scheduled and withdrawn ones.
   SELECT jsonb_agg(to_jsonb(announcement) - 'target_user_ids'::text - 'created_by'::text)
   INTO v_rows
   FROM public.admin_announcements AS announcement
-  WHERE p_user_id = ANY (announcement.target_user_ids);
+  WHERE p_user_id = ANY (announcement.target_user_ids)
+    AND announcement.starts_at <= now()
+    AND announcement.deactivated_at IS NULL;
   IF v_rows IS NOT NULL THEN
     v_data := v_data || jsonb_build_object('announcements_received', v_rows);
   END IF;

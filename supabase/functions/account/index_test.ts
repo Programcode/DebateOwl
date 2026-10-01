@@ -28,8 +28,8 @@ function harness(overrides: Partial<AccountDeps> = {}) {
         storage_objects: [{ bucket_id: "files", name: `${userId}/a.pdf` }],
       });
     },
-    stopBilling: (customerIds) => {
-      calls.push(`cancel:${customerIds.join(",")}`);
+    stopBilling: (userId, customerIds) => {
+      calls.push(`billing:${userId}:${customerIds.join(",")}`);
       return Promise.resolve(1);
     },
     removeStorageObjects: (objects) => {
@@ -70,7 +70,7 @@ Deno.test("delete removes only the caller's account, after billing and files", a
   assertEquals(await response.json(), { deleted: true, canceledSubscriptions: 1 });
   assertEquals(calls, [
     `plan:${caller.id}`,
-    "cancel:cus_1",
+    `billing:${caller.id}:cus_1`,
     `storage:${caller.id}/a.pdf`,
     `prepare:${caller.id}`,
     `delete:${caller.id}`,
@@ -155,11 +155,12 @@ Deno.test("billing stops open checkouts, then every live subscription, and skips
     cus_2: [{ id: "sub_past_due", status: "past_due" }, { id: "sub_trial", status: "trialing" }],
   };
   const count = await stopBillingFor({
+    searchCustomers: () => iterate([]),
     listOpenCheckouts: (customerId) => iterate(customerId === "cus_2" ? [{ id: "cs_open" }] : []),
     expireCheckout: (id) => Promise.resolve(actions.push(`expire:${id}`)),
     listSubscriptions: (customerId) => iterate(subscriptions[customerId]),
     cancelSubscription: (id) => Promise.resolve(actions.push(`cancel:${id}`)),
-  }, ["cus_1", "cus_2"]);
+  }, "user-1", ["cus_2", "cus_1"]);
   assertEquals(count, 3);
   assertEquals(actions, ["cancel:sub_active", "expire:cs_open", "cancel:sub_past_due", "cancel:sub_trial"]);
 });
@@ -171,11 +172,46 @@ Deno.test("billing skips customers Stripe already deleted but fails on other err
     [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(error) }),
   });
   const api = (error: Error) => ({
+    searchCustomers: () => iterate([]),
     listOpenCheckouts: () => failing(error),
     expireCheckout: () => Promise.resolve(),
     listSubscriptions: () => iterate([]),
     cancelSubscription: () => Promise.resolve(),
   });
-  assertEquals(await stopBillingFor(api(missing), ["cus_gone"]), 0);
-  await assertRejects(() => stopBillingFor(api(outage), ["cus_1"]), Error, "Stripe is down");
+  assertEquals(await stopBillingFor(api(missing), "user-1", ["cus_gone"]), 0);
+  await assertRejects(() => stopBillingFor(api(outage), "user-1", ["cus_1"]), Error, "Stripe is down");
+});
+
+Deno.test("billing also stops customers Stripe finds for the user that the database never recorded", async () => {
+  const searched: string[] = [];
+  const canceled: string[] = [];
+  const count = await stopBillingFor({
+    searchCustomers: (userId) => {
+      searched.push(userId);
+      return iterate([
+        { id: "cus_unrecorded", metadata: { user_id: "user-1" } },
+        { id: "cus_recorded", metadata: { user_id: "user-1" } },
+        { id: "cus_someone_else", metadata: { user_id: "user-2" } },
+        { id: "cus_deleted", deleted: true, metadata: { user_id: "user-1" } },
+      ]);
+    },
+    listOpenCheckouts: () => iterate([]),
+    expireCheckout: () => Promise.resolve(),
+    listSubscriptions: (customerId) => iterate([{ id: `sub_${customerId}`, status: "active" }]),
+    cancelSubscription: (id) => Promise.resolve(canceled.push(id)),
+  }, "user-1", ["cus_recorded"]);
+  assertEquals(searched, ["user-1"]);
+  assertEquals(count, 2);
+  assertEquals(canceled, ["sub_cus_recorded", "sub_cus_unrecorded"]);
+});
+
+Deno.test("a failed Stripe search stops deletion", async () => {
+  const outage = Object.assign(new Error("Stripe is down"), { code: "api_error" });
+  await assertRejects(() => stopBillingFor({
+    searchCustomers: () => ({ [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(outage) }) }),
+    listOpenCheckouts: () => iterate([]),
+    expireCheckout: () => Promise.resolve(),
+    listSubscriptions: () => iterate([]),
+    cancelSubscription: () => Promise.resolve(),
+  }, "user-1", []), Error, "Stripe is down");
 });

@@ -6,9 +6,10 @@
 // Foreign keys and the auth.users delete trigger remove every remaining row in
 // that delete; see supabase/migrations/20261001100000_account_deletion_and_export.sql.
 //
-// Billing stops first: open Checkout sessions expire and subscriptions are
-// canceled immediately, without a refund. If Stripe cannot be reached, nothing
-// is deleted and the user can try again.
+// Billing stops first, for every customer the database records and every one
+// Stripe finds by metadata.user_id: open Checkout sessions expire and
+// subscriptions are canceled immediately, without a refund. If Stripe cannot be
+// reached, nothing is deleted and the user can try again.
 
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import { createAdminClient, HttpError, jsonError, requireUser } from "../_shared/auth.ts";
@@ -22,8 +23,8 @@ export type AccountDeps = {
   authenticate: (req: Request) => Promise<AccountUser>;
   exportData: (userId: string) => Promise<unknown>;
   deletionPlan: (userId: string) => Promise<DeletionPlan>;
-  /** Stops all billing for the customers and returns how many subscriptions it canceled. */
-  stopBilling: (customerIds: string[]) => Promise<number>;
+  /** Stops all billing for the user and returns how many subscriptions it canceled. */
+  stopBilling: (userId: string, knownCustomerIds: string[]) => Promise<number>;
   removeStorageObjects: (objects: StorageObject[]) => Promise<void>;
   /** Clears rows that deliberately block a raw auth user delete. */
   prepareDeletion: (userId: string) => Promise<void>;
@@ -39,15 +40,23 @@ export function deletionConfirmation(user: AccountUser) {
 const ENDED_SUBSCRIPTION_STATUSES = new Set(["canceled", "incomplete_expired"]);
 
 export type BillingApi = {
+  searchCustomers: (userId: string) => AsyncIterable<{ id: string; deleted?: boolean; metadata?: Record<string, string> | null }>;
   listOpenCheckouts: (customerId: string) => AsyncIterable<{ id: string }>;
   expireCheckout: (sessionId: string) => Promise<unknown>;
   listSubscriptions: (customerId: string) => AsyncIterable<{ id: string; status: string }>;
   cancelSubscription: (subscriptionId: string) => Promise<unknown>;
 };
 
-export async function stopBillingFor(api: BillingApi, customerIds: string[]) {
+export async function stopBillingFor(api: BillingApi, userId: string, knownCustomerIds: string[]) {
+  // Recorded customers cover the minute Stripe search can lag a new customer;
+  // search covers customers created before create-checkout recorded them.
+  const customerIds = new Set(knownCustomerIds);
+  for await (const customer of api.searchCustomers(userId)) {
+    if (!customer.deleted && customer.metadata?.user_id === userId) customerIds.add(customer.id);
+  }
+
   let canceled = 0;
-  for (const customerId of customerIds) {
+  for (const customerId of [...customerIds].sort()) {
     try {
       // An open Checkout session could otherwise start a subscription after deletion.
       for await (const session of api.listOpenCheckouts(customerId)) {
@@ -96,7 +105,7 @@ export function createHandler(deps: AccountDeps) {
           throw new HttpError(400, "The confirmation does not match, so the account was not deleted");
         }
         const plan = await deps.deletionPlan(user.id);
-        const canceledSubscriptions = await deps.stopBilling(plan.stripe_customer_ids);
+        const canceledSubscriptions = await deps.stopBilling(user.id, plan.stripe_customer_ids);
         await deps.removeStorageObjects(plan.storage_objects);
         await deps.prepareDeletion(user.id);
         await deps.deleteAuthUser(user.id);
@@ -137,25 +146,33 @@ function liveDeps(): AccountDeps {
       return data as DeletionPlan;
     },
 
-    stopBilling: async (customerIds) => {
-      if (customerIds.length === 0) return 0;
+    stopBilling: async (userId, knownCustomerIds) => {
       const billingError = new HttpError(
         502,
         "Could not cancel your subscription, so your account was not deleted. Please try again.",
       );
       const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (!secretKey) throw billingError;
+      // Only the local full-stack gate sets this, to reach its fake Stripe.
+      const apiUrl = Deno.env.get("STRIPE_API_URL");
+      const endpoint = apiUrl ? new URL(apiUrl) : null;
       const stripe = new Stripe(secretKey, {
         apiVersion: "2023-10-16",
         httpClient: Stripe.createFetchHttpClient(),
+        ...(endpoint && {
+          host: endpoint.hostname,
+          port: endpoint.port || (endpoint.protocol === "http:" ? "80" : "443"),
+          protocol: endpoint.protocol.replace(":", "") as "http" | "https",
+        }),
       });
       try {
         return await stopBillingFor({
+          searchCustomers: (user) => stripe.customers.search({ query: `metadata['user_id']:'${user}'`, limit: 100 }),
           listOpenCheckouts: (customer) => stripe.checkout.sessions.list({ customer, status: "open", limit: 100 }),
           expireCheckout: (sessionId) => stripe.checkout.sessions.expire(sessionId),
           listSubscriptions: (customer) => stripe.subscriptions.list({ customer, status: "all", limit: 100 }),
           cancelSubscription: (subscriptionId) => stripe.subscriptions.cancel(subscriptionId),
-        }, customerIds);
+        }, userId, knownCustomerIds);
       } catch (error) {
         console.error("[ACCOUNT] Stripe cancellation failed", (error as { code?: string }).code ?? "unknown");
         throw billingError;
