@@ -1,0 +1,177 @@
+import { readFile } from "node:fs/promises";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, type Evidence, expect, expectProviderCalls, fake, LIVE, signIn, startDebate, test } from "./fixtures";
+
+// Feature map: features/case-generation.md.
+const motion = "This House would make public transport free at the point of use";
+
+type CaseOutput = { caseStructure: { thesis: string }; contentions: Array<{ claim: string }> };
+
+/**
+ * Starts a Current Debate for the motion from the header, as a student does
+ * first. Generate then prefills that motion and runs with no motion check.
+ */
+async function openGenerate(page: import("@playwright/test").Page) {
+  await startDebate(page, motion);
+  await page.goto("/app/generate");
+  await expect(page.getByRole("heading", { name: "Ready to Generate" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);
+}
+
+async function generate(page: import("@playwright/test").Page) {
+  await openGenerate(page);
+  const response = aiResponse(page, "generate");
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  const body = await response;
+  const output = body.output as unknown as CaseOutput;
+  // Standard length asks for exactly three contentions.
+  expect(output.contentions).toHaveLength(3);
+  await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
+  return { body, output };
+}
+
+/** Signs in on a fresh browser context, which has no local copy, so History must hydrate from the database. */
+async function reopenFromHistory(browser: import("@playwright/test").Browser, user: Parameters<typeof signIn>[1], title: string, thesis: string, evidence: Evidence, prefix: string, scope: "debate" | "one-off") {
+  const context = await browser.newContext();
+  try {
+    const other = await context.newPage();
+    await other.addInitScript(() => localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 })));
+    await signIn(other, user);
+    await other.goto("/app/history");
+    // History shows the Current Debate's work in tabs, or, with no debate, a
+    // list of one-off work. Scope to it: an auto-filed case is titled with the
+    // motion, which the header also shows.
+    let entry;
+    if (scope === "debate") {
+      entry = other.getByRole("tabpanel", { name: "Cases" });
+      await expect(entry.getByRole("heading", { name: title })).toBeVisible();
+    } else {
+      await expect(other.getByRole("combobox", { name: "Show work from" })).toContainText("One-off and unsorted work");
+      entry = other.getByRole("main").getByRole("listitem").filter({ hasText: title });
+      await expect(entry).toBeVisible();
+    }
+    await evidence.shot(`${prefix}-history-fresh-device`, other);
+    await entry.getByRole("button", { name: "Load" }).first().click();
+    await expect(other.getByText(thesis).first()).toBeVisible();
+    await evidence.shot(`${prefix}-reopened-from-history`, other);
+    await evidence.step(`Reopened "${title}" from History on a fresh device`);
+  } finally {
+    await context.close();
+  }
+}
+
+// Inside a Current Debate, Generate files the case in the debate by itself and
+// shows no Save button; manual Save with a title is the one-off path (gen-save).
+test("gen-create: a case generated in the Current Debate is filed there and reopens from History on a fresh device", async ({ signedIn: page, user, evidence, browser }) => {
+  await evidence.step(`Header → Start debate, then Generate: motion "${motion}"`);
+  const { body, output } = await generate(page);
+  await evidence.json("01-generate-response", body);
+  await evidence.shot("01-generated");
+  await evidence.aria("01-generated");
+  for (const contention of output.contentions) await expect(page.getByText(contention.claim).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+
+  const call = (await expectProviderCalls(["generate"])).find((item) => item.feature === "generate")!;
+  expect(call.user).toContain(`Motion: ${motion}`);
+  const userId = await user.userId();
+  const { data: usage } = await admin.from("ai_requests").select("feature,status,model").eq("user_id", userId);
+  expect(usage).toContainEqual(expect.objectContaining({ feature: "generate", status: "success" }));
+  await evidence.json("02-ai-requests", usage);
+
+  // The case was recorded in the debate started for its motion, without a Save click.
+  let title = "";
+  await expect.poll(async () => {
+    const { data } = await admin.from("cases").select("title,side,debates(motion)").eq("user_id", userId);
+    title = (data?.[0]?.title as string | undefined) ?? "";
+    return data?.map((row) => ({ side: row.side, debates: row.debates }));
+  }).toEqual([{ side: "pro", debates: { motion } }]);
+  expect(title.length).toBeGreaterThan(0);
+  await evidence.json("03-case-row", { title, motion });
+
+  await reopenFromHistory(browser, user, title, output.caseStructure.thesis, evidence, "04", "debate");
+});
+
+test("gen-save: a one-off case is saved under a title and reopens from History on a fresh device", async ({ signedIn: page, user, evidence, browser }) => {
+  await page.goto("/app/generate");
+  await expect(page.getByRole("heading", { name: "Ready to Generate" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  const response = aiResponse(page, "generate");
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  // No Current Debate: decline the offer, so the case belongs to no debate until saved.
+  await chooseForMotion(page, "once");
+  await evidence.step(`Generate: motion "${motion}", chose Not now, use it once`);
+  const output = (await response).output as unknown as CaseOutput;
+  await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
+  await evidence.shot("01-generated-one-off");
+
+  const title = `Verify case ${Date.now()}`;
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("dialog").getByLabel("Case title").fill(title);
+  await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
+  await evidence.step(`Saved the case as "${title}"`);
+  const userId = await user.userId();
+  await expect.poll(async () => {
+    const { data } = await admin.from("cases").select("title,debate_id").eq("user_id", userId);
+    return data;
+  }).toEqual([{ title, debate_id: null }]);
+  const { data: debates } = await admin.from("debates").select("id").eq("user_id", userId);
+  expect(debates).toEqual([]);
+
+  await reopenFromHistory(browser, user, title, output.caseStructure.thesis, evidence, "02", "one-off");
+});
+
+test("gen-research: generation researches the web and cites what it found", async ({ signedIn: page, evidence }) => {
+  const { body } = await generate(page);
+  await evidence.json("01-generate-response", body);
+  const sources = (body.discoveredSources ?? []) as Array<{ url: string }>;
+  await evidence.json("02-discovered-sources", sources);
+  if (!LIVE) {
+    // The fake stack has no Exa key, so research finds nothing. Record it; do not claim it.
+    test.info().annotations.push({ type: "unverified", description: "web research needs --live (Exa)" });
+    return;
+  }
+  expect(sources.length, "web sources found by research").toBeGreaterThan(0);
+  expect(sources.every((source) => /^https?:\/\//.test(source.url))).toBe(true);
+  const panel = page.getByText("Researched sources").locator("..");
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("link").first()).toHaveAttribute("href", /^https?:\/\//);
+  await evidence.shot("03-researched-sources");
+});
+
+test("gen-export: a generated case exports to PDF and DOCX", async ({ signedIn: page, evidence }) => {
+  await generate(page);
+  for (const [button, extension, magic] of [["PDF", ".pdf", "%PDF"], ["DOCX", ".docx", "PK"]] as const) {
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: button, exact: true }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(new RegExp(`\\${extension}$`));
+    const path = `${evidence.dir}/export${extension}`;
+    await file.saveAs(path);
+    const bytes = await readFile(path);
+    expect(bytes.subarray(0, magic.length).toString("latin1"), `${button} file signature`).toBe(magic);
+    await evidence.step(`Exported ${button}: ${file.suggestedFilename()} (${bytes.length} bytes, saved as export${extension})`);
+  }
+});
+
+test("gen-error: a provider failure shows an error and the retry succeeds", async ({ signedIn: page, evidence }) => {
+  await fake.fail("generate", 500);
+  await openGenerate(page);
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await expect(page.getByText("Generation Failed", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
+  await evidence.shot("01-failed");
+  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeEnabled();
+
+  const response = aiResponse(page, "generate");
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  const body = await response;
+  await expect(page.getByText((body.output as unknown as CaseOutput).caseStructure.thesis).first()).toBeVisible();
+  await evidence.shot("02-retried");
+});
+
+test("gen-quota: an account without quota is told why and the provider is never called", async ({ signedIn: page, user, evidence }) => {
+  await admin.from("user_settings").update({ daily_limit_override: 0 }).eq("user_id", await user.userId());
+  await openGenerate(page);
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await expect(page.getByRole("dialog").getByText("Daily Access Paused")).toBeVisible({ timeout: AI_TIMEOUT });
+  await evidence.shot("01-quota-dialog");
+  expect((await fake.requests()).filter((request) => request.feature === "generate")).toEqual([]);
+});

@@ -11,6 +11,7 @@ const EXCLUDED_PREFIXES = [
   "coverage/",
   "test-results/",
   "playwright-report/",
+  ".verify/",
   "ios/App/CapApp-SPM/",
   "plans/",
 ];
