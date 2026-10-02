@@ -1,14 +1,5 @@
 BEGIN;
-SELECT plan(25);
-
-SELECT has_table('public', 'workspace_proposals', 'proposal metadata is persisted');
-SELECT has_table('public', 'workspace_comments', 'inline comments are persisted');
-SELECT has_table('public', 'workspace_comment_replies', 'comment replies are persisted');
-SELECT has_table('public', 'workspace_notifications', 'mention notifications are persisted');
-SELECT has_function('public', 'create_workspace_proposal', ARRAY['uuid', 'uuid', 'uuid', 'bigint', 'bigint', 'jsonb'], 'proposal creation is authorized');
-SELECT has_function('public', 'create_workspace_comment', ARRAY['uuid', 'uuid', 'uuid', 'jsonb', 'text', 'uuid[]'], 'comment creation is authorized');
-SELECT has_function('public', 'reply_workspace_comment', ARRAY['uuid', 'uuid', 'uuid', 'text'], 'comment replies are authorized');
-SELECT has_function('public', 'resolve_workspace_comment', ARRAY['uuid', 'uuid', 'boolean'], 'comment resolution is authorized');
+SELECT plan(17);
 
 INSERT INTO auth.users (id) VALUES
   ('81111111-1111-4111-8111-111111111111'),

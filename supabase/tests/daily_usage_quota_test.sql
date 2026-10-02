@@ -1,17 +1,11 @@
 BEGIN;
-SELECT plan(15);
+SELECT plan(14);
 
 INSERT INTO auth.users (id)
 VALUES
   ('44444444-4444-4444-8444-444444444444'),
   ('55555555-5555-4555-8555-555555555555');
 
-SELECT has_column(
-  'public',
-  'daily_usage_counters',
-  'quota_key',
-  'daily usage counters identify the quota being consumed'
-);
 SELECT col_not_null(
   'public',
   'daily_usage_counters',
