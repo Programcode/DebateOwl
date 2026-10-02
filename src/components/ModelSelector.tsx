@@ -65,7 +65,7 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
           }
         }}
       >
-        <SelectTrigger className="h-10 w-full text-sm" aria-label={t('modelSelector.selectFor', 'Select AI model for {{feature}}', { feature: t(`nav.${feature}`, feature) })}>
+        <SelectTrigger className="h-10 w-full text-sm" aria-label={t('modelSelector.selectFor', 'Select AI model for {{feature}}', { feature: t(`nav.${feature}`, feature).toLowerCase() })}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
