@@ -11,6 +11,7 @@
     "dev:preview": "VITE_STAGING_PREVIEW=true vite --host 127.0.0.1",
     "docs:check": "node scripts/check-docs.mjs",
     "backend:status": "node scripts/backend-status.mjs",
+    "ci:failures": "node scripts/ci-failures.mjs",
     "build": "vite build && node scripts/check-build-boundaries.mjs",
     "build:dev": "vite build --mode development",
     "ios:build": "vite build --mode capacitor && cap sync ios",
@@ -29,7 +30,7 @@
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:sw": "node scripts/test-service-worker-offline.mjs",
     "test:e2e:staging": "playwright test --project=staging",
-    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm test -- --coverage && npm run test:collaboration && npm run test:edge && npm run build && npm run test:sw && CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e"
+    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm test -- --coverage && npm run test:collaboration && npm run test:edge && npm run build && npm run test:sw && CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

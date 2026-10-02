@@ -25,9 +25,10 @@ Never overwrite unrelated changes. Do not switch to the primary checkout because
 - Playwright browser binaries for browser gates
 - Xcode and CocoaPods or Swift Package Manager support for native iOS work
 
-Install the locked JavaScript tree:
+Install the locked JavaScript tree with the Node version from `.nvmrc`:
 
 ```bash
+nvm use
 npm ci
 ```
 
@@ -47,7 +48,7 @@ For another explicit local port:
 npm run dev -- --host 127.0.0.1 --port 8081
 ```
 
-Automated browser tests own `127.0.0.1:18080` by default and always start a fresh server.
+Automated browser tests always start a fresh server. `npm run verify` puts it on this worktree's port from `18100-18179` (`bash .superset/e2e-port.sh`); a bare Playwright run falls back to `127.0.0.1:18080`.
 
 ## Preview on the tailnet
 
@@ -142,7 +143,7 @@ Never point local tests at staging or production. Never apply a migration to an 
 [`playwright.config.ts`](../playwright.config.ts) starts Vite on an isolated port and refuses to reuse an existing server.
 
 ```bash
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e
 ```
 
 Failure artifacts go to ignored `test-results/` and `playwright-report/`. Protected staging disables traces, screenshots, and video.
