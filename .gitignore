@@ -75,3 +75,6 @@ humanizer.md
 .vercel
 .env*
 .worktrees/
+
+# e2e (agentic tests) output when run outside verify.sh; the replay cache in agentic/replay is committed
+.e2e/
