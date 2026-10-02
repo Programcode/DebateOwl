@@ -17,6 +17,8 @@ const EXCLUDED_PREFIXES = [
 ];
 
 const PLAN_INDEX = "plans/README.md";
+const PLAN_STATUS = /^\*\*Status:\*\*[ \t]*(.*)$/m;
+const PLAN_STATUS_LINES = 15;
 const EXTERNAL_TARGET = /^(?:https?:|mailto:|tel:|data:|\/\/)/i;
 const RETIRED_CHECKOUT = [
   /\b(?:cd|pushd)\s+(?:["'`])?debate-navigator(?=[/\\\s"'`]|$)/i,
@@ -107,6 +109,56 @@ function localTarget(rootDir, documentPath, rawTarget) {
   return { absolutePath };
 }
 
+// Plans are excluded from link checks, but each must say where it stands, and
+// the index's Shipped section must not list a plan that still calls itself a plan.
+async function checkPlans(root, issues) {
+  let entries;
+  try {
+    entries = await readdir(resolve(root, "plans"), { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  const statuses = new Map();
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".md") || entry.name === "README.md") continue;
+    const content = await readFile(resolve(root, "plans", entry.name), "utf8");
+    const head = content.split(/\r?\n/).slice(0, PLAN_STATUS_LINES).join("\n");
+    const status = head.match(PLAN_STATUS)?.[1].trim() || null;
+    statuses.set(entry.name, status);
+    if (!status) {
+      issues.push({ file: `plans/${entry.name}`, line: 1, message: `plan has no **Status:** line in its first ${PLAN_STATUS_LINES} lines` });
+    }
+  }
+
+  let index;
+  try {
+    index = await readFile(resolve(root, PLAN_INDEX), "utf8");
+  } catch {
+    return;
+  }
+  let section = "";
+  for (const [lineIndex, line] of index.split(/\r?\n/).entries()) {
+    const heading = line.match(/^##\s+(.+?)\s*$/);
+    if (heading) {
+      section = heading[1].toLowerCase();
+      continue;
+    }
+    if (section !== "shipped") continue;
+    for (const match of line.matchAll(INLINE_LINK)) {
+      const name = normalizeTarget(match[1]).replace(/[?#].*$/, "").replace(/^\.\//, "");
+      const status = statuses.get(name);
+      if (status && !/^shipped\b/i.test(status)) {
+        issues.push({
+          file: PLAN_INDEX,
+          line: lineIndex + 1,
+          message: `${name} is listed under Shipped but its status is not "Shipped": ${status}`,
+        });
+      }
+    }
+  }
+}
+
 export async function checkDocs(rootDir) {
   const root = resolve(rootDir);
   const issues = [];
@@ -152,6 +204,7 @@ export async function checkDocs(rootDir) {
     }
   }
 
+  await checkPlans(root, issues);
   return issues;
 }
 

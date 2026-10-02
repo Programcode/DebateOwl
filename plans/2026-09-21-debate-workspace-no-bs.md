@@ -1,5 +1,7 @@
 # Debate Workspace: no-BS replacement plan
 
+**Status:** On hold. Collaborative Workspace is hidden in production and renders only when `VITE_COLLABORATION_URL` is set.
+
 Adam's first working journey: sign in, enter a motion once, land in Intro, invite a teammate by code, assign R1, and write in the same paragraph from two browsers. Switch between A favor and En contra, disconnect one browser, reconnect, reload, and reopen the workspace tomorrow with the same text and last-opened file. Create another workspace with different collaborators and still find the first in the archive.
 
 **First-milestone done means** that journey works against real local Auth, PostgreSQL and the collaboration service through a private Tailscale URL. Saved survives a service restart; undo leaves the teammate's work intact; removal blocks subsequent reads and writes. File controls, history/restore, human suggestions and comments work on desktop and mobile. A shell, mocked session, or passing spike is not this deliverable.
