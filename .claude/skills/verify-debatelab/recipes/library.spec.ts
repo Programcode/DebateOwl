@@ -1,7 +1,9 @@
 import type { Page } from "@playwright/test";
-import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, startDebate, test } from "./fixtures";
 
-// Feature map: features/library-sources.md.
+// Feature map: features/library-sources.md. The Library belongs to the Current
+// Debate: `Add Source` stays disabled until one exists, so each test starts one.
+const motion = "Public transport should be free";
 
 async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add Source" }).click();
@@ -12,7 +14,10 @@ async function addSource(page: Page, title: string, content: string) {
 }
 
 test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI requests, and deletions persist", async ({ signedIn: page, user, evidence }) => {
+  await startDebate(page, motion);
+  await evidence.step(`Started the debate "${motion}" from the header`);
   await page.goto("/app/library");
+  await expect(page.getByTestId("library-debate")).toContainText(motion);
   await addSource(page, "Active study", "ACTIVE-SOURCE-MARKER ridership rose after fares were removed in Tallinn.");
   await addSource(page, "Paused study", "PAUSED-SOURCE-MARKER congestion did not change.");
   await page.getByRole("switch", { name: "Toggle Paused study" }).click();
@@ -20,8 +25,9 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await evidence.step("Added two sources and paused one");
   await evidence.shot("01-library");
 
+  // Brainstorm prefills the Current Debate's motion, so no motion check opens.
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
+  await expect(page.getByLabel("Motion / Topic *")).toHaveValue(motion);
   const response = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
   await response;
@@ -37,14 +43,17 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await expect(page.getByRole("switch", { name: "Toggle Active study" })).toBeVisible();
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
   // Live research can save the web sources it found, so check only the two added here.
-  const { data } = await admin.from("sources").select("title,is_active").eq("user_id", await user.userId()).in("title", ["Active study", "Paused study"]);
-  expect(data?.map((row) => row.title)).toEqual(["Active study"]);
+  const userId = await user.userId();
+  const { data: debate } = await admin.from("debates").select("id").eq("user_id", userId).eq("motion", motion).single();
+  const { data } = await admin.from("sources").select("title,is_active,debate_id").eq("user_id", userId).in("title", ["Active study", "Paused study"]);
+  expect(data).toEqual([{ title: "Active study", is_active: true, debate_id: debate?.id }]);
   await evidence.json("03-sources-rows", data);
   await evidence.shot("03-after-delete");
 });
 
 test("lib-import: a web page imports into the Library", async ({ signedIn: page, user, evidence }) => {
   const url = "https://en.wikipedia.org/wiki/Free_public_transport";
+  await startDebate(page, motion);
   await page.goto("/app/library");
   await page.getByRole("button", { name: "Add Source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);

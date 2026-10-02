@@ -1,4 +1,4 @@
-import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, LIVE, providerCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, LIVE, providerCalls, test } from "./fixtures";
 
 // Feature map: features/ai-tools.md.
 
@@ -19,18 +19,28 @@ test("attack-run: Attack analyses a pasted argument", async ({ signedIn: page, e
   expect(call.user).toContain("riders leave their cars at home");
 });
 
-test("brainstorm-run: Brainstorm returns ranked angles", async ({ signedIn: page, evidence }) => {
+test("brainstorm-run: Brainstorm returns ranked angles", async ({ signedIn: page, user, evidence }) => {
+  const motion = "Universal basic income should replace targeted welfare";
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("Universal basic income should replace targeted welfare");
+  await page.getByLabel("Motion / Topic *").fill(motion);
   const response = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  // A new account has no Current Debate, so Brainstorm first offers one for this motion.
+  await chooseForMotion(page, "create");
+  await evidence.step(`Brainstorm: "${motion}", accepted the offer to start a debate for it`);
   const body = await response;
   await evidence.json("01-brainstorm-response", body);
   const topFive = body.output.topFive as Array<{ idea: { title: string } }>;
   expect(topFive.length).toBeGreaterThan(0);
   await expect(page.getByText(topFive[0].idea.title).first()).toBeVisible();
   await evidence.shot("02-brainstorm-result");
-  await expectProviderCalls(["brainstorm"]);
+  const call = (await expectProviderCalls(["brainstorm"])).find((item) => item.feature === "brainstorm")!;
+  expect(call.user).toContain(`Motion: ${motion}`);
+  // The result is saved in the debate the offer created.
+  await expect.poll(async () => {
+    const { data } = await admin.from("brainstorms").select("debates(motion)").eq("user_id", await user.userId());
+    return data;
+  }).toEqual([{ debates: { motion } }]);
 });
 
 test("factoids-run: Factoids researches a statement and keeps only verified citations", async ({ signedIn: page, evidence }) => {

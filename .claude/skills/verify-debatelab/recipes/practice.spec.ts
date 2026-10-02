@@ -1,14 +1,19 @@
-import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, test } from "./fixtures";
 
-// Feature map: features/practice.md.
+// Feature map: features/practice.md. Voice rounds are recipes/voice-rounds.spec.ts.
+// A new account has no Current Debate, so each round first accepts the offer
+// to start one for its motion; the finished round is filed in that debate.
+const sparMotion = "This House would make public transport free at the point of use.";
+const resolution = "Resolved: cities should ban private cars downtown.";
 
 test("spar-round and spar-verdict: a Lincoln-Douglas round is argued, judged, and saved", async ({ signedIn: page, user, evidence }) => {
   await page.goto("/app/sparring");
-  await page.getByLabel("Motion").fill("This House would make public transport free at the point of use.");
+  await page.getByLabel("Motion").fill(sparMotion);
   await page.getByRole("combobox", { name: "Round format" }).click();
   await page.getByRole("option", { name: /Lincoln-Douglas · 5 speeches/ }).click();
   await page.getByRole("button", { name: "Start round" }).click();
-  await evidence.step("Sparring: started a Lincoln-Douglas round");
+  await chooseForMotion(page, "create");
+  await evidence.step("Sparring: started a Lincoln-Douglas round and a debate for its motion");
 
   const speeches = [
     ["Affirmative constructive", "Universal access removes the direct price barrier to participation in work, school, and civic life."],
@@ -32,21 +37,32 @@ test("spar-round and spar-verdict: a Lincoln-Douglas round is argued, judged, an
     const { data } = await admin.from("sparring_sessions").select("status").eq("user_id", await user.userId());
     return data?.map((row) => row.status);
   }).toEqual(["complete"]);
-  const { data: session } = await admin.from("sparring_sessions").select("status,final_evaluation").eq("user_id", await user.userId()).single();
+  const { data: session } = await admin.from("sparring_sessions").select("status,side,final_evaluation,debates(motion)").eq("user_id", await user.userId()).single();
   await evidence.json("03-sparring-session", session);
+  // The judged round is filed in the debate created for its motion, with the user's side.
+  expect(session).toMatchObject({ side: "pro", debates: { motion: sparMotion } });
   const calls = await expectProviderCalls(["sparring"]);
   expect(calls.some((call) => call.feature === "sparring" && /SPARRING ACTION: score/m.test(call.user ?? ""))).toBe(true);
 });
 
 async function startCrossfire(page: import("@playwright/test").Page, mode: "mode-question-ai" | "mode-ai-questions-user") {
   await page.goto("/app/crossfire");
-  await page.getByTestId("crossfire-resolution").fill("Resolved: cities should ban private cars downtown.");
+  await page.getByTestId("crossfire-resolution").fill(resolution);
   await page.getByTestId("crossfire-argument").fill("Private cars create congestion and unsafe streets.");
   await page.getByTestId(mode).click();
   await page.getByTestId("start-crossfire").click();
+  await chooseForMotion(page, "create");
 }
 
-test("cross-turn and cross-debrief: questioning the AI gets an answer, a Jev signal, and a debrief", async ({ signedIn: page, evidence }) => {
+/** The finished exchange is recorded in the debate created for its resolution. */
+async function expectCrossfireSaved(userId: string) {
+  await expect.poll(async () => {
+    const { data } = await admin.from("crossfires").select("title,debates(motion)").eq("user_id", userId);
+    return data;
+  }).toEqual([{ title: resolution, debates: { motion: resolution } }]);
+}
+
+test("cross-turn and cross-debrief: questioning the AI gets an answer, a Jev signal, and a debrief", async ({ signedIn: page, user, evidence }) => {
   await startCrossfire(page, "mode-question-ai");
   await page.getByTestId("crossfire-input").fill("What evidence links fewer private cars to safer streets?");
   const turn = aiResponse(page, "crossfire");
@@ -63,9 +79,10 @@ test("cross-turn and cross-debrief: questioning the AI gets an answer, a Jev sig
   await expect(page.getByTestId("crossfire-debrief")).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("03-debrief");
   await evidence.aria("03-debrief", page.getByTestId("crossfire-debrief"));
+  await expectCrossfireSaved(await user.userId());
 });
 
-test("cross-ai-questions: the AI questions the user, answers are judged, and the debrief completes", async ({ signedIn: page, evidence }) => {
+test("cross-ai-questions: the AI questions the user, answers are judged, and the debrief completes", async ({ signedIn: page, user, evidence }) => {
   const opening = aiResponse(page, "crossfire", "next-turn");
   await startCrossfire(page, "mode-ai-questions-user");
   const question = (await opening).output as { text: string };
@@ -86,4 +103,5 @@ test("cross-ai-questions: the AI questions the user, answers are judged, and the
   await evidence.json("02-debrief", (await debrief).output);
   await expect(page.getByTestId("crossfire-debrief")).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("02-debrief");
+  await expectCrossfireSaved(await user.userId());
 });

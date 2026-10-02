@@ -1,7 +1,9 @@
 import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, signIn, test } from "./fixtures";
 
-// Feature map: features/account.md. Delete All My Data and the plain flowchart
-// save are covered by e2e/full-stack/account-data.spec.ts, which drive also runs.
+// Feature map: the Account entry in features/README.md. Export and account
+// deletion are recipes/account-data.spec.ts (features/account-data.md). Delete
+// All My Data and the plain flowchart save are covered by
+// e2e/full-stack/account-data.spec.ts, which drive also runs.
 
 test("acct-language: the output language follows the account to a new device and reaches the model", async ({ signedIn: page, user, browser, evidence }) => {
   await page.goto("/app/settings");
@@ -65,7 +67,8 @@ test("timer-run: the speech timer starts, pauses, and resets", async ({ signedIn
   await page.goto("/app/timer");
   const display = page.getByRole("timer", { name: "Timer display" });
   const initial = await display.textContent();
-  await page.getByRole("button", { name: "Start" }).click();
+  // Exact: the header's "Start debate" button also matches a substring "Start".
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.getByText("SPEAKING").first()).toBeVisible();
   await expect.poll(() => display.textContent(), { timeout: 5_000 }).not.toBe(initial);
   await page.getByRole("button", { name: "Pause" }).click();

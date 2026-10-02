@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { admin, AI_TIMEOUT, aiResponse, expect, providerCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, providerCalls, test } from "./fixtures";
 
-// Feature map: features/billing.md. Signed, forged, and replayed Stripe
+// Feature map: the Billing entry in features/README.md. Signed, forged, and replayed Stripe
 // webhooks are covered by e2e/full-stack/billing.spec.ts, which drive also runs.
 
 test("bill-promo: an expired account is blocked, redeems a promo code, and gets AI access back", async ({ signedIn: page, user, evidence }) => {
@@ -17,6 +17,8 @@ test("bill-promo: an expired account is blocked, redeems a promo code, and gets 
     await page.goto("/app/brainstorm");
     await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
     await page.getByRole("button", { name: "Start Brainstorming" }).click();
+    // No Current Debate, so the motion check asks first; the paywall (or the run) follows it.
+    await chooseForMotion(page, "once");
   };
   try {
     await brainstorm();
