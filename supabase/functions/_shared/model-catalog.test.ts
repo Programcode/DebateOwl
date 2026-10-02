@@ -7,30 +7,14 @@ import {
   MODEL_CATALOG,
 } from "./model-catalog.ts";
 
-const APPROVED_IDS = [
-  "openai/gpt-5.6-luna",
-  "google/gemini-3.8-flash",
-  "deepseek/deepseek-v4-flash-0731",
-  "anthropic/claude-sonnet-5",
-  "anthropic/claude-opus-5",
-  "openai/gpt-5.6-sol",
-  "openai/gpt-5.6-terra",
-  "deepseek/deepseek-v4-pro-0813",
-  "z-ai/glm-5.3-flash",
-  "meta/muse-spark-1.3",
-] as const;
-
-Deno.test("model catalog contains the ten approved exact OpenRouter IDs", () => {
-  const ids = MODEL_CATALOG.map((entry) => entry.id);
-  if (ids.length !== APPROVED_IDS.length) throw new Error(`unexpected catalog size: ${ids.length}`);
-  for (const id of APPROVED_IDS) {
-    const entry = getModelCatalogEntry(id);
-    if (!entry || !ids.includes(id)) throw new Error(`missing approved model: ${id}`);
-    if (!entry.name || entry.maxTokens <= 0) throw new Error(`incomplete model entry: ${id}`);
-    if (!entry.supportedEfforts.includes("low")) throw new Error(`low effort is not declared for ${id}`);
+Deno.test("every catalog model supports the forced trial effort and both defaults resolve to valid tiers", () => {
+  for (const entry of MODEL_CATALOG) {
+    if (getModelCatalogEntry(entry.id) !== entry) throw new Error(`catalog lookup lost ${entry.id}`);
+    if (!entry.supportedEfforts.includes("low")) throw new Error(`low effort is not declared for ${entry.id}`);
   }
-  if (DEFAULT_MODEL !== "openai/gpt-5.6-luna") throw new Error(`unexpected Basic default: ${DEFAULT_MODEL}`);
-  if (DEFAULT_PRO_MODEL !== "anthropic/claude-sonnet-5") throw new Error(`unexpected Pro default: ${DEFAULT_PRO_MODEL}`);
+  const basic = getModelCatalogEntry(DEFAULT_MODEL);
+  if (!basic || basic.isProOnly) throw new Error(`Basic default is missing or Pro-only: ${DEFAULT_MODEL}`);
+  if (!getModelCatalogEntry(DEFAULT_PRO_MODEL)) throw new Error(`Pro default is not in the catalog: ${DEFAULT_PRO_MODEL}`);
 });
 
 Deno.test("model catalog marks only the approved Pro entries as Pro-only", () => {

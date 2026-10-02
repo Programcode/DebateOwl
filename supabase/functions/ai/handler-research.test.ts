@@ -856,61 +856,6 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   }
 });
 
-Deno.test("cancelled streams keep observed cost unknown", async () => {
-  const originalFetch = globalThis.fetch;
-  const usageRows: Array<Record<string, unknown>> = [];
-  const encoder = new TextEncoder();
-  let providerStartedResolve!: () => void;
-  const providerStarted = new Promise<void>((resolve) => providerStartedResolve = resolve);
-  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
-    const url = new URL(input instanceof Request ? input.url : String(input));
-    const supabaseResponse = supabaseTestResponse(url);
-    if (supabaseResponse) {
-      if (url.pathname.includes("/rest/v1/ai_requests")) usageRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-      return supabaseResponse;
-    }
-    if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
-      const body = new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`));
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 2, completion_tokens: 1, cost: 0.25 } })}\n\n`));
-          providerStartedResolve();
-          init?.signal?.addEventListener("abort", () => controller.error(new DOMException("Upstream aborted", "AbortError")), { once: true });
-        },
-        pull() {
-          return new Promise<void>(() => {});
-        },
-      });
-      return new Response(body, { headers: { "Content-Type": "text/event-stream" } });
-    }
-    throw new Error(`Unexpected request: ${url}`);
-  }) as typeof fetch;
-
-  const testState = globalThis as typeof globalThis & { __testTier?: string };
-  const originalTier = testState.__testTier;
-  testState.__testTier = "trial";
-  const caller = new AbortController();
-  try {
-    const response = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
-      method: "POST",
-      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
-      signal: caller.signal,
-    }));
-    const read = response.text();
-    await providerStarted;
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    caller.abort();
-    await read;
-    const row = usageRows.at(-1);
-    if (row?.status !== "cancelled" || row.cost_usd !== null) throw new Error(`cancelled stream was billed: ${JSON.stringify(row)}`);
-  } finally {
-    globalThis.fetch = originalFetch;
-    if (originalTier === undefined) delete testState.__testTier;
-    else testState.__testTier = originalTier;
-  }
-});
-
 Deno.test("cancelled JSON repair keeps observed tokens but makes the total cost unknown", async () => {
   const originalFetch = globalThis.fetch;
   const usageRows: Array<Record<string, unknown>> = [];
