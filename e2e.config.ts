@@ -16,8 +16,10 @@ if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+\/?$/.test(appUrl)) {
 const live = process.env.VERIFY_MODE === "live";
 
 // The model that drives and judges the browser, not the app's own model. It
-// needs tool calling and image input. Override per run with E2E_AGENT_MODEL.
-const model = openrouter(process.env.E2E_AGENT_MODEL ?? "openai/gpt-6-luna");
+// needs tool calling and image input. The default is free but slow, and its
+// upstream rate-limits under load; E2E_AGENT_MODEL=openai/gpt-6-luna is a fast,
+// cheap paid alternative that also explores better.
+const model = openrouter(process.env.E2E_AGENT_MODEL ?? "qwen/qwen3.8-27b:free");
 
 // `context` reaches every model call, judges included: what the app calls things.
 const context = [
@@ -25,7 +27,8 @@ const context = [
   "Each student works in one Current Debate at a time. The header control reads \"Start debate\" until one exists, then names the motion. Tool pages show a strip \"Working in: <motion>\".",
   "Tools: Generate (a full debate case: thesis, contentions, predicted opponent case, prepared counters), Attack, Brainstorm, Factoids, Ask, Sparring (a practice round against an AI opponent, judged at the end), Crossfire (cross-examination practice), Flowchart, Timer, Library (sources for the Current Debate), and History (saved results).",
   "A tool given a motion with no Current Debate asks \"Start a debate with this motion?\". A motion that differs from the Current Debate asks \"This is a different motion\".",
-  "The interface language can be English, Spanish or Hungarian. Source titles, citations, user content and model names may stay in their own language.",
+  "The interface language can be English, Spanish or Hungarian. Source titles, citations, user content and model names may stay in their own language. Hungarian abbreviates AI as MI (mesterséges intelligencia), so \"MI-modell\" is Hungarian.",
+  "Long values in selects, chips and narrow fields are shortened with an ellipsis (…) on purpose.",
   "This is a local test stack. Google sign-in, Stripe checkout, ElevenLabs voices and Google Docs export are not configured here, so their failures are expected.",
   "The client runs on a Vite dev server, so the first visit to a page can take a few seconds to render.",
   live
@@ -42,6 +45,8 @@ const rules = [
 const agent = (persona?: string) => ({
   model,
   context,
+  // Free and slow models routinely take longer than e2e's 30 s default per judgment.
+  judgmentTimeout: 180_000,
   system: [...rules, ...(persona ? [persona] : [])].join("\n"),
 });
 
@@ -61,8 +66,10 @@ export default {
       app: { url: appUrl, identity: "debatelab-verify-stack", environment: "test" },
     },
   ],
-  // AI steps wait on Edge Functions; live research and judged rounds take minutes.
-  timeout: live ? 600_000 : 180_000,
+  // AI steps wait on Edge Functions, and a free model can take minutes per judgment.
+  timeout: 600_000,
+  // More parallel model calls only trip the free model's upstream rate limit.
+  workers: process.env.CI ? 1 : 2,
   // The dev server compiles lazy routes on first visit.
   assertionTimeout: 15_000,
   video: "retain-on-failure",

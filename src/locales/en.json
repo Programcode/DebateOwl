@@ -258,7 +258,9 @@
     "reasoning": "Reasoning",
     "reasoningLow": "Low",
     "reasoningMedium": "Medium",
-    "reasoningHigh": "High"
+    "reasoningHigh": "High",
+    "label": "AI model",
+    "selectFor": "Select AI model for {{feature}}"
   },
   "voice": {
     "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
@@ -1853,7 +1855,8 @@
       "openingRoom": "Opening room...",
       "startRound": "Start round",
       "draftNotice": "Your draft is saved in this tab as you type. You can pause without losing your place.",
-      "offlineCannotStart": "Reconnect to start a round. Your setup is kept while you are offline."
+      "offlineCannotStart": "Reconnect to start a round. Your setup is kept while you are offline.",
+      "speakingOrder": "Speaking order"
     },
     "round": {
       "inProgress": "Round in progress",
@@ -2239,5 +2242,8 @@
     "lastShortened_other": "{{count}} sources were shortened to fit.",
     "lastUnavailable_one": "{{count}} item was no longer in this debate.",
     "lastUnavailable_other": "{{count}} items were no longer in this debate."
+  },
+  "themeToggle": {
+    "toggle": "Toggle theme"
   }
 }

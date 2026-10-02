@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-02T16:08:35.794Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" (2 of 2)",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "position": {
+            "index": 1,
+            "of": 2
+          }
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"This House would replace school exams w…\" into textbox \"Motion\" in \"Start new debate\"",
+        "target": {
+          "role": "textbox",
+          "name": "Motion",
+          "placeholder": "This House would…",
+          "within": "Start new debate"
+        },
+        "value": "This House would replace school exams with continuous assessment"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" in \"Start new debate\"",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "within": "Start new debate"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap link \"Generate Build a complete debate case.\"",
+        "target": {
+          "role": "link",
+          "name": "Generate Build a complete debate case."
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Generate Debate Case\"",
+        "target": {
+          "role": "button",
+          "name": "Generate Debate Case"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/case-generation.e2e.ts::a%20student%20starts%20a%20debate%20and%20generates%20a%20case%20for%20it",
+      "targetId": "desktop",
+      "instructionDigest": "86311d0b0c95064361ba72d803d642b0c0266b78be93afeba829dde446989804"
+    },
+    "summary": "Started a new debate with motion \"This House would replace school exams with continuous assessment\" (now shown as Current Debate in the header), then opened Generate and generated a case: thesis, framework, 3 structured arguments, predicted opponent case, and prepared counters are displayed (FAKE-P…",
+    "startPath": "/app",
+    "endPath": "/app/generate",
+    "endAnchors": [
+      {
+        "text": "Current debate"
+      },
+      {
+        "role": "heading",
+        "name": "Generate"
+      },
+      {
+        "text": "Working in:"
+      },
+      {
+        "text": "This House would replace school exams with continuous assessment"
+      },
+      {
+        "text": "In favor"
+      },
+      {
+        "role": "button",
+        "name": "Change"
+      },
+      {
+        "role": "button",
+        "name": "Use once"
+      },
+      {
+        "role": "heading",
+        "name": "Generate Debate Case"
+      }
+    ],
+    "endWaitMs": 18577
+  }
+}

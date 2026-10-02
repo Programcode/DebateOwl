@@ -295,7 +295,7 @@ cmd_e2e() {
     [ -n "$key" ] && export OPENROUTER_API_KEY="$key"
   fi
   if [ -n "${OPENROUTER_API_KEY:-}" ]; then
-    say "info testing agent: OpenRouter ${E2E_AGENT_MODEL:-openai/gpt-6-luna} (billed to the OpenRouter key; replayed steps are free)"
+    say "info testing agent: OpenRouter ${E2E_AGENT_MODEL:-qwen/qwen3.8-27b:free} (replayed steps make no model call)"
   else
     say "info no OpenRouter key: tests with agent steps will skip"
   fi

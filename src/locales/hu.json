@@ -258,7 +258,9 @@
     "reasoning": "Érvelés",
     "reasoningLow": "Alacsony",
     "reasoningMedium": "Közepes",
-    "reasoningHigh": "Magas"
+    "reasoningHigh": "Magas",
+    "label": "MI-modell",
+    "selectFor": "MI-modell kiválasztása: {{feature}}"
   },
   "voice": {
     "permissionDenied": "A mikrofonhozzáférés blokkolva van. Engedélyezd a mikrofont a böngésző beállításaiban, majd próbáld újra.",
@@ -1853,7 +1855,8 @@
       "openingRoom": "Szoba megnyitása...",
       "startRound": "Forduló indítása",
       "draftNotice": "A piszkozat írás közben ezen a böngészőfülön mentődik. Szüneteltetheted anélkül, hogy elveszítenéd a helyed.",
-      "offlineCannotStart": "Csatlakozz újra a forduló indításához. A beállításaid offline állapotban is megmaradnak."
+      "offlineCannotStart": "Csatlakozz újra a forduló indításához. A beállításaid offline állapotban is megmaradnak.",
+      "speakingOrder": "Felszólalási sorrend"
     },
     "round": {
       "inProgress": "Forduló folyamatban",
@@ -2239,5 +2242,8 @@
     "lastShortened_other": "{{count}} forrást rövidítettünk, hogy beférjen.",
     "lastUnavailable_one": "{{count}} elem már nem volt ebben a vitában.",
     "lastUnavailable_other": "{{count}} elem már nem volt ebben a vitában."
+  },
+  "themeToggle": {
+    "toggle": "Téma váltása"
   }
 }

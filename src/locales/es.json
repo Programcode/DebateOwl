@@ -258,7 +258,9 @@
     "reasoning": "Razonamiento",
     "reasoningLow": "Bajo",
     "reasoningMedium": "Medio",
-    "reasoningHigh": "Alto"
+    "reasoningHigh": "Alto",
+    "label": "Modelo de IA",
+    "selectFor": "Seleccionar modelo de IA para {{feature}}"
   },
   "voice": {
     "permissionDenied": "El acceso al micrófono está bloqueado. Permite el acceso al micrófono en el navegador e inténtalo de nuevo.",
@@ -1853,7 +1855,8 @@
       "openingRoom": "Abriendo la sala...",
       "startRound": "Iniciar ronda",
       "draftNotice": "Tu borrador se guarda en esta pestaña mientras escribes. Puedes pausar sin perder tu lugar.",
-      "offlineCannotStart": "Vuelve a conectarte para iniciar una ronda. La configuración se conserva mientras estás sin conexión."
+      "offlineCannotStart": "Vuelve a conectarte para iniciar una ronda. La configuración se conserva mientras estás sin conexión.",
+      "speakingOrder": "Orden de intervención"
     },
     "round": {
       "inProgress": "Ronda en curso",
@@ -2239,5 +2242,8 @@
     "lastShortened_other": "{{count}} fuentes se recortaron para que cupieran.",
     "lastUnavailable_one": "{{count}} elemento ya no estaba en este debate.",
     "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate."
+  },
+  "themeToggle": {
+    "toggle": "Cambiar tema"
   }
 }
