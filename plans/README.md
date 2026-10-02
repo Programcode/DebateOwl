@@ -10,6 +10,7 @@ Every plan lives in this folder. Before executing one, recheck its paths, assump
 
 ## Backlog
 
+- **Leaner CI and two previews per PR.** A PR push costs about 62 runner-minutes and real provider spend, and preview sign-in lands on the live site. The pinned-build code is done; the second Vercel project and the Supabase allowlist changes need Adam's go-ahead. Plan: [2026-10-01 leaner CI and previews](2026-10-01-ci-and-preview-verification.md).
 - **Admin staging switcher.** `src/lib/supabase/env.ts` already resolves staging from the `debate-supabase-env` localStorage key, but no admin UI sets it. Staging migration and function sync remain operations that need Adam's authorization.
 - **Document portability PR.** [Programcode/DebateLab#63](https://github.com/Programcode/DebateLab/pull/63) adds Workspace import and export. Workspace is on hold and the PR has open P1 review findings, so decide whether to close or park it.
 

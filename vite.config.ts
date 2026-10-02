@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin, type PluginOption } from "vite";
+import { defineConfig, loadEnv, type Plugin, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
@@ -55,6 +55,12 @@ function bundleGraph(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  // src/lib/supabase/env.ts rejects any other value at startup; fail the build
+  // instead, so a typo in a Vercel variable never deploys a blank app.
+  const pinnedEnv = loadEnv(mode, process.cwd(), "VITE_").VITE_SUPABASE_ENV?.trim();
+  if (pinnedEnv && pinnedEnv !== "production" && pinnedEnv !== "staging") {
+    throw new Error(`VITE_SUPABASE_ENV must be "production" or "staging", not "${pinnedEnv}"`);
+  }
   const release = buildRelease();
   const uploadSourceMaps = sentrySourceMaps(release);
   return {

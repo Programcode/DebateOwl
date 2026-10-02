@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/supabase/AuthProvider';
-import { getActiveEnv } from '@/lib/supabase/env';
+import { getActiveEnv, isEnvPinned } from '@/lib/supabase/env';
 import { reloadPage, switchEnv, useReloadOnEnvChange } from '@/lib/supabase/switch-env';
 
 const BANNER_HEIGHT = '2.25rem'; // h-9
@@ -37,7 +37,7 @@ export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) 
     >
       <FlaskConical className="h-4 w-4" aria-hidden="true" />
       {t('settings.stagingBanner', 'Staging backend')}
-      <Button
+      {!isEnvPinned() && <Button
         size="sm"
         variant="ghost"
         className="h-7 px-3 underline-offset-2 hover:underline"
@@ -48,7 +48,7 @@ export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) 
         }}
       >
         {t('settings.switchToProduction')}
-      </Button>
+      </Button>}
     </div>
   );
 }

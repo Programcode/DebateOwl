@@ -117,7 +117,7 @@ async function freshStart(page: Page, locale: 'en' | 'hu', tourDone: boolean) {
 for (const locale of ['en', 'hu'] as const) {
   const text = copy[locale];
 
-  test(`[${locale}] the first tour step starts the first debate, then shows Library and Generate`, async ({ page }) => {
+  test(`[${locale}] the first tour step starts the first debate, then shows Library and Generate`, locale === 'en' ? { tag: '@smoke' } : {}, async ({ page }) => {
     const backend = await freshStart(page, locale, false);
     await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
@@ -161,7 +161,7 @@ for (const locale of ['en', 'hu'] as const) {
     await expect(tooltip).toHaveCount(0);
   });
 
-  test(`[${locale}] a tool offers a first debate from the typed motion instead of the switch dialog`, async ({ page }) => {
+  test(`[${locale}] a tool offers a first debate from the typed motion instead of the switch dialog`, locale === 'en' ? { tag: '@smoke' } : {}, async ({ page }) => {
     const backend = await freshStart(page, locale, true);
     await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
 
