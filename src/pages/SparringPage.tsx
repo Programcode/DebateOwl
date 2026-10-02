@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { ArrowLeft, CircleHelp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSparringStore } from '@/lib/stores/sparring-store';
@@ -16,6 +17,7 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 import { toast } from '@/hooks/use-toast';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
+import { createArtifactSaveQueue } from '@/lib/workspace/artifact-save-queue';
 import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
@@ -64,13 +66,15 @@ export default function SparringPage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [judgingError, setJudgingError] = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const isOnline = useOnlineStatus();
   const [retryNonce, setRetryNonce] = useState(0);
   const aiRequestRef = useRef<string | null>(null);
   const judgeRequestRef = useRef<string | null>(null);
   const aiInFlightRef = useRef(false);
   const judgeInFlightRef = useRef(false);
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
+  // Autosaves fire on every change; the queue keeps an older one from landing last.
+  const [saveArtifact] = useState(() => createArtifactSaveQueue(saveWorkspaceArtifact));
   const isOnlineRef = useRef(isOnline);
   const voiceAvailability = useVoiceAvailability();
   // A voice round falls back to typing when the microphone is lost.
@@ -99,27 +103,16 @@ export default function SparringPage() {
     navigate(location.pathname, { replace: true, state: { workspaceContext: workspace.context } });
   }, [location.pathname, navigate, restoreWorkspaceSession, workspace.context, workspaceArtifact, workspaceLaunch]);
 
+  // Declared before the request effects so they read the new status in the same commit.
   useEffect(() => {
-    const handleOnline = () => {
-      isOnlineRef.current = true;
-      setIsOnline(true);
-      // Re-run a request that was gated while offline. Do not disturb a call
-      // that was already in flight before the connectivity event.
-      if (!aiInFlightRef.current && !judgeInFlightRef.current) {
-        setRetryNonce((value) => value + 1);
-      }
-    };
-    const handleOffline = () => {
-      isOnlineRef.current = false;
-      setIsOnline(false);
-    };
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+    const reconnected = isOnline && !isOnlineRef.current;
+    isOnlineRef.current = isOnline;
+    // Re-run a request that was gated while offline. Do not disturb a call
+    // that was already in flight before the connectivity event.
+    if (reconnected && !aiInFlightRef.current && !judgeInFlightRef.current) {
+      setRetryNonce((value) => value + 1);
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     if (session?.id) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -256,7 +249,7 @@ export default function SparringPage() {
 
   useEffect(() => {
     if (!workspace.context || !session) return;
-    void saveWorkspaceArtifact({
+    saveArtifact({
       documentEpoch: workspace.context.documentEpoch,
       documentId: workspace.context.documentId,
       inputSnapshot: { motion: session.motion, side: session.userSide, format: session.format, difficulty: session.difficulty },
@@ -267,7 +260,7 @@ export default function SparringPage() {
       tool: 'sparring',
       workspaceId: workspace.context.workspaceId,
     });
-  }, [session, workspace.context]);
+  }, [saveArtifact, session, workspace.context]);
 
   const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => beginRound(values, target.debateId));
 

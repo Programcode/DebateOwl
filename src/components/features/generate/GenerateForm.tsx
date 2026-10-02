@@ -32,6 +32,26 @@ interface GenerateFormProps {
   debatePrefill?: boolean;
 }
 
+function OptionSelect<V extends string>({ value, onValueChange, options, triggerClassName }: {
+  value: V;
+  onValueChange: (value: V) => void;
+  options: { value: V; label: string }[];
+  triggerClassName?: string;
+}) {
+  return (
+    <Select value={value} onValueChange={(next) => onValueChange(next as V)}>
+      <SelectTrigger className={triggerClassName}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: GenerateFormProps) {
   const { t } = useTranslation();
   const { generateForm, setGenerateForm } = useSessionStore();
@@ -154,37 +174,29 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
             {/* Side */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">{t('generateForm.side')}</Label>
-              <Select
+              <OptionSelect
                 value={currentValues.side}
-                onValueChange={(value) => setValue('side', value as GenerateInput['side'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pro">{t('generateForm.sidePro')}</SelectItem>
-                  <SelectItem value="con">{t('generateForm.sideCon')}</SelectItem>
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => setValue('side', value)}
+                options={[
+                  { value: 'pro', label: t('generateForm.sidePro') },
+                  { value: 'con', label: t('generateForm.sideCon') },
+                ]}
+              />
             </div>
 
             {/* Role */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">{t('generateForm.role')}</Label>
-              <Select
+              <OptionSelect
                 value={currentValues.role}
-                onValueChange={(value) => setValue('role', value as GenerateInput['role'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="intro">{t('generateForm.roleIntro')}</SelectItem>
-                  <SelectItem value="r1">{t('generateForm.roleR1')}</SelectItem>
-                  <SelectItem value="r2">{t('generateForm.roleR2')}</SelectItem>
-                  <SelectItem value="conc">{t('generateForm.roleConc')}</SelectItem>
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => setValue('role', value)}
+                options={[
+                  { value: 'intro', label: t('generateForm.roleIntro') },
+                  { value: 'r1', label: t('generateForm.roleR1') },
+                  { value: 'r2', label: t('generateForm.roleR2') },
+                  { value: 'conc', label: t('generateForm.roleConc') },
+                ]}
+              />
             </div>
 
           </div>
@@ -220,55 +232,46 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               {/* Length */}
               <div className="space-y-2 min-w-0">
                 <Label className="text-sm font-medium truncate block">{t('generateForm.length')}</Label>
-                <Select
+                <OptionSelect
                   value={currentValues.length}
-                  onValueChange={(value) => setValue('length', value as GenerateInput['length'])}
-                >
-                  <SelectTrigger className="min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="brief">{t('generateForm.lengthBrief')}</SelectItem>
-                    <SelectItem value="standard">{t('generateForm.lengthStandard')}</SelectItem>
-                    <SelectItem value="comprehensive">{t('generateForm.lengthComprehensive')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onValueChange={(value) => setValue('length', value)}
+                  triggerClassName="min-w-0"
+                  options={[
+                    { value: 'brief', label: t('generateForm.lengthBrief') },
+                    { value: 'standard', label: t('generateForm.lengthStandard') },
+                    { value: 'comprehensive', label: t('generateForm.lengthComprehensive') },
+                  ]}
+                />
               </div>
 
               {/* Audience */}
               <div className="space-y-2 min-w-0">
                 <Label className="text-sm font-medium truncate block">{t('generateForm.audience')}</Label>
-                <Select
+                <OptionSelect
                   value={currentValues.audience}
-                  onValueChange={(value) => setValue('audience', value as GenerateInput['audience'])}
-                >
-                  <SelectTrigger className="min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">{t('generateForm.audienceBeginner')}</SelectItem>
-                    <SelectItem value="intermediate">{t('generateForm.audienceIntermediate')}</SelectItem>
-                    <SelectItem value="advanced">{t('generateForm.audienceAdvanced')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onValueChange={(value) => setValue('audience', value)}
+                  triggerClassName="min-w-0"
+                  options={[
+                    { value: 'beginner', label: t('generateForm.audienceBeginner') },
+                    { value: 'intermediate', label: t('generateForm.audienceIntermediate') },
+                    { value: 'advanced', label: t('generateForm.audienceAdvanced') },
+                  ]}
+                />
               </div>
 
               {/* Tone */}
               <div className="space-y-2 min-w-0">
                 <Label className="text-sm font-medium truncate block">{t('generateForm.tone')}</Label>
-                <Select
+                <OptionSelect
                   value={currentValues.tone}
-                  onValueChange={(value) => setValue('tone', value as GenerateInput['tone'])}
-                >
-                  <SelectTrigger className="min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="formal">{t('generateForm.toneFormal')}</SelectItem>
-                    <SelectItem value="conversational">{t('generateForm.toneConversational')}</SelectItem>
-                    <SelectItem value="aggressive">{t('generateForm.toneAggressive')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onValueChange={(value) => setValue('tone', value)}
+                  triggerClassName="min-w-0"
+                  options={[
+                    { value: 'formal', label: t('generateForm.toneFormal') },
+                    { value: 'conversational', label: t('generateForm.toneConversational') },
+                    { value: 'aggressive', label: t('generateForm.toneAggressive') },
+                  ]}
+                />
                 <p className="text-[11px] text-muted-foreground">{t('generateForm.styleNote')}</p>
               </div>
             </div>

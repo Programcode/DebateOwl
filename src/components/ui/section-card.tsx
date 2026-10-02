@@ -13,6 +13,8 @@ interface SectionCardProps {
   className?: string;
   onRegenerate?: () => void;
   isLoading?: boolean;
+  /** Disables the regenerate button without covering this card. */
+  regenerateDisabled?: boolean;
   icon?: React.ReactNode;
 }
 
@@ -23,12 +25,13 @@ export function SectionCard({
   className,
   onRegenerate,
   isLoading,
+  regenerateDisabled,
   icon,
 }: SectionCardProps) {
   const { t } = useTranslation();
   return (
     <Card className={cn('card-hover-glow relative overflow-hidden', className)}>
-      {isLoading && <LoadingOverlay message={`Generating ${title.toLowerCase()}...`} />}
+      {isLoading && <LoadingOverlay message={t('common.regenerating', 'Regenerating {{title}}…', { title })} />}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -43,7 +46,7 @@ export function SectionCard({
               variant="ghost"
               size="icon"
               onClick={onRegenerate}
-              disabled={isLoading}
+              disabled={isLoading || regenerateDisabled}
               className="h-8 w-8 shrink-0 hover-icon-spin"
               aria-label={t('common.regenerate', 'Regenerate {{title}}', { title })}
             >

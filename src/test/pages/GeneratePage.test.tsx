@@ -86,8 +86,8 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
 }));
 
 vi.mock('@/components/features/generate/GenerateResults', () => ({
-    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, onPracticeCrossfire }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, onPracticeCrossfire?: () => void }) => (
-        <div data-testid="generate-results">
+    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, regeneratingSection = null, onPracticeCrossfire }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, regeneratingSection?: string | null, onPracticeCrossfire?: () => void }) => (
+        <div data-testid="generate-results" data-regenerating={regeneratingSection ?? ''}>
             <h1>Results for {result.caseStructure.thesis}</h1>
             <div data-testid="discovered-sources">{discoveredSources.map((source) => source.title).join(',')}</div>
             <button onClick={() => onRegenerateSection?.('contentions')} data-testid="regenerate-section">Regenerate section</button>
@@ -270,6 +270,38 @@ describe('GeneratePage Integration', () => {
             expect(screen.getByTestId('discovered-sources')).toHaveTextContent('Fresh source');
         });
         expect(screen.getByTestId('discovered-sources')).not.toHaveTextContent('Old source');
+    });
+
+    it('keeps the results on screen while one section regenerates', async () => {
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Existing Thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: {},
+        };
+        let finish: (value: unknown) => void = () => undefined;
+        (generateCase as Mock).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+
+        render(
+            <BrowserRouter>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        expect(screen.getByTestId('generate-results')).toHaveAttribute('data-regenerating', 'contentions');
+        expect(screen.getByTestId('submit-button')).toBeDisabled();
+        expect(mockSetGenerateLoading).not.toHaveBeenCalled();
+
+        // A second click while the first is in flight would merge over a stale result.
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        expect(generateCase).toHaveBeenCalledTimes(1);
+
+        finish({ result: { ...mockGenerateResult, contentions: [{ claim: 'Updated' }] }, discoveredSources: [] });
+        await waitFor(() => expect(screen.getByTestId('generate-results')).toHaveAttribute('data-regenerating', ''));
+        expect(mockSetGenerateLoading).not.toHaveBeenCalled();
     });
 
     it('records the case in the Current Debate with its side automatically', async () => {

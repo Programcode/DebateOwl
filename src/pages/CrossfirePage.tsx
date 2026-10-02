@@ -60,6 +60,7 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { toast } from '@/hooks/use-toast';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
+import { createArtifactSaveQueue } from '@/lib/workspace/artifact-save-queue';
 import { useSpeechCapture } from '@/hooks/use-speech-capture';
 import { isAppLanguage } from '@/lib/languages';
 import { DeliveryFacts } from '@/components/features/voice/DeliveryFacts';
@@ -318,6 +319,8 @@ export default function CrossfirePage() {
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
+  // Autosaves fire on every change; the queue keeps an older one from landing last.
+  const [saveArtifact] = useState(() => createArtifactSaveQueue(saveWorkspaceArtifact));
   const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
   const sourceDebateId = useDebateStore((debates) => debates.oneOff ? null : debates.currentDebateId);
@@ -385,7 +388,7 @@ export default function CrossfirePage() {
 
   useEffect(() => {
     if (!workspace.context) return;
-    void saveWorkspaceArtifact({
+    saveArtifact({
       documentEpoch: workspace.context.documentEpoch,
       documentId: workspace.context.documentId,
       inputSnapshot: state.phase === 'setup' ? state.config : { config: state.config },
@@ -396,7 +399,7 @@ export default function CrossfirePage() {
       tool: 'crossfire',
       workspaceId: workspace.context.workspaceId,
     });
-  }, [state, workspace.context]);
+  }, [saveArtifact, state, workspace.context]);
 
   // A round that finishes on this page is recorded in its debate once.
   const recordedPhaseRef = useRef(state.phase);

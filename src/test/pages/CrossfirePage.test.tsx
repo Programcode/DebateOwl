@@ -6,6 +6,11 @@ const mocks = vi.hoisted(() => ({
   userId: 'user-a',
   crossfire: vi.fn<() => Promise<unknown>>(() => new Promise(() => undefined)),
   crossfireSignal: vi.fn<(input: unknown, config: unknown, options: { signal?: AbortSignal }) => Promise<unknown>>(() => Promise.resolve(undefined)),
+  saveArtifact: vi.fn<(input: { progress: { config: { resolution: string } } }) => Promise<string>>(),
+}));
+
+vi.mock('@/lib/workspace/practice-client', () => ({
+  saveWorkspaceArtifact: mocks.saveArtifact,
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
@@ -33,6 +38,7 @@ import CrossfirePage from '@/pages/CrossfirePage';
 import { createCrossfireSetupState } from '@/lib/crossfire/reducer';
 import { loadCrossfireDraft, saveCrossfireDraft } from '@/lib/crossfire/storage';
 import { enableOneOffMode, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
+import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 
 function renderPage() {
   return render(
@@ -51,6 +57,44 @@ describe('CrossfirePage', () => {
     mocks.crossfireSignal.mockReset();
     mocks.crossfireSignal.mockResolvedValue(undefined);
     localStorage.clear();
+  });
+
+  it('autosaves workspace progress one save at a time so older text never lands last', async () => {
+    const workspaceContext: WorkspaceToolContext = {
+      documentEpoch: 2,
+      documentId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      documentIds: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
+      documentText: 'Accepted text',
+      documentTitle: 'R1',
+      motion: 'Motion',
+      requestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      returnUrl: '/app/workspaces/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      side: 'pro',
+      sourceIds: [],
+      threadRequest: null,
+      threadId: null,
+      workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    };
+    const finishSave: (() => void)[] = [];
+    mocks.saveArtifact.mockImplementation(() => new Promise((resolve) => { finishSave.push(() => resolve('artifact')); }));
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/app/crossfire', state: { workspaceContext } }]}>
+        <CrossfirePage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mocks.saveArtifact).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: a' } });
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: ab' } });
+    fireEvent.change(screen.getByTestId('crossfire-resolution'), { target: { value: 'Resolved: abc' } });
+    // The first save is still running, so nothing else is sent yet.
+    expect(mocks.saveArtifact).toHaveBeenCalledTimes(1);
+
+    finishSave[0]();
+    await waitFor(() => expect(mocks.saveArtifact).toHaveBeenCalledTimes(2));
+    expect(mocks.saveArtifact.mock.calls[1][0].progress.config.resolution).toBe('Resolved: abc');
+    finishSave[1]();
   });
 
   it('supports arrow-key radio navigation', () => {

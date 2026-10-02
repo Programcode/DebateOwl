@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { AlertCircle, Bot, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,7 +64,7 @@ export function SparringRound({
   const pauseTimer = useSparringStore((state) => state.pauseTimer);
   const resumeTimer = useSparringStore((state) => state.resumeTimer);
   const resetTurnTimer = useSparringStore((state) => state.resetTurnTimer);
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const isOnline = useOnlineStatus();
   const currentTurn = session.turns[session.currentTurnIndex];
   const currentWordCount = wordCount(session.draft);
   const totalWords = useMemo(() => session.speeches.reduce((sum, speech) => sum + wordCount(speech.content), 0), [session.speeches]);
@@ -75,17 +76,6 @@ export function SparringRound({
   const isUrgent = session.timerRemainingSeconds <= 30 && session.timerRemainingSeconds > 0;
   const timeExpired = session.timerRemainingSeconds <= 0
     || (session.timerDeadline !== null && session.timerDeadline <= Date.now());
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   useEffect(() => {
     if (!userTurn || !session.timerRunning) return;
