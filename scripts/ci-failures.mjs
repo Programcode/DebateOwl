@@ -13,6 +13,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:f
 import { join, relative } from "node:path";
 
 const DOWNLOAD_ROOT = ".ci-failures";
+// A job that hit its timeout-minutes ends as timed_out, not failure.
+const FAILED_CONCLUSIONS = new Set(["failure", "timed_out"]);
 const SNAPSHOT_MARKERS = /\b(dialog|alertdialog|alert|heading)\b/;
 
 function gh(args, options = {}) {
@@ -162,7 +164,7 @@ const runs = runsForArgument(process.argv[2]);
 const failed = [];
 for (const run of runs) {
   const { jobs } = ghJson(["run", "view", String(run.databaseId), "--json", "jobs"]);
-  const failedJobs = jobs.filter((job) => job.conclusion === "failure");
+  const failedJobs = jobs.filter((job) => FAILED_CONCLUSIONS.has(job.conclusion));
   if (failedJobs.length) failed.push({ run, failedJobs });
 }
 
@@ -175,8 +177,8 @@ if (!failed.length) {
 for (const { run, failedJobs } of failed) {
   console.log(`\n=== ${run.name} (${run.status === "completed" ? run.conclusion : run.status}): ${run.url}`);
   for (const job of failedJobs) {
-    const steps = job.steps.filter((step) => step.conclusion === "failure").map((step) => step.name);
-    console.log(`\n- Job ${job.name} failed at: ${steps.join(", ") || "(no failed step reported)"}`);
+    const steps = job.steps.filter((step) => FAILED_CONCLUSIONS.has(step.conclusion) || step.conclusion === "cancelled").map((step) => step.name);
+    console.log(`\n- Job ${job.name} ${job.conclusion === "timed_out" ? "timed out" : "failed"} at: ${steps.join(", ") || "(no failed step reported)"}`);
     for (const line of failedJobSummary(job.databaseId)) console.log(`  ${line}`);
   }
   // Artifacts upload at the end of a job, so they exist once the job has failed.

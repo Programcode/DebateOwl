@@ -108,7 +108,7 @@ Run this after `npm run build`. It serves `dist/` through Vite preview and prove
 ## Credential-free browser gate
 
 ```bash
-CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
 `.superset/e2e-port.sh` gives each worktree its own port from `18100-18179`, recorded in `~/.superset/debatelab-ports/allocations.json`, so two worktrees can run the gate at once. Without `PORT`, Playwright falls back to `18080`. Playwright starts a new Vite server on that port and runs:
@@ -264,7 +264,7 @@ npx playwright install --with-deps webkit
 Run:
 
 ```bash
-CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e:webkit
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:webkit
 ```
 
 This is the Safari-engine smoke gate. State explicitly when it did not run.

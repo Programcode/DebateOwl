@@ -143,7 +143,7 @@ Never point local tests at staging or production. Never apply a migration to an 
 [`playwright.config.ts`](../playwright.config.ts) starts Vite on an isolated port and refuses to reuse an existing server.
 
 ```bash
-CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
 Failure artifacts go to ignored `test-results/` and `playwright-report/`. Protected staging disables traces, screenshots, and video.

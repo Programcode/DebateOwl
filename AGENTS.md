@@ -46,7 +46,7 @@ npm test -- --coverage
 npm run test:collaboration
 npm run test:edge
 npm run build
-CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
 `npm run verify` runs the complete credential-free ladder, including desktop and mobile Chromium against a fresh Vite server.
@@ -76,7 +76,7 @@ WebKit is a separate release smoke test:
 
 ```bash
 npx playwright install --with-deps webkit
-CI=1 PORT=$(bash .superset/e2e-port.sh) npm run test:e2e:webkit
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:webkit
 ```
 
 ## Verifying features in the real app
