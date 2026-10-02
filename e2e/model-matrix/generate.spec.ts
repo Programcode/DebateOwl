@@ -1,5 +1,5 @@
 import { MODEL_CATALOG } from "../../supabase/functions/_shared/model-catalog";
-import { expect, fake, stackReady, test } from "../full-stack/stack";
+import { chooseForMotion, expect, fake, stackReady, test } from "../full-stack/stack";
 import { aiResponse, LIVE_TIMEOUT } from "../live/live";
 
 // Every model a user can pick must generate a case. The regular live suite pins
@@ -16,6 +16,7 @@ for (const model of MODEL_CATALOG) {
     await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
     const response = aiResponse(page, "generate");
     await page.getByRole("button", { name: "Generate Debate Case" }).click();
+    await chooseForMotion(page, "once");
     const body = await response;
     expect(body.output.contentions).toHaveLength(3);
 
