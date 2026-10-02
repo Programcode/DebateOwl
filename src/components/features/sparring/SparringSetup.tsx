@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
@@ -17,15 +18,21 @@ import {
   formatRoundTime,
 } from '@/lib/sparring/formats';
 import type { SparringDifficulty, SparringFormat, SparringSide } from '@/lib/ai/schemas/sparring';
+import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
+import { useVoiceAvailability } from '@/lib/voice/availability';
 
 export interface SparringSetupValues {
   motion: string;
   userSide: SparringSide;
   format: SparringFormat;
   difficulty: SparringDifficulty;
+  /** Speak the round and hear the opponent, instead of typing. */
+  voice: boolean;
 }
 
 interface SparringSetupProps {
+  /** Offer voice rounds. Off where a round cannot be spoken, such as a workspace. */
+  voiceAllowed?: boolean;
   /** Rendered directly below the title, e.g. the Current Debate strip. */
   banner?: React.ReactNode;
   /** Fill the motion from the Current Debate. */
@@ -41,7 +48,7 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, isStarting = false, initialValues, banner, debatePrefill = false }: SparringSetupProps) {
+export function SparringSetup({ onStart, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initialValues?.motion ?? '');
   const motionRef = useRef(motion);
@@ -50,18 +57,9 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
   const [userSide, setUserSide] = useState<SparringSide>(initialValues?.userSide ?? 'pro');
   const [format, setFormat] = useState<SparringFormat>('standard');
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('medium');
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const [voice, setVoice] = useState(false);
+  const voiceAvailability = useVoiceAvailability();
+  const isOnline = useOnlineStatus();
 
   const selectedFormat = useMemo(() => SPARRING_FORMATS.find((item) => item.id === format) ?? SPARRING_FORMATS[0], [format]);
   const plannedTurns = useMemo(() => buildSparringTurns(format, userSide), [format, userSide]);
@@ -72,7 +70,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canStart) return;
-    onStart({ motion: motion.trim(), userSide, format, difficulty });
+    onStart({ motion: motion.trim(), userSide, format, difficulty, voice: voiceAllowed && voice && voiceAvailability.available });
   };
 
   return (
@@ -172,6 +170,15 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
               })}
             </CardContent>
           </Card>
+
+          {voiceAllowed && (
+            <VoiceModeToggle
+              id="sparring-voice"
+              checked={voice}
+              onCheckedChange={setVoice}
+              description={t('voiceRound.mode.sparringDescription')}
+            />
+          )}
         </div>
 
         <aside className="space-y-4">

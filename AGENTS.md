@@ -31,6 +31,7 @@ The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `m
 
 - Vite development server: `8080` by default outside Superset; Superset allocates `8080-8179` per worktree.
 - Automated browser server: isolated `127.0.0.1:18080`, never an existing dev server.
+- Tailnet previews for Adam: `npm run dev:preview` listens locally on `9200-9299` and is published on tailnet HTTPS `9100-9149`; it pins the app to staging. See [docs/development.md](docs/development.md#preview-on-the-tailnet).
 - Local Supabase: CLI defaults beginning at `54321`. The stack is not parallel-safe across worktrees.
 
 ## Focused verification
@@ -74,6 +75,36 @@ WebKit is a separate release smoke test:
 npx playwright install --with-deps webkit
 CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webkit
 ```
+
+## Verifying features in the real app
+
+To prove that a user-facing change works, drive the real app with the `verify-debatelab` skill ([SKILL.md](.claude/skills/verify-debatelab/SKILL.md)). It runs the React client, local Supabase Auth, Postgres, and Edge Functions, and signs in real demo users. Each run keeps screenshots, ARIA snapshots, provider calls, and database rows in `.verify/artifacts/`.
+
+```bash
+H=.claude/skills/verify-debatelab/bin/verify.sh
+$H up                  # fake model provider, free
+$H up --live           # real AI: OpenRouter pinned to meta/muse-spark-1.3-contributor, real Exa
+$H doctor              # proves the stack is local, ours, and (live) pinned
+$H drive all           # every recipe; or recipes/<name>, e2e/<path>; add --project desktop-chromium
+$H down                # always, including after failures
+```
+
+- Use `--live` when the change touches prompts, model output handling, web research, or citations. The fake mode cannot prove those. URL import fetches pages directly and works the same in both modes. Every chat call is rewritten to the Muse Spark contributor model, so a full run costs cents plus Exa searches, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content: the contributor model may keep prompts.
+- Live keys come from `~/.config/debatelab/live-verify.env` (mode 600, `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY`). On Adam's VPS it holds copies of the Hermes keys in `~/.hermes/.env`. Never print them.
+- The stack holds the same lock as `./.superset/db-gate.sh`, so only one worktree can run it at a time.
+- Most tools work inside a Current Debate. Recipes start one with `startDebate` or answer the motion dialog with `chooseForMotion`; see the skill's Drive section.
+- Neither mode proves Stripe Checkout, real Stripe cancellation, ElevenLabs voice audio, Google sign-in or export, staging, or production.
+
+### Keep the skill working
+
+The skill is maintained code. A change that breaks it or makes it stale must update it in the same PR. That includes a new dialog in a flow, renamed labels or test IDs, moved routes, new stack services, and a new or removed user-facing feature. Specifically:
+
+- Fix the affected recipes in `.claude/skills/verify-debatelab/recipes/`, and add a recipe for a new feature.
+- Update the matching file in `features/` and its index in `features/README.md`.
+- Update `SKILL.md` wherever its commands, selectors, or limits no longer match the app.
+- Run `$H drive recipes/<name>` for every recipe you touched, on both `desktop-chromium` and `mobile-chromium`, and report the result in the PR. A recipe that no longer passes is a regression, the same as a failing test.
+
+Never weaken a recipe's assertions to make it pass.
 
 ## Hard boundaries
 

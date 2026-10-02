@@ -1,5 +1,6 @@
 const testEnvironment = {
   SUPABASE_URL: "https://supabase.test",
+  SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   OPENROUTER_API_KEY: "test-openrouter-key",
 };

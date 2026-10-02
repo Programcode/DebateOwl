@@ -227,6 +227,7 @@
     "docx": "DOCX",
     "googleDocs": "Google Docs",
     "regenerate": "{{title}} újragenerálása",
+    "regenerating": "{{title}} újragenerálása folyamatban…",
     "openingPage": "{{page}} megnyitása",
     "page": "Oldal",
     "close": "Bezárás",
@@ -262,6 +263,58 @@
   "voice": {
     "permissionDenied": "A mikrofonhozzáférés blokkolva van. Engedélyezd a mikrofont a böngésző beállításaiban, majd próbáld újra.",
     "startFailed": "A diktálás nem indítható el. Ellenőrizd a mikrofont, majd próbáld újra."
+  },
+  "voiceRound": {
+    "mode": {
+      "label": "Hangos kör",
+      "sparringDescription": "Mondd el a beszédeidet, és hallgasd meg hangosan az ellenfél válaszát. Gépelni továbbra is lehet.",
+      "crossfireDescription": "Mondd ki a kérdéseidet és a válaszaidat, és hallgasd meg hangosan az ellenfél feleletét. Gépelni továbbra is lehet.",
+      "privacyLine": "A DebateLab soha nem rögzíti és nem tárolja a hangodat."
+    },
+    "unavailable": {
+      "unsupported": "Hangos kör itt nem érhető el, mert ebben a böngészőben nincs beszédfelismerés. Gépelni a szokott módon lehet.",
+      "denied": "A hangos kör ki van kapcsolva, mert a mikrofon-hozzáférés le van tiltva. Gépelni a szokott módon lehet."
+    },
+    "notice": {
+      "title": "Mielőtt bekapcsolod a hangot",
+      "noRecording": "A DebateLab soha nem rögzíti és nem tárolja a hangodat. Csak az elhangzottak szövege marad meg, ahogy egy gépelt körben.",
+      "recognition": "A beszédedet a böngésződ alakítja szöveggé. Chrome-ban ehhez a hangod a Google-höz kerül; más böngészők a saját beszédfelismerő szolgáltatásuknak küldhetik el.",
+      "opponent": "Az ellenfél válaszait szövegként elküldjük az ElevenLabsnek, amely előállítja a hangot, amelyet hallasz.",
+      "accept": "Hang bekapcsolása"
+    },
+    "mic": {
+      "start": "Beszéd indítása",
+      "stop": "Beszéd leállítása",
+      "listening": "Figyelek",
+      "draftPlaceholder": "A szavaid itt jelennek meg, ahogy beszélsz. Gépelhetsz is, vagy kijavíthatod őket.",
+      "notAllowed": "A mikrofon-hozzáférés le van tiltva. Engedélyezd a böngésző beállításaiban, hogy szóban mondhasd el a köreidet.",
+      "noMicrophone": "Nem található mikrofon. Csatlakoztass egyet, és próbáld újra, vagy gépeld be a körödet.",
+      "network": "A beszédfelismerés kapcsolata megszakadt. Próbáld újra, vagy gépeld be a körödet.",
+      "startFailed": "A beszédfelismerés nem indult el. Próbáld újra, vagy gépeld be a körödet."
+    },
+    "opponent": {
+      "loading": "Az ellenfél hangjának előkészítése",
+      "speaking": "Az ellenfél beszél",
+      "blocked": "A böngésződ rád vár, mielőtt hangot játszana le.",
+      "play": "Válasz lejátszása",
+      "stop": "Hang leállítása",
+      "limit": "Az ellenfél ElevenLabs-hangjának mai kerete elfogyott, ezért a válaszokat a böngésződ hangja olvassa fel."
+    },
+    "delivery": {
+      "title": "Szóbeli előadás, mérve",
+      "description": "Ezek a számok az órából és abból a leiratból származnak, amelyet a böngésződ készített az elhangzottakról. Senki nem figyelte a hangszínedet, a magabiztosságodat vagy a hangerődet, és a leiratból kimaradhatnak szavak.",
+      "speakingTime": "Beszédidő",
+      "timeOfLimit": "{{used}} / {{limit}}",
+      "pace": "Tempó",
+      "wordsPerMinute": "{{count}} szó percenként",
+      "fillers": "Töltelékszavak",
+      "longPauses": "Legalább {{seconds}} másodperces szünetek",
+      "pausesWithLongest": "{{count}} (a leghosszabb {{seconds}} mp)"
+    },
+    "scorecard": {
+      "categoryNotesDescription": "Minden pontszám mögött konkrét indokok állnak. A szóban elmondott beszédeknél az előadást a lenti mért adatok és az elhangzottak felépítése alapján értékeljük, nem az alapján, hogyan hangzottál.",
+      "measuredOnly": "mérve, nem hallgatva"
+    }
   },
   "home": {
     "title": "DebateLab",
@@ -1572,11 +1625,11 @@
     "s2": "Hogyan Használjuk az Információidat",
     "p2": "Az információidat szolgáltatásaink nyújtására és fejlesztésére, MI válaszok generálására, mentett tartalmad karbantartására és szolgáltatási frissítések kommunikálására használjuk.",
     "s3": "MI Feldolgozás",
-    "p3": "A bemeneteidet az OpenRouternek küldjük MI-feldolgozásra az általad választott modellel. A tartalmadat nem használjuk MI-modellek betanítására.",
+    "p3": "A bemeneteidet az OpenRouternek küldjük MI-feldolgozásra az általad választott modellel. A tartalmadat nem használjuk MI-modellek betanítására. Hangos körben a böngésződ beszédfelismerése alakítja szöveggé a beszédedet; Chrome-ban ehhez a hangod a Google-höz kerül, más böngészők pedig a saját beszédfelismerő szolgáltatásuknak küldhetik el. A DebateLab soha nem rögzíti és nem tárolja a hangodat. Az MI-ellenfél válaszait szövegként elküldjük az ElevenLabsnek, hogy előállítsa a hangját.",
     "s4": "Adattárolás",
     "p4": "Adataidat biztonságosan, a Supabase infrastruktúráján tároljuk, nyugalmi és átvitel közbeni titkosítással.",
     "s5": "Adatmegosztás",
-    "p5": "Nem adjuk el személyes adataidat. Csak az OpenRouterrel osztunk meg adatot MI-feldolgozás céljából, valamint fizetési szolgáltatókkal a számlázáshoz.",
+    "p5": "Nem adjuk el személyes adataidat. Csak az OpenRouterrel osztunk meg adatot MI-feldolgozás céljából, az ElevenLabsszel az ellenfél hangjához a hangos körökben, valamint fizetési szolgáltatókkal a számlázáshoz.",
     "s6": "Jogaid",
     "p6": "A Beállításokban letöltheted az adataidat egy JSON-fájlban, törölheted a mentett munkáidat, vagy törölheted a fiókodat. A fiók törlése véglegesen eltávolítja a fiókot és minden hozzá tárolt adatot, és azonnal lemondja az esetleges Pro-előfizetést. A Stripe a saját számlázási nyilvántartásait, például a számlákat és a befizetéseket, az adózási és számviteli előírások szerint megőrzi.",
     "s7": "Sütik és Nyomkövetés",

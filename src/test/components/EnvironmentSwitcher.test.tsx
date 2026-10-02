@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/supabase/env', () => ({
   ENV_STORAGE_KEY: 'debate-supabase-env',
   getActiveEnv: () => mocks.env,
-  isEnvPinned: () => mocks.pinned,
+  isEnvPinned: () => mocks.env === 'local' || mocks.pinned,
   setActiveEnv: mocks.setActiveEnv,
 }));
 vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ leaveEnvironment: mocks.signOut, discardTabState: mocks.discard }) }));
@@ -73,15 +73,15 @@ describe('EnvironmentSwitcher', () => {
     expect(reload).toHaveBeenCalledOnce();
   });
 
-  it('renders nothing when the build pins its project', () => {
-    mocks.env = 'staging';
-    mocks.pinned = true;
+  it('renders nothing in local preview', () => {
+    mocks.env = 'local';
     const { container } = render(<EnvironmentSwitcher reload={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders nothing in local preview', () => {
-    mocks.env = 'local';
+  it('renders nothing in a staging preview build, which cannot switch', () => {
+    mocks.env = 'staging';
+    mocks.pinned = true;
     const { container } = render(<EnvironmentSwitcher reload={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
@@ -127,7 +127,7 @@ describe('StagingBanner', () => {
     localStorage.removeItem('debate-supabase-env');
   });
 
-  it('marks a pinned staging build without offering a switch or following other tabs', () => {
+  it('marks a staging preview build without offering a switch it cannot make', () => {
     mocks.env = 'staging';
     mocks.pinned = true;
     const reload = vi.fn();

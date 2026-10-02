@@ -2,6 +2,7 @@ import {
   calculateRequestCost,
   markIncompleteUsage,
   mergeNormalizedUsage,
+  normalizeElevenLabsUsage,
   normalizeOpenRouterUsage,
   selectObservedUsage,
 } from "./cost.ts";
@@ -181,4 +182,32 @@ Deno.test("incomplete stream usage preserves observations and fails closed witho
     if (usage && (marked.raw !== raw || cost.inputTokens !== 100 || cost.outputTokens !== 20)) throw new Error("Observed usage changed");
   }
   if (observed.incomplete) throw new Error("Marker mutated original usage");
+});
+
+Deno.test("ElevenLabs speech is priced from billed characters at the snapshot rate", () => {
+  const usage = normalizeElevenLabsUsage({ characters: 480, characterCostHeader: "500", requestId: "req_1" });
+  const result = calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4", usage });
+  // The provider's own count wins over the characters sent.
+  if (result.costUsd !== 0.04) throw new Error(`wrong cost: ${result.costUsd}`);
+  if (result.pricingSnapshotId !== "elevenlabs-api-pricing-2026-10-01") throw new Error("wrong snapshot");
+  if (result.pricingSourceUrl !== "https://elevenlabs.io/pricing/api") throw new Error("wrong source");
+  if (result.costCalculationVersion !== "elevenlabs-characters-v1") throw new Error("wrong calculation version");
+  if (result.inputTokens !== null || result.outputTokens !== null) throw new Error("speech has no tokens");
+  if (result.rawUsage?.characters !== 480 || result.rawUsage?.request_id !== "req_1") throw new Error("raw usage lost");
+});
+
+Deno.test("ElevenLabs speech without a usable header is priced from the characters sent", () => {
+  for (const header of [null, "", "abc", "-5"]) {
+    const usage = normalizeElevenLabsUsage({ characters: 1_000, characterCostHeader: header, requestId: null });
+    const result = calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4_turbo", usage });
+    if (result.costUsd !== 0.04) throw new Error(`wrong cost for header ${JSON.stringify(header)}: ${result.costUsd}`);
+  }
+});
+
+Deno.test("ElevenLabs cost fails closed for an unlisted model, missing usage, or incomplete work", () => {
+  const usage = normalizeElevenLabsUsage({ characters: 100, characterCostHeader: "100", requestId: null });
+  const unlisted = calculateRequestCost({ provider: "elevenlabs", model: "eleven_v9", usage });
+  if (unlisted.costUsd !== null || unlisted.pricingSourceUrl !== null) throw new Error("an unlisted model was priced");
+  if (calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4" }).costUsd !== null) throw new Error("missing usage was priced");
+  if (calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4", usage: { incomplete: true } }).costUsd !== null) throw new Error("incomplete work was priced");
 });

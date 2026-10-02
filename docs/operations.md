@@ -44,7 +44,7 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 - SPA fallback to `index.html`;
 - no-cache headers for `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;
-- Content Security Policy and the other response security headers.
+- Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only.
 
 [`src/test/vercel-deployment-config.test.ts`](../src/test/vercel-deployment-config.test.ts) guards these rules. Update it together with `vercel.json`, and do not paste the full configuration into another guide.
 
@@ -83,7 +83,7 @@ Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production
    A migration with a local version and no remote version is pending. A function whose folder changed (`git log -- supabase/functions/<name> supabase/functions/_shared`) after its remote `updated_at` is stale. Save both lists as the rollback baseline.
 3. Apply migrations. Run `supabase db push --project-ref brifeyypjauyusmkptkx --dry-run` and check that it lists exactly the pending files from step 2. Then run it without `--dry-run`. Never use `--include-all` to paper over divergent history.
 4. Deploy functions, one at a time, only the ones step 2 marked stale: `supabase functions deploy <name> --project-ref brifeyypjauyusmkptkx --use-api`. [`supabase/config.toml`](../supabase/config.toml) supplies each function's JWT setting. Never use `--prune`.
-5. Verify. Rerun step 2; it must show nothing pending. Then start the staging browser suite: dispatch `Protected staging E2E` from `main` with `gh workflow run staging-e2e.yml --ref main`, or, when Actions cannot run, run it locally with the protected values as described in [testing.md](testing.md#protected-staging). For a manual check in the browser, an admin can switch the deployed frontend to staging from Settings and sign in there with a staging demo code. Google and email sign-in on staging work only if the staging Auth redirect URLs include the frontend origin.
+5. Verify. Rerun step 2; it must show nothing pending. Then start the staging browser suite: dispatch `Protected staging E2E` from `main` with `gh workflow run staging-e2e.yml --ref main`, or, when Actions cannot run, run it locally with the protected values as described in [testing.md](testing.md#protected-staging). For a manual check in the browser, an admin can switch the deployed frontend to staging from Settings and sign in there with a staging demo code. Google and email sign-in on staging work only if the staging Auth redirect URLs include the frontend origin. Since 2026-10-02 they include tailnet previews (`https://codex-remote.tailab0ab3.ts.net:91*/**`); see [development.md](development.md#preview-on-the-tailnet).
 
 Production then follows [Supabase changes](#supabase-changes) with the same list of migrations and functions.
 
@@ -155,6 +155,8 @@ Auth patterns include:
 
 A successful deploy command proves upload only. Verify the behavior through the real endpoint or protected staging flow.
 
+Voice rounds span three independent steps, and the frontend works at every stage of them. The frontend alone (a merge) offers voice rounds that speak with the browser's voice. Deploying `ai` adds audio tags and signed segments to voice replies; deploying `voice` adds the endpoint, which answers `voice_unavailable` until `ELEVENLABS_API_KEY` is set. Deploy `ai` and `voice` together, since they share the token code. Once the key is set, check one Sparring and one Crossfire reply in a real browser, and confirm `voice_sparring` and `voice_crossfire` rows with a cost in `ai_requests`. Removing the key returns every round to the browser voice without a deploy.
+
 ## CORS
 
 Current functions mostly use local explicit origin allowlists. The exact list can differ by endpoint. Treat handler code as the source of truth.
@@ -169,6 +171,7 @@ Secret names may be documented; values may not. Server-side categories include:
 
 - Supabase service credentials;
 - AI provider credentials;
+- the ElevenLabs credential for the opponent's voice (`ELEVENLABS_API_KEY`);
 - research provider credentials;
 - Stripe API and webhook credentials;
 - demo-code hashing material;
@@ -185,7 +188,7 @@ Vercel build variables for Sentry source maps: `SENTRY_AUTH_TOKEN` (an organizat
 
 Choose rollback before changing production:
 
-- Frontend: promote the previous known-good Vercel production deployment, or revert the commit on `main` and let Vercel redeploy.
+- Frontend: promote the previous known-good Vercel production deployment (about 10 seconds), or revert the commit on `main` and let Vercel redeploy (one to two minutes). The Vercel project is `debate-navigator`. `vercel inspect debate.pi-stack.org` shows the live deployment, `vercel ls debate-navigator --environment production --status READY` lists the earlier ones, and `vercel rollback <previous-deployment-url> --yes` switches back. On Adam's VPS, `~/ops/rollback/rollback vercel debate-navigator` does all three. After a rollback, Vercel stops putting new `main` deployments live until one is promoted with `vercel promote <deployment-url>`, so promote the fixed deployment once it is ready. A frontend rollback does not touch Supabase: if the bad change came with a migration or function deploy, the old frontend must still work with the new backend.
 - Edge Function: retain the deployed source or artifact baseline and its environment assumptions.
 - Migration: prefer forward corrective migrations. Do not assume an irreversible schema or data change can be rolled back.
 - Configuration: record the prior value without exposing secrets.

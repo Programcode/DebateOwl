@@ -25,7 +25,8 @@ export async function switchEnv(target: RemoteEnv, leaveEnvironment: () => Promi
 export function useReloadOnEnvChange(discardTabState: () => void, reload: () => void = reloadPage) {
   useEffect(() => {
     const active = getActiveEnv();
-    if (active === 'local' || isEnvPinned()) return;
+    // A pinned build ignores the toggle, so other tabs can't move it.
+    if (isEnvPinned()) return;
     const onStorage = (event: StorageEvent) => {
       if (event.key !== null && event.key !== ENV_STORAGE_KEY) return;
       const next: RemoteEnv = localStorage.getItem(ENV_STORAGE_KEY) === 'staging' ? 'staging' : 'production';

@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
 import path from "path";
+import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./src/lib/supabase/projects";
 
 function buildRelease(): string | undefined {
   const fromEnv = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA;
@@ -53,16 +54,41 @@ function bundleGraph(): Plugin {
   };
 }
 
+/**
+ * `npm run dev:preview` sets VITE_STAGING_PREVIEW=true, which makes the app call
+ * Supabase at /__staging-supabase on its own origin (see src/lib/supabase/env.ts). Forward
+ * that path to the staging project. Other builds get no proxy.
+ */
+function stagingPreviewProxy(stagingPreview: boolean) {
+  if (!stagingPreview) return undefined;
+  return {
+    [`^${STAGING_PREVIEW_PROXY_PATH}/`]: {
+      target: SUPABASE_PROJECTS.staging.url,
+      changeOrigin: true,
+      ws: true,
+      rewrite: (requestPath: string) => requestPath.slice(STAGING_PREVIEW_PROXY_PATH.length),
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // src/lib/supabase/env.ts rejects any other value at startup; fail the build
   // instead, so a typo in a Vercel variable never deploys a blank app.
-  const pinnedEnv = loadEnv(mode, process.cwd(), "VITE_").VITE_SUPABASE_ENV?.trim();
+  const viteEnv = loadEnv(mode, process.cwd(), "VITE_");
+  const pinnedEnv = viteEnv.VITE_SUPABASE_ENV?.trim();
   if (pinnedEnv && pinnedEnv !== "production" && pinnedEnv !== "staging") {
     throw new Error(`VITE_SUPABASE_ENV must be "production" or "staging", not "${pinnedEnv}"`);
   }
   const release = buildRelease();
   const uploadSourceMaps = sentrySourceMaps(release);
+  // Read the flag the way the client sees it (process env plus .env files), so
+  // the app never targets the proxy path while the server lacks the proxy.
+  const stagingPreview = viteEnv.VITE_STAGING_PREVIEW === "true";
+  const proxy = stagingPreviewProxy(stagingPreview);
+  // Previews are reached through `tailscale serve`, which forwards the tailnet
+  // hostname. Vite rejects unknown hosts, so allow tailnet names in this mode only.
+  const allowedHosts = stagingPreview ? [".ts.net"] : undefined;
   return {
   base: mode === 'capacitor' ? './' : '/',
   server: {
@@ -71,6 +97,12 @@ export default defineConfig(({ mode }) => {
     hmr: {
       overlay: false,
     },
+    proxy,
+    allowedHosts,
+  },
+  preview: {
+    proxy,
+    allowedHosts,
   },
   plugins: [react(), bundleGraph(), ...uploadSourceMaps],
   define: {

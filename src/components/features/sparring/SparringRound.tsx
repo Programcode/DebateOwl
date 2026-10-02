@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { AlertCircle, Bot, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,15 +12,24 @@ import { cn } from '@/lib/utils';
 import { formatRoundTime, type SparringTurnKind } from '@/lib/sparring/formats';
 import type { SparringSession } from '@/lib/stores/sparring-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
+import { useSpeechCapture } from '@/hooks/use-speech-capture';
+import { VoiceMicControl } from '@/components/features/voice/VoiceMicControl';
+import { measureDelivery, type SpeechDelivery } from '@/lib/voice/delivery';
+import { opponentVoice } from '@/lib/voice/opponent-voice';
+import type { AppLanguage } from '@/lib/languages';
+
+const MAX_SPEECH_CHARS = 6_000;
 
 interface SparringRoundProps {
   session: SparringSession;
+  /** The student speaks this round; the language is the one they speak in. */
+  voice?: { language: AppLanguage } | null;
   aiLoading?: boolean;
   aiError?: string | null;
   judging?: boolean;
   judgingError?: string | null;
   submissionError?: string | null;
-  onSubmit: (content: string) => void;
+  onSubmit: (content: string, delivery?: SpeechDelivery | null) => void;
   onRetryAi?: () => void;
   onRetryJudging?: () => void;
 }
@@ -38,6 +48,7 @@ const SCHOOL_ROLE_GUIDANCE: Partial<Record<SparringTurnKind, string>> = {
 
 export function SparringRound({
   session,
+  voice = null,
   aiLoading = false,
   aiError,
   judging = false,
@@ -53,7 +64,7 @@ export function SparringRound({
   const pauseTimer = useSparringStore((state) => state.pauseTimer);
   const resumeTimer = useSparringStore((state) => state.resumeTimer);
   const resetTurnTimer = useSparringStore((state) => state.resetTurnTimer);
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const isOnline = useOnlineStatus();
   const currentTurn = session.turns[session.currentTurnIndex];
   const currentWordCount = wordCount(session.draft);
   const totalWords = useMemo(() => session.speeches.reduce((sum, speech) => sum + wordCount(speech.content), 0), [session.speeches]);
@@ -67,26 +78,50 @@ export function SparringRound({
     || (session.timerDeadline !== null && session.timerDeadline <= Date.now());
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!userTurn || !session.timerRunning) return;
     const intervalId = window.setInterval(() => tickTimer(), 250);
     return () => window.clearInterval(intervalId);
   }, [session.timerRunning, tickTimer, userTurn]);
 
+  // Recognised words join the draft, so the student can see and fix them.
+  const capture = useSpeechCapture(voice?.language ?? 'en', (text) => {
+    const draft = useSparringStore.getState().currentSession?.draft ?? '';
+    setDraft(`${draft}${draft && !/\s$/.test(draft) ? ' ' : ''}${text}`.slice(0, MAX_SPEECH_CHARS));
+  });
+  const { listening, stop: stopCapture, cancel: cancelCapture } = capture;
+  const turnKey = `${session.id}:${currentTurn?.id ?? ''}`;
+
+  // Each turn of each round is measured on its own, and a microphone start
+  // still waiting for permission does not carry over into the next turn.
+  useEffect(() => cancelCapture, [cancelCapture, turnKey]);
+
+  // The microphone closes when the student's time or turn is over.
+  const micAllowed = userTurn && !judging && !timeExpired;
+  useEffect(() => {
+    if (!micAllowed) void stopCapture();
+  }, [micAllowed, stopCapture]);
+
+  const startSpeaking = () => {
+    // Speaking over the opponent ends its audio, and the clock runs again.
+    opponentVoice.stop();
+    resumeTimer();
+    void capture.start();
+  };
+
+  const submitSpeech = async () => {
+    // Stopping also withdraws a start that is still waiting for permission.
+    if (listening) await stopCapture();
+    else void stopCapture();
+    const draft = useSparringStore.getState().currentSession?.draft ?? '';
+    if (!draft.trim()) return;
+    onSubmit(draft, voice ? measureDelivery(capture.getTake(), voice.language) : null);
+  };
+  const canSubmit = (Boolean(session.draft.trim()) || listening) && isOnline && !timeExpired;
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       event.preventDefault();
-      if (userTurn && session.draft.trim() && !judging && isOnline && !timeExpired) onSubmit(session.draft);
+      if (userTurn && !judging && canSubmit) void submitSpeech();
     }
   };
 
@@ -177,19 +212,20 @@ export function SparringRound({
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {voice && <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void stopCapture()} disabled={timeExpired} />}
                     <Textarea
                       value={session.draft}
                       onChange={(event) => setDraft(event.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder={t('sparring.round.speechPlaceholder', 'Build your claim, warrant, and impact…')}
+                      placeholder={voice ? t('voiceRound.mic.draftPlaceholder') : t('sparring.round.speechPlaceholder', 'Build your claim, warrant, and impact…')}
                       className="min-h-[240px] resize-y text-base leading-7"
-                      maxLength={6000}
+                      maxLength={MAX_SPEECH_CHARS}
                       aria-label={t('sparring.round.draftFor', 'Draft for {{label}}', { label: t(`sparring.turns.${currentTurn.id}`, currentTurn.label) })}
                       disabled={judging}
                     />
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-muted-foreground">{isOnline ? <><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">⌘</kbd> {t('common.or')} <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Ctrl</kbd> + <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Enter</kbd> {t('sparring.round.toSubmit', 'to submit')}</> : t('sparring.round.offlineCannotSubmit', 'Reconnect to submit this speech.')}</p>
-                      <Button type="button" onClick={() => onSubmit(session.draft)} disabled={!session.draft.trim() || !isOnline || timeExpired} className="sm:min-w-36">
+                      <Button type="button" onClick={() => void submitSpeech()} disabled={!canSubmit} className="sm:min-w-36">
                         {t('sparring.round.submitSpeech', 'Submit speech')} <Send className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>

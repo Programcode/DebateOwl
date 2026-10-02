@@ -18,7 +18,7 @@ export function EnvironmentSwitcher({ reload = reloadPage }: SwitchProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
   const active = getActiveEnv();
-  if (active === 'local' || isEnvPinned()) return null;
+  if (isEnvPinned()) return null;
 
   const target: RemoteEnv = active === 'staging' ? 'production' : 'staging';
   const label = target === 'staging' ? t('settings.switchToStaging') : t('settings.switchToProduction');

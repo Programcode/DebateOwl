@@ -6,6 +6,7 @@ import { UNTRUSTED_CONTENT_RULES } from "../_shared/prompts.ts";
 
 const environment = {
   SUPABASE_URL: "https://supabase.test",
+  SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   SPARRING_INTEGRITY_SECRET: "test-sparring-secret",
   EXA_API_KEY: "test-exa-key",

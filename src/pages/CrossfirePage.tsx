@@ -10,6 +10,7 @@ import {
   Flame,
   Loader2,
   MessageSquare,
+  Mic,
   RefreshCw,
   RotateCcw,
   Send,
@@ -59,6 +60,16 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { toast } from '@/hooks/use-toast';
 import { saveWorkspaceArtifact } from '@/lib/workspace/practice-client';
+import { createArtifactSaveQueue } from '@/lib/workspace/artifact-save-queue';
+import { useSpeechCapture } from '@/hooks/use-speech-capture';
+import { isAppLanguage } from '@/lib/languages';
+import { DeliveryFacts } from '@/components/features/voice/DeliveryFacts';
+import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
+import { VoiceMicControl } from '@/components/features/voice/VoiceMicControl';
+import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
+import { useVoiceAvailability } from '@/lib/voice/availability';
+import { combineDelivery, measureDelivery } from '@/lib/voice/delivery';
+import { opponentVoice } from '@/lib/voice/opponent-voice';
 
 const SESSION_ID_PREFIX = 'crossfire';
 
@@ -196,9 +207,11 @@ function DebriefSection({ title, items, emptyLabel }: { title: string; items: Re
   );
 }
 
-function CrossfireDebriefView({ debrief, onRestart }: { debrief: CrossfireDebrief; onRestart: () => void }) {
+function CrossfireDebriefView({ debrief, turns, onRestart }: { debrief: CrossfireDebrief; turns: CrossfireTurn[]; onRestart: () => void }) {
   const { t } = useTranslation();
   const empty = t('crossfire.noGroundedFinding', 'No grounded finding in this transcript.');
+  // Measured facts from the turns the student spoke aloud; typed rounds have none.
+  const spokenDelivery = combineDelivery(turns.flatMap((turn) => turn.delivery ? [turn.delivery] : []));
   return (
     <div data-testid="crossfire-debrief" className="space-y-6">
       <div className="flex flex-col gap-3 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -250,6 +263,17 @@ function CrossfireDebriefView({ debrief, onRestart }: { debrief: CrossfireDebrie
           <p className="text-sm text-muted-foreground">{empty}</p>
         )}
       </section>
+
+      {spokenDelivery && (
+        <section data-testid="spoken-delivery" className="space-y-3 rounded-xl border border-border/70 p-5" aria-label={t('voiceRound.delivery.title')}>
+          <div className="flex items-center gap-2">
+            <Mic className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">{t('voiceRound.delivery.title')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('voiceRound.delivery.description')}</p>
+          <DeliveryFacts delivery={spokenDelivery} />
+        </section>
+      )}
     </div>
   );
 }
@@ -280,12 +304,23 @@ export default function CrossfirePage() {
   }, [state.phase]);
   const stateMotionClass = phaseChanged ? 'motion-swap' : undefined;
   const [draftTurn, setDraftTurn] = useState('');
+  // Mirrors of the latest draft and state for the spoken path, which awaits
+  // the recogniser's last words before it submits.
+  const draftTurnRef = useRef('');
+  const setDraft = useCallback((value: string) => {
+    draftTurnRef.current = value;
+    setDraftTurn(value);
+  }, []);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [now, setNow] = useState(Date.now());
   const [formError, setFormError] = useState('');
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
+  // Autosaves fire on every change; the queue keeps an older one from landing last.
+  const [saveArtifact] = useState(() => createArtifactSaveQueue(saveWorkspaceArtifact));
   const signalRequestsRef = useRef(new Set<AbortController>());
   const shouldReduceMotion = useReducedMotion();
   const sourceDebateId = useDebateStore((debates) => debates.oneOff ? null : debates.currentDebateId);
@@ -308,8 +343,21 @@ export default function CrossfirePage() {
     (resolution) => dispatch({ type: 'config-patched', patch: { resolution } }),
     Boolean(workspace.context) || state.phase !== 'setup',
   );
-  const { getFeatureConfig } = useSettingsStore();
+  const { getFeatureConfig, outputLanguage } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
+  const voiceLanguage = isAppLanguage(outputLanguage) ? outputLanguage : 'en';
+  const voiceAvailability = useVoiceAvailability();
+  // A voice round falls back to typing when the microphone is lost.
+  const voiceActive = Boolean(state.voice) && voiceAvailability.available && !workspace.context;
+  const capture = useSpeechCapture(voiceLanguage, (text) => {
+    const draft = draftTurnRef.current;
+    setDraft(`${draft}${draft && !/\s$/.test(draft) ? ' ' : ''}${text}`.slice(0, MAX_CROSSFIRE_TURN_CHARS));
+  });
+  const { listening, stop: stopCapture, cancel: cancelCapture } = capture;
+  // A take belongs to one round of one account. Anything said but not sent
+  // is dropped when the round or the account changes.
+  const captureScope = `${stateOwnerId ?? ''}:${state.phase === 'setup' ? 'setup' : state.sessionId}`;
+  useEffect(() => cancelCapture, [cancelCapture, captureScope]);
 
   const abortSignalRequests = useCallback(() => {
     signalRequestsRef.current.forEach((controller) => controller.abort());
@@ -319,6 +367,7 @@ export default function CrossfirePage() {
   useEffect(() => () => {
     requestRef.current?.abort();
     abortSignalRequests();
+    opponentVoice.stop();
   }, [abortSignalRequests]);
 
   useEffect(() => {
@@ -327,9 +376,9 @@ export default function CrossfirePage() {
     abortSignalRequests();
     dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
     setStateOwnerId(user?.id);
-    setDraftTurn('');
+    setDraft('');
     setFormError('');
-  }, [abortSignalRequests, stateOwnerId, user?.id]);
+  }, [abortSignalRequests, setDraft, stateOwnerId, user?.id]);
 
   useEffect(() => {
     if (!user?.id || stateOwnerId !== user.id) return;
@@ -339,7 +388,7 @@ export default function CrossfirePage() {
 
   useEffect(() => {
     if (!workspace.context) return;
-    void saveWorkspaceArtifact({
+    saveArtifact({
       documentEpoch: workspace.context.documentEpoch,
       documentId: workspace.context.documentId,
       inputSnapshot: state.phase === 'setup' ? state.config : { config: state.config },
@@ -350,7 +399,7 @@ export default function CrossfirePage() {
       tool: 'crossfire',
       workspaceId: workspace.context.workspaceId,
     });
-  }, [state, workspace.context]);
+  }, [saveArtifact, state, workspace.context]);
 
   // A round that finishes on this page is recorded in its debate once.
   const recordedPhaseRef = useRef(state.phase);
@@ -389,7 +438,7 @@ export default function CrossfirePage() {
         config: snapshot.config,
         transcript: snapshot.turns,
         expectedReply,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
+      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution), voice: voiceActive });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
         dispatch({
@@ -405,6 +454,7 @@ export default function CrossfirePage() {
         type: 'ai-turn-received',
         turn: nextTurn(snapshot.turns.length + 1, 'ai', result.type, result.text),
       });
+      if (voiceActive) opponentVoice.speak({ feature: 'crossfire', text: result.text, voice: result.voice, language: voiceLanguage });
       if (result.signalToken) {
         const signalController = new AbortController();
         signalRequestsRef.current.add(signalController);
@@ -425,7 +475,7 @@ export default function CrossfirePage() {
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
     }
-  }, [modelConfig, roundDebateId, workspace.context]);
+  }, [modelConfig, roundDebateId, voiceActive, voiceLanguage, workspace.context]);
 
   const runDebrief = useCallback(async (snapshot: Extract<CrossfireState, { phase: 'debriefing' }>) => {
     requestRef.current?.abort();
@@ -457,6 +507,7 @@ export default function CrossfirePage() {
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;
     requestRef.current?.abort();
+    opponentVoice.stop();
     if (state.turns.length === 0) {
       useDebateContextStore.getState().resetOverride('crossfire');
       dispatch({
@@ -494,6 +545,7 @@ export default function CrossfirePage() {
     if (state.phase !== 'setup') return;
     debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
+    opponentVoice.beginRound();
     const action = {
       type: 'session-started' as const,
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,
@@ -506,22 +558,42 @@ export default function CrossfirePage() {
     }
   };
 
-  const submitTurn = () => {
-    if (state.phase !== 'active') return;
-    const kind = expectedUserTurnKind(state);
-    const text = draftTurn.trim();
+  const submitTurn = async () => {
+    // A spoken turn waits for the recogniser's last words, so read the
+    // freshest draft and state afterwards rather than this render's copies.
+    // Stopping also withdraws a start that is still waiting for permission.
+    if (listening) await stopCapture();
+    else void stopCapture();
+    const current = stateRef.current;
+    if (current.phase !== 'active') return;
+    const kind = expectedUserTurnKind(current);
+    const text = draftTurnRef.current.trim();
     if (!kind || !text || text.length > MAX_CROSSFIRE_TURN_CHARS) return;
     const expectedReply: 'question' | 'answer' = kind === 'question' ? 'answer' : 'question';
+    const delivery = voiceActive ? measureDelivery(capture.getTake(), voiceLanguage) : null;
+    capture.resetTake();
     const action = {
       type: 'user-turn-submitted' as const,
-      turn: nextTurn(state.turns.length + 1, 'user', kind, text),
+      turn: { ...nextTurn(current.turns.length + 1, 'user', kind, text), ...(delivery ? { delivery } : {}) },
       expectedReply,
     };
-    const next = crossfireReducer(state, action);
+    const next = crossfireReducer(current, action);
     dispatch(action);
-    setDraftTurn('');
+    setDraft('');
     if (next.phase === 'active') void runNextTurn(next, expectedReply);
   };
+
+  const startSpeaking = () => {
+    // Speaking over the opponent ends its audio.
+    opponentVoice.stop();
+    void capture.start();
+  };
+
+  // The microphone closes when it is no longer the student's turn.
+  const awaitingUserTurn = expectedUserTurnKind(state) !== null;
+  useEffect(() => {
+    if (!awaitingUserTurn) void stopCapture();
+  }, [awaitingUserTurn, stopCapture]);
 
   const retryTurn = () => {
     if (state.phase !== 'active' || state.request.status !== 'failed') return;
@@ -541,12 +613,13 @@ export default function CrossfirePage() {
   const restart = () => {
     requestRef.current?.abort();
     abortSignalRequests();
+    opponentVoice.stop();
     if (user?.id) clearCrossfireDraft(user.id);
     // The round is over, so its Review choices go with it.
     useDebateContextStore.getState().resetOverride('crossfire');
     artifactRequestIdRef.current = crypto.randomUUID();
     dispatch({ type: 'session-reset' });
-    setDraftTurn('');
+    setDraft('');
     setFormError('');
   };
 
@@ -756,6 +829,15 @@ export default function CrossfirePage() {
                 </div>
               </div>
 
+              {!workspace.context && (
+                <VoiceModeToggle
+                  id="crossfire-voice"
+                  checked={Boolean(state.voice)}
+                  onCheckedChange={(voice) => dispatch({ type: 'voice-toggled', voice })}
+                  description={t('voiceRound.mode.crossfireDescription')}
+                />
+              )}
+
               <DebateContextControl
                 feature="crossfire"
                 side="both"
@@ -779,7 +861,7 @@ export default function CrossfirePage() {
       <div className={cn(stateMotionClass, 'container px-4 py-8')}>
         <WorkspaceToolScope context={workspace.context} />
         <div className="mx-auto max-w-5xl space-y-10">
-          <CrossfireDebriefView debrief={state.debrief} onRestart={restart} />
+          <CrossfireDebriefView debrief={state.debrief} turns={state.turns} onRestart={restart} />
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
         </div>
       </div>
@@ -851,6 +933,13 @@ export default function CrossfirePage() {
 
         <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
 
+        {state.voice && !workspace.context && !voiceAvailability.available && (
+          <p data-testid="voice-unavailable" className="text-xs leading-5 text-muted-foreground">
+            {voiceAvailability.reason === 'denied' ? t('voiceRound.unavailable.denied') : t('voiceRound.unavailable.unsupported')}
+          </p>
+        )}
+        {voiceActive && <OpponentVoiceBar />}
+
         {state.request.status === 'failed' && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -880,24 +969,25 @@ export default function CrossfirePage() {
           <Card>
             <CardContent className="space-y-3 p-4 sm:p-5">
               <Label htmlFor="crossfire-input">{inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}</Label>
+              {voiceActive && <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void stopCapture()} />}
               <Textarea
                 id="crossfire-input"
                 data-testid="crossfire-input"
                 value={draftTurn}
                 maxLength={MAX_CROSSFIRE_TURN_CHARS}
-                onChange={(event) => setDraftTurn(event.target.value)}
+                onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                     event.preventDefault();
-                    submitTurn();
+                    void submitTurn();
                   }
                 }}
-                placeholder={inputKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
+                placeholder={voiceActive ? t('voiceRound.mic.draftPlaceholder') : inputKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
                 className="min-h-28 resize-y"
               />
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-xs text-muted-foreground">{t('crossfire.charactersRemaining', { count: MAX_CROSSFIRE_TURN_CHARS - draftTurn.length })}</span>
-                <Button data-testid="submit-turn" onClick={submitTurn} disabled={!draftTurn.trim()}>
+                <Button data-testid="submit-turn" onClick={() => void submitTurn()} disabled={!draftTurn.trim() && !listening}>
                   <Send className="mr-2 h-4 w-4" />
                   {inputKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
                 </Button>

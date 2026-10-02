@@ -1,17 +1,10 @@
 // Supabase Edge Function: Redeem Promo Code
 // Validates and applies promo codes for users.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { type AuthContext, HttpError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-
-
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
@@ -23,23 +16,19 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
   }
 
-  // Authenticate
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ success: false, message: "Unauthorized" }), {
-      status: 401,
+  // Authenticate. The browser expects { success, message } from this function.
+  let auth: AuthContext;
+  try {
+    auth = await requireUser(req);
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    console.warn("[PROMO] Authentication rejected:", error.message);
+    return new Response(JSON.stringify({ success: false, message: error.message }), {
+      status: error.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return new Response(JSON.stringify({ success: false, message: "Invalid token" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const { user, userClient } = auth;
 
   try {
     const body = await req.json();
@@ -52,9 +41,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
     const { data: result, error: redeemError } = await userClient.rpc("redeem_promo_code_atomic", { p_code: code });
 
     if (redeemError) {
@@ -78,4 +64,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}
