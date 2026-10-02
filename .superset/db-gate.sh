@@ -7,7 +7,17 @@
 # once collide in Docker, not just on a socket. Use this instead of calling
 # `supabase db start` directly whenever more than one workspace might be
 # active.
+#
+# --db-only stops after `npm run test:db` (pgTAP and the database scripts),
+# still holding the lock and stopping the stack on exit.
 set -euo pipefail
+
+DB_ONLY=false
+case "${1:-}" in
+  --db-only) DB_ONLY=true ;;
+  "") ;;
+  *) echo "usage: $0 [--db-only]" >&2; exit 2 ;;
+esac
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib/lock.sh"
@@ -24,6 +34,10 @@ LIVE_MODEL="${LIVE_MODEL:-meta/muse-spark-1.3-contributor}"  # empty also means 
 if [ "$LIVE_PROVIDERS" = 1 ] && { [ -z "${LIVE_OPENROUTER_API_KEY:-}" ] || [ -z "${LIVE_EXA_API_KEY:-}" ]; }; then
   echo "LIVE_PROVIDERS=1 requires LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY" >&2
   exit 1
+fi
+if [ "$DB_ONLY" = true ] && [ "$LIVE_PROVIDERS" = 1 ]; then
+  echo "--db-only runs the database tests, which LIVE_PROVIDERS=1 skips" >&2
+  exit 2
 fi
 stack_started=false
 provider_started=false
@@ -87,6 +101,7 @@ for attempt in 1 2 3; do
   sleep $((attempt * 30))
 done
 if [ "$LIVE_PROVIDERS" != 1 ]; then npm run test:db; fi
+if [ "$DB_ONLY" = true ]; then exit 0; fi
 
 status_json="$(supabase status -o json 2>/dev/null)"
 status_value() {

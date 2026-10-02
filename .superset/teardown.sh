@@ -12,6 +12,7 @@ PORTS_LOCK="$HOME/.superset/debatelab-ports/lock"
 
 lock_acquire "$PORTS_LOCK" 30
 node "$DIR/lib/port-alloc.cjs" release "$WORKSPACE_KEY" || true
+node "$DIR/lib/port-alloc.cjs" release "e2e:$(git rev-parse --show-toplevel)" || true
 lock_release "$PORTS_LOCK"
 
 if command -v supabase >/dev/null 2>&1 && supabase status >/dev/null 2>&1; then
