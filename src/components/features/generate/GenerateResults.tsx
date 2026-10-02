@@ -239,7 +239,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                   </Button>
                 )}
                 {onUndo && (
-                  <Button variant="outline" size="sm" onClick={onUndo}>
+                  <Button variant="outline" size="sm" onClick={onUndo} disabled={regeneratingSection !== null}>
                     <Undo2 className="mr-2 h-4 w-4" />
                     {t('generateResults.undo', 'Undo')}
                   </Button>

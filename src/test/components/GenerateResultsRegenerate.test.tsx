@@ -17,7 +17,7 @@ const result: GenerateOutput = {
 
 describe('GenerateResults section regeneration', () => {
   it('covers only the regenerating section and keeps the other sections visible', () => {
-    render(<GenerateResults result={result} onRegenerateSection={vi.fn()} regeneratingSection="contentions" />);
+    render(<GenerateResults result={result} onRegenerateSection={vi.fn()} onUndo={vi.fn()} regeneratingSection="contentions" />);
 
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Regenerating');
@@ -30,12 +30,15 @@ describe('GenerateResults section regeneration', () => {
     const buttons = screen.getAllByRole('button', { name: /^Regenerate / });
     expect(buttons.length).toBeGreaterThan(1);
     for (const button of buttons) expect(button).toBeDisabled();
+    // Undo now would be reverted when the section comes back.
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
   it('leaves every section enabled when nothing is regenerating', () => {
-    render(<GenerateResults result={result} onRegenerateSection={vi.fn()} />);
+    render(<GenerateResults result={result} onRegenerateSection={vi.fn()} onUndo={vi.fn()} />);
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     for (const button of screen.getAllByRole('button', { name: /^Regenerate / })) expect(button).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
   });
 });

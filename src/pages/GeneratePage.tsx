@@ -32,7 +32,7 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function GeneratePage() {
   const workspace = useWorkspaceToolScope('generate');
-  const { generateResult, generateLoading, generateForm, setGenerateResult, setGenerateLoading, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore();
+  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore();
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   // The debate row this page's current result was recorded into, if any.
   const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
@@ -59,8 +59,6 @@ export default function GeneratePage() {
   }, [shouldReduceMotion, successfulGenerationSequence]);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
-  // One section at a time: each regeneration merges into the result it started from.
-  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
 
   const handleUndo = () => {
     const prev = (autosavedCases || []).find(item => item.data !== generateResult);
@@ -139,11 +137,15 @@ export default function GeneratePage() {
     const debateId = resultDebateId !== undefined
       ? resultDebateId
       : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
-    setRegeneratingSection(section);
+    // One section at a time: each regeneration merges into the result it started from.
+    const base = generateResult;
+    setGenerateRegeneratingSection(section);
     void generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId)
       .then(async ({ result: next, discoveredSources: sources }) => {
+        // Undo or a new generation replaced the case meanwhile; merging now would revert it.
+        if (useSessionStore.getState().generateResult !== base) return;
         const regenerated = {
-          ...generateResult,
+          ...base,
           ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
           ...(section === 'contentions' ? { contentions: next.contentions } : {}),
           ...(section === 'opponent' ? { predictedOpponentCase: next.predictedOpponentCase } : {}),
@@ -161,7 +163,7 @@ export default function GeneratePage() {
         console.error('Failed to regenerate section:', error);
         toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: 'destructive' });
       })
-      .finally(() => setRegeneratingSection(null));
+      .finally(() => setGenerateRegeneratingSection(null));
   };
 
   const handleSave = () => {
