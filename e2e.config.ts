@@ -15,11 +15,14 @@ if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+\/?$/.test(appUrl)) {
 
 const live = process.env.VERIFY_MODE === "live";
 
-// The model that drives and judges the browser, not the app's own model. It
-// needs tool calling and image input. The default is free but slow, and its
-// upstream rate-limits under load; E2E_AGENT_MODEL=openai/gpt-6-luna is a fast,
-// cheap paid alternative that also explores better.
+// The testing agent's models, separate from the app's own. Both need tool
+// calling and image input. The actor drives agent.act and explorations; its
+// recorded flows replay with no model call, so a free, slow model is enough.
+// The judge answers every agent.assert, waitFor and extract on every run, so it
+// must be reliable: the Muse Spark contributor tier is the cheapest that is,
+// and like the app's live pin it may keep prompts (made-up content only).
 const model = openrouter(process.env.E2E_AGENT_MODEL ?? "qwen/qwen3.8-27b:free");
+const judge = openrouter(process.env.E2E_JUDGE_MODEL ?? "meta/muse-spark-1.3-contributor");
 
 // `context` reaches every model call, judges included: what the app calls things.
 const context = [
@@ -42,11 +45,14 @@ const rules = [
   "Never delete the account or all data, sign out, or open billing checkout unless the instruction asks for it.",
 ];
 
+// The judge cannot act: Meta's endpoint accepts only tool_choice "auto", and
+// the act loop requires a tool call. Explorations act with the actor too.
 const agent = (persona?: string) => ({
   model,
+  judge,
   context,
-  // Free and slow models routinely take longer than e2e's 30 s default per judgment.
-  judgmentTimeout: 180_000,
+  // Generous for slow providers; e2e's default is 30 s per judgment.
+  judgmentTimeout: 120_000,
   system: [...rules, ...(persona ? [persona] : [])].join("\n"),
 });
 
@@ -68,7 +74,7 @@ export default {
   ],
   // AI steps wait on Edge Functions, and a free model can take minutes per judgment.
   timeout: 600_000,
-  // More parallel model calls only trip the free model's upstream rate limit.
+  // More parallel act steps only trip the free actor's upstream rate limit.
   workers: process.env.CI ? 1 : 2,
   // The dev server compiles lazy routes on first visit.
   assertionTimeout: 15_000,

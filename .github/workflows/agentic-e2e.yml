@@ -82,6 +82,7 @@ jobs:
         env:
           LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
           E2E_AGENT_MODEL: ${{ vars.E2E_AGENT_MODEL }}
+          E2E_JUDGE_MODEL: ${{ vars.E2E_JUDGE_MODEL }}
         # Bug-bash repro tests fail until their bug is fixed; they run on demand.
         run: .claude/skills/verify-debatelab/bin/verify.sh e2e run --exclude-tag repro --reporter list,markdown,junit
 
@@ -90,6 +91,7 @@ jobs:
         env:
           LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
           E2E_AGENT_MODEL: ${{ vars.E2E_AGENT_MODEL }}
+          E2E_JUDGE_MODEL: ${{ vars.E2E_JUDGE_MODEL }}
           GOAL: ${{ inputs.explore }}
           PERSONA: ${{ inputs.persona }}
           TARGET: ${{ inputs.target }}

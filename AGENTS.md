@@ -94,7 +94,7 @@ $H down                # always, including after failures
 - The stack holds the same lock as `./.superset/db-gate.sh`, so only one worktree can run it at a time.
 - Most tools work inside a Current Debate. Recipes start one with `startDebate` or answer the motion dialog with `chooseForMotion`; see the skill's Drive section.
 - Neither mode proves Stripe Checkout, real Stripe cancellation, ElevenLabs voice audio, Google sign-in or export, staging, or production.
-- Agentic tests (`agentic/*.e2e.ts`) are an AI agent driving goals and judging screens, with exact assertions on the result. They catch what selectors cannot: stray untranslated text, clipped layouts, off-topic model output in live mode. They also run explorations that hunt for bugs as a persona. The agent calls its own OpenRouter model (free Qwen by default), even on a fake stack. A flow change that breaks an agentic test updates it in the same PR; commit new or re-recorded `agentic/replay/` entries with it. See [docs/testing.md](docs/testing.md#agentic-browser-tests).
+- Agentic tests (`agentic/*.e2e.ts`) are an AI agent driving goals and judging screens, with exact assertions on the result. They catch what selectors cannot: stray untranslated text, clipped layouts, off-topic model output in live mode. They also run explorations that hunt for bugs as a persona. The agent calls its own OpenRouter models (free Qwen acts, the Muse Spark contributor tier judges), even on a fake stack. A flow change that breaks an agentic test updates it in the same PR; commit new or re-recorded `agentic/replay/` entries with it. See [docs/testing.md](docs/testing.md#agentic-browser-tests).
 
 ### Keep the skill working
 
