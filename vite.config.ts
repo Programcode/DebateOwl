@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin, type PluginOption } from "vite";
+import { defineConfig, loadEnv, type Plugin, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
@@ -54,14 +54,12 @@ function bundleGraph(): Plugin {
   };
 }
 
-const stagingPreview = process.env.VITE_STAGING_PREVIEW === "true";
-
 /**
  * `npm run dev:preview` sets VITE_STAGING_PREVIEW=true, which makes the app call
  * Supabase at /__staging-supabase on its own origin (see src/lib/supabase/env.ts). Forward
  * that path to the staging project. Other builds get no proxy.
  */
-function stagingPreviewProxy() {
+function stagingPreviewProxy(stagingPreview: boolean) {
   if (!stagingPreview) return undefined;
   return {
     [`^${STAGING_PREVIEW_PROXY_PATH}/`]: {
@@ -77,7 +75,10 @@ function stagingPreviewProxy() {
 export default defineConfig(({ mode }) => {
   const release = buildRelease();
   const uploadSourceMaps = sentrySourceMaps(release);
-  const proxy = stagingPreviewProxy();
+  // Read the flag the way the client sees it (process env plus .env files), so
+  // the app never targets the proxy path while the server lacks the proxy.
+  const stagingPreview = loadEnv(mode, process.cwd(), "VITE_").VITE_STAGING_PREVIEW === "true";
+  const proxy = stagingPreviewProxy(stagingPreview);
   // Previews are reached through `tailscale serve`, which forwards the tailnet
   // hostname. Vite rejects unknown hosts, so allow tailnet names in this mode only.
   const allowedHosts = stagingPreview ? [".ts.net"] : undefined;
