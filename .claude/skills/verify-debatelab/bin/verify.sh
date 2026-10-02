@@ -305,6 +305,14 @@ cmd_e2e() {
       local run_id; run_id="$(date -u +%Y%m%dT%H%M%SZ)-e2e-$sub-$$"
       local out=".verify/artifacts/$run_id"
       local status=0
+      # --last-failed reads <output>/report.json, so seed the new directory with
+      # the latest run's report (timestamped names sort oldest first).
+      if [ "$sub" = run ] && [[ " $* " == *" --last-failed "* ]]; then
+        local reports=(.verify/artifacts/*-e2e-run*/report.json)
+        [ -f "${reports[-1]}" ] || fail "--last-failed needs a previous \`verify.sh e2e run\`; none left a report in .verify/artifacts/"
+        mkdir -p "$out" && cp "${reports[-1]}" "$out/report.json"
+        say "info retrying the failures recorded in ${reports[-1]%/report.json}"
+      fi
       npx e2e "$sub" --output "$out" "$@" || status=$?
       say "EVIDENCE $REPO/$out (exit $status)"
       return "$status"
