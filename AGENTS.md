@@ -88,10 +88,11 @@ $H drive all           # every recipe; or recipes/<name>, e2e/<path>; add --proj
 $H down                # always, including after failures
 ```
 
-- Use `--live` when the change touches prompts, model output handling, web research, citations, or URL import. The fake mode cannot prove those. Every chat call is rewritten to the Muse Spark contributor model, so a full run costs cents plus Exa searches, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content: the contributor model may keep prompts.
+- Use `--live` when the change touches prompts, model output handling, web research, or citations. The fake mode cannot prove those. URL import fetches pages directly and works the same in both modes. Every chat call is rewritten to the Muse Spark contributor model, so a full run costs cents plus Exa searches, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content: the contributor model may keep prompts.
 - Live keys come from `~/.config/debatelab/live-verify.env` (mode 600, `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY`). On Adam's VPS it holds copies of the Hermes keys in `~/.hermes/.env`. Never print them.
 - The stack holds the same lock as `./.superset/db-gate.sh`, so only one worktree can run it at a time.
-- Neither mode proves Stripe Checkout, Google sign-in or export, staging, or production.
+- Most tools work inside a Current Debate. Recipes start one with `startDebate` or answer the motion dialog with `chooseForMotion`; see the skill's Drive section.
+- Neither mode proves Stripe Checkout, real Stripe cancellation, ElevenLabs voice audio, Google sign-in or export, staging, or production.
 
 ## Hard boundaries
 
