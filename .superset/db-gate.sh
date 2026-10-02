@@ -40,6 +40,7 @@ if [ "$DB_ONLY" = true ] && [ "$LIVE_PROVIDERS" = 1 ]; then
   exit 2
 fi
 stack_started=false
+provider_started=false
 runtime_dir=""
 owned_pids=()
 
@@ -58,7 +59,10 @@ cleanup() {
   trap - EXIT
 
   stop_owned_processes
-  docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
+  # The container name is shared by every worktree, so only remove our own.
+  if [ "$provider_started" = true ]; then
+    docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
+  fi
 
   if [ -n "$runtime_dir" ] && [ -f "$runtime_dir/function.env" ]; then
     rm -- "$runtime_dir/function.env"
@@ -129,6 +133,7 @@ fi
 
 # Edge Functions reach the fake provider by container name on the stack network.
 docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
+provider_started=true
 docker run -d --rm --name "$FAKE_PROVIDER" --network "supabase_network_$project_id" \
   "${provider_mode[@]}" -p 127.0.0.1:18090:8787 -v "$(pwd)/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
   node:22-alpine node /fake.mjs >/dev/null
