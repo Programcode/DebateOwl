@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/supabase/AuthProvider';
-import { getActiveEnv } from '@/lib/supabase/env';
+import { getActiveEnv, isEnvPinned } from '@/lib/supabase/env';
 import { reloadPage, switchEnv, type RemoteEnv } from '@/lib/supabase/switch-env';
 
 type SwitchProps = { reload?: () => void };
@@ -18,7 +18,7 @@ export function EnvironmentSwitcher({ reload = reloadPage }: SwitchProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
   const active = getActiveEnv();
-  if (active === 'local') return null;
+  if (isEnvPinned()) return null;
 
   const target: RemoteEnv = active === 'staging' ? 'production' : 'staging';
   const label = target === 'staging' ? t('settings.switchToStaging') : t('settings.switchToProduction');

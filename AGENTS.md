@@ -31,6 +31,7 @@ The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `m
 
 - Vite development server: `8080` by default outside Superset; Superset allocates `8080-8179` per worktree.
 - Automated browser server: isolated `127.0.0.1:18080`, never an existing dev server.
+- Tailnet previews for Adam: `npm run dev:preview` listens locally on `9200-9299` and is published on tailnet HTTPS `9100-9149`; it pins the app to staging. See [docs/development.md](docs/development.md#preview-on-the-tailnet).
 - Local Supabase: CLI defaults beginning at `54321`. The stack is not parallel-safe across worktrees.
 
 ## Focused verification

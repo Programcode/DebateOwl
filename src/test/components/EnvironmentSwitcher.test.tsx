@@ -5,6 +5,7 @@ import { StagingBanner } from '@/components/StagingBanner';
 
 const mocks = vi.hoisted(() => ({
   env: 'production' as 'local' | 'production' | 'staging',
+  pinned: false,
   setActiveEnv: vi.fn(),
   signOut: vi.fn(),
   discard: vi.fn(),
@@ -12,12 +13,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/supabase/env', () => ({
   ENV_STORAGE_KEY: 'debate-supabase-env',
   getActiveEnv: () => mocks.env,
+  isEnvPinned: () => mocks.env === 'local' || mocks.pinned,
   setActiveEnv: mocks.setActiveEnv,
 }));
 vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ leaveEnvironment: mocks.signOut, discardTabState: mocks.discard }) }));
 
 beforeEach(() => {
   mocks.env = 'production';
+  mocks.pinned = false;
   mocks.setActiveEnv.mockReset();
   mocks.signOut.mockReset().mockResolvedValue(undefined);
   mocks.discard.mockReset();
@@ -75,6 +78,13 @@ describe('EnvironmentSwitcher', () => {
     const { container } = render(<EnvironmentSwitcher reload={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('renders nothing in a staging preview build, which cannot switch', () => {
+    mocks.env = 'staging';
+    mocks.pinned = true;
+    const { container } = render(<EnvironmentSwitcher reload={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });
 
 describe('StagingBanner', () => {
@@ -114,6 +124,19 @@ describe('StagingBanner', () => {
     changeTo('staging');
     expect(mocks.discard).toHaveBeenCalledOnce();
     expect(reload).toHaveBeenCalledOnce();
+    localStorage.removeItem('debate-supabase-env');
+  });
+
+  it('marks a staging preview build without offering a switch it cannot make', () => {
+    mocks.env = 'staging';
+    mocks.pinned = true;
+    const reload = vi.fn();
+    render(<StagingBanner reload={reload} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Staging backend');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    localStorage.setItem('debate-supabase-env', 'production');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'debate-supabase-env', newValue: 'production' }));
+    expect(reload).not.toHaveBeenCalled();
     localStorage.removeItem('debate-supabase-env');
   });
 
