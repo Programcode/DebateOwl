@@ -227,6 +227,7 @@
     "docx": "DOCX",
     "googleDocs": "Google Docs",
     "regenerate": "{{title}} újragenerálása",
+    "regenerating": "{{title}} újragenerálása folyamatban…",
     "openingPage": "{{page}} megnyitása",
     "page": "Oldal",
     "close": "Bezárás",

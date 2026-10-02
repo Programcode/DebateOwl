@@ -123,6 +123,8 @@ export interface FlowchartData {
 export interface SessionState {
   generateResult: GenerateOutput | null;
   generateLoading: boolean;
+  /** The Generate section being regenerated; kept here so it survives leaving the page. */
+  generateRegeneratingSection: string | null;
 
   attackResult: AttackOutput | null;
   attackLoading: boolean;
@@ -169,6 +171,7 @@ export interface SessionState {
 
   setGenerateResult: (result: GenerateOutput | null) => void;
   setGenerateLoading: (loading: boolean) => void;
+  setGenerateRegeneratingSection: (section: string | null) => void;
   saveCurrentCase: (title: string) => Promise<void>;
   deleteSavedCase: (id: string) => Promise<void>;
   loadSavedCase: (id: string) => void;
@@ -451,6 +454,7 @@ export const useSessionStore = create<SessionState>()(
     (set, get) => ({
       generateResult: null as GenerateOutput | null,
       generateLoading: false,
+      generateRegeneratingSection: null as string | null,
       attackResult: null as AttackOutput | null,
       attackLoading: false,
       brainstormResult: null as BrainstormOutput | null,
@@ -808,6 +812,7 @@ export const useSessionStore = create<SessionState>()(
         }
       },
       setGenerateLoading: (loading) => set({ generateLoading: loading }),
+      setGenerateRegeneratingSection: (section) => set({ generateRegeneratingSection: section }),
       saveCurrentCase: async (title) => {
         const current = get().generateResult;
         if (!current) return;
@@ -1275,6 +1280,7 @@ export const useSessionStore = create<SessionState>()(
       },
       partialize: ({
         generateLoading,
+        generateRegeneratingSection,
         attackLoading,
         brainstormLoading,
         factoidsLoading,

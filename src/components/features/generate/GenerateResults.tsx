@@ -20,6 +20,8 @@ interface GenerateResultsProps {
   result: GenerateOutput;
   discoveredSources?: DiscoveredSource[];
   onRegenerateSection?: (section: string) => void;
+  /** The section being regenerated; the rest of the results stay on screen. */
+  regeneratingSection?: string | null;
   onDiscuss?: () => void;
   onSave?: () => void;
   onUndo?: () => void;
@@ -75,10 +77,14 @@ function formatDuration(ms: number | undefined, t: (key: string, options?: Recor
   return t('generateResults.durationS', { value });
 }
 
-export function GenerateResults({ result, discoveredSources, onRegenerateSection, onDiscuss, onSave, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
+export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
+  const regenerateState = (section: string) => ({
+    isLoading: regeneratingSection === section,
+    regenerateDisabled: regeneratingSection !== null,
+  });
 
   const handleCopyToClipboard = async () => {
     const lines: string[] = [];
@@ -233,7 +239,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                   </Button>
                 )}
                 {onUndo && (
-                  <Button variant="outline" size="sm" onClick={onUndo}>
+                  <Button variant="outline" size="sm" onClick={onUndo} disabled={regeneratingSection !== null}>
                     <Undo2 className="mr-2 h-4 w-4" />
                     {t('generateResults.undo', 'Undo')}
                   </Button>
@@ -251,6 +257,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           description={t('generateResults.exordioDesc')}
           icon={<Sparkles className="h-5 w-5" />}
           onRegenerate={() => onRegenerateSection?.('exordio')}
+          {...regenerateState('exordio')}
         >
           <div className="space-y-4">
             <div>
@@ -272,6 +279,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         description={t('generateResults.caseStructureDesc')}
         icon={<Target className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('structure')}
+        {...regenerateState('structure')}
       >
         <div className="space-y-4">
           <div>
@@ -305,6 +313,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         description={`${result.contentions?.length || 0} ${t('generateResults.structuredArguments')}`}
         icon={<Shield className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('contentions')}
+        {...regenerateState('contentions')}
       >
         <div className="space-y-4">
           {result.contentions?.map((contention, index) => (
@@ -319,6 +328,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         description={t('generateResults.predictedOpponentDesc')}
         icon={<Swords className="h-5 w-5" />}
         onRegenerate={() => onRegenerateSection?.('opponent')}
+        {...regenerateState('opponent')}
       >
         <div className="space-y-4">
           <div>
@@ -361,6 +371,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.preparedCounters')}
         description={t('generateResults.preparedCountersDesc')}
         onRegenerate={() => onRegenerateSection?.('counters')}
+        {...regenerateState('counters')}
       >
         <div className="space-y-4">
           {result.counters?.map((counter, i) => (

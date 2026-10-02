@@ -46,14 +46,24 @@ const mockSetAskLoading = vi.fn();
 let mockGenerateResult: any = null;
 let mockGenerateForm: any = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
 
-vi.mock('@/lib/stores/session-store', () => ({
-    useSessionStore: () => ({
+let mockRegeneratingSection: string | null = null;
+const mockStoreListeners = new Set<() => void>();
+const mockSetRegeneratingSection = vi.fn((section: string | null) => {
+    mockRegeneratingSection = section;
+    mockStoreListeners.forEach((listener) => listener());
+});
+
+vi.mock('@/lib/stores/session-store', async () => {
+    const React = await import('react');
+    const state = () => ({
         generateResult: mockGenerateResult,
         generateLoading: false,
+        generateRegeneratingSection: mockRegeneratingSection,
         generateForm: mockGenerateForm,
         autosavedCases: [] as any[],
         setGenerateResult: mockSetGenerateResult,
         setGenerateLoading: mockSetGenerateLoading,
+        setGenerateRegeneratingSection: mockSetRegeneratingSection,
         saveCurrentCase: mockSaveCurrentCase,
         addAskMessage: mockAddAskMessage,
         setAskLoading: mockSetAskLoading,
@@ -61,8 +71,18 @@ vi.mock('@/lib/stores/session-store', () => ({
         setPendingFlowchartData: vi.fn(),
         recordResult: mockRecordResult,
         updateRecordedResult: mockUpdateRecordedResult,
-    }),
-}));
+    });
+    const useSessionStore = () => {
+        const [, rerender] = React.useReducer((count: number) => count + 1, 0);
+        React.useEffect(() => {
+            mockStoreListeners.add(rerender);
+            return () => { mockStoreListeners.delete(rerender); };
+        }, []);
+        return state();
+    };
+    useSessionStore.getState = state;
+    return { useSessionStore };
+});
 
 vi.mock('@/lib/stores/settings-store', () => ({
     useSettingsStore: () => ({
@@ -86,8 +106,8 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
 }));
 
 vi.mock('@/components/features/generate/GenerateResults', () => ({
-    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, onPracticeCrossfire }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, onPracticeCrossfire?: () => void }) => (
-        <div data-testid="generate-results">
+    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, regeneratingSection = null, onPracticeCrossfire }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, regeneratingSection?: string | null, onPracticeCrossfire?: () => void }) => (
+        <div data-testid="generate-results" data-regenerating={regeneratingSection ?? ''}>
             <h1>Results for {result.caseStructure.thesis}</h1>
             <div data-testid="discovered-sources">{discoveredSources.map((source) => source.title).join(',')}</div>
             <button onClick={() => onRegenerateSection?.('contentions')} data-testid="regenerate-section">Regenerate section</button>
@@ -106,6 +126,7 @@ describe('GeneratePage Integration', () => {
         enableOneOffMode();
         vi.clearAllMocks();
         mockGenerateResult = null;
+        mockRegeneratingSection = null;
         mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
     });
 
@@ -270,6 +291,71 @@ describe('GeneratePage Integration', () => {
             expect(screen.getByTestId('discovered-sources')).toHaveTextContent('Fresh source');
         });
         expect(screen.getByTestId('discovered-sources')).not.toHaveTextContent('Old source');
+    });
+
+    it('keeps the results on screen while one section regenerates', async () => {
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Existing Thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: {},
+        };
+        let finish: (value: unknown) => void = () => undefined;
+        (generateCase as Mock).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+
+        render(
+            <BrowserRouter>
+                <GeneratePage />
+            </BrowserRouter>
+        );
+
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        expect(screen.getByTestId('generate-results')).toHaveAttribute('data-regenerating', 'contentions');
+        expect(screen.getByTestId('submit-button')).toBeDisabled();
+        expect(mockSetGenerateLoading).not.toHaveBeenCalled();
+
+        // A second click while the first is in flight would merge over a stale result.
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        expect(generateCase).toHaveBeenCalledTimes(1);
+
+        finish({ result: { ...mockGenerateResult, contentions: [{ claim: 'Updated' }] }, discoveredSources: [] });
+        await waitFor(() => expect(screen.getByTestId('generate-results')).toHaveAttribute('data-regenerating', ''));
+        expect(mockSetGenerateLoading).not.toHaveBeenCalled();
+    });
+
+    it('keeps a pending regeneration visible after leaving Generate and coming back', async () => {
+        mockGenerateResult = { caseStructure: { thesis: 'Existing Thesis' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[], metadata: {} };
+        (generateCase as Mock).mockReturnValueOnce(new Promise(() => undefined));
+
+        const first = render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        first.unmount();
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        expect(screen.getByTestId('generate-results')).toHaveAttribute('data-regenerating', 'contentions');
+        expect(screen.getByTestId('submit-button')).toBeDisabled();
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        expect(generateCase).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops a regenerated section when the case changed while it was running', async () => {
+        const original = { caseStructure: { thesis: 'Existing Thesis' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[], metadata: {} };
+        mockGenerateResult = original;
+        let finish: (value: unknown) => void = () => undefined;
+        (generateCase as Mock).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        // Undo, or a new generation, replaced the case before the section came back.
+        mockGenerateResult = { ...original, caseStructure: { thesis: 'Restored Thesis' } };
+        finish({ result: { ...original, contentions: [{ claim: 'Updated' }] }, discoveredSources: [] });
+
+        await waitFor(() => expect(mockSetRegeneratingSection).toHaveBeenLastCalledWith(null));
+        expect(mockSetGenerateResult).not.toHaveBeenCalled();
+        expect(mockUpdateRecordedResult).not.toHaveBeenCalled();
     });
 
     it('records the case in the Current Debate with its side automatically', async () => {

@@ -227,6 +227,7 @@
     "docx": "DOCX",
     "googleDocs": "Google Docs",
     "regenerate": "Regenerate {{title}}",
+    "regenerating": "Regenerating {{title}}…",
     "openingPage": "Opening {{page}}",
     "page": "Page",
     "close": "Close",

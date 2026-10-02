@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
@@ -58,18 +59,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('medium');
   const [voice, setVoice] = useState(false);
   const voiceAvailability = useVoiceAvailability();
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const isOnline = useOnlineStatus();
 
   const selectedFormat = useMemo(() => SPARRING_FORMATS.find((item) => item.id === format) ?? SPARRING_FORMATS[0], [format]);
   const plannedTurns = useMemo(() => buildSparringTurns(format, userSide), [format, userSide]);

@@ -152,6 +152,42 @@ test("gen-export: a generated case exports to PDF and DOCX", async ({ signedIn: 
   }
 });
 
+test("gen-regenerate: regenerating one section keeps the rest of the case and its toolbar on screen", async ({ signedIn: page, evidence }) => {
+  const { output } = await generate(page);
+  const thesis = output.caseStructure.thesis;
+  await evidence.shot("01-generated");
+
+  // Hold the regenerate request so the in-flight screen can be checked.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/functions/v1/ai", async (route) => {
+    await held;
+    await route.continue();
+  });
+  const response = aiResponse(page, "generate");
+  await page.getByRole("button", { name: "Regenerate Arguments" }).click();
+  await evidence.step("Clicked Regenerate Arguments; request held");
+
+  const overlay = page.getByRole("status").filter({ hasText: "Regenerating Arguments" });
+  await expect(overlay).toBeVisible();
+  await expect(page.getByText(thesis).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "PDF", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Regenerate Case Structure" })).toBeDisabled();
+  // The form button reads "Generating..." while busy, so find it by its tour anchor.
+  await expect(page.locator('[data-tour="generate-button"]')).toBeDisabled();
+  await evidence.shot("02-regenerating-one-section");
+  await evidence.aria("02-regenerating-one-section");
+
+  release();
+  await response;
+  await page.unroute("**/functions/v1/ai");
+  await expect(page.getByText("Section regenerated").first()).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(overlay).toHaveCount(0);
+  await expect(page.getByText(thesis).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Regenerate Case Structure" })).toBeEnabled();
+  await evidence.shot("03-regenerated");
+});
+
 test("gen-error: a provider failure shows an error and the retry succeeds", async ({ signedIn: page, evidence }) => {
   await fake.fail("generate", 500);
   await openGenerate(page);

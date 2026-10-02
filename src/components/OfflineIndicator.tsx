@@ -1,20 +1,10 @@
-import { useEffect, useState } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 export function OfflineIndicator() {
   const { t } = useTranslation();
-  const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
-
-  useEffect(() => {
-    const update = () => setOffline(!navigator.onLine);
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
-    return () => {
-      window.removeEventListener('online', update);
-      window.removeEventListener('offline', update);
-    };
-  }, []);
+  const offline = !useOnlineStatus();
 
   if (!offline) return null;
 
