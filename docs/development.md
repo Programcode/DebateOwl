@@ -25,9 +25,10 @@ Never overwrite unrelated changes. Do not switch to the primary checkout because
 - Playwright browser binaries for browser gates
 - Xcode and CocoaPods or Swift Package Manager support for native iOS work
 
-Install the locked JavaScript tree:
+Install the locked JavaScript tree with the Node version from `.nvmrc`:
 
 ```bash
+nvm use
 npm ci
 ```
 
@@ -47,7 +48,19 @@ For another explicit local port:
 npm run dev -- --host 127.0.0.1 --port 8081
 ```
 
-Automated browser tests own `127.0.0.1:18080` by default and always start a fresh server.
+Automated browser tests always start a fresh server. `npm run verify` puts it on this worktree's port from `18100-18179` (`bash .superset/e2e-port.sh`); a bare Playwright run falls back to `127.0.0.1:18080`.
+
+## Preview on the tailnet
+
+A plain `npm run dev` talks to the production Supabase project unless the browser toggle says staging. For anything Adam opens from another device, run the staging preview instead:
+
+```bash
+npm run dev:preview -- --port 9201 --strictPort
+```
+
+`dev:preview` binds to `127.0.0.1` and sets `VITE_STAGING_PREVIEW=true`. In that mode Vite also accepts `*.ts.net` hostnames, so `tailscale serve` can forward to it however it was started. The app is then pinned to staging and calls Supabase at `/__staging-supabase` on its own origin, which Vite proxies to the staging project (see `stagingPreviewProxy` in [`vite.config.ts`](../vite.config.ts)). Requests stay same-origin, so Edge Function CORS lists need no preview entries. The staging strip shows, without the switch to production.
+
+Two ports are involved. The dev server listens locally on a port in `9200-9299`. The `tailnet-preview` skill publishes it on a tailnet HTTPS port in `9100-9149`, and that HTTPS origin is what the browser sees. Staging Auth allows redirects to `https://codex-remote.tailab0ab3.ts.net:91*/**`, so Google sign-in returns to the preview only when the published port starts with `91`. If you run `tailscale serve` by hand, publish on `9100-9199`. Demo codes and email codes must be staging ones: staging has its own users.
 
 ## Environment behavior
 
@@ -130,7 +143,7 @@ Never point local tests at staging or production. Never apply a migration to an 
 [`playwright.config.ts`](../playwright.config.ts) starts Vite on an isolated port and refuses to reuse an existing server.
 
 ```bash
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
 Failure artifacts go to ignored `test-results/` and `playwright-report/`. Protected staging disables traces, screenshots, and video.

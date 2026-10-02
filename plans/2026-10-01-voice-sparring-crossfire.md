@@ -1,6 +1,6 @@
 # Voice Sparring and Crossfire
 
-**Status:** Plan. Written 2026-10-01 against `main` at `fe6100a`. It records only the general choices. Implementation details are up to the implementer.
+**Status:** Shipped in #84 (merged 2026-10-02 as `791ccb0`). Kept as the record. Written 2026-10-01 against `main` at `fe6100a`. It records only the general choices. Implementation details are up to the implementer.
 
 ## Why
 

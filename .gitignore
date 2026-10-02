@@ -30,9 +30,13 @@ coverage/
 *.tsbuildinfo
 .vite/
 .playwright-cli/
+.playwright-mcp/
 
 # Verification skill state, logs, and evidence
 .verify/
+
+# CI failure artifacts downloaded by `npm run ci:failures`
+.ci-failures/
 
 # Playwright artifacts
 test-results/
@@ -62,16 +66,12 @@ deno.lock
 tasks.txt
 humanizer.md
 
-# Local notes/docs, except the project README
-*.md
+# Local notes. Other Markdown files are not ignored: a blanket *.md rule
+# silently dropped new root-level docs.
+/TASKS.md
+*.local.md
 *.txt
 *.info
-!README.md
-!AGENTS.md
-!**/README.md
-!docs/**/*.md
-!plans/**/*.md
-!.claude/skills/**/*.md
 .vercel
 .env*
 .worktrees/

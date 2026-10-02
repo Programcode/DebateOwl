@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/supabase/AuthProvider';
-import { getActiveEnv } from '@/lib/supabase/env';
+import { getActiveEnv, isEnvPinned } from '@/lib/supabase/env';
 import { reloadPage, switchEnv, useReloadOnEnvChange } from '@/lib/supabase/switch-env';
 
 const BANNER_HEIGHT = '2.25rem'; // h-9
@@ -12,6 +12,8 @@ const BANNER_HEIGHT = '2.25rem'; // h-9
  * Shown on every route while staging is active. A fresh staging session starts
  * signed out and Settings needs sign-in, so this is the way back that always works.
  * Mounted at the app root in every environment, it also keeps other tabs in step.
+ * A staging preview build is pinned to staging, so it shows the strip without
+ * the switch.
  */
 export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) {
   const { t } = useTranslation();
@@ -37,18 +39,20 @@ export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) 
     >
       <FlaskConical className="h-4 w-4" aria-hidden="true" />
       {t('settings.stagingBanner', 'Staging backend')}
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-7 px-3 underline-offset-2 hover:underline"
-        disabled={switching}
-        onClick={() => {
-          setSwitching(true);
-          void switchEnv('production', leaveEnvironment, reload);
-        }}
-      >
-        {t('settings.switchToProduction')}
-      </Button>
+      {!isEnvPinned() && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-3 underline-offset-2 hover:underline"
+          disabled={switching}
+          onClick={() => {
+            setSwitching(true);
+            void switchEnv('production', leaveEnvironment, reload);
+          }}
+        >
+          {t('settings.switchToProduction')}
+        </Button>
+      )}
     </div>
   );
 }

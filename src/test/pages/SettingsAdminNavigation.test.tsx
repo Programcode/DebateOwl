@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   role: vi.fn(),
   env: 'production' as 'production' | 'staging',
 }));
-vi.mock('@/lib/supabase/env', () => ({ getActiveEnv: () => mocks.env, setActiveEnv: vi.fn() }));
+vi.mock('@/lib/supabase/env', () => ({ getActiveEnv: () => mocks.env, isEnvPinned: () => false, setActiveEnv: vi.fn() }));
 vi.mock('@/lib/supabase/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock('@/lib/supabase/client', () => ({
   SUPABASE_URL: 'https://example.invalid',

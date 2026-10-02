@@ -2,7 +2,7 @@
 
 **Status:** Plan index. Plans describe intended work, not current implementation truth. Reconciled against `main` at `791ccb0` on 2026-10-02.
 
-Every plan lives in this folder. Before executing one, recheck its paths, assumptions, product decisions, and verification commands against current source.
+Every plan lives in this folder and opens with a `**Status:**` line; a plan listed under Shipped must say Shipped (`npm run docs:check` enforces both). When you split a plan across several agent threads, commit it first and put its path in each thread's prompt: an uncommitted plan exists only in one worktree. Before executing one, recheck its paths, assumptions, product decisions, and verification commands against current source.
 
 ## In progress
 
@@ -19,7 +19,7 @@ Nothing is in progress.
 
 ## Shipped
 
-These plans are finished. Their files were removed; git history keeps them.
+These plans are finished. Most of their files were removed and git history keeps them. The three linked below are kept as the record, and each says `**Status:** Shipped`.
 
 - Voice Sparring and Crossfire: #84. Plan kept as the record: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
 - Debate-aware AI and smaller modules: #75. Plan kept as the record: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).

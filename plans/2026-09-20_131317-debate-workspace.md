@@ -1,5 +1,7 @@
 # Debate workspace implementation plan
 
+**Status:** On hold and superseded by [the reduced-scope plan](2026-09-21-debate-workspace-no-bs.md). Collaborative Workspace is hidden in production. Kept as evidence.
+
 > For agentic workers: use `superpowers:executing-plans` or, when delegated execution is authorized, `superpowers:subagent-driven-development`. This is a master plan. Execute one reviewed slice at a time and keep its checkboxes current. Planning does not authorize implementation or deployment.
 
 **Goal:** Give a school debate squad one persistent, collaborative place to prepare both sides of a motion, develop speeches, share evidence, use AI, practise, review feedback, and export its work.

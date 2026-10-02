@@ -27,7 +27,16 @@ function runStatus(args: string[], extraEnv: Record<string, string> = {}) {
   return spawnSync("node", [SCRIPT, ...args], {
     cwd: root,
     encoding: "utf8",
-    env: { ...env, CALL_LOG: join(root, "calls.log"), PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`, ...extraEnv },
+    // HOME and an empty token keep the real Management API token out of the test.
+    env: {
+      ...env,
+      CALL_LOG: join(root, "calls.log"),
+      HOME: root,
+      PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
+      SUPABASE_ACCESS_TOKEN: "",
+      SUPABASE_HOME: "",
+      ...extraEnv,
+    },
   });
 }
 
@@ -81,6 +90,10 @@ beforeEach(async () => {
       { slug: "retired", version: 1, updated_at: 500_000, verify_jwt: true },
     ],
   };
+  const secrets = {
+    message: "",
+    secrets: ["OPENROUTER_API_KEY", "EXA_API_KEY", "ELEVENLABS_API_KEY"].map((name) => ({ name, value: `digest-of-${name}` })),
+  };
   await mkdir(join(root, "bin"));
   await writeFile(
     join(root, "bin/supabase"),
@@ -90,6 +103,7 @@ beforeEach(async () => {
       'echo "A new version of Supabase CLI is available" >&2',
       `if [ "$1 $2" = "migration list" ]; then echo '${JSON.stringify(migrations)}'; exit 0; fi`,
       `if [ "$1 $2" = "functions list" ]; then echo '${JSON.stringify(functions)}'; exit 0; fi`,
+      `if [ "$1 $2" = "secrets list" ]; then echo '${JSON.stringify(secrets)}'; exit 0; fi`,
       "exit 99",
       "",
     ].join("\n"),
@@ -115,23 +129,32 @@ it("reports what the current commit has that the project lacks", async () => {
   expect(out).toMatch(/verify_jwt differs from supabase\/config.toml:\n {4}beta: deployed false, config true\n/);
   expect(out).toMatch(/Deployed but not on this commit:\n {4}retired\n/);
   expect(out).toContain("4 pending items.");
+  expect(out).toMatch(/Secrets: missing expected function secrets \(names only\):\n {4}STRIPE_SECRET_KEY: .+\n {4}STRIPE_WEBHOOK_SECRET: .+\n\n/);
+  expect(out).not.toContain("digest-of-");
+  expect(out).toContain("Auth URLs: not checked (unknown project ref).");
 });
 
 it("uses only read-only list commands and targets the linked project by default", async () => {
   runStatus([]);
 
   const calls = (await readFile(join(root, "calls.log"), "utf8")).trim().split("\n");
-  expect(calls).toEqual(["migration list --linked --output-format json", "functions list --output-format json"]);
+  expect(calls).toEqual([
+    "migration list --linked --output-format json",
+    "functions list --output-format json",
+    "secrets list --output-format json",
+  ]);
 });
 
 it("passes --project-ref to both commands and names known projects", async () => {
   const result = runStatus(["--project-ref", STAGING_REF]);
 
   expect(result.stdout).toContain(`Backend status: ${STAGING_REF} (staging) compared with commit`);
+  expect(result.stdout).toContain("Auth URLs: not checked (no access token file; if the CLI keeps it in the OS keyring, set SUPABASE_ACCESS_TOKEN).");
   const calls = (await readFile(join(root, "calls.log"), "utf8")).trim().split("\n");
   expect(calls).toEqual([
     `migration list --project-ref ${STAGING_REF} --output-format json`,
     `functions list --project-ref ${STAGING_REF} --output-format json`,
+    `secrets list --project-ref ${STAGING_REF} --output-format json`,
   ]);
 });
 

@@ -128,6 +128,16 @@ The database gate proves migration replay and pgTAP assertions locally. It does 
 
 `20260926090100_legacy_debate_cleanup.sql` defines `private.purge_legacy_debate_material`, which deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. The migration does not call it, so applying it deletes nothing; legacy rows stay in the Unsorted view. Running the purge on a remote project is a separate, destructive step that needs explicit authorization for that environment. Work created after the rollout is never touched, however late it runs.
 
+## Adding an Edge Function
+
+A new function needs more than its own folder. In the same PR:
+
+1. Add a `[functions.<name>]` block to [`config.toml`](config.toml) with the intended `verify_jwt`.
+2. Add it to the readiness loop in [`../.superset/db-gate.sh`](../.superset/db-gate.sh) (`for function_name in ...`) when the full-stack gate calls it, and to the matching loop in [`../.claude/skills/verify-debatelab/bin/verify.sh`](../.claude/skills/verify-debatelab/bin/verify.sh).
+3. If it calls OpenRouter, Stripe or another paid provider, teach [`../e2e/full-stack/fake-openrouter.mjs`](../e2e/full-stack/fake-openrouter.mjs) to answer it. The fake rejects requests it doesn't recognize.
+4. If it reads a new environment variable, add the name to `--allow-env` in the `test:edge` script in `package.json`, to [Environment and secrets](#environment-and-secrets), and to `EXPECTED_SECRETS` in [`../scripts/backend-status.mjs`](../scripts/backend-status.mjs) when every deployed project must hold it.
+5. Describe it under [Function groups](#function-groups).
+
 ## Edge Function tests
 
 Run:
@@ -155,6 +165,14 @@ Document names, never values. Depending on deployed features, server-side config
 - sparring integrity material, which also signs voice tokens;
 - Google export configuration;
 - allowed origins and environment-specific application URLs.
+
+Supabase injects `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Every deployed project, staging included, also needs:
+
+- `OPENROUTER_API_KEY` and `EXA_API_KEY`, or AI features and web research fail;
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, or checkout, the billing portal, the webhook and account deletion fail (`stripe-webhook` fails at startup without them);
+- `ELEVENLABS_API_KEY` for the opponent's voice, which otherwise falls back to the browser voice.
+
+`DEMO_CODE_PEPPER` and `SPARRING_INTEGRITY_SECRET` fall back to a value derived from the service-role key. The `WORKSPACE_INVITE_*` values serve only the hidden Workspace. `npm run backend:status -- --project-ref <ref>` lists which expected names a project lacks, without printing values.
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
 
