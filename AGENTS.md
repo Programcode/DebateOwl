@@ -94,6 +94,17 @@ $H down                # always, including after failures
 - Most tools work inside a Current Debate. Recipes start one with `startDebate` or answer the motion dialog with `chooseForMotion`; see the skill's Drive section.
 - Neither mode proves Stripe Checkout, real Stripe cancellation, ElevenLabs voice audio, Google sign-in or export, staging, or production.
 
+### Keep the skill working
+
+The skill is maintained code. A change that breaks it or makes it stale must update it in the same PR. That includes a new dialog in a flow, renamed labels or test IDs, moved routes, new stack services, and a new or removed user-facing feature. Specifically:
+
+- Fix the affected recipes in `.claude/skills/verify-debatelab/recipes/`, and add a recipe for a new feature.
+- Update the matching file in `features/` and its index in `features/README.md`.
+- Update `SKILL.md` wherever its commands, selectors, or limits no longer match the app.
+- Run `$H drive recipes/<name>` for every recipe you touched, on both `desktop-chromium` and `mobile-chromium`, and report the result in the PR. A recipe that no longer passes is a regression, the same as a failing test.
+
+Never weaken a recipe's assertions to make it pass.
+
 ## Hard boundaries
 
 - Start bug fixes with a failing test or repeatable browser reproduction when a suitable test layer exists.
