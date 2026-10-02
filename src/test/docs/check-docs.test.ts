@@ -58,7 +58,7 @@ describe("checkDocs", () => {
   it("checks the plan index but excludes other plan artifacts", async () => {
     const root = await createRoot();
     await write(root, "plans/README.md", "Run `cd debate-navigator`.\n");
-    await write(root, "plans/old.md", "Run `cd debate-navigator`.\n");
+    await write(root, "plans/old.md", "**Status:** Shipped.\n\nRun `cd debate-navigator`.\n");
 
     const issues = await (await loadCheckDocs())(root);
 
@@ -154,5 +154,40 @@ describe("checkDocs", () => {
     await write(root, "README.md", `${link}\n`);
 
     await expect((await loadCheckDocs())(root)).resolves.toEqual([]);
+  });
+
+  it("requires a status line on every plan", async () => {
+    const root = await createRoot();
+    await write(root, "plans/README.md", "# Plans\n");
+    await write(root, "plans/new.md", "# New plan\n\nNo status yet.\n");
+    await write(root, "plans/dated.md", "# Dated plan\n\n**Status:** Plan. Written 2026-10-01.\n");
+
+    const issues = await (await loadCheckDocs())(root);
+
+    expect(issues).toEqual([
+      { file: "plans/new.md", line: 1, message: "plan has no **Status:** line in its first 15 lines" },
+    ]);
+  });
+
+  it("rejects a plan listed under Shipped whose status is not shipped", async () => {
+    const root = await createRoot();
+    await write(
+      root,
+      "plans/README.md",
+      "# Plans\n\n## Backlog\n\n- [Next](next.md)\n\n## Shipped\n\n- Done: #1. [Done](done.md)\n- Stale: #2. [Stale](./stale.md)\n",
+    );
+    await write(root, "plans/next.md", "**Status:** Plan.\n");
+    await write(root, "plans/done.md", "**Status:** Shipped in #1.\n");
+    await write(root, "plans/stale.md", "**Status:** Plan. Written 2026-10-01.\n");
+
+    const issues = await (await loadCheckDocs())(root);
+
+    expect(issues).toEqual([
+      {
+        file: "plans/README.md",
+        line: 10,
+        message: 'stale.md is listed under Shipped but its status is not "Shipped": Plan. Written 2026-10-01.',
+      },
+    ]);
   });
 });

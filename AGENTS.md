@@ -134,7 +134,7 @@ Open only what the task needs:
 - [docs/testing.md](docs/testing.md): what each gate proves, browser matrices, staging, artifacts, and cleanup.
 - [docs/operations.md](docs/operations.md): CI, Vercel hosting, staging, deployment, rollback, and live verification.
 - [supabase/README.md](supabase/README.md): Edge Functions, shared backend modules, migrations, auth boundaries, and required secret names.
-- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Every plan lives in `plans/`; write new plans there. Revalidate every plan against current source before executing it.
+- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Every plan lives in `plans/` and opens with a `**Status:**` line; write new plans there. Commit a plan before splitting it across agent threads, and put its path in each thread's prompt. Revalidate every plan against current source before executing it.
 - [docs/README.md](docs/README.md): complete documentation index and freshness labels.
 
 When commands, ports, workflows, or runtime boundaries change, update the owning focused document in the same change. Do not copy large source trees, schemas, dependency lists, or model catalogs into documentation.

@@ -3,9 +3,10 @@
 //
 // Vercel ships the frontend on merge; migrations and Edge Functions are
 // deployed by hand. This script lists what the current commit has that the
-// project does not. It only runs `supabase migration list` and
-// `supabase functions list`, and it reads the repository from git HEAD, so
-// uncommitted files are ignored.
+// project does not. It only runs `supabase migration list`,
+// `supabase functions list` and `supabase secrets list` (names only), reads the
+// project's Auth URL settings from the Management API, and reads the
+// repository from git HEAD, so uncommitted files are ignored.
 //
 // Usage: npm run backend:status [-- --project-ref <ref>] [--check]
 //   --project-ref <ref>  inspect this project instead of the linked one
@@ -13,12 +14,24 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, posix } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const KNOWN_PROJECTS = {
   uziwdtkzofptihahfooo: "production",
   brifeyypjauyusmkptkx: "staging",
+};
+
+// Secrets the functions read that Supabase does not inject. DEMO_CODE_PEPPER
+// and SPARRING_INTEGRITY_SECRET fall back to the service-role key, and the
+// WORKSPACE_INVITE_* values serve the hidden Workspace, so they are not listed.
+export const EXPECTED_SECRETS = {
+  OPENROUTER_API_KEY: "every model request",
+  EXA_API_KEY: "web research in case generation and Ask",
+  STRIPE_SECRET_KEY: "checkout, billing portal, webhook and account deletion",
+  STRIPE_WEBHOOK_SECRET: "stripe-webhook signature check",
+  ELEVENLABS_API_KEY: "opponent voice; without it voice rounds use the browser voice",
 };
 
 const MIGRATION_FILE = /^(\d+)_.+\.sql$/;
@@ -252,6 +265,55 @@ export function formatReport({ target, local, result, deployedCount, notes }) {
   return lines.join("\n");
 }
 
+export function missingSecrets(names) {
+  const present = new Set(names);
+  return Object.entries(EXPECTED_SECRETS)
+    .filter(([name]) => !present.has(name))
+    .map(([name, use]) => `${name}: ${use}`);
+}
+
+function secretsReport(root, targetArgs) {
+  let names;
+  try {
+    const output = supabaseJson(root, ["secrets", "list", ...targetArgs]);
+    names = (Array.isArray(output) ? output : (output.secrets ?? [])).map((secret) => secret.name);
+  } catch (error) {
+    return `Secrets: not checked (${error.message.split("\n")[0]}).`;
+  }
+  const missing = missingSecrets(names);
+  if (missing.length === 0) return "Secrets: every expected function secret is set.";
+  return ["Secrets: missing expected function secrets (names only):", ...missing.map((line) => `    ${line}`)].join("\n");
+}
+
+function accessToken() {
+  const fromEnv = process.env.SUPABASE_ACCESS_TOKEN?.trim();
+  if (fromEnv) return fromEnv;
+  const file = join(homedir(), ".supabase", "access-token");
+  return existsSync(file) ? readFileSync(file, "utf8").trim() : null;
+}
+
+/** Site URL and redirect allowlist, which magic links and OAuth redirects must match. */
+export async function authUrlsReport(ref) {
+  if (!/^[a-z0-9]{20}$/.test(ref)) return "Auth URLs: not checked (unknown project ref).";
+  const token = accessToken();
+  if (!token) return "Auth URLs: not checked (no SUPABASE_ACCESS_TOKEN or ~/.supabase/access-token).";
+  try {
+    const response = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return `Auth URLs: not checked (Management API answered ${response.status}).`;
+    const config = await response.json();
+    const allowList = String(config.uri_allow_list ?? "").split(",").map((entry) => entry.trim()).filter(Boolean);
+    return [
+      `Auth URLs: site_url ${config.site_url || "(unset)"}`,
+      "  Redirect allowlist:",
+      ...(allowList.length ? allowList.map((entry) => `    ${entry}`) : ["    (empty)"]),
+    ].join("\n");
+  } catch (error) {
+    return `Auth URLs: not checked (${error.message}).`;
+  }
+}
+
 export function backendStatus({ root, projectRef }) {
   const local = readCommit(root);
   const targetArgs = projectRef ? ["--project-ref", projectRef] : [];
@@ -280,10 +342,11 @@ export function backendStatus({ root, projectRef }) {
   const target = label ? `${ref} (${label})` : ref;
 
   const result = compareBackend({ local, remoteMigrations, deployedFunctions, changeOf });
-  return { result, report: formatReport({ target, local, result, deployedCount: deployedFunctions.length, notes }) };
+  const report = formatReport({ target, local, result, deployedCount: deployedFunctions.length, notes });
+  return { ref, result, report: `${report}\n\n${secretsReport(root, targetArgs)}` };
 }
 
-function main() {
+async function main() {
   let options;
   try {
     options = parseArgs(process.argv.slice(2));
@@ -295,8 +358,9 @@ function main() {
 
   try {
     const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]).trim();
-    const { result, report } = backendStatus({ root, projectRef: options.projectRef });
+    const { ref, result, report } = backendStatus({ root, projectRef: options.projectRef });
     console.log(report);
+    console.log(`\n${await authUrlsReport(ref)}`);
     if (options.check && result.pendingMigrations.length > 0) process.exit(1);
   } catch (error) {
     console.error(error.message);
@@ -307,4 +371,4 @@ function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

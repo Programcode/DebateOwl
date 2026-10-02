@@ -33,7 +33,7 @@ If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the accou
 
 ## Frontend hosting on Vercel
 
-Vercel builds and serves the frontend from the Git repository. Merging to `main` starts a production deployment to `https://debate.pi-stack.org`; pull requests may get preview deployments. The production canary runs after each successful Vercel `Production` deployment.
+Vercel builds and serves the frontend from the Git repository. Merging to `main` starts a production deployment to `https://debate.pi-stack.org`. Pull requests may get Vercel preview deployments, and those use the production Supabase project unless the in-app switcher picks staging, so treat a preview as production data. For a staging-pinned preview, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment.
 
 [`vercel.json`](../vercel.json) owns:
 
@@ -63,14 +63,14 @@ The staging browser suite disables trace, screenshot, and video capture. It crea
 
 Do not enable the staging repository variable before every prerequisite is present. A skipped staging job is not a pass.
 
-`STAGING_E2E_ENABLED` has been `true` since 2026-09-18, and the job passed through 2026-09-23. Since then it has been skipped because the `Quality` run it waits for fails before any runner starts (see [When GitHub Actions cannot run](#when-github-actions-cannot-run)). Restoring Actions minutes restores the staging job; nothing in the workflow needs changing.
+`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs after every successful `Quality` run from a push to `main`. Quality runs from pull requests also trigger it, and those show as skipped by design. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence.
 
 ## Staging sync
 
 Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production is `debate-trainer` (`uziwdtkzofptihahfooo`). Every backend change goes to staging first, passes the staging browser suite, and only then goes to production. Steps 1 and 2 are read-only. Steps 3 and 4 change staging and need Adam's authorization each time.
 
 1. Confirm the target. `supabase projects list` must show the staging ref under the staging name. Stop if a command, link, or environment variable points at the production ref.
-2. Find what is pending. Run `npm run backend:status -- --project-ref brifeyypjauyusmkptkx --check` from a checkout of the commit you mean to ship. It compares staging with the committed tree and exits 1 when a migration is not applied. Where that script is not available, run its two read-only queries directly:
+2. Find what is pending. Run `npm run backend:status -- --project-ref brifeyypjauyusmkptkx --check` from a checkout of the commit you mean to ship. It compares staging with the committed tree and exits 1 when a migration is not applied. It also lists expected function secrets the project lacks (names only) and prints the Auth site URL and redirect allowlist. Where that script is not available, run its two read-only queries directly:
 
    ```bash
    supabase migration list --project-ref brifeyypjauyusmkptkx
@@ -94,7 +94,7 @@ The switch only works while the `connect-src` directive in [`vercel.json`](../ve
 
 ## Backend drift check
 
-`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the project the Supabase CLI resolves, which is `SUPABASE_PROJECT_ID` when that is set and the linked project otherwise; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list` and `supabase functions list` and changes no schema, data, functions, or secrets. To connect to the database, the CLI creates its usual short-lived login role.
+`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the project the Supabase CLI resolves, which is `SUPABASE_PROJECT_ID` when that is set and the linked project otherwise; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list`, `supabase functions list` and `supabase secrets list`, reads the Auth site URL and redirect allowlist from the Management API with the CLI's access token (`SUPABASE_ACCESS_TOKEN` or `~/.supabase/access-token`), and changes no schema, data, functions, or secrets. It prints secret names only, never values or digests. To connect to the database, the CLI creates its usual short-lived login role.
 
 The comparison uses the committed tree at `HEAD`, so commit or stash local edits first. It reports:
 
