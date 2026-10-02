@@ -21,6 +21,12 @@ it("stops local Supabase when database tests fail", async () => {
   const bin = join(root, "bin");
   const log = join(root, "calls.log");
   await mkdir(bin);
+  // The gate's cleanup can remove the shared fake-provider container. A real
+  // docker here would kill a gate running in any other worktree, so log it instead.
+  await executable(
+    join(bin, "docker"),
+    '#!/usr/bin/env bash\nprintf "docker %s\\n" "$*" >> "$CALL_LOG"\n',
+  );
   await executable(
     join(bin, "supabase"),
     '#!/usr/bin/env bash\nprintf "supabase %s\\n" "$*" >> "$CALL_LOG"\n',
@@ -37,6 +43,8 @@ it("stops local Supabase when database tests fail", async () => {
       CALL_LOG: log,
       HOME: root,
       PATH: `${bin}:${process.env.PATH ?? ""}`,
+      TMPDIR: root,
+      WORKSPACE_GATE_ARTIFACT_ROOT: "",
     },
   });
 
