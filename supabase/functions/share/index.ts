@@ -2,6 +2,7 @@
 // Creates and manages shareable links for debate content
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders } from "../_shared/cors.ts";
 
 
@@ -26,7 +27,7 @@ function isUniqueViolation(error: { code?: string; message?: string } | null): b
     return error?.code === "23505" || Boolean(error?.message?.toLowerCase().includes("duplicate"));
 }
 
-Deno.serve(async (req: Request) => {
+export async function handleRequest(req: Request): Promise<Response> {
     const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
     if (req.method === "OPTIONS") {
@@ -40,24 +41,14 @@ Deno.serve(async (req: Request) => {
         });
     }
 
-    // Get user from token (optional - anonymous shares allowed)
-    let userId: string | null = null;
-    const authHeader = req.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-        try {
-            const token = authHeader.slice(7);
-            const { data: { user } } = await supabase.auth.getUser(token);
-            userId = user?.id || null;
-        } catch {
-            // Continue as anonymous
-        }
-    }
-
-    if (!userId) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    // Creating a share link requires a signed-in user, who becomes its owner.
+    let userId: string;
+    try {
+        userId = (await requireUser(req)).user.id;
+    } catch (error) {
+        if (!(error instanceof HttpError)) throw error;
+        console.warn("[SHARE] Authentication rejected:", error.message);
+        return jsonError(error, corsHeaders);
     }
 
     try {
@@ -141,4 +132,8 @@ Deno.serve(async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

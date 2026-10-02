@@ -7,6 +7,7 @@
 // the browser can fall back to its own voice and keep the round going.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { HttpError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { ELEVENLABS_PROVIDER, normalizeElevenLabsUsage } from "../_shared/cost.ts";
 import {
@@ -110,11 +111,14 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
 
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return errorResponse(401, "Unauthorized", corsHeaders);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
-  if (authError || !user) return errorResponse(401, "Invalid token", corsHeaders);
-  const userId = user.id;
+  let userId: string;
+  try {
+    userId = (await requireUser(req)).user.id;
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    console.warn("[VOICE] Authentication rejected:", error.message);
+    return errorResponse(error.status, error.message, corsHeaders);
+  }
 
   const request = await readRequest(req);
   if (!request) return errorResponse(400, "Invalid voice request", corsHeaders);

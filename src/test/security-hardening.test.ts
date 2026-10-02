@@ -45,7 +45,10 @@ describe('security hardening regressions', () => {
   it('uses code-scoped sharing and disallows anonymous share creation', () => {
     expect(migration).toContain('DROP POLICY IF EXISTS "shared_items_select_public"');
     expect(migration).toContain('FUNCTION public.get_shared_item(p_share_code text)');
-    expect(share).toContain('if (!userId)');
+    // requireUser refuses a missing, empty, or rejected token with 401, so the
+    // creator is always a verified user. share/auth_test.ts covers the behavior.
+    expect(share).toContain('userId = (await requireUser(req)).user.id');
+    expect(share).toContain('created_by: userId');
     expect(share).toContain('crypto.getRandomValues');
     const sharedPage = read('src/pages/SharedPage.tsx');
     expect(sharedPage).toContain("rpc('get_shared_item'");

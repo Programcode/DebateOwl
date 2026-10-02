@@ -1,5 +1,6 @@
 for (const [key, value] of Object.entries({
   SUPABASE_URL: "https://supabase.test",
+  SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
