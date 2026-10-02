@@ -2,35 +2,8 @@
 // Creates a Google Doc from debate data using the user's OAuth token.
 // Supports multiple modes: generate, attack, brainstorm, factoids
 
-// Import Supabase client for JWT verification
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { HttpError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-
-// Initialize Supabase client with service role key for user verification
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Validate JWT from Authorization header
-async function validateJWT(req: Request): Promise<{ valid: boolean; userId?: string; error?: string }> {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-        return { valid: false, error: "Missing or invalid Authorization header" };
-    }
-
-    const token = authHeader.slice(7);
-    try {
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (error || !user) {
-            console.error("[GDOC] JWT validation failed:", error?.message || "No user found");
-            return { valid: false, error: error?.message || "Invalid token" };
-        }
-        return { valid: true, userId: user.id };
-    } catch (err) {
-        console.error("[GDOC] JWT validation error:", err);
-        return { valid: false, error: "Token validation failed" };
-    }
-}
 
 
 
@@ -752,7 +725,7 @@ function buildFactoidsContent(data: FactoidsData) {
 // ============================================================
 // MAIN HANDLER
 // ============================================================
-Deno.serve(async (req: Request) => {
+export async function handleRequest(req: Request): Promise<Response> {
     // IMMEDIATE log to verify function is being called
     console.log("[GDOC] Function invoked, method:", req.method);
 
@@ -767,19 +740,24 @@ Deno.serve(async (req: Request) => {
         return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
     }
 
-    // Validate Supabase JWT (manual validation since we disabled gateway verification)
-    const jwtResult = await validateJWT(req);
-    if (!jwtResult.valid) {
-        console.error("[GDOC] JWT validation failed:", jwtResult.error);
+    // Gateway JWT verification is disabled for this function, so the handler
+    // checks the Supabase session itself. The browser reads `error` and treats
+    // any 401 as "sign in again", so the response keeps this shape.
+    let userId: string;
+    try {
+        userId = (await requireUser(req)).user.id;
+    } catch (error) {
+        if (!(error instanceof HttpError)) throw error;
+        console.warn("[GDOC] Authentication rejected:", error.message);
         return new Response(JSON.stringify({
             error: "Unauthorized",
-            details: jwtResult.error
+            details: error.message
         }), {
-            status: 401,
+            status: error.status,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
     }
-    console.log("[GDOC] JWT validated successfully, userId:", jwtResult.userId);
+    console.log("[GDOC] JWT validated successfully, userId:", userId);
 
     try {
         console.log("[GDOC] Parsing request body...");
@@ -958,4 +936,8 @@ Deno.serve(async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
     }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

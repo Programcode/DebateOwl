@@ -1,6 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
+import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Re-export helpers so existing callers (if any) keep working.
@@ -235,15 +236,13 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
   }
 
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
-  }
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return jsonResponse({ error: "Invalid token" }, 401, corsHeaders);
+  let user: User;
+  try {
+    user = (await requireUser(req)).user;
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    console.warn("[IMPORT_SOURCE] Authentication rejected:", error.message);
+    return jsonError(error, corsHeaders);
   }
 
   if (await isUserBanned(user.id)) {

@@ -1,13 +1,14 @@
 // Supabase Edge Function: Admin API for DebateLab
 // Provides usage statistics, rate limit management, and user management
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
 import {
     validateAnnouncementId,
     validateCreateAnnouncement,
 } from "../_shared/announcements.ts";
 import { generateDemoCode, hashDemoCode, isCreatableDemoRole } from "../_shared/demo-code.ts";
 import { collectAdminUsagePages, getKnownCost, hasUnknownCost, isNonAiActivity } from "../_shared/admin-cost.ts";
+import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 // SECURITY: Allow specific origins for CORS
@@ -86,7 +87,7 @@ async function assertCurrentAdmin(userId: string) {
     }
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
     const origin = req.headers.get("origin");
     const corsHeaders = getCorsHeaders(origin, { methods: "POST, GET, OPTIONS" });
 
@@ -95,26 +96,13 @@ Deno.serve(async (req) => {
     }
 
     // Authenticate request
-    const authHeader = req.headers.get("authorization");
-    console.log("[ADMIN] Auth header present:", !!authHeader, "starts with Bearer:", authHeader?.startsWith("Bearer "));
-    if (!authHeader?.startsWith("Bearer ")) {
-        console.log("[ADMIN] No auth header, returning 401");
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-    }
-
-    const token = authHeader.slice(7);
-    console.log("[ADMIN] Token length:", token.length);
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    console.log("[ADMIN] getUser result - user:", user?.id, "error:", authError?.message);
-    if (authError || !user) {
-        console.log("[ADMIN] Auth failed, returning 401");
-        return new Response(JSON.stringify({ error: "Invalid token" }), {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    let user: User;
+    try {
+        user = (await requireUser(req)).user;
+    } catch (error) {
+        if (!(error instanceof HttpError)) throw error;
+        console.warn("[ADMIN] Authentication rejected:", error.message);
+        return jsonError(error, corsHeaders);
     }
 
     // Check if user is admin
@@ -1032,4 +1020,8 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

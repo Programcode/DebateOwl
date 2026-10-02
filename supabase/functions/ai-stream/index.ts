@@ -1,7 +1,7 @@
 // Supabase Edge Function: streaming Ask proxy for DebateLab.
 // Keeps provider keys server-side and uses SSE for progressive UI rendering.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
 import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
 import { boundPromptSources, buildStreamingAskSystemPrompt, type StreamingAskMaterial } from "../_shared/prompts.ts";
@@ -18,6 +18,7 @@ import {
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
+import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
 import { OPENROUTER_API_URL } from "../_shared/research.ts";
@@ -101,15 +102,13 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return jsonResponse({ error: "Authentication required" }, 401, corsHeaders);
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return jsonResponse({ error: "Invalid authentication token" }, 401, corsHeaders);
+  let user: User;
+  try {
+    user = (await requireUser(req)).user;
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    console.warn(JSON.stringify({ function: "ai-stream", event: "auth_rejected", error: error.message }));
+    return jsonError(error, corsHeaders);
   }
 
   let body: Record<string, unknown>;
