@@ -8,7 +8,7 @@ import { openrouter } from "@openrouter/ai-sdk-provider";
 // the evidence. See docs/testing.md#agentic-browser-tests.
 
 // Only the `verify.sh up` client: a plain dev server talks to production Supabase.
-const appUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:18081";
+const appUrl = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:18081";
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+\/?$/.test(appUrl)) {
   throw new Error(`Agentic tests only drive the local verification stack, not ${appUrl}`);
 }
@@ -21,8 +21,9 @@ const live = process.env.VERIFY_MODE === "live";
 // The judge answers every agent.assert, waitFor and extract on every run, so it
 // must be reliable: the Muse Spark contributor tier is the cheapest that is,
 // and like the app's live pin it may keep prompts (made-up content only).
-const model = openrouter(process.env.E2E_AGENT_MODEL ?? "qwen/qwen3.8-27b:free");
-const judge = openrouter(process.env.E2E_JUDGE_MODEL ?? "meta/muse-spark-1.3-contributor");
+// `||`, not `??`: an unset Actions variable arrives as an empty string.
+const model = openrouter(process.env.E2E_AGENT_MODEL || "qwen/qwen3.8-27b:free");
+const judge = openrouter(process.env.E2E_JUDGE_MODEL || "meta/muse-spark-1.3-contributor");
 
 // `context` reaches every model call, judges included: what the app calls things.
 const context = [
