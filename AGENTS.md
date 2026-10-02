@@ -5,7 +5,7 @@
 - The repository is DebateLab. Never infer its directory from an old repository name.
 - Run `git rev-parse --show-toplevel` and stay inside that returned worktree. On Adam's VPS, `/home/codex/Projects/DebateLab` is the primary checkout, but Superset and other agents use linked worktrees elsewhere.
 - Before editing, inspect the branch and working tree. Preserve unrelated changes.
-- Use Node 22, npm, and the committed `package-lock.json`. The VPS default is Node 24, so run `nvm use` first (`.nvmrc` pins 22). Install with `npm ci`; T3 worktrees start without `node_modules`.
+- Use Node 22, npm, and the committed `package-lock.json`. `.nvmrc` pins 22, but the VPS default is Node 24: check `node -v` and run `nvm use` (with `NVM_DIR=$HOME/.nvm` set) when it isn't 22. Install with `npm ci` when `node_modules` is missing.
 
 ## Parallel Superset workspaces
 
