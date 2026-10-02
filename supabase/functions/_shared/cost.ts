@@ -4,6 +4,19 @@
 
 export const OPENROUTER_COST_CALCULATION_VERSION = "openrouter-usage-v1";
 
+export const ELEVENLABS_PROVIDER = "elevenlabs";
+export const ELEVENLABS_COST_CALCULATION_VERSION = "elevenlabs-characters-v1";
+export const ELEVENLABS_PRICING_SNAPSHOT_ID = "elevenlabs-api-pricing-2026-10-01";
+export const ELEVENLABS_PRICING_SOURCE_URL = "https://elevenlabs.io/pricing/api";
+// USD per 1,000 billed characters at list price on the snapshot date.
+// ElevenLabs reports characters, not dollars, so this is the one place a
+// price table remains. Promotions and plan credits are not modelled: a row
+// can overstate the charge, never understate it.
+const ELEVENLABS_USD_PER_1K_CHARACTERS: Record<string, number> = {
+  eleven_v4: 0.08,
+  eleven_v4_turbo: 0.04,
+};
+
 export interface NormalizedUsage {
   /** True when part of the request's provider work was not observed to settle. */
   incomplete?: boolean;
@@ -21,6 +34,8 @@ export interface NormalizedUsage {
   reasoningOutputTokens?: number;
   /** OpenRouter's authoritative account charge, in USD. */
   reportedCostUsd?: number;
+  /** Characters ElevenLabs billed for a speech request. */
+  billedCharacters?: number;
   /** Untouched provider usage object, kept verbatim for audit. */
   raw?: Record<string, unknown>;
 }
@@ -66,12 +81,57 @@ export function normalizeOpenRouterUsage(usage: Record<string, unknown>): Normal
   };
 }
 
+/**
+ * ElevenLabs bills per input character and reports the count in the
+ * `character-cost` response header. Without a usable header, the characters
+ * sent are the documented basis for the charge.
+ */
+export function normalizeElevenLabsUsage(args: {
+  characters: number;
+  characterCostHeader: string | null;
+  requestId: string | null;
+}): NormalizedUsage {
+  const reported = args.characterCostHeader !== null && /^\d+$/.test(args.characterCostHeader.trim())
+    ? Number(args.characterCostHeader.trim())
+    : undefined;
+  return {
+    billedCharacters: reported ?? args.characters,
+    raw: {
+      characters: args.characters,
+      character_cost: args.characterCostHeader,
+      request_id: args.requestId,
+    },
+  };
+}
+
+function calculateElevenLabsCost(model: string, usage?: NormalizedUsage): CostResult {
+  const rate = ELEVENLABS_USD_PER_1K_CHARACTERS[model];
+  const characters = usage?.billedCharacters;
+  const result: CostResult = {
+    inputTokens: null,
+    cachedInputTokens: null,
+    cacheWriteTokens: null,
+    outputTokens: null,
+    reasoningOutputTokens: null,
+    // An unlisted model or an unknown character count stays unpriced.
+    costUsd: rate === undefined || characters === undefined || usage?.incomplete
+      ? null
+      : Number(((characters / 1_000) * rate).toFixed(6)),
+    pricingSnapshotId: ELEVENLABS_PRICING_SNAPSHOT_ID,
+    pricingSourceUrl: rate === undefined ? null : ELEVENLABS_PRICING_SOURCE_URL,
+    costCalculationVersion: ELEVENLABS_COST_CALCULATION_VERSION,
+  };
+  if (usage?.raw) result.rawUsage = usage.raw;
+  return result;
+}
+
 export function calculateRequestCost(args: {
   provider: string;
   model: string;
   usage?: NormalizedUsage;
 }): CostResult {
   const { usage } = args;
+  if (args.provider === ELEVENLABS_PROVIDER) return calculateElevenLabsCost(args.model, usage);
   // Cache writes report the combined 5m + 1h total for storage; raw_usage
   // keeps the exact TTL split for audit.
   const combinedCacheWrite = usage?.cacheWriteTokens !== undefined || usage?.cacheWrite1hTokens !== undefined

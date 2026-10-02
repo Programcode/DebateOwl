@@ -112,7 +112,9 @@ const ask = () => ({
   uncertainties: [],
 });
 
-const sparring = (user) => /^SPARRING ACTION: score/m.test(user)
+// In a voice round the prompt allows audio tags. The fake uses one allowed tag
+// and one invented tag, so the journey can prove neither reaches the page.
+const sparring = (user, system) => /^SPARRING ACTION: score/m.test(user)
   ? {
     action: "score",
     scorecard: {
@@ -129,7 +131,9 @@ const sparring = (user) => /^SPARRING ACTION: score/m.test(user)
   : {
     action: "respond",
     speech: {
-      content: `${MARK} opponent speech: the policy needs a stronger comparative case.`,
+      content: system.includes("SPOKEN ROUND:")
+        ? `[sighs] ${MARK} opponent speech: the policy needs a stronger comparative case. [dramatic gasp] It is not there yet.`
+        : `${MARK} opponent speech: the policy needs a stronger comparative case.`,
       strategy: "Test the warrant, then weigh the alternative.",
       targetedPoints: ["The comparative mechanism is underdeveloped."],
     },
@@ -149,7 +153,8 @@ const crossfire = (user) => {
   }
   const type = /must be type "(question|answer)"/.exec(user)?.[1];
   if (!type) return null;
-  return { type, text: `${MARK} crossfire ${type}: what evidence links fewer cars to safer streets?` };
+  const tag = user.includes("SPOKEN EXCHANGE:") ? "[scoffs] " : "";
+  return { type, text: `${tag}${MARK} crossfire ${type}: what evidence links fewer cars to safer streets?` };
 };
 
 // Order matters only where one marker could appear inside another prompt.
@@ -160,7 +165,7 @@ const routes = [
   ["attack", "Analyze the opponent's case clearly", attack],
   ["brainstorm", "Brainstorm arguments like experienced competitive debaters", brainstorm],
   ["factoids", "You are a debate research specialist", factoids],
-  ["sparring", "live debate sparring opponent", (user) => sparring(user)],
+  ["sparring", "live debate sparring opponent", (user, system) => sparring(user, system)],
   ["crossfire", "You are DebateLab's crossfire coach", (user) => crossfire(user)],
   ["ask", "You are a debate coach chat bot", ask],
 ];
@@ -174,7 +179,7 @@ function classify(body) {
   }
   const route = routes.find(([, marker]) => system.includes(marker));
   if (!route) return { feature: null, system, user };
-  return { feature: route[0], system, user, output: route[2](user) };
+  return { feature: route[0], system, user, output: route[2](user, system) };
 }
 
 function jevAnswers(questions) {

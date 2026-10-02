@@ -426,6 +426,46 @@ describe('sparring-store', () => {
     expect(useSparringStore.getState().hydrated).toBe(true);
   });
 
+  it('starts a voice round, keeps a spoken speech\'s measured facts, and reloads both', async () => {
+    const delivery = { speakingSeconds: 75, wordCount: 160, wordsPerMinute: 128, fillerCount: 2, fillers: [{ word: 'um', count: 2 }], longPauses: 1, longestPauseSeconds: 4 };
+    const store = useSparringStore.getState();
+    store.startSession({ motion: 'This House would make public transport free.', userSide: 'pro', format: 'standard', difficulty: 'medium', voice: true });
+    expect(getSession().voice).toBe(true);
+
+    const next = useSparringStore.getState().submitUserSpeech('Universal access removes the price barrier.', undefined, delivery);
+    expect(next?.speeches[0].delivery).toEqual(delivery);
+
+    // A speech typed in the same voice round carries no measurements.
+    const typed = useSparringStore.getState();
+    typed.startSession({ motion: 'This House would make public transport free.', userSide: 'pro', format: 'standard', difficulty: 'medium', voice: true });
+    expect(useSparringStore.getState().submitUserSpeech('A typed speech.')?.speeches[0]).not.toHaveProperty('delivery');
+
+    useSparringStore.setState({ currentSession: next });
+    const persisted = JSON.stringify({ version: 4, state: { ownerUserId: null, currentSession: next, privateSessionBackup: null, savedSessions: [] } });
+    useSparringStore.setState({ currentSession: null });
+    sessionStorage.setItem('debate-sparring-storage', persisted);
+    await useSparringStore.persist.rehydrate();
+    expect(getSession().voice).toBe(true);
+    expect(getSession().speeches[0].delivery).toEqual(delivery);
+  });
+
+  it('starts typed rounds without a voice marker, and loads sessions saved before voice rounds', async () => {
+    const session = useSparringStore.getState().startSession({ motion: 'This House would make public transport free.', userSide: 'pro', format: 'standard', difficulty: 'medium' });
+    expect(session).not.toHaveProperty('voice');
+
+    // Rows saved before voice rounds have no delivery facts; rows saved after may.
+    const spoken = validSavedRow('spoken-row');
+    const delivery = { speakingSeconds: 60, wordCount: 120, wordsPerMinute: 120, fillerCount: 0, fillers: [] as Array<{ word: string; count: number }>, longPauses: 0, longestPauseSeconds: 0 };
+    spoken.turns[0] = { ...spoken.turns[0], delivery } as typeof spoken.turns[0];
+    setMockTableResponse('sparring_sessions', { select: [validSavedRow('typed-row'), spoken] });
+    await useSparringStore.getState().hydrateSavedSessions();
+
+    const saved = useSparringStore.getState().savedSessions;
+    expect(saved.map((item) => item.id).sort()).toEqual(['spoken-row', 'typed-row']);
+    expect(saved.find((item) => item.id === 'typed-row')?.speeches[0]).not.toHaveProperty('delivery');
+    expect(saved.find((item) => item.id === 'spoken-row')?.speeches[0].delivery).toEqual(delivery);
+  });
+
   it('caps hydrated sparring history to fifty sessions', async () => {
     setMockTableResponse('sparring_sessions', {
       select: Array.from({ length: 55 }, (_, index) => ({

@@ -10,6 +10,7 @@ import {
   crossfireReplyOutput,
   MAX_CROSSFIRE_PROMPT_CHARS,
 } from "./crossfire-input.ts";
+import { prepareVoiceReply, type VoicePayload } from "../../_shared/voice-token.ts";
 import type { FeatureContext } from "./types.ts";
 
 export interface CrossfireHandlerOptions {
@@ -33,7 +34,7 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
 
   if (!crossfireInput) throw new Error("Crossfire input was not validated");
   const userPrompt = crossfireInput.operation === "next-turn"
-    ? buildCrossfireNextTurnPrompt(crossfireInput)
+    ? buildCrossfireNextTurnPrompt({ ...crossfireInput, voice: ctx.voice })
     : buildCrossfireDebriefPrompt(crossfireInput);
   if (userPrompt.length > MAX_CROSSFIRE_PROMPT_CHARS) {
     throw new Error(`Crossfire prompt exceeds ${MAX_CROSSFIRE_PROMPT_CHARS} characters`);
@@ -71,6 +72,17 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     : validateCrossfireDebrief(cleanedOutput, crossfireInput.transcript);
   if ("error" in output) throw new Error(output.error);
 
+  // In a voice round the reply may carry an audio tag. It goes to the voice
+  // only: the text that is shown, signed, and saved has none.
+  let voice: VoicePayload | undefined;
+  if (crossfireInput.operation === "next-turn" && ctx.voice) {
+    const spokenReply = output.value as { type: "question" | "answer"; text: string };
+    const reply = await prepareVoiceReply(userId, feature, spokenReply.text);
+    if (!reply.clean) throw new Error("Crossfire response text is empty or too long");
+    spokenReply.text = reply.clean;
+    voice = reply.voice;
+  }
+
   let signalToken: string | undefined;
   if (crossfireInput.operation === "next-turn" &&
     ((output.value as { type?: unknown }).type === "answer" || crossfireInput.transcript.at(-1)?.kind === "answer")) {
@@ -83,5 +95,5 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
 
   const latencyMs = Date.now() - startTime;
   await logUsage(userId, feature, provider, model, aiResult.usage, latencyMs);
-  return await ctx.respond({ output: output.value, ...(signalToken ? { signalToken } : {}) });
+  return await ctx.respond({ output: output.value, ...(signalToken ? { signalToken } : {}), ...(voice ? { voice } : {}) });
 }

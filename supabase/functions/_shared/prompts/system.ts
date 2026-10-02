@@ -23,7 +23,7 @@ import { BRAINSTORM_PROMPT, buildBrainstormUserPrompt } from "./brainstorm.ts";
 import { buildCrossfireUserPrompt, CROSSFIRE_PROMPT } from "./crossfire.ts";
 import { buildFactoidsUserPrompt, FACTOIDS_PROMPT } from "./factoids.ts";
 import { buildGenerateUserPrompt, GENERATE_PROMPT } from "./generate.ts";
-import { buildSparringUserPrompt, SPARRING_PROMPT } from "./sparring.ts";
+import { buildSparringUserPrompt, SPARRING_PROMPT, sparringTaskPrompt, type SparringVoiceOptions } from "./sparring.ts";
 import {
   type DebatePromptContext,
   renderDebateContext,
@@ -53,11 +53,15 @@ export interface SystemPromptOptions {
   debateContext?: DebatePromptContext | null;
   /** Marker that web research accompanies this request; adds RESEARCH_RULES. */
   researchContext?: string;
+  /** Sparring only: voice-round variants of the task prompt. */
+  sparringVoice?: SparringVoiceOptions;
 }
 
 export function buildSystemPrompt(options: SystemPromptOptions): string {
-  const taskTemplate = FEATURE_PROMPTS[options.feature];
-  if (!taskTemplate) throw new Error(`Unsupported feature: ${options.feature}`);
+  if (!FEATURE_PROMPTS[options.feature]) throw new Error(`Unsupported feature: ${options.feature}`);
+  const taskTemplate = options.feature === "sparring"
+    ? sparringTaskPrompt(options.sparringVoice)
+    : FEATURE_PROMPTS[options.feature];
   // Always resolve the placeholder so it never reaches the model verbatim.
   const task = taskTemplate.replace("[DATE_CONTEXT]", options.dateContext ?? "").replace(/\n{3,}/g, "\n\n");
 

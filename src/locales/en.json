@@ -263,6 +263,58 @@
     "permissionDenied": "Microphone access is blocked. Allow microphone access in your browser settings and try again.",
     "startFailed": "Dictation could not start. Check your microphone and try again."
   },
+  "voiceRound": {
+    "mode": {
+      "label": "Voice round",
+      "sparringDescription": "Speak your speeches and hear the opponent answer aloud. You can still type.",
+      "crossfireDescription": "Speak your questions and answers and hear the opponent reply aloud. You can still type.",
+      "privacyLine": "DebateLab never records or stores your audio."
+    },
+    "unavailable": {
+      "unsupported": "Voice rounds are not available here because this browser has no speech recognition. Typing works as usual.",
+      "denied": "Voice rounds are off because microphone access is blocked. Typing works as usual."
+    },
+    "notice": {
+      "title": "Before you turn on voice",
+      "noRecording": "DebateLab never records or stores your audio. Only the text of what you said is kept, as in a typed round.",
+      "recognition": "Your browser turns your speech into text. In Chrome, that sends your audio to Google; other browsers may send it to their own speech service.",
+      "opponent": "The opponent's replies are sent as text to ElevenLabs, which produces the voice you hear.",
+      "accept": "Turn on voice"
+    },
+    "mic": {
+      "start": "Start speaking",
+      "stop": "Stop speaking",
+      "listening": "Listening",
+      "draftPlaceholder": "Your words appear here as you speak. You can also type or correct them.",
+      "notAllowed": "Microphone access is blocked. Allow it in your browser settings to speak your turns.",
+      "noMicrophone": "No microphone was found. Connect one and try again, or type your turn.",
+      "network": "Speech recognition lost its connection. Try again, or type your turn.",
+      "startFailed": "Speech recognition could not start. Try again, or type your turn."
+    },
+    "opponent": {
+      "loading": "Preparing the opponent's voice",
+      "speaking": "The opponent is speaking",
+      "blocked": "Your browser is waiting for you before it plays sound.",
+      "play": "Play reply",
+      "stop": "Stop voice",
+      "limit": "Today's allowance for the opponent's ElevenLabs voice is used up, so your browser's voice is reading the replies."
+    },
+    "delivery": {
+      "title": "Spoken delivery, measured",
+      "description": "These figures come from the clock and your browser's transcript of what you said. Nobody listened for tone, confidence or volume, and the transcript can miss words.",
+      "speakingTime": "Speaking time",
+      "timeOfLimit": "{{used}} of {{limit}}",
+      "pace": "Pace",
+      "wordsPerMinute": "{{count}} words per minute",
+      "fillers": "Filler words",
+      "longPauses": "Pauses of {{seconds}} seconds or more",
+      "pausesWithLongest": "{{count}} (longest {{seconds}} s)"
+    },
+    "scorecard": {
+      "categoryNotesDescription": "Specific reasons behind every score. For speeches you spoke aloud, Delivery uses the measured facts below and the structure of what you said, not how you sounded.",
+      "measuredOnly": "measured, not heard"
+    }
+  },
   "home": {
     "title": "DebateLab",
     "subtitle": "Choose a mode to start.",
@@ -1572,11 +1624,11 @@
     "s2": "How We Use Your Information",
     "p2": "Your information is used to provide and improve our services, generate AI responses, maintain your saved content, and communicate service updates.",
     "s3": "AI Processing",
-    "p3": "Your inputs are sent to OpenRouter for AI processing using the model you select. We do not use your content to train AI models.",
+    "p3": "Your inputs are sent to OpenRouter for AI processing using the model you select. We do not use your content to train AI models. In a voice round, your browser's speech recognition turns your speech into text; in Chrome, that sends your audio to Google, and other browsers may send it to their own speech service. DebateLab never records or stores your audio. The AI opponent's replies are sent as text to ElevenLabs to produce its voice.",
     "s4": "Data Storage",
     "p4": "Your data is stored securely using Supabase infrastructure with encryption at rest and in transit.",
     "s5": "Data Sharing",
-    "p5": "We do not sell your personal data. We share data only with OpenRouter for AI processing and payment processors for billing.",
+    "p5": "We do not sell your personal data. We share data only with OpenRouter for AI processing, ElevenLabs for the opponent's voice in voice rounds, and payment processors for billing.",
     "s6": "Your Rights",
     "p6": "In Settings you can download a copy of your data as a JSON file, erase your saved work, or delete your account. Deleting your account permanently removes it and all data stored with it, and cancels any Pro subscription immediately. Stripe keeps its own billing records, such as invoices and payments, as required for tax and accounting.",
     "s7": "Cookies and Tracking",

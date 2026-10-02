@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Award, BarChart3, Bot, Download, FileText, Lightbulb, RotateCcw, Sparkles, Target, UserRound } from 'lucide-react';
+import { Award, BarChart3, Bot, Download, FileText, Lightbulb, Mic, RotateCcw, Sparkles, Target, UserRound } from 'lucide-react';
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { formatRoundTime, getSparringFormat } from '@/lib/sparring/formats';
 import type { SparringScorecard } from '@/lib/ai/schemas/sparring';
 import type { SparringSession } from '@/lib/stores/sparring-store';
+import { DeliveryFacts } from '@/components/features/voice/DeliveryFacts';
 
 interface SparringScorecardProps {
   session: SparringSession;
@@ -29,6 +30,9 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
   const { t } = useTranslation();
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const formatLabel = t(`sparring.format.${session.format}`, getSparringFormat(session.format).name);
+  // Speeches the student spoke aloud carry measured facts; typed rounds have none.
+  const spokenSpeeches = session.speeches.filter((speech) => speech.speaker === 'user' && speech.delivery);
+  const spokenRound = spokenSpeeches.length > 0;
   const chartData = scorecard.categories.map((category) => ({
     category: category.name,
     You: category.userScore,
@@ -102,14 +106,14 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">{t('sparring.scorecard.categoryNotes', 'Category notes')}</CardTitle>
-          <CardDescription>{t('sparring.scorecard.categoryNotesDescription', 'Specific reasons behind every score. Delivery is judged from the written speech, not audio.')}</CardDescription>
+          <CardDescription>{spokenRound ? t('voiceRound.scorecard.categoryNotesDescription') : t('sparring.scorecard.categoryNotesDescription', 'Specific reasons behind every score. Delivery is judged from the written speech, not audio.')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           {scorecard.categories.map((category) => (
             <article key={category.name} className="rounded-xl border border-border/70 bg-background p-4 sm:p-5" aria-labelledby={`category-${category.name}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 id={`category-${category.name}`} className="font-semibold">{t(`sparring.category.${category.name}`, category.name)}{category.name === 'Delivery' && <span className="ml-2 text-xs font-normal text-muted-foreground">{t('sparring.scorecard.writtenOnly', 'written only')}</span>}</h3>
+                  <h3 id={`category-${category.name}`} className="font-semibold">{t(`sparring.category.${category.name}`, category.name)}{category.name === 'Delivery' && <span className="ml-2 text-xs font-normal text-muted-foreground">{spokenRound ? t('voiceRound.scorecard.measuredOnly') : t('sparring.scorecard.writtenOnly', 'written only')}</span>}</h3>
                   <p className="sr-only">{t('sparring.scorecard.accessibleCategoryScore', 'Your score {{user}} out of 25. Opponent score {{opponent}} out of 25.', { user: category.userScore, opponent: category.aiScore })}</p>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-sm tabular-nums" aria-hidden="true">
@@ -125,6 +129,23 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
           ))}
         </CardContent>
       </Card>
+
+      {spokenRound && (
+        <Card data-testid="spoken-delivery">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl"><Mic className="h-5 w-5 text-primary" aria-hidden="true" />{t('voiceRound.delivery.title')}</CardTitle>
+            <CardDescription>{t('voiceRound.delivery.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {spokenSpeeches.map((speech) => (
+              <section key={speech.id} aria-label={t(`sparring.turns.${speech.turnId}`, speech.role)}>
+                <h3 className="mb-2 text-sm font-semibold">{t(`sparring.turns.${speech.turnId}`, speech.role)}</h3>
+                <DeliveryFacts delivery={speech.delivery!} timeLimitSeconds={speech.timeLimitSeconds} />
+              </section>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <section className="grid gap-5 md:grid-cols-2">
         <InsightCard title={t('sparring.scorecard.keyMoments', 'Key moments')} icon={<Sparkles className="h-5 w-5" aria-hidden="true" />} items={scorecard.keyMoments} tone="primary" emptyLabel={t('sparring.scorecard.noKeyMoments', 'No key moments were recorded.')} />

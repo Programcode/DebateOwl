@@ -18,6 +18,8 @@ export interface FeatureContext {
   reasoningEffort: ReasoningEffort;
   /** Caller cancellation combined with the shared request budget. */
   workSignal: AbortSignal;
+  /** The client asked for a spoken opponent reply (voice round). */
+  voice: boolean;
   /** Sanitized, control-validated feature input. */
   input: Record<string, unknown>;
   /** Library sources after ranking, ready for the prompt. */

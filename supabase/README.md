@@ -30,6 +30,7 @@ supabase/tests/            pgTAP database and policy tests
 
 - `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity.
 - `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
+- `voice`: authenticated text-to-speech for the opponent in voice rounds. It accepts one segment of at most 1,000 characters with the token `ai` signed for it, so it speaks only server-written text. It answers `voice_unavailable` without `ELEVENLABS_API_KEY`, enforces the per-user daily voice cap through `consume_daily_quota` under the `voice` key, calls ElevenLabs (`eleven_v4` for sparring, `eleven_v4_turbo` for Crossfire), and records each request in `ai_requests` as `voice_sparring` or `voice_crossfire`. Every failure is a JSON error with a code, and the browser then reads the reply with its own voice.
 
 `ai/index.ts` is the entrypoint and dispatcher; `ai/features/` holds one handler per feature, `ai/provider.ts` the OpenRouter call and JSON repair, `ai/request.ts` input hygiene, and `ai/runtime.ts` the environment and service clients. Each feature's prompt lives in `_shared/prompts/<feature>.ts`, with shared rules in `_shared/prompts/common.ts` and composition in `_shared/prompts/system.ts`.
 
@@ -72,6 +73,7 @@ Other shared modules own:
 - normalization of provider-reported usage and cost;
 - control enforcement;
 - crossfire response validation;
+- audio-tag handling and signed voice tokens for voice rounds (`voice-tags.ts`, which the browser also imports, and `voice-token.ts`);
 - the pinned OpenRouter Jev Decisions client, automatic model routing, semantic source decisions, and Crossfire signals;
 - announcement input validation.
 
@@ -144,12 +146,13 @@ Document names, never values. Depending on deployed features, server-side config
 
 - Supabase URL, anon key, and service-role key;
 - `OPENROUTER_API_KEY` for all model requests, plus `OPENROUTER_API_URL`, which only the local full-stack gate sets to reach its fake provider (leave it unset everywhere else);
+- `ELEVENLABS_API_KEY` for the opponent's voice, and optionally `ELEVENLABS_VOICE_ID` to replace the default voice; without the key, voice rounds use the browser's voice;
 - research provider keys;
 - Stripe secret, webhook secret, and price configuration, plus `STRIPE_API_URL`, which only the local full-stack gate sets so the `account` function reaches its fake Stripe (leave it unset everywhere else);
 - demo-code hashing material;
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;
-- sparring integrity material;
+- sparring integrity material, which also signs voice tokens;
 - Google export configuration;
 - allowed origins and environment-specific application URLs.
 

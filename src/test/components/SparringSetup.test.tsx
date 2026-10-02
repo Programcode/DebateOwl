@@ -55,6 +55,7 @@ describe('SparringSetup', () => {
       userSide: 'con',
       format: 'standard',
       difficulty: 'hard',
+      voice: false,
     });
   });
 

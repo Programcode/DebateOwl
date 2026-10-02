@@ -8,6 +8,8 @@ Every plan lives in this folder. Before executing one, recheck its paths, assump
 
 - **Debate-aware AI and smaller modules (PR 2).** Every feature gets server-loaded Current Debate context with a visible Review control, each feature gets its own prompt module, and the 88 KB `supabase/functions/ai/index.ts` is split into per-feature handlers behind the same endpoints. Plan: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
 
+- **Voice Sparring and Crossfire.** Students speak their turns through the browser's speech recognition and the opponent answers aloud through ElevenLabs Eleven v4, with the browser voice as fallback. Plan: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
+
 ## Backlog
 
 - **Admin staging switcher.** `src/lib/supabase/env.ts` already resolves staging from the `debate-supabase-env` localStorage key, but no admin UI sets it. Staging migration and function sync remain operations that need Adam's authorization.

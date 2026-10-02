@@ -38,6 +38,34 @@ describe('Crossfire draft storage', () => {
     expect(loadCrossfireDraft('user-a', storage)).toEqual(state);
   });
 
+  it('round-trips a voice round with measured facts, and still loads drafts saved before voice rounds', () => {
+    const storage = new MemoryStorage();
+    const delivery = { speakingSeconds: 4, wordCount: 8, wordsPerMinute: 120, fillerCount: 0, fillers: [] as Array<{ word: string; count: number }>, longPauses: 1, longestPauseSeconds: 3 };
+    let state = crossfireReducer(createCrossfireSetupState({ resolution: 'Resolved: test', argument: 'Case text' }), { type: 'voice-toggled', voice: true });
+    state = crossfireReducer(state, { type: 'session-started', sessionId: 's', now: 1 });
+    state = crossfireReducer(state, { type: 'user-turn-submitted', turn: { id: 'T1', sequence: 1, speaker: 'user', kind: 'question', text: 'Why?', createdAt: 1, delivery }, expectedReply: 'answer' });
+    expect(saveCrossfireDraft('user-a', state, storage, 10)).toBe(true);
+    expect(loadCrossfireDraft('user-a', storage)).toEqual(state);
+
+    // A draft written by the app before voice rounds existed.
+    const legacy = {
+      version: 1,
+      ownerId: 'user-b',
+      savedAt: 5,
+      state: {
+        phase: 'active',
+        sessionId: 'legacy',
+        config: { resolution: 'Resolved: test', argument: 'Case text', mode: 'question-ai', style: 'cooperative', durationSeconds: 180, useSourceLibrary: false, seedQuestions: [] as string[] },
+        turns: [{ id: 'T1', sequence: 1, speaker: 'user', kind: 'question', text: 'Why?', createdAt: 1 }],
+        startedAt: 1,
+        endsAt: 181_000,
+        request: { status: 'pending', expectedReply: 'answer' },
+      },
+    };
+    storage.setItem(crossfireStorageKey('user-b'), JSON.stringify(legacy));
+    expect(loadCrossfireDraft('user-b', storage)).toEqual(legacy.state);
+  });
+
   it('clears malformed, oversized, or differently owned data', () => {
     const malformed = new MemoryStorage();
     malformed.setItem(crossfireStorageKey('user-a'), '{broken');

@@ -10,5 +10,6 @@ export { BRAINSTORM_PROMPT } from "./prompts/brainstorm.ts";
 export { CROSSFIRE_PROMPT } from "./prompts/crossfire.ts";
 export { FACTOIDS_PROMPT } from "./prompts/factoids.ts";
 export { GENERATE_PROMPT } from "./prompts/generate.ts";
-export { SPARRING_PROMPT } from "./prompts/sparring.ts";
+export { SPARRING_PROMPT, sparringTaskPrompt, type SparringVoiceOptions } from "./prompts/sparring.ts";
+export { CROSSFIRE_SPOKEN_REPLY_RULES, SPARRING_SPOKEN_REPLY_RULES } from "./prompts/voice.ts";
 export { type DebatePromptContext, neutralizeStructureTags, UNTRUSTED_CONTENT_RULES } from "./prompts/context.ts";

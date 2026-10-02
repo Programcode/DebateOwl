@@ -16,6 +16,7 @@ import {
 
 export type CrossfireAction =
   | { type: 'config-patched'; patch: Partial<CrossfireSetupConfig> }
+  | { type: 'voice-toggled'; voice: boolean }
   | { type: 'session-started'; sessionId: string; now: number }
   | { type: 'user-turn-submitted'; turn: CrossfireTurn; expectedReply: 'question' | 'answer' }
   | { type: 'ai-turn-received'; turn: CrossfireTurn; signal?: CrossfireTurnSignal }
@@ -85,6 +86,8 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
       const config = CrossfireSetupConfigSchema.safeParse({ ...state.config, ...action.patch });
       return config.success ? { ...state, config: config.data } : state;
     }
+    case 'voice-toggled':
+      return state.phase === 'setup' ? { ...state, voice: action.voice } : state;
     case 'session-started': {
       if (state.phase !== 'setup') return state;
       const config = CrossfireConfigSchema.safeParse(state.config);
@@ -99,6 +102,7 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
         request: config.data.mode === 'ai-questions-user'
           ? { status: 'pending', expectedReply: 'question' }
           : { status: 'idle' },
+        ...(state.voice ? { voice: true } : {}),
       };
     }
     case 'user-turn-submitted': {
@@ -163,6 +167,7 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
         endedAt: action.now,
         endedReason: action.reason,
         requestStatus: 'pending',
+        ...(state.voice ? { voice: true } : {}),
       };
     }
     case 'debrief-failed': {
@@ -192,6 +197,7 @@ export function crossfireReducer(state: CrossfireState, action: CrossfireAction)
         endedAt: state.endedAt,
         endedReason: state.endedReason,
         debrief: debrief.data,
+        ...(state.voice ? { voice: true } : {}),
       };
     }
     case 'state-restored': {

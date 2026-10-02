@@ -33,6 +33,9 @@ verify_jwt = false
 [functions.import-source]
 verify_jwt = false
 
+[functions.voice]
+verify_jwt = false
+
 [functions.workspace-invites]
 verify_jwt = false
 
