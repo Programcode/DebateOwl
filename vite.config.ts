@@ -54,13 +54,15 @@ function bundleGraph(): Plugin {
   };
 }
 
+const stagingPreview = process.env.VITE_STAGING_PREVIEW === "true";
+
 /**
  * `npm run dev:preview` sets VITE_STAGING_PREVIEW=true, which makes the app call
  * Supabase at /__staging-supabase on its own origin (see src/lib/supabase/env.ts). Forward
  * that path to the staging project. Other builds get no proxy.
  */
 function stagingPreviewProxy() {
-  if (process.env.VITE_STAGING_PREVIEW !== "true") return undefined;
+  if (!stagingPreview) return undefined;
   return {
     [`^${STAGING_PREVIEW_PROXY_PATH}/`]: {
       target: SUPABASE_PROJECTS.staging.url,
@@ -76,6 +78,9 @@ export default defineConfig(({ mode }) => {
   const release = buildRelease();
   const uploadSourceMaps = sentrySourceMaps(release);
   const proxy = stagingPreviewProxy();
+  // Previews are reached through `tailscale serve`, which forwards the tailnet
+  // hostname. Vite rejects unknown hosts, so allow tailnet names in this mode only.
+  const allowedHosts = stagingPreview ? [".ts.net"] : undefined;
   return {
   base: mode === 'capacitor' ? './' : '/',
   server: {
@@ -85,9 +90,11 @@ export default defineConfig(({ mode }) => {
       overlay: false,
     },
     proxy,
+    allowedHosts,
   },
   preview: {
     proxy,
+    allowedHosts,
   },
   plugins: [react(), bundleGraph(), ...uploadSourceMaps],
   define: {
