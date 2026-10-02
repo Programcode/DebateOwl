@@ -10,6 +10,8 @@ import { expect, fake, stackReady, test as stackTest } from "../../../../e2e/ful
 // modes, so assert structure (response shape, rows, visible sections), never
 // model wording.
 export * from "../../../../e2e/full-stack/stack";
+// Scripted microphone, recogniser, and browser voice for spoken rounds.
+export { say, spokenByBrowser, stubSpeech } from "../../../../e2e/helpers/voice";
 
 if (!stackReady) throw new Error("Stack environment missing; run recipes through `verify.sh drive`");
 
