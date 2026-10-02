@@ -8,7 +8,7 @@ description: Launch and drive the real DebateLab web app (React client + local S
 DebateLab is a web app. The surface a user touches is the browser client at `/login` and `/app/*`, backed by Supabase Auth, Postgres/RLS, and Deno Edge Functions. This skill runs all of that locally and drives it with Playwright. It has two modes:
 
 - **Fake (default, free).** `e2e/full-stack/fake-openrouter.mjs` answers every model call with canned text. Proves wiring, rows, and UI, not model behavior.
-- **Live (`up --live`, costs money).** The same container becomes a recording proxy to real OpenRouter. It rewrites every chat call to `meta/muse-spark-1.3-contributor` (override with `VERIFY_LIVE_MODEL`), records OpenRouter's reply model as proof, and stops forwarding after `--max-calls` (default 400). Edge Functions also get a real Exa key, so web research, verified citations, and URL import are real.
+- **Live (`up --live`, costs money).** The same container becomes a recording proxy to real OpenRouter. It rewrites every chat call to `meta/muse-spark-1.3-contributor` (override with `VERIFY_LIVE_MODEL`), records OpenRouter's reply model as proof, and stops forwarding after `--max-calls` (default 400). Edge Functions also get a real Exa key, so web research and verified citations are real.
 
 Everything goes through one helper, run from the repository root (`git rev-parse --show-toplevel`):
 
@@ -53,7 +53,7 @@ It prints nothing about the values. Ask Adam before the first live run: it spend
 4. `supabase functions serve --no-verify-jwt`.
 5. Starts Vite on `http://127.0.0.1:18081` in local-preview mode.
 
-It is ready when it prints `READY http://127.0.0.1:18081`. Port 18081 is fixed because it is the only local origin the Edge Function CORS list (`supabase/functions/_shared/cors.ts`) and the invite fixture allow.
+It is ready when it prints `READY http://127.0.0.1:18081`. Port 18081 is fixed: the Edge Function CORS list (`supabase/functions/_shared/cors.ts`) allows it for the local full-stack gate, and it stays clear of the dev server (8080) and the credential-free browser run (18080), which the list also allows.
 
 Vite serves the working tree live, so uncommitted edits to `src/` apply on reload. Changes to `supabase/functions/` are picked up by `functions serve`. A new migration needs `down` then `up`.
 
@@ -74,15 +74,19 @@ It also prints the commit the stack started at and whether there are uncommitted
 
 ## Drive
 
-**Scripted (preferred for proof).** Recipes are Playwright specs in `.claude/skills/verify-debatelab/recipes/`. They import from `./fixtures`, which re-exports `e2e/full-stack/stack.ts` and adds the following:
+**Scripted (preferred for proof).** Recipes are Playwright specs in `.claude/skills/verify-debatelab/recipes/`. They import from `./fixtures`, which re-exports `e2e/full-stack/stack.ts` and `e2e/helpers/voice.ts` and adds the following:
 
-- A fresh demo-code user per test, signed in through the real Login page and `demo-code-login`, and deleted afterwards. Use the `signedIn` fixture for the page and `user` for `user.email` and `await user.userId()`.
+- A fresh demo-code user per test, signed in through the real Login page and `demo-code-login`, and deleted afterwards. Use the `signedIn` fixture for the page and `user` for `user.email` and `await user.userId()`. The user has seen the onboarding tour and has no Current Debate.
+- The Current Debate helpers: `startDebate(page, motion)` starts one from the header, `chooseForMotion(page, "create" | "once")` answers the motion dialog, and `debateControl(page)` is the visible header control on either viewport.
+- The voice helpers: `stubSpeech(page)` installs a scripted microphone, recogniser and browser voice; `say(page, words)` speaks; `spokenByBrowser(page)` reads back what the browser voice said.
 - `admin`: a service-role client for reading rows as a second view.
 - `fake` / `providerCall(feature)`: what the Edge Function actually sent upstream. Use `fake.fail(feature, status)` to force a provider error.
 - `aiResponse(page, feature, operation?)`: the parsed body of the next `ai` Edge Function response. Assert that its fields reach the screen, never on model wording, so a recipe passes in both modes. `LIVE` and `AI_TIMEOUT` (30 s fake, 240 s live) let a recipe branch where a check only makes sense live, and a fake-mode branch adds an `unverified` annotation instead of passing silently.
 - `expectProviderCalls([...])`: what reached the provider. Each test writes `provider-calls.json`, and in live mode the fixture fails the test if any chat call was answered by a model other than the pin.
 - `evidence`: `step(line)`, `aria(name, locator?)`, `shot(name)` and `json(name, value)`.
 - Automatic failure on any uncaught page error, horizontal overflow, or remote Supabase request.
+
+Every result, source and practice round belongs to a Current Debate or is explicitly one-off. A tool given a motion when no debate exists opens `Start a debate with this motion?`; a motion that differs from the Current Debate's opens `This is a different motion`. Both open after the submit click and before the AI request, so create the `aiResponse()` promise, click, answer with `chooseForMotion`, then await. Or call `startDebate` first, after which tools prefill its motion and open no dialog. The Library's `Add Source` is disabled until a debate exists. See `features/current-debate.md`.
 
 ```bash
 $H drive all                                           # every recipe, both viewports
@@ -96,9 +100,9 @@ Fake mode also runs `e2e/full-stack/`. Live mode runs the recipes, `e2e/live/`, 
 
 To prove a feature without a recipe, copy `recipes/case-generation.spec.ts` to `recipes/<feature>.spec.ts` and use the selectors from the matching file in `features/`. Recipes are maintained files. Keep the ones worth keeping.
 
-**Interactive.** Run `$H user` to mint a code. It prints `DEMO_CODE=...`, and `down` deletes that user. Then point a browser tool (Playwright MCP `browser_navigate` etc.) at `http://127.0.0.1:18081/login`, choose the `Demo code` tab, fill the `Demo code` textbox, and click `Sign in with demo code`. Save your own screenshots into `.verify/artifacts/<run-id>/`. A new account shows the onboarding tour on `/app`: click `[data-test-id="button-skip"]`. Interactive runs have no remote-Supabase guard. Doctor's local-mode check is what protects you.
+**Interactive.** Run `$H user` to mint a code. It prints `DEMO_CODE=...`, and `down` deletes that user. Then point a browser tool (Playwright MCP `browser_navigate` etc.) at `http://127.0.0.1:18081/login`, choose the `Demo code` tab, fill the `Demo code` textbox, and click `Sign in with demo code`. Save your own screenshots into `.verify/artifacts/<run-id>/`. A new account shows the onboarding tour on `/app`. Its first step offers `Start debate`; to skip the tour, click `Skip Tour` (`[data-test-id="button-skip"]`). Then start a debate from the header (`Start debate`, test id `current-debate-desktop` or `current-debate-mobile`) or answer the motion dialog the first tool opens: `Start debate` files the work in a new debate, `Not now, use it once` keeps it one-off. Interactive runs have no remote-Supabase guard. Doctor's local-mode check is what protects you.
 
-Selectors: use accessible names and roles as the feature files list them (`getByRole("button", { name: "Generate Debate Case" })`). Crossfire is the exception and uses `data-testid`. Never use coordinates.
+Selectors: use accessible names and roles as the feature files list them (`getByRole("button", { name: "Generate Debate Case" })`). The exceptions use `data-testid`: Crossfire's controls, the Current Debate control, strip and dashboard, and the voice controls (`voice-mode`, `voice-mic`). Use `exact: true` for short names such as `Start` or `Save`, because the header's `Start debate` also matches `Start`. Never use coordinates.
 
 ## Evidence
 
@@ -117,9 +121,9 @@ A proof must meet these standards:
 
 What each mode proves:
 
-- Fake mode does not prove model output, web research and citations (no Exa key, so Factoids drops every unverified source), URL import of real pages, or real Jev judgement. The affected tests add an `unverified` annotation.
+- Fake mode does not prove model output, web research and citations (no Exa key, so Factoids drops every unverified source), or real Jev judgement. The affected tests add an `unverified` annotation. URL import (`import-source`) fetches the page directly in both modes, so it needs outbound internet but no key.
 - Live mode proves those with one cheap model. It does not prove how the production models (per-feature routing in `supabase/functions/_shared/`) behave, and model text varies run to run.
-- Neither mode proves Stripe Checkout or the billing portal UI, Google sign-in, Google Docs export, or anything about staging, production, or the deployed host.
+- Neither mode proves Stripe Checkout or the billing portal UI, real Stripe cancellation on account deletion (the fake container answers the customer search), ElevenLabs voice audio (no key, so the browser voice reads replies), Google sign-in, Google Docs export, or anything about staging, production, or the deployed host.
 
 For those, see `docs/testing.md` (the live-provider gate and the production canary).
 
@@ -148,4 +152,8 @@ It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run 
 - The fake provider rejects prompts it doesn't recognize. If a prompt change makes a feature fail with a provider error, update `e2e/full-stack/fake-openrouter.mjs`. Don't mock around it.
 - Once, the fake-provider container was SIGKILLed about 20 seconds after `up`, and the cause was never found. Doctor catches this, and `drive` refuses to run until you `down && up`.
 - Demo-code users are Pro with a daily limit of 999. To test quota or tier paths, change `user_settings` through `admin` inside the recipe, as `e2e/full-stack/case-generation.spec.ts` does.
+- A `waitForResponse` timeout right after a submit click usually means a motion dialog is open. See the Current Debate note under Drive.
+- The client files a result in its debate after it renders. A `page.goto` straight after the `ai` response can drop it; wait for the result on screen (and its row, if the next step reloads) first.
+- In a voice round, wait for the opponent's reply to finish (`spokenByBrowser`) before clicking `voice-mic` again; speaking over it abandons the voice request. `recipes/voice-rounds.spec.ts` shows the wait.
+- Account deletion is irreversible. `recipes/account-data.spec.ts` deletes only its own `@fullstack.test` demo user and checks that before clicking.
 - `.superset/db-gate.sh` and this skill share the lock. While your stack is up, the gate in any worktree waits (for up to 600 s) and then fails. Don't leave the stack up.

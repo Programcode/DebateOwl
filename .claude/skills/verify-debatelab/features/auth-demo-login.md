@@ -29,6 +29,6 @@ Preconditions:
 
 ## Gotchas
 
-- A first sign-in on a new account starts the onboarding tour on `/app`. The fixtures pre-seed `debate-trainer-onboarding` to skip it. Interactive runs click `[data-test-id="button-skip"]`.
+- A first sign-in on a new account starts the onboarding tour on `/app`. Its first step (`Welcome to DebateLab!`, `Start your first debate here.`) offers `Start debate`. The fixtures pre-seed `debate-trainer-onboarding` to skip it. Interactive runs click `Skip Tour` (`[data-test-id="button-skip"]`). The tour itself is covered in [current-debate](./current-debate.md).
 - Sessions are stored under the `debate-auth-local` localStorage key in local-preview mode. Don't reuse stub-session helpers (`e2e/helpers/auth.ts`). They fake auth and prove rendering only.
 - Google sign-in is not wired to the local stack. Only demo codes work here.
