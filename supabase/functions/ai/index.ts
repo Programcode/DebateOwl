@@ -46,6 +46,7 @@ import {
   type ResearchContext,
   type ResearchDeps,
 } from "../_shared/research.ts";
+import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
   checkRateLimit,
@@ -274,26 +275,14 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Require a valid user session for all AI requests.
   // The frontend already enforces auth; this protects the endpoint even when
   // gateway JWT verification is disabled.
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    log(requestId, "WARN", "Missing authorization header");
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  let userId: string;
+  try {
+    userId = (await requireUser(req)).user.id;
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    log(requestId, "WARN", "Authentication rejected", { error: error.message });
+    return jsonError(error, corsHeaders);
   }
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    log(requestId, "WARN", "Auth token validation failed", { error: authError?.message });
-    return new Response(JSON.stringify({ error: "Invalid token" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const userId: string = user.id;
   log(requestId, "INFO", "User authenticated", { userId });
 
   if (debateContextRequest) {
