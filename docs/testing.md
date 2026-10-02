@@ -107,12 +107,12 @@ Run this after `npm run build`. It serves `dist/` through Vite preview and prove
 ## Credential-free browser gate
 
 ```bash
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
 Pull requests run only tests tagged `@smoke` on desktop Chromium (`npm run test:e2e:smoke`, about 30 tests). Tag a test `@smoke` only when it covers a whole user path that would otherwise go unchecked until the nightly run.
 
-Playwright starts a new Vite server on `127.0.0.1:18080` and runs:
+`.superset/e2e-port.sh` gives each worktree its own port from `18100-18179`, recorded in `~/.superset/debatelab-ports/allocations.json`, so two worktrees can run the gate at once. Without `PORT`, Playwright falls back to `18080`. Playwright starts a new Vite server on that port and runs:
 
 - desktop Chromium at 1280 by 800
 - mobile Chromium using the Pixel 5 device profile
@@ -165,7 +165,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this same gate on pull requests that touch its paths, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. Outside Superset, run only the database portion with:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this same gate on pull requests that touch its paths, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`. Outside Superset, run it with:
 
 ```bash
 supabase db start
@@ -265,7 +265,7 @@ npx playwright install --with-deps webkit
 Run:
 
 ```bash
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webkit
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:webkit
 ```
 
 This is the Safari-engine smoke gate. State explicitly when it did not run.
@@ -318,6 +318,8 @@ Tests are not the proof that a change works; using it is. Two local recipes that
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging conditions.
 
 [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. `main` has no branch protection or rulesets (checked 2026-10-01; GitHub Free does not enforce them on private repositories), so no check is required. Path-filtered workflows that skip therefore don't block merges. Read the PR's checks before merging.
+
+To see why a run failed, use `npm run ci:failures` (current branch's PR), `npm run ci:failures -- <pr>` or `npm run ci:failures -- <run-id>`. It works while the run is still going, as soon as a job fails. It lists failed jobs and steps, prints the Playwright or Vitest summary from each job log, downloads the `*-failure-<run-id>` artifacts into ignored `.ci-failures/`, and prints each failed test's error plus the dialogs and headings from its `error-context.md` page snapshot. A dialog the spec never answered shows up there. Protected staging uploads no artifact, so only its job log is available.
 
 Before calling CI green:
 

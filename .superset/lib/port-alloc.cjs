@@ -25,6 +25,16 @@ function readData() {
   }
 }
 
+// Keys are worktree paths, optionally prefixed ("e2e:/path"). Drop entries
+// whose worktree is gone so deleted worktrees don't hold ports forever.
+function pruneRemoved(data) {
+  for (const key of Object.keys(data)) {
+    const dir = key.replace(/^[a-z0-9]+:(?=\/)/, '');
+    if (path.isAbsolute(dir) && !fs.existsSync(dir)) delete data[key];
+  }
+  return data;
+}
+
 function writeData(data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
@@ -38,7 +48,7 @@ if (!cmd || !workspace) {
 }
 
 if (cmd === 'allocate') {
-  const data = readData();
+  const data = pruneRemoved(readData());
   if (data[workspace]) {
     console.log(data[workspace]);
     process.exit(0);

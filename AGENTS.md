@@ -5,7 +5,7 @@
 - The repository is DebateLab. Never infer its directory from an old repository name.
 - Run `git rev-parse --show-toplevel` and stay inside that returned worktree. On Adam's VPS, `/home/codex/Projects/DebateLab` is the primary checkout, but Superset and other agents use linked worktrees elsewhere.
 - Before editing, inspect the branch and working tree. Preserve unrelated changes.
-- Use Node 22, npm, and the committed `package-lock.json`. Install with `npm ci`.
+- Use Node 22, npm, and the committed `package-lock.json`. `.nvmrc` pins 22, but the VPS default is Node 24: check `node -v` and run `nvm use` (with `NVM_DIR=$HOME/.nvm` set) when it isn't 22. Install with `npm ci` when `node_modules` is missing.
 
 ## Parallel Superset workspaces
 
@@ -30,7 +30,7 @@ The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `m
 ## Normal ports
 
 - Vite development server: `8080` by default outside Superset; Superset allocates `8080-8179` per worktree.
-- Automated browser server: isolated `127.0.0.1:18080`, never an existing dev server.
+- Automated browser server: a per-worktree port from `18100-18179`, printed by `bash .superset/e2e-port.sh`, never an existing dev server. Protected staging keeps `127.0.0.1:18080`, the origin deployed CORS allows.
 - Tailnet previews for Adam: `npm run dev:preview` listens locally on `9200-9299` and is published on tailnet HTTPS `9100-9149`; it pins the app to staging. See [docs/development.md](docs/development.md#preview-on-the-tailnet).
 - Local Supabase: CLI defaults beginning at `54321`. The stack is not parallel-safe across worktrees.
 
@@ -46,17 +46,20 @@ npm test
 npm run test:collaboration
 npm run test:edge
 npm run build
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
 `npm run verify` runs the credential-free ladder with the desktop Chromium `@smoke` browser set (about a minute). `npm run verify:full` adds the full desktop and mobile suite.
 
 If GitHub Actions jobs fail within 2 to 5 seconds with no logs, they did not run: the account is out of Actions minutes (billing), not failing on the code. In that case run the same checks locally at the final head (`npm run verify` and the database gate) and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
 
+When a CI job fails, start with `npm run ci:failures -- <pr>`. It prints the failing jobs and specs, downloads the failure artifact into `.ci-failures/`, and shows each failed test's error and the dialogs and headings on the page from its `error-context.md`. Read that before guessing at timeouts or infrastructure.
+
 Database migrations and pgTAP policies use a separate Docker-backed gate. In Superset, use the locking wrapper:
 
 ```bash
 ./.superset/db-gate.sh
+./.superset/db-gate.sh --db-only   # pgTAP and database scripts only
 ```
 
 Outside Superset, run the underlying commands directly:
@@ -73,7 +76,7 @@ WebKit is a separate release smoke test:
 
 ```bash
 npx playwright install --with-deps webkit
-CI=1 PORT=18080 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18080 npm run test:e2e:webkit
+P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:webkit
 ```
 
 ## Verifying features in the real app
@@ -134,7 +137,7 @@ Open only what the task needs:
 - [docs/testing.md](docs/testing.md): what each gate proves, browser matrices, staging, artifacts, and cleanup.
 - [docs/operations.md](docs/operations.md): CI, Vercel hosting, staging, deployment, rollback, and live verification.
 - [supabase/README.md](supabase/README.md): Edge Functions, shared backend modules, migrations, auth boundaries, and required secret names.
-- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Every plan lives in `plans/`; write new plans there. Revalidate every plan against current source before executing it.
+- [plans/README.md](plans/README.md): work in progress, the backlog, and shipped plans. Every plan lives in `plans/` and opens with a `**Status:**` line; write new plans there. Commit a plan before splitting it across agent threads, and put its path in each thread's prompt. Revalidate every plan against current source before executing it.
 - [docs/README.md](docs/README.md): complete documentation index and freshness labels.
 
 When commands, ports, workflows, or runtime boundaries change, update the owning focused document in the same change. Do not copy large source trees, schemas, dependency lists, or model catalogs into documentation.

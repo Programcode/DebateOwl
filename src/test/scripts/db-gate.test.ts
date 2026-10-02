@@ -21,15 +21,15 @@ it("stops local Supabase when database tests fail", async () => {
   const bin = join(root, "bin");
   const log = join(root, "calls.log");
   await mkdir(bin);
-  await executable(
-    join(bin, "supabase"),
-    '#!/usr/bin/env bash\nprintf "supabase %s\\n" "$*" >> "$CALL_LOG"\n',
-  );
-  // The real gate removes a shared container on exit. Stub docker so this test
-  // cannot stop another worktree's running gate.
+  // The gate's cleanup can remove the shared fake-provider container. A real
+  // docker here would kill a gate running in any other worktree, so log it instead.
   await executable(
     join(bin, "docker"),
     '#!/usr/bin/env bash\nprintf "docker %s\\n" "$*" >> "$CALL_LOG"\n',
+  );
+  await executable(
+    join(bin, "supabase"),
+    '#!/usr/bin/env bash\nprintf "supabase %s\\n" "$*" >> "$CALL_LOG"\n',
   );
   await executable(
     join(bin, "npm"),
@@ -42,14 +42,14 @@ it("stops local Supabase when database tests fail", async () => {
       ...process.env,
       CALL_LOG: log,
       HOME: root,
-      // The gate keeps its runtime dir after a failure; keep it inside root.
-      TMPDIR: root,
       PATH: `${bin}:${process.env.PATH ?? ""}`,
+      TMPDIR: root,
+      WORKSPACE_GATE_ARTIFACT_ROOT: "",
     },
   });
 
   expect(result.status).toBe(17);
   await expect(readFile(log, "utf8")).resolves.toBe(
-    "supabase start\nnpm run test:db\ndocker rm -f debatelab-fake-openrouter\nsupabase stop --no-backup\n",
+    "supabase start\nnpm run test:db\nsupabase stop --no-backup\n",
   );
 });

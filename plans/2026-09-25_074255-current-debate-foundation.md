@@ -1,5 +1,7 @@
 # PR 1: Current Debate
 
+**Status:** Shipped in #72 (merged 2026-09-27 as `5ee0b05`). Kept as the record.
+
 ## What Adam wants
 
 DebateLab's existing features feel like separate tools. A student enters the same motion repeatedly, manually carries material between pages, and can accidentally use sources from an older topic. Adam wants a lightweight personal debate context now, without rebuilding the postponed collaborative Workspace.

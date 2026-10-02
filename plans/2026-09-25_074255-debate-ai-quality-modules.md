@@ -1,5 +1,7 @@
 # PR 2: Debate-aware AI and smaller modules
 
+**Status:** Shipped in #75 (merged 2026-09-28 as `f0f2f75`). Kept as the record.
+
 ## What Adam wants
 
 Once Current Debate exists, every DebateLab feature should understand the same preparation instead of behaving like a blank tool. The model should receive useful debate context automatically, while the student can see and change what will be sent. The current prompts also need deliberate improvement, and the oversized AI Edge Function needs smaller internal files so future fixes do not require understanding an 88 KB entrypoint.
