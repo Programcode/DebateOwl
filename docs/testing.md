@@ -48,6 +48,8 @@ npx vitest run src/test/security/url-validation.test.ts
 
 For a bug, watch the reproduction fail for the expected reason before implementing the fix.
 
+Which behavior deserves a test, and which tests not to write, is in [AGENTS.md](../AGENTS.md#what-to-test). The short version: test specs where a regression is costly or invisible (auth, RLS, billing, quotas, migrations, concurrency, parsers, regressions of fixed bugs), and prove everything else by using the app.
+
 ## Collaboration service tests
 
 ```bash
