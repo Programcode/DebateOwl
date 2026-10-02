@@ -7,6 +7,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 const environment = {
   SUPABASE_URL: "https://supabase.test",
+  SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   SPARRING_INTEGRITY_SECRET: "test-sparring-secret",
   EXA_API_KEY: "test-exa-key",
@@ -117,6 +118,51 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
     const observedCalls: string[] = Array.from(calls);
     if (observedCalls.length !== 1 || !observedCalls[0].includes("/auth/v1/user")) {
       throw new Error(`streaming validation performed quota or provider work: ${observedCalls.join(", ")}`);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("AI handler rejects missing, empty, and invalid bearer tokens with the shared auth errors", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+
+  globalThis.fetch = (async (input: Request | URL | string) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    calls.push(url.href);
+    if (url.origin === "https://supabase.test" && url.pathname === "/auth/v1/user") {
+      return jsonResponse({ code: 401, msg: "invalid JWT" }, 401);
+    }
+    throw new Error(`Rejected auth reached unexpected work: ${url}`);
+  }) as typeof fetch;
+
+  const send = (authorization?: string) =>
+    handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authorization === undefined ? {} : { Authorization: authorization }),
+      },
+      body: JSON.stringify({
+        feature: "ask",
+        model: "openai/gpt-5.6-luna",
+        input: { message: "Question", mode: "general" },
+      }),
+    }));
+
+  try {
+    for (const [label, authorization, expectedError, expectedCalls] of [
+      ["missing header", undefined, "Authentication required", 0],
+      ["empty bearer token", "Bearer   ", "Authentication required", 0],
+      ["rejected token", "Bearer expired-token", "Invalid authentication token", 1],
+    ] as const) {
+      calls.length = 0;
+      const response = await send(authorization);
+      if (response.status !== 401) throw new Error(`${label} returned ${response.status}`);
+      const body = await response.json() as { error?: unknown };
+      if (body.error !== expectedError) throw new Error(`${label} returned error ${JSON.stringify(body.error)}`);
+      if (calls.length !== expectedCalls) throw new Error(`${label} made remote calls: ${calls.join(", ")}`);
     }
   } finally {
     globalThis.fetch = originalFetch;
