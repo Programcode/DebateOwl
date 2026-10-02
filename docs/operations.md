@@ -94,7 +94,7 @@ The switch only works while the `connect-src` directive in [`vercel.json`](../ve
 
 ## Backend drift check
 
-`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the project the Supabase CLI resolves, which is `SUPABASE_PROJECT_ID` when that is set and the linked project otherwise; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list`, `supabase functions list` and `supabase secrets list`, reads the Auth site URL and redirect allowlist from the Management API with the CLI's access token (`SUPABASE_ACCESS_TOKEN` or `~/.supabase/access-token`), and changes no schema, data, functions, or secrets. It prints secret names only, never values or digests. To connect to the database, the CLI creates its usual short-lived login role.
+`npm run backend:status` shows what the current commit has that a Supabase project lacks. It inspects the project the Supabase CLI resolves, which is `SUPABASE_PROJECT_ID` when that is set and the linked project otherwise; `npm run backend:status -- --project-ref <ref>` inspects another one. It runs `supabase migration list`, `supabase functions list` and `supabase secrets list`, reads the Auth site URL and redirect allowlist from the Management API with the CLI's access token (`SUPABASE_ACCESS_TOKEN`, or the `access-token` file in `SUPABASE_HOME`, default `~/.supabase`), and changes no schema, data, functions, or secrets. It prints secret names only, never values or digests. To connect to the database, the CLI creates its usual short-lived login role.
 
 The comparison uses the committed tree at `HEAD`, so commit or stash local edits first. It reports:
 

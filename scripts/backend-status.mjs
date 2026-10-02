@@ -285,10 +285,12 @@ function secretsReport(root, targetArgs) {
   return ["Secrets: missing expected function secrets (names only):", ...missing.map((line) => `    ${line}`)].join("\n");
 }
 
+// The CLI's file-backed token. A token kept only in the OS keyring can't be
+// read here; set SUPABASE_ACCESS_TOKEN for this command instead.
 function accessToken() {
   const fromEnv = process.env.SUPABASE_ACCESS_TOKEN?.trim();
   if (fromEnv) return fromEnv;
-  const file = join(homedir(), ".supabase", "access-token");
+  const file = join(process.env.SUPABASE_HOME?.trim() || join(homedir(), ".supabase"), "access-token");
   return existsSync(file) ? readFileSync(file, "utf8").trim() : null;
 }
 
@@ -296,7 +298,7 @@ function accessToken() {
 export async function authUrlsReport(ref) {
   if (!/^[a-z0-9]{20}$/.test(ref)) return "Auth URLs: not checked (unknown project ref).";
   const token = accessToken();
-  if (!token) return "Auth URLs: not checked (no SUPABASE_ACCESS_TOKEN or ~/.supabase/access-token).";
+  if (!token) return "Auth URLs: not checked (no access token file; if the CLI keeps it in the OS keyring, set SUPABASE_ACCESS_TOKEN).";
   try {
     const response = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {
       headers: { Authorization: `Bearer ${token}` },

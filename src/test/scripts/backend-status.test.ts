@@ -34,6 +34,7 @@ function runStatus(args: string[], extraEnv: Record<string, string> = {}) {
       HOME: root,
       PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
       SUPABASE_ACCESS_TOKEN: "",
+      SUPABASE_HOME: "",
       ...extraEnv,
     },
   });
@@ -148,7 +149,7 @@ it("passes --project-ref to both commands and names known projects", async () =>
   const result = runStatus(["--project-ref", STAGING_REF]);
 
   expect(result.stdout).toContain(`Backend status: ${STAGING_REF} (staging) compared with commit`);
-  expect(result.stdout).toContain("Auth URLs: not checked (no SUPABASE_ACCESS_TOKEN or ~/.supabase/access-token).");
+  expect(result.stdout).toContain("Auth URLs: not checked (no access token file; if the CLI keeps it in the OS keyring, set SUPABASE_ACCESS_TOKEN).");
   const calls = (await readFile(join(root, "calls.log"), "utf8")).trim().split("\n");
   expect(calls).toEqual([
     `migration list --project-ref ${STAGING_REF} --output-format json`,
