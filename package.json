@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:preview": "VITE_STAGING_PREVIEW=true vite --host 127.0.0.1",
     "docs:check": "node scripts/check-docs.mjs",
     "backend:status": "node scripts/backend-status.mjs",
     "build": "vite build && node scripts/check-build-boundaries.mjs",

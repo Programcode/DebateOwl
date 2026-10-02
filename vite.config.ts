@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
 import path from "path";
+import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./src/lib/supabase/projects";
 
 function buildRelease(): string | undefined {
   const fromEnv = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA;
@@ -53,10 +54,28 @@ function bundleGraph(): Plugin {
   };
 }
 
+/**
+ * `npm run dev:preview` sets VITE_STAGING_PREVIEW=true, which makes the app call
+ * Supabase at /__staging-supabase on its own origin (see src/lib/supabase/env.ts). Forward
+ * that path to the staging project. Other builds get no proxy.
+ */
+function stagingPreviewProxy() {
+  if (process.env.VITE_STAGING_PREVIEW !== "true") return undefined;
+  return {
+    [`^${STAGING_PREVIEW_PROXY_PATH}/`]: {
+      target: SUPABASE_PROJECTS.staging.url,
+      changeOrigin: true,
+      ws: true,
+      rewrite: (requestPath: string) => requestPath.slice(STAGING_PREVIEW_PROXY_PATH.length),
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const release = buildRelease();
   const uploadSourceMaps = sentrySourceMaps(release);
+  const proxy = stagingPreviewProxy();
   return {
   base: mode === 'capacitor' ? './' : '/',
   server: {
@@ -65,6 +84,10 @@ export default defineConfig(({ mode }) => {
     hmr: {
       overlay: false,
     },
+    proxy,
+  },
+  preview: {
+    proxy,
   },
   plugins: [react(), bundleGraph(), ...uploadSourceMaps],
   define: {

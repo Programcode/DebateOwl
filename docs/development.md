@@ -49,6 +49,18 @@ npm run dev -- --host 127.0.0.1 --port 8081
 
 Automated browser tests own `127.0.0.1:18080` by default and always start a fresh server.
 
+## Preview on the tailnet
+
+A plain `npm run dev` talks to the production Supabase project unless the browser toggle says staging. For anything Adam opens from another device, run the staging preview instead:
+
+```bash
+npm run dev:preview -- --port 9201 --strictPort
+```
+
+`dev:preview` binds to `127.0.0.1` and sets `VITE_STAGING_PREVIEW=true`. The app is then pinned to staging and calls Supabase at `/__staging-supabase` on its own origin, which Vite proxies to the staging project (see `stagingPreviewProxy` in [`vite.config.ts`](../vite.config.ts)). Requests stay same-origin, so Edge Function CORS lists need no preview entries. The staging strip shows, without the switch to production.
+
+Expose it with the `tailnet-preview` skill on a port in `9200-9299`. Staging Auth allows redirects to `https://codex-remote.tailab0ab3.ts.net:91*/**`, so Google sign-in returns to the preview. Demo codes and email codes must be staging ones: staging has its own users.
+
 ## Environment behavior
 
 The checked-in [`.env.example`](../.env.example) contains optional client observability variables:
