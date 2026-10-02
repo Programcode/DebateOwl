@@ -1,19 +1,16 @@
 # Plans
 
-**Status:** Plan index. Plans describe intended work, not current implementation truth. Reconciled against `main` at `0bda733` on 2026-09-27.
+**Status:** Plan index. Plans describe intended work, not current implementation truth. Reconciled against `main` at `791ccb0` on 2026-10-02.
 
 Every plan lives in this folder. Before executing one, recheck its paths, assumptions, product decisions, and verification commands against current source.
 
 ## In progress
 
-- **Debate-aware AI and smaller modules (PR 2).** Every feature gets server-loaded Current Debate context with a visible Review control, each feature gets its own prompt module, and the 88 KB `supabase/functions/ai/index.ts` is split into per-feature handlers behind the same endpoints. Plan: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
-
-- **Voice Sparring and Crossfire.** Students speak their turns through the browser's speech recognition and the opponent answers aloud through ElevenLabs Eleven v4, with the browser voice as fallback. Plan: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
+Nothing is in progress.
 
 ## Backlog
 
-- **Admin staging switcher.** `src/lib/supabase/env.ts` already resolves staging from the `debate-supabase-env` localStorage key, but no admin UI sets it. Staging migration and function sync remain operations that need Adam's authorization.
-- **Document portability PR.** [Programcode/DebateLab#63](https://github.com/Programcode/DebateLab/pull/63) adds Workspace import and export. Workspace is on hold and the PR has open P1 review findings, so decide whether to close or park it.
+- **Next 15.** Security and data protection, operational safety, code health, and product polish, ordered by risk. Items 3, 5, 6, 8 and 13 have shipped; the plan lists the follow-ups they left. Plan: [2026-10-01 next 15](2026-10-01-next-15.md). Item 15 covers the PR #63 decision.
 
 ## On hold
 
@@ -23,6 +20,8 @@ Every plan lives in this folder. Before executing one, recheck its paths, assump
 
 These plans are finished. Their files were removed; git history keeps them.
 
+- Voice Sparring and Crossfire: #84. Plan kept as the record: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
+- Debate-aware AI and smaller modules: #75. Plan kept as the record: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
 - Current Debate foundation: #72. Plan kept as the record: [2026-09-25 current debate foundation](2026-09-25_074255-current-debate-foundation.md).
 - Email OTP and demo-code sign-in: #40, #41.
 - AI control enforcement at the edge: #32, #42.
