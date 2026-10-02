@@ -172,7 +172,7 @@ Vercel build variables for Sentry source maps: `SENTRY_AUTH_TOKEN` (an organizat
 
 Choose rollback before changing production:
 
-- Frontend: promote the previous known-good Vercel production deployment, or revert the commit on `main` and let Vercel redeploy.
+- Frontend: promote the previous known-good Vercel production deployment (about 10 seconds), or revert the commit on `main` and let Vercel redeploy (one to two minutes). The Vercel project is `debate-navigator`. `vercel inspect debate.pi-stack.org` shows the live deployment, `vercel ls debate-navigator --environment production --status READY` lists the earlier ones, and `vercel rollback <previous-deployment-url> --yes` switches back. On Adam's VPS, `~/ops/rollback/rollback vercel debate-navigator` does all three. After a rollback, Vercel stops putting new `main` deployments live until one is promoted with `vercel promote <deployment-url>`, so promote the fixed deployment once it is ready. A frontend rollback does not touch Supabase: if the bad change came with a migration or function deploy, the old frontend must still work with the new backend.
 - Edge Function: retain the deployed source or artifact baseline and its environment assumptions.
 - Migration: prefer forward corrective migrations. Do not assume an irreversible schema or data change can be rolled back.
 - Configuration: record the prior value without exposing secrets.
