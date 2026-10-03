@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { setLocale } from './helpers/auth';
 
-test.describe('login passwordless flows', () => {
+test.describe('login passwordless flows', { tag: '@smoke' }, () => {
   test.beforeEach(async ({ page }) => {
     await setLocale(page, 'en');
   });

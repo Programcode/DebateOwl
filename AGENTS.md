@@ -42,14 +42,14 @@ Run the smallest relevant check first:
 npm run docs:check
 npm run lint
 npm run typecheck
-npm test -- --coverage
+npm test
 npm run test:collaboration
 npm run test:edge
 npm run build
 P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
-`npm run verify` runs the complete credential-free ladder, including desktop and mobile Chromium against a fresh Vite server.
+`npm run verify` runs the credential-free ladder with the desktop Chromium `@smoke` browser set (about a minute). `npm run verify:full` adds the full desktop and mobile suite.
 
 If GitHub Actions jobs fail within 2 to 5 seconds with no logs, they did not run: the account is out of Actions minutes (billing), not failing on the code. In that case run the same checks locally at the final head (`npm run verify` and the database gate) and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
 

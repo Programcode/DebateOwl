@@ -73,11 +73,18 @@ function stagingPreviewProxy(stagingPreview: boolean) {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  // src/lib/supabase/env.ts rejects any other value at startup; fail the build
+  // instead, so a typo in a Vercel variable never deploys a blank app.
+  const viteEnv = loadEnv(mode, process.cwd(), "VITE_");
+  const pinnedEnv = viteEnv.VITE_SUPABASE_ENV?.trim();
+  if (pinnedEnv && pinnedEnv !== "production" && pinnedEnv !== "staging") {
+    throw new Error(`VITE_SUPABASE_ENV must be "production" or "staging", not "${pinnedEnv}"`);
+  }
   const release = buildRelease();
   const uploadSourceMaps = sentrySourceMaps(release);
   // Read the flag the way the client sees it (process env plus .env files), so
   // the app never targets the proxy path while the server lacks the proxy.
-  const stagingPreview = loadEnv(mode, process.cwd(), "VITE_").VITE_STAGING_PREVIEW === "true";
+  const stagingPreview = viteEnv.VITE_STAGING_PREVIEW === "true";
   const proxy = stagingPreviewProxy(stagingPreview);
   // Previews are reached through `tailscale serve`, which forwards the tailnet
   // hostname. Vite rejects unknown hosts, so allow tailnet names in this mode only.

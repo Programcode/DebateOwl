@@ -9,6 +9,7 @@ type EnvironmentInput = {
   VITE_LOCAL_SUPABASE_ANON_KEY?: string;
   VITE_LOCAL_SUPABASE_URL?: string;
   VITE_STAGING_PREVIEW?: string;
+  VITE_SUPABASE_ENV?: string;
 };
 
 type StorageReader = { getItem(key: string): string | null };
@@ -52,6 +53,16 @@ export function resolveSupabaseConfig(
       pinned: true,
       url: `${new URL(currentOrigin).origin}${STAGING_PREVIEW_PROXY_PATH}`,
     };
+  }
+
+  // Hosted builds can pin one project; the staging Vercel project sets
+  // VITE_SUPABASE_ENV=staging so each PR gets a staging preview.
+  const pinned = environment.VITE_SUPABASE_ENV?.trim();
+  if (pinned) {
+    if (pinned !== "production" && pinned !== "staging") {
+      throw new Error(`Unknown VITE_SUPABASE_ENV: ${pinned}`);
+    }
+    return { ...ENVS[pinned], env: pinned, pinned: true };
   }
 
   return storage.getItem(ENV_STORAGE_KEY) === "staging"
