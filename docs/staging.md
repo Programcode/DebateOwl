@@ -76,4 +76,5 @@ The unit's `PATH` names `~/.nvm/versions/node/v24.20.0/bin`, where `node` and `s
 
 - Production is never a fallback. When staging access fails, stop.
 - Staging browser tests create uniquely named data and delete only what they created ([testing.md](testing.md#protected-staging)).
+- To run the staging browser suite locally, use the seeded Pro code as `STAGING_DEMO_CODE`, and rerun the seed afterwards to restore that account's Current Debate. The CI code exists only as a GitHub secret. The copy in `~/.config/debatelab/staging-e2e.env` expired on 2026-09-10.
 - `VERCEL_STAGING_BYPASS` (GitHub `staging` environment, and the VPS access file) lets CI and agents open protected `debatelab-staging` previews with the `x-vercel-protection-bypass` header. Treat it like the demo codes.
