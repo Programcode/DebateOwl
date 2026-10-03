@@ -15,7 +15,8 @@
 //              the drift issue. The staging browser suite waits for that status.
 //   --seed     run scripts/staging/seed.mjs after a successful sync
 //
-// Exit codes: 0 in sync, 1 drift remains or a step failed, 2 refused or misused.
+// Exit codes: 0 in sync, 1 drift remains or a step failed, 2 refused or misused,
+// 3 deferred because a staging browser job is running (try again later).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -35,6 +36,7 @@ const DRIFT_ISSUE_TITLE = "Staging is out of sync with main";
 export const SKIPPED_FUNCTIONS = new Set(["workspace-invites"]);
 
 class RefusedError extends Error {}
+class DeferredError extends Error {}
 
 export function parseArgs(argv) {
   const options = { root: null, dryRun: false, report: false, seed: false };
@@ -185,7 +187,7 @@ function sameList(a, b) {
   return a.length === b.length && [...a].sort().every((value, index) => value === [...b].sort()[index]);
 }
 
-export function sync({ root, dryRun, log = console.log }) {
+export function sync({ root, dryRun, log = console.log, beforeChange = () => {} }) {
   const before = backendStatus({ root, projectRef: STAGING_REF });
   log(before.report, "");
   const plan = planWithContent(root, before.result, log);
@@ -199,6 +201,7 @@ export function sync({ root, dryRun, log = console.log }) {
     return { plan, applied: [], deployed: [] };
   }
 
+  if (!dryRun) beforeChange();
   const applied = [];
   if (plan.migrations.length > 0) {
     const dry = supabase(root, ["db", "push", "--dry-run", "--output-format", "json"]);
@@ -252,6 +255,31 @@ function setStatus(sha, state, description) {
     "-f", `context=${STATUS_CONTEXT}`,
     "-f", `description=${description.slice(0, 139)}`,
   ]);
+}
+
+function currentStatus(sha) {
+  const statuses = JSON.parse(gh(["api", `repos/${GITHUB_REPO}/commits/${sha}/statuses`]));
+  return statuses.find((status) => status.context === STATUS_CONTEXT) ?? null;
+}
+
+function browserJobRunning() {
+  const runs = JSON.parse(gh(["run", "list", "--repo", GITHUB_REPO, "--workflow", "staging-e2e.yml", "--status", "in_progress", "--limit", "100", "--json", "databaseId"]));
+  return runs.some(({ databaseId }) => JSON.parse(gh(["run", "view", String(databaseId), "--repo", GITHUB_REPO, "--json", "jobs"]))
+    .jobs.some((job) => job.name === "staging-e2e" && job.status === "in_progress"));
+}
+
+/**
+ * Marks the commit pending before staging changes, so browser jobs that start
+ * from now on refuse to test (they need success), then checks once more that
+ * none started since run.sh looked. If one did, it changes nothing.
+ */
+export function claimStaging(sha) {
+  const previous = currentStatus(sha);
+  setStatus(sha, "pending", "Syncing staging; browser tests wait for this.");
+  if (browserJobRunning()) {
+    if (previous) setStatus(sha, previous.state, previous.description ?? "");
+    throw new DeferredError("A staging browser job started; syncing on a later run.");
+  }
 }
 
 function openDriftIssue() {
@@ -317,7 +345,8 @@ function main() {
     console.log(text);
   };
   try {
-    const { applied, deployed } = sync({ root, dryRun: options.dryRun, log });
+    const beforeChange = options.report ? () => claimStaging(sha) : undefined;
+    const { applied, deployed } = sync({ root, dryRun: options.dryRun, log, beforeChange });
     if (options.seed && !options.dryRun) {
       const seeded = run("node", [join(root, "scripts/staging/seed.mjs")], { cwd: root });
       log(quiet(seeded.stdout), quiet(seeded.stderr));
@@ -329,6 +358,7 @@ function main() {
     if (options.report && !options.dryRun) report({ sha, ok: true, summary, detail: lines.join("\n") });
   } catch (error) {
     console.error(error.message);
+    if (error instanceof DeferredError) process.exit(3);
     if (options.report && !options.dryRun) {
       try {
         report({ sha, ok: false, summary: error.message.split("\n")[0], detail: `${lines.join("\n")}\n${error.message}` });

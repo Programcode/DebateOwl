@@ -63,6 +63,8 @@ if node "$REPO/scripts/staging-sync.mjs" --root "$REPO" --report "${seed[@]}"; t
   rm -f "$STATE/last-failed"
 else
   status=$?
+  # 3: a browser job started while syncing; nothing changed, retry next tick.
+  [ "$status" -eq 3 ] && exit 0
   echo "$sha" > "$STATE/last-failed"
   exit "$status"
 fi
