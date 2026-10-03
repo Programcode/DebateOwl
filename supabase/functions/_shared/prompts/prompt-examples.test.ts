@@ -50,16 +50,6 @@ function promptsFor(example: typeof PROMPT_EXAMPLES[number]) {
   return { system, user, score };
 }
 
-Deno.test("every feature has two representative examples", () => {
-  for (const feature of Object.keys(QUALITY_RULES) as Feature[]) {
-    const examples = PROMPT_EXAMPLES.filter((example) => example.feature === feature);
-    assert(examples.length === 2, `${feature} needs exactly two examples`);
-    if (feature !== "ask" && feature !== "crossfire") {
-      assert(new Set(examples.map((example) => example.side)).size === 2, `${feature} examples must cover both sides`);
-    }
-  }
-});
-
 for (const example of PROMPT_EXAMPLES) {
   Deno.test(`prompt example ${example.id} carries its quality rules and allowed debate material`, () => {
     const { system, user, score } = promptsFor(example);

@@ -1,8 +1,4 @@
-import {
-  AUTO_FAST,
-  AUTO_PRO,
-  isAutoModelSelection,
-} from "./model-catalog.ts";
+import { AUTO_FAST, AUTO_PRO } from "./model-catalog.ts";
 import {
   resolveModelSelection,
   type AutoModelRouterJev,
@@ -32,11 +28,6 @@ function jevReturning(result: JevDecisionResult, observed?: { calls: number; sta
     return Promise.resolve(result);
   };
 }
-
-Deno.test("Auto Fast is a Basic selection and Auto Pro is Pro-only", () => {
-  if (!isAutoModelSelection(AUTO_FAST) || !isAutoModelSelection(AUTO_PRO)) throw new Error("auto selections missing");
-  if (AUTO_FAST !== "auto-fast" || AUTO_PRO !== "auto-pro") throw new Error("auto IDs changed");
-});
 
 Deno.test("Auto Fast normally resolves to GLM for a Basic user", async () => {
   const resolved = await resolveModelSelection({

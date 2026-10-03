@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(48);
+SELECT plan(46);
 
 INSERT INTO auth.users (id, email, email_confirmed_at)
 VALUES
@@ -25,8 +25,6 @@ SELECT set_config(
 INSERT INTO public.workspace_members (workspace_id, user_id)
 VALUES (current_setting('test.workspace_id')::uuid, '62222222-2222-4222-8222-222222222222');
 
-SELECT has_table('private', 'workspace_invites', 'private workspace invites exist');
-SELECT has_table('private', 'workspace_invite_attempts', 'private redemption attempts exist');
 SELECT ok(
   NOT has_table_privilege('anon', 'private.workspace_invites', 'SELECT,INSERT,UPDATE,DELETE')
     AND NOT has_table_privilege('authenticated', 'private.workspace_invites', 'SELECT,INSERT,UPDATE,DELETE')

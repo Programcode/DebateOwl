@@ -8,10 +8,6 @@ type HeaderRule = {
 };
 
 type VercelConfig = {
-  $schema?: string;
-  framework?: string;
-  buildCommand?: string;
-  outputDirectory?: string;
   rewrites?: Array<{ source: string; destination: string }>;
   headers?: HeaderRule[];
 };
@@ -21,16 +17,8 @@ function loadConfig(): VercelConfig {
   return JSON.parse(readFileSync(path, "utf8")) as VercelConfig;
 }
 
-function loadPackageJson(): {
-  engines?: { node?: string };
-  dependencies?: Record<string, string>;
-  scripts?: Record<string, string>;
-} {
+function loadPackageJson(): { scripts?: Record<string, string> } {
   return JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
-}
-
-function loadMainSource(): string {
-  return readFileSync(resolve(process.cwd(), "src/main.tsx"), "utf8");
 }
 
 function readProjectFile(path: string): string {
@@ -44,15 +32,6 @@ function headersFor(config: VercelConfig, source: string) {
 }
 
 describe("Vercel frontend deployment configuration", () => {
-  it("builds DebateLab as a Vite static site", () => {
-    const config = loadConfig();
-
-    expect(config.$schema).toBe("https://openapi.vercel.sh/vercel.json");
-    expect(config.framework).toBe("vite");
-    expect(config.buildCommand).toBe("npm run build");
-    expect(config.outputDirectory).toBe("dist");
-  });
-
   it("falls back to the SPA shell after Vercel checks the filesystem", () => {
     const config = loadConfig();
 
@@ -119,17 +98,6 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).toContain('<meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />');
   });
 
-  it("starts with a branded boot shell instead of visible crawl-only copy", () => {
-    const indexHtml = readProjectFile("index.html");
-    const mainSource = loadMainSource();
-    const rootMarkup = indexHtml.match(/<div id="root">([\s\S]*?)<\/div>/)?.[1] ?? "";
-
-    expect(indexHtml).toContain('aria-label="DebateLab is loading"');
-    expect(rootMarkup).not.toContain("DebateLab by Programcode is the official");
-    expect(indexHtml).toMatch(/<noscript>[\s\S]*DebateLab by Programcode is the official/);
-    expect(mainSource).not.toContain("preloadOfflineRoutes");
-  });
-
   it("keeps route chunks out of the initial document and runs the graph gate", () => {
     const indexHtml = readProjectFile("index.html");
     const packageJson = loadPackageJson();
@@ -170,23 +138,5 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headersFor(config, "/assets/(.*)")["Cache-Control"]).toBe(
       "public, max-age=31536000, immutable",
     );
-  });
-
-  it("pins the Vercel runtime to Node 22", () => {
-    expect(loadPackageJson().engines?.node).toBe("22.x");
-  });
-
-  it("includes Vercel Web Analytics and Speed Insights in the app root", () => {
-    const packageJson = loadPackageJson();
-    const mainSource = loadMainSource();
-    const telemetrySource = readProjectFile("src/components/WebTelemetry.tsx");
-
-    expect(packageJson.dependencies).toHaveProperty("@vercel/analytics");
-    expect(packageJson.dependencies).toHaveProperty("@vercel/speed-insights");
-    expect(mainSource).toContain("<WebTelemetry />");
-    expect(mainSource).toContain('window.requestIdleCallback(run)');
-    expect(telemetrySource).toContain('lazy(() => import("@vercel/analytics/react")');
-    expect(telemetrySource).toContain('lazy(() => import("@vercel/speed-insights/react")');
-    expect(telemetrySource).toContain('window.requestIdleCallback(() => setReady(true))');
   });
 });

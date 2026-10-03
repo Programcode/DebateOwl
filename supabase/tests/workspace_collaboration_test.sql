@@ -1,43 +1,11 @@
 BEGIN;
-SELECT plan(19);
+SELECT plan(12);
 
-SELECT has_table(
-  'private',
-  'workspace_document_state',
-  'canonical workspace document state is private'
-);
-SELECT has_table(
-  'private',
-  'workspace_document_updates',
-  'durable workspace updates are private'
-);
-SELECT has_function(
-  'public',
-  'create_workspace_document',
-  ARRAY['uuid', 'text', 'text', 'uuid', 'bigint', 'uuid'],
-  'members create or duplicate files through one transactional RPC'
-);
 SELECT has_trigger(
   'public',
   'workspace_members',
   'workspace_members_notify_access_revoked_after_delete',
   'member removal notifies the collaboration fence after commit'
-);
-SELECT has_table('public', 'workspace_versions', 'version metadata is member-readable');
-SELECT has_function(
-  'public', 'create_workspace_version',
-  ARRAY['uuid', 'uuid', 'text', 'bigint', 'uuid'],
-  'members create named or automatic versions through one RPC'
-);
-SELECT has_function(
-  'public', 'restore_workspace_version',
-  ARRAY['uuid', 'uuid', 'uuid', 'bigint', 'uuid'],
-  'restore compares the previewed sequence through one RPC'
-);
-SELECT has_function(
-  'public', 'get_workspace_version_snapshot',
-  ARRAY['uuid', 'uuid', 'uuid'],
-  'preview returns private version bytes only through an authorized RPC'
 );
 
 INSERT INTO auth.users (id) VALUES

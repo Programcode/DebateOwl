@@ -224,6 +224,15 @@ describe("Postgres collaboration writer locks", () => {
       documentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       epoch: 3,
     })).resolves.toBe(true);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("member.user_id = $3"),
+      [
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        3,
+        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        false,
+      ],
+    );
     expect(client.release).toHaveBeenCalledTimes(1);
   });
 

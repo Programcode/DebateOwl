@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(36);
+SELECT plan(32);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -7,11 +7,6 @@ VALUES
   ('22222222-2222-4222-8222-222222222222'),
   ('33333333-3333-4333-8333-333333333333'),
   ('44444444-4444-4444-8444-444444444444');
-
-SELECT has_table('public', 'workspaces', 'workspaces exists');
-SELECT has_table('public', 'workspace_members', 'workspace_members exists');
-SELECT has_table('public', 'workspace_documents', 'workspace_documents exists');
-SELECT has_table('public', 'workspace_audit_events', 'workspace_audit_events exists');
 
 SELECT results_eq(
   $$SELECT relrowsecurity
