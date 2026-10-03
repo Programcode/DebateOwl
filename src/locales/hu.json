@@ -1141,7 +1141,7 @@
     "sidePro": "Csak mellette",
     "sideCon": "Csak ellene",
     "outputFormat": "Kimeneti Formátum",
-    "outputTop5": "Top 5 Legjobb Szög",
+    "outputTop5": "Az 5 Legjobb Szög",
     "outputMindmap": "Gondolattérkép Stílus",
     "outputBuckets": "Kategorizált Csoportok",
     "existing": "Ami Már Megvan (Opcionális)",
@@ -1157,7 +1157,7 @@
   "brainstormResults": {
     "clarification": "Pontosítás Szükséges",
     "clarificationDesc": "Válaszolj ezekre a kérdésekre a jobb eredményekért",
-    "top5": "Top 5 Érvelési Szög",
+    "top5": "Az 5 Legerősebb Érvelési Szög",
     "top5Desc": "Legjobb lehetőségek potenciál szerint rangsorolva",
     "argMap": "Érvtérkép",
     "argMapDesc": "Ötletek kategória szerint rendezve",

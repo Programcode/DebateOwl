@@ -10,7 +10,7 @@ for (const path of PAGES) {
     await expect(browser.locator("html")).toHaveAttribute("lang", "hu");
     await expect(browser.locator("main h1, main h2").first()).toBeVisible();
     await agent.assert(
-      "Every piece of interface text on this screen (navigation, headings, buttons, field labels, placeholders, hints and empty states) is in Hungarian. Product names such as DebateLab, debate format codes, language names offered as choices (English, Español, Magyar), and user content do not count. An English loanword inflected with a Hungarian ending, such as \"coachingot\", is Hungarian.",
+      "Every piece of interface text on this screen (navigation, headings, buttons, field labels, placeholders, hints and empty states) is in Hungarian. Product names such as DebateLab, AI model names (Claude Sonnet 5) and plan names (Pro), debate format codes, language names offered as choices (English, Español, Magyar), and user content do not count. An English loanword inflected with a Hungarian ending, such as \"coachingot\", is Hungarian.",
       { vision: true },
     );
     await agent.assert(
