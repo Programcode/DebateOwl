@@ -182,9 +182,9 @@ function setStatus(sha, state, description) {
 }
 
 function openDriftIssue() {
+  // Not --search: the search index lags, and a retry would open a duplicate.
   const found = JSON.parse(gh([
-    "issue", "list", "--repo", GITHUB_REPO, "--state", "open", "--search", `"${DRIFT_ISSUE_TITLE}" in:title`,
-    "--json", "number,title",
+    "issue", "list", "--repo", GITHUB_REPO, "--state", "open", "--limit", "200", "--json", "number,title",
   ]));
   return found.find((issue) => issue.title === DRIFT_ISSUE_TITLE)?.number ?? null;
 }
@@ -202,8 +202,8 @@ export function report({ sha, ok, summary, detail }) {
     return;
   }
   // One comment per failing commit, not one per retry.
-  const comments = gh(["issue", "view", String(issue), "--repo", GITHUB_REPO, "--json", "comments", "--jq", ".comments[].body"]);
-  if (!comments.includes(sha)) gh(["issue", "comment", String(issue), "--repo", GITHUB_REPO, "--body-file", "-"], body);
+  const seen = gh(["issue", "view", String(issue), "--repo", GITHUB_REPO, "--json", "body,comments", "--jq", ".body, .comments[].body"]);
+  if (!seen.includes(sha)) gh(["issue", "comment", String(issue), "--repo", GITHUB_REPO, "--body-file", "-"], body);
 }
 
 function main() {
