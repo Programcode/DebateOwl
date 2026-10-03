@@ -31,7 +31,10 @@ A production account, demo code, or email code does not work on staging, and a s
 
 The debates cover private cars in city centres, platform liability for misinformation, and standardised testing. Each has two or three sources and two or three saved results. Between them they cover cases, attacks, brainstorms, and factoids, and the liability debate also has an Ask chat. Seeded ids start with `5eed`. The fixtures live in [`scripts/staging/fixtures.mjs`](../scripts/staging/fixtures.mjs); all of the text is made up.
 
-Only the trial and expired accounts lack demo codes. To try them, create a code in the staging Admin page as Adam and bind it to their email.
+A demo code turns its account into lifetime Pro when used, so the trial and expired accounts have none. To try those plans:
+
+- Adam, on any device: `node scripts/staging/seed.mjs --owner-tier trial` (or `expired`) on the VPS, then reload. The next seed run, at the latest the next merge to `main`, puts the account back on Pro, or run `--owner-tier pro`.
+- Agents: `node scripts/staging/seed.mjs --session trial > "$tmp/session.json"` prints a session for any seeded account (`admin`, `pro`, `trial`, `expired`, `owner`) without sending mail. Put it in the `debate-auth-staging` localStorage key before the app loads, as [`e2e/staging/auth.setup.ts`](../e2e/staging/auth.setup.ts) does. It holds live tokens: keep it in a mode-600 file and delete it afterwards.
 
 Staging deliberately has no Stripe or ElevenLabs secrets. Checkout, the billing portal, `stripe-webhook`, and the Stripe part of account deletion fail on staging, and voice rounds fall back to the browser voice. AI requests and web research use staging's own OpenRouter and Exa keys.
 
@@ -44,9 +47,9 @@ A user systemd timer on Adam's VPS, `debatelab-staging-sync.timer`, runs [`ops/s
 3. reruns the seed;
 4. sets the `staging-sync` commit status on that commit, and opens or comments on the GitHub issue **Staging is out of sync with main** when anything fails. A later successful sync closes the issue.
 
-An already-synced commit is rechecked hourly, so drift from a hand deploy also shows up. A failed commit is retried hourly. The script stops instead of pushing when staging has a migration the commit lacks.
+An already-synced commit is rechecked hourly, so drift from a hand deploy also shows up. A failed commit is retried hourly. The script stops instead of pushing when staging has a migration the commit lacks. It never deletes a function: one that is deployed on staging but gone from the commit fails the sync until someone runs `supabase functions delete <name> --project-ref brifeyypjauyusmkptkx`. `workspace-invites` is the exception, because it is hidden and never deployed.
 
-`Protected staging E2E` waits for a successful `staging-sync` status on its commit before testing. If no status arrives within 20 minutes, it fails with a pointer to this page.
+`Protected staging E2E` waits for a successful `staging-sync` status on its commit before testing. If `main` moves past the commit while it waits, the run skips: staging then runs the newer backend, and the newer commit's run tests it. If no status arrives within 20 minutes, it fails with a pointer to this page.
 
 PRs that change `supabase/migrations/` or `supabase/functions/` get a comment saying their staging preview still runs `main`'s backend. Those changes reach staging only after merge. To try them before then, use the `verify-debatelab` skill against a local stack.
 

@@ -18,7 +18,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  staging-e2e:
+  # Staging is one shared backend that the VPS sync (docs/staging.md) moves to
+  # each new main commit and marks with a staging-sync commit status. Test a
+  # commit only once staging runs it, and skip a commit that main has already
+  # moved past: staging runs the newer backend, and the newer commit's run
+  # tests it.
+  staging-sync-gate:
     if: >-
       (
         (github.event_name == 'workflow_run' &&
@@ -28,28 +33,31 @@ jobs:
         (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
       ) && vars.STAGING_E2E_ENABLED == 'true'
     runs-on: ubuntu-latest
-    environment: staging
+    timeout-minutes: 25
+    outputs:
+      current: ${{ steps.wait.outputs.current }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-
-      # The VPS staging sync (docs/staging.md) sets this status once staging's
-      # migrations and Edge Functions match the commit. Testing before that
-      # would test the previous backend.
       - name: Wait for staging to sync this commit
+        id: wait
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
         shell: bash
         run: |
           for _ in $(seq 1 40); do
+            main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+            if [ "$main" != "$SHA" ]; then
+              echo "::notice::main moved on to ${main}; staging runs that backend, and its own run tests it. Skipping ${SHA}."
+              echo "current=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/statuses" \
               --jq '[.[] | select(.context == "staging-sync")][0].state // "missing"')"
             case "$state" in
-              success) echo "Staging is synced with ${SHA}."; exit 0 ;;
+              success)
+                echo "Staging is synced with ${SHA}."
+                echo "current=true" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
               failure|error)
                 echo "::error::Staging sync failed for ${SHA}. See the open 'Staging is out of sync with main' issue."
                 exit 1 ;;
@@ -58,6 +66,18 @@ jobs:
           done
           echo "::error::No staging-sync status for ${SHA} after 20 minutes. Is debatelab-staging-sync.timer running on the VPS? See docs/staging.md."
           exit 1
+
+  staging-e2e:
+    needs: staging-sync-gate
+    if: needs.staging-sync-gate.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Verify selected commit passed the quality workflow
         if: github.event_name == 'workflow_dispatch'

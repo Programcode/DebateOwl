@@ -43,7 +43,8 @@ In this PR:
 - `scripts/staging-sync.mjs`: refuses any ref but staging, applies migrations, deploys changed functions, rechecks, and reports. It sets a `staging-sync` commit status and manages a drift issue.
 - `ops/staging-sync/`: the timer, the service, `run.sh` (a dedicated clone of `main`, no `npm install`), and `install.sh`. It has been installed on the VPS since 2026-10-03.
 - `scripts/staging/seed.mjs` and `fixtures.mjs`: four seeded accounts on Pro, trial, and expired plans, plus Adam's account. Three invented debates with sources and saved results. Fixed ids, idempotent.
-- `Protected staging E2E` waits for `staging-sync` success on its commit, so it never tests a stale backend.
+- `seed.mjs --session <account>` mints a session for agents to sign in as any seeded account, because a demo code turns its account into Pro. `--owner-tier` puts Adam's account on trial or expired until the next seed.
+- `Protected staging E2E` gains a gate job that waits for `staging-sync` success on its commit and skips commits `main` has already moved past, so it never tests a stale or newer backend.
 - `staging-preview-note.yml`: the PR comment from decision 3.
 - `docs/staging.md`: the one way in. `operations.md` and `testing.md` point to it.
 

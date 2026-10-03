@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error -- plain ESM script without type declarations
-import { assertStagingTarget, planSync, PRODUCTION_REF, STAGING_REF } from "../../../scripts/staging-sync.mjs";
+import { assertNoUndeclared, assertStagingTarget, planSync, PRODUCTION_REF, STAGING_REF } from "../../../scripts/staging-sync.mjs";
 
 const staging = { ref: STAGING_REF, name: "debate-trainer-staging" };
 const production = { ref: PRODUCTION_REF, name: "debate-trainer" };
@@ -37,5 +37,7 @@ describe("staging sync plan", () => {
       functions: ["account", "ai", "share"],
       undeclared: ["old-fn"],
     });
+    // A function removed from main but still deployed fails the sync instead of passing quietly.
+    expect(() => assertNoUndeclared(plan)).toThrow(/old-fn/);
   });
 });

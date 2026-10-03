@@ -62,8 +62,13 @@ function quiet(text) {
     .trim();
 }
 
+/**
+ * `--agent no` keeps the CLI's output the same under an agent (where it
+ * detects one and switches to JSON) and under the systemd timer (where it
+ * doesn't), so what an agent tests is what the timer runs.
+ */
 function supabase(root, args) {
-  const result = run("supabase", [...args, "--project-ref", STAGING_REF], { cwd: root });
+  const result = run("supabase", [...args, "--agent", "no", "--project-ref", STAGING_REF], { cwd: root });
   const output = quiet(`${result.stdout}\n${result.stderr}`);
   if (result.status !== 0) throw new Error(`supabase ${args.slice(0, 2).join(" ")} failed:\n${output}`);
   return output;
@@ -99,6 +104,17 @@ export function planSync(result) {
   };
 }
 
+/**
+ * A function deployed on staging but gone from the commit stays callable. The
+ * sync never deletes functions, so it reports them as drift until someone
+ * removes them by hand (`supabase functions delete <name> --project-ref ...`).
+ */
+export function assertNoUndeclared(plan) {
+  if (plan.undeclared.length > 0) {
+    throw new Error(`Deployed on staging but not in this commit: ${plan.undeclared.join(", ")}. Delete them by hand; see docs/staging.md.`);
+  }
+}
+
 function lastJsonLine(text) {
   for (const line of text.split("\n").reverse()) {
     try {
@@ -123,13 +139,14 @@ export function sync({ root, dryRun, log = console.log }) {
     throw new Error(`Staging has migrations this commit lacks (${plan.divergent.join(", ")}). Not pushing over divergent history; fix it by hand.`);
   }
   if (plan.migrations.length === 0 && plan.functions.length === 0) {
+    assertNoUndeclared(plan);
     log("Staging already matches this commit.");
     return { plan, applied: [], deployed: [] };
   }
 
   const applied = [];
   if (plan.migrations.length > 0) {
-    const dry = supabase(root, ["db", "push", "--dry-run"]);
+    const dry = supabase(root, ["db", "push", "--dry-run", "--output-format", "json"]);
     const wouldPush = (lastJsonLine(dry)?.migrations ?? []).map((file) => file.split("_")[0]);
     if (!sameList(wouldPush, plan.migrations)) {
       throw new Error(`db push would apply [${wouldPush.join(", ")}] but the pending list is [${plan.migrations.join(", ")}]. Stopping.`);
@@ -160,6 +177,7 @@ export function sync({ root, dryRun, log = console.log }) {
     log(after.report);
     throw new Error(`Still pending after sync: ${[...left.migrations, ...left.functions].join(", ")}`);
   }
+  assertNoUndeclared(left);
   log(`Staging matches ${after.report.split("\n")[0].split(" ").pop()}.`);
   return { plan, applied, deployed };
 }

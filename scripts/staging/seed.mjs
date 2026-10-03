@@ -11,7 +11,14 @@
 //   STAGING_OWNER_EMAIL     Adam's Google account; gets admin, Pro and the debates
 //   STAGING_SEED_PRO_CODE   demo code for the seeded Pro account (written here)
 //
-// Usage: node scripts/staging/seed.mjs
+// Usage:
+//   node scripts/staging/seed.mjs                      seed or restore everything
+//   node scripts/staging/seed.mjs --session <account>  print a session for a seeded
+//        account (admin, pro, trial, expired, owner) as JSON for the browser's
+//        `debate-auth-staging` localStorage key. Demo codes turn an account into
+//        Pro, so this is how agents sign in as trial or expired.
+//   node scripts/staging/seed.mjs --owner-tier <pro|trial|expired>
+//        put Adam's account on another plan until the next seed run
 // See docs/staging.md.
 
 import { spawnSync } from "node:child_process";
@@ -137,7 +144,7 @@ async function ensureUser(api, existing, email, appMetadata) {
   });
 }
 
-/** A short-lived session for a seeded account, minted with the service role. */
+/** A session for a seeded account, minted with the service role without sending mail. */
 async function sessionFor(api, email) {
   const link = await api.request("/auth/v1/admin/generate_link", { method: "POST", body: { type: "magiclink", email } });
   const tokenHash = link.hashed_token ?? link.properties?.hashed_token;
@@ -147,7 +154,7 @@ async function sessionFor(api, email) {
     token: api.anon,
     apikey: api.anon,
   });
-  return session.access_token;
+  return session;
 }
 
 /** Makes sure the seeded Pro account has a demo code we know. */
@@ -157,7 +164,7 @@ async function ensureProCode(api, access, adminEmail, proEmail) {
   if (row && !row.disabled_at && access.STAGING_SEED_PRO_CODE) return row.id;
   // The raw code is shown only once. If we lost it, replace the row.
   if (row) await api.request(`/rest/v1/demo_access_codes?id=eq.${row.id}`, { method: "DELETE" });
-  const token = await sessionFor(api, adminEmail);
+  const { access_token: token } = await sessionFor(api, adminEmail);
   const created = await api.request("/functions/v1/admin?action=create-demo-code", {
     method: "POST",
     token,
@@ -203,13 +210,7 @@ export async function seed({ log = console.log } = {}) {
     const metadata = account.key === "pro" ? { demo_access_code_id: codeId } : undefined;
     const user = await ensureUser(api, users, account.email, metadata);
     await api.upsert("user_roles", [{ user_id: user.id, role: account.role }], "user_id");
-    await api.upsert("user_settings", [{
-      user_id: user.id,
-      subscription_tier: account.tier,
-      trial_ends_at: account.trialEndsAt ?? null,
-      daily_limit_override: account.tier === "pro" ? 200 : null,
-      grace_period_ends_at: account.tier === "pro" ? "9999-12-31T23:59:59.999Z" : null,
-    }], "user_id");
+    await api.upsert("user_settings", [{ user_id: user.id, ...tierSettings(account) }], "user_id");
     const count = account.prefix ? await seedContent(api, user.id, account.prefix, account.debates) : 0;
     log(`${account.key}: ${account.tier}${account.role === "admin" ? ", admin" : ""}, ${count} debate(s)`);
   }
@@ -217,9 +218,49 @@ export async function seed({ log = console.log } = {}) {
   log(`Seeded staging. Access details: ${ACCESS_FILE}`);
 }
 
+/** Plan fields for a seeded account, as the seed writes them. */
+function tierSettings(account) {
+  return {
+    subscription_tier: account.tier,
+    trial_ends_at: account.trialEndsAt ?? null,
+    daily_limit_override: account.tier === "pro" ? 200 : null,
+    grace_period_ends_at: account.tier === "pro" ? "9999-12-31T23:59:59.999Z" : null,
+  };
+}
+
+async function printSession(key) {
+  const account = seedAccounts(readAccessFile().STAGING_OWNER_EMAIL).find((candidate) => candidate.key === key);
+  if (!account) throw new Error(`Unknown account "${key}". Use admin, pro, trial, expired or owner.`);
+  const api = client(stagingKeys());
+  if (!(await listUsers(api)).some((user) => user.email?.toLowerCase() === account.email)) {
+    throw new Error(`${account.email} is not on staging yet. Run the seed first.`);
+  }
+  process.stdout.write(`${JSON.stringify(await sessionFor(api, account.email))}\n`);
+}
+
+async function setOwnerTier(tier) {
+  const access = readAccessFile();
+  const owner = seedAccounts(access.STAGING_OWNER_EMAIL).find((account) => account.key === "owner");
+  if (!owner) throw new Error(`No STAGING_OWNER_EMAIL in ${ACCESS_FILE}.`);
+  const template = seedAccounts(null).find((account) => account.tier === tier);
+  if (!template) throw new Error(`Unknown plan "${tier}". Use pro, trial or expired.`);
+  const api = client(stagingKeys());
+  const user = (await listUsers(api)).find((candidate) => candidate.email?.toLowerCase() === owner.email);
+  if (!user) throw new Error("The owner account is not on staging yet. Sign in with Google once, or run the seed.");
+  await api.upsert("user_settings", [{ user_id: user.id, ...tierSettings(template) }], "user_id");
+  console.log(`Owner account is on ${tier} until the next seed run.`);
+}
+
+function main(argv) {
+  if (argv[0] === "--session" && argv[1]) return printSession(argv[1]);
+  if (argv[0] === "--owner-tier" && argv[1]) return setOwnerTier(argv[1]);
+  if (argv.length > 0) throw new Error(`Unknown arguments: ${argv.join(" ")}`);
+  return seed();
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  seed().catch((error) => {
-    console.error(`Seeding failed: ${error.message}`);
+  Promise.resolve().then(() => main(process.argv.slice(2))).catch((error) => {
+    console.error(`scripts/staging/seed.mjs failed: ${error.message}`);
     process.exit(1);
   });
 }
