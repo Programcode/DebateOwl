@@ -126,13 +126,20 @@ test('real staging session persists, starts a debate, writes and removes a sourc
     });
 
     await step(page, 'source and debate hydrate from staging after local state is cleared', async () => {
-      await page.evaluate(() => localStorage.removeItem('debate-trainer-storage'));
-      const sourceHydration = page.waitForResponse((response) =>
-        response.request().method() === 'GET' && response.url().includes('/rest/v1/sources?')
+      // Sources and debates persist under separate keys; clear both so every value below comes from staging.
+      await page.evaluate(() => {
+        localStorage.removeItem('debate-trainer-storage');
+        localStorage.removeItem('debatelab-current-debate');
+      });
+      const hydrationRead = (table: string) => page.waitForResponse((response) =>
+        response.request().method() === 'GET' && response.url().includes(`/rest/v1/${table}?`)
       );
+      const tables = ['sources', 'debates', 'current_debates'];
+      const reads = Promise.all(tables.map(hydrationRead));
       await page.reload();
-      expect((await sourceHydration).ok()).toBe(true);
+      (await reads).forEach((read, index) => expect(read.ok(), `${tables[index]} read`).toBe(true));
       await expect(page.getByTestId('library-debate')).toContainText(motion, { timeout: 15_000 });
+      await expect(page.getByTestId('current-debate-desktop')).toHaveAttribute('aria-label', `Current debate: ${motion}`);
       await expect(page.getByText(sourceTitle, { exact: true })).toBeVisible({ timeout: 15_000 });
       await page.getByText(sourceTitle, { exact: true }).click();
       await expect(page.locator('#source-detail-content')).toHaveValue(sourceContent);
