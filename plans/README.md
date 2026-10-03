@@ -6,7 +6,7 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## In progress
 
-Nothing is in progress.
+- **Staging that tracks main.** Audit of staging, the VPS sync timer, the seed, and what to delete. Plan: [2026-10-03 staging loop](2026-10-03-staging-loop.md). Previews come from #95 and the staging spec fix from #100.
 
 ## Backlog
 

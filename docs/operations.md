@@ -66,28 +66,15 @@ The staging browser suite disables trace, screenshot, and video capture. It crea
 
 Do not enable the staging repository variable before every prerequisite is present. A skipped staging job is not a pass.
 
-`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs after every successful `Quality` run from a push to `main`. Quality runs from pull requests also trigger it, and those show as skipped by design. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence. On failure the log names the failed step and the URL path, for example `Staging step "add a source to the debate" failed at path /app/library`.
+`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs after every successful `Quality` run from a push to `main`, and it first waits up to 20 minutes for a successful `staging-sync` status on that commit. Quality runs from pull requests also trigger it, and those show as skipped by design. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence. On failure the log names the failed step and the URL path, for example `Staging step "add a source to the debate" failed at path /app/library`.
 
 No staging run passed after 2026-09-23. Until 2026-10-01 the job did not run, because the `Quality` run it waits for never started. Once Actions came back, it failed on every `main` push through 2026-10-02. The cause was the spec, not staging: since the Current Debate change (#72), Library disables **Add Source** until a debate is current, and the spec never started one. The spec now starts a uniquely named debate and deletes it afterwards. The suite drives the real UI, so a change to a flow it covers can break it with no backend drift; run it locally before blaming staging.
 
 ## Staging sync
 
-Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production is `debate-trainer` (`uziwdtkzofptihahfooo`). Every backend change goes to staging first, passes the staging browser suite, and only then goes to production. Steps 1 and 2 are read-only. Steps 3 and 4 change staging and need Adam's authorization each time.
+Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production is `debate-trainer` (`uziwdtkzofptihahfooo`). Staging syncs itself: a timer on the VPS applies migrations and deploys changed Edge Functions to staging within about 5 minutes of every commit on `main`. It sets the `staging-sync` commit status, and on failure it opens the **Staging is out of sync with main** issue. No per-run authorization is needed for staging. [staging.md](staging.md) covers the timer, its credential, the seed, and how to get in.
 
-1. Confirm the target. `supabase projects list` must show the staging ref under the staging name. Stop if a command, link, or environment variable points at the production ref.
-2. Find what is pending. Run `npm run backend:status -- --project-ref brifeyypjauyusmkptkx --check` from a checkout of the commit you mean to ship. It compares staging with the committed tree and exits 1 when a migration is not applied. It also lists expected function secrets the project lacks (names only) and prints the Auth site URL and redirect allowlist. Where that script is not available, run its two read-only queries directly:
-
-   ```bash
-   supabase migration list --project-ref brifeyypjauyusmkptkx
-   supabase functions list --project-ref brifeyypjauyusmkptkx
-   ```
-
-   A migration with a local version and no remote version is pending. A function whose folder changed (`git log -- supabase/functions/<name> supabase/functions/_shared`) after its remote `updated_at` is stale. Save both lists as the rollback baseline.
-3. Apply migrations. Run `supabase db push --project-ref brifeyypjauyusmkptkx --dry-run` and check that it lists exactly the pending files from step 2. Then run it without `--dry-run`. Never use `--include-all` to paper over divergent history.
-4. Deploy functions, one at a time, only the ones step 2 marked stale: `supabase functions deploy <name> --project-ref brifeyypjauyusmkptkx --use-api`. [`supabase/config.toml`](../supabase/config.toml) supplies each function's JWT setting. Never use `--prune`.
-5. Verify. Rerun step 2; it must show nothing pending. Then start the staging browser suite: dispatch `Protected staging E2E` from `main` with `gh workflow run staging-e2e.yml --ref main`, or, when Actions cannot run, run it locally with the protected values as described in [testing.md](testing.md#protected-staging). For a manual check in the browser, an admin can switch the deployed frontend to staging from Settings and sign in there with a staging demo code. Google and email sign-in on staging work only if the staging Auth redirect URLs include the frontend origin. Since 2026-10-02 they include tailnet previews (`https://codex-remote.tailab0ab3.ts.net:91*/**`); see [development.md](development.md#preview-on-the-tailnet).
-
-Production then follows [Supabase changes](#supabase-changes) with the same list of migrations and functions.
+Before a production backend deploy, check that the commit's `staging-sync` status is green and that `Protected staging E2E` passed for it. Then follow [Supabase changes](#supabase-changes) with the list of migrations and functions that `npm run backend:status` reports for production.
 
 ## Switching the frontend to staging
 
