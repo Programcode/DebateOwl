@@ -1,0 +1,34 @@
+name: Staging preview note
+
+# Staging runs main's backend (docs/staging.md). A PR that changes supabase/
+# gets a comment saying its staging preview still uses main's migrations and
+# Edge Functions until it merges.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+
+permissions:
+  pull-requests: write
+
+jobs:
+  note:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Comment once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          marker="<!-- staging-preview-note -->"
+          if gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq '.[].body' | grep -qF "$marker"; then
+            exit 0
+          fi
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$marker
+          This PR changes \`supabase/\`. Its **debatelab-staging** preview talks to staging, which runs main's migrations and Edge Functions, so this PR's backend changes are not there yet. The VPS staging sync applies them within about 5 minutes of the merge. To try them before merging, use the \`verify-debatelab\` skill against a local stack. See docs/staging.md."

@@ -10,6 +10,8 @@ permissions:
   # Manual dispatch queries workflow runs for the selected main commit.
   actions: read
   contents: read
+  # Waits for the staging-sync commit status set by the VPS sync.
+  statuses: read
 
 concurrency:
   group: protected-staging-e2e-main
@@ -33,6 +35,29 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      # The VPS staging sync (docs/staging.md) sets this status once staging's
+      # migrations and Edge Functions match the commit. Testing before that
+      # would test the previous backend.
+      - name: Wait for staging to sync this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        shell: bash
+        run: |
+          for _ in $(seq 1 40); do
+            state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/statuses" \
+              --jq '[.[] | select(.context == "staging-sync")][0].state // "missing"')"
+            case "$state" in
+              success) echo "Staging is synced with ${SHA}."; exit 0 ;;
+              failure|error)
+                echo "::error::Staging sync failed for ${SHA}. See the open 'Staging is out of sync with main' issue."
+                exit 1 ;;
+            esac
+            sleep 30
+          done
+          echo "::error::No staging-sync status for ${SHA} after 20 minutes. Is debatelab-staging-sync.timer running on the VPS? See docs/staging.md."
+          exit 1
 
       - name: Verify selected commit passed the quality workflow
         if: github.event_name == 'workflow_dispatch'

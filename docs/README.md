@@ -30,6 +30,7 @@ Start with the smallest document that answers the task instead of loading every 
 ## Operate or deploy
 
 - [Operations guide](operations.md), current. Open before changing CI, Vercel hosting, staging, CORS, migrations, Edge Function deployment, rollback, or production state.
+- [Staging](staging.md), current. How to get into staging, the seeded accounts, and the VPS timer that syncs it with `main`.
 - [`.github/workflows/`](../.github/workflows/) is the CI source of truth.
 
 ## Plans

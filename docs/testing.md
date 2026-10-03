@@ -271,6 +271,8 @@ This is the Safari-engine smoke gate. State explicitly when it did not run.
 
 ## Protected staging
 
+To get into staging by hand, or to see what is seeded there, read [staging.md](staging.md). The suite tests whatever backend staging runs, and in CI it waits for the `staging-sync` status on its commit first.
+
 Staging requires all three protected values:
 
 - `STAGING_SUPABASE_URL`
