@@ -294,11 +294,15 @@ The suite:
 - verifies that the anon key belongs to the supplied staging URL;
 - authenticates through `demo-code-login`;
 - proves session reload;
-- writes and reads one uniquely named source;
-- makes one bounded AI request;
-- deletes only the source it created.
+- removes debates an interrupted earlier run left behind (only motions starting `E2E staging debate `);
+- starts one uniquely named debate from Library, because sources belong to a Current Debate;
+- writes one uniquely named source, then reads it back after clearing local state;
+- makes one bounded AI request in Ask;
+- deletes the source through the UI and the debate through the REST API with the test user's own session (the app cannot delete the Current Debate), which also removes the chat Ask saved to it.
 
-Temporary auth state lives under `test-results/.auth/`. The staging projects disable traces, screenshots, and video because browser captures can retain authenticated data.
+Use port `18080`: the staging Edge Functions answer browser requests only from allowlisted origins (see the [staging contract](operations.md#staging-contract)). The CI demo code exists only in the GitHub `staging` environment, so a local run needs its own bounded staging code.
+
+Temporary auth state lives under `test-results/.auth/`. The staging projects disable traces, screenshots, and video because browser captures can retain authenticated data. Actions time out after 30 seconds, well inside the 180-second test timeout, so cleanup still runs after a failure. Each failure logs the step name and the URL path, never the query or hash. Playwright still writes an ARIA snapshot to `test-results/**/error-context.md` on failure; the workflow does not upload it, and it can contain staging account text.
 
 The GitHub staging workflow runs only after an eligible main-branch quality result or a main-branch manual dispatch, and only when `STAGING_E2E_ENABLED=true`. The protected environment must already contain current secrets, functions, schema, provider access, a dedicated test code, and a main-only deployment rule.
 
