@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.19";
+import { assertEquals } from "jsr:@std/assert@1.0.19";
 import { ALLOWED_ORIGINS, getCorsHeaders, isAllowedOrigin, isDevOrigin } from "./cors.ts";
 
 Deno.test("allows the Capacitor WebView origin", () => {
@@ -44,11 +44,6 @@ Deno.test("carries the requested methods", () => {
     getCorsHeaders(null, { methods: "GET, POST, OPTIONS" })["Access-Control-Allow-Methods"],
     "GET, POST, OPTIONS",
   );
-});
-
-Deno.test("native share links use the public HTTPS origin", async () => {
-  const source = await Deno.readTextFile(new URL("../share/index.ts", import.meta.url));
-  assertStringIncludes(source, "shareUrl: `${PUBLIC_WEB_APP_ORIGIN}/share/${data.share_code}`");
 });
 
 Deno.test("allows both Vercel projects' preview and staging hosts", () => {

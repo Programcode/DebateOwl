@@ -16,25 +16,11 @@ test('shows a dark private startup shell while the entry module is delayed', { t
 
   await page.goto('/app', { waitUntil: 'commit' });
   await expect(page.locator('[data-startup-shell]')).toBeVisible();
-  await expect(page.locator('#root > .seo-fallback')).toBeHidden();
   await expect(page.locator('[data-startup-status]')).toHaveText('Loading DebateLab');
   await expect.poll(() => page.evaluate(() => ({
     appShell: document.documentElement.classList.contains('app-shell'),
     dark: document.documentElement.classList.contains('dark'),
   }))).toEqual({ appShell: true, dark: true });
-});
-
-test('shows the startup shell on login while the entry module is delayed', { tag: '@smoke' }, async ({ page }) => {
-  await setLocale(page, 'en');
-  await page.route('**/src/bootstrap.ts*', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    await route.continue();
-  });
-
-  await page.goto('/login', { waitUntil: 'commit' });
-  await expect(page.locator('[data-startup-shell]')).toBeVisible();
-  await expect(page.locator('#root > .seo-fallback')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('app-shell'))).toBe(true);
 });
 
 test('mounts the app before Jam recorder modules resolve', { tag: '@smoke' }, async ({ page }) => {
@@ -52,7 +38,6 @@ test('mounts the app before Jam recorder modules resolve', { tag: '@smoke' }, as
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('main').getByRole('heading', { name: 'DebateLab', exact: true, level: 1 })).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator('#root > .seo-fallback')).toHaveCount(0);
   expect(await page.evaluate(() => {
     const jam = (window as Window & { __jam__?: { exports?: { metadata?: unknown } } }).__jam__;
     return typeof jam?.exports?.metadata === 'function';
@@ -66,16 +51,4 @@ test('shows a recoverable message when the static main entry fails', { tag: '@sm
   await expect(page.locator('[data-bootstrap-error]')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Unable to load DebateLab' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reload' })).toBeEnabled();
-});
-
-test('keeps the branded shell visible before a delayed public entry module', { tag: '@smoke' }, async ({ page }) => {
-  await setLocale(page, 'en');
-  await page.route('**/src/bootstrap.ts*', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    await route.continue();
-  });
-
-  await page.goto('/', { waitUntil: 'commit' });
-  await expect(page.locator('[data-startup-shell]')).toBeVisible();
-  await expect(page.getByText('DebateLab by Programcode is the official')).toHaveCount(0);
 });

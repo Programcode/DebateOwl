@@ -87,7 +87,7 @@ const HomeGridSkeleton = () => (
 const ToolFormSkeleton = () => (
   <PageFrame className="mx-auto max-w-6xl">
     <Heading width="w-52" />
-    <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
+    <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
       <Surface className="min-h-[420px] space-y-6">
         <Shape className="h-6 w-40" />
         {[0, 1, 2].map((field) => (

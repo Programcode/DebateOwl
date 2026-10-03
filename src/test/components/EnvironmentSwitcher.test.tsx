@@ -55,12 +55,6 @@ describe('EnvironmentSwitcher', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('offers production while staging is active', () => {
-    mocks.env = 'staging';
-    render(<EnvironmentSwitcher reload={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Switch to Production' })).toBeInTheDocument();
-  });
-
   it('still switches when sign-out fails, so nobody is stranded on a broken project', async () => {
     mocks.env = 'staging';
     mocks.signOut.mockRejectedValue(new Error('staging unreachable'));

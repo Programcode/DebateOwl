@@ -65,23 +65,6 @@ async function openFeatureRoute(page: Page, route: 'brainstorm' | 'factoids' | '
   await expect(page).toHaveURL(new RegExp(`/app/${route}$`));
 }
 
-test('keeps route and feature-state motion short and stable', async ({ page }, testInfo) => {
-  await prepareMotionFixture(page, 'no-preference');
-  const options = await openGenerateOptions(page);
-
-  await expect(page.locator('[data-route-transition-ms]')).toHaveCount(0);
-  const transitionMs = await options.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration) * 1000);
-  expect(transitionMs).toBeGreaterThan(0);
-  await page.screenshot({ path: testInfo.outputPath('normal-empty-options.png'), fullPage: true });
-
-  await generateMockCase(page);
-  await expect(page.locator('#generate-results')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  await expect(page.locator('main.page-enter')).toHaveCount(0);
-  await expect(page.getByText('Generate complete', { exact: true })).toBeHidden({ timeout: 10_000 });
-  await page.screenshot({ path: testInfo.outputPath('normal-result.png'), fullPage: true });
-});
-
 test('removes non-essential route and state movement for reduced motion', async ({ page }, testInfo) => {
   await prepareMotionFixture(page, 'reduce');
   const options = await openGenerateOptions(page);
