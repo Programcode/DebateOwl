@@ -245,6 +245,13 @@ function main() {
     if (dirty) throw new RefusedError("Uncommitted changes under supabase/. Sync only from a clean commit.");
   } catch (error) {
     console.error(`Refused: ${error.message}`);
+    if (options.report && !options.dryRun) {
+      try {
+        report({ sha, ok: false, summary: `Refused: ${error.message.split("\n")[0]}`, detail: error.message });
+      } catch (reportError) {
+        console.error(`Reporting failed too: ${reportError.message}`);
+      }
+    }
     process.exit(2);
   }
 
