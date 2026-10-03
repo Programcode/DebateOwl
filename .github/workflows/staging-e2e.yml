@@ -71,6 +71,8 @@ jobs:
     needs: staging-sync-gate
     if: needs.staging-sync-gate.outputs.current == 'true'
     runs-on: ubuntu-latest
+    # Bounds how long the VPS sync holds off for this run (ops/staging-sync/run.sh).
+    timeout-minutes: 30
     environment: staging
     steps:
       - name: Checkout code

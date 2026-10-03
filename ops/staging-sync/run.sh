@@ -26,6 +26,16 @@ for marker in ok failed; do
   fi
 done
 
+# Don't change the backend under a browser run that is testing an older
+# commit; sync once it finishes (the job times out after 30 minutes). A run
+# for this commit is waiting for this sync, so it doesn't count.
+testing="$(gh run list --repo Programcode/DebateLab --workflow staging-e2e.yml --limit 20 --json status,headSha \
+  --jq "[.[] | select(.status != \"completed\" and .headSha != \"$sha\")] | length")" || testing=0
+if [ "$testing" != "0" ]; then
+  echo "Protected staging E2E is testing an older commit; syncing $sha after it finishes."
+  exit 0
+fi
+
 git -C "$REPO" checkout --quiet --force --detach "$sha"
 git -C "$REPO" clean -fdq
 

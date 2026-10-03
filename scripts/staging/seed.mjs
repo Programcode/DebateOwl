@@ -188,7 +188,14 @@ async function seedContent(api, userId, prefix, debateIndexes) {
       await api.upsert(table, debate.results[table].map(({ id, title, side, output }) => inDebate({ id, title, side, input: {}, output })));
     }
     await api.upsert("chats", debate.chats.map(({ id, title, side }) => inDebate({ id, title, side })));
-    await api.upsert("messages", debate.chats.flatMap((chat) => chat.messages.map((message) => ({ ...message, chat_id: chat.id, output: null }))));
+    // Chats load ordered by created_at alone, so give each message its own time.
+    const base = Date.parse("2026-09-28T18:00:00Z");
+    await api.upsert("messages", debate.chats.flatMap((chat) => chat.messages.map((message, index) => ({
+      ...message,
+      chat_id: chat.id,
+      output: null,
+      created_at: new Date(base + index * 60_000).toISOString(),
+    }))));
   }
   if (debates[0]) await api.upsert("current_debates", [{ user_id: userId, debate_id: debates[0].id }], "user_id");
   return debates.length;
