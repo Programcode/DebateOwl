@@ -1,9 +1,17 @@
 name: Live provider E2E
 
-# Real OpenRouter, Jev, and Exa behind the local stack. Runs on pull requests,
-# nightly to catch provider drift without code changes, and on demand.
+# Real OpenRouter, Jev, and Exa behind the local stack. Every run spends
+# provider credit, so pull requests run it only when AI or research code
+# changes. Nightly runs catch provider drift without code changes.
 on:
   pull_request:
+    paths:
+      - "supabase/functions/**"
+      - "src/lib/ai/**"
+      - "e2e/live/**"
+      - "e2e/full-stack/fake-openrouter.mjs"
+      - ".superset/db-gate.sh"
+      - ".github/workflows/live-e2e.yml"
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:

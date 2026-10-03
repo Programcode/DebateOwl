@@ -127,7 +127,7 @@ async function prepare(page: Page, requests: CrossfireRequest[], failFirstAnswer
   await page.getByTestId('crossfire-argument').fill('Private cars create congestion and unsafe streets.');
 }
 
-test('Question the AI completes a grounded Crossfire debrief', async ({ page }, testInfo) => {
+test('Question the AI completes a grounded Crossfire debrief', { tag: '@smoke' }, async ({ page }, testInfo) => {
   const requests: CrossfireRequest[] = [];
   await prepare(page, requests);
   await page.getByTestId('mode-question-ai').click();

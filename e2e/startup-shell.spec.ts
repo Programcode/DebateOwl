@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
 
-test('shows a dark private startup shell while the entry module is delayed', async ({ page }) => {
+test('shows a dark private startup shell while the entry module is delayed', { tag: '@smoke' }, async ({ page }) => {
   await setLocale(page, 'en');
   await page.addInitScript(() => {
     const settings = JSON.parse(window.localStorage.getItem('debate-trainer-settings') || '{}');
@@ -24,7 +24,7 @@ test('shows a dark private startup shell while the entry module is delayed', asy
   }))).toEqual({ appShell: true, dark: true });
 });
 
-test('shows the startup shell on login while the entry module is delayed', async ({ page }) => {
+test('shows the startup shell on login while the entry module is delayed', { tag: '@smoke' }, async ({ page }) => {
   await setLocale(page, 'en');
   await page.route('**/src/bootstrap.ts*', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -37,7 +37,7 @@ test('shows the startup shell on login while the entry module is delayed', async
   await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('app-shell'))).toBe(true);
 });
 
-test('mounts the app before Jam recorder modules resolve', async ({ page }) => {
+test('mounts the app before Jam recorder modules resolve', { tag: '@smoke' }, async ({ page }) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.addInitScript(() => {
@@ -59,7 +59,7 @@ test('mounts the app before Jam recorder modules resolve', async ({ page }) => {
   })).toBe(true);
 });
 
-test('shows a recoverable message when the static main entry fails', async ({ page }) => {
+test('shows a recoverable message when the static main entry fails', { tag: '@smoke' }, async ({ page }) => {
   await page.route('**/src/main.tsx*', (route) => route.fulfill({ status: 503, body: 'entry unavailable' }));
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
@@ -68,7 +68,7 @@ test('shows a recoverable message when the static main entry fails', async ({ pa
   await expect(page.getByRole('button', { name: 'Reload' })).toBeEnabled();
 });
 
-test('keeps the branded shell visible before a delayed public entry module', async ({ page }) => {
+test('keeps the branded shell visible before a delayed public entry module', { tag: '@smoke' }, async ({ page }) => {
   await setLocale(page, 'en');
   await page.route('**/src/bootstrap.ts*', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1500));

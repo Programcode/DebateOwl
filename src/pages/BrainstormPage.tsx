@@ -115,7 +115,7 @@ export default function BrainstormPage() {
         </AnimatedSection>
         <CurrentDebateStrip side={brainstormForm?.side} hidden={Boolean(workspace.context)} />
 
-        <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
+        <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
             <BrainstormForm onSubmit={handleSubmit} isLoading={brainstormLoading} debatePrefill={!workspace.context} />

@@ -133,7 +133,7 @@ export default function FactoidsPage() {
         </AnimatedSection>
         <CurrentDebateStrip hidden={Boolean(workspace.context)} />
 
-        <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
+        <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* Form */}
           <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
             <FactoidsForm onSubmit={handleSubmit} isLoading={factoidsLoading} debateContext={!workspace.context} />

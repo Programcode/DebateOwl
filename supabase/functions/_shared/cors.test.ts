@@ -1,5 +1,5 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.19";
-import { ALLOWED_ORIGINS, getCorsHeaders, isDevOrigin } from "./cors.ts";
+import { ALLOWED_ORIGINS, getCorsHeaders, isAllowedOrigin, isDevOrigin } from "./cors.ts";
 
 Deno.test("allows the Capacitor WebView origin", () => {
   const headers = getCorsHeaders("capacitor://localhost");
@@ -49,4 +49,28 @@ Deno.test("carries the requested methods", () => {
 Deno.test("native share links use the public HTTPS origin", async () => {
   const source = await Deno.readTextFile(new URL("../share/index.ts", import.meta.url));
   assertStringIncludes(source, "shareUrl: `${PUBLIC_WEB_APP_ORIGIN}/share/${data.share_code}`");
+});
+
+Deno.test("allows both Vercel projects' preview and staging hosts", () => {
+  for (const origin of [
+    "https://debate-navigator-git-feat-accou-6d6edb-adam-gaborjanis-projects.vercel.app",
+    "https://debate-navigator-da65qye7v-adam-gaborjanis-projects.vercel.app",
+    "https://debatelab-staging-git-main-adam-gaborjanis-projects.vercel.app",
+    "https://debatelab-staging.vercel.app",
+  ]) {
+    assertEquals(isAllowedOrigin(origin), true, origin);
+    assertEquals(getCorsHeaders(origin)["Access-Control-Allow-Origin"], origin);
+  }
+});
+
+Deno.test("rejects other Vercel projects and lookalike hosts", () => {
+  for (const origin of [
+    "https://chorely-git-main-adam-gaborjanis-projects.vercel.app",
+    "https://debate-navigator-git-x-someone-else.vercel.app",
+    "https://debate-navigator-x-adam-gaborjanis-projects.vercel.app.evil.com",
+    "http://debate-navigator-x-adam-gaborjanis-projects.vercel.app",
+    "https://debate-navigator.vercel.app",
+  ]) {
+    assertEquals(isAllowedOrigin(origin), false, origin);
+  }
 });

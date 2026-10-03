@@ -35,10 +35,9 @@ Lint checks repository ESLint rules. Type checking uses `tsconfig.app.json` and 
 
 ```bash
 npm test
-npm test -- --coverage
 ```
 
-Vitest runs tests selected by [`vitest.config.ts`](../vitest.config.ts). The coverage gate is deliberately selected-scope coverage for audited runtime modules, not a claim that every maintained file is measured.
+Vitest runs tests selected by [`vitest.config.ts`](../vitest.config.ts). The suite is deliberately small: it keeps only logic that browser tests cannot reach cheaply, such as security boundaries, Current Debate isolation, project selection, stream parsing, source import, and the Crossfire and Sparring rules. There is no coverage gate. Add a unit test for a pure function with real branching or a bug that has a clear repro; prove page behavior with Playwright instead.
 
 Run one test file while iterating:
 
@@ -111,6 +110,8 @@ Run this after `npm run build`. It serves `dist/` through Vite preview and prove
 P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
+Pull requests run only tests tagged `@smoke` on desktop Chromium (`npm run test:e2e:smoke`, about 30 tests). Tag a test `@smoke` only when it covers a whole user path that would otherwise go unchecked until the nightly run.
+
 `.superset/e2e-port.sh` gives each worktree its own port from `18100-18179`, recorded in `~/.superset/debatelab-ports/allocations.json`, so two worktrees can run the gate at once. Without `PORT`, Playwright falls back to `18080`. Playwright starts a new Vite server on that port and runs:
 
 - desktop Chromium at 1280 by 800
@@ -141,12 +142,12 @@ The gate runs, in order:
 1. documentation checks
 2. lint
 3. type checking
-4. selected-scope coverage
+4. unit tests
 5. collaboration service tests
 6. native Edge Function tests
 7. production build
 8. production service-worker offline smoke
-9. desktop and mobile Chromium
+9. the desktop Chromium `@smoke` set (`npm run verify:full` adds the full desktop and mobile suite)
 
 It does not start local Supabase, run pgTAP, run WebKit, or use protected staging.
 
@@ -164,7 +165,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. Pull requests run this same gate in the `database-tests` job and retain its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`. Outside Superset, run it with:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this same gate on pull requests that touch its paths, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`. Outside Superset, run it with:
 
 ```bash
 supabase db start
@@ -217,7 +218,7 @@ The specs cover web-researched case generation, verified Factoids citations, Ask
 
 A live failure means the pipeline broke with this model. It does not prove how production models behave, because each model has its own latency and JSON quality.
 
-`.github/workflows/live-e2e.yml` runs this on pull requests, nightly at 03:17 UTC, and on demand, using the `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY` repository secrets. The gate exits before starting anything when either key is missing, so a misconfigured job fails instead of skipping.
+`.github/workflows/live-e2e.yml` runs this nightly at 03:17 UTC, on demand, and on pull requests that change `supabase/functions/`, `src/lib/ai/`, `e2e/live/`, the fake provider, or the gate, using the `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY` repository secrets. The gate exits before starting anything when either key is missing, so a misconfigured job fails instead of skipping.
 
 ### Model matrix
 
@@ -307,13 +308,20 @@ The GitHub staging workflow runs only after an eligible main-branch quality resu
 
 A skipped staging workflow is not a pass. Missing credentials or provider access is a blocker, not permission to use production or mocks.
 
+## Checking a change by hand
+
+Tests are not the proof that a change works; using it is. Two local recipes that need no shared Supabase stack:
+
+- Built frontend: `npx vite build --outDir /tmp/<name>` (put build variables such as `VITE_SUPABASE_ENV=staging` in front), then `npx vite preview --outDir /tmp/<name> --host 127.0.0.1 --port <free port> --strictPort`, and drive it with Playwright. Abort `supabase.co` requests with `context.route()` and record their hosts to see which project the app calls without touching it; the Google button on `/login` produces a safe `/auth/v1/authorize` request. `vite preview` returns HTML for `/_vercel/insights` and `/_vercel/speed-insights`, so their `Unexpected token '<'` page errors are expected locally.
+- One Edge Function over HTTP: functions that end with `if (import.meta.main) Deno.serve(handleRequest)`, such as `demo-code-login`, run alone with `DENO_SERVE_ADDRESS=tcp:127.0.0.1:<port> SUPABASE_URL=<fake> SUPABASE_SERVICE_ROLE_KEY=test deno run --allow-net --allow-env --allow-read supabase/functions/<name>/index.ts`. Point `SUPABASE_URL` at a small fake that answers the paths in the function's `index_test.ts`, and check CORS with `curl -X OPTIONS -H "Origin: <origin>" -D -`.
+
 ## CI evidence
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), the `Quality` workflow, runs documentation, lint, type, coverage, collaboration, Edge Function, and build checks. Pull requests also run database and Chromium jobs.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), the `Quality` workflow, runs documentation, lint, type, unit, collaboration, Edge Function, and build checks. On pull requests a parallel `browser-smoke` job runs the `@smoke` set on desktop Chromium. [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml) runs the full desktop and mobile suite nightly and on demand. [`.github/workflows/database.yml`](../.github/workflows/database.yml) runs the database gate when backend-facing paths change.
 
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging conditions.
 
-[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. Branch protection on `main` requires `quality`, `database-tests`, `browser-tests`, and `live-e2e`. It also requires a pull request, and administrators are not exempt.
+[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. `main` has no branch protection or rulesets (checked 2026-10-01; GitHub Free does not enforce them on private repositories), so no check is required. Path-filtered workflows that skip therefore don't block merges. Read the PR's checks before merging.
 
 To see why a run failed, use `npm run ci:failures` (current branch's PR), `npm run ci:failures -- <pr>` or `npm run ci:failures -- <run-id>`. It works while the run is still going, as soon as a job fails. It lists failed jobs and steps, prints the Playwright or Vitest summary from each job log, downloads the `*-failure-<run-id>` artifacts into ignored `.ci-failures/`, and prints each failed test's error plus the dialogs and headings from its `error-context.md` page snapshot. A dialog the spec never answered shows up there. Protected staging uploads no artifact, so only its job log is available.
 

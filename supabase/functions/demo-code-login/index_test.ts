@@ -29,6 +29,7 @@ type Scenario = {
   attemptLookupFails?: boolean;
   currentRole?: string | null;
   existingUser?: boolean;
+  redirectTo?: string;
   userMetadata?: Record<string, unknown>;
 };
 
@@ -37,9 +38,10 @@ async function runScenario({
   attemptLookupFails = false,
   currentRole = "user",
   existingUser = true,
+  redirectTo,
   userMetadata = {},
 }: Scenario) {
-  const calls: Array<{ body: Record<string, unknown> | null; method: string; pathname: string }> = [];
+  const calls: Array<{ body: Record<string, unknown> | null; method: string; pathname: string; search: string }> = [];
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
@@ -47,7 +49,7 @@ async function runScenario({
     const url = new URL(request.url);
     const bodyText = request.method === "GET" ? "" : await request.clone().text();
     const body = bodyText ? JSON.parse(bodyText) as Record<string, unknown> : null;
-    calls.push({ body, method: request.method, pathname: url.pathname });
+    calls.push({ body, method: request.method, pathname: url.pathname, search: url.search });
 
     if (url.pathname === "/rest/v1/demo_access_attempts" && request.method !== "POST") {
       return attemptLookupFails ? jsonResponse({ message: "attempt lookup failed" }, 500) : jsonResponse([]);
@@ -102,6 +104,7 @@ async function runScenario({
       body: JSON.stringify({
         code: "DEMO-AB12-CD34",
         ...(attemptLookupFails ? { browserFingerprint: "test-browser" } : {}),
+        ...(redirectTo ? { redirectTo } : {}),
       }),
     }));
     return { calls, response };
@@ -187,5 +190,19 @@ Deno.test("attempt-store errors fail closed before code lookup", async () => {
   if (response.status !== 500) throw new Error(`attempt-store failure returned ${response.status}`);
   if (countCalls(calls, "/rest/v1/demo_access_codes") !== 0) {
     throw new Error("attempt-store failure continued to code lookup");
+  }
+});
+
+Deno.test("sends sign-in links back to a DebateLab preview but not to a foreign host", async () => {
+  const linkFor = async (redirectTo: string) => {
+    const { calls } = await runScenario({ existingUser: false, redirectTo });
+    const call = calls.find((entry) => entry.pathname === "/auth/v1/admin/generate_link");
+    return JSON.stringify(call?.body ?? null) + decodeURIComponent(call?.search ?? "");
+  };
+  const preview = "https://debatelab-staging-git-main-adam-gaborjanis-projects.vercel.app/app";
+  const sent = await linkFor(preview);
+  if (!sent.includes(preview)) throw new Error(`preview redirect was dropped: ${sent}`);
+  if ((await linkFor("https://evil.example.com/app")).includes("evil.example.com")) {
+    throw new Error("foreign redirect was passed to generate_link");
   }
 });

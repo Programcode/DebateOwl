@@ -482,7 +482,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
         </SheetContent>
       </Sheet>
 
-      <div className={cn('grid gap-3', desktopSidebarOpen ? 'lg:grid-cols-[280px_1fr]' : 'lg:grid-cols-[auto_1fr]')}>
+      <div className={cn('grid gap-3', desktopSidebarOpen ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
         <aside className="hidden lg:block">
           {desktopSidebarOpen ? (
             <Card className="flex h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20">

@@ -19,6 +19,21 @@ export const ALLOWED_ORIGINS = [
   "capacitor://localhost", // iOS Capacitor WebView
 ] as const;
 
+/**
+ * Vercel preview and staging hosts for the two DebateLab projects. Preview
+ * hosts end in this team's scope slug. Tokens live in the real origin's
+ * storage, so a lookalike host gains nothing from being allowed here.
+ */
+const VERCEL_PREVIEW_ORIGIN =
+  /^https:\/\/(?:debate-navigator|debatelab-staging)-[a-z0-9-]+-adam-gaborjanis-projects\.vercel\.app$/;
+const STAGING_WEB_APP_ORIGIN = "https://debatelab-staging.vercel.app";
+
+export function isAllowedOrigin(origin: string): boolean {
+  return (ALLOWED_ORIGINS as readonly string[]).includes(origin) ||
+    origin === STAGING_WEB_APP_ORIGIN ||
+    VERCEL_PREVIEW_ORIGIN.test(origin);
+}
+
 export type CorsMethods = "POST, OPTIONS" | "GET, POST, OPTIONS" | "POST, GET, OPTIONS";
 
 /**
@@ -52,7 +67,7 @@ export function getCorsHeaders(
   { allowDevOrigins = false, methods = "POST, OPTIONS" }: CorsOptions = {},
 ): Record<string, string> {
   const permitted = Boolean(origin) && (
-    ALLOWED_ORIGINS.includes(origin as typeof ALLOWED_ORIGINS[number]) ||
+    isAllowedOrigin(origin as string) ||
     (allowDevOrigins && isDevOrigin(origin as string))
   );
   return {
