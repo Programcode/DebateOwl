@@ -12,6 +12,7 @@ Nothing is in progress.
 
 - **Missing translation keys.** 88 literal `t()` keys are in no catalog, so Spanish and Hungarian users see English in toasts, dialogs and Library actions. Plan: [2026-10-02 missing translation keys](2026-10-02-missing-translation-keys.md).
 - **Next 15.** Security and data protection, operational safety, code health, and product polish, ordered by risk. Items 3, 5, 6, 8 and 13 have shipped; the plan lists the follow-ups they left. Plan: [2026-10-01 next 15](2026-10-01-next-15.md). Item 15 covers the PR #63 decision.
+- **Leaner CI and two previews per PR.** Three-minute PR check, a staging Vercel project for per-PR staging previews, and Edge Function CORS for preview hosts. Plan: [2026-10-01 leaner CI and previews](2026-10-01-ci-and-preview-verification.md).
 
 ## On hold
 

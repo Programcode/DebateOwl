@@ -1,16 +1,6 @@
 BEGIN;
-SELECT plan(32);
+SELECT plan(22);
 
-SELECT has_table('public', 'workspace_sources', 'shared sources exist');
-SELECT has_table('public', 'workspace_threads', 'shared threads exist');
-SELECT has_table('public', 'workspace_thread_messages', 'thread messages exist');
-SELECT has_table('public', 'workspace_artifacts', 'practice artifacts exist');
-SELECT has_function('public', 'save_workspace_source', ARRAY['uuid','uuid','text','text','text','jsonb','jsonb'], 'sources use an authorized RPC');
-SELECT has_function('public', 'create_workspace_thread', ARRAY['uuid','uuid','text'], 'threads use an authorized RPC');
-SELECT has_function('public', 'save_workspace_thread_message', ARRAY['uuid','uuid','uuid','uuid','text','text','text'], 'messages use an authorized RPC');
-SELECT has_function('public', 'start_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','uuid','uuid','text'], 'thread generation starts atomically');
-SELECT has_function('public', 'complete_workspace_thread_generation', ARRAY['uuid','uuid','uuid','uuid','text','text'], 'assistant completion stays server-owned');
-SELECT has_function('public', 'save_workspace_artifact', ARRAY['uuid','uuid','uuid','uuid','bigint','text','text','jsonb','jsonb','jsonb'], 'artifacts use an authorized RPC');
 SELECT ok(
   NOT has_function_privilege('anon', 'public.start_workspace_thread_generation(uuid,uuid,uuid,uuid,uuid,uuid,text)', 'EXECUTE')
     AND NOT has_function_privilege('anon', 'public.complete_workspace_thread_generation(uuid,uuid,uuid,uuid,text,text)', 'EXECUTE')

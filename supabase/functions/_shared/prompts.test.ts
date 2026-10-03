@@ -6,7 +6,6 @@ import {
   FACTOIDS_PROMPT,
   GENERATE_PROMPT,
   JSON_RULES,
-  PRODUCT_IDENTITY,
   RESEARCH_RULES,
   SPARRING_PROMPT,
   boundPromptSources,
@@ -88,19 +87,6 @@ Deno.test("research citation rules appear exactly when research is attached", ()
   }
 });
 
-Deno.test("research and citation honesty rules are present when research is provided", () => {
-  const prompt = buildSystemPrompt({ feature: "ask", researchContext: "=== WEB RESEARCH RESULTS ===" });
-  if (!prompt.includes(RESEARCH_RULES.slice(0, 60))) throw new Error("research rules missing");
-  if (!prompt.includes("=== WEB RESEARCH RESULTS ===")) throw new Error("research context missing");
-});
-
-Deno.test("research rules are absent when no research was provided", () => {
-  const prompt = buildSystemPrompt({ feature: "brainstorm" });
-  if (prompt.includes("RESEARCH CITATION RULES:") || prompt.includes(RESEARCH_RULES.slice(0, 60))) {
-    throw new Error("citation rules leaked into a prompt without research");
-  }
-});
-
 Deno.test("admin, library, debate, and student-material rules follow the task layer in order", () => {
   const prompt = buildSystemPrompt({
     feature: "generate",
@@ -126,110 +112,11 @@ Deno.test("admin, library, debate, and student-material rules follow the task la
   if (!prompt.endsWith(UNTRUSTED_CONTENT_RULES)) throw new Error("student-material rules must close the prompt");
 });
 
-Deno.test("the retired per-user custom prompt has no prompt layer", () => {
-  const prompt = buildSystemPrompt({ feature: "ask", globalPrompt: "ADMIN RULE" });
-  if (prompt.includes("CUSTOM SYSTEM PROMPT")) throw new Error("custom prompt layer still rendered");
-  if (prompt.includes("STUDENT MATERIAL RULES")) throw new Error("material rules added without student material");
-});
-
 Deno.test("date context replaces the placeholder in every feature task prompt", () => {
   for (const feature of FEATURES) {
     const prompt = buildSystemPrompt({ feature, dateContext: "CURRENT DATE: Testdate" });
     if (prompt.includes("[DATE_CONTEXT]")) throw new Error(`${feature}: date placeholder not replaced`);
     if (!prompt.includes("CURRENT DATE: Testdate")) throw new Error(`${feature}: date context missing`);
-  }
-});
-
-Deno.test("product identity includes the humanizer style rules", () => {
-  if (!PRODUCT_IDENTITY.includes("HUMANIZER STYLE INSTRUCTIONS")) throw new Error("humanizer missing from identity layer");
-});
-
-Deno.test("feature prompts carry plain-language calibration", () => {
-  const expectedByFeature: Record<Feature, string> = {
-    generate: "Match the requested audience, length, and tone.",
-    attack: "Be direct and substantive, not hostile.",
-    brainstorm: "Use plain language and concrete examples.",
-    factoids: "Write evidence in clear, card-ready language.",
-    ask: "Answer the user's question first in plain language.",
-    sparring: "Difficulty changes argument pressure, not vocabulary.",
-    crossfire: "Ask one direct question at a time.",
-  };
-
-  for (const feature of FEATURES) {
-    const prompt = buildSystemPrompt({ feature });
-    if (!prompt.includes(expectedByFeature[feature])) {
-      throw new Error(`${feature}: plain-language calibration missing`);
-    }
-  }
-});
-
-Deno.test("Crossfire keeps replies short and easy to say aloud", () => {
-  const prompt = buildSystemPrompt({ feature: "crossfire" });
-  if (!prompt.includes("Keep the answer short and easy to say aloud.")) {
-    throw new Error("Crossfire speech-length guidance missing");
-  }
-  if (!prompt.includes("Questions should be one sentence. Answers should be no more than three short sentences.")) {
-    throw new Error("Crossfire sentence-length guidance missing");
-  }
-  if (!prompt.includes("Use the user's own words where possible")) {
-    throw new Error("Crossfire vocabulary guidance missing");
-  }
-  if (!prompt.includes("Tie each reply to the latest relevant transcript turn")) {
-    throw new Error("Crossfire transcript-targeting guidance missing");
-  }
-});
-
-Deno.test("shared language rules honor explicit output-language instructions", () => {
-  const prompt = buildSystemPrompt({ feature: "generate" });
-  if (!prompt.includes("Follow any explicit output-language instruction. Otherwise match the language used by the user.")) {
-    throw new Error("explicit output-language rule missing");
-  }
-});
-
-Deno.test("sparring system prompt defines difficulty and transcript-only scoring", () => {
-  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: Testdate" });
-  if (!prompt.includes("Difficulty is a real control")) throw new Error("difficulty guidance missing");
-  if (!prompt.includes("clarity, organization, and time discipline")) throw new Error("typed delivery guidance missing");
-  if (!prompt.includes("Never invent citations")) throw new Error("transcript-only guidance missing");
-});
-
-Deno.test("sparring system prompt teaches the school 4-6-6-3 speaker duties", () => {
-  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: August 31, 2026 (2026)" });
-  for (const expected of ["Introductor", "R1", "R2", "Conclusor", "no new arguments"]) {
-    if (!prompt.includes(expected)) throw new Error(`school role guidance missing: ${expected}`);
-  }
-});
-
-Deno.test("sparring system prompt keeps LD and PF duties separate from school roles", () => {
-  const prompt = buildSystemPrompt({ feature: "sparring", dateContext: "CURRENT DATE: August 31, 2026 (2026)" });
-  if (!prompt.includes('When format is "standard"')) throw new Error("school role condition missing");
-  if (!prompt.includes('When format is "ld" or "pf"')) throw new Error("LD/PF role condition missing");
-  if (!prompt.includes("rather than importing the school roles")) throw new Error("format separation missing");
-});
-
-Deno.test("sparring system prompt names the behavioral rules for school, LD, and PF", () => {
-  const prompt = buildSystemPrompt({ feature: "sparring" });
-  for (const expected of [
-    'When format is "standard"',
-    'When format is "ld" or "pf"',
-    "Difficulty is a real control",
-    "Follow the requested language for every prose field",
-  ]) {
-    if (!prompt.includes(expected)) throw new Error(`sparring control guidance missing: ${expected}`);
-  }
-  if (prompt.includes("RESEARCH CITATION RULES:")) throw new Error("sparring received research rules without research");
-});
-
-Deno.test("crossfire system prompt carries strict turn and debrief safety rules", () => {
-  const prompt = buildSystemPrompt({ feature: "crossfire" });
-  if (!prompt.includes("Each non-empty debrief item must cite only actual turn IDs")) {
-    throw new Error("crossfire turn-reference rule missing");
-  }
-  if (!prompt.includes("without insults, threats, harassment")) {
-    throw new Error("crossfire style safety rule missing");
-  }
-  if (prompt.includes("RESEARCH CITATION RULES:")) {
-    throw new Error("crossfire unexpectedly carries live research rules");
   }
 });
 

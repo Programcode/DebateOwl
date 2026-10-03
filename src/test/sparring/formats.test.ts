@@ -65,16 +65,9 @@ describe('sparring formats', () => {
       expect(definition.turnCount).toBe(expected.length);
       expect(definition.name).toBeTruthy();
       expect(definition.shortDescription).toBeTruthy();
-      expect(definition.approximateMinutes).toBeGreaterThan(0);
+      const speakingSeconds = expected.reduce((total, turn) => total + turn.seconds, 0);
+      expect(definition.approximateMinutes).toBe(Math.round(speakingSeconds / 60));
     }
-  });
-
-  it('presents the school format as the primary 4-6-6-3 format', () => {
-    expect(getSparringFormat('standard')).toMatchObject({
-      name: 'School 4-6-6-3',
-      turnCount: 8,
-      approximateMinutes: 38,
-    });
   });
 
   it.each([

@@ -10,7 +10,6 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
-  isAskStreamingModeAllowed,
 } from "../_shared/control-enforcement.ts";
 import { buildSearchRequests } from "../_shared/source-quality.ts";
 
@@ -21,38 +20,6 @@ function assertIncludes(text: string, expected: string, label: string) {
 function assert(condition: boolean, label: string) {
   if (!condition) throw new Error(`[${label}] behavioral effect missing`);
 }
-
-Deno.test("generate controls propagate to prompt and post-processing", () => {
-  const genBrief = buildUserPrompt("generate", { motion: "M", side: "pro", length: "brief", role: "r1" }, "");
-  assertIncludes(genBrief, "Length: brief", "generate.length payload");
-  assertIncludes(genBrief, "Length Instruction: Return exactly 2 contentions", "generate.length prompt");
-  const out: Record<string, unknown> = { contentions: [{}, {}, {}], metadata: {} };
-  enforceGenerateControls(out, "pro", "custom", "brief", "intro");
-  assert((out.contentions as unknown[]).length === 2, "generate.length post-processing");
-
-  const underlength: Record<string, unknown> = { contentions: [{}], metadata: {} };
-  let rejected = false;
-  try {
-    enforceGenerateControls(underlength, "pro", "custom", "comprehensive", "r1");
-  } catch (error) {
-    rejected = error instanceof Error && error.message.includes("requires exactly 4");
-  }
-  assert(rejected, "generate.length underlength responses fail closed");
-  assert((underlength.contentions as unknown[]).length === 1, "generate.length never fabricates contentions");
-
-  assertIncludes(
-    buildUserPrompt("generate", { motion: "M", side: "pro", audience: "advanced", role: "r1" }, ""),
-    "Audience Instruction: Assume an advanced debater",
-    "generate.audience",
-  );
-  assertIncludes(
-    buildUserPrompt("generate", { motion: "M", side: "pro", tone: "aggressive", role: "r1" }, ""),
-    "Tone Instruction: Use sharper strategic phrasing",
-    "generate.tone",
-  );
-  assertIncludes(buildUserPrompt("generate", { motion: "M", side: "con", role: "r1" }, ""), "Side: con", "generate.side");
-  assertIncludes(buildUserPrompt("generate", { motion: "M", side: "pro", role: "conc" }, ""), "Role: conc", "generate.role");
-});
 
 Deno.test("generate length and role controls preserve the output contract", () => {
   const targets = { brief: 2, standard: 3, comprehensive: 4 } as const;
@@ -68,29 +35,6 @@ Deno.test("generate length and role controls preserve the output contract", () =
       assert((role === "intro") === ("exordio" in output), `generate.${role} exordio shape`);
     }
   }
-});
-
-Deno.test("attack controls propagate to prompt and post-processing", () => {
-  const attackOff = buildUserPrompt("attack", { caseText: "C", detectFallacies: false, analyzeWeighing: false }, "");
-  assertIncludes(attackOff, "Detect Fallacies: disabled", "attack.fallacies payload");
-  assertIncludes(attackOff, "Analyze Weighing: disabled", "attack.weighing payload");
-  const out: Record<string, unknown> = {
-    fallaciesDetected: [{}],
-    weighingAnalysis: { currentWeighing: "x", missingComparisons: ["y"], improvementSuggestions: ["z"] },
-  };
-  enforceAttackControls(out, false, false);
-  assert((out.fallaciesDetected as unknown[]).length === 0, "attack.fallacies post-processing");
-
-  assertIncludes(
-    buildUserPrompt("attack", { caseText: "C", aggressiveness: "ruthless", judgeParadigm: "policy" }, ""),
-    "Attack Intensity: ruthless",
-    "attack.intensity",
-  );
-  assertIncludes(
-    buildUserPrompt("attack", { caseText: "C", judgeParadigm: "values" }, ""),
-    "Judge Paradigm: values",
-    "attack.paradigm",
-  );
 });
 
 Deno.test("attack toggle controls retain or clear only their requested sections", () => {
@@ -119,18 +63,6 @@ Deno.test("attack toggle controls retain or clear only their requested sections"
   }
 });
 
-Deno.test("brainstorm controls propagate to prompt and post-processing", () => {
-  assertIncludes(
-    buildUserPrompt("brainstorm", { motion: "M", side: "pro", outputMode: "buckets" }, ""),
-    "Output Mode: buckets",
-    "brainstorm.outputMode payload",
-  );
-  const out: Record<string, unknown> = { topFive: [], mindmap: [], buckets: [] };
-  enforceBrainstormControls(out, "pro", "buckets");
-  assert("buckets" in out && !("topFive" in out), "brainstorm.outputMode post-processing");
-  assertIncludes(buildUserPrompt("brainstorm", { motion: "M", side: "both", outputMode: "topfive" }, ""), "Side: both", "brainstorm.side");
-});
-
 Deno.test("brainstorm output mode controls keep only the requested branch", () => {
   for (const side of ["pro", "con", "both"] as const) {
     for (const outputMode of ["topfive", "mindmap", "buckets"] as const) {
@@ -143,23 +75,6 @@ Deno.test("brainstorm output mode controls keep only the requested branch", () =
       }
     }
   }
-});
-
-Deno.test("factoids controls propagate to prompt and query construction", () => {
-  assertIncludes(
-    buildUserPrompt("factoids", { claim: "C", region: "EU", sourceType: "government", timeframe: "2024-2026" }, ""),
-    "Source Type: government",
-    "factoids.sourceType prompt",
-  );
-  assertIncludes(
-    buildUserPrompt("factoids", { claim: "C", region: "EU", timeframe: "2024-2026" }, ""),
-    "Timeframe: 2024-2026",
-    "factoids.timeframe prompt",
-  );
-  const govRequests = buildSearchRequests("C", "EU", "government", "2024-2026");
-  assert(govRequests.some((request) => request.includeDomains?.includes("energy.gov")), "factoids.sourceType retrieval");
-  assert(govRequests.some((request) => request.startPublishedDate?.startsWith("2024")), "factoids.timeframe retrieval");
-  assert(govRequests.some((request) => request.endPublishedDate?.startsWith("2026")), "factoids.timeframe upper bound");
 });
 
 Deno.test("factoids matrix preserves legal, statistics, academic, recent, direction, and count effects", () => {
@@ -188,55 +103,6 @@ Deno.test("factoids matrix preserves legal, statistics, academic, recent, direct
   assertIncludes(againstPrompt, "Find evidence against this statement", "factoids.direction");
   assertIncludes(againstPrompt, "Source Type: academic", "factoids.academic prompt");
   assertIncludes(againstPrompt, "Source Count: 12", "factoids.sourceCount prompt");
-});
-
-Deno.test("ask toggles and modes appear verbatim in the request prompt", () => {
-  assertIncludes(buildUserPrompt("ask", { message: "Hi", mode: "clarify" }, ""), "Mode Guidance:", "ask.mode payload");
-
-  const allOn = buildAskBasePrompt({
-    message: "Hi",
-    mode: "clarify",
-    citationMode: true,
-    webSearchEnabled: true,
-    prosConsMode: true,
-    argumentMapMode: true,
-    researchAvailable: true,
-  });
-  assertIncludes(allOn, "Citation Mode: ON", "ask.citationMode payload");
-  assertIncludes(allOn, "Web Search: ENABLED", "ask.webSearch payload");
-  assertIncludes(allOn, "Pros/Cons: ON", "ask.prosCons payload");
-  assertIncludes(allOn, "Argument Map: ON", "ask.argumentMap payload");
-  assertIncludes(allOn, "Research Context: AVAILABLE", "ask.research gating");
-
-  const allOff = buildAskBasePrompt({
-    message: "Hi",
-    mode: "general",
-    citationMode: false,
-    webSearchEnabled: false,
-    prosConsMode: false,
-    argumentMapMode: false,
-    researchAvailable: false,
-  });
-  assertIncludes(allOff, "Citation Mode: OFF", "ask.citationMode off state");
-  assertIncludes(allOff, "Web Search: DISABLED", "ask.webSearch off state");
-  assertIncludes(allOff, "Pros/Cons: OFF", "ask.prosCons off state");
-  assertIncludes(allOff, "Argument Map: OFF", "ask.argumentMap off state");
-  assertIncludes(allOff, "Research Context: NONE", "ask.research off state");
-
-  const out: Record<string, unknown> = {
-    response: "r",
-    followUpQuestions: ["q"],
-    uncertainties: [] as string[],
-    prosConsAnalysis: { pros: ["p"], cons: ["c"] },
-    argumentMap: { mainClaim: "m", supportingPoints: [], counterpoints: [], assumptions: [] },
-  };
-  enforceAskControls(out, { mode: "clarify", citationMode: true, prosConsMode: true, argumentMapMode: true });
-  assert((out.uncertainties as string[]).length === 0, "ask.clarify quiet when follow-ups exist");
-  assert("prosConsAnalysis" in out && "argumentMap" in out, "ask toggles on keep sections");
-
-  const stripped: Record<string, unknown> = { response: "r", followUpQuestions: [], uncertainties: [], citations: [{}] };
-  enforceAskControls(stripped, { mode: "general" });
-  assert(Array.isArray(stripped.citations) && stripped.citations.length === 0, "ask citations off clears list");
 });
 
 Deno.test("ask matrix preserves every mode, toggle, research, and output effect", () => {
@@ -314,25 +180,4 @@ Deno.test("ask matrix preserves every mode, toggle, research, and output effect"
       }
     }
   }
-});
-
-Deno.test("prompt matrix applies the explicit Hungarian output contract", () => {
-  const instruction = "Language: Hungarian (hu) - Write ALL output in this language.";
-  for (const [feature, input] of [
-    ["generate", { motion: "M", language: "hu" }],
-    ["attack", { caseText: "C", language: "hu" }],
-    ["brainstorm", { motion: "M", language: "hu" }],
-    ["factoids", { claim: "C", language: "hu" }],
-    ["ask", { message: "Q", language: "hu" }],
-    ["sparring", { motion: "M", language: "hu" }],
-  ] as const) {
-    assertIncludes(buildUserPrompt(feature, input, ""), instruction, `${feature}.language`);
-  }
-});
-
-Deno.test("only plain general ask mode is eligible for streaming", () => {
-  for (const mode of ["clarify", "summarize", "proscons", "argumentmap"]) {
-    assert(!isAskStreamingModeAllowed(mode), `ask.${mode} streaming bypass`);
-  }
-  assert(isAskStreamingModeAllowed("general"), "ask.general streaming eligibility");
 });

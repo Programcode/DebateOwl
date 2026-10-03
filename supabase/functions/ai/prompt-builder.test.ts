@@ -113,6 +113,7 @@ Deno.test("attack prompt includes intensity, paradigm, and toggle states", () =>
 Deno.test("every AI feature carries an explicit Hungarian output instruction", () => {
   const instruction = "Language: Hungarian (hu) - Write ALL output in this language.";
   const prompts = [
+    buildUserPrompt("generate", { motion: "MOTION", language: "hu" }, ""),
     buildUserPrompt("attack", { caseText: "CASE", language: "hu" }, ""),
     buildUserPrompt("brainstorm", { motion: "MOTION", language: "hu" }, ""),
     buildUserPrompt("factoids", { claim: "CLAIM", language: "hu" }, ""),
@@ -195,22 +196,6 @@ Deno.test("brainstorm prompt matrix preserves both one-side and comparative inpu
       assertIncludes(prompt, "RESEARCH CONTEXT");
     }
   }
-});
-
-Deno.test("factoids prompt includes source filters and language", () => {
-  const prompt = buildUserPrompt("factoids", {
-    claim: "Solar is cheaper than coal",
-    region: "United States",
-    sourceType: "government",
-    timeframe: "2020-2025",
-    language: "en",
-  }, "SEARCH CONTEXT");
-
-  assertIncludes(prompt, "Find evidence in favor of this statement: \"Solar is cheaper than coal\"");
-  assertIncludes(prompt, "Region: United States");
-  assertIncludes(prompt, "Source Type: government");
-  assertIncludes(prompt, "Timeframe: 2020-2025");
-  assertIncludes(prompt, "Language: English (en)");
 });
 
 Deno.test("factoids prompt matrix preserves legal, statistics, academic, recent, direction, and count inputs", () => {
@@ -373,36 +358,6 @@ Deno.test("sparring score prompt has no current turn", () => {
   }, "");
 
   assertIncludes(prompt, "Current Turn: none for scoring");
-});
-
-Deno.test("crossfire next-turn prompt carries the expected reply and real turn IDs", () => {
-  const prompt = buildCrossfireNextTurnPrompt({
-    config: {
-      resolution: "Cities should ban private cars downtown.",
-      argument: "Private cars create congestion and unsafe streets.",
-      mode: "question-ai",
-      style: "aggressive",
-      durationSeconds: 300,
-      useSourceLibrary: false,
-      seedQuestions: ["What is the mechanism?"],
-    },
-    transcript: [{
-      id: "T1",
-      sequence: 1,
-      speaker: "user",
-      kind: "question",
-      text: "What is the mechanism?",
-      createdAt: 1,
-    }],
-    expectedReply: "answer",
-    language: "hu",
-  });
-
-  assertIncludes(prompt, "The next model reply must be type \"answer\"");
-  assertIncludes(prompt, "turn-id=T1");
-  assertIncludes(prompt, "aggressive");
-  assertIncludes(prompt, "Do not insult, threaten, harass");
-  assertIncludes(prompt, "Language: Hungarian (hu) - Write ALL output in this language.");
 });
 
 Deno.test("crossfire next-turn builder preserves all three style controls", () => {

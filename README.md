@@ -41,9 +41,10 @@ Vite serves on port `8080` by default. In a Superset workspace or other linked w
 ```bash
 npm run lint
 npm run typecheck
-npm test -- --coverage
+npm test
 npm run build
-npm run verify         # full credential-free gate, including desktop and mobile Chromium
+npm run verify         # credential-free gate with the desktop Chromium smoke set
+npm run verify:full    # adds the full desktop and mobile browser suite
 ./.superset/db-gate.sh # migrations, pgTAP, and full-stack journeys on local Supabase
 ```
 

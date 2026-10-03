@@ -172,8 +172,13 @@ describe('Current Debate context in requests and the Review control', () => {
     }
   });
 
-  it('sends no debate material in one-off mode and says so above the button', () => {
+  it('sends no debate material in one-off mode and says so above the button', async () => {
     enableOneOffMode();
+    setMockInvokeResponse({ output: { needsMoreInfo: false, clarifyingQuestions: [], topFive: [], nextSteps: [], warningsAndTradeoffs: [] } });
+    await brainstorm(brainstormInput, config);
+    expect(lastBody().debateContext).toBeUndefined();
+    expect(lastBody().sourceIds).toEqual([]);
+
     render(<DebateContextControl feature="generate" side="pro" />);
     expect(screen.getByTestId('debate-context-control')).toHaveTextContent('One-off mode: no Current Debate material will be used or saved.');
   });
