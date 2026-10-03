@@ -203,7 +203,7 @@ cmd_up() {
   wait_url "$mailer_url/api/v1/messages"
   wait_url "$APP_ORIGIN"
   wait_url "http://127.0.0.1:$FAKE_PORT/__requests"
-  for fn in workspace-invites ai ai-stream demo-code-login admin announcements; do
+  for fn in workspace-invites ai ai-stream demo-code-login admin announcements voice account; do
     wait_url "$api_url/functions/v1/$fn" 300 --request OPTIONS --header "Origin: $APP_ORIGIN"
   done
   if [ "$collab" = true ]; then
