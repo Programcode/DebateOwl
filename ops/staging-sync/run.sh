@@ -26,25 +26,21 @@ for marker in ok failed; do
   fi
 done
 
-# Don't change the backend under a browser run. A run for an older commit
-# holds the sync until it finishes or skips (the browser job times out after
-# 30 minutes). A run for this commit holds it only while its browser job is
-# testing: before that it is waiting for this very sync.
+# Don't change the backend while a browser job is testing it. Only a running
+# browser job counts: a queued run, or one still waiting in its gate for this
+# very sync, isn't using staging yet, and an older run's gate skips once main
+# moves on. The browser job times out after 30 minutes.
 fail_query() {
   echo "Could not ask GitHub whether staging E2E is running; not syncing blind." >&2
   exit 1
 }
 busy=0
-for state in queued in_progress waiting pending requested; do
-  runs="$(gh run list --repo Programcode/DebateLab --workflow staging-e2e.yml --status "$state" --limit 100 \
-    --json databaseId,headSha --jq '.[] | "\(.databaseId) \(.headSha)"')" || fail_query
-  while read -r id head; do
-    [ -n "$id" ] || continue
-    if [ "$head" != "$sha" ]; then busy=1; continue; fi
-    testing="$(gh run view "$id" --repo Programcode/DebateLab --json jobs \
-      --jq '[.jobs[] | select(.name == "staging-e2e" and .status == "in_progress")] | length')" || fail_query
-    [ "$testing" = "0" ] || busy=1
-  done <<< "$runs"
+runs="$(gh run list --repo Programcode/DebateLab --workflow staging-e2e.yml --status in_progress --limit 100 \
+  --json databaseId --jq '.[].databaseId')" || fail_query
+for id in $runs; do
+  testing="$(gh run view "$id" --repo Programcode/DebateLab --json jobs \
+    --jq '[.jobs[] | select(.name == "staging-e2e" and .status == "in_progress")] | length')" || fail_query
+  [ "$testing" = "0" ] || busy=1
 done
 if [ "$busy" != "0" ]; then
   echo "Protected staging E2E is testing; syncing $sha after it finishes."

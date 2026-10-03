@@ -18,8 +18,10 @@
 // Exit codes: 0 in sync, 1 drift remains or a step failed, 2 refused or misused.
 
 import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { backendStatus } from "./backend-status.mjs";
 
 export const STAGING_REF = "brifeyypjauyusmkptkx";
@@ -104,6 +106,59 @@ export function planSync(result) {
   };
 }
 
+/** Edge Functions in the checkout: folders under supabase/functions with an index.ts. */
+function repoFunctions(root) {
+  const base = join(root, "supabase/functions");
+  return readdirSync(base, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_") && existsSync(join(base, entry.name, "index.ts")))
+    .map((entry) => entry.name)
+    .filter((name) => !SKIPPED_FUNCTIONS.has(name));
+}
+
+function filesUnder(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? filesUnder(join(dir, entry.name)) : [join(dir, entry.name)]);
+}
+
+/** The source files staging runs for one function, keyed by path under supabase/functions. */
+function downloadDeployed(root, name) {
+  const dir = mkdtempSync(join(tmpdir(), "staging-fn-"));
+  try {
+    // The CLI writes supabase/.temp into its cwd, so download into a scratch dir.
+    supabase(dir, ["functions", "download", name, "--use-api"]);
+    const base = join(dir, "supabase/functions");
+    return new Map(filesUnder(base).map((file) => [relative(base, file), readFileSync(file)]));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Functions whose deployed source differs from the commit. Deploy dates only
+ * say when something was deployed, not what, so an older checkout deployed
+ * after a merge would otherwise pass as current.
+ */
+export function contentDrift(root, names, download = (name) => downloadDeployed(root, name)) {
+  const base = join(root, "supabase/functions");
+  return names.filter((name) => {
+    const deployed = download(name);
+    if (deployed.size === 0 || ![...deployed.keys()].includes(`${name}/index.ts`)) return true;
+    return [...deployed].some(([path, bytes]) => {
+      const local = join(base, path);
+      return !existsSync(local) || !readFileSync(local).equals(bytes);
+    });
+  });
+}
+
+/** planSync plus a content check of every deployed function the date check passed. */
+function planWithContent(root, result, log) {
+  const plan = planSync(result);
+  const pending = new Set([...plan.functions, ...result.notDeployed]);
+  const drifted = contentDrift(root, repoFunctions(root).filter((name) => !pending.has(name)));
+  if (drifted.length > 0) log(`Deployed source differs from this commit: ${drifted.join(", ")}`);
+  return { ...plan, functions: [...new Set([...plan.functions, ...drifted])].sort() };
+}
+
 /**
  * A function deployed on staging but gone from the commit stays callable. The
  * sync never deletes functions, so it reports them as drift until someone
@@ -132,8 +187,8 @@ function sameList(a, b) {
 
 export function sync({ root, dryRun, log = console.log }) {
   const before = backendStatus({ root, projectRef: STAGING_REF });
-  const plan = planSync(before.result);
   log(before.report, "");
+  const plan = planWithContent(root, before.result, log);
 
   if (plan.divergent.length > 0) {
     throw new Error(`Staging has migrations this commit lacks (${plan.divergent.join(", ")}). Not pushing over divergent history; fix it by hand.`);
@@ -172,7 +227,7 @@ export function sync({ root, dryRun, log = console.log }) {
   if (dryRun) return { plan, applied, deployed };
 
   const after = backendStatus({ root, projectRef: STAGING_REF });
-  const left = planSync(after.result);
+  const left = planWithContent(root, after.result, log);
   if (left.migrations.length > 0 || left.functions.length > 0 || left.divergent.length > 0) {
     log(after.report);
     throw new Error(`Still pending after sync: ${[...left.migrations, ...left.functions].join(", ")}`);

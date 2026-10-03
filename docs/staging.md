@@ -43,13 +43,13 @@ Staging deliberately has no Stripe or ElevenLabs secrets. Checkout, the billing 
 A user systemd timer on Adam's VPS, `debatelab-staging-sync.timer`, runs [`ops/staging-sync/run.sh`](../ops/staging-sync/run.sh) every 5 minutes. When `origin/main` has a commit it has not synced, it:
 
 1. checks that commit out in a dedicated clone at `~/ops/debatelab-staging-sync/repo` (it never runs `npm install`);
-2. runs [`scripts/staging-sync.mjs`](../scripts/staging-sync.mjs), which refuses unless the Supabase CLI sees `brifeyypjauyusmkptkx` named `debate-trainer-staging`, passes `--project-ref brifeyypjauyusmkptkx` to every CLI call, applies pending migrations, deploys new or changed Edge Functions except the hidden `workspace-invites`, and then checks that nothing is left pending;
+2. runs [`scripts/staging-sync.mjs`](../scripts/staging-sync.mjs), which refuses unless the Supabase CLI sees `brifeyypjauyusmkptkx` named `debate-trainer-staging`, passes `--project-ref brifeyypjauyusmkptkx` to every CLI call, applies pending migrations, deploys new or changed Edge Functions except the hidden `workspace-invites`, and then checks that nothing is left pending. A function counts as changed when git has changed it since its last deploy, or when the source staging runs (from `supabase functions download`) differs byte for byte from the commit. The second check catches an older checkout deployed by hand;
 3. reruns the seed;
 4. sets the `staging-sync` commit status on that commit, and opens or comments on the GitHub issue **Staging is out of sync with main** when anything fails. A later successful sync closes the issue.
 
 An already-synced commit is rechecked hourly, so drift from a hand deploy also shows up. A failed commit is retried hourly. The script stops instead of pushing when staging has a migration the commit lacks. It never deletes a function: one that is deployed on staging but gone from the commit fails the sync until someone runs `supabase functions delete <name> --project-ref brifeyypjauyusmkptkx`. `workspace-invites` is the exception, because it is hidden and never deployed.
 
-`Protected staging E2E` waits for a successful `staging-sync` status on its commit before testing, and the timer holds a new commit's sync while a run for an older commit is still testing. If `main` moves past the commit while it waits, the run skips: staging then runs the newer backend, and the newer commit's run tests it. If no status arrives within 20 minutes, it fails with a pointer to this page.
+`Protected staging E2E` waits for a successful `staging-sync` status on its commit before testing, and the timer holds any sync while a browser job is running. If `main` moves past the commit while it waits, the run skips: staging then runs the newer backend, and the newer commit's run tests it. If no status arrives within 20 minutes, it fails with a pointer to this page.
 
 PRs that change `supabase/migrations/` or `supabase/functions/` get a comment saying their staging preview still runs `main`'s backend. Those changes reach staging only after merge. To try them before then, use the `verify-debatelab` skill against a local stack.
 
