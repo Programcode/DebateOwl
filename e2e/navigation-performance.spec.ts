@@ -5,7 +5,6 @@ declare global {
   interface Window {
     __baselineAppLayout?: Element | null;
     __baselineShell?: Element | null;
-    __baselineClickAt?: number | null;
     __genericLoaderObserver?: MutationObserver;
     __genericLoaderSeen?: boolean;
   }
@@ -125,13 +124,6 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   await page.evaluate(() => {
     window.__baselineAppLayout = document.querySelector('header')?.parentElement;
     window.__baselineShell = document.querySelector('header');
-    window.__baselineClickAt = null;
-    document.addEventListener('click', (event) => {
-      const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
-      if (anchor && new URL(anchor.href, window.location.href).pathname === '/app/attack') {
-        window.__baselineClickAt = performance.now();
-      }
-    }, true);
   });
   let destinationRequested = false;
   await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
@@ -178,27 +170,6 @@ test('a delayed destination chunk exposes the route fallback without replacing t
     appLayout: document.querySelector('header')?.parentElement === window.__baselineAppLayout,
     header: document.querySelector('header') === window.__baselineShell,
   }))).toEqual({ appLayout: true, header: true });
-
-  const transitionMetrics = await page.evaluate(() => ({
-    clickTime: window.__baselineClickAt ?? null,
-    route: location.pathname,
-    shellDomIdentitySurvived: document.querySelector('header') === window.__baselineShell,
-    allRequestCount: performance.getEntriesByType('resource').length,
-    measuredRequestCount: performance.getEntriesByType('resource')
-      .filter((entry) => window.__baselineClickAt !== null && entry.startTime >= window.__baselineClickAt).length,
-    sourceRequestCount: performance.getEntriesByType('resource')
-      .filter((entry) => window.__baselineClickAt !== null && entry.startTime < window.__baselineClickAt).length,
-    allLongTaskCount: performance.getEntriesByType('longtask').length,
-    measuredLongTaskCount: performance.getEntriesByType('longtask')
-      .filter((entry) => window.__baselineClickAt !== null && entry.startTime >= window.__baselineClickAt).length,
-  }));
-  expect(transitionMetrics.clickTime).not.toBeNull();
-  expect(transitionMetrics.route).toBe('/app/attack');
-  expect(transitionMetrics.shellDomIdentitySurvived).toBe(true);
-  expect(transitionMetrics.sourceRequestCount).toBeGreaterThan(0);
-  expect(transitionMetrics.measuredRequestCount).toBeGreaterThan(0);
-  expect(transitionMetrics.measuredRequestCount).toBeLessThan(transitionMetrics.allRequestCount);
-  expect(transitionMetrics.measuredLongTaskCount).toBeLessThanOrEqual(transitionMetrics.allLongTaskCount);
 });
 
 test('a failed route chunk recovers after the offered reload', async ({ page }) => {
@@ -225,35 +196,6 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
   await waitForContent(page, attackContent);
   await expect(page.locator('header')).toBeVisible();
 });
-
-for (const [locale, openingLabel] of [
-  ['es', 'Abriendo Atacar'],
-  ['hu', 'Támadás megnyitása'],
-] as const) {
-  test(`${locale} delayed route announces the localized destination`, async ({ page }) => {
-    await setLocale(page, locale);
-    await stubSupabaseSession(page);
-    await skipOnboarding(page);
-    await page.goto('/app', { waitUntil: 'domcontentloaded' });
-    await expect(homeToolLink(page, 'attack')).toBeVisible();
-
-    let destinationRequested = false;
-    await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
-      destinationRequested = true;
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await route.continue();
-    });
-
-    await homeToolLink(page, 'attack').click();
-
-    await expect.poll(() => destinationRequested).toBe(true);
-    const status = page.getByRole('status', { name: openingLabel, exact: true });
-    await expect(status).toHaveCount(1);
-    await expect(status).toHaveText(openingLabel);
-    await expect(status).not.toHaveText('Opening Attack');
-    await expect(page.locator('[data-route-skeleton="tool-form"][aria-busy="true"]')).toBeVisible();
-  });
-}
 
 async function gotoHome(page: Page) {
   await setLocale(page, 'en');

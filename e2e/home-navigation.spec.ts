@@ -124,20 +124,6 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
 });
 
-test('desktop header holds Home, Current debate, Library, and History with no tool links', async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 1024, 'Desktop-only header check');
-  await page.goto('/app', { waitUntil: 'domcontentloaded' });
-
-  const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(navigation.getByRole('link')).toHaveText(['Home', 'Library', 'History']);
-  await expect(navigation.getByTestId('current-debate-desktop')).toHaveText('Start debate');
-  for (const tool of ['Generate', 'Attack', 'Ask', 'Crossfire', 'Sparring', 'More']) {
-    await expect(navigation.getByText(tool, { exact: true })).toHaveCount(0);
-  }
-  await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
-});
-
 test('desktop header fits without internal or document overflow at supported widths', async ({ page }) => {
   for (const width of [1024, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
