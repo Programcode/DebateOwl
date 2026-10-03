@@ -75,6 +75,21 @@ jobs:
     timeout-minutes: 30
     environment: staging
     steps:
+      # "Re-run failed jobs" skips the gate, so check again on every attempt.
+      - name: Confirm staging still runs this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        shell: bash
+        run: |
+          main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/statuses" \
+            --jq '[.[] | select(.context == "staging-sync")][0].state // "missing"')"
+          if [ "$main" != "$SHA" ] || [ "$state" != "success" ]; then
+            echo "::error::Staging no longer runs ${SHA} (main is ${main}, staging-sync is ${state}). Rerun the newest main commit's run instead."
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

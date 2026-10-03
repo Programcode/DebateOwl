@@ -29,11 +29,15 @@ done
 # Don't change the backend under a browser run that is testing an older
 # commit; sync once it finishes (the job times out after 30 minutes). A run
 # for this commit is waiting for this sync, so it doesn't count.
-testing="$(gh run list --repo Programcode/DebateLab --workflow staging-e2e.yml --limit 20 --json status,headSha \
-  --jq "[.[] | select(.status != \"completed\" and .headSha != \"$sha\")] | length")" || {
-  echo "Could not ask GitHub whether staging E2E is running; not syncing blind." >&2
-  exit 1
-}
+testing=0
+for state in queued in_progress waiting pending requested; do
+  count="$(gh run list --repo Programcode/DebateLab --workflow staging-e2e.yml --status "$state" --limit 100 \
+    --json headSha --jq "[.[] | select(.headSha != \"$sha\")] | length")" || {
+    echo "Could not ask GitHub whether staging E2E is running; not syncing blind." >&2
+    exit 1
+  }
+  testing=$((testing + count))
+done
 if [ "$testing" != "0" ]; then
   echo "Protected staging E2E is testing an older commit; syncing $sha after it finishes."
   exit 0
