@@ -1,6 +1,6 @@
 # Leaner CI and two previews per PR
 
-**Status:** In progress 2026-10-01. Part 1's code is done in this branch; its Vercel and Supabase settings need Adam's go-ahead. Parts 2 and 3 are proposed. Numbers come from GitHub Actions runs 36903797758 and 36903797787 (PR #83) and a read-only query of both Supabase projects' Auth settings.
+**Status:** In progress 2026-10-03. Code for all three parts is in PR #95. Part 1's Vercel project and Supabase allowlists were set up on 2026-10-02; the Edge Function redeploy waits for the merge. Part 2 item 3's worker change is not done. Numbers come from GitHub Actions runs 36903797758 and 36903797787 (PR #83) and a read-only query of both Supabase projects' Auth settings.
 
 ## Goal
 
@@ -18,7 +18,7 @@ Done in this branch:
 
 - Edge Function CORS and the demo-code sign-in redirect now accept both projects' preview hosts (`isAllowedOrigin()` in `supabase/functions/_shared/cors.ts`). Before this, previews could not call any function, so demo-code sign-in and AI failed there too.
 
-Needs Adam's go-ahead (outside the repo):
+Outside the repo. Items 1 to 3 were done on 2026-10-02 with backups in `~/backups/supabase-auth/`; item 0 follows the merge:
 
 0. Merge, then redeploy the Edge Functions on production and staging so the CORS change is live.
 
