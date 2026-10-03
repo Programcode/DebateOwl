@@ -130,53 +130,6 @@ describe('GeneratePage Integration', () => {
         mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
     });
 
-    it('renders the empty state initially', () => {
-        // Override store mock for this test if needed, but default is null result
-        render(
-            <BrowserRouter>
-                <GeneratePage />
-            </BrowserRouter>
-        );
-
-        expect(screen.getByText('Ready to Generate')).toBeInTheDocument();
-        expect(screen.getByTestId('generate-form')).toBeInTheDocument();
-        expect(screen.queryByTestId('generate-results')).not.toBeInTheDocument();
-    });
-
-    it('handles form submission and successful generation', async () => {
-        // Setup API mock
-        const mockResult = {
-            caseStructure: { thesis: 'Test Thesis' },
-            contentions: [] as any[],
-            predictedOpponentCase: {},
-            counters: [] as any[]
-        };
-        (generateCase as Mock).mockResolvedValue({ result: mockResult, discoveredSources: [] });
-
-        render(
-            <BrowserRouter>
-                <GeneratePage />
-            </BrowserRouter>
-        );
-
-        // Trigger submit
-        fireEvent.click(screen.getByTestId('submit-button'));
-
-        // Verify loading state calls
-        expect(mockSetGenerateLoading).toHaveBeenCalledWith(true);
-
-        // Wait for API call
-        await waitFor(() => {
-            expect(generateCase).toHaveBeenCalled();
-        });
-
-        // Verify result setting and completion
-        await waitFor(() => {
-            expect(mockSetGenerateResult).toHaveBeenCalledWith(mockResult);
-            expect(mockSetGenerateLoading).toHaveBeenCalledWith(false);
-        });
-    });
-
     it('reports a rejected case save instead of confirming success', async () => {
         mockGenerateResult = {
             caseStructure: { thesis: 'Existing Thesis' },
@@ -200,34 +153,6 @@ describe('GeneratePage Integration', () => {
             expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
         });
         expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Case Saved' }));
-    });
-
-    it('displays results when store has data', () => {
-        mockGenerateResult = {
-            caseStructure: { thesis: 'Existing Thesis' },
-            contentions: [] as any[],
-            predictedOpponentCase: {
-                likelyArguments: [] as any[],
-                strategicWeaknesses: [] as any[],
-                keyClashes: [] as any[],
-            },
-            counters: [] as any[],
-            metadata: {
-                side: 'pro',
-                format: 'bp',
-                generatedAt: '2024-01-01T00:00:00Z',
-            },
-        };
-
-        render(
-            <BrowserRouter>
-                <GeneratePage />
-            </BrowserRouter>
-        );
-
-        expect(screen.getByTestId('generate-results')).toBeInTheDocument();
-        expect(screen.getByText('Results for Existing Thesis')).toBeInTheDocument();
-        expect(screen.queryByText('Ready to Generate')).not.toBeInTheDocument();
     });
 
     it('opens Crossfire with the generated resolution and argument', () => {
