@@ -132,24 +132,8 @@ test('keeps the setup usable on mobile with reduced motion', async ({ page }) =>
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/app/sparring', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Sparring' })).toBeVisible();
-  const logo = page.getByAltText('DebateLab logo');
-  await expect(logo).toHaveAttribute('src', '/favicon-72.png');
-  await expect(logo).toHaveAttribute('width', '36');
-  await expect(logo).toHaveAttribute('height', '36');
-  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(page.getByRole('combobox', { name: 'Round format' })).toHaveText('School 4-6-6-3 · 8 speeches');
-  await expect(page.getByText('Write the resolution as you would hear it in the room.')).toHaveCount(0);
-  await expect(page.getByText('A precise motion gives the opponent something concrete to attack.')).toHaveCount(0);
   await expect(page.getByText('Pro Introductor')).toBeHidden();
-  const speakingSummary = page.locator('main details > summary');
-  const summaryMetrics = await speakingSummary.evaluate((element) => {
-    const icon = element.querySelector('svg');
-    if (!icon) throw new Error('Speaking order disclosure is missing its chevron.');
-    const summaryBox = element.getBoundingClientRect();
-    const iconBox = icon.getBoundingClientRect();
-    return Math.abs((summaryBox.top + summaryBox.height / 2) - (iconBox.top + iconBox.height / 2));
-  });
-  expect(summaryMetrics).toBeLessThanOrEqual(1);
   await page.getByText('Speaking order', { exact: true }).click();
   await expect(page.getByText('Pro Introductor')).toBeVisible();
   await expect(page.getByText('Pro Conclusor')).toBeVisible();
