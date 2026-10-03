@@ -27,7 +27,10 @@ jobs:
         shell: bash
         run: |
           marker="<!-- staging-preview-note -->"
-          if gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq '.[].body' | grep -qF "$marker"; then
+          # Read every comment first: grep -q exiting early would SIGPIPE gh, and
+          # under pipefail that reads as "no marker" and posts a duplicate.
+          bodies="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq '.[].body')"
+          if grep -qF "$marker" <<< "$bodies"; then
             exit 0
           fi
           gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$marker
