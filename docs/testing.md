@@ -29,7 +29,7 @@ npm run lint
 npm run typecheck
 ```
 
-Lint checks repository ESLint rules. Type checking uses `tsconfig.app.json` and emits no files. Neither command replaces runtime tests.
+Lint checks repository ESLint rules. Type checking uses `tsconfig.app.json` for the client and `tsconfig.agentic.json` for `e2e.config.ts` and `agentic/` (the e2e runner itself does not type-check), and emits no files. Neither command replaces runtime tests.
 
 ## Unit and component tests
 
@@ -230,6 +230,41 @@ LIVE_PROVIDERS=1 LIVE_MODEL=as-requested LIVE_OPENROUTER_API_KEY=... LIVE_EXA_AP
 
 `.github/workflows/model-matrix.yml` runs this on Mondays at 04:29 UTC, on demand, and on pull requests that change `supabase/functions/_shared/`, `supabase/functions/ai/`, or `src/lib/ai/`. It is not a required check, because it runs only on those paths. One run costs about $1 in model and search usage.
 
+## Agentic browser tests
+
+```bash
+H=.claude/skills/verify-debatelab/bin/verify.sh
+$H up
+$H e2e run                                                  # the suite on both viewports
+$H e2e run agentic/case-generation.e2e.ts --target desktop  # one file, one viewport
+$H e2e explore "Practise a Sparring round and report anything broken" --session student --agent first-timer
+$H down
+```
+
+[`agentic/`](../agentic/) holds tests for [e2e](https://e2e.tester.army/docs), TesterArmy's agentic test runner (`e2e@0.15.2`, configured in [`e2e.config.ts`](../e2e.config.ts)). In each test, an AI agent works toward a goal in plain language (`agent.act`) and judges what is on screen (`agent.assert`). Locators and database reads then pin the result exactly. The suite covers what the Playwright layers cannot:
+
+- Goal-level journeys that survive copy and layout changes: a new student starts their first debate from the onboarding tour, and a student starts a debate and generates a case.
+- Judgments a selector cannot make: every main page reads in Hungarian (`e2e/hungarian-parity.spec.ts` deliberately does not reject stray English), and no text is cut off or overflowing on either viewport.
+- In live mode (`up --live`), whether the generated case argues the motion at all. Recipes never assert model wording.
+- Exploration. `e2e explore` sends a persona through the app with a goal and reports findings with expected and observed behavior, reproduction steps, and screenshots. The personas are the named agents in `e2e.config.ts`: `first-timer`, `coach`, `edge-input`, and `hungarian`.
+
+How it runs:
+
+- Always through `verify.sh e2e <run|explore|list|cache>`. The wrapper runs `doctor`, loads the stack environment, turns e2e telemetry off, and takes the testing agent's key from `OPENROUTER_API_KEY`, `LIVE_OPENROUTER_API_KEY`, or `~/.config/debatelab/live-verify.env`. It writes the report (`summary.md`, `report.json`), screenshots, traces, and failure videos to `.verify/artifacts/<run>-e2e-<command>-<pid>/`. The config refuses a non-loopback URL and never starts a dev server, because a plain `npm run dev` reaches production.
+- Each test signs in a fresh demo-code user through the Login page and deletes it afterwards. A request to a hosted Supabase project, or a page wider than its viewport, fails the test.
+- There are two targets, `desktop` (1280 by 800) and `mobile` (393 by 851). e2e 0.15 sets only the viewport size: it does not emulate touch or a phone user agent, so the Playwright Pixel 5 project still owns mobile behavior.
+- The testing agent has two models on OpenRouter, separate from the app's provider mode, and a fake-mode stack still needs both. The actor (`agent.act` and explorations) is `qwen/qwen3.8-27b:free`. It is free, and recorded flows replay without it, but it is slow and its upstream sometimes answers `temporarily rate-limited upstream`. Treat that as infrastructure and rerun with `--last-failed`. The judge (`agent.assert`, `waitFor`, `extract`) is `meta/muse-spark-1.3-contributor` ($0.10 and $0.20 per million input and output tokens), the same tier as the app's live pin. It answers every judgment on every run. A full suite run costs under two cents, and a 4-step exploration well under one. The judge cannot act, because Meta's endpoint accepts only `tool_choice: "auto"`. `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` override the two; `E2E_AGENT_MODEL=openai/gpt-6-luna` gives fast, reliable explorations for cents. Both default models may keep prompts, so use made-up debate content only. The agent's context explains that fake AI answers are canned free-transport text.
+- Replay. When a later assertion passes, an `agent.act` flow is recorded in [`agentic/replay/`](../agentic/replay/). Later runs replay it with no model call until the app changes, at which point the agent takes over and records again. Commit new and changed entries with the test that made them. Local runs read and write the cache; CI only reads it. `agent.assert`, `waitFor`, and `extract` always call the model.
+- Without a model key or the stack environment, agent tests skip, so a bare `npx e2e run` proves nothing.
+
+To write a test, import `test`, `expect`, and the fixtures from [`agentic/support/fixtures.ts`](../agentic/support/fixtures.ts) and pass the `agentic` options. Follow every `agent.act` with a locator assertion, because only verified flows are recorded. Prefer `agent.assert` for what a selector cannot express, and an exact `expect` for everything else. The [`e2e` skill](../.claude/skills/e2e/SKILL.md), `npx e2e guide <topic>`, and `node_modules/e2e/docs` cover the API for the installed version.
+
+A bug bash runs several explorations in parallel, one charter per area and persona, then proves each finding with a repro test. Ask an agent to "bug bash <area>"; the `e2e` skill's `bug-bash` topic has the procedure. A finding counts only when its repro test fails for the reported reason. Tag repro tests `{ tags: ["repro"] }` so the scheduled suite skips them until the fix lands, then remove the tag so they become regression tests. The client runs on a Vite dev server, so a route that is still compiling can look like a dead link to an explorer. Reproduce before you believe it.
+
+[`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml) runs the suite nightly at 03:47 UTC, on pull requests that change it, and on demand. On demand with a goal, it runs one exploration with the chosen persona and viewport instead. It uses the `LIVE_OPENROUTER_API_KEY` secret (the `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` repository variables override the models), fails when the key is missing, and writes the report to the job summary. It is not a required check: model judgments can flake, and a red nightly is a finding to triage.
+
+e2e is pre-1.0 and its minor releases have broken APIs, so it is pinned exactly. Read its changelog before upgrading, and expect the replay cache to re-record after an engine minor bump.
+
 ## Production canary
 
 ```bash
@@ -323,7 +358,7 @@ Tests are not the proof that a change works; using it is. Two local recipes that
 
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging conditions.
 
-[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. `main` has no branch protection or rulesets (checked 2026-10-01; GitHub Free does not enforce them on private repositories), so no check is required. Path-filtered workflows that skip therefore don't block merges. Read the PR's checks before merging.
+[`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml) runs the agentic suite and on-demand explorations. [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. `main` has no branch protection or rulesets (checked 2026-10-01; GitHub Free does not enforce them on private repositories), so no check is required. Path-filtered workflows that skip therefore don't block merges. Read the PR's checks before merging.
 
 To see why a run failed, use `npm run ci:failures` (current branch's PR), `npm run ci:failures -- <pr>` or `npm run ci:failures -- <run-id>`. It works while the run is still going, as soon as a job fails. It lists failed jobs and steps, prints the Playwright or Vitest summary from each job log, downloads the `*-failure-<run-id>` artifacts into ignored `.ci-failures/`, and prints each failed test's error plus the dialogs and headings from its `error-context.md` page snapshot. A dialog the spec never answered shows up there. Protected staging uploads no artifact, so only its job log is available.
 
@@ -346,3 +381,4 @@ When Actions cannot run at all, the local `npm run verify` and `./.superset/db-g
 - Staging pass: no authorization to deploy or mutate production.
 - Live provider pass: no proof for the production models, only for the pinned test model.
 - Canary pass: production was healthy at that moment; it covers one AI path, not every feature.
+- Agentic pass: a model judged the screens it was shown. It is not exhaustive, a judgment can be wrong in either direction, and fake mode proves nothing about model output. An exploration finding is a lead until a repro test fails on it.

@@ -19,6 +19,7 @@ $H up --live [--max-calls N]   # real OpenRouter (pinned) + real Exa
 $H doctor        # read-only: is this instance ours, local, and healthy?
 $H drive <all|recipes/<name>|e2e/<path>> [--project desktop-chromium|mobile-chromium] [-g <title regex>]
 $H user [label]  # mint a demo-code login for interactive driving
+$H e2e <run|explore|list|cache> [args]  # agentic tests in agentic/ and explorations (TesterArmy e2e)
 $H down          # stop everything `up` started; evidence stays
 ```
 
@@ -103,6 +104,23 @@ To prove a feature without a recipe, copy `recipes/case-generation.spec.ts` to `
 **Interactive.** Run `$H user` to mint a code. It prints `DEMO_CODE=...`, and `down` deletes that user. Then point a browser tool (Playwright MCP `browser_navigate` etc.) at `http://127.0.0.1:18081/login`, choose the `Demo code` tab, fill the `Demo code` textbox, and click `Sign in with demo code`. Save your own screenshots into `.verify/artifacts/<run-id>/`. A new account shows the onboarding tour on `/app`. Its first step offers `Start debate`; to skip the tour, click `Skip Tour` (`[data-test-id="button-skip"]`). Then start a debate from the header (`Start debate`, test id `current-debate-desktop` or `current-debate-mobile`) or answer the motion dialog the first tool opens: `Start debate` files the work in a new debate, `Not now, use it once` keeps it one-off. Interactive runs have no remote-Supabase guard. Doctor's local-mode check is what protects you.
 
 Selectors: use accessible names and roles as the feature files list them (`getByRole("button", { name: "Generate Debate Case" })`). The exceptions use `data-testid`: Crossfire's controls, the Current Debate control, strip and dashboard, and the voice controls (`voice-mode`, `voice-mic`). Use `exact: true` for short names such as `Start` or `Save`, because the header's `Start debate` also matches `Start`. Never use coordinates.
+
+## Agentic tests and exploration
+
+`$H e2e` runs [e2e](https://e2e.tester.army/docs) against this stack: an AI agent drives goals and judges screens, and exact assertions pin the result. The tests are `agentic/*.e2e.ts`, the config is `e2e.config.ts`, and the API is in the `e2e` skill (`.claude/skills/e2e/SKILL.md`). docs/testing.md, under "Agentic browser tests", says what the suite covers and what a pass proves.
+
+```bash
+$H e2e run                                                  # the suite, desktop and mobile targets
+$H e2e run agentic/hungarian.e2e.ts --target mobile         # one file, one viewport
+$H e2e explore "Use Brainstorm and Attack on one motion and report anything off" --session student --agent coach
+$H e2e cache ls                                             # recorded agent flows in agentic/replay
+```
+
+- `e2e` runs `doctor` first and refuses a broken stack, like `drive`. It turns e2e telemetry off and prints `EVIDENCE <dir>`, which holds `summary.md`, `report.json`, and per-attempt screenshots, traces, and failure videos.
+- The testing agent has its own OpenRouter models: free `qwen/qwen3.8-27b:free` acts (test steps and explorations) and `meta/muse-spark-1.3-contributor` judges, under two cents per suite run. `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` override them. The key comes from `OPENROUTER_API_KEY`, `LIVE_OPENROUTER_API_KEY`, or the live keys file, and is needed in fake mode too. A recorded `agent.act` replays with no model call; every judgment and every exploration step is a call. Without a key, agent tests skip. A `temporarily rate-limited upstream` error from the free actor is infrastructure: rerun with `--last-failed`. For a long or important exploration, `E2E_AGENT_MODEL=openai/gpt-6-luna` is faster and more reliable for cents (the Muse Spark judge cannot act).
+- `--session student` starts an exploration signed in as a fresh demo user, minted by `agentic/sessions.e2e.ts`. `--agent` picks a persona: `first-timer`, `coach`, `edge-input`, or `hungarian`. `--target mobile` explores the phone-sized viewport.
+- Explorations report `issue` (functional) and `warning` (cosmetic) findings, and exit 1 when there is an issue. Treat a finding as a lead: the stack serves Vite dev, so a route that is still compiling can look dead, and fake mode answers every motion with free-transport text. Prove a finding with a repro test tagged `repro` before you report it as a bug.
+- Several explorations can run at once (a bug bash), because each gets its own evidence directory. They share this one stack, so give each a different area.
 
 ## Evidence
 

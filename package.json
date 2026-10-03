@@ -17,7 +17,7 @@
     "ios:build": "vite build --mode capacitor && cap sync ios",
     "ios:open": "cap open ios",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.agentic.json",
     "preview": "vite preview",
     "smoke:jev": "node scripts/smoke-jev.mjs",
     "test": "vitest run",
@@ -31,6 +31,7 @@
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:sw": "node scripts/test-service-worker-offline.mjs",
     "test:e2e:staging": "playwright test --project=staging",
+    "test:agentic": "bash .claude/skills/verify-debatelab/bin/verify.sh e2e run",
     "verify": "npm run docs:check && npm run lint && npm run typecheck && npm test && npm run test:collaboration && npm run test:edge && npm run build && npm run test:sw && P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:smoke",
     "verify:full": "npm run verify && P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e"
   },
@@ -108,8 +109,10 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@e2e-dev/web": "0.11.1",
     "@eslint/js": "^9.32.0",
-    "@playwright/test": "^1.60.0",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "@playwright/test": "^1.63.0",
     "@sentry/vite-plugin": "^5.4.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
@@ -120,7 +123,9 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "@vitest/coverage-v8": "^4.1.8",
+    "ai": "^7.0.127",
     "autoprefixer": "^10.4.21",
+    "e2e": "0.15.2",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

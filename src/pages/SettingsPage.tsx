@@ -298,12 +298,13 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              {/* A long email wraps instead of pushing Sign out off a phone screen. */}
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
-                <p className="font-medium">{user?.email || t('settings.unknownUser')}</p>
+                <p className="font-medium break-all">{user?.email || t('settings.unknownUser')}</p>
               </div>
-              <Button variant="outline" onClick={handleSignOut}>
+              <Button variant="outline" className="shrink-0" onClick={handleSignOut}>
                 {t('settings.signOut')}
               </Button>
             </div>

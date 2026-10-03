@@ -23,7 +23,7 @@ Start with the smallest document that answers the task instead of loading every 
 
 ## Test and verify
 
-- [Testing guide](testing.md), current. Open before running coverage, Edge Function, database, browser, WebKit, live-provider, canary, or protected staging gates.
+- [Testing guide](testing.md), current. Open before running coverage, Edge Function, database, browser, agentic, WebKit, live-provider, canary, or protected staging gates.
 - [`package.json`](../package.json) owns npm script definitions.
 - [`vitest.config.ts`](../vitest.config.ts) and [`playwright.config.ts`](../playwright.config.ts) own test selection and browser behavior.
 

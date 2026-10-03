@@ -14,6 +14,10 @@
 #                             run recipes (`all`, `recipes/<name>`) or a maintained
 #                             suite (`e2e/live/`, `e2e/workspace-collaboration`)
 #                             and keep the evidence
+#   verify.sh e2e <run|explore|list|cache> [e2e args...]
+#                             run the agentic suite in agentic/ (TesterArmy e2e)
+#                             or an exploration against this stack; the testing
+#                             agent's model is billed to the OpenRouter key
 #   verify.sh down            stop what `up` started; evidence is kept
 set -euo pipefail
 
@@ -273,6 +277,50 @@ cmd_drive() {
   return "$status"
 }
 
+cmd_e2e() {
+  load_state
+  local sub="${1:-run}"; [ "$#" -eq 0 ] || shift
+  case "$sub" in run|explore|list|cache) ;; *) fail "usage: verify.sh e2e <run|explore|list|cache> [e2e args]" ;; esac
+  cmd_doctor >/dev/null || { cmd_doctor || true; fail "doctor failed; not driving a broken stack (fix it, or down + up)"; }
+  set -a; source "$STATE_DIR/drive.env"; set +a
+  export E2E_TELEMETRY_DISABLED=1
+  # The testing agent's own model key, separate from the app's provider mode:
+  # a fake-mode stack still needs a real model to act and judge.
+  if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+    local key="${LIVE_OPENROUTER_API_KEY:-}"
+    if [ -z "$key" ] && [ -f "$LIVE_KEYS_FILE" ]; then
+      [ "$(stat -c %a "$LIVE_KEYS_FILE")" = 600 ] || fail "$LIVE_KEYS_FILE must be mode 600"
+      key="$(sed -n 's/^LIVE_OPENROUTER_API_KEY=//p' "$LIVE_KEYS_FILE" | tail -1)"
+    fi
+    [ -n "$key" ] && export OPENROUTER_API_KEY="$key"
+  fi
+  if [ -n "${OPENROUTER_API_KEY:-}" ]; then
+    say "info testing agent: OpenRouter actor ${E2E_AGENT_MODEL:-qwen/qwen3.8-27b:free}, judge ${E2E_JUDGE_MODEL:-meta/muse-spark-1.3-contributor} (replayed steps make no model call)"
+  else
+    say "info no OpenRouter key: tests with agent steps will skip"
+  fi
+  case "$sub" in
+    run|explore)
+      # The pid keeps parallel explorations (a bug bash) in separate directories.
+      local run_id; run_id="$(date -u +%Y%m%dT%H%M%SZ)-e2e-$sub-$$"
+      local out=".verify/artifacts/$run_id"
+      local status=0
+      # --last-failed reads <output>/report.json, so seed the new directory with
+      # the latest run's report (timestamped names sort oldest first).
+      if [ "$sub" = run ] && [[ " $* " == *" --last-failed "* ]]; then
+        local reports=(.verify/artifacts/*-e2e-run*/report.json)
+        [ -f "${reports[-1]}" ] || fail "--last-failed needs a previous \`verify.sh e2e run\`; none left a report in .verify/artifacts/"
+        mkdir -p "$out" && cp "${reports[-1]}" "$out/report.json"
+        say "info retrying the failures recorded in ${reports[-1]%/report.json}"
+      fi
+      npx e2e "$sub" --output "$out" "$@" || status=$?
+      say "EVIDENCE $REPO/$out (exit $status)"
+      return "$status"
+      ;;
+    *) npx e2e "$sub" "$@" ;;
+  esac
+}
+
 cmd_down() {
   if [ ! -f "$STATE" ]; then say "nothing recorded in $STATE; nothing to stop"; return 0; fi
   source "$STATE"
@@ -305,6 +353,7 @@ case "${1:-}" in
   doctor) cmd_doctor ;;
   user) shift; cmd_user "$@" ;;
   drive) shift; cmd_drive "$@" ;;
+  e2e) shift; cmd_e2e "$@" ;;
   down) cmd_down ;;
   *) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 2 ;;
 esac

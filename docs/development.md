@@ -150,6 +150,8 @@ Failure artifacts go to ignored `test-results/` and `playwright-report/`. Protec
 
 Read [testing.md](testing.md) before running WebKit or staging.
 
+Agentic tests (`agentic/*.e2e.ts`, the e2e runner) drive the verification stack, never a dev server you started. Run them with `.claude/skills/verify-debatelab/bin/verify.sh e2e run` after `verify.sh up`. See [testing.md](testing.md#agentic-browser-tests).
+
 ## iOS workflow
 
 ```bash
