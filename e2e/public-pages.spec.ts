@@ -10,7 +10,7 @@ const PUBLIC_ROUTES = [
 ] as const;
 
 for (const locale of LOCALES) {
-  test.describe(`public pages [${locale}]`, () => {
+  test.describe(`public pages [${locale}]`, locale === 'en' ? { tag: '@smoke' } : {}, () => {
     test.beforeEach(async ({ page }) => {
       await setLocale(page, locale);
     });

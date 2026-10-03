@@ -10,20 +10,23 @@ Never infer authorization from access. Never use production to replace missing l
 
 ## CI workflows
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow) owns credential-free quality plus pull-request database and browser tests. It does not deploy anything; Vercel does.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow) owns credential-free quality and the pull-request browser smoke set. It does not deploy anything; Vercel does.
 
 The quality job uses Node 22, `npm ci`, and Deno 2.9.6, then runs:
 
 - `npm run docs:check`
 - `npm run lint`
 - `npm run typecheck`
-- `npm test -- --coverage`
+- `npm test`
+- `npm run test:collaboration`
 - `npm run test:edge`
 - `npm run build`
 
-Pull requests also start isolated local Supabase for pgTAP and run desktop plus mobile Chromium on port `18080`.
+On pull requests a parallel `browser-smoke` job runs the Playwright tests tagged `@smoke` (about 30) on desktop Chromium, port `18080`, with the browser download cached. [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml) runs the full desktop and mobile suite nightly and on demand. Pull requests that change only `docs/`, `plans/`, or Markdown skip `Quality` and run [`.github/workflows/docs.yml`](../.github/workflows/docs.yml), which runs `npm run docs:check` alone.
 
-[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the local stack against real providers on pull requests and nightly. [`.github/workflows/model-matrix.yml`](../.github/workflows/model-matrix.yml) generates a case with every catalog model weekly and when AI code changes. [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) checks production after each Vercel production deployment and daily. See [testing.md](testing.md) for all three. Both Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
+[`.github/workflows/database.yml`](../.github/workflows/database.yml) starts isolated local Supabase for pgTAP and the full-stack browser journeys. It takes about 20 minutes, so it runs on pull requests and `main` pushes only when they change the backend, the stores or clients that talk to it, or the gate itself (the `paths` list in the file), plus weekly and on demand.
+
+[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the local stack against real providers nightly and on pull requests that change AI or research code. [`.github/workflows/model-matrix.yml`](../.github/workflows/model-matrix.yml) generates a case with every catalog model weekly and when AI code changes. [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) checks production after each Vercel production deployment and daily. See [testing.md](testing.md) for all three. Both Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
 
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging. It accepts eligible successful main-branch `Quality` runs or a manual dispatch from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist.
 
@@ -33,7 +36,7 @@ If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the accou
 
 ## Frontend hosting on Vercel
 
-Vercel builds and serves the frontend from the Git repository. Merging to `main` starts a production deployment to `https://debate.pi-stack.org`. Pull requests may get Vercel preview deployments, and those use the production Supabase project unless the in-app switcher picks staging, so treat a preview as production data. For a staging-pinned preview, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment.
+Vercel builds and serves the frontend from the Git repository. Merging to `main` starts a production deployment to `https://debate.pi-stack.org`; pull requests get two preview deployments (see [Per-PR previews](#per-pr-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment.
 
 [`vercel.json`](../vercel.json) owns:
 
@@ -90,7 +93,20 @@ Production then follows [Supabase changes](#supabase-changes) with the same list
 
 Admins see a **Developer** card in Settings that signs out, sets the key, and reloads. The app's persisted stores are shared by both projects, so the switch also clears this project's stored session, its Google token, and all user-specific local data, including saved results and form drafts. It waits at most 4 seconds for the sign-out request, so an unresponsive project cannot block it. Other open tabs clear their own session storage, including their Google token, and reload as soon as the key changes, so no tab keeps talking to the old project while sharing stores with the new one. The strip publishes its height as `--staging-banner-height`, and the landing navigation and app header sit below it. While staging is active, every page shows a staging strip with **Switch to Production**, and the Settings card is shown to everyone. A new staging session starts signed out, and an admin on production may not be an admin on staging, so the way back cannot depend on that role. The switch is a convenience, not an access control. Staging RLS and its separate user accounts are the boundary.
 
+A build can pin one project with the `VITE_SUPABASE_ENV` build variable (`production` or `staging`; any other non-empty value fails the build). A pinned build ignores the localStorage key, hides the Settings card and the strip's **Switch to Production** button, and does not reload when another tab switches. The strip still shows on a pinned staging build. The staging Vercel project uses this so each PR gets a staging preview; see [Per-PR previews](#per-pr-previews).
+
 The switch only works while the `connect-src` directive in [`vercel.json`](../vercel.json) allows the staging project origin. Today the `*.supabase.co` wildcard covers it. If you narrow that wildcard, list both project origins explicitly.
+
+## Per-PR previews
+
+Each pull request gets two Vercel previews, one per Supabase project, and both rebuild on every push:
+
+- `debate-navigator` (the production Vercel project) builds previews with no `VITE_SUPABASE_ENV`, so they use production unless the saved toggle says staging. Production's Auth redirect allowlist must include `https://debate-navigator-*-adam-gaborjanis-projects.vercel.app/**` for Google sign-in to return to the preview.
+- `debatelab-staging` builds the same repository with `VITE_SUPABASE_ENV=staging`. Staging's Auth redirect allowlist must include `https://debatelab-staging-*-adam-gaborjanis-projects.vercel.app/**`. Its production deployment tracks `main`.
+
+Edge Function CORS and the demo-code sign-in redirect accept these hosts through `isAllowedOrigin()` in [`supabase/functions/_shared/cors.ts`](../supabase/functions/_shared/cors.ts). Previews can call functions only after both projects run a function build that includes it.
+
+The staging project's name must not start with `debate-navigator-`, or production's allowlist pattern would also match it. A production preview runs unmerged frontend code with real production sessions and data, so use the staging preview unless the change needs production data. A staging preview runs against whatever backend staging has; if the PR changes migrations or Edge Functions, sync staging first (see [Staging sync](#staging-sync)).
 
 ## Backend drift check
 

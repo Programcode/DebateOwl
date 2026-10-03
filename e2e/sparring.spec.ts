@@ -41,7 +41,7 @@ test.beforeEach(async ({ page }) => {
   await stubSupabaseSession(page);
 });
 
-test('completes an LD sparring round through mocked opponent turns and judging', async ({ page }) => {
+test('completes an LD sparring round through mocked opponent turns and judging', { tag: '@smoke' }, async ({ page }) => {
   let responseNumber = 0;
   const actions: string[] = [];
 

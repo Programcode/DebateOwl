@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { ALLOWED_ORIGINS, getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 import {
   getDemoCodeDenialReason,
   getDemoLoginRole,
@@ -38,11 +38,7 @@ function sanitizeRedirectTo(value: unknown): string | undefined {
     // Web origins only. The shared CORS list also carries the Capacitor
     // WebView scheme, which must never be a generateLink redirect target.
     if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
-    return ALLOWED_ORIGINS.includes(
-      `${url.protocol}//${url.host}` as typeof ALLOWED_ORIGINS[number],
-    )
-      ? value
-      : undefined;
+    return isAllowedOrigin(`${url.protocol}//${url.host}`) ? value : undefined;
   } catch {
     return undefined;
   }

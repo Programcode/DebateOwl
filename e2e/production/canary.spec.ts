@@ -115,6 +115,10 @@ test("the canary account generates a case", async ({ page }) => {
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
   const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  // Use the motion once so the canary account does not collect production debates.
+  await page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ })
+    .getByRole("button", { name: /^(Not now, use it once|Use once without saving to a debate)$/ })
+    .click();
   const response = await generated;
   expect(response.status(), "ai generate status").toBe(200);
   const body = await response.json() as { output: { contentions?: unknown[] } };

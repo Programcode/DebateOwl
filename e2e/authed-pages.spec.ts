@@ -19,7 +19,8 @@ const AUTH_ROUTES = [
 ] as const;
 
 for (const locale of LOCALES) {
-  test.describe(`authed pages [${locale}]`, () => {
+  // English runs in the pull-request smoke set; the other locales run nightly.
+  test.describe(`authed pages [${locale}]`, locale === 'en' ? { tag: '@smoke' } : {}, () => {
     test.beforeEach(async ({ page }) => {
       await setLocale(page, locale);
       await stubSupabaseSession(page);
