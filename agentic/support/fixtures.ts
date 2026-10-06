@@ -83,7 +83,8 @@ export async function pageErrors(browser: Browser): Promise<string[]> {
  * cuts such text off, so the page-width check alone misses it. Each text node
  * is measured, not its element's box, and clipped through every ancestor that
  * clips: text clipped away entirely (a drawer off canvas, an `sr-only` label)
- * does not count, and text that shows at all but runs past the edge does.
+ * or cut short inside the screen (an ellipsis) does not count, and text that
+ * shows right up to the edge and continues past it does.
  * Text in a container that scrolls sideways on purpose (a table, a carousel)
  * or pans (the Flowchart canvas) is exempt.
  */
@@ -120,6 +121,10 @@ async function textPastTheEdge(browser: Browser): Promise<string[]> {
         bottom = Math.min(bottom, clip.bottom);
       }
       if (exempt || right - left < 1 || bottom - top < 1) continue;
+      // Cut short by its own box inside the screen, like an ellipsis on a
+      // long motion: shortened on purpose, not running off the screen.
+      const reachesEdge = (box.right > width + 1 && right >= width - 1) || (box.left < -1 && left <= 1);
+      if (!reachesEdge) continue;
       found.push(`${el.tagName.toLowerCase()} "${text.textContent.trim().slice(0, 60)}" spans ${Math.round(box.left)}-${Math.round(box.right)}px of ${width}px`);
     }
     return found;
