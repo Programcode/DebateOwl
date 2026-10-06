@@ -50,8 +50,12 @@ function checkWorkflows() {
       report(file, 1, "set a top-level `permissions:` block");
     }
     const checkPinned = (action, keys) => {
-      if (action.startsWith("./") || action.startsWith("docker://")) return;
-      if (!/@[0-9a-f]{40}$/.test(action)) report(file, lineAt(keys), `pin ${action} to a full commit SHA`);
+      if (action.startsWith("./")) return;
+      if (action.startsWith("docker://")) {
+        if (!/@sha256:[0-9a-f]{64}$/.test(action)) report(file, lineAt(keys), `pin ${action} to an image digest (@sha256:...)`);
+      } else if (!/@[0-9a-f]{40}$/.test(action)) {
+        report(file, lineAt(keys), `pin ${action} to a full commit SHA`);
+      }
     };
     for (const [jobName, job] of Object.entries(workflow?.jobs ?? {})) {
       if (typeof job?.uses === "string") checkPinned(job.uses, ["jobs", jobName, "uses"]);
@@ -154,7 +158,8 @@ function checkPgTapPrivileges() {
   // Under NOT, a list correctly means "none of them". The check errs toward
   // flagging: anything but one quoted privilege in a positive call is reported,
   // and a negative written as `= false` is rewritten with NOT.
-  const call = /\bhas_[a-z_]+_privilege\s*\(/gi;
+  // Optional schema (pg_catalog.) and optional double quotes around either name.
+  const call = /(?:\b[A-Za-z_]+\.|"[A-Za-z_]+"\.)?(?:\bhas_[a-z_]+_privilege|"has_[a-z_]+_privilege")\s*\(/gi;
   for (const file of listFiles("supabase/tests", [".sql"])) {
     const source = blankComments(readFileSync(path.join(root, file), "utf8"));
     for (const match of source.matchAll(call)) {
