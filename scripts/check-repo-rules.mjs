@@ -137,7 +137,9 @@ function callArguments(source, open) {
 function checkPgTapPrivileges() {
   // has_table_privilege(role, table, 'SELECT,INSERT') is true when ANY listed
   // privilege is held, so a list cannot prove that a role has all of them.
-  // Under NOT, a list correctly means "none of them".
+  // Under NOT, a list correctly means "none of them". The check errs toward
+  // flagging: a negative written as `= false`, or a list in a comment inside a
+  // dollar-quoted body, is reported too and is rewritten with NOT.
   const call = /\bhas_[a-z_]+_privilege\s*\(/gi;
   for (const file of listFiles("supabase/tests", [".sql"])) {
     const source = blankComments(readFileSync(path.join(root, file), "utf8"));
@@ -145,7 +147,7 @@ function checkPgTapPrivileges() {
       const literals = [...callArguments(source, match.index + match[0].length - 1).matchAll(/'((?:[^']|'')*)'/g)];
       const privilege = literals.at(-1)?.[1] ?? "";
       if (privilege.includes(",") && !isNegated(source.slice(0, match.index))) {
-        report(file, lineOf(source, match.index), "check one privilege per has_*_privilege call; a list means \"any of\"");
+        report(file, lineOf(source, match.index), "a privilege list means \"any of\": check one privilege per call, or write a negative check as NOT has_*_privilege(...)");
       }
     }
   }
