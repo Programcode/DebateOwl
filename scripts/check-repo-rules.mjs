@@ -68,31 +68,49 @@ function checkWorkflows() {
   }
 }
 
-// Replaces SQL comments with spaces, keeping newlines and string literals,
-// so comments can neither supply nor hide a call's arguments.
+// Replaces SQL comments with spaces, keeping newlines, quoted strings and
+// dollar-quoted bodies, so comments can neither supply nor hide a call's
+// arguments. Block comments nest, as in PostgreSQL.
 function blankComments(source) {
   let out = "";
   let index = 0;
+  const copyUntil = (stop) => {
+    out += source.slice(index, stop);
+    index = stop;
+  };
+  const blankUntil = (stop) => {
+    out += source.slice(index, stop).replace(/[^\n]/g, " ");
+    index = stop;
+  };
   while (index < source.length) {
-    const char = source[index];
-    if (char === "'") {
+    const dollar = source.slice(index).match(/^\$[A-Za-z_]*\$/);
+    if (source[index] === "'") {
       const end = source.indexOf("'", index + 1);
-      const stop = end === -1 ? source.length : end + 1;
-      out += source.slice(index, stop);
-      index = stop;
+      copyUntil(end === -1 ? source.length : end + 1);
+    } else if (dollar) {
+      const end = source.indexOf(dollar[0], index + dollar[0].length);
+      copyUntil(end === -1 ? source.length : end + dollar[0].length);
     } else if (source.startsWith("--", index)) {
       const end = source.indexOf("\n", index);
-      const stop = end === -1 ? source.length : end;
-      out += " ".repeat(stop - index);
-      index = stop;
+      blankUntil(end === -1 ? source.length : end);
     } else if (source.startsWith("/*", index)) {
-      const end = source.indexOf("*/", index + 2);
-      const stop = end === -1 ? source.length : end + 2;
-      out += source.slice(index, stop).replace(/[^\n]/g, " ");
-      index = stop;
+      let depth = 0;
+      let stop = index;
+      while (stop < source.length) {
+        if (source.startsWith("/*", stop)) {
+          depth += 1;
+          stop += 2;
+        } else if (source.startsWith("*/", stop)) {
+          depth -= 1;
+          stop += 2;
+          if (depth === 0) break;
+        } else {
+          stop += 1;
+        }
+      }
+      blankUntil(stop);
     } else {
-      out += char;
-      index += 1;
+      copyUntil(index + 1);
     }
   }
   return out;
