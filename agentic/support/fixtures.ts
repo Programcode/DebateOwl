@@ -88,7 +88,7 @@ export async function pageErrors(browser: Browser): Promise<string[]> {
  * Text in a container that scrolls sideways on purpose (a table, a carousel)
  * or pans (the Flowchart canvas) is exempt.
  */
-async function textPastTheEdge(browser: Browser): Promise<string[]> {
+export async function textPastTheEdge(browser: Browser): Promise<string[]> {
   return browser.evaluate(() => {
     const width = document.documentElement.clientWidth;
     const found: string[] = [];
@@ -111,14 +111,19 @@ async function textPastTheEdge(browser: Browser): Promise<string[]> {
       let exempt = false;
       for (let node: Element | null = el; node && node !== document.documentElement; node = node.parentElement) {
         const style = getComputedStyle(node);
-        if (style.clip !== "auto" || style.clipPath !== "none") { left = right; break; }
-        if (style.overflowX === "visible" && style.overflowY === "visible") continue;
         if ((style.overflowX === "auto" || style.overflowX === "scroll") && node.scrollWidth > node.clientWidth) { exempt = true; break; }
+        // `clip` and `clip-path` cut to the box at most; a zero-area `clip` hides it (`sr-only`).
+        const clipsToBox = style.clipPath !== "none" || style.clip !== "auto";
+        if (style.clip !== "auto" && /^rect\(0px,? 0px,? 0px,? 0px\)$/.test(style.clip)) { left = right; break; }
         const clip = node.getBoundingClientRect();
-        left = Math.max(left, clip.left);
-        right = Math.min(right, clip.right);
-        top = Math.max(top, clip.top);
-        bottom = Math.min(bottom, clip.bottom);
+        if (clipsToBox || style.overflowX !== "visible") {
+          left = Math.max(left, clip.left);
+          right = Math.min(right, clip.right);
+        }
+        if (clipsToBox || style.overflowY !== "visible") {
+          top = Math.max(top, clip.top);
+          bottom = Math.min(bottom, clip.bottom);
+        }
       }
       if (exempt || right - left < 1 || bottom - top < 1) continue;
       // Cut short by its own box inside the screen, like an ellipsis on a
