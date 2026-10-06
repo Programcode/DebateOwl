@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-02T16:03:12.575Z",
+  "createdAt": "2026-10-06T08:38:24.943Z",
   "payload": {
     "actions": [
       {
@@ -67,9 +67,12 @@
     "recordedFor": {
       "testId": "agentic/first-debate.e2e.ts::a%20new%20student%20starts%20their%20first%20debate%20from%20the%20onboarding%20tour",
       "targetId": "desktop",
-      "instructionDigest": "027693f6c76e21fe239c9a427a38bfdbab2bd0577d771749dc8a73dd02fb46f8"
+      "instructionDigest": "027693f6c76e21fe239c9a427a38bfdbab2bd0577d771749dc8a73dd02fb46f8",
+      "paramsDigest": "7b7f2a77eeb79b4f239bf2535592910008b2af7aeab8eea04264408c8ad7e948",
+      "callIndex": 0,
+      "agent": "default"
     },
-    "summary": "Followed the onboarding tour: at step 1 of 4 started a debate with motion \"This House would make debate compulsory in secondary schools\", then advanced through the Library, Generate steps and the final \"You're Ready!\" step via Get Started!. The tour is finished; home shows the Current Debate with t…",
+    "summary": "Started a debate on “This House would make debate compulsory in secondary schools” at the tour’s first step, advanced through Library and Generate, and selected Get Started! on the final “You’re Ready!” step. The tour dialog closed.",
     "startPath": "/app",
     "endPath": "/app",
     "endAnchors": [
@@ -92,6 +95,38 @@
         "testId": "current-debate-desktop"
       }
     ],
-    "endWaitMs": 14375
+    "goneAnchors": [
+      {
+        "role": "alertdialog",
+        "name": "Welcome to DebateLab! 🎉Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.Start debate"
+      },
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
+      },
+      {
+        "text": "No current debate"
+      },
+      {
+        "text": "Start a debate to keep one motion, its sources, and your results together."
+      },
+      {
+        "role": "heading",
+        "name": "Welcome to DebateLab! 🎉"
+      },
+      {
+        "text": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here."
+      },
+      {
+        "role": "button",
+        "name": "Skip Tour"
+      },
+      {
+        "role": "button",
+        "name": "Next (Step 1 of 4)"
+      }
+    ],
+    "endWaitMs": 12998
   }
 }

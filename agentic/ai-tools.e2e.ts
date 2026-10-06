@@ -33,7 +33,7 @@ test("a student brainstorms a motion and it is filed in a new debate", options, 
 
 test("a student looks up factoids for a statement", options, async ({ app, agent, student }) => {
   await app.open("/app/factoids");
-  await agent.act("Find factoids for the statement {statement}.", {
+  await agent.act("Run a factoid search for the statement {statement}. The goal is done when the search finishes, even if it finds no factoids.", {
     params: { statement: "Cities with free buses have fewer cars downtown." },
   });
 

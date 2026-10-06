@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:51:36.896Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" (2 of 2)",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "position": {
+            "index": 1,
+            "of": 2
+          }
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"This House would ban single-use plastics\" into textbox \"Motion\" in \"Start new debate\"",
+        "target": {
+          "role": "textbox",
+          "name": "Motion",
+          "placeholder": "This House would…",
+          "within": "Start new debate"
+        },
+        "value": "This House would ban single-use plastics"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" in \"Start new debate\"",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "within": "Start new debate"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap link \"Library\" (1 of 2)",
+        "target": {
+          "role": "link",
+          "name": "Library",
+          "position": {
+            "index": 0,
+            "of": 2
+          }
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Add Source\"",
+        "target": {
+          "role": "button",
+          "name": "Add Source"
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"Plastic bag levy study\" into textbox \"Source title...\"",
+        "target": {
+          "role": "textbox",
+          "name": "Source title...",
+          "placeholder": "Source title..."
+        },
+        "value": "Plastic bag levy study"
+      },
+      {
+        "name": "type",
+        "summary": "type \"After a 5p levy, single-use bag sales a…\" into textbox \"Paste source content...\"",
+        "target": {
+          "role": "textbox",
+          "name": "Paste source content...",
+          "placeholder": "Paste source content..."
+        },
+        "value": "After a 5p levy, single-use bag sales at major retailers fell by more than 95 percent."
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Save to Library\"",
+        "target": {
+          "role": "button",
+          "name": "Save to Library"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/workspace.e2e.ts::a%20student%20adds%20a%20source%20to%20the%20debate%27s%20Library%20and%20pauses%20it",
+      "targetId": "desktop",
+      "instructionDigest": "36bd6ba640c32c1dd9ab808075c9cda3de5aac1fee2191e69f36d42871d5a3dd",
+      "paramsDigest": "bf59bb736176d61326f66ebabe06a3c96d8aaba47c010122e432e9fdd7dca5ca",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Started the debate “This House would ban single-use plastics” and added “Plastic bag levy study” to the Library with the requested content. The Library shows the source and a “Source Added” confirmation.",
+    "startPath": "/app",
+    "endPath": "/app/library",
+    "endAnchors": [
+      {
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "text": "Source Added"
+      },
+      {
+        "text": "Your source is now available for grounding."
+      },
+      {
+        "text": "Current debate"
+      },
+      {
+        "role": "heading",
+        "name": "Source Library"
+      },
+      {
+        "text": "This House would ban single-use plastics"
+      },
+      {
+        "role": "button",
+        "name": "Change"
+      },
+      {
+        "text": "All folders"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
+      },
+      {
+        "text": "No current debate"
+      },
+      {
+        "text": "Start a debate to keep one motion, its sources, and your results together."
+      },
+      {
+        "role": "heading",
+        "name": "Prepare"
+      },
+      {
+        "text": "Generate"
+      },
+      {
+        "text": "Build a complete debate case."
+      },
+      {
+        "text": "Brainstorm"
+      },
+      {
+        "text": "Explore angles for a motion."
+      }
+    ],
+    "endWaitMs": 14336
+  }
+}

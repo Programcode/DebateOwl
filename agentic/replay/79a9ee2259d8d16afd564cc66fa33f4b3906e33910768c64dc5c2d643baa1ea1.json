@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:46:53.105Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "type",
+        "summary": "type \"Cities with free buses have fewer cars …\" into textbox \"Statement *\"",
+        "target": {
+          "role": "textbox",
+          "name": "Statement *",
+          "placeholder": "e.g., Renewable energy is more cost-effective than fossil fuels"
+        },
+        "value": "Cities with free buses have fewer cars downtown."
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Find Factoids\"",
+        "target": {
+          "role": "button",
+          "name": "Find Factoids"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/ai-tools.e2e.ts::a%20student%20looks%20up%20factoids%20for%20a%20statement",
+      "targetId": "desktop",
+      "instructionDigest": "c5db87feed7ab17397c5b18d8103e63359c9fd3267161d228707120f188c6734",
+      "paramsDigest": "d8a1d67bcd2eea2a8af37d3fa6dcb19b9fc23cda24c8503ef5ba290f52b5840d",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Submitted the factoid search for “Cities with free buses have fewer cars downtown.” Research completed and the results screen shows “Found 0 Factoids” with a no-matching-sources message.",
+    "startPath": "/app/factoids",
+    "endPath": "/app/factoids",
+    "endAnchors": [
+      {
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "text": "Research complete"
+      },
+      {
+        "text": "Verified evidence is ready."
+      },
+      {
+        "role": "heading",
+        "name": "Factoids"
+      },
+      {
+        "text": "No current debate. Results stay one-off until you start one."
+      },
+      {
+        "role": "heading",
+        "name": "Find Evidence"
+      },
+      {
+        "text": "Get debate-ready factoids with verified citations"
+      },
+      {
+        "text": "*"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "status",
+        "name": "Opening Factoids"
+      }
+    ],
+    "endWaitMs": 14699
+  }
+}

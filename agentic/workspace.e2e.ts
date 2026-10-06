@@ -38,10 +38,13 @@ test("a student times a speech and pauses the timer", options, async ({ app, age
   const display = browser.locator('[role="timer"][aria-label="Timer display"]');
   await expect(display).toBeVisible();
   const initial = (await display.textContent()) ?? "";
-  await agent.act("Start the speech timer, then pause it.");
-
-  await expect(screen.getByText("PAUSED").first()).toBeVisible();
+  // Two goals: a replay presses buttons faster than the clock ticks.
+  await agent.act("Start the speech timer.");
+  await expect(screen.getByText("SPEAKING").first()).toBeVisible();
   await expect(display).not.toHaveText(initial);
+
+  await agent.act("Pause the speech timer.");
+  await expect(screen.getByText("PAUSED").first()).toBeVisible();
 });
 
 test("a student switches the interface to Spanish and the AI output to Hungarian", options, async ({ app, agent, browser, student }) => {

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:40:56.435Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap link \"History\" in \"Utilities\"",
+        "target": {
+          "role": "link",
+          "name": "History",
+          "within": "Utilities"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Load\" in \"Saved Cases\"",
+        "target": {
+          "role": "button",
+          "name": "Load",
+          "within": "Saved Cases"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/case-generation.e2e.ts::a%20student%20starts%20a%20debate%20and%20generates%20a%20case%20for%20it",
+      "targetId": "mobile",
+      "instructionDigest": "fb09b9b54eb268c0e9520a17583c722af19bc8aff71ce3b60d25fe2a1e11db55",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Opened History, found the saved case for “This House would replace school exams with continuous assessment,” and selected Load. The app returned to Generate with the case loaded, showing the case structure, arguments, predicted opponent case, and prepared counters.",
+    "startPath": "/app",
+    "endPath": "/app/generate",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "Generate"
+      },
+      {
+        "text": "Working in:"
+      },
+      {
+        "text": "In favor"
+      },
+      {
+        "role": "button",
+        "name": "Change"
+      },
+      {
+        "role": "button",
+        "name": "Use once"
+      },
+      {
+        "role": "heading",
+        "name": "Generate Debate Case"
+      },
+      {
+        "text": "Create structured arguments for any motion"
+      },
+      {
+        "text": "*"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "text": "Last activity less than a minute ago · 0 sources · 1 outputs"
+      },
+      {
+        "role": "link",
+        "name": "Open debate"
+      },
+      {
+        "role": "heading",
+        "name": "Prepare"
+      },
+      {
+        "text": "Generate"
+      },
+      {
+        "text": "Build a complete debate case."
+      },
+      {
+        "text": "Brainstorm"
+      },
+      {
+        "text": "Explore angles for a motion."
+      },
+      {
+        "text": "Factoids"
+      }
+    ],
+    "endWaitMs": 14008
+  }
+}

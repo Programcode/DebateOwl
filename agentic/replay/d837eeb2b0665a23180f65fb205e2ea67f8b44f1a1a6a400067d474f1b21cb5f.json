@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:38:37.416Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "type",
+        "summary": "type \"This House would ban zoos\" into textbox \"Motion / Topic *\"",
+        "target": {
+          "role": "textbox",
+          "name": "Motion / Topic *",
+          "placeholder": "e.g., Universal Basic Income should be implemented globally"
+        },
+        "value": "This House would ban zoos"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start Brainstorming\"",
+        "target": {
+          "role": "button",
+          "name": "Start Brainstorming"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" in \"Start a debate with this motion?\"",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "within": "Start a debate with this motion?"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/ai-tools.e2e.ts::a%20student%20brainstorms%20a%20motion%20and%20it%20is%20filed%20in%20a%20new%20debate",
+      "targetId": "desktop",
+      "instructionDigest": "fefbe6831f05cbe5226d052540ae0cd061ed3bc58e2263c57786ba7fa9ef4590",
+      "paramsDigest": "4799d5c28b5c2c4b6bcd1f82a33d5e0da6d430c1b76bb4436e6761692f30059f",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Started a Current Debate for “This House would ban zoos” and brainstormed angles. The screen confirms “Brainstorm complete” and shows the saved Top 5 Argument Angles result.",
+    "startPath": "/app/brainstorm",
+    "endPath": "/app/brainstorm",
+    "endAnchors": [
+      {
+        "text": "Current debate"
+      },
+      {
+        "role": "heading",
+        "name": "Brainstorm"
+      },
+      {
+        "text": "Working in:"
+      },
+      {
+        "text": "This House would ban zoos"
+      },
+      {
+        "text": "Both sides"
+      },
+      {
+        "role": "button",
+        "name": "Change"
+      },
+      {
+        "role": "button",
+        "name": "Use once"
+      },
+      {
+        "role": "heading",
+        "name": "Brainstorm Ideas"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "status",
+        "name": "Opening Brainstorm"
+      },
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
+      }
+    ],
+    "endWaitMs": 17658
+  }
+}

@@ -244,9 +244,9 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label>{t('settings.uiLanguage')}</Label>
+                <Label htmlFor="settings-ui-language">{t('settings.uiLanguage')}</Label>
                 <Select value={language} onValueChange={(value) => isAppLanguage(value) && setLanguage(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger id="settings-ui-language">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -257,9 +257,9 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t('settings.outputLanguage')}</Label>
+                <Label htmlFor="settings-output-language">{t('settings.outputLanguage')}</Label>
                 <Select value={outputLanguage} onValueChange={(value) => isAppLanguage(value) && setOutputLanguage(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger id="settings-output-language">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -270,9 +270,9 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t('settings.theme')}</Label>
+                <Label htmlFor="settings-theme">{t('settings.theme')}</Label>
                 <Select value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>
-                  <SelectTrigger>
+                  <SelectTrigger id="settings-theme">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

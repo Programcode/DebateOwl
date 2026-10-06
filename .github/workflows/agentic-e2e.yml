@@ -3,9 +3,9 @@ name: Agentic E2E
 # The e2e suite in agentic/ against the local stack in fake mode: an AI agent
 # drives goal-level flows and judges screens. Recorded flows replay from
 # agentic/replay without model calls; judgments always call the model.
-# It runs nightly and on pull requests that touch the app or the suite, one
-# job per viewport. A weekly bug bash sends each persona exploring, and on
-# demand one exploration runs instead of the suite.
+# It runs nightly and on pull requests that touch the app or the suite. A
+# weekly bug bash sends each persona exploring, and on demand one exploration
+# runs instead of the suite.
 # Not a required check. See docs/testing.md#agentic-browser-tests.
 on:
   pull_request:
@@ -27,7 +27,115 @@ on:
     - cron: "13 5 * * 0" # the weekly bug bash
   workflow_dispatch:
     inputs:
-      # The weekly bug bash explores with every persona; a manual run explores once.
+      explore:
+        description: "Exploration goal. Empty runs the test suite instead."
+        required: false
+        default: ""
+      persona:
+        description: "Agent from e2e.config.ts that explores"
+        type: choice
+        default: first-timer
+        options: [default, first-timer, coach, edge-input, hungarian]
+      target:
+        description: "Viewport to explore on"
+        type: choice
+        default: desktop
+        options: [desktop, mobile]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentic-e2e-${{ github.ref }}-${{ github.event.schedule || inputs.persona || 'suite' }}
+  cancel-in-progress: true
+
+env:
+  SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+
+jobs:
+  suite:
+    if: github.event.schedule != '13 5 * * 0' && (github.event_name != 'workflow_dispatch' || inputs.explore == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Four legs keep each well under the timeout: the page sweep makes about
+    # 60 judgments per viewport, the journeys and the rest about 15.
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [desktop, mobile]
+        part: [pages, journeys]
+    name: suite (${{ matrix.target }}, ${{ matrix.part }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.116.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Without the key every agent test skips, which would read as a pass.
+      # Same accepted risk as live-e2e.yml: pull-request code runs with it.
+      - name: Require the testing agent's model key
+        env:
+          LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
+        run: test -n "$LIVE_OPENROUTER_API_KEY" || { echo "LIVE_OPENROUTER_API_KEY is not set" >&2; exit 1; }
+
+      - name: Start the local stack (fake model provider)
+        run: .claude/skills/verify-debatelab/bin/verify.sh up
+
+      - name: Agentic suite
+        env:
+          LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
+          E2E_AGENT_MODEL: ${{ vars.E2E_AGENT_MODEL }}
+          E2E_JUDGE_MODEL: ${{ vars.E2E_JUDGE_MODEL }}
+          TARGET: ${{ matrix.target }}
+          PART: ${{ matrix.part }}
+        # Bug-bash repro tests fail until their bug is fixed; they run on demand.
+        # The journeys leg runs everything that is not the page sweep, so an
+        # untagged test still runs.
+        run: |
+          if [ "$PART" = pages ]; then filter=(--tag pages --exclude-tag repro); else filter=(--exclude-tag pages,repro); fi
+          .claude/skills/verify-debatelab/bin/verify.sh e2e run --target "$TARGET" "${filter[@]}" --reporter list,markdown,junit
+
+      - name: Publish the report
+        if: always()
+        run: |
+          for summary in .verify/artifacts/*-e2e-*/summary.md; do
+            [ -f "$summary" ] && cat "$summary" >>"$GITHUB_STEP_SUMMARY"
+          done
+          true
+
+      - name: Stop the local stack
+        if: always()
+        run: .claude/skills/verify-debatelab/bin/verify.sh down
+
+      # Local test data only: fake model output, throwaway demo users.
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agentic-e2e-${{ matrix.target }}-${{ matrix.part }}-${{ github.run_id }}
+          path: |
+            .verify/artifacts/
+            .verify/logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The weekly bug bash explores with every persona; a manual run explores once.
   plan-explore:
     if: github.event.schedule == '13 5 * * 0' || (github.event_name == 'workflow_dispatch' && inputs.explore != '')
     runs-on: ubuntu-latest
@@ -122,7 +230,7 @@ on:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: agentic-explore-${{ matrix.leg.persona }}-${{ github.run_id }}
+          name: agentic-explore-${{ matrix.leg.persona }}-${{ matrix.leg.target }}-${{ github.run_id }}
           path: |
             .verify/artifacts/
             .verify/logs/

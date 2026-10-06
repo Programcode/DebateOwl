@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:42:52.183Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Start\"",
+        "target": {
+          "role": "button",
+          "name": "Start"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/workspace.e2e.ts::a%20student%20times%20a%20speech%20and%20pauses%20the%20timer",
+      "targetId": "mobile",
+      "instructionDigest": "232cce2805bf5871080e66d24477abaf8893967abffe918c09c1d02069d6c710",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Started the speech timer. The display changed from PAUSED to SPEAKING and the control now reads Pause.",
+    "startPath": "/app/timer",
+    "endPath": "/app/timer",
+    "endAnchors": [
+      {
+        "text": "SPEAKING"
+      },
+      {
+        "role": "button",
+        "name": "Pause"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "text": "PAUSED"
+      },
+      {
+        "role": "button",
+        "name": "Start"
+      }
+    ],
+    "endWaitMs": 12221
+  }
+}

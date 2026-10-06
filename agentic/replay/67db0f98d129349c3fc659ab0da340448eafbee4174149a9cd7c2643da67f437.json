@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:52:21.873Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap combobox \"Idioma de Salida IA\"",
+        "target": {
+          "role": "combobox",
+          "name": "Idioma de Salida IA"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap option \"Magyar\"",
+        "target": {
+          "role": "option",
+          "name": "Magyar"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/workspace.e2e.ts::a%20student%20switches%20the%20interface%20to%20Spanish%20and%20the%20AI%20output%20to%20Hungarian",
+      "targetId": "desktop",
+      "instructionDigest": "0493cb3ea82426b6cb2ffdb5a79c9003647eb4eafbbb124ce74b65954f9a3ef4",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Set the AI Output Language to Magyar. The language list shows Magyar as selected.",
+    "startPath": "/app/settings",
+    "endPath": "/app/settings",
+    "endAnchors": [
+      {
+        "text": "Magyar"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "text": "English"
+      }
+    ],
+    "endWaitMs": 14920
+  }
+}

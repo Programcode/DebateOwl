@@ -17,12 +17,14 @@ const live = process.env.VERIFY_MODE === "live";
 
 // The testing agent's models, separate from the app's own. Both need tool
 // calling and image input. The actor drives agent.act and explorations; its
-// recorded flows replay with no model call, so a free, slow model is enough.
+// recorded flows replay with no model call, so it runs only on a cache miss
+// and in explorations, for a fraction of a cent per step. GPT-6 Luna is fast
+// and reliable at it (OpenRouter withdrew the free Qwen tier used before).
 // The judge answers every agent.assert, waitFor and extract on every run, so it
-// must be reliable: the Muse Spark contributor tier is the cheapest that is,
-// and like the app's live pin it may keep prompts (made-up content only).
+// must be cheap and reliable: the Muse Spark contributor tier, which like the
+// app's live pin may keep prompts (made-up content only).
 // `||`, not `??`: an unset Actions variable arrives as an empty string.
-const model = openrouter(process.env.E2E_AGENT_MODEL || "qwen/qwen3.8-27b:free");
+const model = openrouter(process.env.E2E_AGENT_MODEL || "openai/gpt-6-luna");
 const judge = openrouter(process.env.E2E_JUDGE_MODEL || "meta/muse-spark-1.3-contributor");
 
 // `context` reaches every model call, judges included: what the app calls things.
@@ -31,7 +33,7 @@ const context = [
   "Each student works in one Current Debate at a time. The header control reads \"Start debate\" until one exists, then names the motion. Tool pages show a strip \"Working in: <motion>\".",
   "Tools: Generate (a full debate case: thesis, contentions, predicted opponent case, prepared counters), Attack, Brainstorm, Factoids, Ask, Sparring (a practice round against an AI opponent, judged at the end), Crossfire (cross-examination practice), Flowchart, Timer, Library (sources for the Current Debate), and History (saved results).",
   "A tool given a motion with no Current Debate asks \"Start a debate with this motion?\". A motion that differs from the Current Debate asks \"This is a different motion\".",
-  "The interface language can be English, Spanish or Hungarian. Source titles, citations, user content and model names may stay in their own language. Hungarian abbreviates AI as MI (mesterséges intelligencia), so \"MI-modell\" is Hungarian, and an English loanword with a Hungarian ending, such as \"coachingot\", is Hungarian. The Spanish interface deliberately keeps the loanwords coach, coaching and sparring (\"Pregunta a tu coach\", \"Para Coaches\", \"Rondas de sparring\"); they are Spanish there.",
+  "The interface language can be English, Spanish or Hungarian. Source titles, citations, user content and model names may stay in their own language. Hungarian abbreviates AI as MI (mesterséges intelligencia), so \"MI-modell\" is Hungarian, and English loanwords such as coaching are Hungarian there too, inflected (\"coachingot\") or as a modifier (\"coaching funkciók\"). The Spanish interface deliberately keeps the loanwords coach, coaching and sparring (\"Pregunta a tu coach\", \"Para Coaches\", \"Rondas de sparring\"); they are Spanish there.",
   "Long values in selects, chips and narrow fields are shortened with an ellipsis (…) on purpose.",
   "This is a local test stack. Google sign-in, Stripe checkout, ElevenLabs voices and Google Docs export are not configured here, so their failures are expected.",
   "The client runs on a Vite dev server, so the first visit to a page can take a few seconds to render.",
@@ -79,11 +81,10 @@ export default {
       app: { url: appUrl, identity: "debatelab-verify-stack", environment: "test" },
     },
   ],
-  // AI steps wait on Edge Functions, and a free model can take minutes per judgment.
+  // AI steps wait on Edge Functions, and a judgment can take a minute.
   timeout: 600_000,
-  // Judgments go to the paid judge, and replayed steps call no model, so three
-  // workers keep the page sweep short. Recording many new flows at once can
-  // trip the free actor's rate limit; record with a paid actor (docs/testing.md).
+  // Judgments dominate the run time, and replayed steps call no model, so
+  // three workers keep the page sweep short.
   workers: 3,
   // A test that skips after a failed soft assertion or attempt is a failure.
   failOnSkippedFailure: true,

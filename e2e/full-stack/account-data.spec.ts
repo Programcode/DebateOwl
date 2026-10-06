@@ -79,7 +79,7 @@ test("Delete All My Data erases the account's saved work and nobody else's", asy
 
 test("the output language setting follows the account and reaches the model", async ({ signedIn: page, user, browser }) => {
   await page.goto("/app/settings");
-  await page.locator("div.space-y-2", { has: page.getByText("AI Output Language", { exact: true }) }).getByRole("combobox").click();
+  await page.getByRole("combobox", { name: "AI Output Language" }).click();
   await page.getByRole("option", { name: "Magyar" }).click();
   await expect.poll(async () => {
     const { data } = await admin.from("user_settings").select("output_language").eq("user_id", await user.userId()).single();

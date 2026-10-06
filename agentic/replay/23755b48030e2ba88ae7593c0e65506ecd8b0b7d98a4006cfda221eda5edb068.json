@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-02T16:08:35.794Z",
+  "createdAt": "2026-10-06T08:38:38.078Z",
   "payload": {
     "actions": [
       {
@@ -59,9 +59,12 @@
     "recordedFor": {
       "testId": "agentic/case-generation.e2e.ts::a%20student%20starts%20a%20debate%20and%20generates%20a%20case%20for%20it",
       "targetId": "desktop",
-      "instructionDigest": "86311d0b0c95064361ba72d803d642b0c0266b78be93afeba829dde446989804"
+      "instructionDigest": "86311d0b0c95064361ba72d803d642b0c0266b78be93afeba829dde446989804",
+      "paramsDigest": "d63cb21535f10ff8c68842c61788532a41b77a00b8533372ddf5f3bc2c00b258",
+      "callIndex": 0,
+      "agent": "default"
     },
-    "summary": "Started a new debate with motion \"This House would replace school exams with continuous assessment\" (now shown as Current Debate in the header), then opened Generate and generated a case: thesis, framework, 3 structured arguments, predicted opponent case, and prepared counters are displayed (FAKE-P…",
+    "summary": "Started a debate for “This House would replace school exams with continuous assessment” and opened Generate. The generated debate case is visible, with the confirmation “Your debate case is ready” and a saved Case (In favor) result.",
     "startPath": "/app",
     "endPath": "/app/generate",
     "endAnchors": [
@@ -94,6 +97,35 @@
         "name": "Generate Debate Case"
       }
     ],
-    "endWaitMs": 18577
+    "goneAnchors": [
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
+      },
+      {
+        "text": "No current debate"
+      },
+      {
+        "text": "Start a debate to keep one motion, its sources, and your results together."
+      },
+      {
+        "role": "heading",
+        "name": "Prepare"
+      },
+      {
+        "text": "Generate"
+      },
+      {
+        "text": "Build a complete debate case."
+      },
+      {
+        "text": "Brainstorm"
+      },
+      {
+        "text": "Explore angles for a motion."
+      }
+    ],
+    "endWaitMs": 15301
   }
 }
