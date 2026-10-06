@@ -99,6 +99,12 @@ const nodeIcons: Record<NodeType, React.ReactNode> = {
     dropped: <AlertTriangle className="h-4 w-4" />,
 };
 
+const strengthTranslationKeys = {
+    strong: 'flowchart.strengthStrong',
+    moderate: 'flowchart.strengthModerate',
+    weak: 'flowchart.strengthWeak',
+};
+
 // Custom node component
 function CustomNode({ data }: { data: FlowNodeData }) {
     const { t } = useTranslation();
@@ -135,7 +141,7 @@ function CustomNode({ data }: { data: FlowNodeData }) {
                             : 'border-yellow-300 text-yellow-100'
                         }`}
                 >
-                    {data.strength}
+                    {t(strengthTranslationKeys[data.strength])}
                 </Badge>
             )}
             <Handle type="source" position={Position.Bottom} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
