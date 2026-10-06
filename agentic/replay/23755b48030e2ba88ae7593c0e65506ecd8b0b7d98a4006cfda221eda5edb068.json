@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:38:38.078Z",
+  "createdAt": "2026-10-06T10:49:38.577Z",
   "payload": {
     "actions": [
       {
@@ -64,10 +64,20 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Started a debate for “This House would replace school exams with continuous assessment” and opened Generate. The generated debate case is visible, with the confirmation “Your debate case is ready” and a saved Case (In favor) result.",
+    "summary": "The new debate is active with the motion “This House would replace school exams with continuous assessment.” Generate completed successfully and displayed “Your debate case is ready,” with the generated case structure and arguments visible.",
     "startPath": "/app",
     "endPath": "/app/generate",
     "endAnchors": [
+      {
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "text": "Generate complete"
+      },
+      {
+        "text": "Your debate case is ready."
+      },
       {
         "text": "Current debate"
       },
@@ -83,18 +93,6 @@
       },
       {
         "text": "In favor"
-      },
-      {
-        "role": "button",
-        "name": "Change"
-      },
-      {
-        "role": "button",
-        "name": "Use once"
-      },
-      {
-        "role": "heading",
-        "name": "Generate Debate Case"
       }
     ],
     "goneAnchors": [
@@ -126,6 +124,6 @@
         "text": "Explore angles for a motion."
       }
     ],
-    "endWaitMs": 15301
+    "endWaitMs": 15032
   }
 }
