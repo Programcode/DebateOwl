@@ -10,7 +10,6 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## Backlog
 
-- **Missing translation keys.** 88 literal `t()` keys are in no catalog, so Spanish and Hungarian users see English in toasts, dialogs and Library actions. Plan: [2026-10-02 missing translation keys](2026-10-02-missing-translation-keys.md).
 - **Next 15.** Security and data protection, operational safety, code health, and product polish, ordered by risk. Items 3, 5, 6, 8 and 13 have shipped; the plan lists the follow-ups they left. Plan: [2026-10-01 next 15](2026-10-01-next-15.md). Item 15 covers the PR #63 decision.
 - **Leaner CI and two previews per PR.** Three-minute PR check, a staging Vercel project for per-PR staging previews, and Edge Function CORS for preview hosts. Plan: [2026-10-01 leaner CI and previews](2026-10-01-ci-and-preview-verification.md).
 
@@ -20,8 +19,9 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## Shipped
 
-These plans are finished. Most of their files were removed and git history keeps them. The three linked below are kept as the record, and each says `**Status:** Shipped`.
+These plans are finished. Most of their files were removed and git history keeps them. The linked plans below are kept as the record, and each says `**Status:** Shipped`.
 
+- Missing translation keys: 90 literal keys and 40 count forms added to each catalog. Plan: [2026-10-02 missing translation keys](2026-10-02-missing-translation-keys.md).
 - Voice Sparring and Crossfire: #84. Plan kept as the record: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
 - Debate-aware AI and smaller modules: #75. Plan kept as the record: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
 - Current Debate foundation: #72. Plan kept as the record: [2026-09-25 current debate foundation](2026-09-25_074255-current-debate-foundation.md).
