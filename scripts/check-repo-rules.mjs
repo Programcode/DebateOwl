@@ -121,13 +121,18 @@ function blankComments(source) {
 const isNegated = (before) => /\bNOT[\s(]*$/i.test(before);
 
 // Arguments of the call whose opening parenthesis is at `open`, up to its
-// matching close, skipping parentheses inside string literals.
+// matching close, skipping parentheses inside quoted and dollar-quoted strings.
 function callArguments(source, open) {
   let depth = 0;
   let quoted = false;
   for (let index = open; index < source.length; index += 1) {
     const char = source[index];
-    if (char === "'") quoted = !quoted;
+    const dollar = quoted ? null : source.slice(index).match(/^\$[A-Za-z_]*\$/);
+    if (dollar) {
+      const end = source.indexOf(dollar[0], index + dollar[0].length);
+      if (end === -1) break;
+      index = end + dollar[0].length - 1;
+    } else if (char === "'") quoted = !quoted;
     else if (!quoted && char === "(") depth += 1;
     else if (!quoted && char === ")" && --depth === 0) return source.slice(open + 1, index);
   }
@@ -144,8 +149,12 @@ function checkPgTapPrivileges() {
   for (const file of listFiles("supabase/tests", [".sql"])) {
     const source = blankComments(readFileSync(path.join(root, file), "utf8"));
     for (const match of source.matchAll(call)) {
-      const literals = [...callArguments(source, match.index + match[0].length - 1).matchAll(/'((?:[^']|'')*)'/g)];
-      const privilege = literals.at(-1)?.[1] ?? "";
+      // String arguments, single- or dollar-quoted; the privilege is the last.
+      const literals = [
+        ...callArguments(source, match.index + match[0].length - 1).matchAll(/'((?:[^']|'')*)'|\$([A-Za-z_]*)\$([\s\S]*?)\$\2\$/g),
+      ];
+      const last = literals.at(-1);
+      const privilege = last?.[1] ?? last?.[3] ?? "";
       if (privilege.includes(",") && !isNegated(source.slice(0, match.index))) {
         report(file, lineOf(source, match.index), "a privilege list means \"any of\": check one privilege per call, or write a negative check as NOT has_*_privilege(...)");
       }
