@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T09:24:38.325Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Argument Argument 1 Your first argument…\"",
+        "target": {
+          "role": "button",
+          "name": "Argument Argument 1 Your first argument Strong",
+          "testId": "rf__node-c1"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Delete\" (1 of 2)",
+        "target": {
+          "role": "button",
+          "name": "Delete",
+          "position": {
+            "index": 0,
+            "of": 2
+          }
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Delete node\"",
+        "target": {
+          "role": "button",
+          "name": "Delete node"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Save\"",
+        "target": {
+          "role": "button",
+          "name": "Save"
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"Zoo ban flow\" into textbox \"Node title...\" in \"Save Flowchart\"",
+        "target": {
+          "role": "textbox",
+          "name": "Node title...",
+          "placeholder": "Node title...",
+          "within": "Save Flowchart"
+        },
+        "value": "Zoo ban flow"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Save Flowchart\"",
+        "target": {
+          "role": "button",
+          "name": "Save Flowchart"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/workspace.e2e.ts::a%20student%20edits%20and%20saves%20a%20flowchart",
+      "targetId": "mobile",
+      "instructionDigest": "f9b2512fe4780b8389cd48765f698834cc973af6a8e64ba553502c62ef3fe327",
+      "paramsDigest": "d8eb2b16cb9f438cdf20460c83ea28bd5d56bbe5cac29e3300059124989825cb",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Deleted Argument 1; the flowchart now shows two arguments. Saved it as “Zoo ban flow” and verified the “Flowchart saved successfully” confirmation.",
+    "startPath": "/app/flowchart",
+    "endPath": "/app/flowchart",
+    "endAnchors": [
+      {
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "text": "Flowchart saved successfully"
+      },
+      {
+        "role": "heading",
+        "name": "Argument Flowchart"
+      },
+      {
+        "text": "Support"
+      },
+      {
+        "text": "No current debate. Results stay one-off until you start one."
+      },
+      {
+        "text": "Thesis"
+      },
+      {
+        "text": "Your Thesis"
+      },
+      {
+        "text": "Click to edit or add new nodes"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "status",
+        "name": "Opening Flowchart"
+      }
+    ],
+    "endWaitMs": 13789
+  }
+}

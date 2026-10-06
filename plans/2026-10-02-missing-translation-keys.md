@@ -1,6 +1,6 @@
 # Missing translation keys
 
-**Status:** Shipped in `chore/i18n-missing-keys`. The source scan found 88 missing literal keys and 40 missing count forms. Two more keys separate source and case save failures from chat save failures.
+**Status:** Shipped (Done). `chore/i18n-missing-keys` added 90 literal keys and 40 count forms; this follow-up localizes Flowchart strength badges and the Hungarian landing badge.
 
 ## Problem
 

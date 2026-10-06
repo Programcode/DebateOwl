@@ -3,14 +3,17 @@ name: e2e
 description: Agentic end-to-end tests with e2e, the e2e runner. Covers scaffolding e2e.config.ts, picking the Playwright browser engine or the agent-device mobile engine, starting the app under test from the config, driving flows with agent.act, judging with agent.assert, agent.waitFor, and agent.extract, pinning values with screen, app, browser, and expect, shaping the agent (context, system prompt, tools, personas), the replay cache, the e2e CLI, reading .e2e/report.json, and bug bashes (parallel explore runs proven with repro tests). Use when a project depends on e2e, when asked for end-to-end, browser, mobile, or agentic UI tests, to bug bash or hunt for bugs, or when an e2e run fails.
 ---
 
-> **DebateLab rules override this skill.** Vendored from `e2e@0.15.2`
+> **DebateLab rules override this skill.** Vendored from `e2e@0.17.0`
 > (`node_modules/e2e/skills/e2e`, Apache-2.0, TesterArmy). Refresh it with
 > `rm -rf .claude/skills/e2e && cp -r node_modules/e2e/skills/e2e .claude/skills/e2e`
 > after an upgrade, then re-add this block.
 >
 > - Tests live in `agentic/*.e2e.ts` and import `test`, `expect`, and the
 >   `student` fixture from `agentic/support/fixtures.ts`. The config is
->   `e2e.config.ts`.
+>   `e2e.config.ts`. Tag a tool journey `journey`; a new route joins the page
+>   sweep in `agentic/pages.e2e.ts`. The fixtures fail a test on page errors,
+>   `console.error`, Supabase 5xx answers and overflow; fix the app, never the
+>   check.
 > - Run everything through the verification stack, never bare `npx e2e`:
 >   `.claude/skills/verify-debatelab/bin/verify.sh up`, then
 >   `verify.sh e2e run|explore|list ...`, then `verify.sh down`. The wrapper
@@ -30,8 +33,8 @@ one goal; `agent.assert`, `agent.waitFor`, and `agent.extract` judge the
 screen. `screen`, `app`, `browser`, and `expect` make exact interactions and
 checks. The replay cache reruns verified actions and checks their recorded end
 state without a model call; agent judgments still run live. UI targets use
-`@e2e-dev/web` for browsers or `@e2e-dev/mobile` for iOS simulators and
-Android emulators. A test that takes only `app` can check an API with `fetch`
+`@e2e-dev/web` for browsers or `@e2e-dev/mobile` for iOS simulators,
+Android emulators, and connected phones. A test that takes only `app` can check an API with `fetch`
 and `expect` (topic `writing-tests`). Model sign-in commands are in
 [setup](references/setup.md#subscriptions-and-api-keys).
 

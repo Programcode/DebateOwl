@@ -7,7 +7,7 @@ import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, signIn, tes
 
 test("acct-language: the output language follows the account to a new device and reaches the model", async ({ signedIn: page, user, browser, evidence }) => {
   await page.goto("/app/settings");
-  await page.locator("div.space-y-2", { has: page.getByText("AI Output Language", { exact: true }) }).getByRole("combobox").click();
+  await page.getByRole("combobox", { name: "AI Output Language" }).click();
   await page.getByRole("option", { name: "Magyar" }).click();
   await expect.poll(async () => {
     const { data } = await admin.from("user_settings").select("output_language").eq("user_id", await user.userId()).single();

@@ -1,0 +1,135 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:40:02.345Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "type",
+        "summary": "type \"This House would make public transport …\" into textbox \"Resolution\"",
+        "target": {
+          "role": "textbox",
+          "name": "Resolution",
+          "testId": "crossfire-resolution",
+          "placeholder": "Enter the motion or resolution you are debating..."
+        },
+        "value": "This House would make public transport free"
+      },
+      {
+        "name": "type",
+        "summary": "type \"Fares keep the poorest riders off the b…\" into textbox \"Your argument or case\"",
+        "target": {
+          "role": "textbox",
+          "name": "Your argument or case",
+          "testId": "crossfire-argument",
+          "placeholder": "Paste the argument you want to defend..."
+        },
+        "value": "Fares keep the poorest riders off the bus."
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start crossfire\"",
+        "target": {
+          "role": "button",
+          "name": "Start crossfire",
+          "testId": "start-crossfire"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" in \"Start a debate with this motion?\"",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "within": "Start a debate with this motion?"
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"What evidence links free fares to fewer…\" into textbox \"Your question\"",
+        "target": {
+          "role": "textbox",
+          "name": "Your question",
+          "testId": "crossfire-input",
+          "placeholder": "Ask a focused question..."
+        },
+        "value": "What evidence links free fares to fewer cars?"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Send question\"",
+        "target": {
+          "role": "button",
+          "name": "Send question",
+          "testId": "submit-turn"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"End session\"",
+        "target": {
+          "role": "button",
+          "name": "End session",
+          "testId": "end-crossfire"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/practice.e2e.ts::a%20student%20cross-examines%20the%20AI%20and%20gets%20a%20debrief",
+      "targetId": "desktop",
+      "instructionDigest": "14be6438f67651b8800cbf10b9bcd6c6b2b25a701f80951824044a68a6cf23e8",
+      "paramsDigest": "a16f3b388b51b313b67c8f80b04a5837d9c6a50eb69afa11823721cec0c11dc5",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Started a Current Debate for “This House would make public transport free,” ran Crossfire in Question the AI mode with the provided argument, submitted “What evidence links free fares to fewer cars?”, received the AI answer, and ended the session. The transcript is visible in the Crossfire debrief.",
+    "startPath": "/app/crossfire",
+    "endPath": "/app/crossfire",
+    "endAnchors": [
+      {
+        "text": "Current debate"
+      },
+      {
+        "role": "heading",
+        "name": "Crossfire debrief"
+      },
+      {
+        "text": "Review what happened in the exchange and plan your next move."
+      },
+      {
+        "role": "heading",
+        "name": "Concessions secured"
+      },
+      {
+        "text": "No grounded finding in this transcript."
+      },
+      {
+        "role": "heading",
+        "name": "Questions that controlled the exchange"
+      },
+      {
+        "role": "heading",
+        "name": "Weak or repetitive questions"
+      },
+      {
+        "role": "heading",
+        "name": "Evasive or incomplete answers"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "status",
+        "name": "Opening Crossfire"
+      },
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
+      }
+    ],
+    "endWaitMs": 13614
+  }
+}

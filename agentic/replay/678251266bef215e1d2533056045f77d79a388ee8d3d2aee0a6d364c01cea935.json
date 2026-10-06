@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:41:51.795Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "type",
+        "summary": "type \"This House would lower the voting age t…\" into textbox \"Motion\"",
+        "target": {
+          "role": "textbox",
+          "name": "Motion",
+          "placeholder": "This house would require social media companies to verify the age of every user."
+        },
+        "value": "This House would lower the voting age to 16"
+      },
+      {
+        "name": "tap",
+        "summary": "tap combobox \"Round format\"",
+        "target": {
+          "role": "combobox",
+          "name": "Round format"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap option \"Lincoln-Douglas · 5 speeches\"",
+        "target": {
+          "role": "option",
+          "name": "Lincoln-Douglas · 5 speeches"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start round\"",
+        "target": {
+          "role": "button",
+          "name": "Start round"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" in \"Start a debate with this motion?\"",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "within": "Start a debate with this motion?"
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"Sixteen-year-olds pay taxes and should …\" into textbox \"Draft for Affirmative constructive\"",
+        "target": {
+          "role": "textbox",
+          "name": "Draft for Affirmative constructive",
+          "placeholder": "Build your claim, warrant, and impact..."
+        },
+        "value": "Sixteen-year-olds pay taxes and should have a say in how that money is spent."
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Submit speech\"",
+        "target": {
+          "role": "button",
+          "name": "Submit speech"
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"Sixteen-year-olds pay taxes and should …\" into textbox \"Draft for First affirmative rebuttal\"",
+        "target": {
+          "role": "textbox",
+          "name": "Draft for First affirmative rebuttal",
+          "placeholder": "Build your claim, warrant, and impact..."
+        },
+        "value": "Sixteen-year-olds pay taxes and should have a say in how that money is spent."
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Submit speech\"",
+        "target": {
+          "role": "button",
+          "name": "Submit speech"
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"Sixteen-year-olds pay taxes and should …\" into textbox \"Draft for Second affirmative rebuttal\"",
+        "target": {
+          "role": "textbox",
+          "name": "Draft for Second affirmative rebuttal",
+          "placeholder": "Build your claim, warrant, and impact..."
+        },
+        "value": "Sixteen-year-olds pay taxes and should have a say in how that money is spent."
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Submit speech\"",
+        "target": {
+          "role": "button",
+          "name": "Submit speech"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/practice.e2e.ts::a%20student%20practises%20a%20full%20sparring%20round%20and%20gets%20a%20verdict",
+      "targetId": "mobile",
+      "instructionDigest": "a24c487d613a9127f852667430286bc158068e0277fba5886fddf022b363a331",
+      "paramsDigest": "4e8b3a690950bfa3fe355c4e6cc27a7f47f902d50bbdfd4629ce085b25e8184c",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Started the motion as the Current Debate, selected Lincoln-Douglas, and submitted the provided speech for all three of your turns. The round ended and the verdict is shown: You won the ballot, 80–72; the judge’s verdict reads “FAKE-PROVIDER verdict: the user had the edge.”.",
+    "startPath": "/app/sparring",
+    "endPath": "/app/sparring",
+    "endAnchors": [
+      {
+        "text": "Current debate"
+      },
+      {
+        "text": "This House would lower the voting age to 16"
+      },
+      {
+        "text": "Round review"
+      },
+      {
+        "role": "heading",
+        "name": "Here is what happened in the room."
+      },
+      {
+        "role": "button",
+        "name": "Export DOCX"
+      },
+      {
+        "role": "button",
+        "name": "PDF"
+      },
+      {
+        "role": "button",
+        "name": "Start another round"
+      },
+      {
+        "text": "Final result"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "status",
+        "name": "Opening Sparring"
+      },
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-mobile"
+      }
+    ],
+    "endWaitMs": 13987
+  }
+}

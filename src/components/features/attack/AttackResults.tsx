@@ -79,7 +79,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
           <Lightbulb className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-primary">{t('attackResults.improvedVersion')}</span>
         </div>
-        <p className="text-sm text-foreground"><Markdown>{weakness.improvedVersion}</Markdown></p>
+        <div className="text-sm text-foreground"><Markdown>{weakness.improvedVersion}</Markdown></div>
       </div>
     </div>
   );
@@ -266,7 +266,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
                     <Badge variant="destructive">{fallacy.name}</Badge>
                     <span className="text-xs text-muted-foreground">{t('attackResults.in')} {fallacy.location}</span>
                   </div>
-                  <p className="text-sm text-foreground"><Markdown>{fallacy.explanation}</Markdown></p>
+                  <div className="text-sm text-foreground"><Markdown>{fallacy.explanation}</Markdown></div>
                 </div>
               ))}
             </div>

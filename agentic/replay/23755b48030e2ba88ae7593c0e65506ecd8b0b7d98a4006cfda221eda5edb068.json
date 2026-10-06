@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-02T16:08:26.536Z",
+  "createdAt": "2026-10-06T10:49:38.577Z",
   "payload": {
     "actions": [
       {
@@ -58,18 +58,28 @@
     },
     "recordedFor": {
       "testId": "agentic/case-generation.e2e.ts::a%20student%20starts%20a%20debate%20and%20generates%20a%20case%20for%20it",
-      "targetId": "mobile",
-      "instructionDigest": "86311d0b0c95064361ba72d803d642b0c0266b78be93afeba829dde446989804"
+      "targetId": "desktop",
+      "instructionDigest": "86311d0b0c95064361ba72d803d642b0c0266b78be93afeba829dde446989804",
+      "paramsDigest": "d63cb21535f10ff8c68842c61788532a41b77a00b8533372ddf5f3bc2c00b258",
+      "callIndex": 0,
+      "agent": "default"
     },
-    "summary": "Started a new debate on the motion \"This House would replace school exams with continuous assessment\" (now shown as Current Debate in header and home), opened Generate (working-in strip shows the motion) and generated the case. Result confirmed: \"Generate complete\" with Case Structure, Thesis/3 con…",
+    "summary": "The new debate is active with the motion “This House would replace school exams with continuous assessment.” Generate completed successfully and displayed “Your debate case is ready,” with the generated case structure and arguments visible.",
     "startPath": "/app",
     "endPath": "/app/generate",
     "endAnchors": [
       {
-        "text": "Current debate"
+        "role": "button",
+        "name": "Close"
       },
       {
-        "text": "This House would replace school exams with continuous assessment"
+        "text": "Generate complete"
+      },
+      {
+        "text": "Your debate case is ready."
+      },
+      {
+        "text": "Current debate"
       },
       {
         "role": "heading",
@@ -79,21 +89,41 @@
         "text": "Working in:"
       },
       {
+        "text": "This House would replace school exams with continuous assessment"
+      },
+      {
         "text": "In favor"
-      },
+      }
+    ],
+    "goneAnchors": [
       {
         "role": "button",
-        "name": "Change"
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
       },
       {
-        "role": "button",
-        "name": "Use once"
+        "text": "No current debate"
+      },
+      {
+        "text": "Start a debate to keep one motion, its sources, and your results together."
       },
       {
         "role": "heading",
-        "name": "Generate Debate Case"
+        "name": "Prepare"
+      },
+      {
+        "text": "Generate"
+      },
+      {
+        "text": "Build a complete debate case."
+      },
+      {
+        "text": "Brainstorm"
+      },
+      {
+        "text": "Explore angles for a motion."
       }
     ],
-    "endWaitMs": 16389
+    "endWaitMs": 15032
   }
 }

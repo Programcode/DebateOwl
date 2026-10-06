@@ -3,18 +3,28 @@ name: Agentic E2E
 # The e2e suite in agentic/ against the local stack in fake mode: an AI agent
 # drives goal-level flows and judges screens. Recorded flows replay from
 # agentic/replay without model calls; judgments always call the model.
-# On demand it runs one exploration (a persona looking for bugs) instead.
+# It runs nightly and on pull requests that touch the app or the suite. A
+# weekly bug bash sends each persona exploring, and on demand one exploration
+# runs instead of the suite.
 # Not a required check. See docs/testing.md#agentic-browser-tests.
 on:
   pull_request:
     paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - "package-lock.json"
       - "agentic/**"
       - "e2e.config.ts"
       - "e2e/full-stack/stack-core.ts"
+      - "e2e/full-stack/fake-openrouter.mjs"
       - ".claude/skills/verify-debatelab/bin/verify.sh"
       - ".github/workflows/agentic-e2e.yml"
   schedule:
-    - cron: "47 3 * * *"
+    - cron: "47 3 * * *" # the suite
+    - cron: "13 5 * * 0" # the weekly bug bash
   workflow_dispatch:
     inputs:
       explore:
@@ -36,13 +46,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: agentic-e2e-${{ github.ref }}
+  group: agentic-e2e-${{ github.ref }}-${{ github.event.schedule || inputs.persona || 'suite' }}
   cancel-in-progress: true
 
+env:
+  SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+
 jobs:
-  agentic-e2e:
+  suite:
+    if: github.event.schedule != '13 5 * * 0' && (github.event_name != 'workflow_dispatch' || inputs.explore == '')
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Four legs keep each well under the timeout: the page sweep makes about
+    # 60 judgments per viewport, the journeys and the rest about 15.
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [desktop, mobile]
+        part: [pages, journeys]
+    name: suite (${{ matrix.target }}, ${{ matrix.part }})
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,32 +95,21 @@ jobs:
         run: test -n "$LIVE_OPENROUTER_API_KEY" || { echo "LIVE_OPENROUTER_API_KEY is not set" >&2; exit 1; }
 
       - name: Start the local stack (fake model provider)
-        env:
-          SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
         run: .claude/skills/verify-debatelab/bin/verify.sh up
 
       - name: Agentic suite
-        if: inputs.explore == ''
         env:
           LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
           E2E_AGENT_MODEL: ${{ vars.E2E_AGENT_MODEL }}
           E2E_JUDGE_MODEL: ${{ vars.E2E_JUDGE_MODEL }}
+          TARGET: ${{ matrix.target }}
+          PART: ${{ matrix.part }}
         # Bug-bash repro tests fail until their bug is fixed; they run on demand.
-        run: .claude/skills/verify-debatelab/bin/verify.sh e2e run --exclude-tag repro --reporter list,markdown,junit
-
-      - name: Exploration
-        if: inputs.explore != ''
-        env:
-          LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
-          E2E_AGENT_MODEL: ${{ vars.E2E_AGENT_MODEL }}
-          E2E_JUDGE_MODEL: ${{ vars.E2E_JUDGE_MODEL }}
-          GOAL: ${{ inputs.explore }}
-          PERSONA: ${{ inputs.persona }}
-          TARGET: ${{ inputs.target }}
-        run: >-
-          .claude/skills/verify-debatelab/bin/verify.sh e2e explore "$GOAL"
-          --session student --agent "$PERSONA" --target "$TARGET"
-          --trace=on --video=on --reporter list,markdown
+        # The journeys leg runs everything that is not the page sweep, so an
+        # untagged test still runs.
+        run: |
+          if [ "$PART" = pages ]; then filter=(--tag pages --exclude-tag repro); else filter=(--exclude-tag pages,repro); fi
+          .claude/skills/verify-debatelab/bin/verify.sh e2e run --target "$TARGET" "${filter[@]}" --reporter list,markdown,junit
 
       - name: Publish the report
         if: always()
@@ -117,7 +128,109 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: agentic-e2e-${{ github.run_id }}
+          name: agentic-e2e-${{ matrix.target }}-${{ matrix.part }}-${{ github.run_id }}
+          path: |
+            .verify/artifacts/
+            .verify/logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The weekly bug bash explores with every persona; a manual run explores once.
+  plan-explore:
+    if: github.event.schedule == '13 5 * * 0' || (github.event_name == 'workflow_dispatch' && inputs.explore != '')
+    runs-on: ubuntu-latest
+    outputs:
+      legs: ${{ steps.plan.outputs.legs }}
+    steps:
+      - id: plan
+        env:
+          GOAL: ${{ inputs.explore }}
+          PERSONA: ${{ inputs.persona }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [ -n "$GOAL" ]; then
+            jq -cn '[{persona: env.PERSONA, target: env.TARGET, goal: env.GOAL}]'
+          else
+            jq -cn '[
+              {persona: "first-timer", target: "desktop", goal: "Get ready for a tournament next week: start a debate, generate a case for it, then practise it in a Sparring round. Report anything broken, confusing or misleading."},
+              {persona: "coach", target: "desktop", goal: "Use Generate, Brainstorm and the Library in one debate, then check that History and the Current Debate page show every saved result and source where the app says they will be."},
+              {persona: "edge-input", target: "desktop", goal: "Try awkward input in the motion, argument and source fields of Generate, Attack and the Library: very long text, emoji, right-to-left text, blank fields and double submits."},
+              {persona: "hungarian", target: "mobile", goal: "Switch the app to Hungarian, start a debate, and open every tool in the menu. Report untranslated, cut-off or overflowing text."}
+            ]'
+          fi | sed 's/^/legs=/' >>"$GITHUB_OUTPUT"
+
+  explore:
+    needs: plan-explore
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Findings are leads to reproduce, not verdicts: a red exploration does not
+    # fail the workflow. docs/testing.md has the bug-bash procedure.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.plan-explore.outputs.legs) }}
+    name: explore (${{ matrix.leg.persona }}, ${{ matrix.leg.target }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.116.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Require the testing agent's model key
+        env:
+          LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
+        run: test -n "$LIVE_OPENROUTER_API_KEY" || { echo "LIVE_OPENROUTER_API_KEY is not set" >&2; exit 1; }
+
+      - name: Start the local stack (fake model provider)
+        run: .claude/skills/verify-debatelab/bin/verify.sh up
+
+      - name: Exploration
+        env:
+          LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
+          E2E_AGENT_MODEL: ${{ vars.E2E_AGENT_MODEL }}
+          E2E_JUDGE_MODEL: ${{ vars.E2E_JUDGE_MODEL }}
+          GOAL: ${{ matrix.leg.goal }}
+          PERSONA: ${{ matrix.leg.persona }}
+          TARGET: ${{ matrix.leg.target }}
+        run: >-
+          .claude/skills/verify-debatelab/bin/verify.sh e2e explore "$GOAL"
+          --session student --agent "$PERSONA" --target "$TARGET"
+          --trace=on --video=on --reporter list,markdown
+
+      - name: Publish the report
+        if: always()
+        run: |
+          for summary in .verify/artifacts/*-e2e-*/summary.md; do
+            [ -f "$summary" ] && cat "$summary" >>"$GITHUB_STEP_SUMMARY"
+          done
+          true
+
+      - name: Stop the local stack
+        if: always()
+        run: .claude/skills/verify-debatelab/bin/verify.sh down
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agentic-explore-${{ matrix.leg.persona }}-${{ matrix.leg.target }}-${{ github.run_id }}
           path: |
             .verify/artifacts/
             .verify/logs/

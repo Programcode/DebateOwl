@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:52:21.869Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap combobox \"Interface Language\"",
+        "target": {
+          "role": "combobox",
+          "name": "Interface Language"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap option \"Español\"",
+        "target": {
+          "role": "option",
+          "name": "Español"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/workspace.e2e.ts::a%20student%20switches%20the%20interface%20to%20Spanish%20and%20the%20AI%20output%20to%20Hungarian",
+      "targetId": "desktop",
+      "instructionDigest": "2527feb760c51cb423dc8dc5c71d964f6370bcc973d7b06eb9f87ff5a1f1ba3f",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Changed the Interface Language setting to Español. The settings page and navigation are now displayed in Spanish, including “Ajustes” and “Idioma de Interfaz.”.",
+    "startPath": "/app/settings",
+    "endPath": "/app/settings",
+    "endAnchors": [
+      {
+        "role": "image",
+        "name": "Logotipo de DebateLab"
+      },
+      {
+        "text": "Inicio"
+      },
+      {
+        "role": "button",
+        "name": "Iniciar debate",
+        "testId": "current-debate-desktop"
+      },
+      {
+        "text": "Biblioteca"
+      },
+      {
+        "text": "Historial"
+      },
+      {
+        "text": "Cambiar tema"
+      },
+      {
+        "role": "link",
+        "name": "Ajustes"
+      },
+      {
+        "role": "heading",
+        "name": "Ajustes"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "image",
+        "name": "DebateLab logo"
+      },
+      {
+        "text": "Home"
+      },
+      {
+        "role": "button",
+        "name": "Start debate",
+        "testId": "current-debate-desktop"
+      },
+      {
+        "text": "Library"
+      },
+      {
+        "text": "History"
+      },
+      {
+        "text": "Toggle theme"
+      },
+      {
+        "role": "link",
+        "name": "Settings"
+      },
+      {
+        "role": "heading",
+        "name": "Settings"
+      }
+    ],
+    "endWaitMs": 17439
+  }
+}

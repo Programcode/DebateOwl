@@ -1,6 +1,7 @@
 // src/components/features/factoids/FactoidsForm.tsx
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
+import type { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { BookOpen, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,8 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
   const { t } = useTranslation();
   const { factoidsForm, setFactoidsForm } = useSessionStore();
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FactoidsInput>({
+  // The schema coerces and defaults fields, so the form's input type differs from what submit receives.
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<z.input<typeof FactoidsInputSchema>, unknown, FactoidsInput>({
     resolver: zodResolver(FactoidsInputSchema),
     defaultValues: {
       claim: '',
@@ -57,6 +59,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
   }, [watch, setFactoidsForm]);
 
   const currentValues = watch();
+  const sourceCount = Number(currentValues.sourceCount) || 5;
 
   return (
     <Card className="border-secondary/30">
@@ -130,12 +133,12 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
               <div className="flex items-center justify-between">
                 <Label htmlFor="factoid-source-count" className="text-sm font-medium">{t('factoidsForm.sourceCount', 'Sources')}</Label>
                 <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  {currentValues.sourceCount || 5}
+                  {sourceCount}
                 </span>
               </div>
               <Slider
                 id="factoid-source-count"
-                value={[currentValues.sourceCount || 5]}
+                value={[sourceCount]}
                 min={3}
                 max={15}
                 step={1}

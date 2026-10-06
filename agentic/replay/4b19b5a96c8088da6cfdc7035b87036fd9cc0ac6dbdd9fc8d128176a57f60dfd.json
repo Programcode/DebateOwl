@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-06T08:39:34.786Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "type",
+        "summary": "type \"How do I weigh access against cost in a…\" into textbox \"Ask your debate coach...\"",
+        "target": {
+          "role": "textbox",
+          "name": "Ask your debate coach...",
+          "placeholder": "Ask your debate coach..."
+        },
+        "value": "How do I weigh access against cost in a rebuttal?"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Send message\"",
+        "target": {
+          "role": "button",
+          "name": "Send message"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/ai-tools.e2e.ts::a%20student%20asks%20the%20coach%20a%20question%20and%20gets%20a%20streamed%20answer",
+      "targetId": "desktop",
+      "instructionDigest": "335f7825088365022905d2b2e0551e97f33b1036bd587821def3bf4f33836358",
+      "paramsDigest": "1208085b29a5f6f45f0f6c438ee587681c3055ffeaa92cfc652a127dab3c39d9",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Asked the debate coach “How do I weigh access against cost in a rebuttal?” and verified a visible answer: “FAKE-PROVIDER streamed answer: weigh access against cost.”",
+    "startPath": "/app/ask",
+    "endPath": "/app/ask",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "Ask"
+      },
+      {
+        "text": "No current debate. Results stay one-off until you start one."
+      },
+      {
+        "role": "heading",
+        "name": "Ask Your Coach"
+      },
+      {
+        "text": "Get answers to debate questions"
+      },
+      {
+        "text": "How do I weigh access against cost in a rebuttal?"
+      },
+      {
+        "text": "FAKE-PROVIDER streamed answer: weigh access against cost."
+      },
+      {
+        "text": "Citations"
+      },
+      {
+        "text": "Web search"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "status",
+        "name": "Opening Ask"
+      }
+    ],
+    "endWaitMs": 15156
+  }
+}

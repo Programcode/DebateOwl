@@ -1532,7 +1532,12 @@
     "edgeRebuttal": "Refutación",
     "edgeSupport": "Apoyo",
     "exportFailedToast": "No se pudo exportar el diagrama.",
-    "selectedNode": "Seleccionado"
+    "selectedNode": "Seleccionado",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "fitView": "Ajustar a la vista",
+    "toggleInteractivity": "Bloquear o desbloquear el lienzo",
+    "miniMap": "Vista general del diagrama"
   },
   "historyPage": {
     "title": "Historial",

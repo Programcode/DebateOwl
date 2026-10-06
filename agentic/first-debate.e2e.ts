@@ -4,7 +4,7 @@ const MOTION = "This House would make debate compulsory in secondary schools";
 
 // The onboarding copy and step order change often. The goal stays the same:
 // a new student finishes the tour with their first debate started.
-test("a new student starts their first debate from the onboarding tour", agentic, async ({ agent, browser, student }) => {
+test("a new student starts their first debate from the onboarding tour", { ...agentic, tags: ["journey"] }, async ({ agent, browser, student }) => {
   await agent.act("Follow the onboarding tour. At its first step, start a debate on the motion {motion}, then go through the remaining steps until the tour is finished.", {
     params: { motion: MOTION },
   });

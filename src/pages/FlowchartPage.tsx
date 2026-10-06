@@ -5,6 +5,7 @@ import ReactFlow, {
     Node,
     Edge,
     Controls,
+    ControlButton,
     Background,
     MiniMap,
     useNodesState,
@@ -15,6 +16,9 @@ import ReactFlow, {
     BackgroundVariant,
     Handle,
     Position,
+    useReactFlow,
+    useStore,
+    useStoreApi,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
@@ -62,7 +66,11 @@ import {
     Save,
     FolderOpen,
     Clock,
-    LayoutGrid
+    LayoutGrid,
+    Minus,
+    Maximize,
+    Lock,
+    Unlock
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatRelativeDate } from '@/lib/date-format';
@@ -98,6 +106,50 @@ const nodeIcons: Record<NodeType, React.ReactNode> = {
     rebuttal: <GitBranch className="h-4 w-4" />,
     dropped: <AlertTriangle className="h-4 w-4" />,
 };
+
+const strengthTranslationKeys = {
+    strong: 'flowchart.strengthStrong',
+    moderate: 'flowchart.strengthModerate',
+    weak: 'flowchart.strengthWeak',
+};
+
+// React Flow's own control buttons have fixed English names, so the canvas
+// renders the same four with translated ones.
+function LocalizedControls() {
+    const { t } = useTranslation();
+    const { zoomIn, zoomOut, fitView } = useReactFlow();
+    const store = useStoreApi();
+    const isInteractive = useStore((state) => state.nodesDraggable || state.nodesConnectable || state.elementsSelectable);
+    const minZoomReached = useStore((state) => state.transform[2] <= state.minZoom);
+    const maxZoomReached = useStore((state) => state.transform[2] >= state.maxZoom);
+    const toggleInteractivity = () => store.setState({
+        nodesDraggable: !isInteractive,
+        nodesConnectable: !isInteractive,
+        elementsSelectable: !isInteractive,
+    });
+
+    return (
+        <Controls showZoom={false} showFitView={false} showInteractive={false}>
+            <ControlButton onClick={() => zoomIn()} disabled={maxZoomReached} title={t('flowchart.zoomIn')} aria-label={t('flowchart.zoomIn')}>
+                <Plus />
+            </ControlButton>
+            <ControlButton onClick={() => zoomOut()} disabled={minZoomReached} title={t('flowchart.zoomOut')} aria-label={t('flowchart.zoomOut')}>
+                <Minus />
+            </ControlButton>
+            <ControlButton onClick={() => fitView()} title={t('flowchart.fitView')} aria-label={t('flowchart.fitView')}>
+                <Maximize />
+            </ControlButton>
+            <ControlButton
+                onClick={toggleInteractivity}
+                title={t('flowchart.toggleInteractivity')}
+                aria-label={t('flowchart.toggleInteractivity')}
+                aria-pressed={!isInteractive}
+            >
+                {isInteractive ? <Unlock /> : <Lock />}
+            </ControlButton>
+        </Controls>
+    );
+}
 
 // Custom node component
 function CustomNode({ data }: { data: FlowNodeData }) {
@@ -135,7 +187,7 @@ function CustomNode({ data }: { data: FlowNodeData }) {
                             : 'border-yellow-300 text-yellow-100'
                         }`}
                 >
-                    {data.strength}
+                    {t(strengthTranslationKeys[data.strength])}
                 </Badge>
             )}
             <Handle type="source" position={Position.Bottom} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
@@ -708,8 +760,9 @@ export default function FlowchartPage() {
                             fitView
                             attributionPosition="bottom-left"
                         >
-                            <Controls />
+                            <LocalizedControls />
                             <MiniMap
+                                ariaLabel={t('flowchart.miniMap')}
                                 nodeColor={(node) => {
                                     const type = (node.data as FlowNodeData).type;
                                     switch (type) {
