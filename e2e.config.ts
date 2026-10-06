@@ -31,7 +31,7 @@ const context = [
   "Each student works in one Current Debate at a time. The header control reads \"Start debate\" until one exists, then names the motion. Tool pages show a strip \"Working in: <motion>\".",
   "Tools: Generate (a full debate case: thesis, contentions, predicted opponent case, prepared counters), Attack, Brainstorm, Factoids, Ask, Sparring (a practice round against an AI opponent, judged at the end), Crossfire (cross-examination practice), Flowchart, Timer, Library (sources for the Current Debate), and History (saved results).",
   "A tool given a motion with no Current Debate asks \"Start a debate with this motion?\". A motion that differs from the Current Debate asks \"This is a different motion\".",
-  "The interface language can be English, Spanish or Hungarian. Source titles, citations, user content and model names may stay in their own language. Hungarian abbreviates AI as MI (mesterséges intelligencia), so \"MI-modell\" is Hungarian.",
+  "The interface language can be English, Spanish or Hungarian. Source titles, citations, user content and model names may stay in their own language. Hungarian abbreviates AI as MI (mesterséges intelligencia), so \"MI-modell\" is Hungarian, and an English loanword with a Hungarian ending, such as \"coachingot\", is Hungarian. The Spanish interface deliberately keeps the loanwords coach, coaching and sparring (\"Pregunta a tu coach\", \"Para Coaches\", \"Rondas de sparring\"); they are Spanish there.",
   "Long values in selects, chips and narrow fields are shortened with an ellipsis (…) on purpose.",
   "This is a local test stack. Google sign-in, Stripe checkout, ElevenLabs voices and Google Docs export are not configured here, so their failures are expected.",
   "The client runs on a Vite dev server, so the first visit to a page can take a few seconds to render.",
@@ -57,26 +57,36 @@ const agent = (persona?: string) => ({
   system: [...rules, ...(persona ? [persona] : [])].join("\n"),
 });
 
+// Records page errors, console.error and Supabase 5xx answers in every
+// document; the student fixture fails the test on them.
+const initScripts = [{ path: "agentic/support/capture-errors.js" }];
+
 export default {
   projectId: "debatelab",
   tests: "agentic/**/*.e2e.ts",
   targets: [
     {
       name: "desktop",
-      engine: web({ viewport: { width: 1280, height: 800 } }),
+      engine: web({ viewport: { width: 1280, height: 800 }, initScripts }),
       app: { url: appUrl, identity: "debatelab-verify-stack", environment: "test" },
     },
     {
-      // A phone-sized viewport only: e2e 0.15 has no touch or user-agent emulation.
+      // A phone-sized viewport without touch emulation, which e2e does not
+      // offer. The app lays out by viewport width and never reads the user
+      // agent; the Playwright Pixel 5 project covers touch.
       name: "mobile",
-      engine: web({ viewport: { width: 393, height: 851 } }),
+      engine: web({ viewport: { width: 393, height: 851 }, initScripts }),
       app: { url: appUrl, identity: "debatelab-verify-stack", environment: "test" },
     },
   ],
   // AI steps wait on Edge Functions, and a free model can take minutes per judgment.
   timeout: 600_000,
-  // More parallel act steps only trip the free actor's upstream rate limit.
-  workers: process.env.CI ? 1 : 2,
+  // Judgments go to the paid judge, and replayed steps call no model, so three
+  // workers keep the page sweep short. Recording many new flows at once can
+  // trip the free actor's rate limit; record with a paid actor (docs/testing.md).
+  workers: 3,
+  // A test that skips after a failed soft assertion or attempt is a failure.
+  failOnSkippedFailure: true,
   // The dev server compiles lazy routes on first visit.
   assertionTimeout: 15_000,
   video: "retain-on-failure",
