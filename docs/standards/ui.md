@@ -4,9 +4,8 @@ Part of the [coding standards](../../CODING_STANDARDS.md). [docs/architecture.md
 
 ## Every string is translated
 
-- Every user-facing string, including toasts, errors, and accessible names, uses a `t()` key that exists in `en.json`, `es.json`, and `hu.json`. An inline English fallback is not a translation: Spanish and Hungarian users see it ([#11](https://github.com/Programcode/DebateLab/pull/11#discussion_r3872004217), [#43](https://github.com/Programcode/DebateLab/pull/43#discussion_r4048412531)). `src/test/i18n.test.ts` only compares catalogs with each other, so it cannot catch a key missing from all three. [plans/2026-10-02-missing-translation-keys.md](../../plans/2026-10-02-missing-translation-keys.md) adds the check that can.
+- Every user-facing string, including toasts, errors, and accessible names, goes through `t()`. `src/test/i18n-keys.test.ts` fails when a literal key is missing from the catalogs or a `count` call lacks its plural forms. It cannot see dynamic keys (``t(`nav.${key}`)``) or raw values rendered as text, so check those by hand: an English word in a Hungarian screen is the usual sign ([#11](https://github.com/Programcode/DebateLab/pull/11#discussion_r3872004217), [#43](https://github.com/Programcode/DebateLab/pull/43#discussion_r4048412531)).
 - Store a translation key or error kind in state and translate at render time. English strings stored in state stay English after a reload ([#12](https://github.com/Programcode/DebateLab/pull/12#discussion_r3893641290)).
-- A key that receives `count` needs `_one` and `_other` forms in every catalog ([#12](https://github.com/Programcode/DebateLab/pull/12#discussion_r3893641263)).
 - Use the localized feature name everywhere in a catalog: "Interrogatorio", "Keresztkérdezés" ([#12](https://github.com/Programcode/DebateLab/pull/12#discussion_r3893641268), [#13 review](https://github.com/Programcode/DebateLab/pull/13#issuecomment-5477866033)).
 
 ## Accessible names
