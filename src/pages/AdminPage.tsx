@@ -591,7 +591,7 @@ export default function AdminPage() {
                 setLoading(false);
             }
         };
-        loadData();
+        void loadData();
     }, [fetchAdminData, t, toast]);
 
     useEffect(() => {

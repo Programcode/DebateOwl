@@ -6,9 +6,18 @@ INSERT INTO auth.users (id) VALUES
   ('d2222222-2222-4222-8222-222222222222');
 
 SELECT ok(
-  has_table_privilege('authenticated', 'public.debates', 'SELECT,INSERT,UPDATE,DELETE')
-    AND has_table_privilege('authenticated', 'public.current_debates', 'SELECT,INSERT,UPDATE,DELETE')
-    AND has_table_privilege('authenticated', 'public.crossfires', 'SELECT,INSERT,UPDATE,DELETE')
+  has_table_privilege('authenticated', 'public.debates', 'SELECT')
+    AND has_table_privilege('authenticated', 'public.debates', 'INSERT')
+    AND has_table_privilege('authenticated', 'public.debates', 'UPDATE')
+    AND has_table_privilege('authenticated', 'public.debates', 'DELETE')
+    AND has_table_privilege('authenticated', 'public.current_debates', 'SELECT')
+    AND has_table_privilege('authenticated', 'public.current_debates', 'INSERT')
+    AND has_table_privilege('authenticated', 'public.current_debates', 'UPDATE')
+    AND has_table_privilege('authenticated', 'public.current_debates', 'DELETE')
+    AND has_table_privilege('authenticated', 'public.crossfires', 'SELECT')
+    AND has_table_privilege('authenticated', 'public.crossfires', 'INSERT')
+    AND has_table_privilege('authenticated', 'public.crossfires', 'UPDATE')
+    AND has_table_privilege('authenticated', 'public.crossfires', 'DELETE')
     AND has_function_privilege('authenticated', 'public.attach_to_debate(text, uuid, uuid, text)', 'EXECUTE')
     AND NOT has_function_privilege('anon', 'public.attach_to_debate(text, uuid, uuid, text)', 'EXECUTE'),
   'signed-in clients can manage debates and attach work; anonymous callers cannot'

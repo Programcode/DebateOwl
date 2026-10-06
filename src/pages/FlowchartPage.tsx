@@ -538,7 +538,7 @@ export default function FlowchartPage() {
                                                         className="h-8 w-8 text-destructive opacity-70 hover:opacity-100"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleDeleteFlowchart(item.id, e);
+                                                            void handleDeleteFlowchart(item.id, e);
                                                         }}
                                                         aria-label={t('common.delete', 'Delete')}
                                                     >

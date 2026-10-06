@@ -22,7 +22,10 @@ SELECT ok(
   'authenticated callers cannot write demo login attempts'
 );
 SELECT ok(
-  has_table_privilege('service_role', 'public.demo_access_codes', 'SELECT,INSERT,UPDATE,DELETE'),
+  has_table_privilege('service_role', 'public.demo_access_codes', 'SELECT')
+    AND has_table_privilege('service_role', 'public.demo_access_codes', 'INSERT')
+    AND has_table_privilege('service_role', 'public.demo_access_codes', 'UPDATE')
+    AND has_table_privilege('service_role', 'public.demo_access_codes', 'DELETE'),
   'service role owns demo-code access'
 );
 SELECT ok(

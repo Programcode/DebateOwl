@@ -68,7 +68,7 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
           {oneOff && <p className="text-xs font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>
         <div className="grid gap-1">
-          <Button variant="ghost" className="justify-start" onClick={() => act(() => navigate('/app/debate'))}>{t('debate.open', 'Open debate')}</Button>
+          <Button variant="ghost" className="justify-start" onClick={() => act(() => { navigate('/app/debate'); })}>{t('debate.open', 'Open debate')}</Button>
           <Button variant="ghost" className="justify-start" onClick={() => act(() => openDialog('switch'))}>{t('debate.switch', 'Switch debate')}</Button>
           <Button variant="ghost" className="justify-start" onClick={() => act(() => openDialog('create'))}>{t('debate.startNew', 'Start new debate')}</Button>
           <Button variant="ghost" className="justify-start" onClick={() => act(() => setOneOff(!oneOff))}>

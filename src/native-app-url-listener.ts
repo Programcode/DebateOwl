@@ -77,7 +77,11 @@ export function registerNativeAppUrlListener() {
     console.warn('[Native] Failed to read launch URL:', error);
   });
 
-  App.addListener('appUrlOpen', ({ url }) => handleNativeAppUrlOnce(url)).catch((error) => {
+  App.addListener('appUrlOpen', ({ url }) => {
+    handleNativeAppUrlOnce(url).catch((error) => {
+      console.warn('[Native] Failed to handle app URL:', error);
+    });
+  }).catch((error) => {
     console.warn('[Native] Failed to register app URL listener:', error);
   });
 }

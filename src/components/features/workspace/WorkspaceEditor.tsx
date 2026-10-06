@@ -253,7 +253,9 @@ export function WorkspaceEditor({
       if (!disposed) setEditor(activeEditor);
     };
     const offline = () => setStatus("Offline");
-    const online = () => provider?.connect();
+    const online = () => {
+      provider?.connect().catch(() => setStatus("Offline"));
+    };
     window.addEventListener("offline", offline);
     window.addEventListener("online", online);
     void start();
