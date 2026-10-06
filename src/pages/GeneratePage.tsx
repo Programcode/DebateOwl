@@ -183,7 +183,7 @@ export default function GeneratePage() {
       console.error('Failed to save case:', error);
       toast({
         title: t('ask.saveFailed', 'Save failed'),
-        description: t('ask.saveFailedDesc', 'The case could not be saved. Please try again.'),
+        description: t('generate.saveFailedDesc', 'The case could not be saved. Please try again.'),
         variant: 'destructive',
       });
     }

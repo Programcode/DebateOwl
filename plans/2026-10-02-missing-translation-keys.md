@@ -1,6 +1,6 @@
 # Missing translation keys
 
-**Status:** Backlog. Found on 2026-10-02 by the agentic Hungarian checks (`agentic/hungarian.e2e.ts`). Recheck the list against current source before starting.
+**Status:** Shipped in `chore/i18n-missing-keys`. The source scan found 88 missing literal keys and 40 missing count forms. Two more keys separate source and case save failures from chat save failures.
 
 ## Problem
 
