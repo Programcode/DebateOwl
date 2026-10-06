@@ -238,7 +238,13 @@
     "back": "Back",
     "cancel": "Cancel",
     "delete": "Delete",
-    "save": "Save"
+    "save": "Save",
+    "clear": "Clear",
+    "copied": "Copied",
+    "copy": "Copy",
+    "deleted": "Deleted",
+    "discuss": "Discuss",
+    "retry": "Retry"
   },
   "aiClient": {
     "inputShortened": "Input was shortened",
@@ -311,7 +317,11 @@
       "wordsPerMinute": "{{count}} words per minute",
       "fillers": "Filler words",
       "longPauses": "Pauses of {{seconds}} seconds or more",
-      "pausesWithLongest": "{{count}} (longest {{seconds}} s)"
+      "pausesWithLongest": "{{count}} (longest {{seconds}} s)",
+      "pausesWithLongest_one": "{{count}} (longest {{seconds}} s)",
+      "pausesWithLongest_other": "{{count}} (longest {{seconds}} s)",
+      "wordsPerMinute_one": "{{count}} word per minute",
+      "wordsPerMinute_other": "{{count}} words per minute"
     },
     "scorecard": {
       "categoryNotesDescription": "Specific reasons behind every score. For speeches you spoke aloud, Delivery uses the measured facts below and the structure of what you said, not how you sounded.",
@@ -361,24 +371,43 @@
     "flowchartImportedDesc": "Your case has been imported to Flowcharts.",
     "flowchartImportFailed": "Import Failed",
     "flowchartImportFailedDesc": "Could not build flowchart from case data.",
-    "flowchartNoData": "No valid case data to import."
+    "flowchartNoData": "No valid case data to import.",
+    "caseTitle": "Case title",
+    "complete": "Generate complete",
+    "completeDesc": "Your debate case is ready.",
+    "noUndo": "Nothing to undo",
+    "regenerated": "Section regenerated",
+    "regeneratedDesc": "The selected section has been refreshed.",
+    "regenerateUnavailable": "Cannot regenerate yet",
+    "regenerateUnavailableDesc": "Generate a case first, then retry a section.",
+    "saveCase": "Save case",
+    "undone": "Reverted",
+    "undoneDesc": "Loaded previous generation.",
+    "saveFailedDesc": "The case could not be saved. Please try again."
   },
   "attack": {
     "emptyTitle": "No Mercy Mode",
     "emptyDesc": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.",
-    "failed": "Attack Analysis Failed"
+    "failed": "Attack Analysis Failed",
+    "complete": "Attack analysis complete",
+    "completeDesc": "The critique is ready."
   },
   "brainstorm": {
     "emptyTitle": "Unlock Creative Angles",
     "emptyDesc": "Describe your motion to explore unconventional argument angles, identify tradeoffs, and find your strongest positions.",
-    "failed": "Brainstorming Failed"
+    "failed": "Brainstorming Failed",
+    "complete": "Brainstorm complete",
+    "completeDesc": "Your argument angles are ready."
   },
   "factoids": {
     "emptyTitle": "Evidence That Wins",
     "emptyDesc": "Enter a claim to find supporting factoids with real citations, context, and guidance on how to use them effectively.",
     "failed": "Research Failed",
     "savedToLibrary": "Saved to Library",
-    "savedToLibraryDesc": "This evidence is now available for grounding."
+    "savedToLibraryDesc": "This evidence is now available for grounding.",
+    "complete": "Research complete",
+    "completeDesc": "Verified evidence is ready.",
+    "saveFailed": "Could not save source."
   },
   "ask": {
     "failed": "Error",
@@ -389,7 +418,13 @@
     "inputTooLargeTitle": "Message is too large",
     "inputTooLargeDesc": "Remove some attachment text or shorten your question before sending.",
     "streamInterrupted": "The streamed response was interrupted before completion.",
-    "streamInterruptedDesc": "You can ask again to get a complete answer."
+    "streamInterruptedDesc": "You can ask again to get a complete answer.",
+    "chatSaved": "Chat saved",
+    "chatSavedDesc": "You can load it from History.",
+    "retryableFailedDesc": "Couldn't reach the AI. Check your connection and retry.",
+    "saveFailed": "Save failed",
+    "saveFailedDesc": "The chat could not be saved. Please try again.",
+    "sourceSaveFailedDesc": "The source could not be saved. Please try again."
   },
   "chat": {
     "error": "Chat Error",
@@ -758,7 +793,11 @@
       "deactivateAction": "Deactivate announcement",
       "deleteTitle": "Delete this announcement?",
       "deleteDescription": "This removes the message for every user and cannot be undone.",
-      "deleteAction": "Delete announcement"
+      "deleteAction": "Delete announcement",
+      "characterCount_one": "{{count}}/{{max}} character",
+      "characterCount_other": "{{count}}/{{max}} characters",
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected"
     }
   },
   "notFound": {
@@ -1062,7 +1101,10 @@
     "exportedGdocs": "Case exported to Google Docs!",
     "open": "Open",
     "exportFailed": "Failed to export to Google Docs",
-    "exportError": "An unexpected error occurred during export"
+    "exportError": "An unexpected error occurred during export",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyFailed": "Unable to copy to clipboard",
+    "undo": "Undo"
   },
   "attackForm": {
     "title": "Attack My Case",
@@ -1129,7 +1171,9 @@
     "exportFailedPdf": "Failed to export to PDF",
     "open": "Open",
     "exportFailedGdocs": "Failed to export to Google Docs",
-    "exportError": "An unexpected error occurred during export"
+    "exportError": "An unexpected error occurred during export",
+    "weaknessesCount_one": "{{count}} issue found, sorted by severity",
+    "weaknessesCount_other": "{{count}} issues found, sorted by severity"
   },
   "brainstormForm": {
     "title": "Brainstorm Ideas",
@@ -1174,7 +1218,9 @@
     "exportedGdocs": "Brainstorm exported to Google Docs!",
     "open": "Open",
     "exportFailedGdocs": "Failed to export to Google Docs",
-    "exportError": "An unexpected error occurred during export"
+    "exportError": "An unexpected error occurred during export",
+    "noIdeasDesc": "Try a more specific motion or switch the output format, then brainstorm again.",
+    "noIdeasTitle": "No ideas returned"
   },
   "factoidsForm": {
     "title": "Find Evidence",
@@ -1230,7 +1276,9 @@
     "exportedGdocs": "Factoids exported to Google Docs!",
     "open": "Open",
     "exportFailedGdocs": "Failed to export to Google Docs",
-    "exportError": "An unexpected error occurred during export"
+    "exportError": "An unexpected error occurred during export",
+    "noVerified": "No verified matching sources were found. Try a broader source type or timeframe.",
+    "useSuggestion": "Search this"
   },
   "askChat": {
     "title": "Ask Your Coach",
@@ -1283,7 +1331,12 @@
     "researching": "Researching...",
     "analyzing": "Analyzing...",
     "generatingResponse": "Generating response...",
-    "almostThere": "Almost there..."
+    "almostThere": "Almost there...",
+    "save": "Save",
+    "messageCount_one": "{{count}} message",
+    "messageCount_other": "{{count}} messages",
+    "savedCount_one": "{{count}} saved",
+    "savedCount_other": "{{count}} saved"
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
@@ -1406,7 +1459,9 @@
         "2nr": "2NR",
         "2ar": "2AR"
       }
-    }
+    },
+    "disableSound": "Disable sound",
+    "enableSound": "Enable sound"
   },
   "flowchart": {
     "title": "Argument Flowchart",
@@ -1471,7 +1526,13 @@
       "opponentAttackDesc": "How they might respond",
       "rebuttalLabel": "Your Rebuttal",
       "rebuttalDesc": "How you counter their attack"
-    }
+    },
+    "autoLayout": "Auto layout",
+    "edgeAttack": "Attack",
+    "edgeRebuttal": "Rebuttal",
+    "edgeSupport": "Support",
+    "exportFailedToast": "Could not export flowchart.",
+    "selectedNode": "Selected"
   },
   "historyPage": {
     "title": "History",
@@ -1514,7 +1575,11 @@
     "deleteCaseLabel": "Delete {{title}}",
     "load": "Load",
     "resume": "Resume",
-    "messages": "messages"
+    "messages": "messages",
+    "caseDeleted": "Saved case deleted.",
+    "deleteCaseDesc": "This removes the saved case from your history.",
+    "deleteCaseTitle": "Delete saved case?",
+    "deleteFailed": "Could not delete saved case."
   },
   "libraryPage": {
     "title": "Source Library",
@@ -1590,7 +1655,37 @@
     "sourceAdded": "Source Added",
     "sourceAddedDesc": "Your source is now available for grounding.",
     "clearFailed": "Failed to clear sources",
-    "clearConfirm": "Are you sure you want to clear all sources?"
+    "clearConfirm": "Are you sure you want to clear all sources?",
+    "activateFolder": "Activate",
+    "clearSuccess": "Library cleared.",
+    "copyFailed": "Unable to copy source.",
+    "deactivateFolder": "Deactivate",
+    "deleteFolderDesc": "Sources in this folder will move to General. The sources themselves will not be deleted.",
+    "deleteFolderTitle": "Delete folder?",
+    "deleteSourceDesc": "This removes the source from your synced library.",
+    "deleteSourceTitle": "Delete source?",
+    "folderActions": "Folder actions",
+    "folderActionsDesc": "Rename, delete, or change grounding for every source in this folder.",
+    "folderActivated": "Folder activated",
+    "folderActivatedDesc": "All sources in this folder are active.",
+    "folderDeactivated": "Folder deactivated",
+    "folderDeactivatedDesc": "Sources stay saved but will not ground AI outputs.",
+    "folderDeleted": "Folder deleted",
+    "folderDeletedDesc": "Sources were moved to General.",
+    "folderMergeConfirm": "A folder with this name already exists. Merge sources into it?",
+    "folderRenamed": "Folder renamed",
+    "folderRenamedDesc": "Sources in this folder were moved to the new name.",
+    "noMatchingSources": "No matching sources",
+    "noMatchingSourcesDesc": "Try a different search or folder.",
+    "renameFolder": "Rename folder",
+    "sourceCopied": "Source copied to clipboard.",
+    "sourceDeleted": "Source removed.",
+    "sourceUpdated": "Source updated",
+    "sourceUpdatedDesc": "Your source changes were saved.",
+    "typeLabel": "Type",
+    "untitledSource": "Untitled source",
+    "useForGrounding": "Use for AI grounding",
+    "useForGroundingDesc": "Inactive sources stay saved but are ignored by generation."
   },
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",
@@ -1599,7 +1694,9 @@
     "removedPartialTitle": "Some sources removed",
     "removedPartialDesc": "{{succeeded}} removed, {{failed}} failed to remove.",
     "removeFailed": "Could not remove auto-saved sources.",
-    "removeFailedDesc": "{{succeeded}} sources were removed. {{failed}} sources could not be removed."
+    "removeFailedDesc": "{{succeeded}} sources were removed. {{failed}} sources could not be removed.",
+    "removedDesc_one": "{{count}} auto-saved source removed from your library.",
+    "removedDesc_other": "{{count}} auto-saved sources removed from your library."
   },
   "sharedPage": {
     "title": "Shared Content",
@@ -1780,7 +1877,11 @@
     "sparringKeyMoments": "Key moments",
     "sparringImprovementAreas": "Work on next",
     "sparringScorecardUnavailable": "A final scorecard is not available yet.",
-    "sparringNoTranscript": "No speeches were submitted for this round."
+    "sparringNoTranscript": "No speeches were submitted for this round.",
+    "factoidsSummary_one": "{{count}} Fact • {{verified}} Verified",
+    "factoidsSummary_other": "{{count}} Facts • {{verified}} Verified",
+    "topIdeasCount_one": "{{count}} Top Idea",
+    "topIdeasCount_other": "{{count}} Top Ideas"
   },
   "sparring": {
     "pro": "Pro",
@@ -1856,7 +1957,15 @@
       "startRound": "Start round",
       "draftNotice": "Your draft is saved in this tab as you type. You can pause without losing your place.",
       "offlineCannotStart": "Reconnect to start a round. Your setup is kept while you are offline.",
-      "speakingOrder": "Speaking order"
+      "speakingOrder": "Speaking order",
+      "aboutMinutes_one": "About {{count}} minute",
+      "aboutMinutes_other": "About {{count}} minutes",
+      "aiRequestBreakdown_one": "{{count}} reply + 1 judge",
+      "aiRequestBreakdown_other": "{{count}} replies + 1 judge",
+      "speeches_one": "{{count}} speech",
+      "speeches_other": "{{count}} speeches",
+      "turns_one": "{{count}} turn",
+      "turns_other": "{{count}} turns"
     },
     "round": {
       "inProgress": "Round in progress",
@@ -1911,7 +2020,13 @@
       "timeUsed": "{{time}} used",
       "estimatedTimeUsed": "{{time}} estimated",
       "youArePro": "You are Pro",
-      "youAreCon": "You are Con"
+      "youAreCon": "You are Con",
+      "submittedCount_one": "{{count}} submitted",
+      "submittedCount_other": "{{count}} submitted",
+      "totalWords_one": "{{count}} word",
+      "totalWords_other": "{{count}} words",
+      "wordCount_one": "{{count}} word",
+      "wordCount_other": "{{count}} words"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -1947,7 +2062,9 @@
       "fullTranscript": "Full transcript",
       "transcriptDescription": "{{count}} speeches from this {{format}} round.",
       "hideTranscript": "Hide transcript",
-      "showTranscript": "Show transcript"
+      "showTranscript": "Show transcript",
+      "transcriptDescription_one": "{{count}} speech from this {{format}} round.",
+      "transcriptDescription_other": "{{count}} speeches from this {{format}} round."
     }
   },
   "langSwitcher": {
@@ -2096,7 +2213,9 @@
       "strong": "Strong",
       "moderate": "Moderate",
       "weak": "Weak"
-    }
+    },
+    "usageExplanation_one": "Used in {{count}} saved case. Importance: {{importance}}. Evidence strength: {{strength}}.",
+    "usageExplanation_other": "Used in {{count}} saved cases. Importance: {{importance}}. Evidence strength: {{strength}}."
   },
   "debate": {
     "motion": "Motion",
@@ -2195,7 +2314,9 @@
     },
     "offerTitle": "Start a debate with this motion?",
     "offerDesc": "A debate keeps this motion, its sources, and your results together, and every tool uses it.",
-    "offerNotNow": "Not now, use it once"
+    "offerNotNow": "Not now, use it once",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items"
   },
   "debateContext": {
     "using": "Using {{list}}",
@@ -2244,6 +2365,19 @@
     "lastUnavailable_other": "{{count}} items were no longer in this debate."
   },
   "themeToggle": {
-    "toggle": "Toggle theme"
+    "toggle": "Toggle theme",
+    "current": "Current theme: {{theme}}. Click to cycle."
+  },
+  "googleDriveAuth": {
+    "connect": "Connect Google Drive",
+    "description": "To export to Google Docs, DebateLab needs permission to create files in your Google Drive.",
+    "failedDesc": "Please try again.",
+    "failedTitle": "Could not open Google",
+    "redirecting": "Redirecting...",
+    "scopeNote": "We request the limited drive.file permission, not full Drive access.",
+    "title": "Connect Google Drive"
+  },
+  "offlineIndicator": {
+    "label": "Offline mode"
   }
 }

@@ -238,7 +238,13 @@
     "back": "Vissza",
     "cancel": "Mégse",
     "delete": "Törlés",
-    "save": "Mentés"
+    "save": "Mentés",
+    "clear": "Törlés",
+    "copied": "Másolva",
+    "copy": "Másolás",
+    "deleted": "Törölve",
+    "discuss": "Megvitatás",
+    "retry": "Újrapróbálás"
   },
   "aiClient": {
     "inputShortened": "A bemenet rövidítve lett",
@@ -311,7 +317,11 @@
       "wordsPerMinute": "{{count}} szó percenként",
       "fillers": "Töltelékszavak",
       "longPauses": "Legalább {{seconds}} másodperces szünetek",
-      "pausesWithLongest": "{{count}} (a leghosszabb {{seconds}} mp)"
+      "pausesWithLongest": "{{count}} (a leghosszabb {{seconds}} mp)",
+      "pausesWithLongest_one": "{{count}} (a leghosszabb {{seconds}} mp)",
+      "pausesWithLongest_other": "{{count}} (a leghosszabb {{seconds}} mp)",
+      "wordsPerMinute_one": "{{count}} szó percenként",
+      "wordsPerMinute_other": "{{count}} szó percenként"
     },
     "scorecard": {
       "categoryNotesDescription": "Minden pontszám mögött konkrét indokok állnak. A szóban elmondott beszédeknél az előadást a lenti mért adatok és az elhangzottak felépítése alapján értékeljük, nem az alapján, hogyan hangzottál.",
@@ -361,24 +371,43 @@
     "flowchartImportedDesc": "Az eseted átkerült a folyamatábrákhoz.",
     "flowchartImportFailed": "Import sikertelen",
     "flowchartImportFailedDesc": "Nem sikerült folyamatábrát építeni az eset adataiból.",
-    "flowchartNoData": "Nincs érvényes esetadat az importhoz."
+    "flowchartNoData": "Nincs érvényes esetadat az importhoz.",
+    "caseTitle": "Az eset címe",
+    "complete": "A generálás elkészült",
+    "completeDesc": "Elkészült a vitaeseted.",
+    "noUndo": "Nincs mit visszavonni",
+    "regenerated": "A szakasz újragenerálva",
+    "regeneratedDesc": "A kiválasztott szakasz frissült.",
+    "regenerateUnavailable": "Még nem lehet újragenerálni",
+    "regenerateUnavailableDesc": "Előbb generálj egy esetet, majd próbáld újra a szakaszt.",
+    "saveCase": "Eset mentése",
+    "undone": "Visszaállítva",
+    "undoneDesc": "Az előző generálás betöltve.",
+    "saveFailedDesc": "Nem sikerült menteni az esetet. Próbáld újra."
   },
   "attack": {
     "emptyTitle": "Kegyetlen Mód",
     "emptyDesc": "Illeszd be az érvedet kíméletlen kritikáért, logikai hibák azonosításáért és megvalósítható javításokért.",
-    "failed": "Támadás Elemzés Sikertelen"
+    "failed": "Támadás Elemzés Sikertelen",
+    "complete": "A támadáselemzés elkészült",
+    "completeDesc": "Elkészült a kritika."
   },
   "brainstorm": {
     "emptyTitle": "Kreatív Szögek Feloldása",
     "emptyDesc": "Írd le az indítványodat szokatlan érvelési szögek felfedezéséhez, kompromisszumok azonosításához és legerősebb pozícióid megtalálásához.",
-    "failed": "Ötletelés Sikertelen"
+    "failed": "Ötletelés Sikertelen",
+    "complete": "Az ötletelés elkészült",
+    "completeDesc": "Elkészültek az érvelési ötleteid."
   },
   "factoids": {
     "emptyTitle": "Győztes Bizonyítékok",
     "emptyDesc": "Adj meg egy állítást támogató tények kereséséhez valós hivatkozásokkal, kontextussal és útmutatóval a hatékony felhasználáshoz.",
     "failed": "Kutatás Sikertelen",
     "savedToLibrary": "Mentve a Könyvtárba",
-    "savedToLibraryDesc": "Ez a bizonyíték mostantól elérhető megalapozáshoz."
+    "savedToLibraryDesc": "Ez a bizonyíték mostantól elérhető megalapozáshoz.",
+    "complete": "A kutatás elkészült",
+    "completeDesc": "Elkészültek az ellenőrzött bizonyítékok.",
+    "saveFailed": "Nem sikerült menteni a forrást."
   },
   "ask": {
     "failed": "Hiba",
@@ -389,7 +418,13 @@
     "inputTooLargeTitle": "Az üzenet túl nagy",
     "inputTooLargeDesc": "Küldés előtt távolíts el néhány csatolt szöveget, vagy rövidítsd le a kérdést.",
     "streamInterrupted": "A streamelt válasz a befejezés előtt megszakadt.",
-    "streamInterruptedDesc": "Kérdezz újra a teljes válaszért."
+    "streamInterruptedDesc": "Kérdezz újra a teljes válaszért.",
+    "chatSaved": "Chat mentve",
+    "chatSavedDesc": "Az Előzményekből újra megnyithatod.",
+    "retryableFailedDesc": "Nem sikerült elérni az MI-t. Ellenőrizd a kapcsolatot, majd próbáld újra.",
+    "saveFailed": "A mentés sikertelen",
+    "saveFailedDesc": "Nem sikerült menteni a chatet. Próbáld újra.",
+    "sourceSaveFailedDesc": "Nem sikerült menteni a forrást. Próbáld újra."
   },
   "chat": {
     "error": "Chat Hiba",
@@ -758,7 +793,11 @@
       "deactivateAction": "Közlemény kikapcsolása",
       "deleteTitle": "Törlöd ezt a közleményt?",
       "deleteDescription": "Ez minden felhasználónál törli az üzenetet, és nem vonható vissza.",
-      "deleteAction": "Közlemény törlése"
+      "deleteAction": "Közlemény törlése",
+      "characterCount_one": "{{count}}/{{max}} karakter",
+      "characterCount_other": "{{count}}/{{max}} karakter",
+      "selectedCount_one": "{{count}} kiválasztva",
+      "selectedCount_other": "{{count}} kiválasztva"
     }
   },
   "notFound": {
@@ -1062,7 +1101,10 @@
     "exportedGdocs": "Eset exportálva Google Docs-ba!",
     "open": "Megnyitás",
     "exportFailed": "Nem sikerült exportálni Google Docs-ba",
-    "exportError": "Váratlan hiba történt az exportálás során"
+    "exportError": "Váratlan hiba történt az exportálás során",
+    "copiedToClipboard": "Vágólapra másolva",
+    "copyFailed": "Nem sikerült a vágólapra másolni",
+    "undo": "Visszavonás"
   },
   "attackForm": {
     "title": "Támadás az Esetem Ellen",
@@ -1129,7 +1171,9 @@
     "exportFailedPdf": "Nem sikerült exportálni PDF-be",
     "open": "Megnyitás",
     "exportFailedGdocs": "Nem sikerült exportálni Google Docs-ba",
-    "exportError": "Váratlan hiba történt az exportálás során"
+    "exportError": "Váratlan hiba történt az exportálás során",
+    "weaknessesCount_one": "{{count}} probléma található, súlyosság szerint rendezve",
+    "weaknessesCount_other": "{{count}} probléma található, súlyosság szerint rendezve"
   },
   "brainstormForm": {
     "title": "Ötletelés",
@@ -1174,7 +1218,9 @@
     "exportedGdocs": "Ötletelés exportálva Google Docs-ba!",
     "open": "Megnyitás",
     "exportFailedGdocs": "Nem sikerült exportálni Google Docs-ba",
-    "exportError": "Váratlan hiba történt az exportálás során"
+    "exportError": "Váratlan hiba történt az exportálás során",
+    "noIdeasDesc": "Próbálj pontosabb tételt vagy más kimeneti formátumot, majd ötletelj újra.",
+    "noIdeasTitle": "Nem születtek ötletek"
   },
   "factoidsForm": {
     "title": "Bizonyítékok Keresése",
@@ -1230,7 +1276,9 @@
     "exportedGdocs": "Tények exportálva Google Docs-ba!",
     "open": "Megnyitás",
     "exportFailedGdocs": "Nem sikerült exportálni Google Docs-ba",
-    "exportError": "Váratlan hiba történt az exportálás során"
+    "exportError": "Váratlan hiba történt az exportálás során",
+    "noVerified": "Nem találtunk megfelelő, ellenőrzött forrásokat. Próbálj más forrástípust vagy hosszabb időszakot.",
+    "useSuggestion": "Keresés erre"
   },
   "askChat": {
     "title": "Kérdezd az Edződ",
@@ -1283,7 +1331,12 @@
     "noSavedChatsDesc": "A mentett edzői beszélgetések itt jelennek meg.",
     "messageCount": "{{count}} üzenet",
     "savedCount": "{{count}} mentve",
-    "removeFile": "{{name}} eltávolítása"
+    "removeFile": "{{name}} eltávolítása",
+    "save": "Mentés",
+    "messageCount_one": "{{count}} üzenet",
+    "messageCount_other": "{{count}} üzenet",
+    "savedCount_one": "{{count}} mentve",
+    "savedCount_other": "{{count}} mentve"
   },
   "limitModal": {
     "trialEnded": "Ingyenes Próba Lejárt",
@@ -1406,7 +1459,9 @@
         "2nr": "2NR",
         "2ar": "2AR"
       }
-    }
+    },
+    "disableSound": "Hang kikapcsolása",
+    "enableSound": "Hang bekapcsolása"
   },
   "flowchart": {
     "title": "Érvelési Folyamatábra",
@@ -1471,7 +1526,13 @@
       "opponentAttackDesc": "Így válaszolhatnak",
       "rebuttalLabel": "A cáfolatod",
       "rebuttalDesc": "Így válaszolsz a támadásukra"
-    }
+    },
+    "autoLayout": "Automatikus elrendezés",
+    "edgeAttack": "Támadás",
+    "edgeRebuttal": "Cáfolat",
+    "edgeSupport": "Alátámasztás",
+    "exportFailedToast": "Nem sikerült exportálni a folyamatábrát.",
+    "selectedNode": "Kiválasztva"
   },
   "historyPage": {
     "title": "Előzmények",
@@ -1514,7 +1575,11 @@
     "deleteCaseLabel": "{{title}} törlése",
     "load": "Betöltés",
     "resume": "Folytatás",
-    "messages": "üzenet"
+    "messages": "üzenet",
+    "caseDeleted": "A mentett eset törölve.",
+    "deleteCaseDesc": "Ezzel eltávolítod a mentett esetet az előzményeidből.",
+    "deleteCaseTitle": "Törlöd a mentett esetet?",
+    "deleteFailed": "Nem sikerült törölni a mentett esetet."
   },
   "libraryPage": {
     "title": "Forráskönyvtár",
@@ -1590,7 +1655,37 @@
     "syncedFolders": "Szinkronizált mappák",
     "manualSource": "Kézi forrás",
     "searchSources": "Források keresése",
-    "searchPlaceholder": "Keresés forrásokban, mappákban vagy tartalomban..."
+    "searchPlaceholder": "Keresés forrásokban, mappákban vagy tartalomban...",
+    "activateFolder": "Aktiválás",
+    "clearSuccess": "A könyvtár tartalma törölve.",
+    "copyFailed": "Nem sikerült másolni a forrást.",
+    "deactivateFolder": "Deaktiválás",
+    "deleteFolderDesc": "A mappában lévő források átkerülnek az Általános mappába. Maguk a források nem törlődnek.",
+    "deleteFolderTitle": "Törlöd a mappát?",
+    "deleteSourceDesc": "Ezzel eltávolítod a forrást a szinkronizált könyvtáradból.",
+    "deleteSourceTitle": "Törlöd a forrást?",
+    "folderActions": "Mappaműveletek",
+    "folderActionsDesc": "Nevezd át vagy töröld a mappát, illetve állítsd be, hogy a benne lévő forrásokat felhasználja-e az MI a válaszai megalapozásához.",
+    "folderActivated": "Mappa aktiválva",
+    "folderActivatedDesc": "A mappa összes forrása aktív.",
+    "folderDeactivated": "Mappa deaktiválva",
+    "folderDeactivatedDesc": "A források mentve maradnak, de az MI nem használja őket a válaszai megalapozásához.",
+    "folderDeleted": "Mappa törölve",
+    "folderDeletedDesc": "A források átkerültek az Általános mappába.",
+    "folderMergeConfirm": "Már van ilyen nevű mappa. Áthelyezed bele a forrásokat?",
+    "folderRenamed": "Mappa átnevezve",
+    "folderRenamedDesc": "A mappa forrásai az új nevű mappába kerültek.",
+    "noMatchingSources": "Nincs egyező forrás",
+    "noMatchingSourcesDesc": "Próbálj más keresést vagy mappát.",
+    "renameFolder": "Mappa átnevezése",
+    "sourceCopied": "A forrás a vágólapra másolva.",
+    "sourceDeleted": "Forrás eltávolítva.",
+    "sourceUpdated": "Forrás frissítve",
+    "sourceUpdatedDesc": "A forrás módosításai mentve.",
+    "typeLabel": "Típus",
+    "untitledSource": "Névtelen forrás",
+    "useForGrounding": "Felhasználás az MI válaszainak megalapozásához",
+    "useForGroundingDesc": "Az inaktív források mentve maradnak, de a generálás nem használja őket."
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",
@@ -1599,7 +1694,9 @@
     "removedPartialTitle": "Néhány forrás eltávolítva",
     "removedPartialDesc": "{{succeeded}} eltávolítva, {{failed}} eltávolítása sikertelen.",
     "removeFailed": "Nem sikerült eltávolítani az automatikusan mentett forrásokat.",
-    "removeFailedDesc": "{{succeeded}} forrás eltávolítva. {{failed}} forrás eltávolítása sikertelen."
+    "removeFailedDesc": "{{succeeded}} forrás eltávolítva. {{failed}} forrás eltávolítása sikertelen.",
+    "removedDesc_one": "{{count}} automatikusan mentett forrás eltávolítva a könyvtáradból.",
+    "removedDesc_other": "{{count}} automatikusan mentett forrás eltávolítva a könyvtáradból."
   },
   "sharedPage": {
     "title": "Megosztott Tartalom",
@@ -1780,7 +1877,11 @@
     "sparringKeyMoments": "Kulcspillanatok",
     "sparringImprovementAreas": "Következő fejlesztési pontok",
     "sparringScorecardUnavailable": "Még nincs végleges értékelőlap.",
-    "sparringNoTranscript": "Ebben a fordulóban nem küldtek be beszédet."
+    "sparringNoTranscript": "Ebben a fordulóban nem küldtek be beszédet.",
+    "factoidsSummary_one": "{{count}} tény • Ellenőrzött: {{verified}}",
+    "factoidsSummary_other": "{{count}} tény • Ellenőrzött: {{verified}}",
+    "topIdeasCount_one": "{{count}} legjobb ötlet",
+    "topIdeasCount_other": "{{count}} legjobb ötlet"
   },
   "sparring": {
     "pro": "Mellette",
@@ -1856,7 +1957,15 @@
       "startRound": "Forduló indítása",
       "draftNotice": "A piszkozat írás közben ezen a böngészőfülön mentődik. Szüneteltetheted anélkül, hogy elveszítenéd a helyed.",
       "offlineCannotStart": "Csatlakozz újra a forduló indításához. A beállításaid offline állapotban is megmaradnak.",
-      "speakingOrder": "Felszólalási sorrend"
+      "speakingOrder": "Felszólalási sorrend",
+      "aboutMinutes_one": "Körülbelül {{count}} perc",
+      "aboutMinutes_other": "Körülbelül {{count}} perc",
+      "aiRequestBreakdown_one": "{{count}} válasz + 1 bíró",
+      "aiRequestBreakdown_other": "{{count}} válasz + 1 bíró",
+      "speeches_one": "{{count}} beszéd",
+      "speeches_other": "{{count}} beszéd",
+      "turns_one": "{{count}} kör",
+      "turns_other": "{{count}} kör"
     },
     "round": {
       "inProgress": "Forduló folyamatban",
@@ -1911,7 +2020,13 @@
       "timeUsed": "{{time}} felhasználva",
       "estimatedTimeUsed": "Becsült idő: {{time}}",
       "youArePro": "Te vagy mellette",
-      "youAreCon": "Te vagy ellene"
+      "youAreCon": "Te vagy ellene",
+      "submittedCount_one": "{{count}} beküldve",
+      "submittedCount_other": "{{count}} beküldve",
+      "totalWords_one": "{{count}} szó",
+      "totalWords_other": "{{count}} szó",
+      "wordCount_one": "{{count}} szó",
+      "wordCount_other": "{{count}} szó"
     },
     "scorecard": {
       "eyebrow": "Forduló értékelése",
@@ -1947,7 +2062,9 @@
       "fullTranscript": "Teljes átirat",
       "transcriptDescription": "{{count}} beszéd ebből a(z) {{format}} fordulóból.",
       "hideTranscript": "Átirat elrejtése",
-      "showTranscript": "Átirat megjelenítése"
+      "showTranscript": "Átirat megjelenítése",
+      "transcriptDescription_one": "{{count}} beszéd ebből a(z) {{format}} fordulóból.",
+      "transcriptDescription_other": "{{count}} beszéd ebből a(z) {{format}} fordulóból."
     }
   },
   "langSwitcher": {
@@ -2096,7 +2213,9 @@
       "strong": "Erős",
       "moderate": "Közepes",
       "weak": "Gyenge"
-    }
+    },
+    "usageExplanation_one": "Felhasználva {{count}} mentett esetben. Fontosság: {{importance}}. Bizonyíték ereje: {{strength}}.",
+    "usageExplanation_other": "Felhasználva {{count}} mentett esetben. Fontosság: {{importance}}. Bizonyíték ereje: {{strength}}."
   },
   "debate": {
     "motion": "Tétel",
@@ -2195,7 +2314,9 @@
     },
     "offerTitle": "Indítasz egy vitát ezzel a tétellel?",
     "offerDesc": "A vita együtt tartja a tételt, a forrásait és az eredményeidet, és minden eszköz ezt használja.",
-    "offerNotNow": "Most nem, csak egyszer használom"
+    "offerNotNow": "Most nem, csak egyszer használom",
+    "itemCount_one": "{{count}} elem",
+    "itemCount_other": "{{count}} elem"
   },
   "debateContext": {
     "using": "Felhasználva: {{list}}",
@@ -2244,6 +2365,19 @@
     "lastUnavailable_other": "{{count}} elem már nem volt ebben a vitában."
   },
   "themeToggle": {
-    "toggle": "Téma váltása"
+    "toggle": "Téma váltása",
+    "current": "Jelenlegi téma: {{theme}}. Kattints a váltáshoz."
+  },
+  "googleDriveAuth": {
+    "connect": "Google Drive csatlakoztatása",
+    "description": "A Google Docsba történő exportáláshoz a DebateLabnak engedélyre van szüksége fájlok létrehozásához a Google Drive-odban.",
+    "failedDesc": "Próbáld újra.",
+    "failedTitle": "Nem sikerült megnyitni a Google-t",
+    "redirecting": "Átirányítás...",
+    "scopeNote": "Csak a korlátozott drive.file engedélyt kérjük, nem teljes hozzáférést a Drive-hoz.",
+    "title": "Google Drive csatlakoztatása"
+  },
+  "offlineIndicator": {
+    "label": "Offline mód"
   }
 }

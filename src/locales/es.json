@@ -238,7 +238,13 @@
     "back": "Atrás",
     "cancel": "Cancelar",
     "delete": "Eliminar",
-    "save": "Guardar"
+    "save": "Guardar",
+    "clear": "Borrar",
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "deleted": "Eliminado",
+    "discuss": "Discutir",
+    "retry": "Reintentar"
   },
   "aiClient": {
     "inputShortened": "La entrada se acortó",
@@ -311,7 +317,11 @@
       "wordsPerMinute": "{{count}} palabras por minuto",
       "fillers": "Muletillas",
       "longPauses": "Pausas de {{seconds}} segundos o más",
-      "pausesWithLongest": "{{count}} (la más larga, {{seconds}} s)"
+      "pausesWithLongest": "{{count}} (la más larga, {{seconds}} s)",
+      "pausesWithLongest_one": "{{count}} (la más larga, {{seconds}} s)",
+      "pausesWithLongest_other": "{{count}} (la más larga, {{seconds}} s)",
+      "wordsPerMinute_one": "{{count}} palabra por minuto",
+      "wordsPerMinute_other": "{{count}} palabras por minuto"
     },
     "scorecard": {
       "categoryNotesDescription": "Motivos específicos detrás de cada puntuación. En los discursos que pronunciaste, la presentación usa los datos medidos de abajo y la estructura de lo que dijiste, no cómo sonaste.",
@@ -361,24 +371,43 @@
     "flowchartImportedDesc": "Tu caso se importó a Diagramas.",
     "flowchartImportFailed": "Error al importar",
     "flowchartImportFailedDesc": "No se pudo construir el diagrama con los datos del caso.",
-    "flowchartNoData": "No hay datos de caso válidos para importar."
+    "flowchartNoData": "No hay datos de caso válidos para importar.",
+    "caseTitle": "Título del caso",
+    "complete": "Caso generado",
+    "completeDesc": "Tu caso de debate está listo.",
+    "noUndo": "No hay nada que deshacer",
+    "regenerated": "Sección regenerada",
+    "regeneratedDesc": "La sección seleccionada se ha actualizado.",
+    "regenerateUnavailable": "Aún no se puede regenerar",
+    "regenerateUnavailableDesc": "Primero genera un caso y luego vuelve a intentar regenerar una sección.",
+    "saveCase": "Guardar caso",
+    "undone": "Cambio deshecho",
+    "undoneDesc": "Se cargó la generación anterior.",
+    "saveFailedDesc": "No se pudo guardar el caso. Inténtalo de nuevo."
   },
   "attack": {
     "emptyTitle": "Modo Sin Piedad",
     "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
-    "failed": "Error en el Análisis de Ataque"
+    "failed": "Error en el Análisis de Ataque",
+    "complete": "Análisis de ataque completado",
+    "completeDesc": "La crítica está lista."
   },
   "brainstorm": {
     "emptyTitle": "Desbloquea Ángulos Creativos",
     "emptyDesc": "Describe tu moción para explorar ángulos de argumentación no convencionales, identificar compromisos y encontrar tus posiciones más fuertes.",
-    "failed": "Error en la Lluvia de Ideas"
+    "failed": "Error en la Lluvia de Ideas",
+    "complete": "Lluvia de ideas completada",
+    "completeDesc": "Tus enfoques de argumentación están listos."
   },
   "factoids": {
     "emptyTitle": "Evidencia Que Gana",
     "emptyDesc": "Ingresa una afirmación para encontrar datos de apoyo con citas reales, contexto y guía sobre cómo usarlos efectivamente.",
     "failed": "Error en la Investigación",
     "savedToLibrary": "Guardado en Biblioteca",
-    "savedToLibraryDesc": "Esta evidencia ahora está disponible para fundamentación."
+    "savedToLibraryDesc": "Esta evidencia ahora está disponible para fundamentación.",
+    "complete": "Investigación completada",
+    "completeDesc": "La evidencia verificada está lista.",
+    "saveFailed": "No se pudo guardar la fuente."
   },
   "ask": {
     "failed": "Error",
@@ -389,7 +418,13 @@
     "inputTooLargeTitle": "El mensaje es demasiado grande",
     "inputTooLargeDesc": "Elimina parte del texto adjunto o acorta la pregunta antes de enviarla.",
     "streamInterrupted": "La respuesta en streaming se interrumpió antes de completarse.",
-    "streamInterruptedDesc": "Puedes preguntar de nuevo para obtener una respuesta completa."
+    "streamInterruptedDesc": "Puedes preguntar de nuevo para obtener una respuesta completa.",
+    "chatSaved": "Chat guardado",
+    "chatSavedDesc": "Puedes abrirlo desde el Historial.",
+    "retryableFailedDesc": "No se pudo conectar con la IA. Comprueba tu conexión e inténtalo de nuevo.",
+    "saveFailed": "No se pudo guardar",
+    "saveFailedDesc": "No se pudo guardar el chat. Inténtalo de nuevo.",
+    "sourceSaveFailedDesc": "No se pudo guardar la fuente. Inténtalo de nuevo."
   },
   "chat": {
     "error": "Error de Chat",
@@ -758,7 +793,11 @@
       "deactivateAction": "Desactivar anuncio",
       "deleteTitle": "¿Eliminar este anuncio?",
       "deleteDescription": "Esto elimina el mensaje para todos los usuarios y no se puede deshacer.",
-      "deleteAction": "Eliminar anuncio"
+      "deleteAction": "Eliminar anuncio",
+      "characterCount_one": "{{count}}/{{max}} carácter",
+      "characterCount_other": "{{count}}/{{max}} caracteres",
+      "selectedCount_one": "{{count}} seleccionado",
+      "selectedCount_other": "{{count}} seleccionados"
     }
   },
   "notFound": {
@@ -1062,7 +1101,10 @@
     "exportedGdocs": "¡Caso exportado a Google Docs!",
     "open": "Abrir",
     "exportFailed": "Error al exportar a Google Docs",
-    "exportError": "Ocurrió un error inesperado durante la exportación"
+    "exportError": "Ocurrió un error inesperado durante la exportación",
+    "copiedToClipboard": "Copiado al portapapeles",
+    "copyFailed": "No se pudo copiar al portapapeles",
+    "undo": "Deshacer"
   },
   "attackForm": {
     "title": "Atacar Mi Caso",
@@ -1129,7 +1171,9 @@
     "exportFailedPdf": "Error al exportar a PDF",
     "open": "Abrir",
     "exportFailedGdocs": "Error al exportar a Google Docs",
-    "exportError": "Ocurrió un error inesperado durante la exportación"
+    "exportError": "Ocurrió un error inesperado durante la exportación",
+    "weaknessesCount_one": "{{count}} problema encontrado, ordenado por gravedad",
+    "weaknessesCount_other": "{{count}} problemas encontrados, ordenados por gravedad"
   },
   "brainstormForm": {
     "title": "Lluvia de Ideas",
@@ -1174,7 +1218,9 @@
     "exportedGdocs": "¡Lluvia de ideas exportada a Google Docs!",
     "open": "Abrir",
     "exportFailedGdocs": "Error al exportar a Google Docs",
-    "exportError": "Ocurrió un error inesperado durante la exportación"
+    "exportError": "Ocurrió un error inesperado durante la exportación",
+    "noIdeasDesc": "Prueba con una moción más concreta o cambia el formato de salida y vuelve a generar ideas.",
+    "noIdeasTitle": "No se generaron ideas"
   },
   "factoidsForm": {
     "title": "Buscar Evidencia",
@@ -1230,7 +1276,9 @@
     "exportedGdocs": "¡Datos exportados a Google Docs!",
     "open": "Abrir",
     "exportFailedGdocs": "Error al exportar a Google Docs",
-    "exportError": "Ocurrió un error inesperado durante la exportación"
+    "exportError": "Ocurrió un error inesperado durante la exportación",
+    "noVerified": "No se encontraron fuentes verificadas que coincidan. Prueba con otro tipo de fuente o un período más amplio.",
+    "useSuggestion": "Buscar esto"
   },
   "askChat": {
     "title": "Pregunta a Tu Coach",
@@ -1283,7 +1331,12 @@
     "noSavedChatsDesc": "Los chats de coaching guardados aparecerán aquí.",
     "messageCount": "{{count}} mensajes",
     "savedCount": "{{count}} guardados",
-    "removeFile": "Eliminar {{name}}"
+    "removeFile": "Eliminar {{name}}",
+    "save": "Guardar",
+    "messageCount_one": "{{count}} mensaje",
+    "messageCount_other": "{{count}} mensajes",
+    "savedCount_one": "{{count}} guardado",
+    "savedCount_other": "{{count}} guardados"
   },
   "limitModal": {
     "trialEnded": "Prueba Gratuita Finalizada",
@@ -1406,7 +1459,9 @@
         "2nr": "2NR",
         "2ar": "2AR"
       }
-    }
+    },
+    "disableSound": "Desactivar sonido",
+    "enableSound": "Activar sonido"
   },
   "flowchart": {
     "title": "Diagrama de Argumentos",
@@ -1471,7 +1526,13 @@
       "opponentAttackDesc": "Cómo podría responder",
       "rebuttalLabel": "Tu refutación",
       "rebuttalDesc": "Cómo respondes a su ataque"
-    }
+    },
+    "autoLayout": "Organizar automáticamente",
+    "edgeAttack": "Ataque",
+    "edgeRebuttal": "Refutación",
+    "edgeSupport": "Apoyo",
+    "exportFailedToast": "No se pudo exportar el diagrama.",
+    "selectedNode": "Seleccionado"
   },
   "historyPage": {
     "title": "Historial",
@@ -1514,7 +1575,11 @@
     "deleteCaseLabel": "Eliminar {{title}}",
     "load": "Cargar",
     "resume": "Reanudar",
-    "messages": "mensajes"
+    "messages": "mensajes",
+    "caseDeleted": "Se eliminó el caso guardado.",
+    "deleteCaseDesc": "Esto eliminará el caso guardado de tu historial.",
+    "deleteCaseTitle": "¿Eliminar el caso guardado?",
+    "deleteFailed": "No se pudo eliminar el caso guardado."
   },
   "libraryPage": {
     "title": "Biblioteca de Fuentes",
@@ -1590,7 +1655,37 @@
     "syncedFolders": "Carpetas sincronizadas",
     "manualSource": "Fuente manual",
     "searchSources": "Buscar fuentes",
-    "searchPlaceholder": "Buscar en fuentes, carpetas o contenido..."
+    "searchPlaceholder": "Buscar en fuentes, carpetas o contenido...",
+    "activateFolder": "Activar",
+    "clearSuccess": "Se borró la biblioteca.",
+    "copyFailed": "No se pudo copiar la fuente.",
+    "deactivateFolder": "Desactivar",
+    "deleteFolderDesc": "Las fuentes de esta carpeta se moverán a General. Las fuentes no se eliminarán.",
+    "deleteFolderTitle": "¿Eliminar carpeta?",
+    "deleteSourceDesc": "Esto eliminará la fuente de tu biblioteca sincronizada.",
+    "deleteSourceTitle": "¿Eliminar fuente?",
+    "folderActions": "Acciones de carpeta",
+    "folderActionsDesc": "Cambia el nombre, elimina la carpeta o ajusta el uso de todas sus fuentes para fundamentar las respuestas de la IA.",
+    "folderActivated": "Carpeta activada",
+    "folderActivatedDesc": "Todas las fuentes de esta carpeta están activas.",
+    "folderDeactivated": "Carpeta desactivada",
+    "folderDeactivatedDesc": "Las fuentes siguen guardadas, pero no se usarán para fundamentar las respuestas de la IA.",
+    "folderDeleted": "Carpeta eliminada",
+    "folderDeletedDesc": "Las fuentes se movieron a General.",
+    "folderMergeConfirm": "Ya existe una carpeta con ese nombre. ¿Quieres combinar las fuentes en ella?",
+    "folderRenamed": "Carpeta renombrada",
+    "folderRenamedDesc": "Las fuentes de esta carpeta se movieron a la carpeta con el nuevo nombre.",
+    "noMatchingSources": "No hay fuentes que coincidan",
+    "noMatchingSourcesDesc": "Prueba otra búsqueda o carpeta.",
+    "renameFolder": "Cambiar nombre de carpeta",
+    "sourceCopied": "Fuente copiada al portapapeles.",
+    "sourceDeleted": "Fuente eliminada.",
+    "sourceUpdated": "Fuente actualizada",
+    "sourceUpdatedDesc": "Se guardaron los cambios de la fuente.",
+    "typeLabel": "Tipo",
+    "untitledSource": "Fuente sin título",
+    "useForGrounding": "Usar para fundamentar respuestas de la IA",
+    "useForGroundingDesc": "Las fuentes inactivas siguen guardadas, pero no se usan al generar contenido."
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
@@ -1599,7 +1694,9 @@
     "removedPartialTitle": "Algunas fuentes eliminadas",
     "removedPartialDesc": "{{succeeded}} eliminadas, {{failed}} no se pudieron eliminar.",
     "removeFailed": "No se pudieron eliminar las fuentes autoguardadas.",
-    "removeFailedDesc": "Se eliminaron {{succeeded}} fuentes. No se pudieron eliminar {{failed}} fuentes."
+    "removeFailedDesc": "Se eliminaron {{succeeded}} fuentes. No se pudieron eliminar {{failed}} fuentes.",
+    "removedDesc_one": "Se eliminó {{count}} fuente guardada automáticamente de tu biblioteca.",
+    "removedDesc_other": "Se eliminaron {{count}} fuentes guardadas automáticamente de tu biblioteca."
   },
   "sharedPage": {
     "title": "Contenido Compartido",
@@ -1780,7 +1877,11 @@
     "sparringKeyMoments": "Momentos clave",
     "sparringImprovementAreas": "Aspectos a mejorar",
     "sparringScorecardUnavailable": "Aún no hay una tarjeta final de puntuación.",
-    "sparringNoTranscript": "No se enviaron intervenciones en esta ronda."
+    "sparringNoTranscript": "No se enviaron intervenciones en esta ronda.",
+    "factoidsSummary_one": "{{count}} dato • Verificados: {{verified}}",
+    "factoidsSummary_other": "{{count}} datos • Verificados: {{verified}}",
+    "topIdeasCount_one": "{{count}} idea destacada",
+    "topIdeasCount_other": "{{count}} ideas destacadas"
   },
   "sparring": {
     "pro": "A favor",
@@ -1856,7 +1957,15 @@
       "startRound": "Iniciar ronda",
       "draftNotice": "Tu borrador se guarda en esta pestaña mientras escribes. Puedes pausar sin perder tu lugar.",
       "offlineCannotStart": "Vuelve a conectarte para iniciar una ronda. La configuración se conserva mientras estás sin conexión.",
-      "speakingOrder": "Orden de intervención"
+      "speakingOrder": "Orden de intervención",
+      "aboutMinutes_one": "Aproximadamente {{count}} minuto",
+      "aboutMinutes_other": "Aproximadamente {{count}} minutos",
+      "aiRequestBreakdown_one": "{{count}} respuesta + 1 juez",
+      "aiRequestBreakdown_other": "{{count}} respuestas + 1 juez",
+      "speeches_one": "{{count}} intervención",
+      "speeches_other": "{{count}} intervenciones",
+      "turns_one": "{{count}} turno",
+      "turns_other": "{{count}} turnos"
     },
     "round": {
       "inProgress": "Ronda en curso",
@@ -1911,7 +2020,13 @@
       "timeUsed": "{{time}} usados",
       "estimatedTimeUsed": "{{time}} estimados",
       "youArePro": "Estás a favor",
-      "youAreCon": "Estás en contra"
+      "youAreCon": "Estás en contra",
+      "submittedCount_one": "{{count}} enviada",
+      "submittedCount_other": "{{count}} enviadas",
+      "totalWords_one": "{{count}} palabra",
+      "totalWords_other": "{{count}} palabras",
+      "wordCount_one": "{{count}} palabra",
+      "wordCount_other": "{{count}} palabras"
     },
     "scorecard": {
       "eyebrow": "Revisión de la ronda",
@@ -1947,7 +2062,9 @@
       "fullTranscript": "Transcripción completa",
       "transcriptDescription": "{{count}} intervenciones de esta ronda {{format}}.",
       "hideTranscript": "Ocultar transcripción",
-      "showTranscript": "Mostrar transcripción"
+      "showTranscript": "Mostrar transcripción",
+      "transcriptDescription_one": "{{count}} intervención de esta ronda {{format}}.",
+      "transcriptDescription_other": "{{count}} intervenciones de esta ronda {{format}}."
     }
   },
   "langSwitcher": {
@@ -2096,7 +2213,9 @@
       "strong": "Fuerte",
       "moderate": "Moderada",
       "weak": "Débil"
-    }
+    },
+    "usageExplanation_one": "Usada en {{count}} caso guardado. Importancia: {{importance}}. Fuerza de la evidencia: {{strength}}.",
+    "usageExplanation_other": "Usada en {{count}} casos guardados. Importancia: {{importance}}. Fuerza de la evidencia: {{strength}}."
   },
   "debate": {
     "motion": "Moción",
@@ -2195,7 +2314,9 @@
     },
     "offerTitle": "¿Iniciar un debate con esta moción?",
     "offerDesc": "Un debate mantiene juntos la moción, sus fuentes y tus resultados, y todas las herramientas lo usan.",
-    "offerNotNow": "Ahora no, usarla una vez"
+    "offerNotNow": "Ahora no, usarla una vez",
+    "itemCount_one": "{{count}} elemento",
+    "itemCount_other": "{{count}} elementos"
   },
   "debateContext": {
     "using": "Usando {{list}}",
@@ -2244,6 +2365,19 @@
     "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate."
   },
   "themeToggle": {
-    "toggle": "Cambiar tema"
+    "toggle": "Cambiar tema",
+    "current": "Tema actual: {{theme}}. Haz clic para cambiarlo."
+  },
+  "googleDriveAuth": {
+    "connect": "Conectar Google Drive",
+    "description": "Para exportar a Google Docs, DebateLab necesita permiso para crear archivos en tu Google Drive.",
+    "failedDesc": "Inténtalo de nuevo.",
+    "failedTitle": "No se pudo abrir Google",
+    "redirecting": "Redirigiendo...",
+    "scopeNote": "Solo solicitamos el permiso limitado drive.file, no acceso completo a Drive.",
+    "title": "Conectar Google Drive"
+  },
+  "offlineIndicator": {
+    "label": "Modo sin conexión"
   }
 }

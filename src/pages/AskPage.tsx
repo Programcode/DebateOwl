@@ -321,7 +321,7 @@ export default function AskPage() {
           title: t('ask.saveFailed', 'Save failed'),
           description: error instanceof DebateRequiredError
             ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
-            : t('ask.saveFailedDesc', 'The source could not be saved. Please try again.'),
+            : t('ask.sourceSaveFailedDesc', 'The source could not be saved. Please try again.'),
           variant: 'destructive',
         });
       if (saveResult && typeof saveResult.then === 'function') {
