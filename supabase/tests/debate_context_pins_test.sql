@@ -6,10 +6,15 @@ INSERT INTO auth.users (id) VALUES
   ('e2222222-2222-4222-8222-222222222222');
 
 SELECT ok(
-  has_table_privilege('authenticated', 'public.debate_context_pins', 'SELECT,INSERT,DELETE')
+  has_table_privilege('authenticated', 'public.debate_context_pins', 'SELECT')
+    AND has_table_privilege('authenticated', 'public.debate_context_pins', 'INSERT')
+    AND has_table_privilege('authenticated', 'public.debate_context_pins', 'DELETE')
     AND NOT has_table_privilege('authenticated', 'public.debate_context_pins', 'UPDATE')
     AND NOT has_table_privilege('anon', 'public.debate_context_pins', 'SELECT')
-    AND has_table_privilege('service_role', 'public.debate_context_pins', 'SELECT,INSERT,UPDATE,DELETE'),
+    AND has_table_privilege('service_role', 'public.debate_context_pins', 'SELECT')
+    AND has_table_privilege('service_role', 'public.debate_context_pins', 'INSERT')
+    AND has_table_privilege('service_role', 'public.debate_context_pins', 'UPDATE')
+    AND has_table_privilege('service_role', 'public.debate_context_pins', 'DELETE'),
   'signed-in clients can read, add, and remove pins; anonymous callers cannot'
 );
 

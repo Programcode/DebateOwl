@@ -1,0 +1,18 @@
+# Merges with the organization settings in the CodeRabbit UI; only the keys
+# below are set here.
+inheritance: true
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "CODING_STANDARDS.md"
+      - "docs/standards/*.md"
+reviews:
+  path_instructions:
+    - path: "**/*"
+      instructions: >-
+        Follow the review steps in CODING_STANDARDS.md and apply the area files
+        in docs/standards/ that match the changed files. Report a rule violation
+        as a finding with the rule's link. Skip what lint, typecheck, the test
+        suites and npm run docs:check already catch.

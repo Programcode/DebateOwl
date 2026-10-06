@@ -268,6 +268,7 @@ test('hover intent is limited to fine pointers and click stays in-document', asy
   if (supportsHover) {
     await expect.poll(requestCount).toBe(1);
   } else {
+    // eslint-disable-next-line no-restricted-properties -- observation window: no prefetch may start without hover intent.
     await page.waitForTimeout(INTENT_OBSERVATION_MS);
     expect(requestCount()).toBe(0);
   }
@@ -330,6 +331,7 @@ for (const [label, connection] of [
     expect(requestCount()).toBe(0);
 
     await signalAllowedIntent(page, link);
+    // eslint-disable-next-line no-restricted-properties -- observation window: this connection must not start a speculative request.
     await page.waitForTimeout(INTENT_OBSERVATION_MS);
     expect(requestCount()).toBe(0);
 
@@ -391,6 +393,7 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   await openHome(page);
   await homeToolLink(page, 'attack').click();
   await waitForContent(page, attackContent);
+  // eslint-disable-next-line no-restricted-properties -- observation window: no extra subscription request may follow.
   await page.waitForTimeout(100);
 
   expect(subscriptionRequests).toEqual(['user_settings', 'ai_requests']);

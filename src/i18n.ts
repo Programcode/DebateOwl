@@ -5,7 +5,8 @@ import es from './locales/es.json';
 import hu from './locales/hu.json';
 import { languageName, type AppLanguage } from './lib/languages';
 
-i18n.use(initReactI18next).init({
+// Bundled resources make init synchronous; the returned promise cannot reject.
+void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, es: { translation: es }, hu: { translation: hu } },
   lng: 'en',
   fallbackLng: 'en',

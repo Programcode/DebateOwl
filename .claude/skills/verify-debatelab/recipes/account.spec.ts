@@ -74,6 +74,7 @@ test("timer-run: the speech timer starts, pauses, and resets", async ({ signedIn
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByText("PAUSED").first()).toBeVisible();
   const paused = await display.textContent();
+  // eslint-disable-next-line no-restricted-properties -- observation window: a paused timer must not change.
   await page.waitForTimeout(1_500);
   expect(await display.textContent()).toBe(paused);
   await evidence.shot("01-paused");

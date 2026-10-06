@@ -15,6 +15,10 @@ Start with the smallest document that answers the task instead of loading every 
 - [Agent guide](../AGENTS.md), current. Always-loaded commands, safety rules, and routing.
 - [Root README](../README.md), current. Product overview and quick start.
 
+## Write and review code
+
+- [Coding standards](../CODING_STANDARDS.md), current. Review rules drawn from accepted review findings, split by area under [`standards/`](standards/). Read by reviewers; open an area file when a review finding cites it.
+
 ## Set up and develop
 
 - [Development guide](development.md), current. Open for installation, environment behavior, linked worktrees, frontend, backend, database, or iOS workflows.

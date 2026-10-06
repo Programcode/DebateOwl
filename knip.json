@@ -1,0 +1,34 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/test/**/*.{ts,tsx}",
+    "scripts/**/*.{mjs,ts}",
+    "e2e/**/*.{ts,mjs}",
+    "e2e.config.ts",
+    "agentic/**/*.ts",
+    "services/collaboration/src/**/*.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/**/*.{mjs,ts}",
+    "e2e/**/*.{ts,mjs}",
+    "agentic/**/*.ts",
+    "services/collaboration/src/**/*.ts"
+  ],
+  "ignore": [
+    "src/lib/workspace/document-conversion.ts"
+  ],
+  "ignoreBinaries": [
+    "supabase"
+  ],
+  "ignoreDependencies": [
+    "squawk-cli"
+  ],
+  "include": [
+    "files",
+    "dependencies",
+    "devDependencies",
+    "unlisted",
+    "binaries"
+  ]
+}

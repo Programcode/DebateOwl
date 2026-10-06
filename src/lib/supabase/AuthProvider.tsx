@@ -225,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    init();
+    void init();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');

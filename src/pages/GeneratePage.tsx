@@ -441,7 +441,7 @@ export default function GeneratePage() {
         </DialogHeader>
         <div className="space-y-2">
           <Label htmlFor="case-title">{t('generate.caseTitle', 'Case title')}</Label>
-          <Input id="case-title" value={saveTitle} onChange={(event) => setSaveTitle(event.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && saveTitle.trim()) confirmSave(); }} autoFocus />
+          <Input id="case-title" value={saveTitle} onChange={(event) => setSaveTitle(event.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && saveTitle.trim()) void confirmSave(); }} autoFocus />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>

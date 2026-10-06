@@ -29,7 +29,13 @@ npm run lint
 npm run typecheck
 ```
 
-Lint checks repository ESLint rules. Type checking uses `tsconfig.app.json` for the client and `tsconfig.agentic.json` for `e2e.config.ts` and `agentic/` (the e2e runner itself does not type-check), and emits no files. Neither command replaces runtime tests.
+Lint runs ESLint, then `npm run lint:repo`:
+
+- ESLint is type-aware for `src/` (outside `src/test/`) and rejects promises nobody awaits or catches. `void` marks a promise that cannot reject or handles its own errors. In browser tests it rejects `waitForTimeout`; a deliberate observation window keeps a `no-restricted-properties` disable comment with its reason.
+- [knip](../knip.json) fails on unused files and on dependencies that are unused or missing from `package.json`.
+- [`scripts/check-repo-rules.mjs`](../scripts/check-repo-rules.mjs) requires a top-level `permissions:` block, SHA-pinned actions, and `persist-credentials: false` on checkout in every workflow. It rejects a positive `has_*_privilege` check that lists several privileges, since a list means "any of". It runs [squawk](https://squawkhq.com) on migrations newer than its baseline; silence a deliberate lock with `-- squawk-ignore <rule>` and a reason.
+
+Type checking uses `tsconfig.app.json` for the client and `tsconfig.agentic.json` for `e2e.config.ts` and `agentic/` (the e2e runner itself does not type-check), and emits no files. Neither command replaces runtime tests.
 
 ## Unit and component tests
 
