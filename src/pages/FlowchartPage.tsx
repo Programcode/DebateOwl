@@ -120,6 +120,8 @@ function LocalizedControls() {
     const { zoomIn, zoomOut, fitView } = useReactFlow();
     const store = useStoreApi();
     const isInteractive = useStore((state) => state.nodesDraggable || state.nodesConnectable || state.elementsSelectable);
+    const minZoomReached = useStore((state) => state.transform[2] <= state.minZoom);
+    const maxZoomReached = useStore((state) => state.transform[2] >= state.maxZoom);
     const toggleInteractivity = () => store.setState({
         nodesDraggable: !isInteractive,
         nodesConnectable: !isInteractive,
@@ -128,10 +130,10 @@ function LocalizedControls() {
 
     return (
         <Controls showZoom={false} showFitView={false} showInteractive={false}>
-            <ControlButton onClick={() => zoomIn()} title={t('flowchart.zoomIn')} aria-label={t('flowchart.zoomIn')}>
+            <ControlButton onClick={() => zoomIn()} disabled={maxZoomReached} title={t('flowchart.zoomIn')} aria-label={t('flowchart.zoomIn')}>
                 <Plus />
             </ControlButton>
-            <ControlButton onClick={() => zoomOut()} title={t('flowchart.zoomOut')} aria-label={t('flowchart.zoomOut')}>
+            <ControlButton onClick={() => zoomOut()} disabled={minZoomReached} title={t('flowchart.zoomOut')} aria-label={t('flowchart.zoomOut')}>
                 <Minus />
             </ControlButton>
             <ControlButton onClick={() => fitView()} title={t('flowchart.fitView')} aria-label={t('flowchart.fitView')}>

@@ -30,11 +30,17 @@
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
     const response = await nativeFetch(input, init);
-    if (response.status >= 500) {
-      const url = new URL(typeof input === "string" || input instanceof URL ? String(input) : input.url, location.href);
-      if (url.pathname.startsWith("/functions/") || url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/")) {
-        record("http", `${response.status} ${(init && init.method) || (input instanceof Request ? input.method : "GET")} ${url.pathname}`);
+    // Recording must never change what the app's request returns.
+    try {
+      if (response.status >= 500) {
+        const url = new URL(input instanceof Request ? input.url : String(input), location.href);
+        if (/^\/(functions|rest|auth)\//.test(url.pathname)) {
+          const method = (init && init.method) || (input instanceof Request ? input.method : "GET");
+          record("http", `${response.status} ${method.toUpperCase()} ${url.pathname}`);
+        }
       }
+    } catch {
+      // An input this script cannot parse is the app's business, not a finding.
     }
     return response;
   };
