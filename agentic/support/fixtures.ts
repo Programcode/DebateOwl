@@ -121,8 +121,9 @@ export async function textPastTheEdge(browser: Browser): Promise<string[]> {
       // A fixed or absolute box escapes the overflow of ancestors outside its
       // containing block, so only ancestors on that chain clip it.
       const containsFixed = (style: CSSStyleDeclaration) =>
-        style.transform !== "none" || style.perspective !== "none" || style.filter !== "none" ||
-        /paint|layout|strict|content/.test(style.contain) || /transform|perspective|filter/.test(style.willChange);
+        style.transform !== "none" || style.translate !== "none" || style.rotate !== "none" || style.scale !== "none" ||
+        style.perspective !== "none" || style.filter !== "none" || style.backdropFilter !== "none" ||
+        /paint|layout|strict|content/.test(style.contain) || /transform|translate|rotate|scale|perspective|filter/.test(style.willChange);
       let escaping: "fixed" | "absolute" | null = null;
       for (let node: Element | null = el; node && node !== document.documentElement; node = node.parentElement) {
         const style = getComputedStyle(node);
@@ -144,8 +145,10 @@ export async function textPastTheEdge(browser: Browser): Promise<string[]> {
         }
         const inset = /^inset\(([^)]*?)(?:\s+round[^)]*)?\)$/.exec(style.clipPath);
         if (inset) {
-          const v = inset[1].trim().split(/\s+/).map((part, i) => part.endsWith("%") ? parseFloat(part) / 100 * (i % 2 ? rect.width : rect.height) : parseFloat(part));
-          const [t, r = t, b = t, l = r] = v;
+          // Expand the shorthand first: a percentage is of the width for left and right, the height for top and bottom.
+          const [t0, r0 = t0, b0 = t0, l0 = r0] = inset[1].trim().split(/\s+/);
+          const length = (part: string, of: number) => part.endsWith("%") ? parseFloat(part) / 100 * of : parseFloat(part);
+          const [t, r, b, l] = [length(t0, rect.height), length(r0, rect.width), length(b0, rect.height), length(l0, rect.width)];
           cut({ left: rect.left + l, right: rect.right - r, top: rect.top + t, bottom: rect.bottom - b }, true, true);
         } else if (style.clipPath !== "none") {
           cut(rect, true, true);
