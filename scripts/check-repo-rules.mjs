@@ -68,17 +68,39 @@ function checkWorkflows() {
   }
 }
 
-// The text between a call and whatever wraps it: whitespace, comments and
-// opening parentheses do not change whether the call is negated.
-function isNegated(before) {
-  let text = before.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
-  for (;;) {
-    const trimmed = text.replace(/[\s(]+$/, "");
-    if (trimmed === text) break;
-    text = trimmed;
+// Replaces SQL comments with spaces, keeping newlines and string literals,
+// so comments can neither supply nor hide a call's arguments.
+function blankComments(source) {
+  let out = "";
+  let index = 0;
+  while (index < source.length) {
+    const char = source[index];
+    if (char === "'") {
+      const end = source.indexOf("'", index + 1);
+      const stop = end === -1 ? source.length : end + 1;
+      out += source.slice(index, stop);
+      index = stop;
+    } else if (source.startsWith("--", index)) {
+      const end = source.indexOf("\n", index);
+      const stop = end === -1 ? source.length : end;
+      out += " ".repeat(stop - index);
+      index = stop;
+    } else if (source.startsWith("/*", index)) {
+      const end = source.indexOf("*/", index + 2);
+      const stop = end === -1 ? source.length : end + 2;
+      out += source.slice(index, stop).replace(/[^\n]/g, " ");
+      index = stop;
+    } else {
+      out += char;
+      index += 1;
+    }
   }
-  return /\bNOT$/i.test(text);
+  return out;
 }
+
+// Whitespace and opening parentheses between NOT and the call do not change
+// whether the call is negated.
+const isNegated = (before) => /\bNOT[\s(]*$/i.test(before);
 
 // Arguments of the call whose opening parenthesis is at `open`, up to its
 // matching close, skipping parentheses inside string literals.
@@ -100,7 +122,7 @@ function checkPgTapPrivileges() {
   // Under NOT, a list correctly means "none of them".
   const call = /\bhas_[a-z_]+_privilege\s*\(/gi;
   for (const file of listFiles("supabase/tests", [".sql"])) {
-    const source = readFileSync(path.join(root, file), "utf8");
+    const source = blankComments(readFileSync(path.join(root, file), "utf8"));
     for (const match of source.matchAll(call)) {
       const literals = [...callArguments(source, match.index + match[0].length - 1).matchAll(/'((?:[^']|'')*)'/g)];
       const privilege = literals.at(-1)?.[1] ?? "";
