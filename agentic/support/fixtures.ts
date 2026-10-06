@@ -81,12 +81,17 @@ export async function pageErrors(browser: Browser): Promise<string[]> {
  * Visible text that crosses the left or right edge of the screen. A wrapper
  * with `overflow-x: hidden` keeps the page from scrolling sideways while it
  * cuts such text off, so the page-width check alone misses it. Each text node
- * is measured, not its element's box, and clipped through every ancestor that
- * clips: text clipped away entirely (a drawer off canvas, an `sr-only` label)
- * or cut short inside the screen (an ellipsis) does not count, and text that
- * shows right up to the edge and continues past it does.
- * Text in a container that scrolls sideways on purpose (a table, a carousel)
- * or pans (the Flowchart canvas) is exempt.
+ * is measured, not its element's box, and clipped the way the browser clips
+ * it: by the ancestors on its containing-block chain, and by `clip` and
+ * `clip-path`. Text clipped away entirely (a drawer off canvas, an `sr-only`
+ * label) does not count; text that shows right up to the edge and continues
+ * past it does. Text in a container that scrolls sideways on purpose (a table,
+ * a carousel) or pans (the Flowchart canvas) is exempt.
+ *
+ * Text cut short inside the screen is out of scope on purpose. An ellipsis,
+ * a scroll area, a carousel and a line clamp all clip inside the page by
+ * design, so a geometric rule would fail them; the page sweep's judge checks
+ * for text that is cut off.
  */
 export async function textPastTheEdge(browser: Browser): Promise<string[]> {
   return browser.evaluate(() => {
@@ -109,21 +114,44 @@ export async function textPastTheEdge(browser: Browser): Promise<string[]> {
       let top = box.top;
       let bottom = box.bottom;
       let exempt = false;
+      const cut = (area: { left: number; right: number; top: number; bottom: number }, x: boolean, y: boolean) => {
+        if (x) { left = Math.max(left, area.left); right = Math.min(right, area.right); }
+        if (y) { top = Math.max(top, area.top); bottom = Math.min(bottom, area.bottom); }
+      };
+      // A fixed or absolute box escapes the overflow of ancestors outside its
+      // containing block, so only ancestors on that chain clip it.
+      const containsFixed = (style: CSSStyleDeclaration) =>
+        style.transform !== "none" || style.perspective !== "none" || style.filter !== "none" ||
+        /paint|layout|strict|content/.test(style.contain) || /transform|perspective|filter/.test(style.willChange);
+      let escaping: "fixed" | "absolute" | null = null;
       for (let node: Element | null = el; node && node !== document.documentElement; node = node.parentElement) {
         const style = getComputedStyle(node);
-        if ((style.overflowX === "auto" || style.overflowX === "scroll") && node.scrollWidth > node.clientWidth) { exempt = true; break; }
-        // `clip` and `clip-path` cut to the box at most; a zero-area `clip` hides it (`sr-only`).
-        const clipsToBox = style.clipPath !== "none" || style.clip !== "auto";
-        if (style.clip !== "auto" && /^rect\(0px,? 0px,? 0px,? 0px\)$/.test(style.clip)) { left = right; break; }
-        const clip = node.getBoundingClientRect();
-        if (clipsToBox || style.overflowX !== "visible") {
-          left = Math.max(left, clip.left);
-          right = Math.min(right, clip.right);
+        const onChain = escaping === null
+          || (escaping === "absolute" && (style.position !== "static" || containsFixed(style)))
+          || (escaping === "fixed" && containsFixed(style));
+        if (onChain) {
+          escaping = null;
+          if ((style.overflowX === "auto" || style.overflowX === "scroll") && node.scrollWidth > node.clientWidth) { exempt = true; break; }
+          const rect = node.getBoundingClientRect();
+          cut(rect, style.overflowX !== "visible", style.overflowY !== "visible");
         }
-        if (clipsToBox || style.overflowY !== "visible") {
-          top = Math.max(top, clip.top);
-          bottom = Math.min(bottom, clip.bottom);
+        // `clip` and `clip-path` apply to the element itself, wherever it sits.
+        const rect = node.getBoundingClientRect();
+        const clipRect = /^rect\((.+)\)$/.exec(style.clip);
+        if (clipRect) {
+          const [t, r, b, l] = clipRect[1].split(/,?\s+/).map((v, i) => v === "auto" ? [0, rect.width, rect.height, 0][i] : parseFloat(v));
+          cut({ left: rect.left + l, right: rect.left + r, top: rect.top + t, bottom: rect.top + b }, true, true);
         }
+        const inset = /^inset\(([^)]*?)(?:\s+round[^)]*)?\)$/.exec(style.clipPath);
+        if (inset) {
+          const v = inset[1].trim().split(/\s+/).map((part, i) => part.endsWith("%") ? parseFloat(part) / 100 * (i % 2 ? rect.width : rect.height) : parseFloat(part));
+          const [t, r = t, b = t, l = r] = v;
+          cut({ left: rect.left + l, right: rect.right - r, top: rect.top + t, bottom: rect.bottom - b }, true, true);
+        } else if (style.clipPath !== "none") {
+          cut(rect, true, true);
+        }
+        if (style.position === "fixed") escaping = "fixed";
+        else if (style.position === "absolute" && escaping === null) escaping = "absolute";
       }
       if (exempt || right - left < 1 || bottom - top < 1) continue;
       // Cut short by its own box inside the screen, like an ellipsis on a
