@@ -1532,7 +1532,12 @@
     "edgeRebuttal": "Cáfolat",
     "edgeSupport": "Alátámasztás",
     "exportFailedToast": "Nem sikerült exportálni a folyamatábrát.",
-    "selectedNode": "Kiválasztva"
+    "selectedNode": "Kiválasztva",
+    "zoomIn": "Nagyítás",
+    "zoomOut": "Kicsinyítés",
+    "fitView": "Teljes nézet",
+    "toggleInteractivity": "Vászon zárolása vagy feloldása",
+    "miniMap": "Folyamatábra áttekintése"
   },
   "historyPage": {
     "title": "Előzmények",

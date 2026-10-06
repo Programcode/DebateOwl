@@ -1532,7 +1532,12 @@
     "edgeRebuttal": "Rebuttal",
     "edgeSupport": "Support",
     "exportFailedToast": "Could not export flowchart.",
-    "selectedNode": "Selected"
+    "selectedNode": "Selected",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit view",
+    "toggleInteractivity": "Lock or unlock the canvas",
+    "miniMap": "Flowchart overview"
   },
   "historyPage": {
     "title": "History",
