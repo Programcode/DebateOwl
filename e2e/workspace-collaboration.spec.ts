@@ -281,6 +281,7 @@ test("real local users collaborate, recover, review, restore, and revoke access"
     await cdp.send("Input.imeSetComposition", { text: " tűrő", selectionStart: 5, selectionEnd: 5 });
     await expect(owner.page.locator(".ProseMirror")).not.toContainText("tűrő");
     await cdp.send("Input.imeSetComposition", { text: "", selectionStart: 0, selectionEnd: 0 });
+    // eslint-disable-next-line no-restricted-properties -- observation window: a cancelled IME composition must not create a suggestion.
     await owner.page.waitForTimeout(500);
     await expect(member.page.getByRole("button", { name: "Reject" })).toHaveCount(0);
     await expect(owner.page.locator(".ProseMirror")).not.toContainText("tűrő");

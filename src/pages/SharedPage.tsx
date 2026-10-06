@@ -56,7 +56,7 @@ export default function SharedPage() {
             }
         };
 
-        loadSharedItem();
+        void loadSharedItem();
     }, [code, t]);
 
     const handleImport = async () => {

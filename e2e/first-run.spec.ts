@@ -157,6 +157,7 @@ for (const locale of ['en', 'hu'] as const) {
     // Finishing is remembered across a reload.
     await page.goto('/app', { waitUntil: 'domcontentloaded' });
     await expect(card).toBeVisible();
+    // eslint-disable-next-line no-restricted-properties -- observation window: the finished tour must not reopen after its start delay.
     await page.waitForTimeout(800);
     await expect(tooltip).toHaveCount(0);
   });
