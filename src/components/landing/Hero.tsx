@@ -30,7 +30,7 @@ const Hero = () => {
             <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/75 to-background pointer-events-none" />
 
             <div className="section-container relative z-10">
-                <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
                     <div>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -174,7 +174,7 @@ const HeroPreview = () => {
                     </div>
                 </div>
 
-                <div className="grid gap-4 bg-background/95 p-5 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="grid grid-cols-1 gap-4 bg-background/95 p-5 lg:grid-cols-[1.05fr_0.95fr]">
                     <div className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4">
                         <div className="flex items-center justify-between gap-3">
                             <h3 className="text-base font-semibold text-foreground">{t(`features.${mode}`)}</h3>

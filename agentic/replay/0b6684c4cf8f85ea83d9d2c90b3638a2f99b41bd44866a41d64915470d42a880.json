@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:42:37.456Z",
+  "createdAt": "2026-10-06T09:24:38.325Z",
   "payload": {
     "actions": [
       {
@@ -8,7 +8,7 @@
         "summary": "tap button \"Argument Argument 1 Your first argument…\"",
         "target": {
           "role": "button",
-          "name": "Argument Argument 1 Your first argument strong",
+          "name": "Argument Argument 1 Your first argument Strong",
           "testId": "rf__node-c1"
         }
       },
@@ -72,7 +72,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Deleted Argument 1 and saved the flowchart with the title “Zoo ban flow.” The screen confirms “Flowchart saved successfully.”",
+    "summary": "Deleted Argument 1; the flowchart now shows two arguments. Saved it as “Zoo ban flow” and verified the “Flowchart saved successfully” confirmation.",
     "startPath": "/app/flowchart",
     "endPath": "/app/flowchart",
     "endAnchors": [
@@ -84,32 +84,31 @@
         "text": "Flowchart saved successfully"
       },
       {
-        "role": "listitem",
-        "name": "Close Flowchart saved successfully"
+        "role": "heading",
+        "name": "Argument Flowchart"
       },
       {
-        "text": "Argument: 2"
+        "text": "Support"
+      },
+      {
+        "text": "No current debate. Results stay one-off until you start one."
+      },
+      {
+        "text": "Thesis"
+      },
+      {
+        "text": "Your Thesis"
+      },
+      {
+        "text": "Click to edit or add new nodes"
       }
     ],
     "goneAnchors": [
       {
-        "text": "Argument 1"
-      },
-      {
-        "text": "Your first argument"
-      },
-      {
-        "text": "strong"
-      },
-      {
-        "text": "Argument: 3"
-      },
-      {
-        "role": "button",
-        "name": "Argument Argument 1 Your first argument strong",
-        "testId": "rf__node-c1"
+        "role": "status",
+        "name": "Opening Flowchart"
       }
     ],
-    "endWaitMs": 12707
+    "endWaitMs": 13789
   }
 }

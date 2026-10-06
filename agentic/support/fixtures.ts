@@ -78,9 +78,42 @@ export async function pageErrors(browser: Browser): Promise<string[]> {
 }
 
 /**
+ * Visible text that crosses the left or right edge of the screen. A wrapper
+ * with `overflow-x: hidden` keeps the page from scrolling sideways while it
+ * cuts such text off, so the page-width check alone misses it. Text inside a
+ * container that scrolls sideways on purpose (a table, a carousel) is exempt.
+ */
+async function textPastTheEdge(browser: Browser): Promise<string[]> {
+  return browser.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const scrollsSideways = (el: Element) => {
+      for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+        const overflowX = getComputedStyle(node).overflowX;
+        if ((overflowX === "auto" || overflowX === "scroll") && node.scrollWidth > node.clientWidth) return true;
+      }
+      return false;
+    };
+    const found: string[] = [];
+    for (const el of Array.from(document.body.querySelectorAll("*"))) {
+      const ownText = Array.from(el.childNodes).some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+      if (!ownText) continue;
+      const rect = el.getBoundingClientRect();
+      // An ancestor at opacity 0 hides it too: a scroll-reveal waiting off screen.
+      if (rect.width < 2 || rect.height < 2 || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+      if (rect.right <= width + 1 && rect.left >= -1) continue;
+      if (scrollsSideways(el)) continue;
+      found.push(`${el.tagName.toLowerCase()} "${(el.textContent ?? "").trim().slice(0, 60)}" spans ${Math.round(rect.left)}-${Math.round(rect.right)}px of ${width}px`);
+      if (found.length === 5) break;
+    }
+    return found;
+  });
+}
+
+/**
  * Fails the test on any request to a hosted Supabase project, anything the
- * page logged as an error (see `pageErrors`), and a page wider than its
- * viewport, checked after the test body on whatever page it ended.
+ * page logged as an error (see `pageErrors`), a page wider than its viewport,
+ * and text past the screen edge, checked after the test body on whatever page
+ * it ended.
  */
 async function guarded(browser: Browser, body: () => Promise<void>) {
   const remote: string[] = [];
@@ -92,6 +125,7 @@ async function guarded(browser: Browser, body: () => Promise<void>) {
   expect(await pageErrors(browser), "errors the page logged").toEqual([]);
   const overflow = await browser.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow, "horizontal page overflow in px").toBeLessThanOrEqual(1);
+  expect(await textPastTheEdge(browser), "text running past the screen edge").toEqual([]);
   expect(remote, "requests to a hosted Supabase project").toEqual([]);
 }
 
