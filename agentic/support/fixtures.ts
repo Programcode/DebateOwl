@@ -80,30 +80,47 @@ export async function pageErrors(browser: Browser): Promise<string[]> {
 /**
  * Visible text that crosses the left or right edge of the screen. A wrapper
  * with `overflow-x: hidden` keeps the page from scrolling sideways while it
- * cuts such text off, so the page-width check alone misses it. Text inside a
- * container that scrolls sideways on purpose (a table, a carousel) is exempt.
+ * cuts such text off, so the page-width check alone misses it. Each text node
+ * is measured, not its element's box, and clipped through every ancestor that
+ * clips: text clipped away entirely (a drawer off canvas, an `sr-only` label)
+ * does not count, and text that shows at all but runs past the edge does.
+ * Text in a container that scrolls sideways on purpose (a table, a carousel)
+ * or pans (the Flowchart canvas) is exempt.
  */
 async function textPastTheEdge(browser: Browser): Promise<string[]> {
   return browser.evaluate(() => {
     const width = document.documentElement.clientWidth;
-    const scrollsSideways = (el: Element) => {
-      for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
-        const overflowX = getComputedStyle(node).overflowX;
-        if ((overflowX === "auto" || overflowX === "scroll") && node.scrollWidth > node.clientWidth) return true;
-      }
-      return false;
-    };
     const found: string[] = [];
-    for (const el of Array.from(document.body.querySelectorAll("*"))) {
-      const ownText = Array.from(el.childNodes).some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
-      if (!ownText) continue;
-      const rect = el.getBoundingClientRect();
-      // An ancestor at opacity 0 hides it too: a scroll-reveal waiting off screen.
-      if (rect.width < 2 || rect.height < 2 || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
-      if (rect.right <= width + 1 && rect.left >= -1) continue;
-      if (scrollsSideways(el)) continue;
-      found.push(`${el.tagName.toLowerCase()} "${(el.textContent ?? "").trim().slice(0, 60)}" spans ${Math.round(rect.left)}-${Math.round(rect.right)}px of ${width}px`);
-      if (found.length === 5) break;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let text = walker.nextNode(); text && found.length < 5; text = walker.nextNode()) {
+      const el = text.parentElement;
+      if (!el || !text.textContent?.trim()) continue;
+      if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+      if (el.closest(".react-flow__viewport")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const box = range.getBoundingClientRect();
+      if (box.width < 1 || box.height < 1) continue;
+      if (box.right <= width + 1 && box.left >= -1) continue;
+      // What of the text survives every clipping ancestor and the screen.
+      let left = Math.max(box.left, 0);
+      let right = Math.min(box.right, width);
+      let top = box.top;
+      let bottom = box.bottom;
+      let exempt = false;
+      for (let node: Element | null = el; node && node !== document.documentElement; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.clip !== "auto" || style.clipPath !== "none") { left = right; break; }
+        if (style.overflowX === "visible" && style.overflowY === "visible") continue;
+        if ((style.overflowX === "auto" || style.overflowX === "scroll") && node.scrollWidth > node.clientWidth) { exempt = true; break; }
+        const clip = node.getBoundingClientRect();
+        left = Math.max(left, clip.left);
+        right = Math.min(right, clip.right);
+        top = Math.max(top, clip.top);
+        bottom = Math.min(bottom, clip.bottom);
+      }
+      if (exempt || right - left < 1 || bottom - top < 1) continue;
+      found.push(`${el.tagName.toLowerCase()} "${text.textContent.trim().slice(0, 60)}" spans ${Math.round(box.left)}-${Math.round(box.right)}px of ${width}px`);
     }
     return found;
   });
