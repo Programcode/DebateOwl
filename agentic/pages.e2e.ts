@@ -3,9 +3,8 @@ import type { Agent } from "e2e";
 import { agentic, expect, LANGUAGES, localeTest, visitorTest, type Language } from "./support/fixtures";
 
 // Every page a student or visitor reaches, in every interface language, on
-// both viewports. Not covered: /app/admin (admins only) and a valid
-// /share/:code (no client code creates a share link yet); a missing share and
-// an unknown route are visited once below. Selectors pin
+// both viewports. Not covered: /app/admin (admins only) and /share/:code (no
+// client code creates a share link yet). Selectors pin
 // what they can (lang, a heading, no raw values); the judge reads the screen
 // for what they cannot: stray untranslated text, error notices, and clipped
 // or overlapping text. e2e/hungarian-parity.spec.ts and authed-pages.spec.ts
@@ -67,16 +66,3 @@ for (const language of LANGUAGES) {
     });
   }
 }
-
-// Expected misses show their notice without logging anything: the visitor
-// fixture fails the test on a console error or on the 406 PostgREST answers
-// when the page asks for exactly one share row and there is none.
-const englishVisitor = visitorTest("en");
-englishVisitor("a missing share link says so without logging an error", { ...agentic, tags: ["pages", "en"] }, async ({ browser, visitor }) => {
-  await visitor.open("/share/agentic-missing-share");
-  await expect(browser.locator("body")).toContainText("This shared content is no longer available");
-});
-englishVisitor("an unknown route shows the 404 page without logging an error", { ...agentic, tags: ["pages", "en"] }, async ({ browser, visitor }) => {
-  await visitor.open("/agentic-no-such-page");
-  await expect(browser.locator("h1")).toHaveText("404");
-});

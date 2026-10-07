@@ -66,8 +66,8 @@ async function signIn(screen: Screen, browser: Browser, code: string, language: 
 
 /**
  * What `support/capture-errors.js` recorded in this tab: uncaught errors,
- * rejected promises, console.error, Supabase 5xx answers, and PostgREST 406s.
- * Reading clears the list.
+ * rejected promises, console.error, and Supabase 5xx answers. Reading clears
+ * the list.
  */
 export async function pageErrors(browser: Browser): Promise<string[]> {
   return browser.evaluate(() => {

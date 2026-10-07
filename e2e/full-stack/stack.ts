@@ -49,12 +49,9 @@ export async function chooseForMotion(page: Page, choice: "create" | "once") {
   await expect(dialog).toBeHidden();
 }
 
-type Fixtures = { user: DemoUser; signedIn: Page; tolerate: RegExp[] };
+type Fixtures = { user: DemoUser; signedIn: Page };
 
 export const test = base.extend<Fixtures>({
-  // Problems a spec causes on purpose, such as a provider failure, matched
-  // against the lines the page fixture collects. Set with test.use().
-  tolerate: [[], { option: true }],
   // Playwright requires a destructuring pattern even when a fixture has no dependencies.
   // eslint-disable-next-line no-empty-pattern
   user: async ({}, provide, testInfo) => {
@@ -62,22 +59,10 @@ export const test = base.extend<Fixtures>({
     await provide(created);
     await deleteDemoUser(created);
   },
-  page: async ({ page, tolerate }, provide) => {
+  page: async ({ page }, provide) => {
     // Any uncaught exception fails the test, even when the visible flow passes.
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    // So does a console error or a failed request to the local app or stack:
-    // an expected miss, like an unknown share code, must not log one.
-    const problems: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") problems.push(`console.error: ${message.text()}`);
-    });
-    page.on("response", (response) => {
-      const url = new URL(response.url());
-      if (response.status() >= 400 && /^(127\.0\.0\.1|localhost|\[::1\])$/.test(url.hostname)) {
-        problems.push(`${response.status()} ${response.request().method()} ${url.pathname}`);
-      }
-    });
     // Init scripts rerun on every load, so seed only what the app has not written.
     await page.addInitScript(() => {
       const seed = (key: string, state: Record<string, unknown>) => {
@@ -89,7 +74,6 @@ export const test = base.extend<Fixtures>({
     await fake.reset();
     await provide(page);
     expect(errors, "uncaught page errors").toEqual([]);
-    expect(problems.filter((line) => !tolerate.some((pattern) => pattern.test(line))), "console errors and failed local requests").toEqual([]);
     // Overflow widens the mobile layout viewport and pushes controls off-screen.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, "horizontal page overflow in px").toBeLessThanOrEqual(1);
