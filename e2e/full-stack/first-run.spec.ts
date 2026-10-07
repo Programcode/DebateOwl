@@ -64,6 +64,18 @@ async function signUpFresh(page: Page, user: DemoUser, locale: Locale) {
   await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
 }
 
+// On a slow runner the welcome tooltip first renders over the card and only
+// slides below it a moment later. A click before that slide was lost, so wait
+// for the tooltip's final position.
+async function welcomeTourSettled(page: Page) {
+  const tooltip = page.locator(".react-joyride__tooltip");
+  const card = page.locator('[data-tour="current-debate"]');
+  await expect.poll(async () => {
+    const [tip, target] = await Promise.all([tooltip.boundingBox(), card.boundingBox()]);
+    return !!tip && !!target && tip.y >= target.y + target.height;
+  }, { timeout: 15_000 }).toBe(true);
+}
+
 async function serverDebates(user: DemoUser) {
   const userId = await user.userId();
   const [{ data: debates }, { data: current }] = await Promise.all([
@@ -86,6 +98,7 @@ for (const locale of ["en", "hu"] as const) {
     await expect(tooltip).toContainText(text.firstDebate);
     await expect(page.locator("html")).toHaveAttribute("lang", locale);
 
+    await welcomeTourSettled(page);
     await tooltip.getByRole("button", { name: text.startDebate }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel(text.motionField).fill(text.tourMotion);
@@ -123,6 +136,7 @@ for (const locale of ["en", "hu"] as const) {
   test(`[${locale}] a fresh account that skips the tour is offered a debate from its motion`, async ({ page, user }) => {
     test.setTimeout(90_000);
     await signUpFresh(page, user, locale);
+    await welcomeTourSettled(page);
     await page.locator('[data-test-id="button-skip"]').click();
     await expect(page.locator(".react-joyride__tooltip")).toHaveCount(0);
 
