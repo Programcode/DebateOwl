@@ -46,6 +46,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Current Debate](./current-debate.md): start, the first-debate offer and the different-motion choice, sources and results scoped to a debate, switching, and the first onboarding step (`recipes/current-debate.spec.ts`); debate context review and pins (`e2e/full-stack/debate-context.spec.ts`).
 - [Practice](./practice.md): a full Lincoln-Douglas sparring round with verdict, and Crossfire in both directions with debrief, each filed in its debate (`recipes/practice.spec.ts`).
 - [Voice rounds](./voice-rounds.md): spoken Sparring and Crossfire on the browser voice, with no ElevenLabs key (`recipes/voice-rounds.spec.ts`).
+- [Workspace autosave](./workspace-autosave.md): a slow Crossfire or Sparring save from a Workspace never overwrites newer text (`recipes/workspace-autosave.spec.ts`). Needs `up --collab`; skips without it.
 - [Account data](./account-data.md): Download my data and Delete account, each proven against a bystander (`recipes/account-data.spec.ts`); Delete All My Data scoped against a bystander (`e2e/full-stack/account-data.spec.ts`).
 - Account: output language reaching the model from a new device, flowchart node delete, save and load, and the speech timer (`recipes/account.spec.ts`).
 - Billing: expired account blocked, promo code restores access (`recipes/billing.spec.ts`); signed, forged, and replayed Stripe webhooks (`e2e/full-stack/billing.spec.ts`).
