@@ -19,22 +19,53 @@ export function untilAborted<T>(promise: Promise<T>, signal?: AbortSignal): Prom
   });
 }
 
+// The hosted Edge runtime does not deliver a response until the function has
+// read the request body. An oversized request is therefore read to the end and
+// discarded, for at most this long, before the caller answers 413. An upstream
+// response is cancelled instead.
+const REQUEST_DRAIN_MS = 10_000;
+
+async function discardRest(reader: ReadableStreamDefaultReader<Uint8Array>, signal?: AbortSignal) {
+  const limit = AbortSignal.timeout(REQUEST_DRAIN_MS);
+  const until = signal ? AbortSignal.any([signal, limit]) : limit;
+  try {
+    while (!(await untilAborted(reader.read(), until)).done) {
+      // Discard.
+    }
+  } catch {
+    // Out of time or the sender went away; answer anyway.
+  }
+}
+
+/** Reads and drops a request body the caller is refusing, so the refusal reaches the client. */
+export async function discardRequestBody(req: Request, signal?: AbortSignal): Promise<void> {
+  if (!req.body || req.bodyUsed) return;
+  const reader = req.body.getReader();
+  try {
+    await discardRest(reader, signal);
+  } finally {
+    reader.cancel().catch(() => undefined);
+  }
+}
+
 export async function readBoundedBody(
   source: Request | Response,
   maxBytes: number,
   signal?: AbortSignal,
 ): Promise<string> {
+  const isRequest = source instanceof Request;
   const declaredLength = Number(source.headers.get("content-length"));
-  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-    await source.body?.cancel().catch(() => undefined);
-    throw new BodyTooLargeError(maxBytes);
+  const declaredTooLarge = Number.isFinite(declaredLength) && declaredLength > maxBytes;
+  if (!source.body) {
+    if (declaredTooLarge) throw new BodyTooLargeError(maxBytes);
+    return "";
   }
-  if (!source.body) return "";
   const reader = source.body.getReader();
   const decoder = new TextDecoder();
   let received = 0;
   let text = "";
   try {
+    if (declaredTooLarge) throw new BodyTooLargeError(maxBytes);
     while (true) {
       // A pending read is not guaranteed to reject when the fetch signal
       // aborts, so race each read against the signal directly.
@@ -45,6 +76,9 @@ export async function readBoundedBody(
       text += decoder.decode(value, { stream: true });
     }
     return text + decoder.decode();
+  } catch (error) {
+    if (isRequest && error instanceof BodyTooLargeError) await discardRest(reader, signal);
+    throw error;
   } finally {
     reader.cancel().catch(() => undefined);
   }

@@ -4,7 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders } from "../_shared/cors.ts";
-import { BodyTooLargeError, readBoundedBody } from "../_shared/bounded-body.ts";
+import { BodyTooLargeError, discardRequestBody, readBoundedBody } from "../_shared/bounded-body.ts";
 
 // Shared items are saved text, so 512 KB of JSON leaves room for long cases and
 // chats while keeping one request from filling the table.
@@ -70,6 +70,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     } catch (error) {
         if (!(error instanceof HttpError)) throw error;
         console.warn("[SHARE] Authentication rejected:", error.message);
+        await discardRequestBody(req);
         return jsonError(error, corsHeaders);
     }
 
