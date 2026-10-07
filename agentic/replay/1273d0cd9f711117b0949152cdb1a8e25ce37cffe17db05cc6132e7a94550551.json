@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-07T12:08:33.739Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "check",
+        "summary": "check switch \"Toggle Plastic bag levy study\"",
+        "target": {
+          "role": "switch",
+          "name": "Toggle Plastic bag levy study"
+        },
+        "checked": true
+      },
+      {
+        "name": "check",
+        "summary": "check switch \"Toggle Plastic bag levy study\"",
+        "target": {
+          "role": "switch",
+          "name": "Toggle Plastic bag levy study"
+        },
+        "checked": true
+      },
+      {
+        "name": "tap",
+        "summary": "tap switch \"Toggle Plastic bag levy study\"",
+        "target": {
+          "role": "switch",
+          "name": "Toggle Plastic bag levy study"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "agentic/workspace.e2e.ts::a%20student%20adds%20a%20source%20to%20the%20debate%27s%20Library%20and%20pauses%20it",
+      "targetId": "desktop",
+      "instructionDigest": "9d91feda70935783ebcf15c1b620bce9da676e8396f3bf892a209539bebb7dbb",
+      "paramsDigest": "5389157aca16270d663ba59055313812cc7ac445013bac8109e739f151f394e3",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "Toggled the switch for 'Plastic bag levy study' off. The Library now shows: Active sources = 0, Grounding Disabled with message 'AI responses are not grounded', and the source switch is no longer checked.",
+    "startPath": "/app/library",
+    "endPath": "/app/library",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "Grounding Disabled"
+      },
+      {
+        "text": "AI responses are not grounded"
+      },
+      {
+        "role": "switch",
+        "name": "Toggle Plastic bag levy study"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "role": "button",
+        "name": "Close"
+      },
+      {
+        "text": "Source Added"
+      },
+      {
+        "text": "Your source is now available for grounding."
+      },
+      {
+        "role": "heading",
+        "name": "Grounding Active"
+      },
+      {
+        "text": "AI responses use your sources"
+      },
+      {
+        "role": "listitem",
+        "name": "Close Source Added Your source is now available for grounding."
+      },
+      {
+        "role": "switch",
+        "name": "Toggle Plastic bag levy study",
+        "states": [
+          "checked"
+        ]
+      }
+    ],
+    "endWaitMs": 12649
+  }
+}

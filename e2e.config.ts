@@ -18,13 +18,14 @@ const live = process.env.VERIFY_MODE === "live";
 // The testing agent's models, separate from the app's own. Both need tool
 // calling and image input. The actor drives agent.act and explorations; its
 // recorded flows replay with no model call, so it runs only on a cache miss
-// and in explorations, for a fraction of a cent per step. GPT-6 Luna is fast
-// and reliable at it (OpenRouter withdrew the free Qwen tier used before).
+// and in explorations. Ling 3.0 Flash VL is about a fifth of GPT-6 Luna's
+// price and drives these flows fine; Gemma 3 12B, cheaper still, could not.
+// OpenRouter withdrew the free Qwen tier used before.
 // The judge answers every agent.assert, waitFor and extract on every run, so it
 // must be cheap and reliable: the Muse Spark contributor tier, which like the
 // app's live pin may keep prompts (made-up content only).
 // `||`, not `??`: an unset Actions variable arrives as an empty string.
-const model = openrouter(process.env.E2E_AGENT_MODEL || "openai/gpt-6-luna");
+const model = openrouter(process.env.E2E_AGENT_MODEL || "inclusionai/ling-3.0-flash-vl");
 const judge = openrouter(process.env.E2E_JUDGE_MODEL || "meta/muse-spark-1.3-contributor");
 
 // `context` reaches every model call, judges included: what the app calls things.
