@@ -163,6 +163,8 @@ cmd_up() {
       printf 'VERIFY_MODE=%s\n' "$([ "$live" = true ] && echo live || echo fake)"
       printf 'LIVE_MODEL=%s\n' "$([ "$live" = true ] && echo "$LIVE_MODEL")"
       printf 'VERIFY_STRIPE=%s\n' "$([ -n "$stripe_key" ] && echo test || echo placeholder)"
+      # Recipes that need the collaboration service skip unless `up --collab` started it.
+      printf 'VERIFY_COLLAB=%s\n' "$collab"
       [ -z "$stripe_key" ] || printf 'STRIPE_TEST_SECRET_KEY=%s\n' "$stripe_key"
       # e2e/workspace-collaboration.spec.ts starts its own collaboration process with these.
       printf 'COLLABORATION_DATABASE_URL=%s\n' "$db_url"

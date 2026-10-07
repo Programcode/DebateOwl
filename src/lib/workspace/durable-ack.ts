@@ -1,6 +1,8 @@
 import { createDecoder, readVarString, readVarUint, readVarUint8Array } from "lib0/decoding";
 
 export async function durableMutationFromMessage(message: Uint8Array) {
+  // Hocuspocus also reports empty outgoing messages; none of them is a document write.
+  if (message.byteLength === 0) return null;
   const decoder = createDecoder(message);
   readVarString(decoder);
   if (readVarUint(decoder) !== 0) return null;

@@ -93,9 +93,12 @@ Every result, source and practice round belongs to a Current Debate or is explic
 $H drive all                                           # every recipe, both viewports
 $H drive recipes/ai-tools --project desktop-chromium   # one file, one viewport
 $H drive e2e/full-stack/billing                        # a maintained full-stack spec
+$H drive recipes/workspace-autosave                    # needs up --collab; skips on a plain up
 $H drive e2e/workspace-collaboration                   # starts its own collaboration process; do not use up --collab
 $H drive e2e/live/ --project desktop-chromium          # live mode only
 ```
+
+`recipes/workspace-autosave` needs the collaboration service from `up --collab` and skips with that reason on any other stack, including in `drive all`. `e2e/workspace-collaboration` is the opposite: it starts its own service, so drive it on a stack without `--collab`.
 
 Fake mode also runs `e2e/full-stack/`. Live mode runs the recipes, `e2e/live/`, and only the provider-free `e2e/full-stack/` tests (the config's `grepInvert` skips the ones asserting fake text).
 
