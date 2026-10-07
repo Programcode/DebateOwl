@@ -111,9 +111,30 @@ The skill is maintained code. A change that breaks it or makes it stale must upd
 
 Never weaken a recipe's assertions to make it pass.
 
+## What to test
+
+Prove a change by using it: `npm run lint`, `npm run typecheck`, `npm run build`, then drive the feature in the real app with `verify-debatelab`. New tests are not a substitute for that, and a test-heavy diff is harder to review.
+
+Write a test only when a regression would be costly or hard to notice by using the app:
+
+- auth, sessions, RLS and pgTAP policies, and cross-user or cross-debate isolation;
+- billing, Stripe webhooks, quotas, daily limits, and cost accounting;
+- migrations and data integrity, concurrency, and the collaboration service;
+- parsers, validators, schemas at a trust boundary, prompt routing in the fake provider, and stream accounting;
+- a fixed bug that could plausibly come back.
+
+Do not write tests that:
+
+- restate a TypeScript type or a schema's shape;
+- check that a removed feature stays removed, or that a column, file, export, route, or translation key exists (the i18n catalog check already covers keys);
+- assert static copy, or only that a component renders;
+- only exercise mocks, or can never fail.
+
+Keep a PR's test diff small enough to read next to the change. Deleting a test that cannot catch a real regression is not weakening tests; deleting or loosening one to make a failing run pass is. Never lower a coverage threshold in `vitest.config.ts` without Adam's approval.
+
 ## Hard boundaries
 
-- Start bug fixes with a failing test or repeatable browser reproduction when a suitable test layer exists.
+- Start bug fixes with a failing test when the bug is in behavior listed under [What to test](#what-to-test), otherwise with a repeatable browser reproduction.
 - Stub sessions prove rendering only. Do not call them authenticated backend proof.
 - Never put staging or production credentials in jobs, logs, traces, screenshots, commits, comments, or docs. Two scoped exceptions reach jobs only through GitHub Actions secrets:
   - the protected staging values;
