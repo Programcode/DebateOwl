@@ -82,10 +82,12 @@ test("ws-crossfire-autosave: a slow Crossfire save does not overwrite newer text
   const saves = await holdSave(page, (progress) => String((progress.config as { resolution?: string })?.resolution).endsWith(" n"));
   await resolution.focus();
   await resolution.press("Control+End");
-  await resolution.pressSequentially(" now, starting next year", { delay: 40 });
+  // The queue keeps only the newest pending save, so stop at the held value until it is sent.
+  await resolution.pressSequentially(" n", { delay: 40 });
+  await expect.poll(saves.wasHeld).toBe(true);
+  await resolution.pressSequentially("ow, starting next year", { delay: 40 });
   const expected = `${motion} now, starting next year`;
   await expect(resolution).toHaveValue(expected);
-  expect(saves.wasHeld()).toBe(true);
   expect(saves.sentWhileHeld()).toBe(0);
   await saves.release();
   await evidence.step("Crossfire: held one save in flight while the resolution kept changing");
@@ -111,9 +113,11 @@ test("ws-sparring-autosave: a slow Sparring save does not overwrite a newer draf
 
   const saves = await holdSave(page, (progress) => progress.draft === "Coding");
   const text = "Coding classes teach every student to break problems into steps.";
-  await draft.pressSequentially(text, { delay: 40 });
+  // The queue keeps only the newest pending save, so stop at the held value until it is sent.
+  await draft.pressSequentially("Coding", { delay: 40 });
+  await expect.poll(saves.wasHeld).toBe(true);
+  await draft.pressSequentially(text.slice("Coding".length), { delay: 40 });
   await expect(draft).toHaveValue(text);
-  expect(saves.wasHeld()).toBe(true);
   expect(saves.sentWhileHeld()).toBe(0);
   await saves.release();
   await evidence.step("Sparring: held one save in flight while the speech draft kept changing");
