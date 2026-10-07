@@ -1,6 +1,7 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
+import { BodyTooLargeError, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -9,8 +10,10 @@ export { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl };
 
 
 const MAX_CONTENT_CHARS = 50_000;
+// Total time for the request body, DNS, redirects and the whole source body.
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
+const MAX_REQUEST_BYTES = 16_384;
 const DAILY_IMPORT_LIMIT = 50;
 
 
@@ -58,42 +61,45 @@ async function logImport(userId: string, status: "success" | "error", errorCode?
   }
 }
 
-async function fetchWithTimeout(initialUrl: URL) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    let currentUrl = initialUrl;
-    for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-      await validateResolvedPublicHost(currentUrl);
-      const response = await fetch(currentUrl.toString(), {
-        headers: {
-          "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
-          "User-Agent": "DebateLabSourceImporter/1.0",
-        },
-        signal: controller.signal,
-        redirect: "manual",
-      });
-
-      // Manual redirect handling so we can re-validate against SSRF on every hop.
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("location");
-        if (!location) {
-          throw new Error("Redirect without Location header.");
-        }
-        if (hop === MAX_REDIRECTS) {
-          throw new Error("Too many redirects.");
-        }
-        const nextUrl = new URL(location, currentUrl);
-        currentUrl = validatePublicHttpUrl(nextUrl.toString());
-        continue;
-      }
-
-      return { response, finalUrl: currentUrl };
-    }
-    throw new Error("Too many redirects.");
-  } finally {
-    clearTimeout(timeout);
+class SourceTimeoutError extends Error {
+  constructor() {
+    super("The source took too long to respond.");
   }
+}
+
+// The caller's signal is the import's one deadline: it covers DNS, every
+// redirect hop and the body read that follows.
+async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal) {
+  let currentUrl = initialUrl;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    await validateResolvedPublicHost(currentUrl, signal);
+    const response = await untilAborted(fetch(currentUrl.toString(), {
+      headers: {
+        "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
+        "User-Agent": "DebateLabSourceImporter/1.0",
+      },
+      signal,
+      redirect: "manual",
+    }), signal);
+
+    // Manual redirect handling so we can re-validate against SSRF on every hop.
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel().catch(() => undefined);
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error("Redirect without Location header.");
+      }
+      if (hop === MAX_REDIRECTS) {
+        throw new Error("Too many redirects.");
+      }
+      const nextUrl = new URL(location, currentUrl);
+      currentUrl = validatePublicHttpUrl(nextUrl.toString());
+      continue;
+    }
+
+    return { response, finalUrl: currentUrl };
+  }
+  throw new Error("Too many redirects.");
 }
 
 function decodeEntities(text: string) {
@@ -266,27 +272,44 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   const startedAt = Date.now();
+  const deadline = new AbortController();
+  const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
   try {
-    const body = await req.json().catch(() => null);
+    let body: { url?: unknown } | null = null;
+    try {
+      body = JSON.parse(await readBoundedBody(req, MAX_REQUEST_BYTES, deadline.signal));
+    } catch (error) {
+      if (deadline.signal.aborted) {
+        await logImport(user.id, "error", "request_timeout", Date.now() - startedAt);
+        return jsonResponse({ error: "The request took too long to arrive." }, 408, corsHeaders);
+      }
+      if (error instanceof BodyTooLargeError) {
+        await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
+        return jsonResponse({ error: "Request body is too large." }, 413, corsHeaders);
+      }
+    }
     if (!body || typeof body !== "object") {
       await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
       return jsonResponse({ error: "Invalid JSON body." }, 400, corsHeaders);
     }
     const parsedUrl = validatePublicHttpUrl(String(body.url || "").trim());
-    const { response, finalUrl } = await fetchWithTimeout(parsedUrl);
+    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal);
 
     if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
       await logImport(user.id, "error", `upstream_${response.status}`, Date.now() - startedAt);
       return jsonResponse({ error: `Could not fetch source (${response.status}).` }, 502, corsHeaders);
     }
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("text/plain") && !contentType.includes("application/xhtml+xml")) {
+      await response.body?.cancel().catch(() => undefined);
       await logImport(user.id, "error", "unsupported_type", Date.now() - startedAt);
       return jsonResponse({ error: "Only HTML and plain text pages can be imported from a URL." }, 415, corsHeaders);
     }
 
-    const raw = await readBoundedText(response);
+    const raw = await readBoundedText(response, deadline.signal);
+    clearTimeout(deadlineTimer);
     const isHtml = contentType.includes("html") || /<html|<article|<main|<p[\s>]/i.test(raw);
     const content = normalizeText(isHtml ? stripHtml(raw) : raw);
 
@@ -312,9 +335,15 @@ export async function handleRequest(req: Request): Promise<Response> {
       url: finalUrl.toString(),
     }, 200, corsHeaders);
   } catch (error) {
+    if (deadline.signal.aborted) {
+      await logImport(user.id, "error", "timeout", Date.now() - startedAt);
+      return jsonResponse({ error: new SourceTimeoutError().message }, 504, corsHeaders);
+    }
     const message = error instanceof Error ? error.message : "Failed to import source.";
     await logImport(user.id, "error", "exception", Date.now() - startedAt);
     return jsonResponse({ error: message }, 400, corsHeaders);
+  } finally {
+    clearTimeout(deadlineTimer);
   }
 }
 

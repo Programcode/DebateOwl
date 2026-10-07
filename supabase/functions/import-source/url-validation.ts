@@ -6,6 +6,7 @@
 // re-exported here so this file and the shared copy can't drift apart.
 
 import { isPrivateIpv4, isPrivateIpv6 } from "../_shared/url-validation.ts";
+import { untilAborted } from "../_shared/bounded-body.ts";
 
 export { isPrivateIpv4, isPrivateIpv6 };
 
@@ -39,18 +40,21 @@ export function validatePublicHttpUrl(rawUrl: string): URL {
 }
 
 // Re-checks the hostname's *resolved* addresses, not just its literal text, so a
-// public-looking domain that resolves to a private/link-local IP (DNS rebinding)
-// is still rejected. Call this immediately before every fetch, including redirect hops.
-export async function validateResolvedPublicHost(url: URL): Promise<void> {
+// public-looking domain that resolves to a private, reserved or link-local IP is
+// still rejected. Call this immediately before every fetch, including redirect
+// hops. The runtime cannot pin the checked address for the connection, so a
+// resolver that answers differently a moment later is not covered; see
+// docs/standards/security.md "Recorded exceptions".
+export async function validateResolvedPublicHost(url: URL, signal?: AbortSignal): Promise<void> {
   const hostname = url.hostname.toLowerCase();
   if (isPrivateIpv4(hostname) || isPrivateIpv6(hostname)) {
     throw new Error("Private and local network URLs cannot be imported.");
   }
 
-  const results = await Promise.allSettled([
-    Deno.resolveDns(hostname, "A"),
-    Deno.resolveDns(hostname, "AAAA"),
-  ]);
+  const results = await untilAborted(Promise.allSettled([
+    Deno.resolveDns(hostname, "A", { signal }),
+    Deno.resolveDns(hostname, "AAAA", { signal }),
+  ]), signal);
   const addresses = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 
   if (addresses.length === 0) {

@@ -42,8 +42,8 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 ### Content and sharing
 
-- `import-source`: authenticated public-URL import with SSRF protection on redirects, timeout, content-type and size limits, readable-text extraction, quota checks, and logging.
-- `share`: authenticated creation of expiring share codes for supported saved content.
+- `import-source`: authenticated public-URL import with SSRF protection (resolved addresses checked against the IANA special-purpose ranges on every redirect), one 10-second deadline covering DNS, redirects and the body, content-type and 1 MB size limits, readable-text extraction, a daily quota, and logging.
+- `share`: authenticated creation of share codes for supported saved content, with a 512 KB payload cap, expiry from 1 to 90 days (30 when omitted), and a daily quota of 50 per user.
 - `workspace-invites`: part of the hidden Workspace. Authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
 - `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
 
