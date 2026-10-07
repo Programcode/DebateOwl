@@ -25,6 +25,7 @@ These were raised in review, judged valid, and accepted on purpose. Changing the
 - The production canary account's credentials reach `prod-canary.yml` through Actions secrets, approved 2026-09-24 and recorded in AGENTS.md ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4090664336)).
 - Manual canary runs can exhaust the account's daily quota; that shows as a quota error, not a false pass ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4093482054)).
 - CodeRabbit rated the shared preview-origin allowlist from PR #95 as a high retained concern: an approved production preview runs unmerged code that can receive demo-session handoffs ([#95 security review](https://github.com/Programcode/DebateLab/pull/95)). [docs/operations.md](../operations.md#per-pr-previews) describes the current setup. This one has no recorded decision yet.
+- `import-source` checks every resolved A and AAAA address against the IANA special-purpose ranges before each fetch, but the Edge runtime cannot pin the connection to the checked address. A hostname whose DNS answer changes between the check and the connection can still reach a blocked range. Citation verification avoids the same gap by not fetching at all (`verifyUrl` in [`supabase/functions/_shared/research.ts`](../../supabase/functions/_shared/research.ts)). Closing it needs an egress proxy outside the runtime. Raised as finding [7] of the 2026-08-19 security review; this needs Adam's decision.
 
 ## Telemetry and error reports
 

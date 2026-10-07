@@ -70,8 +70,8 @@ describe('security hardening regressions', () => {
   });
 
   it('resolves DNS and bounds importer bodies before processing', () => {
-    expect(importer).toContain('validateResolvedPublicHost(currentUrl)');
-    expect(importer).toContain('readBoundedText(response)');
+    expect(importer).toContain('validateResolvedPublicHost(currentUrl, signal)');
+    expect(importer).toContain('readBoundedText(response, deadline.signal)');
     expect(read('supabase/functions/import-source/resource-limits.ts')).toContain('MAX_RESPONSE_BYTES');
   });
 

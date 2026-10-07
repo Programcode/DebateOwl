@@ -4,10 +4,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders } from "../_shared/cors.ts";
+import { BodyTooLargeError, readBoundedBody } from "../_shared/bounded-body.ts";
 
-
-// SECURITY: Allow specific origins for CORS
-
+// Shared items are saved text, so 512 KB of JSON leaves room for long cases and
+// chats while keeping one request from filling the table.
+const MAX_SHARE_BYTES = 512 * 1024;
+const DEFAULT_EXPIRES_IN_DAYS = 30;
+const MAX_EXPIRES_IN_DAYS = 90;
+const DAILY_SHARE_LIMIT = 50;
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -21,6 +25,24 @@ function generateShareCode(): string {
         code += chars.charAt(bytes[i] % chars.length);
     }
     return code;
+}
+
+function jsonResponse(body: unknown, status: number, corsHeaders: Record<string, string>) {
+    return new Response(JSON.stringify(body), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+}
+
+async function consumeDailyShareQuota(userId: string): Promise<{ allowed: boolean; currentCount: number }> {
+    const { data, error } = await supabase.rpc("consume_daily_quota", {
+        p_user_id: userId,
+        p_limit: DAILY_SHARE_LIMIT,
+        p_quota_key: "share",
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    return { allowed: Boolean(row?.allowed), currentCount: row?.current_count ?? 0 };
 }
 
 function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
@@ -52,31 +74,51 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     try {
-        const body = await req.json();
-        const { itemType, itemData, title, expiresInDays } = body;
+        let body: Record<string, unknown>;
+        try {
+            const parsed = JSON.parse(await readBoundedBody(req, MAX_SHARE_BYTES));
+            if (!parsed || typeof parsed !== "object") throw new SyntaxError("not an object");
+            body = parsed;
+        } catch (error) {
+            if (error instanceof BodyTooLargeError) {
+                return jsonResponse({ error: "Shared content is too large.", code: "payload_too_large" }, 413, corsHeaders);
+            }
+            return jsonResponse({ error: "Invalid JSON body." }, 400, corsHeaders);
+        }
+        const { itemType, itemData, title } = body;
 
         if (!itemType || !itemData) {
-            return new Response(JSON.stringify({ error: "Missing itemType or itemData" }), {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return jsonResponse({ error: "Missing itemType or itemData" }, 400, corsHeaders);
         }
 
         // Validate item type
         const validTypes = ['case', 'attack', 'brainstorm', 'factoids', 'chat', 'sources'];
-        if (!validTypes.includes(itemType)) {
-            return new Response(JSON.stringify({ error: "Invalid item type" }), {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+        if (typeof itemType !== "string" || !validTypes.includes(itemType)) {
+            return jsonResponse({ error: "Invalid item type" }, 400, corsHeaders);
         }
 
-        // Calculate expiration
-        let expiresAt: string | null = null;
-        if (expiresInDays && typeof expiresInDays === 'number') {
-            const expiry = new Date();
-            expiry.setDate(expiry.getDate() + expiresInDays);
-            expiresAt = expiry.toISOString();
+        // Every share expires. No client sends expiresInDays today; an omitted
+        // value gets the default, and an explicit one must be in range.
+        const expiresInDays = "expiresInDays" in body ? body.expiresInDays : DEFAULT_EXPIRES_IN_DAYS;
+        if (typeof expiresInDays !== "number" || !Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > MAX_EXPIRES_IN_DAYS) {
+            return jsonResponse({ error: `expiresInDays must be a whole number from 1 to ${MAX_EXPIRES_IN_DAYS}.` }, 400, corsHeaders);
+        }
+        const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+
+        let quota: { allowed: boolean; currentCount: number };
+        try {
+            quota = await consumeDailyShareQuota(userId);
+        } catch (err) {
+            console.error("[SHARE] quota reservation failed", err instanceof Error ? err.message : String(err));
+            return jsonResponse({ error: "Unable to verify your quota. Please try again." }, 500, corsHeaders);
+        }
+        if (!quota.allowed) {
+            return jsonResponse({
+                error: `You've reached the daily share limit (${DAILY_SHARE_LIMIT}). Try again tomorrow.`,
+                code: "limit_reached",
+                limit: DAILY_SHARE_LIMIT,
+                current: quota.currentCount,
+            }, 429, corsHeaders);
         }
 
         let data: { share_code: string; expires_at: string | null } | null = null;

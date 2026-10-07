@@ -35,12 +35,13 @@ Deno.test("share records the token's user as the creator", async () => {
     label: "valid token",
     authorization: `Bearer ${VALID_TOKEN}`,
     status: 200,
-    body: { shareCode: "abc123", shareUrl: "https://debate.pi-stack.org/share/abc123", expiresAt: null },
+    body: { shareCode: "abc123", shareUrl: "https://debate.pi-stack.org/share/abc123", expiresAt: "2026-01-01T00:00:00.000Z" },
     authCalls: 1,
   }], (url, _headers, init) => {
+    if (url.pathname === "/rest/v1/rpc/consume_daily_quota") return Response.json([{ allowed: true, current_count: 1 }]);
     if (url.pathname !== "/rest/v1/shared_items") throw new Error(`Unexpected request: ${url}`);
     creators.push((JSON.parse(String(init?.body)) as { created_by?: unknown }).created_by);
-    return Response.json({ share_code: "abc123", expires_at: null }, { status: 201 });
+    return Response.json({ share_code: "abc123", expires_at: "2026-01-01T00:00:00.000Z" }, { status: 201 });
   });
   if (JSON.stringify(creators) !== JSON.stringify([TEST_USER.id])) throw new Error(`creators: ${JSON.stringify(creators)}`);
 });
