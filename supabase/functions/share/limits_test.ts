@@ -75,12 +75,14 @@ Deno.test("share rejects expiries that are not 1 to 90 whole days", async () => 
   }
 });
 
-Deno.test("share honours an expiry at the 90-day limit", async () => {
-  const before = Date.now();
-  const result = await sendShare(shareBody({ expiresInDays: 90 }));
-  assertEquals(result.status, 200);
-  assertEquals(result.calls.inserts.length, 1);
-  assertExpiresInDays(result.calls.inserts[0].expires_at, 90, before);
+Deno.test("share honours expiries at both ends of the 1 to 90 day range", async () => {
+  for (const days of [1, 90]) {
+    const before = Date.now();
+    const result = await sendShare(shareBody({ expiresInDays: days }));
+    assertEquals(result.status, 200, `expiresInDays=${days}`);
+    assertEquals(result.calls.inserts.length, 1);
+    assertExpiresInDays(result.calls.inserts[0].expires_at, days, before);
+  }
 });
 
 Deno.test("share expires a link without an expiry after 30 days and reserves the share quota", async () => {

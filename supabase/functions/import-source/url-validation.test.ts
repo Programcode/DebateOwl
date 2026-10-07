@@ -83,6 +83,7 @@ Deno.test("isPrivateIpv6 rejects every IANA special-purpose range that is not gl
     "64:ff9b::c000:201", "64:ff9b::808:808", // NAT64 well-known prefix 64:ff9b::/96
     "64:ff9b:1::1", // local-use NAT64 64:ff9b:1::/48
     "100::1", // discard-only 100::/64
+    "100:0:0:1::1", // dummy prefix 100:0:0:1::/64
     "2001::1", "2001:1ff::1", // IETF protocol assignments 2001::/23 (Teredo included)
     "2001:db8::1", // documentation 2001:db8::/32
     "2002:c0a8:101::1", // 6to4 2002::/16

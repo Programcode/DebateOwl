@@ -1,7 +1,7 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
-import { untilAborted } from "../_shared/bounded-body.ts";
+import { BodyTooLargeError, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -10,9 +10,10 @@ export { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl };
 
 
 const MAX_CONTENT_CHARS = 50_000;
-// Total time for DNS, redirects and the whole body, not just the headers.
+// Total time for the request body, DNS, redirects and the whole source body.
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
+const MAX_REQUEST_BYTES = 16_384;
 const DAILY_IMPORT_LIMIT = 50;
 
 
@@ -274,7 +275,19 @@ export async function handleRequest(req: Request): Promise<Response> {
   const deadline = new AbortController();
   const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
   try {
-    const body = await req.json().catch(() => null);
+    let body: { url?: unknown } | null = null;
+    try {
+      body = JSON.parse(await readBoundedBody(req, MAX_REQUEST_BYTES, deadline.signal));
+    } catch (error) {
+      if (deadline.signal.aborted) {
+        await logImport(user.id, "error", "request_timeout", Date.now() - startedAt);
+        return jsonResponse({ error: "The request took too long to arrive." }, 408, corsHeaders);
+      }
+      if (error instanceof BodyTooLargeError) {
+        await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
+        return jsonResponse({ error: "Request body is too large." }, 413, corsHeaders);
+      }
+    }
     if (!body || typeof body !== "object") {
       await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
       return jsonResponse({ error: "Invalid JSON body." }, 400, corsHeaders);

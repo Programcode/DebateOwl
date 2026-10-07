@@ -1,6 +1,9 @@
 // SSRF-safe URL validation for outbound fetches to user- or AI-supplied URLs.
 // Rejects every IPv4 and IPv6 range in the IANA special-purpose registries that
-// is not globally reachable, plus multicast, reserved and NAT64 space.
+// is not globally reachable, plus multicast, reserved and NAT64 space. Whole
+// blocks are rejected even where the registry marks a few anycast or ORCHID
+// addresses inside them as global (192.0.0.9, 2001:3::/32 and the like): none
+// of them serve web pages, so failing closed costs nothing.
 
 type Cidr = readonly [bytes: readonly number[], prefixLength: number];
 
@@ -32,6 +35,7 @@ const BLOCKED_IPV6: readonly Cidr[] = [
   [[0, 0x64, 0xff, 0x9b], 96], // NAT64 well-known prefix
   [[0, 0x64, 0xff, 0x9b, 0, 1], 48], // local-use NAT64
   [[0x01, 0x00], 64], // discard-only
+  [[0x01, 0x00, 0, 0, 0, 0, 0, 0x01], 64], // dummy prefix
   [[0x20, 0x01, 0x00, 0x00], 23], // IETF protocol assignments, including Teredo
   [[0x20, 0x01, 0x0d, 0xb8], 32], // documentation
   [[0x20, 0x02], 16], // 6to4

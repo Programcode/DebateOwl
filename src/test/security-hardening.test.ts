@@ -69,11 +69,9 @@ describe('security hardening regressions', () => {
     expect(promo).toContain('userClient.rpc("redeem_promo_code_atomic", { p_code: code })');
   });
 
-  it('resolves DNS and bounds importer bodies before processing', () => {
-    expect(importer).toContain('validateResolvedPublicHost(currentUrl, signal)');
-    expect(importer).toContain('readBoundedText(response, deadline.signal)');
-    expect(read('supabase/functions/import-source/resource-limits.ts')).toContain('MAX_RESPONSE_BYTES');
-  });
+  // Importer DNS checks, body caps and the deadline are covered by behavior in
+  // import-source/url-validation.test.ts, import-source/deadline_test.ts and
+  // _shared/bounded-body.test.ts.
 
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
     expect(modelCatalog).toContain('id: "z-ai/glm-5.3-flash"');

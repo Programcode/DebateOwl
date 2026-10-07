@@ -81,3 +81,53 @@ Deno.test("import-source stops reading a body that drips slower than the deadlin
 Deno.test("import-source stops waiting for a body that never arrives", async () => {
   await importAgainstSlowServer("stall");
 });
+
+Deno.test("import-source stops waiting for a request body that never finishes", async () => {
+  const time = new FakeTime();
+  const originalFetch = globalThis.fetch;
+  const sourceRequests: string[] = [];
+  globalThis.fetch = (async (input: Request | URL | string) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.pathname === "/auth/v1/user") return Response.json({ id: "user-1", aud: "authenticated" });
+    if (url.pathname.includes("/rest/v1/user_roles")) return Response.json({ role: "user" });
+    if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return Response.json([{ allowed: true, current_count: 1 }]);
+    if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
+    sourceRequests.push(url.toString());
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let requestCancelled = false;
+  const stalledUpload = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('{"url": "https://exam'));
+    },
+    pull: () => new Promise<void>(() => {}),
+    cancel() {
+      requestCancelled = true;
+    },
+  });
+
+  try {
+    let settled: Response | undefined;
+    const pending = handleRequest(new Request("http://127.0.0.1/functions/v1/import-source", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+      body: stalledUpload,
+      duplex: "half",
+    } as RequestInit)).then((response) => (settled = response));
+
+    for (let elapsed = 0; elapsed < 11_000 && !settled; elapsed += 250) {
+      await time.tickAsync(250);
+    }
+    if (!settled) throw new Error("import-source was still reading the request body after 11 s");
+    await pending;
+
+    const body = await settled.json();
+    if (settled.status !== 408) throw new Error(`expected 408, got ${settled.status}: ${JSON.stringify(body)}`);
+    if (!requestCancelled) throw new Error("the request body was not cancelled at the deadline");
+    if (sourceRequests.length) throw new Error(`a source was fetched: ${sourceRequests}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+    time.restore();
+  }
+});
