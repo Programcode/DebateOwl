@@ -7,6 +7,8 @@ const PUBLIC_ROUTES = [
   { path: '/terms', name: 'terms' },
   { path: '/privacy', name: 'privacy' },
   { path: '/login', name: 'login' },
+  // An unknown route renders the 404 page, which must not log an error.
+  { path: '/no-such-page', name: 'not-found' },
 ] as const;
 
 for (const locale of LOCALES) {

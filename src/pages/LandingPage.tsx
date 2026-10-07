@@ -15,16 +15,18 @@ const LandingPage = () => {
     return (
         <div className="min-h-screen overflow-x-hidden bg-background">
             <Navbar />
-            <Hero />
-            <SocialProof />
-            <WhatsNew />
-            <Features />
-            <Pricing />
-            <DeepDive />
-            <HowItWorks />
-            <UseCases />
-            <FAQ />
-            <FinalCTA />
+            <main>
+                <Hero />
+                <SocialProof />
+                <WhatsNew />
+                <Features />
+                <Pricing />
+                <DeepDive />
+                <HowItWorks />
+                <UseCases />
+                <FAQ />
+                <FinalCTA />
+            </main>
             <Footer />
         </div>
     );

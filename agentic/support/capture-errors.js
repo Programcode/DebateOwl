@@ -1,7 +1,8 @@
 // Runs before the app's own scripts in every document (web({ initScripts })).
 // It records what the page hides from the screen: uncaught errors, rejected
-// promises, console.error, and 5xx answers from Supabase. The student fixture
-// reads the list at teardown and fails the test on anything it does not expect.
+// promises, console.error, 5xx answers from Supabase, and PostgREST 406s. The
+// student fixture reads the list at teardown and fails the test on anything it
+// does not expect.
 // sessionStorage keeps the list across reloads and navigations in the tab.
 (() => {
   const KEY = "__agentic_errors";
@@ -32,9 +33,11 @@
     const response = await nativeFetch(input, init);
     // Recording must never change what the app's request returns.
     try {
-      if (response.status >= 500) {
+      // PostgREST answers 406 when a query asks for exactly one row
+      // (.single()) and gets none; a lookup that can miss uses .maybeSingle().
+      if (response.status >= 500 || response.status === 406) {
         const url = new URL(input instanceof Request ? input.url : String(input), location.href);
-        if (/^\/(functions|rest|auth)\//.test(url.pathname)) {
+        if (response.status >= 500 ? /^\/(functions|rest|auth)\//.test(url.pathname) : url.pathname.startsWith("/rest/")) {
           const method = (init && init.method) || (input instanceof Request ? input.method : "GET");
           record("http", `${response.status} ${method.toUpperCase()} ${url.pathname}`);
         }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -153,7 +153,8 @@ export default function LoginPage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
             <Sparkles className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle>{t('login.title')}</CardTitle>
+          {/* The page heading, styled like CardTitle (which renders an h3). */}
+          <h1 className="text-2xl font-semibold leading-none tracking-tight">{t('login.title')}</h1>
           <CardDescription>{t('login.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
