@@ -40,7 +40,8 @@ export default function SharedPage() {
             try {
                 const { data, error: fetchError } = await supabase
                     .rpc('get_shared_item', { p_share_code: code })
-                    .single();
+                    // A missing or expired code returns no row; .single() would turn that into an HTTP 406.
+                    .maybeSingle();
 
                 if (fetchError || !data) {
                     setError(t('sharedPage.contentNotFound'));

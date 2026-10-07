@@ -42,9 +42,11 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 
 - the Vite build command and `dist` output;
 - SPA fallback to `index.html`;
-- no-cache headers for `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
+- no-cache headers for `/`, `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;
 - Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only.
+
+The build also writes `dist/terms/index.html` and `dist/privacy/index.html`: copies of the app shell whose canonical URL names their own route instead of the landing page (`selfCanonicalShells` in [`vite.config.ts`](../vite.config.ts)). Vercel serves them before the SPA fallback. Add a route there when a new SPA page joins `public/sitemap.xml`.
 
 [`src/test/vercel-deployment-config.test.ts`](../src/test/vercel-deployment-config.test.ts) guards these rules. Update it together with `vercel.json`, and do not paste the full configuration into another guide.
 

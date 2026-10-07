@@ -7,6 +7,8 @@ const PUBLIC_ROUTES = [
   { path: '/terms', name: 'terms' },
   { path: '/privacy', name: 'privacy' },
   { path: '/login', name: 'login' },
+  // An unknown route renders the 404 page, which must not log an error.
+  { path: '/no-such-page', name: 'not-found' },
 ] as const;
 
 for (const locale of LOCALES) {
@@ -25,7 +27,9 @@ for (const locale of LOCALES) {
 
         const response = await page.goto(route.path, { waitUntil: 'domcontentloaded' });
         expect(response?.ok()).toBeTruthy();
-        await expect(page.locator('body')).toBeVisible();
+        // Pages are lazy chunks: wait until the page itself has rendered, so
+        // errors it logs while mounting are in the list below.
+        await expect(page.locator('h1').first()).toBeVisible();
 
         const fatalErrors = consoleErrors.filter((msg) =>
           !msg.includes('Failed to load resource') &&
