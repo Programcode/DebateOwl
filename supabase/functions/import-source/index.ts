@@ -1,7 +1,7 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
-import { BodyTooLargeError, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
+import { BodyTooLargeError, discardRequestBody, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -248,6 +248,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
     console.warn("[IMPORT_SOURCE] Authentication rejected:", error.message);
+    await discardRequestBody(req);
     return jsonError(error, corsHeaders);
   }
 
