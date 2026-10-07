@@ -54,3 +54,4 @@ Each operational fact has one owner:
 - hosting and HTTP policy: [`vercel.json`](../vercel.json)
 
 When an owner changes, update only the focused document that explains that fact. Prefer links over copied catalogs.
+<!-- codex babysit smoke test 2026-10-07, safe to ignore -->
