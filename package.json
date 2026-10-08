@@ -6,6 +6,9 @@
   "engines": {
     "node": "22.x"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:preview": "VITE_STAGING_PREVIEW=true vite --host 127.0.0.1",
