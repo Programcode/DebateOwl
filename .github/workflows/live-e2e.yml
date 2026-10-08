@@ -8,6 +8,7 @@ on:
     paths:
       - "supabase/functions/**"
       - "src/lib/ai/**"
+      - "packages/**"
       - "e2e/live/**"
       - "e2e/full-stack/fake-openrouter.mjs"
       - ".superset/db-gate.sh"

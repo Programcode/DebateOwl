@@ -1,36 +1,45 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [
-    "scripts/*.{mjs,ts}",
-    "scripts/staging/seed.mjs",
-    "e2e/full-stack/fake-openrouter.mjs",
-    "e2e.config.ts",
-    "agentic/**/*.e2e.ts",
-    "services/collaboration/src/index.ts",
-    "services/collaboration/src/**/*.test.ts",
-    ".claude/skills/verify-debatelab/bin/*.mjs",
-    ".claude/skills/verify-debatelab/recipes/*.spec.ts",
-    "e2e/**/*.setup.ts",
-    ".claude/skills/verify-debatelab/playwright.verify.config.ts"
-  ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "scripts/**/*.{mjs,ts}",
-    "e2e/**/*.{ts,mjs}",
-    "agentic/**/*.ts",
-    "services/collaboration/src/**/*.ts",
-    ".claude/skills/verify-debatelab/**/*.{ts,mjs}"
-  ],
-  "playwright": {
-    "config": [
-      "playwright.config.ts",
-      "playwright.production.config.ts",
-      "playwright.workspace.config.ts"
-    ]
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.{mjs,ts}",
+        "scripts/staging/seed.mjs",
+        "e2e/full-stack/fake-openrouter.mjs",
+        "e2e.config.ts",
+        "agentic/**/*.e2e.ts",
+        "services/collaboration/src/index.ts",
+        "services/collaboration/src/**/*.test.ts",
+        ".claude/skills/verify-debatelab/bin/*.mjs",
+        ".claude/skills/verify-debatelab/recipes/*.spec.ts",
+        "e2e/**/*.setup.ts",
+        ".claude/skills/verify-debatelab/playwright.verify.config.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.{mjs,ts}",
+        "e2e/**/*.{ts,mjs}",
+        "agentic/**/*.ts",
+        "services/collaboration/src/**/*.ts",
+        ".claude/skills/verify-debatelab/**/*.{ts,mjs}"
+      ],
+      "playwright": {
+        "config": [
+          "playwright.config.ts",
+          "playwright.production.config.ts",
+          "playwright.workspace.config.ts"
+        ]
+      },
+      "ignore": [
+        "src/lib/workspace/document-conversion.ts"
+      ]
+    },
+    "packages/core": {
+      "project": [
+        "src/**/*.ts"
+      ]
+    }
   },
-  "ignore": [
-    "src/lib/workspace/document-conversion.ts"
-  ],
   "ignoreBinaries": [
     "supabase"
   ],

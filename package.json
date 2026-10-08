@@ -19,7 +19,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint . && npm run lint:repo",
     "lint:repo": "knip --no-config-hints && node scripts/check-repo-rules.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.agentic.json",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.agentic.json && tsc --noEmit -p packages/core/tsconfig.json",
     "preview": "vite preview",
     "smoke:jev": "node scripts/smoke-jev.mjs",
     "test": "vitest run",

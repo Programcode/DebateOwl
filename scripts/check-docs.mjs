@@ -34,6 +34,7 @@ function toRepositoryPath(path) {
 
 function isExcluded(relativePath) {
   if (relativePath === "plans/" || relativePath === PLAN_INDEX) return false;
+  if (relativePath.split("/").includes("node_modules")) return true;
   return EXCLUDED_PREFIXES.some((prefix) => relativePath.startsWith(prefix));
 }
 
