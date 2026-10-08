@@ -11,7 +11,7 @@ Start with the smallest document that answers the task instead of loading every 
 
 ## Understand the system
 
-- [Architecture](architecture.md), current. Open before changing subsystem boundaries or tracing browser, Current Debate, data, AI, auth, billing, observability, PWA, or iOS flows.
+- [Architecture](architecture.md), current. Open before changing subsystem boundaries or tracing browser, Current Debate, data, AI, auth, billing, observability, or PWA flows.
 - [Agent guide](../AGENTS.md), current. Always-loaded commands, safety rules, and routing.
 - [Root README](../README.md), current. Product overview and quick start.
 
@@ -21,7 +21,7 @@ Start with the smallest document that answers the task instead of loading every 
 
 ## Set up and develop
 
-- [Development guide](development.md), current. Open for installation, environment behavior, linked worktrees, frontend, backend, database, or iOS workflows.
+- [Development guide](development.md), current. Open for installation, environment behavior, linked worktrees, frontend, backend, or database workflows.
 - [Supabase backend](../supabase/README.md), current. Open before changing Edge Functions, shared backend modules, migrations, RLS, RPCs, or backend secrets.
 - [Collaboration service](../services/collaboration/README.md), current. Only for the hidden Workspace.
 

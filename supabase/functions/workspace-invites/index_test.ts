@@ -617,20 +617,3 @@ Deno.test("all actions authenticate through the shared bearer boundary", async (
     throw new Error(`missing bearer token returned ${response.status}`);
   }
 });
-
-Deno.test("Capacitor preflight receives the native app origin", async () => {
-  const { handleRequest } = await import("./index.ts");
-  const response = await handleRequest(
-    new Request(
-      "http://127.0.0.1/functions/v1/workspace-invites",
-      { method: "OPTIONS", headers: { Origin: "capacitor://localhost" } },
-    ),
-  );
-
-  if (
-    response.headers.get("Access-Control-Allow-Origin") !==
-      "capacitor://localhost"
-  ) {
-    throw new Error("workspace invites rejected the Capacitor origin");
-  }
-});

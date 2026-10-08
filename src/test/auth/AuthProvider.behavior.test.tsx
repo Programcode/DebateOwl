@@ -585,7 +585,7 @@ describe('AuthProvider behavior', () => {
     vi.useRealTimers();
   });
 
-  it('propagates native browser launch failures to the caller', async () => {
+  it('propagates external browser launch failures to the caller', async () => {
     signInWithOAuthMock.mockResolvedValue({
       data: { url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=test' },
       error: null,

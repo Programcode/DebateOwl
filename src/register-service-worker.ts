@@ -1,5 +1,3 @@
-import { isNativeApp } from '@/lib/native';
-
 const SERVICE_WORKER_URL = '/sw.js';
 
 function assetUrls(entries: PerformanceEntry[]): string[] {
@@ -12,7 +10,6 @@ function assetUrls(entries: PerformanceEntry[]): string[] {
 }
 
 export function registerServiceWorker() {
-  if (isNativeApp()) return;
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
 
   window.addEventListener('load', () => {

@@ -97,7 +97,7 @@ The effective gateway behavior for a function without an explicit config entry m
 
 Current handlers mostly define explicit origin allowlists. The exact list differs by endpoint and handler code is authoritative.
 
-Relevant origins include the production site, bounded local development hosts, automated staging browser origin, and `capacitor://localhost` where native access is supported.
+Relevant origins include the production site, bounded local development hosts, and the automated staging browser origin.
 
 Do not use wildcard origins to hide a failed browser test. Before protected staging, verify `http://127.0.0.1:18080` for `demo-code-login`, `ai`, `ai-stream`, `admin`, and `announcements`.
 

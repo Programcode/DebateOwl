@@ -157,28 +157,6 @@ All colors MUST be HSL.
     transition: background-color var(--motion-duration-slow) var(--motion-ease-fluid),
                 color var(--motion-duration-slow) var(--motion-ease-fluid);
   }
-
-  .capacitor-native {
-    --native-safe-top: env(safe-area-inset-top, 0px);
-    --native-safe-right: env(safe-area-inset-right, 0px);
-    --native-safe-bottom: env(safe-area-inset-bottom, 0px);
-    --native-safe-left: env(safe-area-inset-left, 0px);
-    --native-keyboard-height: 0px;
-    background: hsl(var(--background));
-  }
-
-  .capacitor-native body {
-    min-height: 100dvh;
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-
-  .capacitor-native input,
-  .capacitor-native textarea,
-  .capacitor-native select {
-    font-size: max(16px, 1rem);
-  }
 }
 
 /* Landing Page Utilities */

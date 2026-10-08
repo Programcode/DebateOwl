@@ -68,7 +68,7 @@ const SITE_ORIGIN = "https://debate.pi-stack.org";
 function selfCanonicalShells(): Plugin {
   return {
     name: "self-canonical-shells",
-    apply: (_config, env) => env.command === "build" && env.mode !== "capacitor",
+    apply: (_config, env) => env.command === "build",
     writeBundle(options) {
       const outDir = options.dir ?? "dist";
       const shell = readFileSync(path.join(outDir, "index.html"), "utf8");
@@ -124,7 +124,7 @@ export default defineConfig(({ mode }) => {
   // hostname. Vite rejects unknown hosts, so allow tailnet names in this mode only.
   const allowedHosts = stagingPreview ? [".ts.net"] : undefined;
   return {
-  base: mode === 'capacitor' ? './' : '/',
+  base: '/',
   server: {
     host: "::",
     port: Number(process.env.PORT) || 8080,

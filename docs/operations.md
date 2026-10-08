@@ -154,7 +154,7 @@ Current functions mostly use local explicit origin allowlists. The exact list ca
 
 Before enabling protected browser staging, verify `http://127.0.0.1:18080` for `demo-code-login`, `ai`, `ai-stream`, `admin`, and `announcements`. Do not broaden origins to `*` merely to make a test pass.
 
-Native requests may use `capacitor://localhost`. Local development origins must remain bounded to intended ports and hosts.
+Local development origins must remain bounded to intended ports and hosts.
 
 ## Secrets
 
@@ -206,6 +206,5 @@ Do not expose protected data in artifacts. Record the commit, environment, opera
 - New frontend errors against Supabase right after a merge: the matching migration or function may not be applied to production yet. Run `npm run backend:status` from the linked checkout.
 - Function returns unauthorized after deploy: check handler auth and environment propagation before changing gateway settings.
 - Browser works on one route only: check the `vercel.json` SPA rewrite and cache headers.
-- Native callback fails while web works: check Capacitor scheme and Supabase redirect allowlist.
 
 Read [testing.md](testing.md) for evidence rules and [`../supabase/README.md`](../supabase/README.md) for backend ownership.

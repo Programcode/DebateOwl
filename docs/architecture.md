@@ -4,10 +4,10 @@
 
 ## System context
 
-DebateLab is a browser application with an optional Capacitor iOS shell. The client uses Supabase for sessions, persisted user data, database RPCs, and Edge Functions. Edge Functions keep privileged credentials server-side and integrate with AI providers, research services, Stripe, and Google APIs.
+DebateLab is a browser application. The client uses Supabase for sessions, persisted user data, database RPCs, and Edge Functions. Edge Functions keep privileged credentials server-side and integrate with AI providers, research services, Stripe, and Google APIs.
 
 ```text
-Browser or Capacitor
+Browser or PWA
   -> React routes, feature components, stores
   -> Supabase Auth, PostgreSQL, RPCs, Edge Functions
   -> AI providers, research, Stripe, Google Docs
@@ -15,7 +15,7 @@ Browser or Capacitor
 
 ## Client startup and routing
 
-[`src/bootstrap.ts`](../src/bootstrap.ts) imports the application entry immediately, then schedules Jam after window load and idle time. [`src/main.tsx`](../src/main.tsx) mounts the application before starting native runtime handling, observability, native URL handling, and service-worker registration. Vercel browser telemetry is disabled inside the native shell and loaded behind a separate Suspense boundary.
+[`src/bootstrap.ts`](../src/bootstrap.ts) imports the application entry immediately, then schedules Jam after window load and idle time. [`src/main.tsx`](../src/main.tsx) mounts the application before starting observability and service-worker registration. Vercel browser telemetry is loaded behind a separate Suspense boundary.
 
 [`src/App.tsx`](../src/App.tsx) owns routes and top-level providers. Pages are lazy loaded. Public routes cover marketing, legal pages, login, sources, and shared content. `/app/*` routes pass through `RequireAuth` and include the main tools, the Current Debate dashboard (`/app/debate`), history, library, timer, sparring, flowchart, settings, and administration. The header holds only Home, the Current debate menu, Library, History, and the language, theme, and Settings controls; tools are launched from Home and the dashboard.
 
@@ -137,12 +137,6 @@ CI and staging must not upload authenticated browser captures. Logging must not 
 ## PWA and offline behavior
 
 The service worker and manifest provide installable web assets and an offline app shell. It precaches only the navigation shell and static identity assets; route chunks enter the runtime cache when a user visits them. On first registration, the client also reports same-origin `/assets/` resources that loaded before the worker took control so the first visited route works offline without a forced reload. Updates wait for the normal service-worker lifecycle instead of reloading an active page. Offline support does not make unvisited routes, authenticated Supabase, or AI operations available without a network.
-
-## iOS shell
-
-[`capacitor.config.ts`](../capacitor.config.ts) owns the native app identifier, build directory, schemes, and native plugin settings. The iOS app wraps the same Vite output using a relative asset base.
-
-OAuth still travels through the provider and Supabase HTTPS callback before returning to the app callback scheme. Native URL handling lives in the client startup path.
 
 ## Deployment boundary
 

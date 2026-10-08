@@ -10,7 +10,6 @@ const ALLOWED_CHECKOUT_CALLBACKS = new Set([
   "http://127.0.0.1:8080",
   "http://localhost:5173",
   "http://127.0.0.1:54321",
-  "capacitor://localhost",
 ]);
 
 function callbackOrigin(url: URL): string {

@@ -1,8 +1,7 @@
 // Shared CORS policy for every browser-called Edge Function.
 //
 // This used to be copy-pasted into each function and had drifted: some lists
-// omitted the Playwright port (18080), and demo-code-login omitted the
-// Capacitor WebView origin entirely.
+// omitted the Playwright port (18080).
 
 export const PUBLIC_WEB_APP_ORIGIN = "https://debate.pi-stack.org";
 
@@ -16,7 +15,6 @@ export const ALLOWED_ORIGINS = [
   "http://127.0.0.1:18081", // Local full-stack browser gate
   "http://localhost:5173",
   "http://127.0.0.1:54321", // Local Supabase
-  "capacitor://localhost", // iOS Capacitor WebView
 ] as const;
 
 /**
