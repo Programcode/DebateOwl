@@ -31,6 +31,8 @@ nvm use
 npm ci
 ```
 
+The repository is an npm workspace: `npm ci` at the root installs the web app and every package under `packages/`, and links `@debatelab/core` into `node_modules`. Run every script from the root.
+
 ## Start the client
 
 Outside Superset, start Vite directly:
@@ -85,7 +87,9 @@ The main entry points are:
 - `src/components/features/` for feature UI.
 - `src/lib/stores/` for state and Supabase hydration.
 - [`src/lib/ai/client.ts`](../src/lib/ai/client.ts) for AI requests.
-- `src/lib/ai/schemas/` for response validation.
+- `packages/core/src/ai/schemas/` for response validation.
+
+Platform-neutral code shared with the iOS app lives in [`packages/core/`](../packages/core/README.md). It mirrors `src/lib/` paths, and each old path re-exports it, so web code keeps importing `@/lib/...`. To add a module, put it under `packages/core/src/`, import siblings by relative path, leave a re-export at the old `src/lib/` path if web code used it, and follow the package's no-DOM rule. The stores, the AI client, and the i18n catalogs stay in `src/` for now.
 
 Follow existing functional React, Zustand, Zod, and shadcn/Radix patterns. Reuse current helpers before adding another abstraction.
 

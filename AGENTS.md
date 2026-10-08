@@ -17,6 +17,7 @@ The local Supabase stack still uses shared default ports and container names. In
 
 - `src/` is the React 18 and TypeScript client. Routes and lazy page entry points live in `src/App.tsx`.
 - `src/lib/stores/` owns browser state and Supabase hydration. `src/lib/ai/client.ts` is the client AI boundary.
+- `packages/core/` (`@debatelab/core`, npm workspace) holds platform-neutral shared code: Zod schemas, validation, languages, Crossfire and Sparring logic. No DOM globals, React, or `import.meta` there; old `src/lib/` paths re-export it. Stores and i18n catalogs stay in `src/`.
 - `supabase/functions/` contains Deno Edge Functions. Shared auth, CORS, research, prompts, cost, and validation code lives in `supabase/functions/_shared/`.
 - `supabase/migrations/` is the database history and schema source of truth.
 - `src/lib/stores/debate-store.ts` owns the Current Debate: every source and saved result belongs to one debate or to one-off work, and nothing crosses debates.

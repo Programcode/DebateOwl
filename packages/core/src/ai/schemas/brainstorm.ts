@@ -1,4 +1,4 @@
-// src/lib/ai/schemas/brainstorm.ts
+// packages/core/src/ai/schemas/brainstorm.ts
 import { z } from 'zod';
 
 export const BrainstormInputSchema = z.object({

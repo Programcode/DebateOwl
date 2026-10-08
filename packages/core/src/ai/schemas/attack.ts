@@ -1,4 +1,4 @@
-// src/lib/ai/schemas/attack.ts
+// packages/core/src/ai/schemas/attack.ts
 import { z } from 'zod';
 
 export const AttackInputSchema = z.object({

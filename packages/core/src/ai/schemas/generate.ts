@@ -1,4 +1,4 @@
-// src/lib/ai/schemas/generate.ts
+// packages/core/src/ai/schemas/generate.ts
 import { z } from 'zod';
 
 export const GenerateInputSchema = z.object({

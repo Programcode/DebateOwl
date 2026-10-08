@@ -7,7 +7,7 @@ import {
 export const CROSSFIRE_STORAGE_KEY_PREFIX = 'debatelab-crossfire-draft';
 export const MAX_CROSSFIRE_STORAGE_CHARS = 80_000;
 
-/** The slice of a key-value store the draft needs; the web passes localStorage. */
+/** The slice of a key-value store the draft needs; the web app passes browser storage. */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;

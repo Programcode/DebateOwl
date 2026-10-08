@@ -74,7 +74,8 @@ Key entry points:
 ## Repository map
 
 ```text
-src/                 React client, stores, hooks, schemas, and unit tests
+src/                 React client, stores, hooks, and unit tests
+packages/core/       Platform-neutral shared code: schemas, validation, languages
 supabase/            Edge Functions, migrations, pgTAP tests, local config
 e2e/                 Playwright browser, full-stack, live, staging, and canary tests
 services/            Collaboration service for the hidden Workspace

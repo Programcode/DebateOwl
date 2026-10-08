@@ -1,4 +1,4 @@
-// src/lib/ai/schemas/ask.ts
+// packages/core/src/ai/schemas/ask.ts
 import { z } from 'zod';
 import { SafeWebUrlSchema } from './url';
 

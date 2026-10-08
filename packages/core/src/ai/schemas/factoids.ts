@@ -1,4 +1,4 @@
-// src/lib/ai/schemas/factoids.ts
+// packages/core/src/ai/schemas/factoids.ts
 import { z } from 'zod';
 import { SafeWebUrlSchema } from './url';
 
