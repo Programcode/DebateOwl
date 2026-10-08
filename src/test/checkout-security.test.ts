@@ -5,13 +5,12 @@ import {
 } from "../../supabase/functions/create-checkout/checkout-security";
 
 describe("checkout security", () => {
-  it("accepts only configured web and native callback origins", () => {
+  it("accepts only configured web callback origins", () => {
     expect(
       isAllowedCheckoutRedirectUrl(
         "https://debate.pi-stack.org/app/settings?checkout=success",
       ),
     ).toBe(true);
-    expect(isAllowedCheckoutRedirectUrl("capacitor://localhost/app/settings")).toBe(true);
     expect(isAllowedCheckoutRedirectUrl("http://localhost:5173/app/settings")).toBe(true);
   });
 

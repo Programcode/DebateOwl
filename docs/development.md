@@ -23,7 +23,6 @@ Never overwrite unrelated changes. Do not switch to the primary checkout because
 - Deno 2.x for Edge Function tests
 - Docker and Supabase CLI 2.115 or newer for database work
 - Playwright browser binaries for browser gates
-- Xcode and CocoaPods or Swift Package Manager support for native iOS work
 
 Install the locked JavaScript tree with the Node version from `.nvmrc`:
 
@@ -151,17 +150,6 @@ Failure artifacts go to ignored `test-results/` and `playwright-report/`. Protec
 Read [testing.md](testing.md) before running WebKit or staging.
 
 Agentic tests (`agentic/*.e2e.ts`, the e2e runner) drive the verification stack, never a dev server you started. Run them with `.claude/skills/verify-debatelab/bin/verify.sh e2e run` after `verify.sh up`. See [testing.md](testing.md#agentic-browser-tests).
-
-## iOS workflow
-
-```bash
-npm run ios:build
-npm run ios:open
-```
-
-The Capacitor build uses a relative Vite base and syncs `dist/` into the native project. [`capacitor.config.ts`](../capacitor.config.ts) owns the app ID, app name, schemes, and native settings.
-
-Do not hand-edit generated package documentation. Make native configuration changes through Capacitor or Xcode as appropriate.
 
 ## Documentation workflow
 

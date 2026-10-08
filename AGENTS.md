@@ -155,7 +155,7 @@ Staging E2E requires all three values together: `STAGING_SUPABASE_URL`, `STAGING
 
 Open only what the task needs:
 
-- [docs/architecture.md](docs/architecture.md): runtime boundaries, request flows, state, auth, billing, observability, PWA, and iOS.
+- [docs/architecture.md](docs/architecture.md): runtime boundaries, request flows, state, auth, billing, observability, and PWA.
 - [docs/development.md](docs/development.md): setup, environment behavior, worktrees, and common workflows.
 - [docs/testing.md](docs/testing.md): what each gate proves, browser matrices, staging, artifacts, and cleanup.
 - [docs/operations.md](docs/operations.md): CI, Vercel hosting, staging, deployment, rollback, and live verification.

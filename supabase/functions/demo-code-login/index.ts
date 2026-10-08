@@ -35,8 +35,8 @@ function sanitizeRedirectTo(value: unknown): string | undefined {
   if (typeof value !== "string" || !value) return undefined;
   try {
     const url = new URL(value);
-    // Web origins only. The shared CORS list also carries the Capacitor
-    // WebView scheme, which must never be a generateLink redirect target.
+    // Web origins only: a non-http(s) scheme must never be a generateLink
+    // redirect target, even if a future CORS entry allows it.
     if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
     return isAllowedOrigin(`${url.protocol}//${url.host}`) ? value : undefined;
   } catch {

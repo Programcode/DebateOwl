@@ -8,7 +8,6 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:18080",
   "http://localhost:5173",
   "http://127.0.0.1:54321",
-  "capacitor://localhost",
 ];
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

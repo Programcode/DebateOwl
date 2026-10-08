@@ -14,8 +14,6 @@
     "ci:failures": "node scripts/ci-failures.mjs",
     "build": "vite build && node scripts/check-build-boundaries.mjs",
     "build:dev": "vite build --mode development",
-    "ios:build": "vite build --mode capacitor && cap sync ios",
-    "ios:open": "cap open ios",
     "lint": "eslint . && npm run lint:repo",
     "lint:repo": "knip --no-config-hints && node scripts/check-repo-rules.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.agentic.json",
@@ -37,14 +35,6 @@
     "verify:full": "npm run verify && P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e"
   },
   "dependencies": {
-    "@capacitor/app": "^8.1.0",
-    "@capacitor/browser": "^8.0.3",
-    "@capacitor/cli": "^8.5.1",
-    "@capacitor/core": "^8.3.4",
-    "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.3.4",
-    "@capacitor/keyboard": "^8.0.3",
-    "@capacitor/status-bar": "^8.0.2",
     "@hocuspocus/provider": "4.7.0",
     "@hocuspocus/server": "4.7.0",
     "@hookform/resolvers": "5.4.0",

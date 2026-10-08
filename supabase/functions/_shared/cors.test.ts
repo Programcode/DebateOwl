@@ -1,11 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1.0.19";
 import { ALLOWED_ORIGINS, getCorsHeaders, isAllowedOrigin, isDevOrigin } from "./cors.ts";
 
-Deno.test("allows the Capacitor WebView origin", () => {
-  const headers = getCorsHeaders("capacitor://localhost");
-  assertEquals(headers["Access-Control-Allow-Origin"], "capacitor://localhost");
-});
-
 Deno.test("allows the isolated staging browser origin", () => {
   const headers = getCorsHeaders("http://127.0.0.1:18080");
   assertEquals(headers["Access-Control-Allow-Origin"], "http://127.0.0.1:18080");

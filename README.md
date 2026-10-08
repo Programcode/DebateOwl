@@ -11,7 +11,7 @@ Live application: [debate.pi-stack.org](https://debate.pi-stack.org)
 - **Practice.** Attack finds weak points. Ask is a streaming debate coach. Crossfire drills questioning. Sparring runs a timed round against the AI and scores it.
 - **Library and History.** Sources and saved work, scoped to the Current Debate.
 - **Account.** Google, email code, and demo-code sign-in; Basic and Pro plans through Stripe; sharing; admin announcements.
-- **Platforms.** Web and installable PWA with an offline shell, plus a Capacitor iOS app.
+- **Platforms.** Web and installable PWA with an offline shell.
 - **Languages.** English, Spanish, and Hungarian interface and AI output.
 
 Collaborative Workspace exists in the code but is hidden and on hold. Its routes appear only when `VITE_COLLABORATION_URL` is set.
@@ -53,7 +53,7 @@ npm run verify:full    # adds the full desktop and mobile browser suite
 ## How it fits together
 
 ```text
-Browser, PWA, or Capacitor iOS shell
+Browser or PWA
   -> React 18 + Vite client (Zustand stores, TanStack Query)
   -> Supabase Auth, PostgreSQL with RLS, Edge Functions (Deno)
   -> OpenRouter models, research providers, Stripe, Google APIs
@@ -79,7 +79,6 @@ supabase/            Edge Functions, migrations, pgTAP tests, local config
 e2e/                 Playwright browser, full-stack, live, staging, and canary tests
 services/            Collaboration service for the hidden Workspace
 public/              Static pages, PWA assets, and SEO files
-ios/                 Capacitor Xcode project
 scripts/             Build, docs, SEO, and test helpers
 .github/workflows/   Quality, live-provider, model-matrix, staging, and canary CI
 .superset/           Worktree dev server, port allocation, and database gate
