@@ -1,51 +1,19 @@
-import {
-  PersistedCrossfireDraftSchema,
-  type CrossfireState,
-  type PersistedCrossfireDraft,
-} from './schemas';
+import * as core from '@debatelab/core/crossfire/storage';
+import type { StorageLike } from '@debatelab/core/crossfire/storage';
+import type { CrossfireState, PersistedCrossfireDraft } from '@debatelab/core/crossfire/schemas';
 
-export const CROSSFIRE_STORAGE_KEY_PREFIX = 'debatelab-crossfire-draft';
-export const MAX_CROSSFIRE_STORAGE_CHARS = 80_000;
+export { CROSSFIRE_STORAGE_KEY_PREFIX, MAX_CROSSFIRE_STORAGE_CHARS, crossfireStorageKey } from '@debatelab/core/crossfire/storage';
 
-type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-
+// The shared module takes storage explicitly; the web defaults to localStorage.
 function browserStorage(): StorageLike | null {
   return typeof window === 'undefined' ? null : window.localStorage;
-}
-
-export function crossfireStorageKey(ownerId: string): string {
-  return `${CROSSFIRE_STORAGE_KEY_PREFIX}:${ownerId}`;
 }
 
 export function loadCrossfireDraft(
   ownerId: string,
   storage: StorageLike | null = browserStorage(),
 ): PersistedCrossfireDraft['state'] | null {
-  if (!storage || !ownerId) return null;
-  const key = crossfireStorageKey(ownerId);
-  let serialized: string | null;
-  try {
-    serialized = storage.getItem(key);
-  } catch {
-    return null;
-  }
-  if (!serialized) return null;
-  if (serialized.length > MAX_CROSSFIRE_STORAGE_CHARS) {
-    try { storage.removeItem(key); } catch { return null; }
-    return null;
-  }
-
-  try {
-    const parsed = PersistedCrossfireDraftSchema.safeParse(JSON.parse(serialized));
-    if (!parsed.success || parsed.data.ownerId !== ownerId) {
-      try { storage.removeItem(key); } catch { return null; }
-      return null;
-    }
-    return parsed.data.state;
-  } catch {
-    try { storage.removeItem(key); } catch { return null; }
-    return null;
-  }
+  return core.loadCrossfireDraft(ownerId, storage);
 }
 
 export function saveCrossfireDraft(
@@ -54,39 +22,11 @@ export function saveCrossfireDraft(
   storage: StorageLike | null = browserStorage(),
   now = Date.now(),
 ): boolean {
-  if (!storage || !ownerId) return false;
-  const key = crossfireStorageKey(ownerId);
-  if (state.phase === 'complete') {
-    try {
-      storage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  const draft: PersistedCrossfireDraft = {
-    version: 1,
-    ownerId,
-    savedAt: now,
-    state,
-  };
-  const parsed = PersistedCrossfireDraftSchema.safeParse(draft);
-  if (!parsed.success) return false;
-
-  const serialized = JSON.stringify(parsed.data);
-  if (serialized.length > MAX_CROSSFIRE_STORAGE_CHARS) return false;
-  try {
-    storage.setItem(key, serialized);
-    return true;
-  } catch {
-    return false;
-  }
+  return core.saveCrossfireDraft(ownerId, state, storage, now);
 }
 
 export function clearCrossfireDraft(ownerId: string, storage: StorageLike | null = browserStorage()): void {
-  if (!ownerId || !storage) return;
-  try { storage.removeItem(crossfireStorageKey(ownerId)); } catch { /* storage unavailable */ }
+  core.clearCrossfireDraft(ownerId, storage);
 }
 
 export function clearCrossfireDraftOnAuthChange(
@@ -94,9 +34,5 @@ export function clearCrossfireDraftOnAuthChange(
   nextUserId: string | undefined,
   storage: StorageLike | null = browserStorage(),
 ): boolean {
-  if (previousUserId === nextUserId) return false;
-  if (previousUserId) {
-    try { storage?.removeItem(crossfireStorageKey(previousUserId)); } catch { /* storage unavailable */ }
-  }
-  return true;
+  return core.clearCrossfireDraftOnAuthChange(previousUserId, nextUserId, storage);
 }
