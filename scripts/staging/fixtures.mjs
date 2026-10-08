@@ -2,7 +2,7 @@
 // person, publication, figure and URL here is made up. Row ids are fixed so a
 // rerun updates rows instead of adding copies. Output shapes follow what the
 // client saves and renders: GenerateOutput, AttackOutput, BrainstormOutput
-// (src/lib/ai/schemas/) and FactoidsOutput (src/lib/ai/schemas/factoids.ts).
+// (packages/core/src/ai/schemas/) and FactoidsOutput (packages/core/src/ai/schemas/factoids.ts).
 
 const id = (n) => `5eed0000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 

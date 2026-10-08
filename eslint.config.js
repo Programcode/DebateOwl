@@ -5,10 +5,11 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", ".remember"] },
+  { ignores: ["dist", "coverage", ".remember", "packages/**/node_modules", "packages/**/dist"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
+    ignores: ["packages/**"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -24,10 +25,46 @@ export default tseslint.config(
     },
   },
   {
+    // Shared packages run on the web and in React Native, so they get no
+    // browser globals and no web-only libraries. See packages/core/README.md.
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ["packages/**/*.ts"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.es2021,
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+      "no-restricted-globals": [
+        "error",
+        ...["window", "document", "localStorage", "sessionStorage", "navigator", "location", "self"].map((name) => ({
+          name,
+          message: "Shared packages cannot use browser globals. Take the value as a parameter.",
+        })),
+      ],
+      "no-restricted-syntax": [
+        "error",
+        { selector: "MetaProperty[meta.name='import']", message: "Shared packages cannot use import.meta. Take the value as a parameter." },
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            "react", "react-dom", "react-native", "react-i18next", "zustand", "@supabase/supabase-js", "posthog-js",
+            "sonner", "react-router-dom", "reactflow", "lucide-react", "framer-motion", "jspdf", "docx",
+          ].map((name) => ({ name, message: "Shared packages stay platform-neutral; keep this in the app." })),
+          patterns: [
+            { group: ["@sentry/*", "@radix-ui/*"], message: "Shared packages stay platform-neutral; keep this in the app." },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // A promise nobody awaits or catches turns a failed write into an
     // unhandled rejection with no message for the user. Type-aware, so it
-    // runs on the client app only.
-    files: ["src/**/*.{ts,tsx}"],
+    // runs on the client app and the shared packages only.
+    files: ["src/**/*.{ts,tsx}", "packages/**/src/**/*.ts"],
     ignores: ["src/test/**"],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

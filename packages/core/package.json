@@ -1,0 +1,12 @@
+{
+  "name": "@debatelab/core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}
