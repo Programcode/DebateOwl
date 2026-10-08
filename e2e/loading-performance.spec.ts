@@ -10,7 +10,7 @@ test('a stalled Jam recorder cannot delay the real application', async ({ page, 
 
   await jamRequest;
   await expect(page.getByRole('heading', { name: /Prep Faster/ })).toBeVisible({ timeout: 2_000 });
-  await expect(page.getByText('DebateLab by Programcode is the official')).toHaveCount(0);
+  await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
 });
 
 test('public routes keep the real UI after refresh', async ({ page }) => {
@@ -22,7 +22,7 @@ test('public routes keep the real UI after refresh', async ({ page }) => {
     await page.goto(path);
     await page.reload();
     await expect(page.getByRole(path === '/' ? 'heading' : 'button', { name: label })).toBeVisible();
-    await expect(page.getByText('DebateLab by Programcode is the official')).toHaveCount(0);
+    await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
   }
 });
 
@@ -38,7 +38,7 @@ test('authenticated routes keep the shell and current page after refresh', async
     await page.reload();
     await expect(page.locator('header')).toBeVisible();
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-    await expect(page.getByText('DebateLab by Programcode is the official')).toHaveCount(0);
+    await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
   }
 });
 
