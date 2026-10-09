@@ -124,11 +124,12 @@ export async function autosaveSources(
  * Saves the rankings of the Library sources a result used, into the debate
  * the request was sent for. One-off work has no Library to rank. Returns
  * false when the rankings could not be saved; the result itself still stands.
+ * Once the request is cancelled or replaced, no ranking is written.
  */
-export async function keepSourceAssessments(userId: string, debateId: string | null, assessments: SourceAssessmentUpdate[]): Promise<boolean> {
+export async function keepSourceAssessments(userId: string, debateId: string | null, assessments: SourceAssessmentUpdate[], signal?: AbortSignal): Promise<boolean> {
   if (!debateId || assessments.length === 0) return true;
   try {
-    await applySourceAssessments(userId, debateId, assessments);
+    await applySourceAssessments(userId, debateId, assessments, signal);
     return true;
   } catch (cause) {
     console.warn('Could not save the source rankings:', cause instanceof Error ? cause.message : cause);

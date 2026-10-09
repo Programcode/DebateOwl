@@ -151,15 +151,17 @@ export async function removeSource(userId: string, id: string, debateId?: string
  * Saves the server's rankings onto the debate's Library sources a result
  * used, as the website's applySourceAssessments does. The debate is the one
  * the request was sent for, read when the student acted; a URL saved in
- * several debates is ranked only in that one.
+ * several debates is ranked only in that one. Once the request is cancelled
+ * or replaced, nothing is written.
  */
-export async function applySourceAssessments(userId: string, debateId: string, assessments: SourceAssessmentUpdate[]): Promise<void> {
-  if (assessments.length === 0) return;
+export async function applySourceAssessments(userId: string, debateId: string, assessments: SourceAssessmentUpdate[], signal?: AbortSignal): Promise<void> {
+  if (assessments.length === 0 || signal?.aborted) return;
   const { data, error } = await supabase
     .from('sources')
     .select('id,origin,metadata')
     .eq('user_id', userId)
     .eq('debate_id', debateId);
+  if (signal?.aborted) return;
   if (error) throw new Error(error.message);
   type Row = { id: string; origin: string | null; metadata: { url?: string; semantic?: SourceSemanticMetadata } | null };
   const candidates = (data ?? []) as Row[];

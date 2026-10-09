@@ -120,7 +120,7 @@ export default function AttackScreen() {
       if (!isCurrent()) return;
       const { result, discoveredSources, truncated, assessments } = await attackCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
       if (!isCurrent()) return;
-      const assessed = await keepSourceAssessments(forUser, debateId, assessments);
+      const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
       const sources = await autosaveSources(forUser, discoveredSources, 'attack', debateId, controller.signal);
       if (!isCurrent()) return;

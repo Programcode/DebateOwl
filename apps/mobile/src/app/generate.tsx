@@ -99,7 +99,7 @@ export default function GenerateScreen() {
       if (!isCurrent()) return;
       const { result, discoveredSources, truncated, assessments } = await generateCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
       if (!isCurrent()) return;
-      const assessed = await keepSourceAssessments(forUser, debateId, assessments);
+      const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
       const sources = await autosaveSources(forUser, discoveredSources, 'generate', debateId, controller.signal);
       if (!isCurrent()) return;

@@ -248,7 +248,7 @@ export default function AskScreen() {
       // A whole answer ranks the Library sources it used and says when the question was shortened, as on the website.
       if (whole.extras) {
         const { truncated, assessments } = whole.extras;
-        const assessed = await keepSourceAssessments(userId, debateId, assessments);
+        const assessed = await keepSourceAssessments(userId, debateId, assessments, controller.signal);
         if (!isCurrent()) return;
         const notices = [
           ...(assessed ? [] : [`${t('aiClient.sourceSaveFailed')}. ${t('aiClient.sourceAssessmentSaveFailed')}`]),

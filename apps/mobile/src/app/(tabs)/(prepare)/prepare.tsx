@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -35,9 +35,13 @@ export default function PrepareScreen() {
   const openTool = (tool: PrepareTool) =>
     tool === 'generate' ? router.push({ pathname: '/generate', params: { from: 'prepare' } }) : router.push({ pathname: '/coming/[tool]', params: { tool } });
 
-  const load = useCallback(async (isCurrent: () => boolean) => {
+  // Every load, from focus or Retry, takes a number; only the newest may write, so a late Retry for another debate never replaces this one's.
+  const loads = useRef(0);
+  const load = useCallback(async () => {
     if (!userId || !debateId) return;
     const forDebate = debateId;
+    const request = ++loads.current;
+    const isCurrent = () => loads.current === request;
     try {
       const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT);
       if (!isCurrent()) return;
@@ -52,10 +56,9 @@ export default function PrepareScreen() {
   // Reload on focus, so a case generated a moment ago, or on the website, shows up.
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      void load(() => active);
+      void load();
       return () => {
-        active = false;
+        loads.current += 1;
       };
     }, [load]),
   );
@@ -97,7 +100,7 @@ export default function PrepareScreen() {
           <Text tone="secondary" style={styles.body}>
             {t('mobile.debate.loadFailed')}
           </Text>
-          <TextButton label={t('common.retry')} onPress={() => void load(() => true)} />
+          <TextButton label={t('common.retry')} onPress={() => void load()} />
         </Card>
       ) : items === null ? (
         <ActivityIndicator style={styles.loading} accessibilityRole="progressbar" />
