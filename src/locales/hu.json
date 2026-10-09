@@ -2446,6 +2446,50 @@
     },
     "deleteAccount": {
       "failedHint": "A fiókod megmaradt. Ellenőrizd a kapcsolatot, és próbáld újra."
+    },
+    "library": {
+      "add": "Forrás hozzáadása",
+      "pasteLink": "Link beillesztése",
+      "writeNote": "Jegyzet írása",
+      "search_one": "Keresés {{count}} forrás között",
+      "search_other": "Keresés {{count}} forrás között",
+      "filters": {
+        "all": "Mind",
+        "files": "Fájlok",
+        "links": "Linkek",
+        "notes": "Jegyzetek"
+      },
+      "types": {
+        "url": "Link",
+        "text": "Jegyzet",
+        "file": "Fájl"
+      },
+      "metaAdded": "{{type}}, hozzáadva: {{when}}",
+      "metaCited_one": "{{type}}, {{count}} eredményben hivatkozva",
+      "metaCited_other": "{{type}}, {{count}} eredményben hivatkozva",
+      "loadFailed": "Nem sikerült betölteni a forrásaidat.",
+      "deleteFailed": "Nem sikerült törölni a forrást. Próbáld újra.",
+      "saveFailed": "Nem sikerült menteni a forrást. Próbáld újra.",
+      "sourceMissing": "Ez a forrás már nincs a könyvtáradban.",
+      "openPage": "Megnyitja az oldalt a böngészőben"
+    },
+    "ask": {
+      "placeholder": "Kérdezd az edződet",
+      "openYou": "Előfizetés megtekintése",
+      "openFailed": "Nem sikerült megnyitni ezt a beszélgetést. Próbáld újra.",
+      "historyFailed": "Nem sikerült betölteni a beszélgetéseidet.",
+      "errors": {
+        "auth": "Lejárt a munkameneted. Jelentkezz ki, majd be újra.",
+        "trialExpired": "Lejárt az ingyenes próbaidőszakod. Az előfizetésedet a Profil lapon látod.",
+        "limitReached": "Elhasználtad a mai MI-kéréseidet. UTC éjfélkor újraindulnak. Az előfizetésedet a Profil lapon látod.",
+        "modelRestricted": "A Kérdezéshez választott modellhez Pro előfizetés kell. Az előfizetésedet a Profil lapon látod.",
+        "rateLimit": "Most túl sok a kérés. Várj egy kicsit, és próbáld újra.",
+        "network": "Nem sikerült elérni az MI-t. Ellenőrizd a kapcsolatot, és próbáld újra.",
+        "timeout": "A kérés túl sokáig tartott. Próbáld újra.",
+        "tooLarge": "Túl hosszú a kérdésed. Rövidítsd le, és küldd el újra.",
+        "debateMissing": "Ez a vita már nem létezik. Válassz másik vitát, és kérdezz újra.",
+        "failed": "Az edző nem tudott válaszolni. Próbáld újra."
+      }
     }
   }
 }

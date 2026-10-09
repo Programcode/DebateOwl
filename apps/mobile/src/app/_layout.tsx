@@ -6,7 +6,8 @@ import type { NativeStackNavigationOptions } from 'expo-router/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
@@ -67,20 +68,25 @@ function Root() {
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      {/* The screenshot script waits for auth-settled before it checks an offline cold start. */}
-      <View style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
+      {/* The screenshot script waits for auth-settled before it checks an offline cold start. Swipeable rows need the gesture root. */}
+      <GestureHandlerRootView style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
           <Stack.Protected guard={session !== null}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="debates" options={sheet} />
             <Stack.Screen name="new-debate" options={sheet} />
             <Stack.Screen name="delete-account" options={sheet} />
+            <Stack.Screen name="add-link" options={sheet} />
+            <Stack.Screen name="new-note" options={sheet} />
+            <Stack.Screen name="source/[id]" options={sheet} />
+            {/* Full screen above the tabs, as in mock 07. */}
+            <Stack.Screen name="ask" />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />
           </Stack.Protected>
         </Stack>
-      </View>
+      </GestureHandlerRootView>
     </ThemeProvider>
   );
 }

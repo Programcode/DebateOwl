@@ -2446,6 +2446,50 @@
     },
     "deleteAccount": {
       "failedHint": "Your account is still here. Check your connection and try again."
+    },
+    "library": {
+      "add": "Add a source",
+      "pasteLink": "Paste a link",
+      "writeNote": "Write a note",
+      "search_one": "Search {{count}} source",
+      "search_other": "Search {{count}} sources",
+      "filters": {
+        "all": "All",
+        "files": "Files",
+        "links": "Links",
+        "notes": "Notes"
+      },
+      "types": {
+        "url": "Link",
+        "text": "Note",
+        "file": "File"
+      },
+      "metaAdded": "{{type}}, added {{when}}",
+      "metaCited_one": "{{type}}, cited in {{count}} result",
+      "metaCited_other": "{{type}}, cited in {{count}} results",
+      "loadFailed": "Could not load your sources.",
+      "deleteFailed": "Could not delete the source. Try again.",
+      "saveFailed": "Could not save the source. Try again.",
+      "sourceMissing": "This source is no longer in your Library.",
+      "openPage": "Opens the page in the browser"
+    },
+    "ask": {
+      "placeholder": "Ask your coach",
+      "openYou": "See your plan",
+      "openFailed": "Could not open this chat. Try again.",
+      "historyFailed": "Could not load your chats.",
+      "errors": {
+        "auth": "Your session has expired. Sign out and sign in again.",
+        "trialExpired": "Your free trial has ended. See your plan in You.",
+        "limitReached": "You have used today's AI requests. They refresh at midnight UTC. See your plan in You.",
+        "modelRestricted": "The model chosen for Ask needs Pro. See your plan in You.",
+        "rateLimit": "Too many requests right now. Wait a moment and try again.",
+        "network": "Couldn't reach the AI. Check your connection and retry.",
+        "timeout": "The request took too long. Please try again.",
+        "tooLarge": "Your question is too long. Shorten it and send it again.",
+        "debateMissing": "This debate no longer exists. Pick another debate and ask again.",
+        "failed": "The coach could not answer. Try again."
+      }
     }
   }
 }

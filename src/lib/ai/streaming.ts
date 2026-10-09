@@ -4,6 +4,7 @@ import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAs
 import { parseDebateContextUsage, useDebateContextStore } from '@/lib/stores/debate-context-store';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
+import { consumeSSEChunk, type ParsedSSEEvent } from '@debatelab/core/ai/sse';
 
 export interface AskStreamOptions {
   mode?: string;
@@ -15,16 +16,13 @@ export interface AskStreamOptions {
   debateId?: string | null;
 }
 
+export { consumeSSEChunk, type ParsedSSEEvent };
+
 export interface AskStreamHandlers {
   onDelta: (text: string) => void;
   onFinal?: (output: AskOutput) => void;
   signal?: AbortSignal;
 }
-
-export type ParsedSSEEvent = {
-  event: string;
-  data: unknown;
-};
 
 export function isAskStreamingSupported(config: ProviderConfig, options: AskStreamOptions = {}) {
   const advancedStructuredMode = Boolean(
@@ -36,40 +34,6 @@ export function isAskStreamingSupported(config: ProviderConfig, options: AskStre
   );
 
   return !advancedStructuredMode && config.provider === 'openrouter';
-}
-
-function parseEventBlock(block: string): ParsedSSEEvent | null {
-  const lines = block.split(/\r?\n/);
-  let event = 'message';
-  const dataLines: string[] = [];
-
-  for (const line of lines) {
-    if (line.startsWith('event:')) {
-      event = line.slice('event:'.length).trim();
-    } else if (line.startsWith('data:')) {
-      dataLines.push(line.slice('data:'.length).trimStart());
-    }
-  }
-
-  if (dataLines.length === 0) return null;
-
-  const rawData = dataLines.join('\n');
-  try {
-    return { event, data: JSON.parse(rawData) };
-  } catch {
-    return { event, data: rawData };
-  }
-}
-
-export function consumeSSEChunk(buffer: string, chunk: string): { events: ParsedSSEEvent[]; buffer: string } {
-  const normalized = `${buffer}${chunk}`.replace(/\r\n/g, '\n');
-  const parts = normalized.split('\n\n');
-  const rest = parts.pop() ?? '';
-  const events = parts
-    .map(parseEventBlock)
-    .filter((event): event is ParsedSSEEvent => event !== null);
-
-  return { events, buffer: rest };
 }
 
 function abortError(): DOMException {
