@@ -23,6 +23,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -577,8 +578,10 @@ export default function FlowchartPage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-9 w-9 text-destructive"
-                                                        disabled={deletingFlowchartIds.has(item.id)}
+                                                        // Busy, not disabled: a disabled button lets the click fall through to the
+                                                        // row, which would load this chart. The handler ignores repeat clicks.
+                                                        className={cn('h-9 w-9 text-destructive', deletingFlowchartIds.has(item.id) && 'opacity-50')}
+                                                        aria-disabled={deletingFlowchartIds.has(item.id)}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             void handleDeleteFlowchart(item, e);

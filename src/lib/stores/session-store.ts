@@ -1083,7 +1083,8 @@ export const useSessionStore = create<SessionState>()(
         // Write first: the page offers Undo (a fresh save) only once the row is really gone.
         // Signed out, charts are local only; signed in, a failed user lookup fails the delete
         // instead of quietly skipping the server row.
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
         if (session) {
           const userId = await getUserId();
           if (!userId) throw new Error('[SessionStore] Could not confirm the signed-in user to delete a flowchart');
