@@ -91,7 +91,12 @@ export function FactoidsDocument({
           )}
           <Labeled label={t('factoidsResults.howToUse')} text={factoid.howToUse} />
           <View style={styles.saveRow}>
-            <TextButton label={t('factoidsResults.saveToLibrary')} onPress={() => onSave(factoid)} disabled={saving} />
+            <TextButton
+              label={t('factoidsResults.saveToLibrary')}
+              accessibilityLabel={t('factoidsResults.saveClaimToLibrary', { claim: factoid.shortClaim })}
+              onPress={() => onSave(factoid)}
+              disabled={saving}
+            />
           </View>
         </>
       ),

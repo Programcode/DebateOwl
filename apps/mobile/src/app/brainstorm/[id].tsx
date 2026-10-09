@@ -1,6 +1,6 @@
 import type { BrainstormInput } from '@debatelab/core/ai/schemas/brainstorm';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ActionMenu } from '@/components/action-menu';
@@ -14,7 +14,7 @@ import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
 import { BRAINSTORM_EXPORT_FILE_NAME, brainstormExportHtml } from '@/lib/export-html';
 import { brainstormToText, discussBrainstormMessage } from '@/lib/result-text';
-import { isCompleteBrainstorm } from '@/lib/results';
+import { readBrainstorm } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
 
 /**
@@ -37,7 +37,9 @@ export default function BrainstormResultScreen() {
   }, [arrival, failed, setNotice, t]);
 
   const result = doc.state.status === 'ready' ? doc.state.result : null;
-  const output = result && isCompleteBrainstorm(result.output) ? result.output : null;
+  // Saved rows are read through the schema, so an old or broken one shows the notice below instead of crashing.
+  const raw = result?.output;
+  const output = useMemo(() => (raw === undefined ? null : readBrainstorm(raw)), [raw]);
   const back = backLabel(t, params.from, 'prepare');
 
   if (!result || !output) {
