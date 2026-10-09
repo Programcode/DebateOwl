@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:38:04.778Z",
+  "createdAt": "2026-10-09T12:08:00.760Z",
   "payload": {
     "actions": [
       {
@@ -34,19 +34,19 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Entered the provided argument and ran Find Weaknesses. The completed analysis is visible, identifying a major evidential weakness and offering an opponent attack, an improved version, and further critique.",
+    "summary": "The argument was entered into the 'Your Argument' field and 'Find Weaknesses' was tapped. The screen now shows the full critique: an overall assessment (62/100), one major weakness (no comparative evidence for the congestion claim), detected fallacies (hasty generalization), cross-examination quest…",
     "startPath": "/app/attack",
     "endPath": "/app/attack",
     "endAnchors": [
       {
-        "role": "button",
-        "name": "Close"
+        "role": "heading",
+        "name": "Attack"
       },
       {
-        "text": "Attack analysis complete"
+        "text": "No current debate. Results stay one-off until you start one."
       },
       {
-        "text": "The critique is ready."
+        "text": "*"
       },
       {
         "role": "textbox",
@@ -55,36 +55,24 @@
         "value": "Free public transport cuts congestion because more people ride the bus."
       },
       {
-        "role": "heading",
-        "name": "Overall Assessment"
+        "text": "Pro"
       },
       {
-        "text": "FAKE-PROVIDER attack summary: the central warrant is underdefended."
+        "text": "Reasoning"
       },
       {
-        "text": "Case Strength"
+        "text": "Low"
       },
       {
-        "text": "62/100"
+        "text": "Options"
       }
     ],
     "goneAnchors": [
       {
-        "role": "textbox",
-        "name": "Your Argument *",
-        "placeholder": "Paste your debate case or argument here..."
-      },
-      {
-        "text": "⚔️"
-      },
-      {
-        "role": "heading",
-        "name": "No Mercy Mode"
-      },
-      {
-        "text": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements."
+        "role": "status",
+        "name": "Opening Attack"
       }
     ],
-    "endWaitMs": 14918
+    "endWaitMs": 31437
   }
 }

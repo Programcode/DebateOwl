@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:40:03.869Z",
+  "createdAt": "2026-10-09T12:10:40.226Z",
   "payload": {
     "actions": [
       {
@@ -34,20 +34,10 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Entered the argument and selected Find Weaknesses. The attack analysis completed and shows an identified major evidential weakness: the congestion claim lacks comparative evidence, with criticism and improvement suggestions displayed.",
+    "summary": "Argument entered and weaknesses found successfully. The critique shows 1 major weakness (evidential gap on congestion claim), a hasty generalization fallacy, cross-examination questions, weighing analysis, and improvement suggestions. The Find Weaknesses action produced the expected analysis output.",
     "startPath": "/app/attack",
     "endPath": "/app/attack",
     "endAnchors": [
-      {
-        "role": "button",
-        "name": "Close"
-      },
-      {
-        "text": "Attack analysis complete"
-      },
-      {
-        "text": "The critique is ready."
-      },
       {
         "role": "heading",
         "name": "Attack"
@@ -56,14 +46,25 @@
         "text": "No current debate. Results stay one-off until you start one."
       },
       {
-        "role": "heading",
-        "name": "Attack My Case"
-      },
-      {
-        "text": "Find weaknesses and get improvement suggestions"
-      },
-      {
         "text": "*"
+      },
+      {
+        "role": "textbox",
+        "name": "Your Argument *",
+        "placeholder": "Paste your debate case or argument here...",
+        "value": "Free public transport cuts congestion because more people ride the bus."
+      },
+      {
+        "text": "Pro"
+      },
+      {
+        "text": "Reasoning"
+      },
+      {
+        "text": "Low"
+      },
+      {
+        "text": "Options"
       }
     ],
     "goneAnchors": [
@@ -72,6 +73,6 @@
         "name": "Opening Attack"
       }
     ],
-    "endWaitMs": 13006
+    "endWaitMs": 27713
   }
 }
