@@ -11,6 +11,7 @@ import type { IconName } from '@/components/icon-paths';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
+import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
   fetchDebateCounts,
@@ -153,6 +154,8 @@ function OneOffNotice({ onReturn }: { onReturn: () => void }) {
 function DebateDetails({ debateId }: { debateId: string }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const { session } = useAuth();
+  const userId = session?.user.id ?? null;
   const [view, setView] = useState<DebateSide>('pro');
   const [counts, setCounts] = useState<DebateCounts | null>(null);
   const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
@@ -160,11 +163,12 @@ function DebateDetails({ debateId }: { debateId: string }) {
 
   // Both sides load together, so switching the view is instant.
   const load = useCallback(async (isCurrent: () => boolean) => {
+    if (!userId) return;
     try {
       const [nextCounts, pro, con] = await Promise.all([
-        fetchDebateCounts(debateId),
-        fetchRecentWork(debateId, 'pro', RECENT_LIMIT),
-        fetchRecentWork(debateId, 'con', RECENT_LIMIT),
+        fetchDebateCounts(userId, debateId),
+        fetchRecentWork(userId, debateId, 'pro', RECENT_LIMIT),
+        fetchRecentWork(userId, debateId, 'con', RECENT_LIMIT),
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
@@ -175,7 +179,7 @@ function DebateDetails({ debateId }: { debateId: string }) {
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [debateId]);
+  }, [userId, debateId]);
 
   // Reload on focus, so work saved on the website shows up.
   useFocusEffect(

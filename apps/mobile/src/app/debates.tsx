@@ -8,6 +8,7 @@ import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
+import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { fetchSourceCounts, type Debate } from '@/lib/debates';
 import { formatRelativeDate, isToday } from '@/lib/dates';
@@ -26,6 +27,8 @@ export default function DebatesSheet() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { status, debates, current, oneOff, setOneOff, switchTo, refresh } = useDebates();
+  const { session } = useAuth();
+  const userId = session?.user.id ?? null;
   const [query, setQuery] = useState('');
   const [sourceCounts, setSourceCounts] = useState<Record<string, number>>({});
   const [switching, setSwitching] = useState<string | null>(null);
@@ -37,9 +40,9 @@ export default function DebatesSheet() {
 
   const ids = debates.map((debate) => debate.id).join(',');
   useEffect(() => {
-    if (!ids) return;
+    if (!userId || !ids) return;
     let active = true;
-    fetchSourceCounts(ids.split(','))
+    fetchSourceCounts(userId, ids.split(','))
       .then((counts) => {
         if (active) setSourceCounts(counts);
       })
@@ -47,7 +50,7 @@ export default function DebatesSheet() {
     return () => {
       active = false;
     };
-  }, [ids]);
+  }, [userId, ids]);
 
   const visible = useMemo(() => {
     const needle = normalize(query);

@@ -36,23 +36,26 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   const [debates, setDebates] = useState<Debate[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [oneOff, setOneOff] = useState(false);
-  // A load that started before a create or switch must not overwrite it, and
-  // nothing from a previous account may land after a sign-out.
+  // A load that started before a create or switch must not overwrite it, only
+  // the latest of overlapping loads may land, and nothing from a previous
+  // account may land after a sign-out.
   const writes = useRef(0);
+  const refreshes = useRef(0);
   const owner = useRef(userId);
 
   const refresh = useCallback(async () => {
     const forUser = owner.current;
     if (!forUser) return;
     const writesBefore = writes.current;
+    const request = ++refreshes.current;
     try {
-      const next = await fetchDebates();
-      if (owner.current !== forUser || writes.current !== writesBefore) return;
+      const next = await fetchDebates(forUser);
+      if (owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
       setDebates(next.debates);
       setCurrentId(next.currentId);
       setStatus('ready');
     } catch (cause) {
-      if (owner.current !== forUser) return;
+      if (owner.current !== forUser || refreshes.current !== request) return;
       console.warn('Could not load debates:', cause instanceof Error ? cause.message : cause);
       // Keep what is on screen; only an empty first load becomes an error.
       setStatus((previous) => (previous === 'ready' ? previous : 'error'));
@@ -83,9 +86,14 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       oneOff,
       activeDebateId: oneOff ? null : current?.id ?? null,
       refresh,
+      // The account is read when the student acts. If it changed while the
+      // write ran, the write still happened for that account, so it is
+      // reported as done but not shown to the account signed in now.
       create: async ({ motion, settings }) => {
-        if (!userId) throw new Error('Sign in to manage debates');
-        const debate = await createDebate(userId, { motion, settings });
+        const forUser = owner.current;
+        if (!forUser) throw new Error('Sign in to manage debates');
+        const debate = await createDebate(forUser, { motion, settings });
+        if (owner.current !== forUser) return debate;
         writes.current += 1;
         setDebates((previous) => sortDebates([debate, ...previous.filter((item) => item.id !== debate.id)]));
         setCurrentId(debate.id);
@@ -94,8 +102,10 @@ export function DebateProvider({ children }: { children: ReactNode }) {
         return debate;
       },
       switchTo: async (id) => {
-        if (!userId) throw new Error('Sign in to manage debates');
-        const at = await switchDebate(userId, id);
+        const forUser = owner.current;
+        if (!forUser) throw new Error('Sign in to manage debates');
+        const at = await switchDebate(forUser, id);
+        if (owner.current !== forUser) return;
         writes.current += 1;
         setDebates((previous) => sortDebates(previous.map((item) => (item.id === id ? { ...item, lastActivityAt: at } : item))));
         setCurrentId(id);
@@ -103,7 +113,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       },
       setOneOff,
     };
-  }, [status, debates, currentId, oneOff, userId, refresh]);
+  }, [status, debates, currentId, oneOff, refresh]);
 
   return <DebateContext.Provider value={value}>{children}</DebateContext.Provider>;
 }

@@ -71,11 +71,16 @@ async function setCurrentPointer(userId: string, debateId: string) {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Every read and write below also filters on the user. Row level security is
+ * the real boundary; the filter keeps a wrong session from mixing accounts.
+ */
+
 /** Every debate, newest activity first, and the current one when it is still in the list. */
-export async function fetchDebates(): Promise<{ debates: Debate[]; currentId: string | null }> {
+export async function fetchDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
   const [debatesResult, currentResult] = await Promise.all([
-    supabase.from('debates').select(DEBATE_COLUMNS).order('last_activity_at', { ascending: false }),
-    supabase.from('current_debates').select('debate_id').maybeSingle(),
+    supabase.from('debates').select(DEBATE_COLUMNS).eq('user_id', userId).order('last_activity_at', { ascending: false }),
+    supabase.from('current_debates').select('debate_id').eq('user_id', userId).maybeSingle(),
   ]);
   if (debatesResult.error) throw new Error(debatesResult.error.message);
   if (currentResult.error) throw new Error(currentResult.error.message);
@@ -110,7 +115,9 @@ export async function switchDebate(userId: string, debateId: string): Promise<nu
   await setCurrentPointer(userId, debateId);
   const now = Date.now();
   // The website does not fail a switch when only this timestamp could not be saved.
-  await supabase.from('debates').update({ last_activity_at: new Date(now).toISOString() }).eq('id', debateId);
+  await supabase.from('debates').update({ last_activity_at: new Date(now).toISOString() })
+    .eq('id', debateId)
+    .eq('user_id', userId);
   return now;
 }
 
@@ -147,10 +154,11 @@ export interface DebateCounts {
   rounds: number;
 }
 
-async function countRows(table: string, debateId: string, sides?: string[]): Promise<number> {
+async function countRows(userId: string, table: string, debateId: string, sides?: string[]): Promise<number> {
   let query = supabase
     .from(table)
     .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
     .eq('debate_id', debateId);
   if (sides) query = query.in('side', sides);
   const { count, error } = await query;
@@ -161,19 +169,19 @@ async function countRows(table: string, debateId: string, sides?: string[]): Pro
 const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
 
 /** Sources, saved results per side and Sparring rounds in one debate. One-off work has no debate and never counts. */
-export async function fetchDebateCounts(debateId: string): Promise<DebateCounts> {
+export async function fetchDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
   const [sources, rounds, pro, con] = await Promise.all([
-    countRows('sources', debateId),
-    countRows('sparring_sessions', debateId),
-    Promise.all(RESULT_TABLES.map((table) => countRows(table, debateId, SIDES_FOR.pro))),
-    Promise.all(RESULT_TABLES.map((table) => countRows(table, debateId, SIDES_FOR.con))),
+    countRows(userId, 'sources', debateId),
+    countRows(userId, 'sparring_sessions', debateId),
+    Promise.all(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.pro))),
+    Promise.all(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.con))),
   ]);
   return { sources, rounds, results: { pro: sum(pro), con: sum(con) } };
 }
 
 /** Library sources per debate, for the switcher's list. */
-export async function fetchSourceCounts(debateIds: string[]): Promise<Record<string, number>> {
-  const counts = await Promise.all(debateIds.map((id) => countRows('sources', id)));
+export async function fetchSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
+  const counts = await Promise.all(debateIds.map((id) => countRows(userId, 'sources', id)));
   return Object.fromEntries(debateIds.map((id, index) => [id, counts[index]]));
 }
 
@@ -185,12 +193,18 @@ export interface DebateItem {
 }
 
 /** The newest saved results and rounds for one side of a debate, like the website's side lists. */
-export async function fetchRecentWork(debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
+export async function fetchRecentWork(
+  userId: string,
+  debateId: string,
+  side: DebateSide,
+  limit: number,
+): Promise<DebateItem[]> {
   const lists = await Promise.all([
     ...RESULT_TABLES.map(async (table) => {
       const { data, error } = await supabase
         .from(table)
         .select('id,title,created_at')
+        .eq('user_id', userId)
         .eq('debate_id', debateId)
         .in('side', SIDES_FOR[side])
         .order('created_at', { ascending: false })
@@ -208,6 +222,7 @@ export async function fetchRecentWork(debateId: string, side: DebateSide, limit:
       const { data, error } = await supabase
         .from('sparring_sessions')
         .select('id,motion,updated_at')
+        .eq('user_id', userId)
         .eq('debate_id', debateId)
         .eq('user_side', side)
         .order('updated_at', { ascending: false })
