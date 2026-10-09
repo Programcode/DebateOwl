@@ -2472,6 +2472,24 @@
       "saveFailed": "No se pudo guardar la fuente. Inténtalo de nuevo.",
       "sourceMissing": "Esta fuente ya no está en tu biblioteca.",
       "openPage": "Abre la página en el navegador"
+    },
+    "ask": {
+      "placeholder": "Pregunta a tu coach",
+      "openYou": "Ver tu plan",
+      "openFailed": "No se pudo abrir este chat. Inténtalo de nuevo.",
+      "historyFailed": "No se pudieron cargar tus chats.",
+      "errors": {
+        "auth": "Tu sesión ha caducado. Cierra sesión y vuelve a entrar.",
+        "trialExpired": "Tu prueba gratuita ha terminado. Consulta tu plan en Tú.",
+        "limitReached": "Has usado las solicitudes de IA de hoy. Se renuevan a medianoche UTC. Consulta tu plan en Tú.",
+        "modelRestricted": "El modelo elegido para Preguntar requiere Pro. Consulta tu plan en Tú.",
+        "rateLimit": "Demasiadas solicitudes ahora mismo. Espera un momento y vuelve a intentarlo.",
+        "network": "No se pudo conectar con la IA. Revisa tu conexión y vuelve a intentarlo.",
+        "timeout": "La solicitud tardó demasiado. Inténtalo de nuevo.",
+        "tooLarge": "Tu pregunta es demasiado larga. Acórtala y envíala de nuevo.",
+        "debateMissing": "Este debate ya no existe. Elige otro debate y vuelve a preguntar.",
+        "failed": "El coach no pudo responder. Inténtalo de nuevo."
+      }
     }
   }
 }

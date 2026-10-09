@@ -2472,6 +2472,24 @@
       "saveFailed": "Nem sikerült menteni a forrást. Próbáld újra.",
       "sourceMissing": "Ez a forrás már nincs a könyvtáradban.",
       "openPage": "Megnyitja az oldalt a böngészőben"
+    },
+    "ask": {
+      "placeholder": "Kérdezd az edződet",
+      "openYou": "Előfizetés megtekintése",
+      "openFailed": "Nem sikerült megnyitni ezt a beszélgetést. Próbáld újra.",
+      "historyFailed": "Nem sikerült betölteni a beszélgetéseidet.",
+      "errors": {
+        "auth": "Lejárt a munkameneted. Jelentkezz ki, majd be újra.",
+        "trialExpired": "Lejárt az ingyenes próbaidőszakod. Az előfizetésedet a Profil lapon látod.",
+        "limitReached": "Elhasználtad a mai MI-kéréseidet. UTC éjfélkor újraindulnak. Az előfizetésedet a Profil lapon látod.",
+        "modelRestricted": "A Kérdezéshez választott modellhez Pro előfizetés kell. Az előfizetésedet a Profil lapon látod.",
+        "rateLimit": "Most túl sok a kérés. Várj egy kicsit, és próbáld újra.",
+        "network": "Nem sikerült elérni az MI-t. Ellenőrizd a kapcsolatot, és próbáld újra.",
+        "timeout": "A kérés túl sokáig tartott. Próbáld újra.",
+        "tooLarge": "Túl hosszú a kérdésed. Rövidítsd le, és küldd el újra.",
+        "debateMissing": "Ez a vita már nem létezik. Válassz másik vitát, és kérdezz újra.",
+        "failed": "Az edző nem tudott válaszolni. Próbáld újra."
+      }
     }
   }
 }

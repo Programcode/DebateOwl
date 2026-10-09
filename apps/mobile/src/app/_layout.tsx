@@ -79,6 +79,8 @@ function Root() {
             <Stack.Screen name="add-link" options={sheet} />
             <Stack.Screen name="new-note" options={sheet} />
             <Stack.Screen name="source/[id]" options={sheet} />
+            {/* Full screen above the tabs, as in mock 07. */}
+            <Stack.Screen name="ask" />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />
