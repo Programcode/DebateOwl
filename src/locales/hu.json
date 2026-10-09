@@ -2411,7 +2411,41 @@
       "body": "A DebateLab ezen része hamarosan az appba is megérkezik. Addig a weboldalon használhatod."
     },
     "debate": {
-      "comingSoon": "Vitát indítani és váltani a következő frissítéssel tudsz majd az appban."
+      "statSources_one": "forrás",
+      "statSources_other": "forrás",
+      "statResults_one": "eredmény",
+      "statResults_other": "eredmény",
+      "statRounds_one": "forduló",
+      "statRounds_other": "forduló",
+      "spar": "Gyakorolj az MI ellen",
+      "sparLine": "{{format}}, a te oldalad: {{side}}",
+      "pickUp": "Folytasd, ahol abbahagytad",
+      "itemMeta": "{{kind}}, {{when}}",
+      "loadFailed": "Nem sikerült betölteni a vitát.",
+      "sideAria": "A te oldalad"
+    },
+    "common": {
+      "done": "Kész"
+    },
+    "debates": {
+      "search": "Tételek keresése",
+      "noMatches": "Nincs a keresésnek megfelelő vita.",
+      "sourceCount_one": "{{count}} forrás",
+      "sourceCount_other": "{{count}} forrás",
+      "activeToday": "ma aktív",
+      "meta": "{{sources}}, {{when}}",
+      "oneOff": "Egyszeri mód",
+      "oneOffDesc": "Eszköz használata vitába mentés nélkül",
+      "newDebate": "Új vita",
+      "loadFailed": "Nem sikerült betölteni a vitáidat."
+    },
+    "newDebate": {
+      "side": "A te oldalad"
+    },
+    "you": {
+      "usage": "Ma {{used}} / {{limit}} MI-használat",
+      "loadFailed": "Nem sikerült betölteni az előfizetésedet.",
+      "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra."
     }
   }
 }

@@ -2,6 +2,7 @@ import '@/lib/i18n';
 
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import type { NativeStackNavigationOptions } from 'expo-router/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -41,6 +42,15 @@ function Root() {
 
   if (!ready) return null;
 
+  // Native form sheets with a grabber on iOS. The web preview shows them as full pages.
+  const sheet: NativeStackNavigationOptions = {
+    presentation: 'formSheet',
+    sheetGrabberVisible: true,
+    sheetAllowedDetents: [0.86, 1],
+    sheetCornerRadius: 22,
+    contentStyle: { backgroundColor: colors.background },
+  };
+
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme = {
     ...base,
@@ -62,6 +72,8 @@ function Root() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
           <Stack.Protected guard={session !== null}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="debates" options={sheet} />
+            <Stack.Screen name="new-debate" options={sheet} />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />
