@@ -2534,6 +2534,19 @@
     },
     "crossfire": {
       "voiceLater": "Coming with the app build."
+    },
+    "sparring": {
+      "chooseSide": "Which side are you on?",
+      "turnOf": "Turn {{current}} of {{total}}, {{pressure}}",
+      "yourNext": "Your {{turn}} is next",
+      "interrupted": "The request stopped when you left the round. Try again to carry on.",
+      "notes": "Notes",
+      "notesPlaceholder": "Their claims, your answers, anything to come back to. Notes stay until you close the app or sign out.",
+      "done": "Done",
+      "resume": "Resume",
+      "replay": "Replay",
+      "versus": "{{user}} vs {{opponent}}",
+      "roundsFailed": "Could not load your sparring rounds."
     }
   }
 }

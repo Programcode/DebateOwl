@@ -2534,6 +2534,19 @@
     },
     "crossfire": {
       "voiceLater": "Az alkalmazás következő verziójával érkezik."
+    },
+    "sparring": {
+      "chooseSide": "Melyik oldalon állsz?",
+      "turnOf": "{{current}}. kör a(z) {{total}} közül, {{pressure}}",
+      "yourNext": "Utána te jössz: {{turn}}",
+      "interrupted": "A kérés leállt, amikor kiléptél a fordulóból. Próbáld újra a folytatáshoz.",
+      "notes": "Jegyzetek",
+      "notesPlaceholder": "Az ellenfél állításai, a válaszaid, bármi, amire visszatérnél. A jegyzetek az app bezárásáig vagy a kijelentkezésig maradnak.",
+      "done": "Kész",
+      "resume": "Folytatás",
+      "replay": "Visszanézés",
+      "versus": "{{user}} – {{opponent}}",
+      "roundsFailed": "Nem sikerült betölteni a vitapárbaj-fordulóidat."
     }
   }
 }

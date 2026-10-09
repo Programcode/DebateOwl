@@ -38,6 +38,11 @@ export function useTimerSignals(): (signal: TimerSignal, sound: boolean) => void
   }, [beep, doubleBeep]);
 }
 
+/** A light tap when the student's turn starts in a live round, so they know without looking. */
+export function tapTurnStart() {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+}
+
 /** Keeps the screen on while a timer runs, and lets it sleep again when it stops or the screen closes. */
 export function useKeepAwakeWhile(active: boolean) {
   useEffect(() => {
