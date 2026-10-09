@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,16 +15,6 @@ export default function YouScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { session, signOut } = useAuth();
-  const [failed, setFailed] = useState(false);
-
-  const handleSignOut = async () => {
-    setFailed(false);
-    try {
-      await signOut();
-    } catch {
-      setFailed(true);
-    }
-  };
 
   return (
     <Screen>
@@ -55,12 +44,7 @@ export default function YouScreen() {
           {t('mobile.placeholder.body')}
         </Text>
       </Card>
-      <TextButton label={t('settings.signOut')} destructive onPress={() => void handleSignOut()} />
-      {failed ? (
-        <Text accessibilityRole="alert" style={[styles.body, { color: colors.destructive }]}>
-          {t('settings.signOutFailed')}
-        </Text>
-      ) : null}
+      <TextButton label={t('settings.signOut')} destructive onPress={() => void signOut()} />
     </Screen>
   );
 }
