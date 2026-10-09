@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { useAuth } from './auth';
 import i18n, { deviceLanguage } from './i18n';
+import { createSerialQueue } from './serial-queue';
 import { supabase } from './supabase';
 
 import { applyColorScheme } from '@/theme/apply-color-scheme';
@@ -93,15 +94,18 @@ async function defaultModelFor(userId: string): Promise<string | null> {
  * an empty feature_configs as "never saved" and would replace this setting
  * with the browser's. The defaults use the Pro model when the student has Pro
  * access, as the website's would, because the website never upgrades configs
- * once they are saved. The filter keeps configs saved in the meantime.
+ * once they are saved. The filter keeps configs saved in the meantime; when it
+ * matches nothing, configs were filled elsewhere and only the column is written.
  *
- * Returns whether the row's feature_configs is known to be filled in. When Pro
- * access can't be read, only the column is written, so the next save retries.
+ * When configs may be empty and Pro access can't be read, nothing is written
+ * and the save fails: a column saved alone would be replaced by the website.
+ * Once this resolves, the row's feature_configs is filled in.
  */
 async function writeSetting(userId: string, key: SettingKey, value: string, configsMayBeEmpty: boolean) {
   const changes = { [COLUMNS[key]]: value, updated_at: new Date().toISOString() };
-  const model = configsMayBeEmpty ? await defaultModelFor(userId) : null;
-  if (model) {
+  if (configsMayBeEmpty) {
+    const model = await defaultModelFor(userId);
+    if (!model) throw new Error('Could not read Pro access to fill in the default feature configs');
     const { data, error } = await supabase
       .from('user_settings')
       .update({ ...changes, feature_configs: getDefaultFeatureConfigs(model) })
@@ -109,11 +113,10 @@ async function writeSetting(userId: string, key: SettingKey, value: string, conf
       .containedBy('feature_configs', {})
       .select('user_id');
     if (error) throw new Error(error.message);
-    if (data && data.length > 0) return true;
+    if (data && data.length > 0) return;
   }
   const { error } = await supabase.from('user_settings').update(changes).eq('user_id', userId);
   if (error) throw new Error(error.message);
-  return !configsMayBeEmpty || model !== null;
 }
 
 /**
@@ -135,6 +138,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const versions = useRef<Record<SettingKey, number>>({ language: 0, outputLanguage: 0, theme: 0 });
   // Whether the row's feature_configs is filled in; null until a load or save tells.
   const configsSaved = useRef<boolean | null>(null);
+  // Saves write one at a time in the order they were made, so the last choice
+  // is the last write even when an earlier save's Pro-access check is slower.
+  const [writes] = useState(createSerialQueue);
 
   const apply = useCallback((next: Settings, forUser: string | null) => {
     if (owner.current !== forUser) return;
@@ -202,15 +208,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const previous = latest.current[key];
     apply({ ...latest.current, [key]: value }, forUser);
     try {
-      const filled = await writeSetting(forUser, key, value, configsSaved.current !== true);
-      if (filled && owner.current === forUser) configsSaved.current = true;
+      await writes(async () => {
+        // A save made before an account switch is dropped, not written for the new account.
+        if (owner.current !== forUser) return;
+        await writeSetting(forUser, key, value, configsSaved.current !== true);
+        if (owner.current === forUser) configsSaved.current = true;
+      });
     } catch (cause) {
-      if (owner.current === forUser && versions.current[key] === version) {
-        apply({ ...latest.current, [key]: previous }, forUser);
-      }
+      if (owner.current !== forUser) return;
+      if (versions.current[key] === version) apply({ ...latest.current, [key]: previous }, forUser);
       throw cause;
     }
-  }, [apply]);
+  }, [apply, writes]);
 
   const value = useMemo<SettingsContextValue>(() => ({
     ...settings,
