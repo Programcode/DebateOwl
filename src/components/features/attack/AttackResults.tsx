@@ -39,7 +39,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
   const Icon = config.icon;
 
   return (
-    <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item card-hover-glow', config.border, config.bg)}>
+    <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item', config.border, config.bg)}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2">
           <Icon className={cn('h-5 w-5 mt-0.5', config.color)} />

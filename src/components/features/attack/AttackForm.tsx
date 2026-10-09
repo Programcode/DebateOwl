@@ -118,7 +118,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
                 <SlidersHorizontal className="h-4 w-4" />
                 {t('attackForm.moreOptions')}
               </span>
-              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${optionsOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform duration-150 ease-out-strong ${optionsOpen ? 'rotate-180' : ''}`} />
             </Button>
           </div>
 

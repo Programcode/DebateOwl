@@ -6,11 +6,11 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## In progress
 
+- **Design audit.** UI audit against Emil Kowalski's Apple-design and motion skills: broken toast stacking, collapsed text-colour tokens, a global CSS layer that overrides the primitives, touch and reduced-motion gaps, wayfinding and undo. Shipping as a four-PR stack: Foundations, Shell, AI tools, Landing. Plan: [2026-10-09 design audit](2026-10-09-design-audit.md).
 - **Staging that tracks main.** Audit of staging, the VPS sync timer, the seed, and what to delete. Plan: [2026-10-03 staging loop](2026-10-03-staging-loop.md). Previews come from #95 and the staging spec fix from #100.
 
 ## Backlog
 
-- **Design audit.** UI audit against Emil Kowalski's Apple-design and motion skills: broken toast stacking, collapsed text-colour tokens, a global CSS layer that overrides the primitives, touch and reduced-motion gaps, wayfinding and undo. Ordered as four PRs. Plan: [2026-10-09 design audit](2026-10-09-design-audit.md).
 - **Native iOS app.** Replace the Capacitor shell with an Expo app for iPhone and iPad, with full parity, Sign in with Apple, in-app purchase, push, a share extension and a lock-screen timer. Built to the approved mocks by one Fable-led thread, tested on Adam's phone. Plan: [2026-10-08 native iOS app](2026-10-08-native-ios-app.md).
 - **Next 15.** Security and data protection, operational safety, code health, and product polish, ordered by risk. Items 3, 5, 6, 8 and 13 have shipped; the plan lists the follow-ups they left. Plan: [2026-10-01 next 15](2026-10-01-next-15.md). Item 15 covers the PR #63 decision.
 - **Leaner CI and two previews per PR.** Three-minute PR check, a staging Vercel project for per-PR staging previews, and Edge Function CORS for preview hosts. Plan: [2026-10-01 leaner CI and previews](2026-10-01-ci-and-preview-verification.md).

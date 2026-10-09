@@ -42,7 +42,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   const safeUrl = validateUrl(factoid.citation?.url);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-4 motion-list-item card-hover-glow">
+    <div className="rounded-lg border border-border bg-card p-4 space-y-4 motion-list-item">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">

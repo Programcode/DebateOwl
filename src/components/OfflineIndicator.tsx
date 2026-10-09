@@ -9,7 +9,7 @@ export function OfflineIndicator() {
   if (!offline) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border bg-background/95 px-4 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur" role="status" aria-live="polite">
+    <div className="native-safe-fixed-bottom fixed left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border bg-background/95 px-4 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur" role="status" aria-live="polite">
       <WifiOff className="h-4 w-4 text-amber-500" />
       {t('offlineIndicator.label', 'Offline mode')}
     </div>
