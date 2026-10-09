@@ -2394,7 +2394,17 @@
       "you": "Profil"
     },
     "signIn": {
-      "subtitle": "Használd az e-mail-címedet vagy az esemény szervezőjétől kapott demókódot."
+      "subtitle": "Használd az e-mail-címedet vagy az esemény szervezőjétől kapott demókódot.",
+      "errors": {
+        "tooManyAttempts": "Túl sok próbálkozás. Várj néhány percet, és próbáld újra.",
+        "network": "Nem sikerült elérni a DebateLabot. Ellenőrizd a kapcsolatot, és próbáld újra.",
+        "codeInvalidOrExpired": "A kód hibás vagy lejárt. Kérj újat.",
+        "demoCodeNotFound": "Nem találjuk ezt a demókódot. Ellenőrizd, és próbáld újra.",
+        "demoCodeDisabled": "Ezt a demókódot kikapcsolták. Kérj újat az esemény szervezőjétől.",
+        "demoCodeExpired": "Ez a demókód lejárt. Kérj újat az esemény szervezőjétől.",
+        "demoCodeUsedUp": "Ez a demókód elfogyott. Kérj újat az esemény szervezőjétől.",
+        "demoCodeUnavailable": "Ez a demókód nem használható. Kérj segítséget az esemény szervezőjétől."
+      }
     },
     "placeholder": {
       "title": "Még nincs az appban",

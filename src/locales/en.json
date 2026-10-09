@@ -2394,7 +2394,17 @@
       "you": "You"
     },
     "signIn": {
-      "subtitle": "Use your email or a demo code from your event host."
+      "subtitle": "Use your email or a demo code from your event host.",
+      "errors": {
+        "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
+        "network": "Could not reach DebateLab. Check your connection and try again.",
+        "codeInvalidOrExpired": "That code is wrong or has expired. Request a new one.",
+        "demoCodeNotFound": "We could not find that demo code. Check it and try again.",
+        "demoCodeDisabled": "This demo code has been turned off. Ask your event host for a new one.",
+        "demoCodeExpired": "This demo code has expired. Ask your event host for a new one.",
+        "demoCodeUsedUp": "This demo code has no uses left. Ask your event host for a new one.",
+        "demoCodeUnavailable": "This demo code cannot be used. Ask your event host for help."
+      }
     },
     "placeholder": {
       "title": "Not in the app yet",

@@ -10,6 +10,7 @@ import { Icon } from '@/components/icon';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
+import { signInErrorKey } from '@/lib/sign-in-errors';
 import { mainActionGradient } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -38,6 +39,7 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [demoCode, setDemoCode] = useState('');
+  // A translation key, translated at render so it follows the language.
   const [error, setError] = useState('');
   const otpRef = useRef<TextInput>(null);
 
@@ -47,9 +49,9 @@ export default function SignInScreen() {
     if (codeSent) otpRef.current?.focus();
   }, [codeSent]);
 
-  const fail = (message: string) => {
+  const fail = (key: string) => {
     setStatus('error');
-    setError(message);
+    setError(key);
   };
 
   const switchMode = (next: Mode) => {
@@ -62,7 +64,7 @@ export default function SignInScreen() {
 
   const sendCode = async () => {
     const normalized = email.trim();
-    if (!EMAIL_PATTERN.test(normalized)) return fail(t('login.invalidEmail'));
+    if (!EMAIL_PATTERN.test(normalized)) return fail('login.invalidEmail');
     setError('');
     setStatus('sending');
     try {
@@ -71,31 +73,31 @@ export default function SignInScreen() {
       setCodeSent(true);
       setStatus('code-sent');
     } catch (cause) {
-      fail(cause instanceof Error ? cause.message : t('login.emailOtpError'));
+      fail(signInErrorKey(cause, 'login.emailOtpError'));
     }
   };
 
   const verifyCode = async () => {
     const normalized = otp.trim();
-    if (!/^\d{6}$/.test(normalized)) return fail(t('login.invalidCode'));
+    if (!/^\d{6}$/.test(normalized)) return fail('login.invalidCode');
     setError('');
     setStatus('verifying');
     try {
       await verifyEmailOtp(email, normalized);
     } catch (cause) {
-      fail(cause instanceof Error ? cause.message : t('login.verifyOtpError'));
+      fail(signInErrorKey(cause, 'login.verifyOtpError'));
     }
   };
 
   const signInWithDemo = async () => {
     const normalized = demoCode.trim().toUpperCase().replace(/\s+/g, '');
-    if (!DEMO_CODE_PATTERN.test(normalized)) return fail(t('login.invalidDemoCode'));
+    if (!DEMO_CODE_PATTERN.test(normalized)) return fail('login.invalidDemoCode');
     setError('');
     setStatus('signing-in');
     try {
       await signInWithDemoCode(normalized);
     } catch (cause) {
-      fail(cause instanceof Error ? cause.message : t('login.demoError'));
+      fail(signInErrorKey(cause, 'login.demoError'));
     }
   };
 
@@ -225,7 +227,7 @@ export default function SignInScreen() {
         ) : null}
         {status === 'error' && error ? (
           <Text accessibilityRole="alert" weight="medium" style={[styles.message, { color: colors.destructive }]}>
-            {error}
+            {t(error)}
           </Text>
         ) : null}
       </ScrollView>
