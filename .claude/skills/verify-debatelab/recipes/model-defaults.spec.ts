@@ -42,7 +42,8 @@ test("model-pro-default: a new Pro account starts on Claude Opus 5.5 and generat
   const body = await generateOnce(page);
   expect((body.meta as { resolvedModel?: string } | undefined)?.resolvedModel ?? OPUS).toBe(OPUS);
   const calls = await providerCalls();
-  expect(calls.filter((call) => call.feature === "generate").map((call) => call.model)).toContain(OPUS);
+  // Live mode rewrites the upstream model to the pin, so read what the app asked for.
+  expect(calls.filter((call) => call.feature === "generate").map((call) => call.requestedModel ?? call.model)).toContain(OPUS);
   const { data: usage } = await admin.from("ai_requests").select("feature,status,model").eq("user_id", userId);
   expect(usage).toContainEqual(expect.objectContaining({ feature: "generate", status: "success", model: OPUS }));
   await evidence.json("02-ai-requests", usage);
