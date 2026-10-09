@@ -1,4 +1,6 @@
+import type { SourceSemanticMetadata } from '@debatelab/core/ai/discovered-sources';
 import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/core/ai/schemas/source-import';
+import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
 import { supabase } from './supabase';
@@ -82,14 +84,28 @@ export async function fetchSource(userId: string, id: string): Promise<Source | 
   return data ? fromRow(data as SourceRow) : null;
 }
 
-/** Saves a source to a debate in the General folder, as the website's Library does. */
+/**
+ * Saves a source to a debate, as the website's session store does: in the
+ * General folder unless another is named, as the Library adds them, or in
+ * Auto-saved with research metadata, as Generate and Attack keep their sources.
+ */
 export async function addSource(
   userId: string,
-  input: { title: string; content: string; type: SourceType; origin?: string | null; debateId: string },
+  input: {
+    title: string;
+    content: string;
+    type: SourceType;
+    origin?: string | null;
+    debateId: string;
+    folder?: string;
+    isActive?: boolean;
+    metadata?: Record<string, unknown> | null;
+  },
 ): Promise<Source> {
+  const folder = input.folder?.trim() || DEFAULT_FOLDER;
   const folderResult = await supabase
     .from('source_folders')
-    .upsert({ user_id: userId, name: DEFAULT_FOLDER }, { onConflict: 'user_id,name' });
+    .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
   if (folderResult.error) throw new Error(folderResult.error.message);
   const { data, error } = await supabase
     .from('sources')
@@ -100,9 +116,9 @@ export async function addSource(
       content: input.content,
       type: input.type,
       origin: input.origin || null,
-      folder: DEFAULT_FOLDER,
-      is_active: true,
-      metadata: null,
+      folder,
+      is_active: input.isActive ?? true,
+      metadata: input.metadata ?? null,
     })
     .select(SOURCE_COLUMNS)
     .single();
@@ -111,10 +127,57 @@ export async function addSource(
   return fromRow(data as SourceRow);
 }
 
-export async function removeSource(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
+/** The sources in one debate's folder, as the website's undo for auto-saved research finds them. */
+export async function fetchSourceIdsInFolder(userId: string, debateId: string, folder: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('sources')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('debate_id', debateId)
+    .eq('folder', folder);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { id: string }[]).map((row) => row.id);
+}
+
+/** Removes a source; with a debate, only while the source is still in that debate. */
+export async function removeSource(userId: string, id: string, debateId?: string): Promise<void> {
+  const query = supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
+  const { error } = await (debateId ? query.eq('debate_id', debateId) : query);
   if (error) throw new Error(error.message);
   notifySourcesChanged();
+}
+
+/**
+ * Saves the server's rankings onto the debate's Library sources a result
+ * used, as the website's applySourceAssessments does. The debate is the one
+ * the request was sent for, read when the student acted; a URL saved in
+ * several debates is ranked only in that one. Once the request is cancelled
+ * or replaced, nothing is written.
+ */
+export async function applySourceAssessments(userId: string, debateId: string, assessments: SourceAssessmentUpdate[], signal?: AbortSignal): Promise<void> {
+  if (assessments.length === 0 || signal?.aborted) return;
+  const { data, error } = await supabase
+    .from('sources')
+    .select('id,origin,metadata')
+    .eq('user_id', userId)
+    .eq('debate_id', debateId);
+  if (signal?.aborted) return;
+  if (error) throw new Error(error.message);
+  type Row = { id: string; origin: string | null; metadata: { url?: string; semantic?: SourceSemanticMetadata } | null };
+  const candidates = (data ?? []) as Row[];
+  const updates = new Map<string, Row['metadata']>();
+  for (const assessment of assessments.slice(0, 10)) {
+    const source = candidates.find((candidate) => isAssessedSource(candidate, assessment));
+    if (!source) continue;
+    updates.set(source.id, { ...source.metadata, semantic: assessedSemantic(source.metadata?.semantic, assessment) });
+  }
+  if (updates.size === 0) return;
+  const results = await Promise.all(
+    Array.from(updates, ([id, metadata]) => supabase.from('sources').update({ metadata }).eq('user_id', userId).eq('debate_id', debateId).eq('id', id)),
+  );
+  notifySourcesChanged();
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw new Error(failed.error.message);
 }
 
 /** The website rejects a URL that is already in the debate's Library. */

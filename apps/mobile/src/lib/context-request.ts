@@ -5,6 +5,7 @@ import {
   MAX_CONTEXT_OUTPUTS,
   MAX_CONTEXT_SOURCES,
   selectDefaultOutputs,
+  type DebateContextFeature,
   type DebateContextOutputKind,
   type DebateContextRequest,
   type DebateContextSide,
@@ -15,9 +16,9 @@ import {
 import { supabase } from './supabase';
 
 /**
- * The Current Debate material an Ask request sends: IDs only, picked the way
- * the website's planDebateContext (src/lib/debate/context.ts) picks them with
- * no Review choices. Pins come from debate_context_pins, as on the website;
+ * The Current Debate material a request sends: IDs only, picked the way the
+ * website's planDebateContext (src/lib/debate/context.ts) picks them with no
+ * Review choices. Pins come from debate_context_pins, as on the website;
  * if they cannot be read, the automatic selection is used. The server loads
  * and checks the text.
  */
@@ -34,9 +35,6 @@ type ResultKind = keyof typeof RESULT_TABLES;
 const RESULT_KINDS = Object.keys(RESULT_TABLES) as ResultKind[];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-// Ask prepares no side, so every saved result matches it.
-const ASK_SIDE: DebateContextSide = 'both';
 
 function sideOf(value: unknown): DebateContextSide | null {
   return value === 'pro' || value === 'con' || value === 'both' || value === 'neutral' ? value : null;
@@ -73,8 +71,18 @@ async function outputData(userId: string, ref: DebateOutputRef): Promise<unknown
   return (result.data as { output?: unknown } | null)?.output;
 }
 
-/** `excludeChatId` is the chat open in Ask: it is already the conversation. */
-export async function buildAskDebateContext(userId: string, debateId: string, excludeChatId: string | null): Promise<DebateContextRequest> {
+/**
+ * `side` is the side the request prepares, as the website's requestSide
+ * picks it. `excludeChatId` is the chat open in Ask: it is already the
+ * conversation.
+ */
+export async function buildDebateContext(
+  userId: string,
+  debateId: string,
+  feature: DebateContextFeature,
+  side: DebateContextSide,
+  excludeChatId: string | null = null,
+): Promise<DebateContextRequest> {
   const [sources, pins, sparring, ...results] = await Promise.all([
     supabase.from('sources').select('id,is_active').eq('user_id', userId).eq('debate_id', debateId).order('created_at', { ascending: false }),
     supabase.from('debate_context_pins').select('item_kind,item_id').eq('user_id', userId).eq('debate_id', debateId),
@@ -106,14 +114,14 @@ export async function buildAskDebateContext(userId: string, debateId: string, ex
     candidates.push({ kind: 'sparring', id: row.id, side: sideOf(row.user_side), createdAt: new Date(row.updated_at).getTime(), pinned: pinnedKeys.has(`sparring:${row.id}`) });
   }
 
-  const sent = selectDefaultOutputs(candidates, 'ask', ASK_SIDE).slice(0, MAX_CONTEXT_OUTPUTS);
+  const sent = selectDefaultOutputs(candidates, feature, side).slice(0, MAX_CONTEXT_OUTPUTS);
   // Results with nothing usable yet, such as an unjudged round, are not sent.
   const digests = await Promise.all(sent.map(async (ref) => ({ ...ref, digest: digestOutput(ref.kind, await outputData(userId, ref)) })));
   const empty = new Set(boundOutputDigests(digests).empty.map((item) => `${item.kind}:${item.id}`));
 
   return {
     debateId,
-    side: ASK_SIDE,
+    side,
     sourceIds,
     outputs: sent.filter((ref) => !empty.has(`${ref.kind}:${ref.id}`)),
   };

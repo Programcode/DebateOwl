@@ -20,13 +20,20 @@ export function MarkdownView({
   claims = [],
   streaming,
   onCite,
+  size,
+  tone,
 }: {
   source: string;
   claims?: string[];
   streaming?: boolean;
   onCite?: (n: number) => void;
+  /** Body text size; documents use a smaller one than Ask's answers. */
+  size?: number;
+  tone?: 'foreground' | 'secondary';
 }) {
   const { colors } = useTheme();
+  const body = size ? { fontSize: size, lineHeight: Math.round(size * 1.47) } : null;
+  const paragraph = [styles.paragraph, body];
   const blocks = useMemo(() => attachCitations(parseMarkdown(source), claims), [source, claims]);
   const caret = <View key="caret" style={[styles.caret, { backgroundColor: colors.primary }]} />;
 
@@ -76,14 +83,14 @@ export function MarkdownView({
     switch (block.type) {
       case 'paragraph':
         return (
-          <Text key={index} style={styles.paragraph}>
+          <Text key={index} tone={tone} style={paragraph}>
             {inline(block.inline)}
             {tail}
           </Text>
         );
       case 'heading':
         return (
-          <Text key={index} weight="bold" style={[styles.paragraph, block.level <= 2 ? styles.h2 : styles.h3]}>
+          <Text key={index} weight="bold" style={[...paragraph, block.level <= 2 ? styles.h2 : styles.h3]}>
             {inline(block.inline)}
             {tail}
           </Text>
@@ -91,7 +98,7 @@ export function MarkdownView({
       case 'quote':
         return (
           <View key={index} style={[styles.quote, { borderLeftColor: colors.border }]}>
-            <Text tone="secondary" style={styles.paragraph}>
+            <Text tone="secondary" style={paragraph}>
               {inline(block.inline)}
               {tail}
             </Text>
@@ -111,10 +118,10 @@ export function MarkdownView({
           <View key={index} style={styles.list}>
             {block.items.map((item, itemIndex) => (
               <View key={itemIndex} style={styles.item}>
-                <Text tone="secondary" style={[styles.paragraph, styles.marker]}>
+                <Text tone="secondary" style={[...paragraph, styles.marker]}>
                   {block.ordered ? `${block.start + itemIndex}.` : '•'}
                 </Text>
-                <Text style={[styles.paragraph, styles.itemText]}>
+                <Text tone={tone} style={[...paragraph, styles.itemText]}>
                   {inline(item, `${itemIndex}:`)}
                   {streaming && index === last && itemIndex === block.items.length - 1 ? caret : null}
                 </Text>
@@ -127,7 +134,7 @@ export function MarkdownView({
 
   return (
     <View style={styles.root}>
-      {blocks.length === 0 && streaming ? <Text style={styles.paragraph}>{caret}</Text> : blocks.map((block, index) => <Fragment key={index}>{render(block, index)}</Fragment>)}
+      {blocks.length === 0 && streaming ? <Text style={paragraph}>{caret}</Text> : blocks.map((block, index) => <Fragment key={index}>{render(block, index)}</Fragment>)}
     </View>
   );
 }

@@ -81,6 +81,11 @@ function Root() {
             <Stack.Screen name="source/[id]" options={sheet} />
             {/* Full screen above the tabs, as in mock 07. */}
             <Stack.Screen name="ask" />
+            {/* Generate, Attack and their documents, full screen above the tabs, as in mock 03. */}
+            <Stack.Screen name="generate" />
+            <Stack.Screen name="case/[id]" />
+            <Stack.Screen name="attack/index" />
+            <Stack.Screen name="attack/[id]" />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />

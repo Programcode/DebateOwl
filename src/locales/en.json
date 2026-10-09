@@ -2490,6 +2490,41 @@
         "debateMissing": "This debate no longer exists. Pick another debate and ask again.",
         "failed": "The coach could not answer. Try again."
       }
+    },
+    "prepare": {
+      "saved": "Saved in this debate"
+    },
+    "results": {
+      "generatedMeta": "{{side}}, generated {{when}}",
+      "evidenceCount_one": "{{count}} piece of evidence",
+      "evidenceCount_other": "{{count}} pieces of evidence",
+      "noEvidence": "No evidence yet",
+      "attackThisCase": "Attack this case",
+      "share": "Share",
+      "copyText": "Copy as text",
+      "loadFailed": "Could not load this result.",
+      "notFound": "This result is no longer saved.",
+      "deleteFailed": "Could not delete this result. Try again.",
+      "deleteAttackTitle": "Delete attack analysis?",
+      "deleteAttackDesc": "This removes the attack analysis from your history.",
+      "sourcesFailed_one": "{{count}} researched source could not be saved to your Library.",
+      "sourcesFailed_other": "{{count}} researched sources could not be saved to your Library.",
+      "exportFailed": "Could not export. Try again.",
+      "errors": {
+        "auth": "Your session has expired. Sign out and sign in again.",
+        "trialExpired": "Your free trial has ended. See your plan in You.",
+        "limitReached": "You have used today's AI requests. They refresh at midnight UTC. See your plan in You.",
+        "modelRestricted": "The model chosen for this tool needs Pro. See your plan in You.",
+        "rateLimit": "Too many requests right now. Wait a moment and try again.",
+        "network": "Couldn't reach the AI. Check your connection and retry.",
+        "timeout": "The AI took too long to respond. Please try again.",
+        "tooLarge": "This is too long to send. Shorten it and try again.",
+        "debateMissing": "This debate no longer exists. Pick another debate and try again.",
+        "failed": "Something went wrong. Try again."
+      }
+    },
+    "attack": {
+      "caseRequired": "Paste or write the case you want attacked."
     }
   }
 }

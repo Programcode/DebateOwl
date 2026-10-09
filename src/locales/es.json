@@ -2490,6 +2490,41 @@
         "debateMissing": "Este debate ya no existe. Elige otro debate y vuelve a preguntar.",
         "failed": "El coach no pudo responder. Inténtalo de nuevo."
       }
+    },
+    "prepare": {
+      "saved": "Guardado en este debate"
+    },
+    "results": {
+      "generatedMeta": "{{side}}, generado {{when}}",
+      "evidenceCount_one": "{{count}} prueba",
+      "evidenceCount_other": "{{count}} pruebas",
+      "noEvidence": "Aún sin pruebas",
+      "attackThisCase": "Atacar el caso",
+      "share": "Compartir",
+      "copyText": "Copiar como texto",
+      "loadFailed": "No se pudo cargar este resultado.",
+      "notFound": "Este resultado ya no está guardado.",
+      "deleteFailed": "No se pudo eliminar este resultado. Inténtalo de nuevo.",
+      "deleteAttackTitle": "¿Eliminar el análisis de ataque?",
+      "deleteAttackDesc": "Esto eliminará el análisis de ataque de tu historial.",
+      "sourcesFailed_one": "{{count}} fuente investigada no se pudo guardar en tu Biblioteca.",
+      "sourcesFailed_other": "{{count}} fuentes investigadas no se pudieron guardar en tu Biblioteca.",
+      "exportFailed": "No se pudo exportar. Inténtalo de nuevo.",
+      "errors": {
+        "auth": "Tu sesión ha caducado. Cierra sesión y vuelve a entrar.",
+        "trialExpired": "Tu prueba gratuita ha terminado. Consulta tu plan en Tú.",
+        "limitReached": "Has usado las solicitudes de IA de hoy. Se renuevan a medianoche UTC. Consulta tu plan en Tú.",
+        "modelRestricted": "El modelo elegido para esta herramienta requiere Pro. Consulta tu plan en Tú.",
+        "rateLimit": "Demasiadas solicitudes ahora mismo. Espera un momento y vuelve a intentarlo.",
+        "network": "No se pudo conectar con la IA. Revisa tu conexión y vuelve a intentarlo.",
+        "timeout": "La IA tardó demasiado en responder. Inténtalo de nuevo.",
+        "tooLarge": "Es demasiado largo para enviarlo. Acórtalo y vuelve a intentarlo.",
+        "debateMissing": "Este debate ya no existe. Elige otro debate y vuelve a intentarlo.",
+        "failed": "Algo salió mal. Inténtalo de nuevo."
+      }
+    },
+    "attack": {
+      "caseRequired": "Pega o escribe el caso que quieres atacar."
     }
   }
 }

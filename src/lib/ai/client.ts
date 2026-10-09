@@ -19,15 +19,18 @@ import { activeDebateId, useDebateStore } from '../stores/debate-store';
 import { parseDebateContextUsage, useDebateContextStore } from '../stores/debate-context-store';
 import { currentDebateContextPlan } from '../debate/context-state';
 import { requestSide, type DebateContextRequest } from '../../../supabase/functions/_shared/debate-context';
+import { cleanGeneratedOutput, expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
+import { parseSourceAssessments } from '@debatelab/core/ai/source-assessments';
 import {
-  type SourceAssessmentUpdate,
-  type SourceProvenance,
-  type SourceSemanticMetadata,
-} from '../stores/session-store';
+  autoSavedSourceRow,
+  parseDiscoveredSources,
+  retainedDiscoveredSources,
+  type DiscoveredSource,
+  type ResultWithSources,
+} from '@debatelab/core/ai/discovered-sources';
 import { getActiveAccessToken, getActiveUserId, invokeAuthenticatedFunction, supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
-import { validateUrl } from '@/lib/validation/url';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
 import {
@@ -44,6 +47,8 @@ import {
   type CrossfireTurnSignal,
 } from '@/lib/crossfire/schemas';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
+
+export type { DiscoveredSource, ResultWithSources };
 import { parseVoicePayload, type VoicePayload } from '@/lib/voice/payload';
 
 // Request timeout in milliseconds (200 seconds)
@@ -153,112 +158,6 @@ function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSigna
     const onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
     signal.addEventListener('abort', onAbort, { once: true });
     Promise.resolve().then(operation).then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
-  });
-}
-
-/** A web source discovered during research, with auditable ranking metadata from the edge function. */
-export interface DiscoveredSource extends Omit<SourceProvenance, 'url'> {
-  title: string;
-  url: string;
-  content?: string;
-}
-
-/** Feature result plus the researched sources that informed it. */
-export interface ResultWithSources<T> {
-  result: T;
-  discoveredSources: DiscoveredSource[];
-}
-
-function parseSourceSemanticMetadata(value: unknown): SourceSemanticMetadata | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const semantic = value as Record<string, unknown>;
-  const { relevance, importance, strength, evaluatedAt, useCount, caseUseCount } = semantic;
-  if (typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
-    typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
-    typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
-    typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) ||
-    typeof useCount !== 'number' || !Number.isInteger(useCount) || useCount < 0 ||
-    typeof caseUseCount !== 'number' || !Number.isInteger(caseUseCount) || caseUseCount < 0 ||
-    (semantic.lastUsedAt !== undefined && typeof semantic.lastUsedAt !== 'string') ||
-    (semantic.lastUsedInCase !== undefined && typeof semantic.lastUsedInCase !== 'boolean')) return undefined;
-  return {
-    relevance,
-    importance: importance as 0 | 1 | 2 | 3,
-    strength: strength as 0 | 1 | 2 | 3,
-    evaluatedAt,
-    useCount,
-    caseUseCount,
-    ...(typeof semantic.lastUsedAt === 'string' ? { lastUsedAt: semantic.lastUsedAt } : {}),
-    ...(typeof semantic.lastUsedInCase === 'boolean' ? { lastUsedInCase: semantic.lastUsedInCase } : {}),
-  };
-}
-
-/**
- * Parses the discovered-sources payload at the trust boundary: only
- * well-formed entries with a title and URL survive; anything else is dropped.
- */
-function parseDiscoveredSources(value: unknown): DiscoveredSource[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.flatMap((item): DiscoveredSource[] => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
-
-    const candidate: Record<string, unknown> = {};
-    for (const [key, fieldValue] of Object.entries(item)) candidate[key] = fieldValue;
-
-    const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
-    const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
-    const normalizedUrl = validateUrl(url);
-    if (!title || !normalizedUrl) return [];
-
-    const source: DiscoveredSource = { title, url: normalizedUrl };
-    if (typeof candidate.content === 'string') source.content = candidate.content;
-
-    if (typeof candidate.sourceType === 'string' && candidate.sourceType.trim()) {
-      source.sourceType = candidate.sourceType.trim();
-    }
-
-    if (typeof candidate.qualityScore === 'number' && Number.isFinite(candidate.qualityScore) &&
-      candidate.qualityScore >= 0 && candidate.qualityScore <= 100) {
-      source.qualityScore = candidate.qualityScore;
-    }
-
-    if (candidate.qualityLabel === 'strong' || candidate.qualityLabel === 'moderate' || candidate.qualityLabel === 'weak') {
-      source.qualityLabel = candidate.qualityLabel;
-    }
-
-    if (typeof candidate.query === 'string' && candidate.query.trim()) {
-      source.query = candidate.query.trim();
-    }
-
-    const semantic = parseSourceSemanticMetadata(candidate.semantic);
-    if (semantic) source.semantic = semantic;
-
-    return [source];
-  });
-}
-
-function parseSourceAssessments(value: unknown): SourceAssessmentUpdate[] {
-  if (!Array.isArray(value)) return [];
-  return value.slice(0, 10).flatMap((item): SourceAssessmentUpdate[] => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
-    const candidate = item as Record<string, unknown>;
-    const key = typeof candidate.key === 'string' ? candidate.key.trim() : '';
-    const { relevance, importance, strength, evaluatedAt } = candidate;
-    if (!key || typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
-      typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
-      typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
-      typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) || typeof candidate.retained !== 'boolean') return [];
-    return [{
-      key,
-      ...(typeof candidate.id === 'string' && candidate.id.trim() ? { id: candidate.id.trim() } : {}),
-      relevance,
-      importance: importance as 0 | 1 | 2 | 3,
-      strength: strength as 0 | 1 | 2 | 3,
-      evaluatedAt,
-      retained: candidate.retained,
-      ...(typeof candidate.usedInCase === 'boolean' ? { usedInCase: candidate.usedInCase } : {}),
-    }];
   });
 }
 
@@ -995,121 +894,6 @@ function isProviderErrorCode(code?: string): boolean {
   return !!code && /quota|billing|api[_-]?key|provider|insufficient|overloaded|rate/i.test(code);
 }
 
-function cleanGeneratedString(value: string) {
-  return value
-    .replace(/[—–]/g, ', ')
-    .replace(/\b(Magnitude|Probability|Timeframe):\s*/gi, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-function cleanGeneratedOutput<T>(value: T): T {
-  if (typeof value === 'string') return cleanGeneratedString(value) as T;
-  if (Array.isArray(value)) return value.map(cleanGeneratedOutput) as T;
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, cleanGeneratedOutput(child)])
-    ) as T;
-  }
-  return value;
-}
-
-/**
- * Transforms AI generate response from various formats to the expected GenerateOutput schema.
- * This handles cases where the AI returns a different structure than requested.
- */
-function transformGenerateResponse(response: Record<string, unknown>): GenerateOutput {
-  // If already in correct format, return as-is (with exordio preserved)
-  if (response.caseStructure && response.contentions && response.predictedOpponentCase && response.counters && response.metadata) {
-    // Ensure exordio is properly structured if present
-    const result = response as unknown as GenerateOutput;
-    if (response.exordio && typeof response.exordio === 'object') {
-      const ex = response.exordio as Record<string, unknown>;
-      result.exordio = {
-        hook: String(ex.hook || ''),
-        transition: String(ex.transition || ''),
-      };
-    }
-    return cleanGeneratedOutput(result);
-  }
-
-  // Transform from wrong format to correct format
-  const wrongFormatContentions = response.contentions as Array<{
-    title?: string;
-    claim?: string;
-    points?: string[];
-    evidence?: string[] | string;
-    analysis?: string;
-    reasoning?: string;
-    impact?: string;
-  }> || [];
-
-  const transformedContentions = wrongFormatContentions.map((c, i) => ({
-    id: String(i + 1),
-    claim: c.claim || c.title || 'Argument',
-    reasoning: c.reasoning || c.analysis || (Array.isArray(c.points) ? c.points.join(' ') : ''),
-    evidence: Array.isArray(c.evidence) ? c.evidence.join(' ') : (c.evidence || ''),
-    needsSource: false,
-    sourceQuery: '',
-    impact: c.impact || c.analysis || '',
-  }));
-
-  // Transform rebuttals to counters
-  const rebuttals = (response.rebuttals as Array<{ attack?: string; response?: string }>) || [];
-  const counters = rebuttals.map(r => ({
-    targetArgument: r.attack || '',
-    counterpoint: r.response || '',
-    rebuttal: r.response || '',
-  }));
-
-  // Transform potentialWeaknesses to predictedOpponentCase
-  const weaknesses = (response.potentialWeaknesses as string[]) || [];
-
-  const result: GenerateOutput = {
-    caseStructure: {
-      thesis: (response.thesis as string) || (response.title as string) || '',
-      framework: 'General framework',
-      keyDefinitions: [],
-      burdenOfProof: 'We must prove that ' + ((response.thesis as string) || '').slice(0, 50),
-    },
-    contentions: transformedContentions.length > 0 ? transformedContentions : [{
-      id: '1',
-      claim: 'Main argument',
-      reasoning: 'Reasoning here',
-      evidence: 'Evidence here',
-      needsSource: false,
-      sourceQuery: '',
-      impact: 'Impact here',
-    }],
-    predictedOpponentCase: {
-      likelyArguments: weaknesses.slice(0, 3),
-      strategicWeaknesses: weaknesses,
-      keyClashes: ['Main clash point'],
-    },
-    counters: counters.length > 0 ? counters : [{
-      targetArgument: 'Opponent argument',
-      counterpoint: 'Our counter',
-      rebuttal: 'Rebuttal text',
-    }],
-    metadata: {
-      side: (response.side as 'pro' | 'con') || 'pro',
-      format: 'custom',
-      generatedAt: new Date().toISOString(),
-    },
-  };
-
-  // Preserve exordio if present in the original response
-  if (response.exordio && typeof response.exordio === 'object') {
-    const ex = response.exordio as Record<string, unknown>;
-    result.exordio = {
-      hook: String(ex.hook || ''),
-      transition: String(ex.transition || ''),
-    };
-  }
-
-  return cleanGeneratedOutput(result);
-}
-
 /**
  * Transforms AI brainstorm response to ensure all required fields exist.
  * This handles cases where the AI returns incomplete structures.
@@ -1239,32 +1023,13 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
   const targetDebateId = debateId !== undefined ? debateId : activeDebateId();
   // Every source belongs to one debate, so one-off research is not kept.
   if (!targetDebateId) return;
-  const retainedSources = sources.filter((source) => !source.semantic ||
-    (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
-    source.semantic.lastUsedInCase === true);
+  const retainedSources = retainedDiscoveredSources(sources);
   if (retainedSources.length === 0) return;
 
   const session = useSessionStore.getState();
   for (const source of retainedSources) {
     try {
-      await session.addSource({
-        title: source.title,
-        content: source.content ?? '',
-        type: 'url',
-        origin: source.url,
-        folder: 'Auto-saved',
-        debateId: targetDebateId,
-        isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
-        metadata: {
-          url: source.url,
-          ...(source.sourceType !== undefined ? { sourceType: source.sourceType } : {}),
-          ...(source.qualityScore !== undefined ? { qualityScore: source.qualityScore } : {}),
-          ...(source.qualityLabel !== undefined ? { qualityLabel: source.qualityLabel } : {}),
-          ...(source.query !== undefined ? { query: source.query } : {}),
-          ...(source.semantic !== undefined ? { semantic: source.semantic } : {}),
-          capturedVia,
-        },
-      });
+      await session.addSource({ ...autoSavedSourceRow(source, capturedVia), debateId: targetDebateId });
     } catch {
       toast({
         title: i18n.t('aiClient.sourceSaveFailed'),
@@ -1274,18 +1039,6 @@ async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVi
     }
   }
   console.log(`[AI Client] Saved ${retainedSources.length} sources to library`);
-}
-
-function expectedContentionCount(length: GenerateInput['length']): number {
-  switch (length) {
-    case 'standard':
-      return 3;
-    case 'comprehensive':
-      return 4;
-    case 'brief':
-    default:
-      return 2;
-  }
 }
 
 export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<GenerateOutput>> {

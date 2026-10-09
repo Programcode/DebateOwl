@@ -2490,6 +2490,41 @@
         "debateMissing": "Ez a vita már nem létezik. Válassz másik vitát, és kérdezz újra.",
         "failed": "Az edző nem tudott válaszolni. Próbáld újra."
       }
+    },
+    "prepare": {
+      "saved": "Ebben a vitában mentve"
+    },
+    "results": {
+      "generatedMeta": "{{side}}, létrehozva {{when}}",
+      "evidenceCount_one": "{{count}} bizonyíték",
+      "evidenceCount_other": "{{count}} bizonyíték",
+      "noEvidence": "Még nincs bizonyíték",
+      "attackThisCase": "Megtámadom",
+      "share": "Megosztás",
+      "copyText": "Másolás szövegként",
+      "loadFailed": "Nem sikerült betölteni ezt az eredményt.",
+      "notFound": "Ez az eredmény már nincs elmentve.",
+      "deleteFailed": "Nem sikerült törölni az eredményt. Próbáld újra.",
+      "deleteAttackTitle": "Törlöd a támadáselemzést?",
+      "deleteAttackDesc": "Ezzel eltávolítod a támadáselemzést az előzményeidből.",
+      "sourcesFailed_one": "{{count}} kutatott forrást nem sikerült a Könyvtáradba menteni.",
+      "sourcesFailed_other": "{{count}} kutatott forrást nem sikerült a Könyvtáradba menteni.",
+      "exportFailed": "Nem sikerült exportálni. Próbáld újra.",
+      "errors": {
+        "auth": "Lejárt a munkameneted. Jelentkezz ki, majd be újra.",
+        "trialExpired": "Lejárt az ingyenes próbaidőszakod. Az előfizetésedet a Profil lapon látod.",
+        "limitReached": "Elhasználtad a mai MI-kéréseidet. UTC éjfélkor újraindulnak. Az előfizetésedet a Profil lapon látod.",
+        "modelRestricted": "Az ehhez az eszközhöz választott modellhez Pro előfizetés kell. Az előfizetésedet a Profil lapon látod.",
+        "rateLimit": "Most túl sok a kérés. Várj egy kicsit, és próbáld újra.",
+        "network": "Nem sikerült elérni az MI-t. Ellenőrizd a kapcsolatot, és próbáld újra.",
+        "timeout": "Az MI túl sokáig nem válaszolt. Próbáld újra.",
+        "tooLarge": "Ez túl hosszú az elküldéshez. Rövidítsd le, és próbáld újra.",
+        "debateMissing": "Ez a vita már nem létezik. Válassz másik vitát, és próbáld újra.",
+        "failed": "Valami hiba történt. Próbáld újra."
+      }
+    },
+    "attack": {
+      "caseRequired": "Illeszd be vagy írd le a megtámadandó esetet."
     }
   }
 }

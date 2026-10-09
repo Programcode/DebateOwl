@@ -1,5 +1,5 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -13,22 +13,14 @@ import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { Text } from '@/components/text';
-import {
-  askOnce,
-  AskError,
-  canStream,
-  isAbortError,
-  isFinalAskError,
-  isMessageWithinBudget,
-  streamAsk,
-  type AskErrorKind,
-  type AskOptions,
-} from '@/lib/ask';
-import { fetchAskConfig, type AskConfig } from '@/lib/ask-config';
-import { buildAskDebateContext } from '@/lib/ask-context';
+import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
+import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
+import { buildDebateContext } from '@/lib/context-request';
+import { fetchFeatureConfig, type FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
+import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { fetchSources, type Source } from '@/lib/sources';
 import { radius } from '@/theme/colors';
@@ -48,8 +40,8 @@ const OPTION_CHIPS: { key: keyof AskOptions; label: string; icon: IconName }[] =
 
 const THINKING = ['askChat.thinking', 'askChat.researching', 'askChat.analyzing', 'askChat.generatingResponse', 'askChat.almostThere'];
 
-const PLAN_ERRORS = new Set<AskErrorKind>(['trialExpired', 'limitReached', 'modelRestricted']);
-const RETRYABLE_ERRORS = new Set<AskErrorKind>(['network', 'timeout', 'failed', 'rateLimit']);
+const PLAN_ERRORS = new Set<AIErrorKind>(['trialExpired', 'limitReached', 'modelRestricted']);
+const RETRYABLE_ERRORS = new Set<AIErrorKind>(['network', 'timeout', 'failed', 'rateLimit']);
 
 let localId = 0;
 const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
@@ -58,6 +50,7 @@ const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
 export default function AskScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
@@ -72,7 +65,7 @@ export default function AskScreen() {
   const [record, setRecordState] = useState<ChatRecord>(NEW_CHAT);
   const [options, setOptions] = useState<AskOptions>(NO_OPTIONS);
   const [input, setInput] = useState('');
-  const [error, setError] = useState<{ kind: AskErrorKind; question: string } | null>(null);
+  const [error, setError] = useState<{ kind: AIErrorKind; question: string } | null>(null);
   const [notice, setNotice] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [library, setLibrary] = useState<Source[]>([]);
@@ -80,7 +73,7 @@ export default function AskScreen() {
   const scroll = useRef<ScrollView>(null);
   const requests = useRef(0);
   const abort = useRef<AbortController | null>(null);
-  const config = useRef<Promise<AskConfig> | null>(null);
+  const config = useRef<Promise<FeatureConfig> | null>(null);
   // The conversation the saved record belongs to; replacing it drops late writes.
   const conversation = useRef(0);
   const recordRef = useRef(record);
@@ -94,7 +87,7 @@ export default function AskScreen() {
   };
 
   const askConfig = () => {
-    if (!config.current && userId) config.current = fetchAskConfig(userId);
+    if (!config.current && userId) config.current = fetchFeatureConfig(userId, 'ask');
     return config.current!;
   };
 
@@ -134,10 +127,9 @@ export default function AskScreen() {
   // The debate this conversation reads from: a loaded chat keeps its own.
   const chatDebateId = record.chatId ? record.debateId : activeDebateId;
   useEffect(() => {
-    if (!chatDebateId || !userId) {
-      setLibrary([]);
-      return;
-    }
+    // The previous debate's sources never stand in for this one's while they load.
+    setLibrary([]);
+    if (!chatDebateId || !userId) return;
     let active = true;
     fetchSources(userId, chatDebateId)
       .then((next) => {
@@ -195,7 +187,8 @@ export default function AskScreen() {
       const debateId = open.chatId ? open.debateId : activeDebateRef.current;
       const [askSettings, debateContext] = await Promise.all([
         askConfig(),
-        debateId ? buildAskDebateContext(userId, debateId, open.chatId) : Promise.resolve(undefined),
+        // Ask prepares no side, so every saved result matches it.
+        debateId ? buildDebateContext(userId, debateId, 'ask', 'both', open.chatId) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
       const askRequest = {
@@ -208,6 +201,10 @@ export default function AskScreen() {
       };
 
       let result: AskOutput;
+      const whole: { extras?: ResponseExtras } = {};
+      const keepExtras = (extras: ResponseExtras) => {
+        whole.extras = extras;
+      };
       if (canStream(requestOptions)) {
         let received = '';
         let pending = '';
@@ -239,16 +236,27 @@ export default function AskScreen() {
           } else {
             // Nothing arrived: ask once more without streaming, as the website does.
             setStreaming(null);
-            result = await askOnce(askRequest, controller.signal);
+            result = await askOnce(askRequest, controller.signal, keepExtras);
           }
         } finally {
           if (flush) clearTimeout(flush);
         }
       } else {
-        result = await askOnce(askRequest, controller.signal);
+        result = await askOnce(askRequest, controller.signal, keepExtras);
       }
 
       if (!isCurrent()) return;
+      // A whole answer ranks the Library sources it used and says when the question was shortened, as on the website.
+      if (whole.extras) {
+        const { truncated, assessments } = whole.extras;
+        const assessed = await keepSourceAssessments(userId, debateId, assessments, controller.signal);
+        if (!isCurrent()) return;
+        const notices = [
+          ...(assessed ? [] : [`${t('aiClient.sourceSaveFailed')}. ${t('aiClient.sourceAssessmentSaveFailed')}`]),
+          ...(truncated ? [`${t('aiClient.inputShortened')}. ${t('aiClient.inputShortenedDesc')}`] : []),
+        ];
+        if (notices.length > 0) setNotice(notices.join(' '));
+      }
       const output = {
         ...result,
         model: result.model || askSettings.model,
@@ -261,8 +269,8 @@ export default function AskScreen() {
     } catch (cause) {
       if (!isCurrent() || isAbortError(cause)) return;
       setStreaming(null);
-      const kind = cause instanceof AskError ? cause.kind : 'failed';
-      if (!(cause instanceof AskError)) console.warn('Ask failed:', cause instanceof Error ? cause.message : cause);
+      const kind = cause instanceof AIError ? cause.kind : 'failed';
+      if (!(cause instanceof AIError)) console.warn('Ask failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
       setError({ kind, question: message });
@@ -274,6 +282,16 @@ export default function AskScreen() {
       }
     }
   };
+
+  // Discuss on a case or an attack opens Ask with the website's message and sends it once.
+  const prompted = useRef(false);
+  useEffect(() => {
+    if (prompted.current || !prompt?.trim() || !userId) return;
+    prompted.current = true;
+    void send(prompt, []);
+    // send reads refs and state setters; it runs once per opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt, userId]);
 
   // Retrying replaces the unanswered question instead of asking it twice.
   const retry = (question: string) => {

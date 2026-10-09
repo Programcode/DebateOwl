@@ -30,10 +30,17 @@
  * fetch), answers the ai function with a fixed answer with citations, and
  * answers chat and message writes locally. The Library screens read the
  * account's real sources and write nothing.
+ *
+ * Generate and Attack screenshots never call a model and never save: the
+ * page answers the ai function with a fixed case or attack, holds it open
+ * for the "generating" shot, and answers case, attack and source writes
+ * locally. The PDF export's HTML (the web export cannot run expo-print) is
+ * rendered in a page of its own, and the "Copy as text" output is written
+ * next to the screenshots.
  */
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 
@@ -222,6 +229,173 @@ async function fakeAsk(page: Page, hold: boolean) {
         : route.continue(),
     );
   }
+}
+
+// A made-up case in GenerateOutput's shape, after mock 03: three arguments for a Standard case.
+const FAKE_CASE = {
+  caseStructure: {
+    thesis: 'City centres are shared public space, and private cars take the most of it while costing everyone else their health.',
+    framework: 'City centres are shared public space. The motion asks who gets to use that space, and at what cost to everyone else\'s health.',
+    keyDefinitions: ['City centre: the area inside a city\'s inner ring road', 'Private cars: privately owned passenger vehicles, with exemptions for disabled drivers'],
+    burdenOfProof: 'We must show that removing private cars improves health and access for most people who use the centre.',
+  },
+  contentions: [
+    {
+      id: '1',
+      claim: 'Clean air is a public health duty',
+      reasoning: 'Traffic is the largest source of roadside pollution, and the people who breathe it most are pedestrians, cyclists and residents, not drivers.',
+      evidence: 'Low-traffic zones cut roadside NO₂ within their first year, according to the Clean Streets Review.',
+      needsSource: false,
+      impact: 'Fewer asthma admissions among children who live and study in the centre.',
+    },
+    {
+      id: '2',
+      claim: 'Streets back for people',
+      reasoning: 'Parked and moving cars take most of a centre\'s street space while carrying a minority of the people in it.',
+      evidence: 'The Street Space Audit found cars use most of the road area; the Footfall Study found shops gain visits when streets close to traffic.',
+      needsSource: false,
+      impact: 'Wider pavements, more seating and safer crossings for everyone.',
+    },
+    {
+      id: '3',
+      claim: 'Transit works when it isn\'t stuck in traffic',
+      reasoning: 'Buses lose most of their delay to congestion caused by private cars.',
+      evidence: 'Bus journeys became quicker and more reliable after the centre closed to through traffic, per the Clean Streets Review.',
+      needsSource: false,
+      impact: 'Faster, more reliable buses make the ban fair to people who cannot walk or cycle.',
+    },
+  ],
+  predictedOpponentCase: {
+    likelyArguments: ['Shift workers and carers need cars at hours when transit is thin', 'Businesses lose customers who drive in'],
+    strategicWeaknesses: ['Depends on exemptions working in practice'],
+    keyClashes: ['Access for the few against health for the many', 'Shops and footfall'],
+  },
+  counters: [
+    { targetArgument: 'Shift workers need cars', counterpoint: 'Exemptions and night buses cover them.', rebuttal: 'Every real ban exempts carers and shift workers, and transit follows demand.' },
+  ],
+  metadata: {
+    side: 'pro',
+    format: 'custom',
+    generatedAt: '2026-10-09T16:43:00.000Z',
+    model: 'test-model',
+    provider: 'openrouter',
+    durationMs: 41200,
+    sourceUsage: [
+      { key: 'https://example.org/clean-streets', title: 'Clean Streets Review', origin: 'https://example.org/clean-streets', importance: 3, strength: 3, probability: 0.9, judgment: 'used' },
+      { key: 'https://example.org/street-space', title: 'Street Space Audit', origin: 'https://example.org/street-space', importance: 2, strength: 2, probability: 0.8, judgment: 'used' },
+      { key: 'https://example.org/footfall', title: 'Footfall Study', origin: 'https://example.org/footfall', importance: 2, strength: 2, probability: 0.7, judgment: 'used' },
+    ],
+  },
+};
+const FAKE_SOURCES = [
+  { title: 'Clean Streets Review', url: 'https://example.org/clean-streets', content: 'Made up for screenshots.', qualityLabel: 'strong', qualityScore: 82 },
+  { title: 'Footfall Study', url: 'https://example.org/footfall', content: 'Made up for screenshots.', qualityLabel: 'moderate', qualityScore: 64 },
+];
+// A made-up attack in AttackOutput's shape.
+const FAKE_ATTACK = {
+  overallAssessment: {
+    score: 64,
+    summary: 'A clear case with strong health evidence, but it leans on exemptions it never defines.',
+    strengthAreas: ['Concrete health impact', 'Good use of the street space argument'],
+  },
+  weaknesses: [
+    { id: 'w1', severity: 'critical', type: 'evidential', description: 'Exemptions are assumed, not shown', whyWeak: 'The case says carers and shift workers are exempt but never says how.', howOpponentAttacks: 'Who checks the exemptions, and what happens to the nurse at 5 a.m.?', improvedVersion: 'Name a real scheme and say how its exemptions work.', affectedQuote: 'Every real ban exempts carers' },
+    { id: 'w2', severity: 'major', type: 'logical', description: 'Footfall gains may not transfer', whyWeak: 'One study of one city does not prove shops gain everywhere.', howOpponentAttacks: 'Your study is one city with a metro.', improvedVersion: 'Compare two centres of different sizes.' },
+    { id: 'w3', severity: 'minor', type: 'structural', description: 'Impact of the third argument is thin', whyWeak: 'It restates the claim.', howOpponentAttacks: 'So what if buses are faster?', improvedVersion: 'Tie faster buses to who can reach jobs.' },
+  ],
+  fallaciesDetected: [{ name: 'Hasty generalisation', location: 'Argument 2', explanation: 'One city stands in for all cities.' }],
+  crossExQuestions: [{ question: 'How many people would need an exemption?', purpose: 'Test the size of the carve-out', expectedTrap: 'A large number undercuts the health benefit' }],
+  weighingAnalysis: { currentWeighing: 'Health outweighs convenience.', missingComparisons: ['Cost to low-income drivers'], improvementSuggestions: ['Weigh by number of people affected'] },
+};
+const FAKE_ROW = (table: string) => ({
+  id: table === 'sources' ? '00000000-0000-4000-8000-0000000050c0' : '00000000-0000-4000-8000-00000000ca5e',
+  title: 'fake',
+  content: '',
+  type: 'url',
+  origin: null,
+  metadata: null,
+  created_at: new Date().toISOString(),
+});
+
+/** Fakes Generate's and Attack's AI calls and saves for this page (see the header). `hold` keeps Generate waiting. */
+async function fakeResults(page: Page, hold: boolean) {
+  await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
+    const feature = (route.request().postDataJSON() as { feature?: string } | null)?.feature;
+    if (feature === 'generate' && hold) return; // Never answered: the page shows its progress state.
+    if (feature === 'generate') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES } });
+    if (feature === 'attack') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output: FAKE_ATTACK, discoveredSources: [] } });
+    return route.abort();
+  });
+  for (const table of ['cases', 'attacks', 'sources', 'source_folders']) {
+    await page.route(`${REST}/${table}*`, (route) =>
+      route.request().method() === 'POST' ? route.fulfill({ status: 201, json: FAKE_ROW(table) }) : route.continue(),
+    );
+  }
+}
+
+/** Prepare, Generate, the case document, Export and Attack, all from fixed outputs (see the header). */
+async function shootResultScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const open = async (hold: boolean) => {
+    const page = await context.newPage();
+    watchErrors(page, problems, `${prefix} results`);
+    page.on('dialog', (dialog) => void dialog.dismiss());
+    await pinSettings(page, language);
+    await fakeResults(page, hold);
+    return page;
+  };
+
+  const waiting = await open(true);
+  await waiting.goto(`${ORIGIN}/prepare`);
+  await waiting.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
+  await settle(waiting);
+  await shoot(waiting, `${prefix}-prepare`);
+  await waiting.getByTestId('prepare-tool-generate').click();
+  await waiting.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await waiting.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await shoot(waiting, `${prefix}-generate-form`);
+  await waiting.getByRole('button', { name: /^(Generate Debate Case|Vitaeset Generálása|Generar Caso de Debate)$/ }).click();
+  await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
+  await shoot(waiting, `${prefix}-generating`);
+  await waiting.close();
+
+  const page = await open(false);
+  await page.goto(`${ORIGIN}/generate?from=prepare`);
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await page.getByRole('button', { name: /^(Generate Debate Case|Vitaeset Generálása|Generar Caso de Debate)$/ }).click();
+  await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-case`);
+  // Close the open argument, so every argument shows collapsed.
+  await page.getByTestId('document-item').first().click();
+  await shoot(page, `${prefix}-case-collapsed`);
+  await page.getByTestId('document-item').first().click();
+
+  await page.getByTestId('export-button').click();
+  await page.getByTestId('export-menu').waitFor();
+  await shoot(page, `${prefix}-export-menu`);
+  await page.getByTestId('export-menu').getByRole('menuitem').first().click();
+  await page.getByTestId('export-button').click();
+  await page.getByTestId('export-menu').getByRole('menuitem').nth(1).click();
+  const exported = await page.evaluate(() => (window as unknown as { __debatelabExport?: { html?: string; fileName?: string; copied?: string } }).__debatelabExport ?? {});
+  if (!exported.html || !exported.copied) throw new Error('Export did not hand over the PDF HTML or the copied text');
+  await writeFile(join(OUT, `${prefix}-case-copy.txt`), exported.copied);
+  const pdf = await context.newPage();
+  await pdf.setViewportSize({ width: 794, height: 1123 });
+  await pdf.setContent(exported.html);
+  await pdf.screenshot({ path: join(OUT, `${prefix}-case-pdf-html.png`), fullPage: true });
+  await pdf.close();
+  console.log(`${prefix}: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
+
+  await page.getByTestId('attack-this-case').click();
+  await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
+  await shoot(page, `${prefix}-attack-form`);
+  await page.getByRole('button', { name: /^(Find Weaknesses|Gyengeségek Keresése|Encontrar Debilidades)$/ }).click();
+  await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-attack-result`);
+  await page.close();
 }
 
 async function shootLibraryScreens(page: Page, prefix: string) {
@@ -439,6 +613,8 @@ async function main() {
           shots += 2;
           await shootAskScreens(signedIn, prefix, language, problems);
           shots += 3;
+          await shootResultScreens(signedIn, prefix, language, problems);
+          shots += 9;
           await signedIn.close();
         }
       }
