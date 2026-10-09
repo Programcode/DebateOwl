@@ -2411,7 +2411,41 @@
       "body": "This part of DebateLab is on its way to the app. Until then, use it on the website."
     },
     "debate": {
-      "comingSoon": "Starting and switching debates comes to the app in the next update."
+      "statSources_one": "source",
+      "statSources_other": "sources",
+      "statResults_one": "result",
+      "statResults_other": "results",
+      "statRounds_one": "round",
+      "statRounds_other": "rounds",
+      "spar": "Spar against the AI",
+      "sparSide": "You pick your side when the round starts",
+      "pickUp": "Pick up where you left off",
+      "itemMeta": "{{kind}}, {{when}}",
+      "loadFailed": "Could not load your debate.",
+      "viewAria": "Show preparation for"
+    },
+    "common": {
+      "done": "Done"
+    },
+    "debates": {
+      "search": "Search motions",
+      "noMatches": "No debates match your search.",
+      "sourceCount_one": "{{count}} source",
+      "sourceCount_other": "{{count}} sources",
+      "activeToday": "active today",
+      "meta": "{{sources}}, {{when}}",
+      "oneOff": "One-off mode",
+      "oneOffDesc": "Use a tool without saving to a debate",
+      "newDebate": "New debate",
+      "loadFailed": "Could not load your debates."
+    },
+    "you": {
+      "usage": "{{used}} of {{limit}} AI uses today",
+      "loadFailed": "Could not load your subscription.",
+      "saveFailed": "Could not save your settings. Try again."
+    },
+    "deleteAccount": {
+      "failedHint": "Your account is still here. Check your connection and try again."
     }
   }
 }

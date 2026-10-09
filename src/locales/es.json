@@ -2411,7 +2411,41 @@
       "body": "Esta parte de DebateLab llegará pronto a la app. Mientras tanto, úsala en la web."
     },
     "debate": {
-      "comingSoon": "Podrás iniciar y cambiar de debate en la app con la próxima actualización."
+      "statSources_one": "fuente",
+      "statSources_other": "fuentes",
+      "statResults_one": "resultado",
+      "statResults_other": "resultados",
+      "statRounds_one": "ronda",
+      "statRounds_other": "rondas",
+      "spar": "Entrena contra la IA",
+      "sparSide": "Eliges tu postura al empezar la ronda",
+      "pickUp": "Continúa donde lo dejaste",
+      "itemMeta": "{{kind}}, {{when}}",
+      "loadFailed": "No se pudo cargar tu debate.",
+      "viewAria": "Mostrar la preparación de"
+    },
+    "common": {
+      "done": "Listo"
+    },
+    "debates": {
+      "search": "Buscar mociones",
+      "noMatches": "Ningún debate coincide con tu búsqueda.",
+      "sourceCount_one": "{{count}} fuente",
+      "sourceCount_other": "{{count}} fuentes",
+      "activeToday": "activo hoy",
+      "meta": "{{sources}}, {{when}}",
+      "oneOff": "Modo puntual",
+      "oneOffDesc": "Usa una herramienta sin guardar en un debate",
+      "newDebate": "Nuevo debate",
+      "loadFailed": "No se pudieron cargar tus debates."
+    },
+    "you": {
+      "usage": "{{used}} de {{limit}} usos de IA hoy",
+      "loadFailed": "No se pudo cargar tu suscripción.",
+      "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo."
+    },
+    "deleteAccount": {
+      "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."
     }
   }
 }

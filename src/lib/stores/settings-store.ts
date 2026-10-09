@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
+import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
+import { canAccessProModels as canAccessProModelsFor } from '@debatelab/core/ai/pro-access';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -14,7 +16,7 @@ import {
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
 
-export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
+export type { FeatureTab };
 type CoreFeatureTab = Exclude<FeatureTab, 'sparring'>;
 type FeatureConfigs = Record<CoreFeatureTab, ProviderConfig> & Partial<Record<'sparring', ProviderConfig>>;
 
@@ -53,22 +55,6 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gemini-3-flash-preview': 'google/gemini-3.8-flash',
   'gemini-3.1-flash-lite-preview': 'google/gemini-3.8-flash',
 };
-
-const defaultConfig: ProviderConfig = {
-  provider: DEFAULT_PROVIDER,
-  model: DEFAULT_MODEL,
-  temperature: 0.7,
-  reasoningEffort: 'low',
-};
-
-const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
-  generate: { ...defaultConfig, model },
-  attack: { ...defaultConfig, model },
-  brainstorm: { ...defaultConfig, model, temperature: 0.9 },
-  factoids: { ...defaultConfig, model, temperature: 0.3 },
-  ask: { ...defaultConfig, model },
-  sparring: { ...defaultConfig, model },
-});
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -143,25 +129,15 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
 }
 
 async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
-  const tier = settings.subscription_tier;
-  const graceEnd = typeof settings.grace_period_ends_at === 'string'
-    ? new Date(settings.grace_period_ends_at)
-    : null;
-  if ((tier === 'pro' || tier === 'legacy_free') && graceEnd && graceEnd > new Date()) return true;
-  if (tier !== 'pro') return false;
-
-  const userId = await getUserId();
-  if (!userId) return null;
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('status, current_period_end')
-    .eq('user_id', userId);
-  if (error) return null;
-  return Boolean(data?.some((subscription) =>
-    (subscription.status === 'active' || subscription.status === 'trialing')
-    && subscription.current_period_end
-    && new Date(subscription.current_period_end) > new Date()
-  ));
+  return canAccessProModelsFor(settings, async () => {
+    const userId = await getUserId();
+    if (!userId) return null;
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', userId);
+    return error ? null : data ?? [];
+  });
 }
 
 async function getUserId() {
