@@ -130,11 +130,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(SIGNED_OUT);
   const [ready, setReady] = useState(false);
   const owner = useRef(userId);
+  // Bumped on every owner change, including signing out and back in as the
+  // same account. Async work from an earlier generation never lands, even when
+  // the same account is signed in again.
+  const generation = useRef(0);
   // The settings last applied, so a save builds on every earlier save.
   const latest = useRef(settings);
+  // Per key, the value the account's row last held as far as the app knows:
+  // from a load, or from a save that succeeded. A failed save rolls back to it.
+  const confirmed = useRef<Settings>({ ...SIGNED_OUT });
   // Bumped by every save of a key. A load keeps the local value of any key
-  // saved after it started, and a failed save undoes its key only while it is
-  // still the latest save of that key.
+  // saved after it started, and a failed save rolls its key back only while it
+  // is still the latest save of that key.
   const versions = useRef<Record<SettingKey, number>>({ language: 0, outputLanguage: 0, theme: 0 });
   // Whether the row's feature_configs is filled in; null until a load or save tells.
   const configsSaved = useRef<boolean | null>(null);
@@ -142,8 +149,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // is the last write even when an earlier save's Pro-access check is slower.
   const [writes] = useState(createSerialQueue);
 
-  const apply = useCallback((next: Settings, forUser: string | null) => {
-    if (owner.current !== forUser) return;
+  const apply = useCallback((next: Settings, forUser: string | null, gen: number) => {
+    if (generation.current !== gen) return;
     latest.current = next;
     setSettings(next);
     if (i18n.language !== next.language) void i18n.changeLanguage(next.language);
@@ -158,26 +165,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     owner.current = userId;
+    const gen = ++generation.current;
     configsSaved.current = null;
     if (!userId) {
-      apply({ ...SIGNED_OUT, language: deviceLanguage() }, null);
+      apply({ ...SIGNED_OUT, language: deviceLanguage() }, null, gen);
+      confirmed.current = { ...latest.current };
       setReady(true);
       return;
     }
+    confirmed.current = { ...latest.current };
     let cancelled = false;
     const started = { ...versions.current };
-    // Loaded values, except for keys saved since the load started.
+    // Loaded values, except for keys saved since the load started. The values
+    // taken also become the confirmed ones.
     const merge = (loaded: Settings): Settings => {
       const next = { ...latest.current };
       for (const key of KEYS) {
-        if (versions.current[key] === started[key]) Object.assign(next, { [key]: loaded[key] });
+        if (versions.current[key] !== started[key]) continue;
+        Object.assign(next, { [key]: loaded[key] });
+        Object.assign(confirmed.current, { [key]: loaded[key] });
       }
       return next;
     };
     void (async () => {
       try {
         const cached = parseSettings(JSON.parse((await AsyncStorage.getItem(cacheKey(userId))) ?? 'null'));
-        if (!cancelled && cached) apply(merge(cached), userId);
+        if (!cancelled && cached) apply(merge(cached), userId, gen);
       } catch (cause) {
         console.warn('Could not read settings from this device:', cause);
       }
@@ -194,7 +207,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
       if (data && configsSaved.current === null) configsSaved.current = !isEmptyObject(data.feature_configs);
       const server = parseSettings(data);
-      if (server) apply(merge(server), userId);
+      if (server) apply(merge(server), userId, gen);
     })();
     return () => {
       cancelled = true;
@@ -204,19 +217,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const save = useCallback(async <K extends SettingKey>(key: K, value: Settings[K]) => {
     const forUser = owner.current;
     if (!forUser) return;
+    const gen = generation.current;
     const version = ++versions.current[key];
-    const previous = latest.current[key];
-    apply({ ...latest.current, [key]: value }, forUser);
+    apply({ ...latest.current, [key]: value }, forUser, gen);
     try {
       await writes(async () => {
-        // A save made before an account switch is dropped, not written for the new account.
-        if (owner.current !== forUser) return;
+        // A save made before an owner change is dropped, not written after it,
+        // even when the same account has signed in again since.
+        if (generation.current !== gen) return;
         await writeSetting(forUser, key, value, configsSaved.current !== true);
-        if (owner.current === forUser) configsSaved.current = true;
+        if (generation.current !== gen) return;
+        configsSaved.current = true;
+        Object.assign(confirmed.current, { [key]: value });
       });
     } catch (cause) {
-      if (owner.current !== forUser) return;
-      if (versions.current[key] === version) apply({ ...latest.current, [key]: previous }, forUser);
+      if (generation.current !== gen) return;
+      if (versions.current[key] === version) apply({ ...latest.current, [key]: confirmed.current[key] }, forUser, gen);
       throw cause;
     }
   }, [apply, writes]);

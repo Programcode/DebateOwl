@@ -38,10 +38,13 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   const [oneOff, setOneOff] = useState(false);
   // A load that started before a create or switch must not overwrite it, only
   // the latest of overlapping loads may land, and nothing from a previous
-  // account may land after a sign-out.
+  // owner may land after a sign-out or account switch. The generation is
+  // bumped on every owner change, so work started before signing out and back
+  // in as the same account does not land either.
   const writes = useRef(0);
   const refreshes = useRef(0);
   const owner = useRef(userId);
+  const generation = useRef(0);
 
   const refresh = useCallback(async () => {
     const forUser = owner.current;
@@ -64,6 +67,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     owner.current = userId;
+    generation.current += 1;
     setDebates([]);
     setCurrentId(null);
     setOneOff(false);
@@ -86,14 +90,15 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       oneOff,
       activeDebateId: oneOff ? null : current?.id ?? null,
       refresh,
-      // The account is read when the student acts. If it changed while the
-      // write ran, the write still happened for that account, so it is
-      // reported as done but not shown to the account signed in now.
+      // The account is read when the student acts. If the owner changed while
+      // the write ran, the write still happened for that account, so it is
+      // reported as done but not shown to whoever is signed in now.
       create: async ({ motion, settings }) => {
         const forUser = owner.current;
         if (!forUser) throw new Error('Sign in to manage debates');
+        const gen = generation.current;
         const debate = await createDebate(forUser, { motion, settings });
-        if (owner.current !== forUser) return debate;
+        if (generation.current !== gen) return debate;
         writes.current += 1;
         setDebates((previous) => sortDebates([debate, ...previous.filter((item) => item.id !== debate.id)]));
         setCurrentId(debate.id);
@@ -104,8 +109,9 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       switchTo: async (id) => {
         const forUser = owner.current;
         if (!forUser) throw new Error('Sign in to manage debates');
+        const gen = generation.current;
         const at = await switchDebate(forUser, id);
-        if (owner.current !== forUser) return;
+        if (generation.current !== gen) return;
         writes.current += 1;
         setDebates((previous) => sortDebates(previous.map((item) => (item.id === id ? { ...item, lastActivityAt: at } : item))));
         setCurrentId(id);
