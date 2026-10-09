@@ -336,7 +336,8 @@ export default function AskScreen() {
         contentContainerStyle={styles.messagesContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
+        // A streamed answer grows every 30 ms; restarting an animated scroll each time stutters.
+        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: streaming === null })}>
         <OneOffNotice />
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>

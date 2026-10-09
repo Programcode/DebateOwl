@@ -29,6 +29,11 @@ type DebateContextValue = {
 
 const DebateContext = createContext<DebateContextValue | null>(null);
 
+/** Refreshes run on every Debate tab focus; an unchanged list keeps its identity so the tabs do not re-render. */
+function keepIfSame(previous: Debate[], next: Debate[]): Debate[] {
+  return JSON.stringify(previous) === JSON.stringify(next) ? previous : next;
+}
+
 export function DebateProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
@@ -54,7 +59,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     try {
       const next = await fetchDebates(forUser);
       if (owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
-      setDebates(next.debates);
+      setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
     } catch (cause) {
