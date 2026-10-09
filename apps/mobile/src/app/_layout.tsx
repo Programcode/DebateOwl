@@ -74,6 +74,7 @@ function Root() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="debates" options={sheet} />
             <Stack.Screen name="new-debate" options={sheet} />
+            <Stack.Screen name="delete-account" options={sheet} />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />
