@@ -38,7 +38,7 @@ export default function FactoidsPage() {
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
   const { toast } = useToast();
-  const run = useToolRun();
+  const run = useToolRun('factoids');
   const results = useRevealResults();
   const lastInput = useRef<FactoidsInput | null>(null);
   const navigate = useNavigate();
@@ -55,6 +55,8 @@ export default function FactoidsPage() {
     const debateId = workspace.context ? null : activeDebateId();
     try {
       const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       setDiscoveredSources(sources);
       setFactoidsResult(result);
       await workspace.attach(data, result);

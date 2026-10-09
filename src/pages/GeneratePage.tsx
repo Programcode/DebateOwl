@@ -60,7 +60,7 @@ export default function GeneratePage() {
   const subError = useSubscriptionError();
   const { t } = useTranslation();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const run = useToolRun();
+  const run = useToolRun('generate');
   const results = useRevealResults();
   const lastRun = useRef<{ data: GenerateInput; debateId: string | null } | null>(null);
   const [saveTitle, setSaveTitle] = useState('');
@@ -88,6 +88,8 @@ export default function GeneratePage() {
     setGenerateLoading(true);
     try {
       const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       // Always stamp with real local time and motion
       if (result.metadata) {
         result.metadata.generatedAt = new Date().toISOString();

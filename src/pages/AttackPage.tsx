@@ -36,7 +36,7 @@ export default function AttackPage() {
   })));
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('attack');
-  const run = useToolRun();
+  const run = useToolRun('attack');
   const results = useRevealResults();
   const lastInput = useRef<AttackInput | null>(null);
   const navigate = useNavigate();
@@ -52,6 +52,8 @@ export default function AttackPage() {
     const debateId = workspace.context ? null : activeDebateId();
     try {
       const { result, discoveredSources } = await attackCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
       setAttackResult(result);
       await workspace.attach(data, result);

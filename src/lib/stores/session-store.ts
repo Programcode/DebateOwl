@@ -1080,9 +1080,13 @@ export const useSessionStore = create<SessionState>()(
       },
 
       deleteSavedFlowchart: async (id) => {
-        set((state) => ({ savedFlowcharts: state.savedFlowcharts.filter((c) => c.id !== id) }));
+        // Write first: the page offers Undo (a fresh save) only once the row is really gone.
         const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('flowcharts').delete(), userId, id);
+        if (userId) {
+          const result = await applyUserScopedIdFilter(supabase.from('flowcharts').delete(), userId, id);
+          throwOnWriteError(result, 'delete flowchart');
+        }
+        set((state) => ({ savedFlowcharts: state.savedFlowcharts.filter((c) => c.id !== id) }));
       },
 
       hydrateFromServer: async () => {

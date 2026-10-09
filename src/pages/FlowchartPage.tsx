@@ -275,13 +275,24 @@ export default function FlowchartPage() {
     const [saveTitle, setSaveTitle] = useState('');
     const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
 
+    // Node ids repeat across charts, so a node's Undo belongs to the chart it was deleted
+    // from: loading another chart retires that Undo.
+    const chartVersion = useRef(0);
+    const nodeUndoToast = useRef<string | number | null>(null);
+    const replaceChart = useCallback((data: FlowchartData) => {
+        chartVersion.current += 1;
+        if (nodeUndoToast.current !== null) toast.dismiss(nodeUndoToast.current);
+        nodeUndoToast.current = null;
+        setNodes(data.nodes);
+        setEdges(data.edges);
+    }, [setNodes, setEdges]);
+
     useEffect(() => {
         if (pendingFlowchartData) {
-            setNodes(pendingFlowchartData.nodes);
-            setEdges(pendingFlowchartData.edges);
+            replaceChart(pendingFlowchartData);
             setPendingFlowchartData(null);
         }
-    }, [pendingFlowchartData, setNodes, setEdges, setPendingFlowchartData]);
+    }, [pendingFlowchartData, replaceChart, setPendingFlowchartData]);
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [newNodeLabel, setNewNodeLabel] = useState('');
@@ -376,8 +387,7 @@ export default function FlowchartPage() {
     };
 
     const handleLoadFlowchart = (data: FlowchartData) => {
-        setNodes(data.nodes);
-        setEdges(data.edges);
+        replaceChart(data);
         setSelectedNode(null);
         setIsLoadDialogOpen(false);
         toast.success(t('flowchart.loadedToast'));
@@ -431,10 +441,12 @@ export default function FlowchartPage() {
         setNodes((nds) => nds.filter((n) => n.id !== selectedNode));
         setEdges((eds) => eds.filter((e) => e.source !== selectedNode && e.target !== selectedNode));
         setSelectedNode(null);
-        toast(t('flowchart.nodeDeletedNamed', { label: removedNode.data.label, defaultValue: 'Deleted {{label}}' }), {
+        const version = chartVersion.current;
+        nodeUndoToast.current = toast(t('flowchart.nodeDeletedNamed', { label: removedNode.data.label, defaultValue: 'Deleted {{label}}' }), {
             action: {
                 label: t('common.undo', 'Undo'),
                 onClick: () => {
+                    if (chartVersion.current !== version) return;
                     setNodes((nds) => (nds.some((n) => n.id === removedNode.id) ? nds : [...nds, removedNode]));
                     setEdges((eds) => [...eds, ...removedEdges.filter((edge) => !eds.some((e) => e.id === edge.id))]);
                 },

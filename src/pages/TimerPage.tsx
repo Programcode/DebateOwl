@@ -239,6 +239,8 @@ export default function TimerPage() {
         action: {
           label: t('common.undo', 'Undo'),
           onClick: () => {
+            // Undo returns to the paused remainder, even if the reset clock was started since.
+            setIsRunning(false);
             clockRef.current = { remainingMs: before.ms, deadline: null };
             setTimeLeft(displaySeconds(before.ms));
             setIsFinished(before.finished);

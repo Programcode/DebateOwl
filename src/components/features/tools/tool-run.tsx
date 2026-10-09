@@ -8,27 +8,27 @@ export interface ToolRunError {
   description?: string;
 }
 
-/**
- * One run of a form tool: a cancellable request and the error it ended with.
- * Leaving the page does not cancel; results still land in the store.
- */
+// The page can unmount mid-run (results still land in the store), so the request
+// belongs to the tool, not to one mount of its page: Cancel works after coming back.
+const controllers = new Map<string, AbortController>();
+
+/** One run of a form tool: a cancellable request and the error it ended with. */
 // eslint-disable-next-line react-refresh/only-export-components
-export function useToolRun() {
-  const controllerRef = useRef<AbortController | null>(null);
+export function useToolRun(tool: string) {
   const [error, setError] = useState<ToolRunError | null>(null);
 
   const start = useCallback(() => {
-    controllerRef.current?.abort();
+    controllers.get(tool)?.abort();
     const controller = new AbortController();
-    controllerRef.current = controller;
+    controllers.set(tool, controller);
     setError(null);
     return controller.signal;
-  }, []);
+  }, [tool]);
 
   const cancel = useCallback(() => {
-    controllerRef.current?.abort();
-    controllerRef.current = null;
-  }, []);
+    controllers.get(tool)?.abort();
+    controllers.delete(tool);
+  }, [tool]);
 
   return { start, cancel, error, setError, clearError: () => setError(null) };
 }

@@ -35,7 +35,7 @@ export default function BrainstormPage() {
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('brainstorm');
-  const run = useToolRun();
+  const run = useToolRun('brainstorm');
   const results = useRevealResults();
   const lastRun = useRef<{ data: BrainstormInput; debateId: string | null } | null>(null);
   const navigate = useNavigate();
@@ -52,6 +52,8 @@ export default function BrainstormPage() {
     setBrainstormLoading(true);
     try {
       const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
       setBrainstormResult(result);
       await workspace.attach(data, result);

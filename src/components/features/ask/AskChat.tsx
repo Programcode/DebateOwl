@@ -601,10 +601,10 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} onSave={onSaveSource} />
+              {/* One keyed list: the finished reply keeps the streaming bubble's id and position, so it isn't remounted. */}
+              {(streamingMessage && !messages.some((message) => message.id === streamingMessage.id) ? [...messages, streamingMessage] : messages).map((message) => (
+                <MessageBubble key={message.id} message={message} onSave={message === streamingMessage ? undefined : onSaveSource} />
               ))}
-              {streamingMessage && <MessageBubble key={streamingMessage.id} message={streamingMessage} />}
               {waitingForText && (
                 // One true status line: what is happening, and how long it has taken once that matters.
                 <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
