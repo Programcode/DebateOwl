@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:42:12.424Z",
+  "createdAt": "2026-10-09T07:51:18.781Z",
   "payload": {
     "actions": [
       {
@@ -54,20 +54,20 @@
       },
       {
         "name": "type",
-        "summary": "type \"Plastic bag levy study\" into textbox \"Source title...\"",
+        "summary": "type \"Plastic bag levy study\" into textbox \"Title\"",
         "target": {
           "role": "textbox",
-          "name": "Source title...",
+          "name": "Title",
           "placeholder": "Source title..."
         },
         "value": "Plastic bag levy study"
       },
       {
         "name": "type",
-        "summary": "type \"After a 5p levy, single-use bag sales a…\" into textbox \"Paste source content...\"",
+        "summary": "type \"After a 5p levy, single-use bag sales a…\" into textbox \"Content\"",
         "target": {
           "role": "textbox",
-          "name": "Paste source content...",
+          "name": "Content",
           "placeholder": "Paste source content..."
         },
         "value": "After a 5p levy, single-use bag sales at major retailers fell by more than 95 percent."
@@ -93,25 +93,20 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Started the debate “This House would ban single-use plastics” and added “Plastic bag levy study” to the Library with the provided content. The Library shows the saved source and a “Source Added” confirmation.",
+    "summary": "Started debate on 'This House would ban single-use plastics', opened Library, and added source 'Plastic bag levy study' with content about 5p levy reducing bag sales by 95%. Source now appears in library with 1 source active and grounding enabled.",
     "startPath": "/app",
     "endPath": "/app/library",
     "endAnchors": [
-      {
-        "role": "button",
-        "name": "Close"
-      },
-      {
-        "text": "Source Added"
-      },
-      {
-        "text": "Your source is now available for grounding."
-      },
       {
         "text": "Current debate"
       },
       {
         "text": "This House would ban single-use plastics"
+      },
+      {
+        "role": "button",
+        "name": "Current debate: This House would ban single-use plastics",
+        "testId": "current-debate-mobile"
       },
       {
         "role": "heading",
@@ -122,7 +117,14 @@
         "name": "Change"
       },
       {
-        "text": "All folders"
+        "text": "1 sources · 1 active · 1 folders"
+      },
+      {
+        "text": "Smart"
+      },
+      {
+        "role": "heading",
+        "name": "Your Knowledge Base"
       }
     ],
     "goneAnchors": [
@@ -130,6 +132,10 @@
         "role": "button",
         "name": "Start debate",
         "testId": "current-debate-mobile"
+      },
+      {
+        "role": "heading",
+        "name": "What are you working on?"
       },
       {
         "text": "No current debate"
@@ -149,11 +155,8 @@
       },
       {
         "text": "Brainstorm"
-      },
-      {
-        "text": "Explore angles for a motion."
       }
     ],
-    "endWaitMs": 12722
+    "endWaitMs": 13153
   }
 }
