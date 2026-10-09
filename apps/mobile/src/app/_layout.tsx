@@ -6,15 +6,25 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { AuthProvider, useAuth } from '@/lib/auth';
 import { interFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <Root />
+    </AuthProvider>
+  );
+}
+
+function Root() {
   const [fontsLoaded, fontError] = useFonts(interFonts);
+  const { session, loading } = useAuth();
   const { scheme, colors } = useTheme();
-  const ready = fontsLoaded || fontError !== null;
+  const ready = (fontsLoaded || fontError !== null) && !loading;
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
@@ -39,7 +49,12 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-        <Stack.Screen name="(tabs)" />
+        <Stack.Protected guard={session !== null}>
+          <Stack.Screen name="(tabs)" />
+        </Stack.Protected>
+        <Stack.Protected guard={session === null}>
+          <Stack.Screen name="sign-in" />
+        </Stack.Protected>
       </Stack>
     </ThemeProvider>
   );
