@@ -13,7 +13,7 @@ import {
 } from '@debatelab/core/crossfire/schemas';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
-import { functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
+import { abortError, AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
 import { supabase } from './supabase';
@@ -68,6 +68,44 @@ function requestBody(input: Record<string, unknown> & { transcript: CrossfireTur
 /** The Library sources a round may use: none unless the student turned grounding on. */
 export function crossfireContext(context: DebateContextRequest | undefined, config: CrossfireConfig): DebateContextRequest | undefined {
   return context && !config.useSourceLibrary ? { ...context, sourceIds: [] } : context;
+}
+
+/**
+ * A turn or debrief within the website's 75 s, counted from before the model
+ * settings and Library context are read, so a stalled read times out like the
+ * request. The caller's signal (leaving the screen) cancels it at any await.
+ */
+export async function withTurnDeadline<T>(signal: AbortSignal, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, TURN_TIMEOUT_MS);
+  const abortForCaller = () => controller.abort();
+  signal.addEventListener('abort', abortForCaller);
+  if (signal.aborted) controller.abort();
+  try {
+    if (controller.signal.aborted) throw abortError();
+    return await work(controller.signal);
+  } catch (error) {
+    if (signal.aborted) throw abortError();
+    if (timedOut) throw new AIError('timeout', 'The request took too long');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener('abort', abortForCaller);
+  }
+}
+
+/** Settles with the read, or rejects as soon as the signal aborts. The read itself cannot be cancelled, only no longer waited for. */
+export function untilAborted<T>(read: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(abortError());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    read.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
 }
 
 export type CrossfireNextTurn = CrossfireReply & { signalToken?: string };
