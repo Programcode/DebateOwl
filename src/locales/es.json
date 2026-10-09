@@ -2443,6 +2443,9 @@
       "usage": "{{used}} de {{limit}} usos de IA hoy",
       "loadFailed": "No se pudo cargar tu suscripción.",
       "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo."
+    },
+    "deleteAccount": {
+      "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."
     }
   }
 }

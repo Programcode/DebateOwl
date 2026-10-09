@@ -29,19 +29,20 @@ export default function DeleteAccountSheet() {
   const expected = deletionConfirmation(email);
   const [confirmation, setConfirmation] = useState('');
   const [deleting, setDeleting] = useState(false);
-  // null while nothing failed; the server's message, possibly empty, after a failure.
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   const remove = async () => {
     if (confirmation !== expected || deleting) return;
     const userId = session?.user.id;
     setDeleting(true);
-    setError(null);
+    setFailed(false);
     try {
       await deleteAccount(confirmation);
     } catch (cause) {
+      // The server's message is English and not meant for students; the sheet shows translated text only.
+      console.warn('Could not delete the account:', cause instanceof Error ? cause.message : cause);
       setDeleting(false);
-      setError(cause instanceof Error ? cause.message : '');
+      setFailed(true);
       return;
     }
     if (userId) await forgetAccount(userId).catch(() => undefined);
@@ -78,16 +79,14 @@ export default function DeleteAccountSheet() {
           returnKeyType="done"
           onSubmitEditing={() => void remove()}
         />
-        {error !== null ? (
+        {failed ? (
           <View accessibilityRole="alert" style={styles.error}>
             <Text weight="semibold" style={[styles.body, { color: colors.destructive }]}>
               {t('settings.deleteAccountFailed')}
             </Text>
-            {error ? (
-              <Text style={[styles.body, { color: colors.destructive }]}>
-                {error}
-              </Text>
-            ) : null}
+            <Text style={[styles.body, { color: colors.destructive }]}>
+              {t('mobile.deleteAccount.failedHint')}
+            </Text>
           </View>
         ) : null}
         <PrimaryButton

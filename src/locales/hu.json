@@ -2443,6 +2443,9 @@
       "usage": "Ma {{used}} / {{limit}} MI-használat",
       "loadFailed": "Nem sikerült betölteni az előfizetésedet.",
       "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra."
+    },
+    "deleteAccount": {
+      "failedHint": "A fiókod megmaradt. Ellenőrizd a kapcsolatot, és próbáld újra."
     }
   }
 }

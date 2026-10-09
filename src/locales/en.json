@@ -2443,6 +2443,9 @@
       "usage": "{{used}} of {{limit}} AI uses today",
       "loadFailed": "Could not load your subscription.",
       "saveFailed": "Could not save your settings. Try again."
+    },
+    "deleteAccount": {
+      "failedHint": "Your account is still here. Check your connection and try again."
     }
   }
 }
