@@ -21,7 +21,10 @@
  * therefore answer the app's user_settings reads with the run's language and
  * the System theme; nothing is written. The Debate tab shows the account's
  * real Current Debate, and its empty state comes from answering the
- * current_debates read with no row. The Debate tab is shot once per side view.
+ * current_debates read with no row. The Debate tab is shot once per side view,
+ * and with one-off mode on, with and without a Current Debate; Prepare and
+ * Generate are shot in one-off mode too. One-off mode is in memory only; the
+ * script toggles it and never taps a debate row.
  *
  * Ask screenshots never call a model and never save a chat: the page answers
  * ai-stream from a fake stream inside the page (expo/fetch uses the page's
@@ -150,10 +153,33 @@ async function shootDebateScreens(page: Page, prefix: string) {
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-debates-sheet`);
 
+  // One-off mode lives in memory only, so toggling it writes nothing. Never tap a debate row
+  // here: switching saves the pointer and last activity to staging.
+  await turnOnOneOff(page);
+  await shoot(page, `${prefix}-debates-oneoff`);
+  await closeSwitcher(page);
+  await page.getByTestId('one-off-notice').waitFor();
+  await shoot(page, `${prefix}-debate-oneoff`);
+  await page.getByTestId('one-off-notice').getByRole('button').click();
+  await page.getByTestId('one-off-notice').waitFor({ state: 'detached' });
+
+  await page.getByTestId('current-debate-pill').click();
+  await page.getByTestId('debates-sheet').waitFor();
   await page.getByRole('button', { name: /^(New debate|Új vita|Nuevo debate)$/ }).click();
   await page.getByTestId('new-debate-sheet').waitFor();
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-new-debate`);
+}
+
+async function turnOnOneOff(page: Page) {
+  const toggle = page.getByTestId('debates-sheet').getByRole('switch');
+  await toggle.click();
+  if (!(await toggle.isChecked())) throw new Error('The one-off switch did not turn on');
+}
+
+async function closeSwitcher(page: Page) {
+  await page.getByTestId('debates-sheet').getByRole('button', { name: /^(Done|Kész|Listo)$/ }).click();
+  await page.getByTestId('debates-sheet').waitFor({ state: 'detached' });
 }
 
 // A made-up answer in the shape of mock 07, streamed a word at a time.
@@ -529,6 +555,34 @@ async function shootAskScreens(context: BrowserContext, prefix: string, language
   await streaming.close();
 }
 
+/** Prepare and Generate in one-off mode, reached in the app so the in-memory mode survives. Nothing is sent or saved. */
+async function shootOneOffTools(page: Page, prefix: string) {
+  await page.goto(`${ORIGIN}/`);
+  // Opening the switcher takes the tab out of focus, which drops a load still running; let it finish first.
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await page.waitForFunction(() => !document.querySelector('[data-testid="debate-counts"]')?.textContent?.includes('–'));
+  await settle(page);
+  await page.getByTestId('current-debate-pill').click();
+  await page.getByTestId('debates-sheet').waitFor();
+  await settle(page);
+  await turnOnOneOff(page);
+  await closeSwitcher(page);
+  await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+  await page.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
+  // The Debate tab stays mounted behind Prepare with its own notice; only the visible one is Prepare's.
+  await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
+  await settle(page);
+  await shoot(page, `${prefix}-prepare-oneoff`);
+  await page.getByTestId('prepare-tool-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  const notice = page.getByTestId('generate-screen').getByTestId('one-off-notice');
+  await notice.waitFor();
+  await shoot(page, `${prefix}-generate-oneoff`);
+  // Return to debate turns the mode off in place, and the strip says where work goes again.
+  await notice.getByRole('button').click();
+  await page.getByTestId('generate-screen').getByTestId('working-in').waitFor();
+}
+
 async function shootEmptyDebate(page: Page, prefix: string) {
   await page.route(`${REST}/current_debates*`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', json: [] }),
@@ -537,6 +591,18 @@ async function shootEmptyDebate(page: Page, prefix: string) {
   await page.getByTestId('current-debate-pill').waitFor({ timeout: 30_000 });
   await settle(page);
   await shoot(page, `${prefix}-debate-empty`);
+
+  // One-off mode works without a Current Debate too; there is nothing to return to.
+  await page.getByTestId('current-debate-pill').click();
+  await page.getByTestId('debates-sheet').waitFor();
+  await settle(page);
+  await turnOnOneOff(page);
+  await closeSwitcher(page);
+  await page.getByTestId('one-off-notice').waitFor();
+  if ((await page.getByTestId('one-off-notice').getByRole('button').count()) > 0) {
+    throw new Error('One-off mode offered a return without a Current Debate');
+  }
+  await shoot(page, `${prefix}-debate-empty-oneoff`);
 }
 
 async function signIn(browser: Browser, problems: string[]): Promise<StorageState> {
@@ -651,7 +717,7 @@ async function main() {
             await shoot(tabPage, `${prefix}-failed`);
             throw error;
           });
-          shots += 4;
+          shots += 6;
           await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
             await shoot(tabPage, `${prefix}-failed`);
             throw error;
@@ -669,7 +735,7 @@ async function main() {
           watchErrors(emptyPage, problems, `${prefix} empty`);
           await pinSettings(emptyPage, language);
           await shootEmptyDebate(emptyPage, prefix);
-          shots += 1;
+          shots += 2;
           await shootAskScreens(signedIn, prefix, language, problems);
           shots += 3;
           await shootResultScreens(signedIn, prefix, language, problems);
@@ -678,6 +744,12 @@ async function main() {
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 6;
           }
+          const oneOffPage = await signedIn.newPage();
+          watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
+          await pinSettings(oneOffPage, language);
+          await shootOneOffTools(oneOffPage, prefix);
+          await oneOffPage.close();
+          shots += 2;
           await signedIn.close();
         }
       }

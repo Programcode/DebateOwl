@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
+import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
@@ -16,7 +16,6 @@ import { useTheme } from '@/theme/use-theme';
 export default function NewNoteSheet() {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
   const { current } = useDebates();
@@ -43,57 +42,50 @@ export default function NewNoteSheet() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
-        keyboardShouldPersistTaps="handled"
-        testID="new-note-sheet">
-        <View style={styles.header}>
-          <Text accessibilityRole="header" weight="bold" style={styles.title}>
-            {t('mobile.library.writeNote')}
-          </Text>
-          <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={saving} />
-        </View>
+    <SheetScrollView testID="new-note-sheet">
+      <View style={styles.header}>
+        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+          {t('mobile.library.writeNote')}
+        </Text>
+        <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={saving} />
+      </View>
 
-        {!current ? (
-          <Text tone="secondary" style={styles.body}>
-            {t('debate.libraryNeedsDebate')}
-          </Text>
-        ) : (
-          <>
-            <Field
-              label={t('libraryPage.titleLabel')}
-              placeholder={t('libraryPage.titlePlaceholder')}
-              value={title}
-              onChangeText={setTitle}
-              autoFocus
-              editable={!saving}
-            />
-            <Field
-              label={t('libraryPage.contentLabel')}
-              placeholder={t('libraryPage.contentPlaceholder')}
-              value={content}
-              onChangeText={setContent}
-              multiline
-              editable={!saving}
-              style={styles.noteBody}
-            />
-            {error ? (
-              <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
-                {error}
-              </Text>
-            ) : null}
-            <MainActionButton label={t('common.save')} busy={saving} disabled={!ready} onPress={() => void save()} />
-          </>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {!current ? (
+        <Text tone="secondary" style={styles.body}>
+          {t('debate.libraryNeedsDebate')}
+        </Text>
+      ) : (
+        <>
+          <Field
+            label={t('libraryPage.titleLabel')}
+            placeholder={t('libraryPage.titlePlaceholder')}
+            value={title}
+            onChangeText={setTitle}
+            autoFocus
+            editable={!saving}
+          />
+          <Field
+            label={t('libraryPage.contentLabel')}
+            placeholder={t('libraryPage.contentPlaceholder')}
+            value={content}
+            onChangeText={setContent}
+            multiline
+            editable={!saving}
+            style={styles.noteBody}
+          />
+          {error ? (
+            <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
+              {error}
+            </Text>
+          ) : null}
+          <MainActionButton label={t('common.save')} busy={saving} disabled={!ready} onPress={() => void save()} />
+        </>
+      )}
+    </SheetScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 22, gap: 18, width: '100%', maxWidth: 640, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 21 },
