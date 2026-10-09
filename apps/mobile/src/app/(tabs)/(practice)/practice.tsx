@@ -10,7 +10,7 @@ import { Screen } from '@/components/screen';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/use-theme';
 
-/** The Practice tools. Ask opens full screen; the others say they are on their way. */
+/** The Practice tools. Attack and Ask open full screen; the others say they are on their way. */
 export default function PracticeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -23,7 +23,13 @@ export default function PracticeScreen() {
           <Pressable
             key={tool.key}
             accessibilityRole="button"
-            onPress={() => (tool.key === 'ask' ? router.push('/ask') : router.push({ pathname: '/soon/[tool]', params: { tool: tool.key } }))}
+            onPress={() =>
+              tool.key === 'ask'
+                ? router.push('/ask')
+                : tool.key === 'attack'
+                  ? router.push({ pathname: '/attack', params: { from: 'practice' } })
+                  : router.push({ pathname: '/soon/[tool]', params: { tool: tool.key } })}
+            testID={`practice-tool-${tool.key}`}
             style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
             <IconTile name={tool.icon} size={42} />
             <View style={styles.rowText}>

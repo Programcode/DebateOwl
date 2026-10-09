@@ -9,6 +9,7 @@ import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
 import i18n from '@/i18n';
 import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
+import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 
 interface Message {
   id: string;
@@ -47,17 +48,6 @@ export interface SourceProvenance {
   /** Which flow captured this source, e.g. 'generate' | 'brainstorm' | 'ask' | 'factoids'. */
   capturedVia?: string;
   semantic?: SourceSemanticMetadata;
-}
-
-export interface SourceAssessmentUpdate {
-  key: string;
-  id?: string;
-  relevance: number;
-  importance: 0 | 1 | 2 | 3;
-  strength: 0 | 1 | 2 | 3;
-  evaluatedAt: string;
-  retained: boolean;
-  usedInCase?: boolean;
 }
 
 export interface Source {
@@ -627,27 +617,11 @@ export const useSessionStore = create<SessionState>()(
         const candidates = previous.filter((source) => source.debateId === debateId);
         const updates = new Map<string, Source>();
         for (const assessment of assessments.slice(0, 10)) {
-          const source = candidates.find((candidate) => candidate.id === assessment.id || candidate.id === assessment.key || candidate.origin === assessment.key || candidate.metadata?.url === assessment.key);
+          const source = candidates.find((candidate) => isAssessedSource(candidate, assessment));
           if (!source) continue;
-          const prior = source.metadata?.semantic;
-          const usedInCase = assessment.usedInCase;
           updates.set(source.id, {
             ...source,
-            metadata: {
-              ...source.metadata,
-              semantic: {
-                relevance: assessment.relevance,
-                importance: assessment.importance,
-                strength: assessment.strength,
-                evaluatedAt: assessment.evaluatedAt,
-                useCount: (prior?.useCount ?? 0) + 1,
-                caseUseCount: (prior?.caseUseCount ?? 0) + (usedInCase === true ? 1 : 0),
-                lastUsedAt: assessment.evaluatedAt,
-                ...(usedInCase !== undefined
-                  ? { lastUsedInCase: usedInCase }
-                  : prior?.lastUsedInCase !== undefined ? { lastUsedInCase: prior.lastUsedInCase } : {}),
-              },
-            },
+            metadata: { ...source.metadata, semantic: assessedSemantic(source.metadata?.semantic, assessment) },
           });
         }
         if (updates.size === 0) return;

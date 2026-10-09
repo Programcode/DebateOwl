@@ -8,9 +8,11 @@ import { MainActionButton, TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
+import { PREPARE_TOOLS } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
+import { WorkRow, workHref } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
@@ -18,35 +20,12 @@ import {
   fetchRecentWork,
   type DebateCounts,
   type DebateItem,
-  type DebateItemKind,
   type DebateSide,
 } from '@/lib/debates';
-import { formatWhen } from '@/lib/dates';
 import { mainActionGradient, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
 const RECENT_LIMIT = 3;
-
-// The Prepare tools on the website's Current Debate page. Each opens the Prepare tab until its screen lands.
-const PREPARE_TOOLS: { key: string; icon: IconName }[] = [
-  { key: 'generate', icon: 'sparkles' },
-  { key: 'brainstorm', icon: 'bulb' },
-  { key: 'factoids', icon: 'book' },
-  { key: 'flowchart', icon: 'branch' },
-];
-
-const KIND_ICONS: Record<DebateItemKind, IconName> = {
-  case: 'sparkles',
-  attack: 'swords',
-  brainstorm: 'bulb',
-  factoids: 'book',
-  chat: 'chat',
-  flowchart: 'branch',
-  crossfire: 'target',
-  sparring: 'swords',
-};
-
-const PRACTICE_KINDS = new Set<DebateItemKind>(['attack', 'crossfire', 'sparring']);
 
 /** Home: the Current Debate, as in mock 01. */
 export default function DebateScreen() {
@@ -222,7 +201,15 @@ function DebateDetails({ debateId }: { debateId: string }) {
       </Text>
       <View style={styles.grid}>
         {PREPARE_TOOLS.map((tool) => (
-          <ToolTile key={tool.key} icon={tool.icon} label={t(`nav.${tool.key}`)} onPress={() => open('/prepare')} />
+          <ToolTile
+            key={tool.key}
+            icon={tool.icon}
+            label={t(`nav.${tool.key}`)}
+            onPress={() =>
+              tool.key === 'generate'
+                ? router.push({ pathname: '/generate', params: { from: 'debate' } })
+                : router.push({ pathname: '/coming/[tool]', params: { tool: tool.key } })}
+          />
         ))}
       </View>
 
@@ -247,12 +234,7 @@ function DebateDetails({ debateId }: { debateId: string }) {
       ) : (
         <Card style={styles.list}>
           {items.map((item, index) => (
-            <RecentRow
-              key={`${item.kind}-${item.id}`}
-              item={item}
-              first={index === 0}
-              onPress={() => open(PRACTICE_KINDS.has(item.kind) ? '/practice' : '/prepare')}
-            />
+            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} onPress={() => router.navigate(workHref(item, 'debate'))} />
           ))}
         </Card>
       )}
@@ -315,32 +297,6 @@ function ToolTile({ icon, label, onPress }: { icon: IconName; label: string; onP
       <Text weight="semibold" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
         {label}
       </Text>
-    </Pressable>
-  );
-}
-
-function RecentRow({ item, first, onPress }: { item: DebateItem; first: boolean; onPress: () => void }) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        !first && { borderTopWidth: 1, borderTopColor: colors.line },
-        pressed && styles.pressed,
-      ]}>
-      <IconTile name={KIND_ICONS[item.kind]} size={42} />
-      <View style={styles.rowText}>
-        <Text weight="semibold" style={styles.rowTitle} numberOfLines={1}>
-          {item.title || t(`debate.kinds.${item.kind}`)}
-        </Text>
-        <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-          {t('mobile.debate.itemMeta', { kind: t(`debate.kinds.${item.kind}`), when: formatWhen(item.createdAt) })}
-        </Text>
-      </View>
-      <Icon name="chevronRight" color={colors.tabInactive} size={20} />
     </Pressable>
   );
 }
@@ -412,8 +368,4 @@ const styles = StyleSheet.create({
   },
   tileLabel: { flex: 1, fontSize: 15.5 },
   list: { padding: 0, gap: 0 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 14 },
-  rowText: { flex: 1, gap: 2 },
-  rowTitle: { fontSize: 16 },
-  rowMeta: { fontSize: 14 },
 });

@@ -192,6 +192,25 @@ export interface DebateItem {
   createdAt: number;
 }
 
+async function fetchResultRows(userId: string, debateId: string, table: ResultTable, sides: string[] | null, limit: number): Promise<DebateItem[]> {
+  let query = supabase
+    .from(table)
+    .select('id,title,created_at')
+    .eq('user_id', userId)
+    .eq('debate_id', debateId);
+  if (sides) query = query.in('side', sides);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row): DebateItem => ({
+    id: row.id,
+    kind: KIND_BY_TABLE[table],
+    title: row.title,
+    createdAt: new Date(row.created_at).getTime(),
+  }));
+}
+
+const newestFirst = (lists: DebateItem[][], limit: number) => lists.flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+
 /** The newest saved results and rounds for one side of a debate, like the website's side lists. */
 export async function fetchRecentWork(
   userId: string,
@@ -200,23 +219,7 @@ export async function fetchRecentWork(
   limit: number,
 ): Promise<DebateItem[]> {
   const lists = await Promise.all([
-    ...RESULT_TABLES.map(async (table) => {
-      const { data, error } = await supabase
-        .from(table)
-        .select('id,title,created_at')
-        .eq('user_id', userId)
-        .eq('debate_id', debateId)
-        .in('side', SIDES_FOR[side])
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      if (error) throw new Error(error.message);
-      return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row): DebateItem => ({
-        id: row.id,
-        kind: KIND_BY_TABLE[table],
-        title: row.title,
-        createdAt: new Date(row.created_at).getTime(),
-      }));
-    }),
+    ...RESULT_TABLES.map((table) => fetchResultRows(userId, debateId, table, SIDES_FOR[side], limit)),
     (async () => {
       // The website lists a round under its motion and the side the student spoke, ordered by its last update.
       const { data, error } = await supabase
@@ -236,5 +239,14 @@ export async function fetchRecentWork(
       }));
     })(),
   ]);
-  return lists.flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+  return newestFirst(lists, limit);
+}
+
+/** The Prepare tools' tables. */
+const PREPARE_TABLES = ['cases', 'brainstorms', 'factoids', 'flowcharts'] as const satisfies readonly ResultTable[];
+
+/** A debate's saved Prepare results for both sides, newest first, for the Prepare tab. */
+export async function fetchPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
+  const lists = await Promise.all(PREPARE_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
+  return newestFirst(lists, limit);
 }
