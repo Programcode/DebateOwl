@@ -83,23 +83,24 @@ test('Factoids names the save action with its claim', async ({ page }) => {
   })).toBeVisible();
 });
 
-test('Flowchart confirms selected-node deletion and reports success', async ({ page }, testInfo) => {
+test('Flowchart deletes a selected node at once and Undo puts it back', async ({ page }, testInfo) => {
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.goto('/app/flowchart');
 
   await page.getByText('Argument 1', { exact: true }).click();
-  await page.getByRole('button', { name: 'Delete' }).last().click();
-  await expect(page.getByRole('alertdialog', { name: 'Delete node?' })).toBeVisible();
-  const confirm = page.getByRole('button', { name: 'Delete node' });
+  const remove = page.getByRole('button', { name: 'Delete' }).last();
   if (testInfo.project.name === 'mobile-chromium') {
-    const box = await confirm.boundingBox();
+    const box = await remove.boundingBox();
     expect(box).not.toBeNull();
     await page.touchscreen.tap(box!.x + box!.width / 2, box!.y + box!.height / 2);
   } else {
-    await confirm.click();
+    await remove.click();
   }
 
-  await expect(page.getByText('Node deleted', { exact: true })).toBeVisible();
+  // No confirmation: the node goes, and the toast offers Undo.
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page.getByText('Argument 1', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByText('Argument 1', { exact: true })).toHaveCount(1);
 });

@@ -1456,7 +1456,8 @@
       }
     },
     "disableSound": "Desactivar sonido",
-    "enableSound": "Activar sonido"
+    "enableSound": "Activar sonido",
+    "resetDone": "Temporizador reiniciado"
   },
   "flowchart": {
     "title": "Diagrama de Argumentos",
@@ -1501,13 +1502,7 @@
     "savedToast": "Diagrama guardado exitosamente",
     "saveFailedToast": "Error al guardar diagrama",
     "loadedToast": "Diagrama cargado",
-    "deletedToast": "Diagrama eliminado",
     "deleteFailedToast": "Error al eliminar diagrama",
-    "deleteNodeTitle": "¿Eliminar nodo?",
-    "deleteNodeDescription": "Se eliminarán «{{label}}» y todas sus conexiones. Esta acción no se puede deshacer.",
-    "deleteNodeConfirm": "Eliminar nodo",
-    "deleteNodeCancel": "Cancelar",
-    "nodeDeletedToast": "Nodo eliminado",
     "starter": {
       "thesisLabel": "Tu tesis",
       "thesisDesc": "Haz clic para editar o añadir nuevos nodos",
@@ -1532,7 +1527,11 @@
     "zoomOut": "Alejar",
     "fitView": "Ajustar a la vista",
     "toggleInteractivity": "Bloquear o desbloquear el lienzo",
-    "miniMap": "Vista general del diagrama"
+    "miniMap": "Vista general del diagrama",
+    "deletedNamed": "Se eliminó {{title}}",
+    "deleteNamed": "Eliminar {{title}}",
+    "restoreFailed": "No se pudo restaurar el diagrama",
+    "nodeDeletedNamed": "Se eliminó {{label}}"
   },
   "historyPage": {
     "title": "Historial",
@@ -1998,7 +1997,6 @@
       "opponentUpNext": "El oponente va ahora",
       "opponentThinkingDescription": "Está leyendo la moción y tus intervenciones antes de elegir una respuesta.",
       "opponentUpNextDescription": "La siguiente respuesta aparecerá aquí.",
-      "aiThinking": "La IA está pensando",
       "transcript": "Transcripción",
       "transcriptDescription": "Cada intervención enviada se queda aquí para el juez.",
       "submittedCount": "{{count}} enviadas",
@@ -2014,7 +2012,8 @@
       "totalWords_one": "{{count}} palabra",
       "totalWords_other": "{{count}} palabras",
       "wordCount_one": "{{count}} palabra",
-      "wordCount_other": "{{count}} palabras"
+      "wordCount_other": "{{count}} palabras",
+      "latestOpponent": "Último discurso del oponente"
     },
     "scorecard": {
       "eyebrow": "Revisión de la ronda",
@@ -2410,5 +2409,9 @@
     "safety": "{{provider}} bloqueó esta solicitud por seguridad. Prueba a reformularla.",
     "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo más tarde.",
     "unexpected": "Se produjo un error inesperado"
+  },
+  "clock": {
+    "timeUp": "Se acabó el tiempo.",
+    "remaining": "Queda {{time}}."
   }
 }

@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, RotateCcw, Bell, Volume2, VolumeX, Keyboard } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ClockAnnouncer, RoundClock, clockTone } from '@/components/features/practice/RoundClock';
+import { displaySeconds, pauseClock, remainingMs, startClock, type ClockState } from '@/lib/timer-clock';
+import { toast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -140,109 +144,127 @@ export default function TimerPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // The clock is kept in milliseconds; the face shows whole seconds.
+  const clockRef = useRef<ClockState>({ remainingMs: currentSpeech.minutes * 60_000, deadline: null });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const deadlineRef = useRef<number | null>(null);
-  const timeLeftRef = useRef(timeLeft);
   const previousTimeLeftRef = useRef(timeLeft);
 
-  useEffect(() => {
-    timeLeftRef.current = timeLeft;
-  }, [timeLeft]);
+  const loadSpeech = useCallback((minutes: number) => {
+    clockRef.current = { remainingMs: minutes * 60_000, deadline: null };
+    setIsRunning(false);
+    setIsFinished(false);
+    setTimeLeft(minutes * 60);
+  }, []);
 
   // Reset when format changes
   useEffect(() => {
     setCurrentSpeechIdx(0);
-    setIsRunning(false);
-    setIsFinished(false);
-    const firstSpeech = currentFormat.speeches[0];
-    setTimeLeft(firstSpeech.minutes * 60);
+    loadSpeech(currentFormat.speeches[0].minutes);
   }, [formatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Safety check if index is out of bounds for new format
   useEffect(() => {
     if (!currentFormat.speeches[currentSpeechIdx]) {
       setCurrentSpeechIdx(0);
-      setIsRunning(false);
-      setIsFinished(false);
-      setTimeLeft(currentFormat.speeches[0].minutes * 60);
+      loadSpeech(currentFormat.speeches[0].minutes);
     }
-  }, [currentFormat, currentSpeechIdx]);
+  }, [currentFormat, currentSpeechIdx, loadSpeech]);
 
-  // Drives the countdown off a deadline timestamp (self-correcting against
-  // setInterval drift/throttling) and only recreates the interval when
-  // isRunning changes, not on every tick. The updater stays pure — no
-  // side effects here; see the effect below for signals/completion.
+  // Counts down against a deadline (self-correcting against interval drift and
+  // throttling). Pausing stores the exact remainder, so pauses never add time.
   useEffect(() => {
-    if (!isRunning || timeLeftRef.current <= 0) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-      deadlineRef.current = null;
+    if (!isRunning) {
+      clockRef.current = pauseClock(clockRef.current, Date.now());
       return;
     }
-
-    deadlineRef.current = Date.now() + timeLeftRef.current * 1000;
-    timerRef.current = setInterval(() => {
-      if (deadlineRef.current === null) return;
-      const remaining = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
-      setTimeLeft(remaining);
-    }, 1000);
-
+    clockRef.current = startClock(clockRef.current, Date.now());
+    const tick = () => setTimeLeft(displaySeconds(remainingMs(clockRef.current, Date.now())));
+    tick();
+    timerRef.current = setInterval(tick, 250);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = null;
     };
   }, [isRunning]);
 
-  // Reacts to the countdown value to trigger signals and mark completion.
+  // Keep the screen awake while a speech runs.
+  useEffect(() => {
+    if (!isRunning || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let released = false;
+    const acquire = () => {
+      if (document.visibilityState !== 'visible') return;
+      navigator.wakeLock.request('screen').then((sentinel) => {
+        if (released) void sentinel.release();
+        else lock = sentinel;
+      }).catch(() => { /* Not allowed here (battery saver, iframe): the timer still works. */ });
+    };
+    acquire();
+    // The browser drops the lock when the tab hides; take it again on return.
+    document.addEventListener('visibilitychange', acquire);
+    return () => {
+      released = true;
+      document.removeEventListener('visibilitychange', acquire);
+      void lock?.release().catch(() => {});
+    };
+  }, [isRunning]);
+
+  // Signals and completion. The time-up sound and vibration fire in the same frame.
   useEffect(() => {
     const previousTimeLeft = previousTimeLeftRef.current;
     previousTimeLeftRef.current = timeLeft;
     if (!isRunning) return;
-    if (soundEnabled) {
-      if (previousTimeLeft > 60 && timeLeft <= 60 && timeLeft > 0) void playSignal('beep');
-      if (timeLeft === 0) void playSignal('double-beep');
-    }
+    if (soundEnabled && previousTimeLeft > 60 && timeLeft <= 60 && timeLeft > 0) void playSignal('beep');
     if (timeLeft === 0) {
+      if (soundEnabled) void playSignal('double-beep');
+      navigator.vibrate?.([200, 100, 200]);
       setIsRunning(false);
       setIsFinished(true);
     }
   }, [timeLeft, isRunning, soundEnabled]);
 
-  const toggleTimer = useCallback(() => setIsRunning(prev => !prev), []);
+  const toggleTimer = useCallback(() => {
+    if (isFinished) return;
+    setIsRunning(prev => !prev);
+  }, [isFinished]);
 
+  // Reset discards progress, so a reset of a started speech offers Undo.
   const resetTimer = useCallback(() => {
-    setIsRunning(false);
-    setIsFinished(false);
     const speech = currentFormat.speeches[currentSpeechIdx] || currentFormat.speeches[0];
-    setTimeLeft(speech.minutes * 60);
-  }, [currentFormat, currentSpeechIdx]);
+    const before = { ms: remainingMs(clockRef.current, Date.now()), finished: isFinished };
+    loadSpeech(speech.minutes);
+    if (before.ms < speech.minutes * 60_000) {
+      toast({
+        title: t('timer.resetDone', 'Timer reset'),
+        action: {
+          label: t('common.undo', 'Undo'),
+          onClick: () => {
+            clockRef.current = { remainingMs: before.ms, deadline: null };
+            setTimeLeft(displaySeconds(before.ms));
+            setIsFinished(before.finished);
+          },
+        },
+      });
+    }
+  }, [currentFormat, currentSpeechIdx, isFinished, loadSpeech, t]);
 
   const nextSpeech = useCallback(() => {
     if (currentSpeechIdx < currentFormat.speeches.length - 1) {
       setCurrentSpeechIdx(prev => prev + 1);
-      setIsRunning(false);
-      setIsFinished(false);
-      const nextSpeechObj = currentFormat.speeches[currentSpeechIdx + 1];
-      setTimeLeft(nextSpeechObj.minutes * 60);
+      loadSpeech(currentFormat.speeches[currentSpeechIdx + 1].minutes);
     }
-  }, [currentSpeechIdx, currentFormat]);
+  }, [currentSpeechIdx, currentFormat, loadSpeech]);
 
   const prevSpeech = useCallback(() => {
     if (currentSpeechIdx > 0) {
       setCurrentSpeechIdx(prev => prev - 1);
-      setIsRunning(false);
-      setIsFinished(false);
-      const prevSpeechObj = currentFormat.speeches[currentSpeechIdx - 1];
-      setTimeLeft(prevSpeechObj.minutes * 60);
+      loadSpeech(currentFormat.speeches[currentSpeechIdx - 1].minutes);
     }
-  }, [currentSpeechIdx, currentFormat]);
+  }, [currentSpeechIdx, currentFormat, loadSpeech]);
 
   const handleSpeechSelect = (idx: number) => {
     setCurrentSpeechIdx(idx);
-    setIsRunning(false);
-    setIsFinished(false);
-    const speech = currentFormat.speeches[idx];
-    setTimeLeft(speech.minutes * 60);
+    loadSpeech(currentFormat.speeches[idx].minutes);
   };
 
   // Keyboard shortcuts
@@ -257,7 +279,8 @@ export default function TimerPage() {
           break;
         case 'KeyR':
         case 'Escape':
-          resetTimer();
+          // A stray key never wipes a running speech; pause first.
+          if (!isRunning) resetTimer();
           break;
         case 'ArrowRight':
           nextSpeech();
@@ -270,7 +293,7 @@ export default function TimerPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleTimer, resetTimer, nextSpeech, prevSpeech]);
+  }, [toggleTimer, resetTimer, nextSpeech, prevSpeech, isRunning]);
 
   const totalDuration = (currentSpeech.minutes || 0) * 60;
   const progress = Math.min(100, Math.max(0, ((totalDuration - timeLeft) / totalDuration) * 100));
@@ -278,9 +301,7 @@ export default function TimerPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-3xl mx-auto text-center">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('timer.title')}</h1>
-        </div>
+        <PageHeader className="mb-8 sm:justify-center" title={t('timer.title')} />
 
         <div className="flex justify-between items-center mb-6 max-w-xl mx-auto">
           <Select value={formatId} onValueChange={(val) => {
@@ -306,7 +327,7 @@ export default function TimerPage() {
           </Button>
         </div>
 
-        <Card className="border-primary/20 bg-card/50 backdrop-blur-sm shadow-xl">
+        <Card className="border-primary/20 shadow-xl">
           <CardHeader>
             <div className="flex justify-center gap-2 mb-4 flex-wrap">
               {currentFormat.speeches.map((s, idx) => (
@@ -326,14 +347,14 @@ export default function TimerPage() {
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Timer Display */}
-            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background/50 shadow-inner transition-all" role="timer" aria-label={t('timer.displayLabel')} aria-live="polite" aria-atomic="true">
-              <div className={`absolute inset-0 rounded-full border-8 border-primary transition-all duration-1000`}
+            {/* The ring sweeps at a constant rate (linear); the clock is not a live region, the announcer is. */}
+            <div className="relative flex items-center justify-center h-64 w-64 sm:h-72 sm:w-72 mx-auto rounded-full border-8 border-muted bg-background shadow-inner">
+              <div className={`absolute inset-0 rounded-full border-8 transition-[clip-path,border-color] duration-1000 ease-linear ${clockTone(timeLeft) === 'normal' ? 'border-primary' : clockTone(timeLeft) === 'warning' ? 'border-amber-500' : 'border-destructive'}`}
                 style={{ clipPath: `inset(${100 - progress}% 0 0 0)` }} />
 
               <div className="text-center z-10 flex flex-col items-center justify-center">
-                <div className={`text-6xl sm:text-7xl font-mono font-bold tracking-tighter tabular-nums transition-colors duration-300 ${timeLeft < 30 && timeLeft > 0 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
-                  {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                </div>
+                <RoundClock secondsLeft={timeLeft} label={t('timer.displayLabel')} className="text-6xl sm:text-7xl font-bold" />
+                <ClockAnnouncer secondsLeft={timeLeft} running={isRunning || isFinished} />
                 <div className="text-sm text-muted-foreground mt-4 font-medium uppercase tracking-widest flex items-center gap-2">
                   {isFinished ? t('timer.timeUp') : isRunning ? t('timer.speaking') : t('timer.paused')}
                   {soundEnabled && <Bell className="h-3 w-3" />}
@@ -353,6 +374,7 @@ export default function TimerPage() {
                 variant={isRunning ? "secondary" : "default"}
                 className="h-16 w-32 text-xl shadow-lg"
                 onClick={toggleTimer}
+                disabled={isFinished}
               >
                 {isRunning ? (
                   <>
@@ -375,7 +397,8 @@ export default function TimerPage() {
               </Button>
             </div>
 
-            <div className="text-xs text-muted-foreground pt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+            {/* Keyboard hints only where there is a keyboard. */}
+            <div className="text-xs text-muted-foreground pt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 pointer-coarse:hidden">
               <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('timer.spaceStartStop')}</span>
               <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('timer.resetKey')}</span>
               <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('timer.arrowsChange')}</span>

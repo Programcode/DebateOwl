@@ -480,6 +480,19 @@ All colors MUST be HSL.
   animation-duration: 200ms;
 }
 
+/* Flowchart auto layout: nodes glide to their new lanes; outside a layout they follow the pointer directly. */
+.flow-layout-animating .react-flow__node {
+  transition: transform 250ms var(--motion-ease-out-strong);
+}
+
+/* React Flow's 26px canvas controls grow to touch size on phones. */
+@media (pointer: coarse) {
+  .react-flow__controls-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* Sonner's mobile toaster sets width: 100% plus a left offset, which pushes
    it past the viewport and widens the whole page on phones. */
 @media (max-width: 600px) {

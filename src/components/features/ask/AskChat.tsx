@@ -17,6 +17,7 @@ import { formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
 import { ModelSelector } from '@/components/ModelSelector';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ListeningIndicator } from '@/components/features/voice/ListeningIndicator';
 
 interface Message {
   id: string;
@@ -708,6 +709,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
             ))}
           </div>
         )}
+        {isListening && <ListeningIndicator label={t('askChat.placeholderListening')} />}
         {voiceError && (
           <p className="text-sm text-destructive">
             {voiceError === 'not-allowed'
@@ -765,7 +767,6 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
               onClick={toggleListening}
               title={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}
               aria-label={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}
-              className={isListening ? "animate-pulse" : ""}
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </Button>

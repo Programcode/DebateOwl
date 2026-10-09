@@ -3,6 +3,7 @@ import { Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SpeechCapture, SpeechCaptureError } from '@/hooks/use-speech-capture';
 import { cn } from '@/lib/utils';
+import { ListeningIndicator } from './ListeningIndicator';
 
 const ERROR_KEYS: Record<SpeechCaptureError, string> = {
   'not-allowed': 'voiceRound.mic.notAllowed',
@@ -37,10 +38,7 @@ export function VoiceMicControl({ capture, onStart, onStop, disabled = false, cl
           {capture.listening ? t('voiceRound.mic.stop') : t('voiceRound.mic.start')}
         </Button>
         {capture.listening && (
-          <span className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-destructive motion-reduce:animate-none" aria-hidden="true" />
-            {t('voiceRound.mic.listening')}
-          </span>
+          <ListeningIndicator label={t('voiceRound.mic.listening')} />
         )}
       </div>
       {capture.listening && capture.interim && (

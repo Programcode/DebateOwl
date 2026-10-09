@@ -317,7 +317,7 @@ export default function GeneratePage() {
             id: `e-${parentId}-${id}`,
             source: parentId,
             target: id,
-            style: { stroke: '#3b82f6' },
+            style: { stroke: '#3b82f6', strokeDasharray: '6 4' },
             markerEnd: { type: MarkerType.ArrowClosed }
           });
         });

@@ -1456,7 +1456,8 @@
       }
     },
     "disableSound": "Hang kikapcsolása",
-    "enableSound": "Hang bekapcsolása"
+    "enableSound": "Hang bekapcsolása",
+    "resetDone": "Időmérő visszaállítva"
   },
   "flowchart": {
     "title": "Érvelési Folyamatábra",
@@ -1501,13 +1502,7 @@
     "savedToast": "Folyamatábra sikeresen mentve",
     "saveFailedToast": "Nem sikerült menteni a folyamatábrát",
     "loadedToast": "Folyamatábra betöltve",
-    "deletedToast": "Folyamatábra törölve",
     "deleteFailedToast": "Nem sikerült törölni a folyamatábrát",
-    "deleteNodeTitle": "Csomópont törlése?",
-    "deleteNodeDescription": "A(z) „{{label}}” csomópont és minden kapcsolata törlődik. Ez a művelet nem vonható vissza.",
-    "deleteNodeConfirm": "Csomópont törlése",
-    "deleteNodeCancel": "Mégse",
-    "nodeDeletedToast": "Csomópont törölve",
     "starter": {
       "thesisLabel": "A tézised",
       "thesisDesc": "Kattints a szerkesztéshez vagy új csomópont hozzáadásához",
@@ -1532,7 +1527,11 @@
     "zoomOut": "Kicsinyítés",
     "fitView": "Teljes nézet",
     "toggleInteractivity": "Vászon zárolása vagy feloldása",
-    "miniMap": "Folyamatábra áttekintése"
+    "miniMap": "Folyamatábra áttekintése",
+    "deletedNamed": "Törölve: {{title}}",
+    "deleteNamed": "{{title}} törlése",
+    "restoreFailed": "Nem sikerült visszaállítani a folyamatábrát",
+    "nodeDeletedNamed": "Törölve: {{label}}"
   },
   "historyPage": {
     "title": "Előzmények",
@@ -1998,7 +1997,6 @@
       "opponentUpNext": "Az ellenfél következik",
       "opponentThinkingDescription": "A válasz előtt elolvassa az indítványt és a beszédeidet.",
       "opponentUpNextDescription": "A következő válasz itt jelenik meg.",
-      "aiThinking": "Az MI gondolkodik",
       "transcript": "Átirat",
       "transcriptDescription": "Minden beküldött beszéd itt marad a bíró számára.",
       "submittedCount": "{{count}} beküldve",
@@ -2014,7 +2012,8 @@
       "totalWords_one": "{{count}} szó",
       "totalWords_other": "{{count}} szó",
       "wordCount_one": "{{count}} szó",
-      "wordCount_other": "{{count}} szó"
+      "wordCount_other": "{{count}} szó",
+      "latestOpponent": "Az ellenfél utolsó beszéde"
     },
     "scorecard": {
       "eyebrow": "Forduló értékelése",
@@ -2410,5 +2409,9 @@
     "safety": "{{provider}}: biztonsági okokból elutasította a kérést. Próbáld másképp megfogalmazni.",
     "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra később.",
     "unexpected": "Váratlan hiba történt"
+  },
+  "clock": {
+    "timeUp": "Lejárt az idő.",
+    "remaining": "Még {{time}}."
   }
 }

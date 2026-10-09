@@ -1456,7 +1456,8 @@
       }
     },
     "disableSound": "Disable sound",
-    "enableSound": "Enable sound"
+    "enableSound": "Enable sound",
+    "resetDone": "Timer reset"
   },
   "flowchart": {
     "title": "Argument Flowchart",
@@ -1501,13 +1502,7 @@
     "savedToast": "Flowchart saved successfully",
     "saveFailedToast": "Failed to save flowchart",
     "loadedToast": "Flowchart loaded",
-    "deletedToast": "Flowchart deleted",
     "deleteFailedToast": "Failed to delete flowchart",
-    "deleteNodeTitle": "Delete node?",
-    "deleteNodeDescription": "{{label}} and all of its connections will be removed. This cannot be undone.",
-    "deleteNodeConfirm": "Delete node",
-    "deleteNodeCancel": "Cancel",
-    "nodeDeletedToast": "Node deleted",
     "starter": {
       "thesisLabel": "Your Thesis",
       "thesisDesc": "Click to edit or add new nodes",
@@ -1532,7 +1527,11 @@
     "zoomOut": "Zoom out",
     "fitView": "Fit view",
     "toggleInteractivity": "Lock or unlock the canvas",
-    "miniMap": "Flowchart overview"
+    "miniMap": "Flowchart overview",
+    "deletedNamed": "Deleted {{title}}",
+    "deleteNamed": "Delete {{title}}",
+    "restoreFailed": "Could not restore the flowchart",
+    "nodeDeletedNamed": "Deleted {{label}}"
   },
   "historyPage": {
     "title": "History",
@@ -1998,7 +1997,6 @@
       "opponentUpNext": "Opponent is up next",
       "opponentThinkingDescription": "It is reading the motion and your speeches before choosing a response.",
       "opponentUpNextDescription": "The next response will appear here.",
-      "aiThinking": "AI is thinking",
       "transcript": "Transcript",
       "transcriptDescription": "Every submitted speech stays here for the judge.",
       "submittedCount": "{{count}} submitted",
@@ -2014,7 +2012,8 @@
       "totalWords_one": "{{count}} word",
       "totalWords_other": "{{count}} words",
       "wordCount_one": "{{count}} word",
-      "wordCount_other": "{{count}} words"
+      "wordCount_other": "{{count}} words",
+      "latestOpponent": "Opponent’s last speech"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -2410,5 +2409,9 @@
     "safety": "{{provider}} blocked this request for safety reasons. Try rephrasing your input.",
     "unexpectedProvider": "The AI provider returned an unexpected error. Please try again later.",
     "unexpected": "An unexpected error occurred"
+  },
+  "clock": {
+    "timeUp": "Time is up.",
+    "remaining": "{{time}} left."
   }
 }
