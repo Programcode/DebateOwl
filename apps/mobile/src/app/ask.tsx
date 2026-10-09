@@ -12,19 +12,10 @@ import { Chip } from '@/components/chip';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { Text } from '@/components/text';
-import {
-  askOnce,
-  AskError,
-  canStream,
-  isAbortError,
-  isFinalAskError,
-  isMessageWithinBudget,
-  streamAsk,
-  type AskErrorKind,
-  type AskOptions,
-} from '@/lib/ask';
-import { fetchAskConfig, type AskConfig } from '@/lib/ask-config';
-import { buildAskDebateContext } from '@/lib/ask-context';
+import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
+import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
+import { buildDebateContext } from '@/lib/context-request';
+import { fetchFeatureConfig, type FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
@@ -47,8 +38,8 @@ const OPTION_CHIPS: { key: keyof AskOptions; label: string; icon: IconName }[] =
 
 const THINKING = ['askChat.thinking', 'askChat.researching', 'askChat.analyzing', 'askChat.generatingResponse', 'askChat.almostThere'];
 
-const PLAN_ERRORS = new Set<AskErrorKind>(['trialExpired', 'limitReached', 'modelRestricted']);
-const RETRYABLE_ERRORS = new Set<AskErrorKind>(['network', 'timeout', 'failed', 'rateLimit']);
+const PLAN_ERRORS = new Set<AIErrorKind>(['trialExpired', 'limitReached', 'modelRestricted']);
+const RETRYABLE_ERRORS = new Set<AIErrorKind>(['network', 'timeout', 'failed', 'rateLimit']);
 
 let localId = 0;
 const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
@@ -71,7 +62,7 @@ export default function AskScreen() {
   const [record, setRecordState] = useState<ChatRecord>(NEW_CHAT);
   const [options, setOptions] = useState<AskOptions>(NO_OPTIONS);
   const [input, setInput] = useState('');
-  const [error, setError] = useState<{ kind: AskErrorKind; question: string } | null>(null);
+  const [error, setError] = useState<{ kind: AIErrorKind; question: string } | null>(null);
   const [notice, setNotice] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [library, setLibrary] = useState<Source[]>([]);
@@ -79,7 +70,7 @@ export default function AskScreen() {
   const scroll = useRef<ScrollView>(null);
   const requests = useRef(0);
   const abort = useRef<AbortController | null>(null);
-  const config = useRef<Promise<AskConfig> | null>(null);
+  const config = useRef<Promise<FeatureConfig> | null>(null);
   // The conversation the saved record belongs to; replacing it drops late writes.
   const conversation = useRef(0);
   const recordRef = useRef(record);
@@ -93,7 +84,7 @@ export default function AskScreen() {
   };
 
   const askConfig = () => {
-    if (!config.current && userId) config.current = fetchAskConfig(userId);
+    if (!config.current && userId) config.current = fetchFeatureConfig(userId, 'ask');
     return config.current!;
   };
 
@@ -194,7 +185,8 @@ export default function AskScreen() {
       const debateId = open.chatId ? open.debateId : activeDebateRef.current;
       const [askSettings, debateContext] = await Promise.all([
         askConfig(),
-        debateId ? buildAskDebateContext(userId, debateId, open.chatId) : Promise.resolve(undefined),
+        // Ask prepares no side, so every saved result matches it.
+        debateId ? buildDebateContext(userId, debateId, 'ask', 'both', open.chatId) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
       const askRequest = {
@@ -260,8 +252,8 @@ export default function AskScreen() {
     } catch (cause) {
       if (!isCurrent() || isAbortError(cause)) return;
       setStreaming(null);
-      const kind = cause instanceof AskError ? cause.kind : 'failed';
-      if (!(cause instanceof AskError)) console.warn('Ask failed:', cause instanceof Error ? cause.message : cause);
+      const kind = cause instanceof AIError ? cause.kind : 'failed';
+      if (!(cause instanceof AIError)) console.warn('Ask failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
       setError({ kind, question: message });

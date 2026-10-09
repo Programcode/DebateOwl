@@ -1,4 +1,4 @@
-import { getDefaultFeatureConfigs } from '@debatelab/core/ai/feature-configs';
+import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
 import { canAccessProModels } from '@debatelab/core/ai/pro-access';
 import {
   AUTO_FAST,
@@ -14,19 +14,19 @@ import {
 import { supabase } from './supabase';
 
 /**
- * The Ask model and its settings, picked exactly as the website's settings
+ * A tool's model and its settings, picked exactly as the website's settings
  * store (src/lib/stores/settings-store.ts) picks them from
  * user_settings.feature_configs. The app only reads them: the model picker
  * and the migration that rewrites old configs stay on the website.
  */
-export interface AskConfig {
+export interface FeatureConfig {
   model: string;
   temperature: number;
   reasoningEffort: ReasoningEffort;
 }
 
-function defaultConfig(model: string = DEFAULT_MODEL): AskConfig {
-  const { temperature, reasoningEffort } = getDefaultFeatureConfigs(model).ask;
+function defaultConfig(feature: FeatureTab, model: string = DEFAULT_MODEL): FeatureConfig {
+  const { temperature, reasoningEffort } = getDefaultFeatureConfigs(model)[feature];
   return { model, temperature, reasoningEffort: reasoningEffort ?? 'low' };
 }
 
@@ -57,7 +57,7 @@ function normalizeModelId(value: unknown, fallback: string): string {
   return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
 }
 
-function normalizeConfig(value: unknown, fallback: AskConfig, allowProModels: boolean): AskConfig {
+function normalizeConfig(value: unknown, fallback: FeatureConfig, allowProModels: boolean): FeatureConfig {
   const candidate = asRecord(value);
   const model = normalizeModelId(candidate?.model, fallback.model);
   return {
@@ -73,13 +73,13 @@ function normalizeConfig(value: unknown, fallback: AskConfig, allowProModels: bo
   };
 }
 
-export async function fetchAskConfig(userId: string): Promise<AskConfig> {
+export async function fetchFeatureConfig(userId: string, feature: FeatureTab): Promise<FeatureConfig> {
   const { data, error } = await supabase
     .from('user_settings')
     .select('feature_configs, subscription_tier, grace_period_ends_at')
     .eq('user_id', userId)
     .maybeSingle();
-  if (error || !data) return defaultConfig();
+  if (error || !data) return defaultConfig(feature);
   // Null when it cannot be told, as on the website, which then keeps its defaults.
   const allowProModels = await canAccessProModels(data, async () => {
     const { data: rows, error: billingError } = await supabase
@@ -88,7 +88,7 @@ export async function fetchAskConfig(userId: string): Promise<AskConfig> {
       .eq('user_id', userId);
     return billingError ? null : rows ?? [];
   });
-  if (allowProModels === null) return defaultConfig();
-  const fallback = defaultConfig(allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL);
-  return normalizeConfig(asRecord(data.feature_configs)?.ask, fallback, allowProModels);
+  if (allowProModels === null) return defaultConfig(feature);
+  const fallback = defaultConfig(feature, allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL);
+  return normalizeConfig(asRecord(data.feature_configs)?.[feature], fallback, allowProModels);
 }
