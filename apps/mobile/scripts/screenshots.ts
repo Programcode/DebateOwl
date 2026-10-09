@@ -22,8 +22,9 @@
  * the System theme; nothing is written. The Debate tab shows the account's
  * real Current Debate, and its empty state comes from answering the
  * current_debates read with no row. The Debate tab is shot once per side view,
- * and with one-off mode on, with and without a Current Debate. One-off mode is
- * in memory only; the script toggles it and never taps a debate row.
+ * and with one-off mode on, with and without a Current Debate; Prepare and
+ * Generate are shot in one-off mode too. One-off mode is in memory only; the
+ * script toggles it and never taps a debate row.
  *
  * Ask screenshots never call a model and never save a chat: the page answers
  * ai-stream from a fake stream inside the page (expo/fetch uses the page's
@@ -458,6 +459,34 @@ async function shootAskScreens(context: BrowserContext, prefix: string, language
   await streaming.close();
 }
 
+/** Prepare and Generate in one-off mode, reached in the app so the in-memory mode survives. Nothing is sent or saved. */
+async function shootOneOffTools(page: Page, prefix: string) {
+  await page.goto(`${ORIGIN}/`);
+  // Opening the switcher takes the tab out of focus, which drops a load still running; let it finish first.
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await page.waitForFunction(() => !document.querySelector('[data-testid="debate-counts"]')?.textContent?.includes('–'));
+  await settle(page);
+  await page.getByTestId('current-debate-pill').click();
+  await page.getByTestId('debates-sheet').waitFor();
+  await settle(page);
+  await turnOnOneOff(page);
+  await closeSwitcher(page);
+  await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+  await page.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
+  // The Debate tab stays mounted behind Prepare with its own notice; only the visible one is Prepare's.
+  await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
+  await settle(page);
+  await shoot(page, `${prefix}-prepare-oneoff`);
+  await page.getByTestId('prepare-tool-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  const notice = page.getByTestId('generate-screen').getByTestId('one-off-notice');
+  await notice.waitFor();
+  await shoot(page, `${prefix}-generate-oneoff`);
+  // Return to debate turns the mode off in place, and the strip says where work goes again.
+  await notice.getByRole('button').click();
+  await page.getByTestId('generate-screen').getByTestId('working-in').waitFor();
+}
+
 async function shootEmptyDebate(page: Page, prefix: string) {
   await page.route(`${REST}/current_debates*`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', json: [] }),
@@ -615,6 +644,12 @@ async function main() {
           shots += 3;
           await shootResultScreens(signedIn, prefix, language, problems);
           shots += 9;
+          const oneOffPage = await signedIn.newPage();
+          watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
+          await pinSettings(oneOffPage, language);
+          await shootOneOffTools(oneOffPage, prefix);
+          await oneOffPage.close();
+          shots += 2;
           await signedIn.close();
         }
       }
