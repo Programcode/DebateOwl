@@ -35,7 +35,8 @@ export const sessionStorage: SupportedStorage = {
       const cipher = new aesjs.ModeOfOperation.ctr(aesjs.utils.hex.toBytes(keyHex), new aesjs.Counter(1));
       return aesjs.utils.utf8.fromBytes(cipher.decrypt(aesjs.utils.hex.toBytes(ciphertext)));
     } catch {
-      // A key and ciphertext from different writes (an interrupted write) read as signed out.
+      // A key and ciphertext from different writes (the app was killed between
+      // them) decrypt to garbage or throw here; supabase-js treats either as no session.
       return null;
     }
   }),
