@@ -183,13 +183,22 @@ async function updateSettings(payload: {
   }
 }
 
-async function persistMigratedFeatureConfigs(featureConfigs: Record<FeatureTab, ProviderConfig>) {
+// The cleanup rewrites the whole feature_configs snapshot it read, so it only
+// applies while the row is unchanged since that read. A settings save that
+// lands first moves updated_at and wins; the next hydration retries.
+async function persistMigratedFeatureConfigs(
+  featureConfigs: Record<FeatureTab, ProviderConfig>,
+  readUpdatedAt: string | null,
+) {
   const userId = await getUserId();
   if (!userId) return;
-  const { error } = await supabase
+  const update = supabase
     .from('user_settings')
     .update({ feature_configs: featureConfigs, updated_at: new Date().toISOString() })
     .eq('user_id', userId);
+  const { error } = await (readUpdatedAt === null
+    ? update.is('updated_at', null)
+    : update.eq('updated_at', readUpdatedAt));
   if (error) {
     console.warn('[SettingsStore] Failed to persist migrated settings:', error.message);
   }
@@ -318,8 +327,11 @@ export const useSettingsStore = create<SettingsState>()(
             feature_configs: mergedConfigs,
             custom_system_prompt: customSystemPrompt ?? null,
           });
-        } else if (configsNeedMigration) {
-          await persistMigratedFeatureConfigs(mergedConfigs);
+        } else if (configsNeedMigration && get().featureConfigs === mergedConfigs) {
+          await persistMigratedFeatureConfigs(
+            mergedConfigs,
+            typeof data.updated_at === 'string' ? data.updated_at : null,
+          );
         }
       },
       resetLocalData: (preserveLanguage = false) => {
