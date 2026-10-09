@@ -2521,7 +2521,11 @@
         "tooLarge": "This is too long to send. Shorten it and try again.",
         "debateMissing": "This debate no longer exists. Pick another debate and try again.",
         "failed": "Something went wrong. Try again."
-      }
+      },
+      "deleteBrainstormTitle": "Delete brainstorm?",
+      "deleteBrainstormDesc": "This removes the brainstorm from your history.",
+      "deleteFactoidsTitle": "Delete factoids?",
+      "deleteFactoidsDesc": "This removes the factoids from your history."
     },
     "attack": {
       "caseRequired": "Paste or write the case you want attacked."
@@ -2534,6 +2538,18 @@
     },
     "crossfire": {
       "voiceLater": "Coming with the app build."
+    },
+    "brainstorm": {
+      "strengths": {
+        "strong": "Strong",
+        "moderate": "Moderate",
+        "weak": "Weak"
+      },
+      "ideaCount_one": "{{count}} idea",
+      "ideaCount_other": "{{count}} ideas"
+    },
+    "factoids": {
+      "claimRequired": "Enter a statement."
     }
   }
 }

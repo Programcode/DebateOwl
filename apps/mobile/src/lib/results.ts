@@ -6,8 +6,12 @@ import {
   type DiscoveredSource,
   type ResultWithSources,
 } from '@debatelab/core/ai/discovered-sources';
+import { transformBrainstormResponse } from '@debatelab/core/ai/brainstorm-output';
+import { factoidsRequestInput, selectVerifiedFactoids } from '@debatelab/core/ai/factoids-output';
 import { expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
 import { AttackOutputSchema, type AttackInput, type AttackOutput } from '@debatelab/core/ai/schemas/attack';
+import { BrainstormOutputSchema, type BrainstormInput, type BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
+import { FactoidsOutputSchema, type FactoidsInput, type FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 import type { SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
@@ -18,20 +22,26 @@ import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource
 import { supabase } from './supabase';
 
 /**
- * Generate and Attack, sent and saved the way the website does it:
- * generateCase and attackCase in src/lib/ai/client.ts for the requests and
- * their researched sources, and recordResult and saveCurrentCase in
- * src/lib/stores/session-store.ts for the saved rows.
+ * Generate, Attack, Brainstorm and Factoids, sent and saved the way the
+ * website does it: generateCase, attackCase, brainstorm and factoids in
+ * src/lib/ai/client.ts for the requests and their researched sources, and
+ * recordResult and saveCurrentCase in src/lib/stores/session-store.ts for the
+ * saved rows.
  */
 
-export type ResultKind = 'case' | 'attack';
+export type ResultKind = 'case' | 'attack' | 'brainstorm' | 'factoids';
 
-const TABLES = { case: 'cases', attack: 'attacks' } as const satisfies Record<ResultKind, string>;
+const TABLES = { case: 'cases', attack: 'attacks', brainstorm: 'brainstorms', factoids: 'factoids' } as const satisfies Record<ResultKind, string>;
 
 export interface OutputFor {
   case: GenerateOutput;
   attack: AttackOutput;
+  brainstorm: BrainstormOutput;
+  factoids: FactoidsOutput;
 }
+
+/** The feature each kind is sent as, and the name its researched sources are captured under. */
+type Feature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
 export interface SavedResult<K extends ResultKind> {
   id: string;
@@ -52,7 +62,7 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-function requestBody(feature: 'generate' | 'attack', input: Record<string, unknown>, options: RequestOptions) {
+function requestBody(feature: Feature, input: Record<string, unknown>, options: RequestOptions) {
   return {
     feature,
     input: { ...input, language: options.language },
@@ -91,6 +101,33 @@ export function attackCase(input: AttackInput, options: RequestOptions): Promise
   });
 }
 
+export function brainstormIdeas(input: BrainstormInput, options: RequestOptions): Promise<ResultWithSources<BrainstormOutput> & ResponseExtras> {
+  return postFunction('ai', requestBody('brainstorm', input, options), options.signal, async (response) => {
+    const { output, data } = await functionOutput(response);
+    const result = readBrainstorm(output);
+    if (!result) throw new AIError('failed', 'AI response did not match the expected brainstorm schema.');
+    return {
+      result,
+      discoveredSources: parseDiscoveredSources(data.discoveredSources),
+      ...responseExtras(data),
+    };
+  });
+}
+
+/** Factoids, as the website asks for them: verified ones only, up to the number of sources chosen. */
+export function findFactoids(input: FactoidsInput, options: RequestOptions): Promise<ResultWithSources<FactoidsOutput> & ResponseExtras> {
+  return postFunction('ai', requestBody('factoids', factoidsRequestInput(input), options), options.signal, async (response) => {
+    const { output, data } = await functionOutput(response);
+    const parsed = FactoidsOutputSchema.safeParse(output);
+    if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected factoids schema.');
+    return {
+      result: selectVerifiedFactoids(parsed.data, input.sourceCount),
+      discoveredSources: parseDiscoveredSources(data.discoveredSources),
+      ...responseExtras(data),
+    };
+  });
+}
+
 /**
  * Keeps the researched sources worth keeping in the debate's Auto-saved
  * folder, one at a time, as the website does. One-off research is not kept.
@@ -100,7 +137,7 @@ export function attackCase(input: AttackInput, options: RequestOptions): Promise
 export async function autosaveSources(
   userId: string,
   sources: DiscoveredSource[],
-  capturedVia: 'generate' | 'attack',
+  capturedVia: Feature,
   debateId: string | null,
   signal?: AbortSignal,
 ): Promise<{ saved: number; failed: number }> {
@@ -246,4 +283,21 @@ export function isCompleteCase(output: unknown): output is GenerateOutput {
 export function isCompleteAttack(output: unknown): output is AttackOutput {
   const value = output as Partial<AttackOutput> | null;
   return Boolean(value?.overallAssessment && Array.isArray(value.weaknesses));
+}
+
+/**
+ * A brainstorm, from the model or a saved row, normalized by the website's transform and then
+ * checked against its schema; null when it still does not fit. A brainstorm with no ideas is
+ * still complete: the website shows "No ideas returned" or its questions.
+ */
+export function readBrainstorm(output: unknown): BrainstormOutput | null {
+  if (!output || typeof output !== 'object' || Array.isArray(output)) return null;
+  const parsed = BrainstormOutputSchema.safeParse(transformBrainstormResponse(output as Record<string, unknown>));
+  return parsed.success ? parsed.data : null;
+}
+
+/** A saved factoids row, checked against the schema its request was checked with; null when it does not fit. */
+export function readFactoids(output: unknown): FactoidsOutput | null {
+  const parsed = FactoidsOutputSchema.safeParse(output);
+  return parsed.success ? parsed.data : null;
 }
