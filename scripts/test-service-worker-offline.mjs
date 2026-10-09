@@ -168,7 +168,7 @@ async function main() {
     const page = await context.newPage();
     await prepare(page);
     await page.goto(`${origin}/app`, { waitUntil: 'networkidle' });
-    await page.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.locator('main h1', { hasText: 'What are you working on?' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.evaluate(async () => navigator.serviceWorker.ready);
     await page.waitForFunction(async (paths) => {
       const urls = (await Promise.all((await caches.keys()).map(async (key) =>
@@ -181,7 +181,7 @@ async function main() {
     assert.equal(firstVisitCache.includes(attackPath), false, 'unvisited Attack chunk was cached');
     await context.setOffline(true);
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.locator('main h1', { hasText: 'What are you working on?' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const logo = page.locator('header a[href="/app"] img');
     assert.equal(await logo.getAttribute('src'), '/favicon-72.png');
     assert.ok(await logo.evaluate((image) => image.naturalWidth > 0), 'offline logo did not load');
@@ -193,7 +193,7 @@ async function main() {
     const prefetchedPage = await context.newPage();
     await prepare(prefetchedPage);
     await prefetchedPage.goto(`${origin}/app`, { waitUntil: 'networkidle' });
-    await prefetchedPage.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await prefetchedPage.locator('main h1', { hasText: 'What are you working on?' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const attackLink = prefetchedPage.locator('main [data-tour="mode-attack"]');
     await attackLink.hover();
     await prefetchedPage.waitForFunction(async (path) => {
