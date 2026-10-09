@@ -42,6 +42,7 @@
     "apps/mobile": {
       "entry": [
         "src/app/**/*.{ts,tsx}",
+        "src/**/*.test.ts",
         "scripts/*.ts"
       ],
       "project": [
