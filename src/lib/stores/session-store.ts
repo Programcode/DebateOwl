@@ -208,7 +208,8 @@ export interface SessionState {
   syncAskChat: (debateId: string | null) => Promise<void>;
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
-  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean }) => Promise<void>;
+  /** `id` and `createdAt` are only for Undo, which puts a deleted source back exactly. */
+  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean; id?: string; createdAt?: number }) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
   applySourceAssessments: (assessments: SourceAssessmentUpdate[]) => Promise<void>;
@@ -496,18 +497,21 @@ export const useSessionStore = create<SessionState>()(
       serverHydration: 'pending',
       setPendingFlowchartData: (data) => set({ pendingFlowchartData: data }),
 
-      addSource: async (source) => {
+      addSource: async ({ id: restoredId, createdAt: restoredAt, ...source }) => {
         const folder = normalizeFolder(source.folder);
         const isActive = source.isActive ?? true;
         // An omitted debate means the tool's scope, which is none in one-off mode.
         const debateId = source.debateId !== undefined ? source.debateId : activeDebateId();
         if (!debateId) throw new DebateRequiredError();
-        const localItem: Source = { ...source, folder, debateId, id: generateId(), createdAt: Date.now(), isActive };
+        const localItem: Source = { ...source, folder, debateId, id: restoredId ?? generateId(), createdAt: restoredAt ?? Date.now(), isActive };
+        // The library is newest first; a restored source goes back to its old place.
+        const place = (list: Source[], item: Source) =>
+          restoredId ? [...list, item].sort((x, y) => y.createdAt - x.createdAt) : [item, ...list];
         const userId = await getUserId();
         if (!userId) {
           set((state) => ({
             sourceFolders: mergeSourceFolders(state.sourceFolders, [localItem]),
-            sourceLibrary: [localItem, ...state.sourceLibrary],
+            sourceLibrary: place(state.sourceLibrary, localItem),
           }));
           return;
         }
@@ -519,6 +523,7 @@ export const useSessionStore = create<SessionState>()(
         const { data, error } = await supabase
           .from('sources')
           .insert({
+            ...(restoredId ? { id: restoredId, created_at: new Date(localItem.createdAt).toISOString() } : {}),
             user_id: userId,
             debate_id: debateId,
             title: source.title,
@@ -548,7 +553,7 @@ export const useSessionStore = create<SessionState>()(
         };
         set((state) => ({
           sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]),
-          sourceLibrary: [savedSource, ...state.sourceLibrary],
+          sourceLibrary: place(state.sourceLibrary, savedSource),
         }));
         markDebateActivity(debateId);
       },

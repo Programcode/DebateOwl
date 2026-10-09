@@ -1706,6 +1706,7 @@
     "summary": "{{total}} sources · {{active}} active · {{folders}} folders",
     "mergeFolderTitle": "Merge into {{name}}?",
     "mergeFolders": "Merge folders",
+    "mergeFailed": "Could not merge the folders. Try again.",
     "openOrigin": "Open {{title}} in a new tab"
   },
   "autoSavedSources": {

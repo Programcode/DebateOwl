@@ -189,6 +189,8 @@ export default function LibraryPage() {
   const [addErrors, setAddErrors] = useState<{ title?: string; content?: string }>({});
   const [draftErrors, setDraftErrors] = useState<{ title?: string; content?: string }>({});
   const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState(false);
   const addTitleRef = useRef<HTMLInputElement>(null);
   const addContentRef = useRef<HTMLTextAreaElement>(null);
   const draftTitleRef = useRef<HTMLInputElement>(null);
@@ -437,6 +439,8 @@ export default function LibraryPage() {
           label: t('common.undo', 'Undo'),
           onClick: () => {
             void addSource({
+              id: source.id,
+              createdAt: source.createdAt,
               title: source.title,
               content: source.content,
               type: source.type,
@@ -942,18 +946,32 @@ export default function LibraryPage() {
           </Card>
         </div>
       </div>
-      <AlertDialog open={mergeTarget !== null} onOpenChange={(open) => !open && setMergeTarget(null)}>
+      <AlertDialog open={mergeTarget !== null} onOpenChange={(open) => { if (!open && !merging) { setMergeTarget(null); setMergeError(false); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('libraryPage.mergeFolderTitle', { name: mergeTarget ?? '', defaultValue: 'Merge into {{name}}?' })}</AlertDialogTitle>
             <AlertDialogDescription>{t('libraryPage.folderMergeConfirm', 'A folder with this name already exists. Merge sources into it?')}</AlertDialogDescription>
           </AlertDialogHeader>
+          {mergeError && (
+            <p role="alert" className="text-sm text-destructive">{t('libraryPage.mergeFailed', 'Could not merge the folders. Try again.')}</p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (mergeTarget) void renameFolderTo(selectedFolder, mergeTarget);
-              setMergeTarget(null);
-            }}>
+            <AlertDialogCancel disabled={merging}>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={merging}
+              onClick={(event) => {
+                // Stays open while the write is pending and closes only once it lands.
+                event.preventDefault();
+                if (!mergeTarget) return;
+                setMerging(true);
+                setMergeError(false);
+                renameFolderTo(selectedFolder, mergeTarget)
+                  .then(() => setMergeTarget(null))
+                  .catch(() => setMergeError(true))
+                  .finally(() => setMerging(false));
+              }}
+            >
+              {merging && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
               {t('libraryPage.mergeFolders', 'Merge folders')}
             </AlertDialogAction>
           </AlertDialogFooter>

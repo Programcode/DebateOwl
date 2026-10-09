@@ -1706,6 +1706,7 @@
     "summary": "{{total}} forrás · {{active}} aktív · {{folders}} mappa",
     "mergeFolderTitle": "Összevonod ezzel: {{name}}?",
     "mergeFolders": "Mappák összevonása",
+    "mergeFailed": "Nem sikerült összevonni a mappákat. Próbáld újra.",
     "openOrigin": "{{title}} megnyitása új lapon"
   },
   "autoSavedSources": {

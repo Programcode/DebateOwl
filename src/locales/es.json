@@ -1706,6 +1706,7 @@
     "summary": "{{total}} fuentes · {{active}} activas · {{folders}} carpetas",
     "mergeFolderTitle": "¿Fusionar con {{name}}?",
     "mergeFolders": "Fusionar carpetas",
+    "mergeFailed": "No se pudieron fusionar las carpetas. Inténtalo de nuevo.",
     "openOrigin": "Abrir {{title}} en una pestaña nueva"
   },
   "autoSavedSources": {

@@ -601,25 +601,25 @@ export default function AdminPage() {
         if (isAdmin === true) captureProductEvent('tool_opened', { tool: 'admin' });
     }, [isAdmin]);
 
+    /** Resolves true once the role is saved; failures are reported here and leave the caller's dialog open. */
     const handleSetUserRole = async (userId: string, role: string) => {
         try {
             await postAdminData('set-role', { userId, role });
             toast({ title: t('admin.success'), description: t('admin.users.roleUpdated', { role: t(`admin.users.roles.${role}`, role) }) });
-            setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
+            setUsers((current) => current.map(u => u.id === userId ? { ...u, role } : u));
+            return true;
         } catch (err) {
             toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.users.roleUpdateFailed'), variant: 'destructive' });
+            return false;
         }
     };
 
     const confirmRoleChange = async () => {
         if (!roleChange || roleSaving) return;
         setRoleSaving(true);
-        try {
-            await handleSetUserRole(roleChange.user.id, roleChange.role);
-        } finally {
-            setRoleSaving(false);
-            setRoleChange(null);
-        }
+        const saved = await handleSetUserRole(roleChange.user.id, roleChange.role);
+        setRoleSaving(false);
+        if (saved) setRoleChange(null);
     };
 
     const openGiftDialog = (user: User) => {

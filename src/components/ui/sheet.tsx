@@ -23,7 +23,8 @@ const Sheet = ({ children, ...props }: React.ComponentProps<typeof SheetPrimitiv
   const phone = React.useSyncExternalStore(subscribePhone, isPhone, () => false);
   return (
     <SheetDrawerContext.Provider value={phone}>
-      {phone ? <Drawer.Root {...props}>{children}</Drawer.Root> : <SheetPrimitive.Root {...props}>{children}</SheetPrimitive.Root>}
+      {/* Vaul leaves focus on the opener by default; move it into the sheet like the Radix branch does. */}
+      {phone ? <Drawer.Root autoFocus {...props}>{children}</Drawer.Root> : <SheetPrimitive.Root {...props}>{children}</SheetPrimitive.Root>}
     </SheetDrawerContext.Provider>
   );
 };

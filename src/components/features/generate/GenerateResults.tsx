@@ -81,6 +81,8 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
+  // Read-only views (a shared link) pass no handler, so the cards show no regenerate button.
+  const regenerate = (section: string) => (onRegenerateSection ? () => onRegenerateSection(section) : undefined);
   const regenerateState = (section: string) => ({
     isLoading: regeneratingSection === section,
     regenerateDisabled: regeneratingSection !== null,
@@ -256,7 +258,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           title={t('generateResults.exordio')}
           description={t('generateResults.exordioDesc')}
           icon={<Sparkles className="h-5 w-5" />}
-          onRegenerate={() => onRegenerateSection?.('exordio')}
+          onRegenerate={regenerate('exordio')}
           {...regenerateState('exordio')}
         >
           <div className="space-y-4">
@@ -278,7 +280,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.caseStructure')}
         description={t('generateResults.caseStructureDesc')}
         icon={<Target className="h-5 w-5" />}
-        onRegenerate={() => onRegenerateSection?.('structure')}
+        onRegenerate={regenerate('structure')}
         {...regenerateState('structure')}
       >
         <div className="space-y-4">
@@ -312,7 +314,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.arguments')}
         description={`${result.contentions?.length || 0} ${t('generateResults.structuredArguments')}`}
         icon={<Shield className="h-5 w-5" />}
-        onRegenerate={() => onRegenerateSection?.('contentions')}
+        onRegenerate={regenerate('contentions')}
         {...regenerateState('contentions')}
       >
         <div className="space-y-4">
@@ -327,7 +329,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.predictedOpponent')}
         description={t('generateResults.predictedOpponentDesc')}
         icon={<Swords className="h-5 w-5" />}
-        onRegenerate={() => onRegenerateSection?.('opponent')}
+        onRegenerate={regenerate('opponent')}
         {...regenerateState('opponent')}
       >
         <div className="space-y-4">
@@ -370,7 +372,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       <SectionCard
         title={t('generateResults.preparedCounters')}
         description={t('generateResults.preparedCountersDesc')}
-        onRegenerate={() => onRegenerateSection?.('counters')}
+        onRegenerate={regenerate('counters')}
         {...regenerateState('counters')}
       >
         <div className="space-y-4">

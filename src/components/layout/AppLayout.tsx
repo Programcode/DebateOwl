@@ -171,6 +171,16 @@ export function AppLayout() {
     void loadAnnouncements();
   }, [loadAnnouncements, location.pathname]);
 
+  // The menu is `lg:hidden`: widening the window would hide it while it still holds the page modal.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const close = () => { if (wide.matches) setMobileMenuOpen(false); };
+    close();
+    wide.addEventListener('change', close);
+    return () => wide.removeEventListener('change', close);
+  }, [mobileMenuOpen]);
+
   useEffect(() => {
     if (announcementsUserId !== userId) return;
     const nextExpiry = Math.min(...announcements
@@ -214,7 +224,12 @@ export function AppLayout() {
     } catch (error) {
       if (activeUserIdRef.current !== requestUserId) return;
       dismissedAnnouncementIds.current.delete(announcementId);
-      setAnnouncements((current) => [dismissed, ...current.filter((announcement) => announcement.id !== announcementId)]);
+      setAnnouncements((current) => {
+        const restored = [dismissed, ...current.filter((announcement) => announcement.id !== announcementId)];
+        // The cache is what the next page load renders first, so it has to come back too.
+        writeCachedAnnouncements(requestUserId, restored);
+        return restored;
+      });
       setDismissError({
         announcementId,
         message: error instanceof Error ? error.message : t('announcements.dismissError'),
