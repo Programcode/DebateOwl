@@ -228,6 +228,7 @@ function SourceRow({ source, first, onOpen, onDelete }: { source: Source; first:
           if (event.nativeEvent.actionName === 'delete') void remove();
         }}
         onPress={onOpen}
+        testID="source-row"
         style={({ pressed }) => [styles.row, { backgroundColor: colors.card }, pressed && styles.pressed]}>
         <IconTile name={SOURCE_ICONS[source.type]} size={42} />
         <View style={styles.rowText}>

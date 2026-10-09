@@ -22,8 +22,14 @@
  * the System theme; nothing is written. The Debate tab shows the account's
  * real Current Debate, and its empty state comes from answering the
  * current_debates read with no row. The Debate tab is shot once per side view.
+ *
+ * Ask screenshots never call a model and never save a chat: the page answers
+ * ai-stream from a fake stream inside the page (expo/fetch uses the page's
+ * fetch), answers the ai function with a fixed answer with citations, and
+ * answers chat and message writes locally. The Library screens read the
+ * account's real sources and write nothing.
  */
-import { chromium, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
@@ -48,7 +54,7 @@ const DEVICES = {
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
-const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', library: '/library', you: '/you' };
+const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -140,6 +146,117 @@ async function shootDebateScreens(page: Page, prefix: string) {
   await page.getByTestId('new-debate-sheet').waitFor();
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-new-debate`);
+}
+
+// A made-up answer in the shape of mock 07, streamed a word at a time.
+const ASK_QUESTION = 'How do I answer "what about the nurse who drives in at 5 a.m."?';
+const ASK_STREAM = 'Concede the edge case, then shrink it. Three moves:\n\n1. **Exemptions exist.** Every real ban permits shift workers and carers.\n2. **Night buses follow demand.** Cities that closed their centres added routes in the first year.\n3. **Flip it.** The same nurse breathes the air on her walk from the car park.';
+const ASK_CITED = {
+  response: 'Two of your sources carry it.\n\n**Exemptions exist.** Every real ban permits shift workers and carers.\n\n**Night buses follow demand.** Cities that closed their centres added routes in the first year.',
+  citations: [
+    { claim: 'Every real ban permits shift workers and carers', source: 'City exemptions policy', verified: true },
+    { claim: 'Cities that closed their centres added routes in the first year', source: 'Transit report https://example.org/transit-report', verified: true },
+  ],
+  followUpQuestions: [],
+  uncertainties: [],
+};
+// The stream stops after this many words and stays open, so a shot can catch it mid-answer.
+const STREAM_HOLD_WORDS = 34;
+
+/** Fakes Ask's AI calls and chat writes for this page (see the header). Call before the first navigation. */
+async function fakeAsk(page: Page, hold: boolean) {
+  await page.addInitScript(({ text, holdAfter }) => {
+    const realFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith('/functions/v1/ai-stream')) return realFetch(input, init);
+      const words = text.split(/(?<= )/);
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          for (const word of holdAfter ? words.slice(0, holdAfter) : words) {
+            await new Promise((resolve) => setTimeout(resolve, 15));
+            controller.enqueue(encoder.encode(`event: delta\ndata: ${JSON.stringify({ text: word })}\n\n`));
+          }
+          if (holdAfter) return;
+          const output = { response: text, followUpQuestions: [], uncertainties: [] };
+          controller.enqueue(encoder.encode(`event: final\ndata: ${JSON.stringify({ output, meta: {} })}\n\n`));
+          controller.close();
+        },
+      });
+      return Promise.resolve(new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } }));
+    };
+  }, { text: ASK_STREAM, holdAfter: hold ? STREAM_HOLD_WORDS : 0 });
+  await page.route(`https://${STAGING_HOST}/functions/v1/ai`, (route) =>
+    route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output: ASK_CITED } }),
+  );
+  for (const table of ['chats', 'messages']) {
+    await page.route(`${REST}/${table}*`, (route) =>
+      route.request().method() === 'POST'
+        ? route.fulfill({ status: 201, json: { id: '00000000-0000-4000-8000-00000000c4a7' } })
+        : route.continue(),
+    );
+  }
+}
+
+async function shootLibraryScreens(page: Page, prefix: string) {
+  await page.goto(`${ORIGIN}/library`);
+  await page.getByTestId('library-add').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-library`);
+
+  await page.getByTestId('library-add').click();
+  await page.getByRole('menu').waitFor();
+  await shoot(page, `${prefix}-library-menu`);
+  await page.getByRole('menuitem').first().click();
+  await page.getByTestId('add-link-sheet').waitFor();
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-add-link`);
+
+  await page.goto(`${ORIGIN}/new-note`);
+  await page.getByTestId('new-note-sheet').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-new-note`);
+
+  await page.goto(`${ORIGIN}/library`);
+  await page.getByTestId('source-row').first().click({ timeout: 30_000 });
+  await page.getByTestId('source-sheet').getByRole('heading').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-source`);
+}
+
+async function shootAskScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const ask = async (hold: boolean) => {
+    const page = await context.newPage();
+    watchErrors(page, problems, `${prefix} ask`);
+    await pinSettings(page, language);
+    await fakeAsk(page, hold);
+    await page.goto(`${ORIGIN}/ask`);
+    await page.getByTestId('ask-input').waitFor({ timeout: 30_000 });
+    await settle(page);
+    return page;
+  };
+
+  const empty = await ask(false);
+  await shoot(empty, `${prefix}-ask-empty`);
+  await empty.getByTestId('ask-input').fill(ASK_QUESTION);
+  await empty.getByTestId('ask-send').click();
+  await empty.getByTestId('ask-answer').waitFor({ timeout: 15_000 });
+  await empty.getByRole('switch').first().click();
+  await empty.getByTestId('ask-input').fill('Which of my sources back that up?');
+  await empty.getByTestId('ask-send').click();
+  await empty.getByTestId('ask-answer').nth(1).waitFor({ timeout: 15_000 });
+  await empty.waitForTimeout(300);
+  await shoot(empty, `${prefix}-ask-answer`);
+  await empty.close();
+
+  const streaming = await ask(true);
+  await streaming.getByTestId('ask-input').fill(ASK_QUESTION);
+  await streaming.getByTestId('ask-send').click();
+  await streaming.getByTestId('ask-streaming').waitFor({ timeout: 15_000 });
+  await streaming.waitForTimeout(STREAM_HOLD_WORDS * 15 + 600);
+  await shoot(streaming, `${prefix}-ask-streaming`);
+  await streaming.close();
 }
 
 async function shootEmptyDebate(page: Page, prefix: string) {
@@ -265,6 +382,11 @@ async function main() {
             throw error;
           });
           shots += 4;
+          await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
+            await shoot(tabPage, `${prefix}-failed`);
+            throw error;
+          });
+          shots += 5;
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
             await tabPage.goto(`${ORIGIN}${route}`);
             await tabPage.getByRole('tablist').first().waitFor();
@@ -278,6 +400,8 @@ async function main() {
           await pinSettings(emptyPage, language);
           await shootEmptyDebate(emptyPage, prefix);
           shots += 1;
+          await shootAskScreens(signedIn, prefix, language, problems);
+          shots += 3;
           await signedIn.close();
         }
       }
