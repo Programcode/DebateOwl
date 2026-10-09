@@ -1,3 +1,4 @@
+import { getDefaultFeatureConfigs } from '@debatelab/core/ai/feature-configs';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -11,6 +12,7 @@ import { applyColorScheme } from '@/theme/apply-color-scheme';
 export type ThemePreference = 'light' | 'dark' | 'system';
 
 type Settings = { language: AppLanguage; outputLanguage: AppLanguage; theme: ThemePreference };
+type SettingKey = keyof Settings;
 
 type SettingsContextValue = Settings & {
   /**
@@ -26,6 +28,7 @@ type SettingsContextValue = Settings & {
 
 // The columns each setting is stored in, in the website's user_settings row.
 const COLUMNS = { language: 'language', outputLanguage: 'output_language', theme: 'theme' } as const;
+const KEYS = Object.keys(COLUMNS) as SettingKey[];
 
 const SIGNED_OUT: Settings = { language: deviceLanguage(), outputLanguage: 'en', theme: 'system' };
 
@@ -55,6 +58,33 @@ function parseSettings(value: unknown): Settings | null {
 
 const cacheKey = (userId: string) => `debatelab.settings.${userId}`;
 
+function isEmptyObject(value: unknown): boolean {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
+}
+
+/**
+ * The sign-up trigger provisions the row and clients may only update it, as in
+ * the website's settings store. Only the changed column is written, plus the
+ * website's default feature_configs while the row has none: the website reads
+ * an empty feature_configs as "never saved" and would replace this setting
+ * with the browser's. The filter keeps configs saved in the meantime.
+ */
+async function writeSetting(userId: string, key: SettingKey, value: string, configsMayBeEmpty: boolean) {
+  const changes = { [COLUMNS[key]]: value, updated_at: new Date().toISOString() };
+  if (configsMayBeEmpty) {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .update({ ...changes, feature_configs: getDefaultFeatureConfigs() })
+      .eq('user_id', userId)
+      .containedBy('feature_configs', {})
+      .select('user_id');
+    if (error) throw new Error(error.message);
+    if (data && data.length > 0) return;
+  }
+  const { error } = await supabase.from('user_settings').update(changes).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
 /**
  * Interface language, AI output language and theme from the account's
  * user_settings row, shared with the website. The last known values are kept
@@ -66,9 +96,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(SIGNED_OUT);
   const [ready, setReady] = useState(false);
   const owner = useRef(userId);
+  // The settings last applied, so a save builds on every earlier save.
+  const latest = useRef(settings);
+  // Bumped by every save of a key. A load keeps the local value of any key
+  // saved after it started, and a failed save undoes its key only while it is
+  // still the latest save of that key.
+  const versions = useRef<Record<SettingKey, number>>({ language: 0, outputLanguage: 0, theme: 0 });
+  // Whether the row's feature_configs is filled in; null until a load or save tells.
+  const configsSaved = useRef<boolean | null>(null);
 
   const apply = useCallback((next: Settings, forUser: string | null) => {
     if (owner.current !== forUser) return;
+    latest.current = next;
     setSettings(next);
     if (i18n.language !== next.language) void i18n.changeLanguage(next.language);
     applyColorScheme(next.theme);
@@ -82,23 +121,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     owner.current = userId;
+    configsSaved.current = null;
     if (!userId) {
       apply({ ...SIGNED_OUT, language: deviceLanguage() }, null);
       setReady(true);
       return;
     }
     let cancelled = false;
+    const started = { ...versions.current };
+    // Loaded values, except for keys saved since the load started.
+    const merge = (loaded: Settings): Settings => {
+      const next = { ...latest.current };
+      for (const key of KEYS) {
+        if (versions.current[key] === started[key]) Object.assign(next, { [key]: loaded[key] });
+      }
+      return next;
+    };
     void (async () => {
       try {
         const cached = parseSettings(JSON.parse((await AsyncStorage.getItem(cacheKey(userId))) ?? 'null'));
-        if (!cancelled && cached) apply(cached, userId);
+        if (!cancelled && cached) apply(merge(cached), userId);
       } catch (cause) {
         console.warn('Could not read settings from this device:', cause);
       }
       if (!cancelled) setReady(true);
       const { data, error } = await supabase
         .from('user_settings')
-        .select('language,output_language,theme')
+        .select('language,output_language,theme,feature_configs')
         .eq('user_id', userId)
         .maybeSingle();
       if (cancelled) return;
@@ -106,29 +155,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         console.warn('Could not load settings:', error.message);
         return;
       }
+      if (data && configsSaved.current === null) configsSaved.current = !isEmptyObject(data.feature_configs);
       const server = parseSettings(data);
-      if (server) apply(server, userId);
+      if (server) apply(merge(server), userId);
     })();
     return () => {
       cancelled = true;
     };
   }, [loading, userId, apply]);
 
-  const save = useCallback(async <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    if (!userId) return;
-    const previous = settings;
-    apply({ ...settings, [key]: value }, userId);
-    // The sign-up trigger provisions the row and clients may only update it,
-    // as in the website's settings store. Only the changed column is written.
-    const { error } = await supabase
-      .from('user_settings')
-      .update({ [COLUMNS[key]]: value, updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
-    if (error) {
-      apply(previous, userId);
-      throw new Error(error.message);
+  const save = useCallback(async <K extends SettingKey>(key: K, value: Settings[K]) => {
+    const forUser = owner.current;
+    if (!forUser) return;
+    const version = ++versions.current[key];
+    const previous = latest.current[key];
+    apply({ ...latest.current, [key]: value }, forUser);
+    try {
+      await writeSetting(forUser, key, value, configsSaved.current !== true);
+      if (owner.current === forUser) configsSaved.current = true;
+    } catch (cause) {
+      if (owner.current === forUser && versions.current[key] === version) {
+        apply({ ...latest.current, [key]: previous }, forUser);
+      }
+      throw cause;
     }
-  }, [userId, settings, apply]);
+  }, [apply]);
 
   const value = useMemo<SettingsContextValue>(() => ({
     ...settings,

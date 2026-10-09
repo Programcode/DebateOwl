@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
+import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -14,7 +15,7 @@ import {
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
 
-export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
+export type { FeatureTab };
 type CoreFeatureTab = Exclude<FeatureTab, 'sparring'>;
 type FeatureConfigs = Record<CoreFeatureTab, ProviderConfig> & Partial<Record<'sparring', ProviderConfig>>;
 
@@ -53,22 +54,6 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gemini-3-flash-preview': 'google/gemini-3.8-flash',
   'gemini-3.1-flash-lite-preview': 'google/gemini-3.8-flash',
 };
-
-const defaultConfig: ProviderConfig = {
-  provider: DEFAULT_PROVIDER,
-  model: DEFAULT_MODEL,
-  temperature: 0.7,
-  reasoningEffort: 'low',
-};
-
-const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
-  generate: { ...defaultConfig, model },
-  attack: { ...defaultConfig, model },
-  brainstorm: { ...defaultConfig, model, temperature: 0.9 },
-  factoids: { ...defaultConfig, model, temperature: 0.3 },
-  ask: { ...defaultConfig, model },
-  sparring: { ...defaultConfig, model },
-});
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
