@@ -173,15 +173,19 @@ function parseOutput(output: unknown, resolvedModel?: string): AskOutput {
 
 /** One POST with the website's headers, a 200 s timeout and the caller's abort. */
 async function post(path: string, body: Record<string, unknown>, signal: AbortSignal | undefined, run: (response: Awaited<ReturnType<typeof fetch>>) => Promise<AskOutput>): Promise<AskOutput> {
-  if (signal?.aborted) throw abortError();
-  const token = await accessToken();
-  const json = JSON.stringify(body);
-  if (utf8Length(json) > MAX_REQUEST_BODY_BYTES) throw new AskError('tooLarge', 'Request is too large');
+  // The deadline and the caller's abort start before the session read, so
+  // leaving Ask while the token refreshes never sends the request.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const abortForCaller = () => controller.abort();
   signal?.addEventListener('abort', abortForCaller);
+  if (signal?.aborted) controller.abort();
   try {
+    if (controller.signal.aborted) throw abortError();
+    const token = await accessToken();
+    if (controller.signal.aborted) throw abortError();
+    const json = JSON.stringify(body);
+    if (utf8Length(json) > MAX_REQUEST_BODY_BYTES) throw new AskError('tooLarge', 'Request is too large');
     const response = await fetch(`${supabaseProject.url}/functions/v1/${path}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, apikey: supabaseProject.anonKey, 'Content-Type': 'application/json' },

@@ -26,7 +26,7 @@ import {
 import { fetchAskConfig, type AskConfig } from '@/lib/ask-config';
 import { buildAskDebateContext } from '@/lib/ask-context';
 import { useAuth } from '@/lib/auth';
-import { fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
+import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
 import { useSettings } from '@/lib/settings';
 import { fetchSources, type Source } from '@/lib/sources';
@@ -161,7 +161,9 @@ export default function AskScreen() {
         if (next && owner === conversation.current) setRecord(next);
       } catch (cause) {
         console.warn('Could not save the chat:', cause instanceof Error ? cause.message : cause);
-        if (owner === conversation.current) setNotice(t('debate.recordFailed'));
+        if (owner !== conversation.current) return;
+        if (cause instanceof ChatSaveError) setRecord(cause.record);
+        setNotice(t('debate.recordFailed'));
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -31,6 +31,14 @@ export interface ChatRecord {
   persisted: number;
 }
 
+/** A failed message write, with the record to keep: the chat may have been created before it failed. */
+export class ChatSaveError extends Error {
+  constructor(message: string, readonly record: ChatRecord) {
+    super(message);
+    this.name = 'ChatSaveError';
+  }
+}
+
 interface MessageRow {
   id: string;
   role: 'user' | 'assistant';
@@ -109,6 +117,7 @@ export async function saveChat(userId: string, record: ChatRecord, messages: Cha
     output: message.output || null,
     created_at: new Date(message.timestamp).toISOString(),
   })));
-  if (error) throw new Error(error.message);
+  // The chat exists now; keep it so the next save adds these messages to it instead of creating another.
+  if (error) throw new ChatSaveError(error.message, { chatId, debateId, persisted: record.persisted });
   return { chatId, debateId, persisted: messages.length };
 }

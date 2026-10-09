@@ -45,7 +45,8 @@ export default function AddLinkSheet() {
       setDraft(imported);
       setTitle(imported.title);
     } catch (cause) {
-      setError(`${t('libraryPage.importFailed')}: ${cause instanceof Error ? cause.message : t('libraryPage.importFailedDesc')}`);
+      console.warn('Could not import the source:', cause instanceof Error ? cause.message : cause);
+      setError(`${t('libraryPage.importFailed')}. ${t('libraryPage.importFailedDesc')}`);
     } finally {
       setBusy(null);
     }
