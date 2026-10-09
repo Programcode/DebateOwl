@@ -1,3 +1,4 @@
+import { parseSourceAssessments, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { fetch } from 'expo/fetch';
 
 import { supabase } from './supabase';
@@ -124,4 +125,17 @@ export async function functionOutput(response: FunctionResponse): Promise<{ outp
   if (typeof data?.error === 'string') throw errorFrom(undefined, data, data.error);
   if (!data?.output) throw new AIError('failed', 'The answer was missing');
   return { output: data.output, data };
+}
+
+/** What a whole answer says besides its output, which the website acts on for every feature (callSupabaseAI). */
+export interface ResponseExtras {
+  /** The server shortened the input to fit; the website tells the student. */
+  truncated: boolean;
+  /** Rankings of the Library sources the answer used, saved onto those sources. */
+  assessments: SourceAssessmentUpdate[];
+}
+
+export function responseExtras(data: Record<string, unknown>): ResponseExtras {
+  const meta = data.meta && typeof data.meta === 'object' ? (data.meta as { truncated?: unknown }) : null;
+  return { truncated: meta?.truncated === true, assessments: parseSourceAssessments(data.sourceAssessments) };
 }

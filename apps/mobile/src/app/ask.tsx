@@ -12,13 +12,14 @@ import { Chip } from '@/components/chip';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { Text } from '@/components/text';
-import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
+import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
 import { buildDebateContext } from '@/lib/context-request';
 import { fetchFeatureConfig, type FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
+import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { fetchSources, type Source } from '@/lib/sources';
 import { radius } from '@/theme/colors';
@@ -125,10 +126,9 @@ export default function AskScreen() {
   // The debate this conversation reads from: a loaded chat keeps its own.
   const chatDebateId = record.chatId ? record.debateId : activeDebateId;
   useEffect(() => {
-    if (!chatDebateId || !userId) {
-      setLibrary([]);
-      return;
-    }
+    // The previous debate's sources never stand in for this one's while they load.
+    setLibrary([]);
+    if (!chatDebateId || !userId) return;
     let active = true;
     fetchSources(userId, chatDebateId)
       .then((next) => {
@@ -200,6 +200,10 @@ export default function AskScreen() {
       };
 
       let result: AskOutput;
+      const whole: { extras?: ResponseExtras } = {};
+      const keepExtras = (extras: ResponseExtras) => {
+        whole.extras = extras;
+      };
       if (canStream(requestOptions)) {
         let received = '';
         let pending = '';
@@ -231,16 +235,27 @@ export default function AskScreen() {
           } else {
             // Nothing arrived: ask once more without streaming, as the website does.
             setStreaming(null);
-            result = await askOnce(askRequest, controller.signal);
+            result = await askOnce(askRequest, controller.signal, keepExtras);
           }
         } finally {
           if (flush) clearTimeout(flush);
         }
       } else {
-        result = await askOnce(askRequest, controller.signal);
+        result = await askOnce(askRequest, controller.signal, keepExtras);
       }
 
       if (!isCurrent()) return;
+      // A whole answer ranks the Library sources it used and says when the question was shortened, as on the website.
+      if (whole.extras) {
+        const { truncated, assessments } = whole.extras;
+        const assessed = await keepSourceAssessments(userId, debateId, assessments);
+        if (!isCurrent()) return;
+        const notices = [
+          ...(assessed ? [] : [`${t('aiClient.sourceSaveFailed')}. ${t('aiClient.sourceAssessmentSaveFailed')}`]),
+          ...(truncated ? [`${t('aiClient.inputShortened')}. ${t('aiClient.inputShortenedDesc')}`] : []),
+        ];
+        if (notices.length > 0) setNotice(notices.join(' '));
+      }
       const output = {
         ...result,
         model: result.model || askSettings.model,

@@ -27,23 +27,25 @@ export default function PrepareScreen() {
   const userId = session?.user.id ?? null;
   const { current, oneOff } = useDebates();
   const debateId = current?.id ?? null;
-  const [items, setItems] = useState<DebateItem[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Each load belongs to the debate it was read for, so another debate's results never show, or open, under this one.
+  const [loaded, setLoaded] = useState<{ debateId: string; items: DebateItem[] | null; failed: boolean } | null>(null);
+  const items = loaded?.debateId === debateId ? loaded.items : null;
+  const failed = loaded?.debateId === debateId && loaded.failed;
 
   const openTool = (tool: PrepareTool) =>
     tool === 'generate' ? router.push({ pathname: '/generate', params: { from: 'prepare' } }) : router.push({ pathname: '/coming/[tool]', params: { tool } });
 
   const load = useCallback(async (isCurrent: () => boolean) => {
     if (!userId || !debateId) return;
+    const forDebate = debateId;
     try {
-      const next = await fetchPrepareWork(userId, debateId, SAVED_LIMIT);
+      const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT);
       if (!isCurrent()) return;
-      setItems(next);
-      setFailed(false);
+      setLoaded({ debateId: forDebate, items: next, failed: false });
     } catch (cause) {
       if (!isCurrent()) return;
       console.warn('Could not load saved results:', cause instanceof Error ? cause.message : cause);
-      setFailed(true);
+      setLoaded({ debateId: forDebate, items: null, failed: true });
     }
   }, [userId, debateId]);
 

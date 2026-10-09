@@ -19,7 +19,8 @@ import { useDebates } from '@/lib/debate-context';
 import { fetchFeatureConfig } from '@/lib/feature-config';
 import { keepOpenResult, openResult } from '@/lib/open-results';
 import { caseToText } from '@/lib/result-text';
-import { attackCase, autosaveSources, fetchResult, isCompleteCase, recordResult } from '@/lib/results';
+import { arrivalNotices, attackCase, autosaveSources, fetchResult, isCompleteCase, keepSourceAssessments, recordResult } from '@/lib/results';
+import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
 import { useTheme } from '@/theme/use-theme';
 
@@ -31,7 +32,7 @@ const DEFAULT_FORM: AttackInput = {
   detectFallacies: true,
   analyzeWeighing: true,
 };
-let lastForm: AttackInput = DEFAULT_FORM;
+const lastForm = sessionSlot<AttackInput>(() => DEFAULT_FORM);
 
 const PROGRESS = ['attackForm.loadingMsg1', 'attackForm.loadingMsg2', 'attackForm.loadingMsg3', 'attackForm.loadingMsg4', 'attackForm.loadingMsg5'];
 
@@ -48,7 +49,7 @@ export default function AttackScreen() {
   const { activeDebateId, refresh } = useDebates();
   const { outputLanguage } = useSettings();
   const { colors } = useTheme();
-  const [form, setFormState] = useState<AttackInput>(lastForm);
+  const [form, setFormState] = useState<AttackInput>(lastForm.get);
   const [textError, setTextError] = useState(false);
   const [phase, setPhase] = useState<'form' | 'attacking'>('form');
   const [error, setError] = useState<AIErrorKind | null>(null);
@@ -59,7 +60,7 @@ export default function AttackScreen() {
   const setForm = useCallback((patch: Partial<AttackInput>) =>
     setFormState((previous) => {
       const next = { ...previous, ...patch };
-      lastForm = next;
+      lastForm.set(next);
       return next;
     }), []);
 
@@ -117,9 +118,11 @@ export default function AttackScreen() {
         debateId ? buildDebateContext(forUser, debateId, 'attack', 'both') : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
-      const { result, discoveredSources } = await attackCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
+      const { result, discoveredSources, truncated, assessments } = await attackCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
       if (!isCurrent()) return;
-      const sources = await autosaveSources(forUser, discoveredSources, 'attack', debateId);
+      const assessed = await keepSourceAssessments(forUser, debateId, assessments);
+      if (!isCurrent()) return;
+      const sources = await autosaveSources(forUser, discoveredSources, 'attack', debateId, controller.signal);
       if (!isCurrent()) return;
       const title = result.overallAssessment?.summary?.slice(0, 80) || input.caseText.slice(0, 80);
       let savedId: string | null = null;
@@ -134,7 +137,7 @@ export default function AttackScreen() {
       }
       if (!isCurrent()) return;
       const key = keepOpenResult({ kind: 'attack', savedId, title, side: 'neutral', debateId, createdAt: Date.now(), input, output: result, sources: discoveredSources });
-      const notice = recordFailed ? 'recordFailed' : sources.failed > 0 ? 'sourcesFailed' : undefined;
+      const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
       router.replace({
         pathname: '/attack/[id]',
         params: {

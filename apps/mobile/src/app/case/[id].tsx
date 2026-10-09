@@ -15,7 +15,7 @@ import { copyText, sharePdf, shareText } from '@/lib/export';
 import { caseExportFileName, caseExportHtml } from '@/lib/export-html';
 import { caseToText, discussCaseMessage } from '@/lib/result-text';
 import { isCompleteCase } from '@/lib/results';
-import { useResultDocument } from '@/lib/use-result-document';
+import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
 
 /** A generated case read as a document, as in mock 03. */
 export default function CaseScreen() {
@@ -28,8 +28,8 @@ export default function CaseScreen() {
 
   // Problems from saving a fresh result are told once, on arrival.
   useEffect(() => {
-    if (arrival === 'recordFailed') setNotice(t('debate.recordFailed'));
-    if (arrival === 'sourcesFailed') setNotice(t('mobile.results.sourcesFailed', { count: Number(failed) || 1 }));
+    const text = arrivalNoticeText(t, arrival, failed);
+    if (text) setNotice(text);
   }, [arrival, failed, setNotice, t]);
 
   const result = doc.state.status === 'ready' ? doc.state.result : null;

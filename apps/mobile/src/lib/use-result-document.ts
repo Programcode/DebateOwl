@@ -1,12 +1,13 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from './auth';
 import { confirmDestructive, promptText } from './confirm';
 import { useDebates } from './debate-context';
 import { forgetOpenResult, keepOpenResult, openResult, updateOpenResult, type OpenResult } from './open-results';
-import { deleteResult, fetchAutoSavedSourceIds, fetchResult, removeSources, saveCase, type ResultKind } from './results';
+import { deleteResult, fetchAutoSavedSourceIds, fetchResult, removeSources, saveCase, type ArrivalNotice, type ResultKind } from './results';
 import { fetchSources, subscribeSourcesChanged, type Source } from './sources';
 
 export type DocumentState<K extends ResultKind> =
@@ -17,12 +18,26 @@ export type DocumentState<K extends ResultKind> =
 
 const NOTICE_MS = 3500;
 
+/** The arrival notices a fresh result carries in its route, as one line; empty when there are none. */
+export function arrivalNoticeText(t: TFunction, notice: string | undefined, failed: string | undefined): string {
+  const text: Record<ArrivalNotice, () => string> = {
+    recordFailed: () => t('debate.recordFailed'),
+    sourcesFailed: () => t('mobile.results.sourcesFailed', { count: Number(failed) || 1 }),
+    assessmentsFailed: () => `${t('aiClient.sourceSaveFailed')}. ${t('aiClient.sourceAssessmentSaveFailed')}`,
+    shortened: () => `${t('aiClient.inputShortened')}. ${t('aiClient.inputShortenedDesc')}`,
+  };
+  return (notice ?? '')
+    .split(',')
+    .flatMap((code) => (code in text ? [text[code as ArrivalNotice]()] : []))
+    .join(' ');
+}
+
 /**
  * A result's document: the result itself (from this session or the saved
  * row), the debate's Library for its citation chips, the Current Debate's
  * auto-saved sources for the undo, and the menu's actions. Every action reads
- * the account when the student acts, and nothing lands after the screen is
- * left or the account changes.
+ * the account and the debate when the student acts, and nothing lands after
+ * the screen is left or the account changes.
  */
 export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
   const { t } = useTranslation();
@@ -35,7 +50,8 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
     return cached ? { status: 'ready', key: id, result: cached } : { status: 'loading' };
   });
   const [library, setLibrary] = useState<Source[]>([]);
-  const [autoSaved, setAutoSaved] = useState<string[]>([]);
+  // The ids belong to the debate they were read for; another debate never sees or deletes them.
+  const [autoSavedFor, setAutoSavedFor] = useState<{ debateId: string; ids: string[] } | null>(null);
   const [notice, setNoticeState] = useState('');
   const [busy, setBusy] = useState(false);
   const live = useRef(true);
@@ -111,16 +127,20 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
 
   // The website's undo covers the Current Debate's Auto-saved folder, also in one-off mode.
   const currentId = current?.id ?? null;
+  const currentRef = useRef(currentId);
+  currentRef.current = currentId;
+  const autoSaved = autoSavedFor && autoSavedFor.debateId === currentId ? autoSavedFor.ids : [];
   const autoSavedRequest = useRef(0);
   const loadAutoSaved = useCallback(() => {
     const request = ++autoSavedRequest.current;
     if (!userId || !currentId) {
-      setAutoSaved([]);
+      setAutoSavedFor(null);
       return;
     }
-    fetchAutoSavedSourceIds(userId, currentId)
+    const debateId = currentId;
+    fetchAutoSavedSourceIds(userId, debateId)
       .then((ids) => {
-        if (live.current && autoSavedRequest.current === request) setAutoSaved(ids);
+        if (live.current && autoSavedRequest.current === request) setAutoSavedFor({ debateId, ids });
       })
       .catch((cause: unknown) => console.warn('Could not count auto-saved sources:', cause instanceof Error ? cause.message : cause));
   }, [userId, currentId]);
@@ -184,11 +204,17 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
   }, [setNotice, state, t, userId]);
 
   const undoAutoSaved = useCallback(async () => {
-    if (!userId || autoSaved.length === 0) return;
+    if (!userId || !autoSavedFor || autoSavedFor.ids.length === 0) return;
+    // The ids read for one debate never delete anything after a switch to another.
+    if (autoSavedFor.debateId !== currentRef.current) {
+      loadAutoSaved();
+      return;
+    }
     const forUser = userId;
+    const { debateId, ids } = autoSavedFor;
     setBusy(true);
     try {
-      const { succeeded, failed } = await removeSources(forUser, autoSaved);
+      const { succeeded, failed } = await removeSources(forUser, debateId, ids);
       if (!live.current || owner.current !== forUser) return;
       if (failed === 0) setNotice(`${t('autoSavedSources.removedTitle')}. ${t('autoSavedSources.removedDesc', { count: succeeded })}`);
       else if (succeeded === 0) setNotice(`${t('autoSavedSources.removeFailed')} ${t('autoSavedSources.removeFailedDesc', { succeeded, failed })}`);
@@ -197,7 +223,7 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
       if (live.current) setBusy(false);
       loadAutoSaved();
     }
-  }, [autoSaved, loadAutoSaved, setNotice, t, userId]);
+  }, [autoSavedFor, loadAutoSaved, setNotice, t, userId]);
 
   return { state, library, autoSaved, notice, setNotice, busy, remove, save, undoAutoSaved };
 }

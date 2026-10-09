@@ -1,7 +1,8 @@
 import type { Session } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { getInstallId, sessionStorage } from './device-storage';
+import { setSessionOwner } from './session-memory';
 import { supabase } from './supabase';
 import { sessionStorageKey } from './supabase-config';
 
@@ -76,7 +77,13 @@ async function signOutError(scope: 'global' | 'local'): Promise<string | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSessionState] = useState<Session | null>(null);
+  // The session memory is cleared before an account change renders, so no
+  // screen ever shows the previous account's forms or results.
+  const setSession = useCallback((next: Session | null) => {
+    setSessionOwner(next?.user.id ?? null);
+    setSessionState(next);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [settled, setSettled] = useState(false);
   // Counts auth changes, so a storage read that lands after a newer change is dropped.
@@ -107,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSettled(true);
     });
     return () => data.subscription.unsubscribe();
-  }, []);
+  }, [setSession]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
@@ -155,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setLoading(false);
     },
-  }), [session, loading, settled]);
+  }), [session, loading, settled, setSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

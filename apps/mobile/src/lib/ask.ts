@@ -2,7 +2,7 @@ import { AskOutputSchema, type AskOutput } from '@debatelab/core/ai/schemas/ask'
 import { consumeSSEChunk, type ParsedSSEEvent } from '@debatelab/core/ai/sse';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
-import { abortError, AIError, errorFrom, functionOutput, postFunction, PROVIDER, utf8Length } from './ai-request';
+import { abortError, AIError, errorFrom, functionOutput, postFunction, PROVIDER, responseExtras, utf8Length, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 
 /**
@@ -160,8 +160,12 @@ export function streamAsk(request: AskRequest, handlers: { onDelta: (text: strin
   });
 }
 
-/** Asks the ai Edge Function for a whole answer, with the options the stream cannot serve. */
-export function askOnce(request: AskRequest, signal?: AbortSignal): Promise<AskOutput> {
+/**
+ * Asks the ai Edge Function for a whole answer, with the options the stream
+ * cannot serve. onExtras receives what the answer says besides its output,
+ * which the website acts on for whole answers only.
+ */
+export function askOnce(request: AskRequest, signal?: AbortSignal, onExtras?: (extras: ResponseExtras) => void): Promise<AskOutput> {
   const body = {
     feature: 'ask',
     input: requestInput(request),
@@ -173,5 +177,10 @@ export function askOnce(request: AskRequest, signal?: AbortSignal): Promise<AskO
     sourceIds: request.debateContext?.sourceIds ?? [],
     ...(request.debateContext ? { debateContext: request.debateContext } : {}),
   };
-  return postFunction('ai', body, signal, async (response) => parseOutput((await functionOutput(response)).output));
+  return postFunction('ai', body, signal, async (response) => {
+    const { output, data } = await functionOutput(response);
+    const result = parseOutput(output);
+    onExtras?.(responseExtras(data));
+    return result;
+  });
 }

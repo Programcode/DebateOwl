@@ -21,7 +21,8 @@ import { fetchFeatureConfig } from '@/lib/feature-config';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepOpenResult } from '@/lib/open-results';
-import { autosaveSources, generateCase, recordResult } from '@/lib/results';
+import { arrivalNotices, autosaveSources, generateCase, keepSourceAssessments, recordResult } from '@/lib/results';
+import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
 import { useTheme } from '@/theme/use-theme';
 
@@ -35,7 +36,7 @@ const DEFAULT_FORM: GenerateInput = {
   audience: 'intermediate',
   tone: 'formal',
 };
-let lastForm: GenerateInput = DEFAULT_FORM;
+const lastForm = sessionSlot<GenerateInput>(() => DEFAULT_FORM);
 
 const PROGRESS = ['generateForm.loadingMsg1', 'generateForm.loadingMsg2', 'generateForm.loadingMsg3', 'generateForm.loadingMsg4', 'generateForm.loadingMsg5'];
 
@@ -49,7 +50,7 @@ export default function GenerateScreen() {
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
   const { outputLanguage } = useSettings();
   const { colors } = useTheme();
-  const [form, setFormState] = useState<GenerateInput>(lastForm);
+  const [form, setFormState] = useState<GenerateInput>(lastForm.get);
   const [motionError, setMotionError] = useState(false);
   const [phase, setPhase] = useState<'form' | 'generating'>('form');
   const [error, setError] = useState<AIErrorKind | 'debate' | null>(null);
@@ -60,7 +61,7 @@ export default function GenerateScreen() {
   const setForm = useCallback((patch: Partial<GenerateInput>) =>
     setFormState((previous) => {
       const next = { ...previous, ...patch };
-      lastForm = next;
+      lastForm.set(next);
       return next;
     }), []);
 
@@ -79,7 +80,7 @@ export default function GenerateScreen() {
   // The motion follows the Current Debate unless the student typed their own.
   useEffect(() => {
     if (oneOff || !current) return;
-    if (shouldPrefillMotion(lastForm.motion, current.motion, debates.map((debate) => debate.motion))) setForm({ motion: current.motion });
+    if (shouldPrefillMotion(lastForm.get().motion, current.motion, debates.map((debate) => debate.motion))) setForm({ motion: current.motion });
   }, [current, debates, oneOff, setForm]);
 
   const start = async (input: GenerateInput, debateId: string | null, forUser: string) => {
@@ -96,9 +97,11 @@ export default function GenerateScreen() {
         debateId ? buildDebateContext(forUser, debateId, 'generate', input.side) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
-      const { result, discoveredSources } = await generateCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
+      const { result, discoveredSources, truncated, assessments } = await generateCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
       if (!isCurrent()) return;
-      const sources = await autosaveSources(forUser, discoveredSources, 'generate', debateId);
+      const assessed = await keepSourceAssessments(forUser, debateId, assessments);
+      if (!isCurrent()) return;
+      const sources = await autosaveSources(forUser, discoveredSources, 'generate', debateId, controller.signal);
       if (!isCurrent()) return;
       let savedId: string | null = null;
       let recordFailed = false;
@@ -122,7 +125,7 @@ export default function GenerateScreen() {
         output: result,
         sources: discoveredSources,
       });
-      const notice = recordFailed ? 'recordFailed' : sources.failed > 0 ? 'sourcesFailed' : undefined;
+      const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
       router.replace({
         pathname: '/case/[id]',
         params: { id: key, from: from ?? 'prepare', ...(notice ? { notice } : {}), ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}) },

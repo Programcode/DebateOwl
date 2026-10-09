@@ -1,4 +1,6 @@
+import type { SourceSemanticMetadata } from '@debatelab/core/ai/discovered-sources';
 import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/core/ai/schemas/source-import';
+import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
 import { supabase } from './supabase';
@@ -137,10 +139,43 @@ export async function fetchSourceIdsInFolder(userId: string, debateId: string, f
   return ((data ?? []) as { id: string }[]).map((row) => row.id);
 }
 
-export async function removeSource(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
+/** Removes a source; with a debate, only while the source is still in that debate. */
+export async function removeSource(userId: string, id: string, debateId?: string): Promise<void> {
+  const query = supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
+  const { error } = await (debateId ? query.eq('debate_id', debateId) : query);
   if (error) throw new Error(error.message);
   notifySourcesChanged();
+}
+
+/**
+ * Saves the server's rankings onto the debate's Library sources a result
+ * used, as the website's applySourceAssessments does. The debate is the one
+ * the request was sent for, read when the student acted; a URL saved in
+ * several debates is ranked only in that one.
+ */
+export async function applySourceAssessments(userId: string, debateId: string, assessments: SourceAssessmentUpdate[]): Promise<void> {
+  if (assessments.length === 0) return;
+  const { data, error } = await supabase
+    .from('sources')
+    .select('id,origin,metadata')
+    .eq('user_id', userId)
+    .eq('debate_id', debateId);
+  if (error) throw new Error(error.message);
+  type Row = { id: string; origin: string | null; metadata: { url?: string; semantic?: SourceSemanticMetadata } | null };
+  const candidates = (data ?? []) as Row[];
+  const updates = new Map<string, Row['metadata']>();
+  for (const assessment of assessments.slice(0, 10)) {
+    const source = candidates.find((candidate) => isAssessedSource(candidate, assessment));
+    if (!source) continue;
+    updates.set(source.id, { ...source.metadata, semantic: assessedSemantic(source.metadata?.semantic, assessment) });
+  }
+  if (updates.size === 0) return;
+  const results = await Promise.all(
+    Array.from(updates, ([id, metadata]) => supabase.from('sources').update({ metadata }).eq('user_id', userId).eq('debate_id', debateId).eq('id', id)),
+  );
+  notifySourcesChanged();
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw new Error(failed.error.message);
 }
 
 /** The website rejects a URL that is already in the debate's Library. */

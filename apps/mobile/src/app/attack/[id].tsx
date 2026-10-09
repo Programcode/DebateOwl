@@ -14,7 +14,7 @@ import { copyText, sharePdf, shareText } from '@/lib/export';
 import { attackExportFileName, attackExportHtml } from '@/lib/export-html';
 import { attackToText, discussAttackMessage } from '@/lib/result-text';
 import { isCompleteAttack } from '@/lib/results';
-import { useResultDocument } from '@/lib/use-result-document';
+import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
 
 /**
  * An attack analysis in the same document style as a case. Its pinned next
@@ -29,8 +29,8 @@ export default function AttackResultScreen() {
   const { setNotice } = doc;
 
   useEffect(() => {
-    if (arrival === 'recordFailed') setNotice(t('debate.recordFailed'));
-    if (arrival === 'sourcesFailed') setNotice(t('mobile.results.sourcesFailed', { count: Number(failed) || 1 }));
+    const text = arrivalNoticeText(t, arrival, failed);
+    if (text) setNotice(text);
   }, [arrival, failed, setNotice, t]);
 
   const result = doc.state.status === 'ready' ? doc.state.result : null;

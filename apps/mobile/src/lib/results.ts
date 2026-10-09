@@ -9,11 +9,12 @@ import {
 import { expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
 import { AttackOutputSchema, type AttackInput, type AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import type { SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
-import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
+import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
-import { addSource, fetchSourceIdsInFolder, removeSource } from './sources';
+import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
 /**
@@ -66,7 +67,7 @@ function requestBody(feature: 'generate' | 'attack', input: Record<string, unkno
 }
 
 /** A generated case, checked like the website checks it and stamped with the local time and motion. */
-export function generateCase(input: GenerateInput, options: RequestOptions): Promise<ResultWithSources<GenerateOutput>> {
+export function generateCase(input: GenerateInput, options: RequestOptions): Promise<ResultWithSources<GenerateOutput> & ResponseExtras> {
   return postFunction('ai', requestBody('generate', input, options), options.signal, async (response) => {
     const { output, data } = await functionOutput(response);
     const parsed = GenerateOutputSchema.safeParse(transformGenerateResponse(output as Record<string, unknown>));
@@ -77,16 +78,16 @@ export function generateCase(input: GenerateInput, options: RequestOptions): Pro
     }
     result.metadata.generatedAt = new Date().toISOString();
     result.metadata.motion = input.motion;
-    return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
+    return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources), ...responseExtras(data) };
   });
 }
 
-export function attackCase(input: AttackInput, options: RequestOptions): Promise<ResultWithSources<AttackOutput>> {
+export function attackCase(input: AttackInput, options: RequestOptions): Promise<ResultWithSources<AttackOutput> & ResponseExtras> {
   return postFunction('ai', requestBody('attack', input, options), options.signal, async (response) => {
     const { output, data } = await functionOutput(response);
     const parsed = AttackOutputSchema.safeParse(output);
     if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected attack schema.');
-    return { result: parsed.data, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
+    return { result: parsed.data, discoveredSources: parseDiscoveredSources(data.discoveredSources), ...responseExtras(data) };
   });
 }
 
@@ -94,12 +95,20 @@ export function attackCase(input: AttackInput, options: RequestOptions): Promise
  * Keeps the researched sources worth keeping in the debate's Auto-saved
  * folder, one at a time, as the website does. One-off research is not kept.
  * A source that fails to save is skipped; the count of failures is returned.
+ * Once the request is cancelled or replaced, no further source is written.
  */
-export async function autosaveSources(userId: string, sources: DiscoveredSource[], capturedVia: 'generate' | 'attack', debateId: string | null): Promise<{ saved: number; failed: number }> {
+export async function autosaveSources(
+  userId: string,
+  sources: DiscoveredSource[],
+  capturedVia: 'generate' | 'attack',
+  debateId: string | null,
+  signal?: AbortSignal,
+): Promise<{ saved: number; failed: number }> {
   if (!debateId) return { saved: 0, failed: 0 };
   let saved = 0;
   let failed = 0;
   for (const source of retainedDiscoveredSources(sources)) {
+    if (signal?.aborted) break;
     try {
       await addSource(userId, { ...autoSavedSourceRow(source, capturedVia), debateId });
       saved += 1;
@@ -111,13 +120,43 @@ export async function autosaveSources(userId: string, sources: DiscoveredSource[
   return { saved, failed };
 }
 
+/**
+ * Saves the rankings of the Library sources a result used, into the debate
+ * the request was sent for. One-off work has no Library to rank. Returns
+ * false when the rankings could not be saved; the result itself still stands.
+ */
+export async function keepSourceAssessments(userId: string, debateId: string | null, assessments: SourceAssessmentUpdate[]): Promise<boolean> {
+  if (!debateId || assessments.length === 0) return true;
+  try {
+    await applySourceAssessments(userId, debateId, assessments);
+    return true;
+  } catch (cause) {
+    console.warn('Could not save the source rankings:', cause instanceof Error ? cause.message : cause);
+    return false;
+  }
+}
+
+/** Problems from making a result, told once when its document opens. */
+export type ArrivalNotice = 'recordFailed' | 'sourcesFailed' | 'assessmentsFailed' | 'shortened';
+
+/** The arrival notices as one route parameter, or undefined when there is nothing to tell. */
+export function arrivalNotices(outcome: { recordFailed: boolean; sourcesFailed: number; assessed: boolean; truncated: boolean }): string | undefined {
+  const notices: ArrivalNotice[] = [];
+  if (outcome.recordFailed) notices.push('recordFailed');
+  else if (outcome.sourcesFailed > 0) notices.push('sourcesFailed');
+  if (!outcome.assessed) notices.push('assessmentsFailed');
+  if (outcome.truncated) notices.push('shortened');
+  return notices.length > 0 ? notices.join(',') : undefined;
+}
+
 /** The website's rule for its undo: every source in the debate's Auto-saved folder. */
 export function fetchAutoSavedSourceIds(userId: string, debateId: string): Promise<string[]> {
   return fetchSourceIdsInFolder(userId, debateId, AUTO_SAVED_FOLDER);
 }
 
-export async function removeSources(userId: string, ids: string[]): Promise<{ succeeded: number; failed: number }> {
-  const results = await Promise.allSettled(ids.map((id) => removeSource(userId, id)));
+/** Removes the debate's auto-saved sources; a source moved to another debate since is left alone. */
+export async function removeSources(userId: string, debateId: string, ids: string[]): Promise<{ succeeded: number; failed: number }> {
+  const results = await Promise.allSettled(ids.map((id) => removeSource(userId, id, debateId)));
   const succeeded = results.filter((result) => result.status === 'fulfilled').length;
   return { succeeded, failed: results.length - succeeded };
 }

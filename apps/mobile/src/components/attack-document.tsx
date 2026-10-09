@@ -30,7 +30,8 @@ export function AttackDocument({ output, sources }: { output: AttackOutput; sour
     const severityLabel = t(`attackResults.${severity}`);
     const typeLabel = t(`attackResults.types.${weakness.type}`, { defaultValue: weakness.type });
     return {
-      key: weakness.id || `${index}`,
+      // Model ids can repeat, so the expansion state is keyed by position.
+      key: `${index}`,
       title: weakness.description,
       summary: `${severityLabel} · ${typeLabel}`,
       body: (

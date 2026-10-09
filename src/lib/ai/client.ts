@@ -19,8 +19,8 @@ import { activeDebateId, useDebateStore } from '../stores/debate-store';
 import { parseDebateContextUsage, useDebateContextStore } from '../stores/debate-context-store';
 import { currentDebateContextPlan } from '../debate/context-state';
 import { requestSide, type DebateContextRequest } from '../../../supabase/functions/_shared/debate-context';
-import { type SourceAssessmentUpdate } from '../stores/session-store';
 import { cleanGeneratedOutput, expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
+import { parseSourceAssessments } from '@debatelab/core/ai/source-assessments';
 import {
   autoSavedSourceRow,
   parseDiscoveredSources,
@@ -158,30 +158,6 @@ function waitForAbortable<T>(operation: () => PromiseLike<T>, signal: AbortSigna
     const onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
     signal.addEventListener('abort', onAbort, { once: true });
     Promise.resolve().then(operation).then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
-  });
-}
-
-function parseSourceAssessments(value: unknown): SourceAssessmentUpdate[] {
-  if (!Array.isArray(value)) return [];
-  return value.slice(0, 10).flatMap((item): SourceAssessmentUpdate[] => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
-    const candidate = item as Record<string, unknown>;
-    const key = typeof candidate.key === 'string' ? candidate.key.trim() : '';
-    const { relevance, importance, strength, evaluatedAt } = candidate;
-    if (!key || typeof relevance !== 'number' || !Number.isFinite(relevance) || relevance < 0 || relevance > 1 ||
-      typeof importance !== 'number' || !Number.isInteger(importance) || importance < 0 || importance > 3 ||
-      typeof strength !== 'number' || !Number.isInteger(strength) || strength < 0 || strength > 3 ||
-      typeof evaluatedAt !== 'string' || !Number.isFinite(Date.parse(evaluatedAt)) || typeof candidate.retained !== 'boolean') return [];
-    return [{
-      key,
-      ...(typeof candidate.id === 'string' && candidate.id.trim() ? { id: candidate.id.trim() } : {}),
-      relevance,
-      importance: importance as 0 | 1 | 2 | 3,
-      strength: strength as 0 | 1 | 2 | 3,
-      evaluatedAt,
-      retained: candidate.retained,
-      ...(typeof candidate.usedInCase === 'boolean' ? { usedInCase: candidate.usedInCase } : {}),
-    }];
   });
 }
 
