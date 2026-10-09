@@ -45,8 +45,10 @@ export function DocumentScreen({ header, children, actions, notice, testID }: { 
       ) : null}
       {actions ? (
         <View style={[styles.pinned, { bottom }]}>
-          {/* The pinned buttons share the width equally, as in the mock. */}
-          {Children.map(unwrapFragment(actions), (action) => (action ? <View style={styles.pinnedItem}>{action}</View> : null))}
+          {/* The pinned buttons share the width equally, as in the mock, within the document's column on iPad. */}
+          <View style={styles.pinnedRow}>
+            {Children.map(unwrapFragment(actions), (action) => (action ? <View style={styles.pinnedItem}>{action}</View> : null))}
+          </View>
         </View>
       ) : null}
     </View>
@@ -307,7 +309,8 @@ export function Callout({ title, children }: { title: string; children: ReactNod
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: 18, paddingTop: 4, gap: 12, width: '100%', maxWidth: 680, alignSelf: 'center' },
-  pinned: { position: 'absolute', left: 14, right: 14, flexDirection: 'row', gap: 10 },
+  pinned: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  pinnedRow: { flexDirection: 'row', gap: 10, width: '100%', maxWidth: 680, paddingHorizontal: 14 },
   pinnedItem: { flex: 1 },
   pressed: { opacity: 0.7 },
   notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },

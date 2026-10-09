@@ -2499,7 +2499,7 @@
       "evidenceCount_one": "{{count}} prueba",
       "evidenceCount_other": "{{count}} pruebas",
       "noEvidence": "Aún sin pruebas",
-      "attackThisCase": "Atacar este caso",
+      "attackThisCase": "Atacar el caso",
       "share": "Compartir",
       "copyText": "Copiar como texto",
       "loadFailed": "No se pudo cargar este resultado.",

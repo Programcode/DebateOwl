@@ -172,7 +172,8 @@ const styles = StyleSheet.create({
   },
   primaryLabel: { fontSize: 17, flexShrink: 1 },
   primaryShadow: { boxShadow: '0 6px 18px -8px rgba(2,132,199,0.6)' },
-  secondary: { borderWidth: 1, paddingHorizontal: 14 },
+  // The mock's outlined button has almost no side padding, so its label fits half the width.
+  secondary: { borderWidth: 1, paddingHorizontal: 6, gap: 6 },
   secondaryShadow: { boxShadow: '0 6px 18px -8px rgba(15,23,42,0.35)' },
   dimmed: { opacity: 0.6 },
   text: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },

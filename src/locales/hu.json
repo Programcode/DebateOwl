@@ -2499,7 +2499,7 @@
       "evidenceCount_one": "{{count}} bizonyíték",
       "evidenceCount_other": "{{count}} bizonyíték",
       "noEvidence": "Még nincs bizonyíték",
-      "attackThisCase": "Támadd meg az esetet",
+      "attackThisCase": "Megtámadom",
       "share": "Megosztás",
       "copyText": "Másolás szövegként",
       "loadFailed": "Nem sikerült betölteni ezt az eredményt.",

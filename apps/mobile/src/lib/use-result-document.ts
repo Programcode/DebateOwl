@@ -142,7 +142,11 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
       await deleteResult(forUser, kind, savedId);
       forgetOpenResult(savedId);
       if (state.status === 'ready') forgetOpenResult(state.key);
-      if (live.current) router.back();
+      // A document opened from a link has nothing behind it; go home instead.
+      if (live.current) {
+        if (router.canGoBack()) router.back();
+        else router.replace('/');
+      }
     } catch (cause) {
       console.warn('Could not delete the result:', cause instanceof Error ? cause.message : cause);
       setNotice(t('mobile.results.deleteFailed'));
