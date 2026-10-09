@@ -30,7 +30,7 @@ const copy = {
     motionField: 'Tétel',
     library: 'Forráskönyvtár',
     generate: 'Generálás',
-    ready: 'Készen Állsz!',
+    ready: 'Készen állsz!',
     finish: 'Kezdjük!',
     generateMotion: 'Indítvány / téma *',
     generateSubmit: 'Vitaeset generálása',
