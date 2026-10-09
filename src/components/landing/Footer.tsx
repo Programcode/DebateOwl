@@ -10,7 +10,7 @@ const Footer = () => {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                         {/* In-app links: no full reload through the startup shell. */}
-                        <Link to="/" className="flex items-center gap-2">
+                        <Link to="/" className="flex items-center gap-2 pointer-coarse:min-h-11">
                             <img
                                 src="/favicon-72.png"
                                 alt={t('common.logoAlt')}

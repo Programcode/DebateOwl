@@ -37,7 +37,7 @@ const Navbar = () => {
         >
             <div className="section-container">
                 <div className="flex h-16 items-center justify-between md:h-20">
-                    <Link to="/" className="group flex items-center gap-2">
+                    <Link to="/" className="group flex items-center gap-2 pointer-coarse:min-h-11">
                         <img
                             src="/favicon-72.png"
                             alt={t('common.logoAlt')}
