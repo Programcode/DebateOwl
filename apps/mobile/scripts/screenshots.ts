@@ -573,6 +573,13 @@ async function shootOneOffTools(page: Page, prefix: string) {
   await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
   await settle(page);
   await shoot(page, `${prefix}-prepare-oneoff`);
+  // Brainstorm and Factoids say it through the same strip; a reload would end one-off mode, so go back in the app.
+  for (const tool of ['brainstorm', 'factoids'] as const) {
+    await page.getByTestId(`prepare-tool-${tool}`).click();
+    await page.getByTestId(`${tool}-screen`).getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
+    await page.goBack();
+    await page.getByTestId('prepare-tool-generate').filter({ visible: true }).waitFor();
+  }
   await page.getByTestId('prepare-tool-generate').click();
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   const notice = page.getByTestId('generate-screen').getByTestId('one-off-notice');
