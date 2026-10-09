@@ -1,0 +1,108 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AlertCircle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+export interface ToolRunError {
+  title: string;
+  description?: string;
+}
+
+/**
+ * One run of a form tool: a cancellable request and the error it ended with.
+ * Leaving the page does not cancel; results still land in the store.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useToolRun() {
+  const controllerRef = useRef<AbortController | null>(null);
+  const [error, setError] = useState<ToolRunError | null>(null);
+
+  const start = useCallback(() => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setError(null);
+    return controller.signal;
+  }, []);
+
+  const cancel = useCallback(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+  }, []);
+
+  return { start, cancel, error, setError, clearError: () => setError(null) };
+}
+
+function useElapsedSeconds() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return elapsed;
+}
+
+/** One spinner, one true status line, elapsed time once it matters, and a way out. */
+export function ToolRunStatus({ label, onCancel }: { label: string; onCancel?: () => void }) {
+  const { t } = useTranslation();
+  const elapsed = useElapsedSeconds();
+  return (
+    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary/25 border-t-primary [animation-duration:600ms]" aria-hidden="true" />
+      <p className="text-sm font-medium text-muted-foreground">
+        <span role="status" aria-live="polite">{label}</span>
+        {elapsed >= 5 && <span className="ml-2 tabular-nums">{t('tools.elapsed', { seconds: elapsed, defaultValue: '{{seconds}}s' })}</span>}
+      </p>
+      {onCancel && (
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          {t('common.cancel', 'Cancel')}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** A failed run stays on the page with Retry, instead of a toast that disappears. */
+export function ToolRunErrorPanel({ error, onRetry, onDismiss }: { error: ToolRunError; onRetry?: () => void; onDismiss?: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div role="alert" className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-foreground">{error.title}</p>
+        {error.description && <p className="mt-0.5 text-muted-foreground">{error.description}</p>}
+      </div>
+      <div className="flex shrink-0 gap-1">
+        {onRetry && <Button type="button" size="sm" variant="outline" onClick={onRetry}>{t('common.retry', 'Retry')}</Button>}
+        {onDismiss && (
+          <Button type="button" size="icon" variant="ghost" className="h-9 w-9" onClick={onDismiss} aria-label={t('common.close', 'Close')}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Whether an error is the user's own Cancel, which needs no message. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function isCanceled(error: unknown, signal: AbortSignal) {
+  return signal.aborted || (error instanceof DOMException && error.name === 'AbortError');
+}
+
+/**
+ * On phones the results sit below the form, so a finished run scrolls them into view.
+ * Wide screens show both side by side and stay put.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useRevealResults() {
+  const ref = useRef<HTMLDivElement>(null);
+  const reveal = useCallback(() => {
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // After the result renders.
+    requestAnimationFrame(() => ref.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }));
+  }, []);
+  return { ref, reveal };
+}

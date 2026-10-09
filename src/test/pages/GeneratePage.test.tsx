@@ -361,7 +361,8 @@ describe('GeneratePage Integration', () => {
 
         await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Could not save this result to the debate' })));
         expect(mockSetGenerateResult).toHaveBeenCalledWith(result);
-        expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Generate complete' }));
+        // The run itself succeeded: no failure panel and no failure toast.
+        expect(screen.queryByText(/Generation Failed/i)).toBeNull();
         expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive', title: expect.stringMatching(/Generation Failed/i) }));
     });
 });

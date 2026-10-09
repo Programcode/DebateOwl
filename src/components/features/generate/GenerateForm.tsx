@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
@@ -109,18 +109,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
   return (
     <Card className="border-primary/20">
-      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <CardTitle>{t('generateForm.title')}</CardTitle>
-            <CardDescription>{t('generateForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Motion Input with Voice */}
           <div className="space-y-2">
@@ -282,10 +271,9 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
           <DebateContextControl feature="generate" side={requestSide('generate', currentValues)} hidden={!debatePrefill} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12 relative overflow-hidden group" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
-            {!isLoading && <span className="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_3s_infinite] pointer-events-none" />}
+          <Button type="submit" className="w-full h-12" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
             {isLoading ? (
-              <span className="motion-reveal inline-flex items-center">
+              <span className="inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
                 {t('generateForm.generating')}
               </span>

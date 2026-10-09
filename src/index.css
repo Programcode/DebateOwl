@@ -355,37 +355,10 @@ All colors MUST be HSL.
   }
 
 
-  .motion-reveal {
-    animation: motion-reveal var(--motion-duration-slow) var(--motion-ease-fluid) both;
-  }
-
   .motion-swap {
     animation: motion-swap var(--motion-duration-normal) var(--motion-ease-fluid) both;
   }
 
-
-  .motion-loading-bar {
-    animation: motion-loading-bar 1.35s var(--motion-ease-fluid) infinite;
-    transform-origin: left center;
-  }
-
-  .motion-ping-ring {
-    animation: motion-ping-ring 1.6s var(--motion-ease-fluid) infinite;
-  }
-
-  .motion-shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .motion-shimmer::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.14), transparent);
-    transform: translateX(-120%);
-    animation: motion-shimmer 1.8s var(--motion-ease-fluid) infinite;
-  }
 
   .motion-expand {
     display: grid;
@@ -519,23 +492,6 @@ All colors MUST be HSL.
   }
 }
 
-/* Message bubble entrance */
-.message-enter {
-  animation: message-enter 0.3s var(--motion-ease-fluid) both;
-}
-
-@keyframes message-enter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -594,17 +550,6 @@ All colors MUST be HSL.
   }
 }
 
-@keyframes motion-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes motion-swap {
   from {
     opacity: 0;
@@ -627,58 +572,6 @@ All colors MUST be HSL.
   }
 }
 
-@keyframes motion-loading-bar {
-  0% {
-    transform: translateX(-45%) scaleX(0.2);
-  }
-  45% {
-    transform: translateX(25%) scaleX(0.65);
-  }
-  100% {
-    transform: translateX(115%) scaleX(0.25);
-  }
-}
-
-@keyframes motion-ping-ring {
-  0% {
-    opacity: 0.7;
-    transform: scale(0.75);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.35);
-  }
-}
-
-@keyframes motion-shimmer {
-  100% {
-    transform: translateX(120%);
-  }
-}
-
-/* Typing indicator */
-.typing-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.typing-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: hsl(var(--muted-foreground));
-  animation: typing-bounce 1.4s ease-in-out infinite;
-}
-
-.typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
 .streaming-caret {
   display: inline-block;
   width: 2px;
@@ -687,77 +580,18 @@ All colors MUST be HSL.
   border-radius: 1px;
   background: hsl(var(--primary));
   vertical-align: -0.15em;
-  animation: streaming-caret-blink 1s ease-in-out infinite;
-  box-shadow: 0 0 6px 2px hsl(var(--primary) / 0.4);
-}
-
-/* Smooth height transition for streaming message bubbles */
-[data-streaming="true"] {
-  transition: max-height 0.2s ease-out, padding 0.2s ease-out;
-  overflow: hidden;
-  word-break: break-word;
-}
-
-/* Glow on the bottom edge of the bubble while streaming */
-[data-streaming="true"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent);
-  animation: streaming-glow-pulse 1.5s ease-in-out infinite;
-}
-
-/* New tokens fade in */
-[data-streaming="true"] .text-sm p:last-child,
-[data-streaming="true"] .text-sm li:last-child,
-[data-streaming="true"] .text-sm > :last-child {
-  animation: token-fade-in 0.3s ease-out;
-}
-
-@keyframes token-fade-in {
-  from {
-    opacity: 0.4;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes streaming-glow-pulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scaleX(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-}
-
-@keyframes typing-bounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-4px);
-  }
+  /* Opacity only, in two steps: a blink that never repaints a glow. */
+  animation: streaming-caret-blink 1s steps(2, jump-none) infinite;
 }
 
 @keyframes streaming-caret-blink {
-  0%, 100% {
+  from {
     opacity: 1;
-    box-shadow: 0 0 6px 2px hsl(var(--primary) / 0.4);
   }
-  50% {
-    opacity: 0.2;
-    box-shadow: 0 0 2px 1px hsl(var(--primary) / 0.1);
+  to {
+    opacity: 0;
   }
 }
-
 
 /* Reduced motion is gentler, not zero: opacity and colour still ease, nothing travels
    or scales, overlays fade, and loading indicators pulse instead of freezing. */
@@ -780,9 +614,7 @@ All colors MUST be HSL.
   [data-state='delayed-open'][class*='animate-in'],
   [data-state='instant-open'][class*='animate-in'],
   [data-state='active'][class*='animate-in'],
-  .motion-reveal,
-  .motion-swap,
-  .message-enter {
+  .motion-swap {
     animation-name: motion-fade-in !important;
   }
 
@@ -792,8 +624,6 @@ All colors MUST be HSL.
 
   /* Spinners and live indicators become a slow opacity pulse so they never look hung. */
   .animate-spin,
-  .motion-ping-ring,
-  .typing-dot,
   .streaming-caret {
     animation-name: motion-pulse !important;
     animation-duration: 1.2s !important;

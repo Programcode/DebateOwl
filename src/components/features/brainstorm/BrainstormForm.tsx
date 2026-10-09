@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { BrainstormInputSchema, type BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -60,17 +60,6 @@ export function BrainstormForm({ onSubmit, isLoading, debatePrefill = true }: Br
 
   return (
     <Card className="border-amber-500/20">
-      <CardHeader className="bg-gradient-to-br from-amber-500/5 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
-          </div>
-          <div>
-            <CardTitle>{t('brainstormForm.title')}</CardTitle>
-            <CardDescription>{t('brainstormForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Motion Input */}

@@ -191,7 +191,8 @@ export interface SessionState {
   saveCurrentFactoids: (title: string) => Promise<void>;
   loadSavedFactoids: (id: string) => void;
 
-  addAskMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  /** Pass the streaming bubble's id so the stored reply keeps its identity and doesn't remount. */
+  addAskMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string }) => void;
   setAskLoading: (loading: boolean) => void;
   setAskStreamingAssistant: (message: StreamingAskMessage | null) => void;
   appendAskStreamingDelta: (text: string) => void;
@@ -946,7 +947,7 @@ export const useSessionStore = create<SessionState>()(
       addAskMessage: (message) => set((state) => ({
         askMessages: [
           ...state.askMessages,
-          { ...message, id: generateId(), timestamp: Date.now() },
+          { ...message, id: message.id ?? generateId(), timestamp: Date.now() },
         ],
       })),
       setAskLoading: (loading) => set({ askLoading: loading }),

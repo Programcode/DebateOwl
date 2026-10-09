@@ -7,10 +7,11 @@ import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
@@ -29,7 +30,7 @@ interface GenerateResultsProps {
   onPracticeCrossfire?: () => void;
 }
 
-function ArgumentCard({ contention, index }: { contention: Contention; index: number }) {
+function ArgumentCard({ contention, index, unverified }: { contention: Contention; index: number; unverified: boolean }) {
   const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item">
@@ -49,11 +50,16 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.reasoning')} </span>
-          <Markdown className="inline">{contention.reasoning}</Markdown>
+          <Markdown inline>{contention.reasoning}</Markdown>
         </div>
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.evidence')} </span>
-          <Markdown className="inline">{contention.evidence}</Markdown>
+          {unverified && !contention.needsSource && (
+            <Badge variant="outline" className="mr-1 border-amber-500/40 bg-amber-500/10 py-0 align-middle text-amber-800 dark:text-amber-300">
+              {t('generateResults.unverified', 'Unverified')}
+            </Badge>
+          )}
+          <Markdown inline>{contention.evidence}</Markdown>
         </div>
         {contention.sourceQuery && (
           <div className="rounded-md bg-muted/50 p-2 text-xs">
@@ -63,7 +69,7 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
         )}
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.impact')} </span>
-          <Markdown className="inline">{contention.impact}</Markdown>
+          <Markdown inline>{contention.impact}</Markdown>
         </div>
       </div>
     </div>
@@ -176,33 +182,27 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   }
 
   const durationText = formatDuration(result.metadata?.durationMs, t);
+  // Without web research, evidence is the model's own claim and is labelled that way.
+  const researched = Boolean(discoveredSources?.length);
   const modelName = result.metadata?.model || result.metadata?.provider;
   const modelText = modelName ? t('generateResults.modelLabel', { value: modelName }) : null;
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {/* Researched sources with quality provenance */}
-      {discoveredSources && discoveredSources.length > 0 && (
-        <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
-          <SourceQualityList sources={discoveredSources} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </div>
-      )}
-      {/* Metadata */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+      <ResultHeader
+        title={t('generateResults.resultTitle', 'Your case')}
+        meta={<>
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
-          </Badge>          <span>•</span>
-          <span>{result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : ''}</span>
+          </Badge>
+          {result.metadata?.generatedAt && <><span>•</span><span>{formatEuropeanDateTime(result.metadata.generatedAt)}</span></>}
           {modelText && <><span>•</span><span>{modelText}</span></>}
           {durationText && <><span>•</span><span>{durationText}</span></>}
-        </div>
-        <div data-tour="export-section">
+        </>}
+        caveat={researched ? undefined : t('generateResults.unresearchedCaveat', 'AI-generated, and no web research backs this evidence. Check facts and sources before using them in a round.')}
+        actions={(
+        <div data-tour="export-section" className="w-full">
           <ExportToolbar
             onPdf={handlePdfExport}
             onDocx={handleDocxExport}
@@ -250,7 +250,9 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
             ) : undefined}
           />
         </div>
-      </div>
+        )}
+      />
+      <ResearchedSources sources={discoveredSources} />
 
       {/* Exordio (Introductor only) */}
       {result.exordio && (result.exordio.hook || result.exordio.transition) && (
@@ -319,7 +321,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       >
         <div className="space-y-4">
           {result.contentions?.map((contention, index) => (
-            <ArgumentCard key={contention.id} contention={contention} index={index} />
+            <ArgumentCard key={contention.id} contention={contention} index={index} unverified={!researched} />
           ))}
         </div>
       </SectionCard>
@@ -394,6 +396,6 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           ))}
         </div>
       </SectionCard>
-    </StaggeredContainer>
+    </div>
   );
 }

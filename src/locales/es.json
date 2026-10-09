@@ -375,8 +375,6 @@
     "flowchartImportFailedDesc": "No se pudo construir el diagrama con los datos del caso.",
     "flowchartNoData": "No hay datos de caso válidos para importar.",
     "caseTitle": "Título del caso",
-    "complete": "Caso generado",
-    "completeDesc": "Tu caso de debate está listo.",
     "noUndo": "No hay nada que deshacer",
     "regenerated": "Sección regenerada",
     "regeneratedDesc": "La sección seleccionada se ha actualizado.",
@@ -385,21 +383,20 @@
     "saveCase": "Guardar caso",
     "undone": "Cambio deshecho",
     "undoneDesc": "Se cargó la generación anterior.",
-    "saveFailedDesc": "No se pudo guardar el caso. Inténtalo de nuevo."
+    "saveFailedDesc": "No se pudo guardar el caso. Inténtalo de nuevo.",
+    "working": "Escribiendo tu caso…"
   },
   "attack": {
     "emptyTitle": "Modo Sin Piedad",
     "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
     "failed": "Error en el Análisis de Ataque",
-    "complete": "Análisis de ataque completado",
-    "completeDesc": "La crítica está lista."
+    "working": "Revisando tu caso…"
   },
   "brainstorm": {
     "emptyTitle": "Desbloquea Ángulos Creativos",
     "emptyDesc": "Describe tu moción para explorar ángulos de argumentación no convencionales, identificar compromisos y encontrar tus posiciones más fuertes.",
     "failed": "Error en la Lluvia de Ideas",
-    "complete": "Lluvia de ideas completada",
-    "completeDesc": "Tus enfoques de argumentación están listos."
+    "working": "Buscando enfoques…"
   },
   "factoids": {
     "emptyTitle": "Evidencia Que Gana",
@@ -407,9 +404,8 @@
     "failed": "Error en la Investigación",
     "savedToLibrary": "Guardado en Biblioteca",
     "savedToLibraryDesc": "Esta evidencia ahora está disponible para fundamentación.",
-    "complete": "Investigación completada",
-    "completeDesc": "La evidencia verificada está lista.",
-    "saveFailed": "No se pudo guardar la fuente."
+    "saveFailed": "No se pudo guardar la fuente.",
+    "working": "Buscando evidencia…"
   },
   "ask": {
     "failed": "Error",
@@ -426,12 +422,10 @@
     "retryableFailedDesc": "No se pudo conectar con la IA. Comprueba tu conexión e inténtalo de nuevo.",
     "saveFailed": "No se pudo guardar",
     "saveFailedDesc": "No se pudo guardar el chat. Inténtalo de nuevo.",
-    "sourceSaveFailedDesc": "No se pudo guardar la fuente. Inténtalo de nuevo."
+    "sourceSaveFailedDesc": "No se pudo guardar la fuente. Inténtalo de nuevo.",
+    "stopped": "Detuviste esta respuesta antes de que terminara."
   },
-  "chat": {
-    "error": "Error de Chat",
-    "errorDesc": "No se pudo generar la respuesta."
-  },
+  "chat": {},
   "settings": {
     "title": "Ajustes",
     "aiOutputLanguage": "Idioma (Interfaz + Salida IA)",
@@ -1040,8 +1034,6 @@
     "title": "Límite de Solicitudes Excedido"
   },
   "generateForm": {
-    "title": "Generar Caso de Debate",
-    "subtitle": "Crea argumentos estructurados para cualquier moción",
     "motion": "Moción / Tema",
     "motionPlaceholder": "ej., Esta cámara cree que la inteligencia artificial creará más empleos de los que destruirá",
     "side": "Lado",
@@ -1073,11 +1065,6 @@
     "startVoice": "Iniciar entrada de voz",
     "stopVoice": "Detener entrada de voz",
     "dictate": "Dicta tu moción",
-    "loadingMsg1": "Leyendo la moción...",
-    "loadingMsg2": "Construyendo cadenas de razonamiento...",
-    "loadingMsg3": "Escribiendo impactos para el discurso...",
-    "loadingMsg4": "Preparando contraargumentos...",
-    "loadingMsg5": "Finalizando el caso...",
     "styleNote": "Guía el estilo de escritura; no cambia la investigación."
   },
   "generateResults": {
@@ -1126,11 +1113,12 @@
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "copiedToClipboard": "Copiado al portapapeles",
     "copyFailed": "No se pudo copiar al portapapeles",
-    "undo": "Deshacer"
+    "undo": "Deshacer",
+    "resultTitle": "Tu caso",
+    "unverified": "Sin verificar",
+    "unresearchedCaveat": "Generado por IA, y ninguna búsqueda web respalda esta evidencia. Comprueba los datos y las fuentes antes de usarlos en una ronda."
   },
   "attackForm": {
-    "title": "Atacar Mi Caso",
-    "subtitle": "Encuentra debilidades y obtén sugerencias de mejora",
     "argument": "Tu Argumento",
     "argumentPlaceholder": "Pega tu caso o argumento de debate aquí...",
     "options": "Opciones",
@@ -1148,12 +1136,7 @@
     "analyzeWeighing": "Analizar Ponderación",
     "analyzeWeighingDesc": "Evaluar la comparación y priorización de impactos",
     "analyzing": "Analizando Caso...",
-    "submit": "Encontrar Debilidades",
-    "loadingMsg1": "Analizando la estructura del caso...",
-    "loadingMsg2": "Buscando vacíos lógicos...",
-    "loadingMsg3": "Elaborando refutaciones...",
-    "loadingMsg4": "Probando suposiciones...",
-    "loadingMsg5": "Finalizando la crítica..."
+    "submit": "Encontrar Debilidades"
   },
   "attackResults": {
     "overall": "Evaluación General",
@@ -1195,11 +1178,10 @@
     "exportFailedGdocs": "Error al exportar a Google Docs",
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "weaknessesCount_one": "{{count}} problema encontrado, ordenado por gravedad",
-    "weaknessesCount_other": "{{count}} problemas encontrados, ordenados por gravedad"
+    "weaknessesCount_other": "{{count}} problemas encontrados, ordenados por gravedad",
+    "resultTitle": "Crítica"
   },
   "brainstormForm": {
-    "title": "Lluvia de Ideas",
-    "subtitle": "Explora ángulos de argumentación de forma colaborativa",
     "motion": "Moción / Tema",
     "motionPlaceholder": "ej., La Renta Básica Universal debería implementarse globalmente",
     "side": "Lado a Explorar",
@@ -1213,12 +1195,7 @@
     "existing": "Lo Que Ya Tienes (Opcional)",
     "existingPlaceholder": "Comparte ideas o ángulos que ya hayas considerado...",
     "generating": "Generando Ideas...",
-    "submit": "Comenzar Lluvia de Ideas",
-    "loadingMsg1": "Explorando ángulos...",
-    "loadingMsg2": "Conectando ideas...",
-    "loadingMsg3": "Buscando caminos no convencionales...",
-    "loadingMsg4": "Clasificando por originalidad...",
-    "loadingMsg5": "Finalizando lluvia de ideas..."
+    "submit": "Comenzar Lluvia de Ideas"
   },
   "brainstormResults": {
     "clarification": "Aclaración Necesaria",
@@ -1242,11 +1219,10 @@
     "exportFailedGdocs": "Error al exportar a Google Docs",
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "noIdeasDesc": "Prueba con una moción más concreta o cambia el formato de salida y vuelve a generar ideas.",
-    "noIdeasTitle": "No se generaron ideas"
+    "noIdeasTitle": "No se generaron ideas",
+    "resultTitle": "Enfoques"
   },
   "factoidsForm": {
-    "title": "Buscar Evidencia",
-    "subtitle": "Obtén datos listos para el debate con citas verificadas",
     "claim": "Declaración",
     "claimPlaceholder": "ej., La energía renovable es más rentable que los combustibles fósiles",
     "direction": "Postura",
@@ -1263,12 +1239,7 @@
     "sourceGovernment": "Fuentes Gubernamentales",
     "sourceNews": "Noticias Principales",
     "finding": "Buscando Evidencia...",
-    "submit": "Buscar Datos",
-    "loadingMsg1": "Buscando en bases de datos...",
-    "loadingMsg2": "Verificando citas...",
-    "loadingMsg3": "Cruzando referencias...",
-    "loadingMsg4": "Clasificando por fiabilidad...",
-    "loadingMsg5": "Finalizando evidencia..."
+    "submit": "Buscar Datos"
   },
   "factoidsResults": {
     "verificationStatus": "Estado de Verificación",
@@ -1300,12 +1271,12 @@
     "exportFailedGdocs": "Error al exportar a Google Docs",
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "noVerified": "No se encontraron fuentes verificadas que coincidan. Prueba con otro tipo de fuente o un período más amplio.",
-    "useSuggestion": "Buscar esto"
+    "useSuggestion": "Buscar esto",
+    "resultTitle": "Evidencia"
   },
   "askChat": {
     "title": "Pregunta a Tu Coach",
     "subtitle": "Obtén respuestas a preguntas de debate",
-    "typing": "Escribiendo",
     "startConversation": "Inicia una conversación",
     "startDesc": "Pregunta lo que sea sobre estrategia de debate, argumentos o pide ayuda con tu caso.",
     "modeGeneral": "General",
@@ -1340,11 +1311,6 @@
     "tooManyFiles": "Demasiados archivos",
     "tooManyFilesDesc": "Solo puedes subir hasta {{max}} archivos a la vez.",
     "fileValidationFailed": "Validación de archivo fallida",
-    "thinking": "Pensando...",
-    "researching": "Investigando...",
-    "analyzing": "Analizando...",
-    "generatingResponse": "Generando respuesta...",
-    "almostThere": "Casi listo...",
     "savedChats": "Chats guardados",
     "savedChatsDesc": "Retoma conversaciones anteriores con tu coach.",
     "openSavedChats": "Abrir chats guardados",
@@ -1358,7 +1324,13 @@
     "messageCount_one": "{{count}} mensaje",
     "messageCount_other": "{{count}} mensajes",
     "savedCount_one": "{{count}} guardado",
-    "savedCount_other": "{{count}} guardados"
+    "savedCount_other": "{{count}} guardados",
+    "working": "Trabajando…",
+    "searchingWeb": "Buscando en la web…",
+    "elapsed": "{{seconds}} s",
+    "jumpToLatest": "Ir al final",
+    "stop": "Detener la respuesta",
+    "options": "Opciones"
   },
   "limitModal": {
     "trialEnded": "Prueba Gratuita Finalizada",
@@ -2350,7 +2322,6 @@
     "leftOut_other": "{{count}} elementos quedan fuera para que la solicitud quepa.",
     "review": "Revisar",
     "oneOff": "Modo puntual: no se usará ni se guardará material del debate actual.",
-    "noDebate": "No hay debate actual, así que no se usará material del debate.",
     "reviewTitle": "Qué usará esta solicitud",
     "reviewDesc": "Estos cambios solo se aplican a tu próxima solicitud. Los resultados fijados siguen incluidos hasta que los sueltes.",
     "debateHeading": "Debate",
@@ -2398,5 +2369,46 @@
   },
   "offlineIndicator": {
     "label": "Modo sin conexión"
+  },
+  "tools": {
+    "elapsed": "{{seconds}} s",
+    "aiCaveat": "Generado por IA. Comprueba los datos y las fuentes antes de usarlos en una ronda.",
+    "researchedSources": "Fuentes investigadas ({{total}})"
+  },
+  "discuss": {
+    "attack": {
+      "intro": "Quiero hablar de la crítica de mi caso.",
+      "assessment": "Valoración general",
+      "score": "Puntuación",
+      "weaknesses": "Debilidades principales",
+      "ask": "¿Me ayudas a mejorarlo?"
+    },
+    "brainstorm": {
+      "intro": "Quiero hablar de estas ideas.",
+      "topIdeas": "Ideas principales",
+      "buckets": "Grupos clave",
+      "ask": "¿Me ayudas a desarrollar alguna?"
+    },
+    "generate": {
+      "intro": "Quiero hablar del caso que acabamos de generar.",
+      "thesis": "Tesis",
+      "arguments": "Argumentos",
+      "ask": "¿Podemos pulirlo?"
+    },
+    "factoids": {
+      "intro": "Quiero hablar de la evidencia que encontré.",
+      "factoids": "Evidencia",
+      "ask": "¿Cómo puedo usar mejor esta evidencia?"
+    }
+  },
+  "aiErrors": {
+    "genericProvider": "El proveedor de IA",
+    "quota": "{{provider}} superó su cuota. Avisa al administrador del sitio.",
+    "config": "{{provider}} no está bien configurado. Avisa al administrador del sitio.",
+    "rateLimit": "{{provider}} superó el límite de solicitudes. Inténtalo más tarde.",
+    "unavailable": "{{provider}} no está disponible por ahora. Inténtalo más tarde.",
+    "safety": "{{provider}} bloqueó esta solicitud por seguridad. Prueba a reformularla.",
+    "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo más tarde.",
+    "unexpected": "Se produjo un error inesperado"
   }
 }

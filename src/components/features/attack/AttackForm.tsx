@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -72,17 +72,6 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
 
   return (
     <Card className="border-destructive/20">
-      <CardHeader className="bg-gradient-to-br from-destructive/5 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-            <Swords className="h-5 w-5 text-destructive" />
-          </div>
-          <div>
-            <CardTitle>{t('attackForm.title')}</CardTitle>
-            <CardDescription>{t('attackForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Case Text Input */}
@@ -201,7 +190,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
           {/* Submit Button */}
           <Button type="submit" className="w-full h-12" disabled={isLoading}>
             {isLoading ? (
-              <span className="motion-reveal inline-flex items-center">
+              <span className="inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
                 {t('attackForm.analyzing')}
               </span>

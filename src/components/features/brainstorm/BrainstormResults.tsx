@@ -5,11 +5,12 @@ import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
@@ -142,26 +143,22 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
   }
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {/* Researched sources with quality provenance */}
-      {discoveredSources && discoveredSources.length > 0 && (
-        <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
-          <SourceQualityList sources={discoveredSources} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </div>
-      )}
-      <ExportToolbar
-        onPdf={handlePdfExport}
-        onDocx={handleDocxExport}
-        onGoogleDocs={handleGoogleDocsExport}
-        isExportingGDocs={isExportingGDocs}
-        onDiscuss={onDiscuss}
-        discussLabel={t('brainstormResults.discuss')}
+      <ResultHeader
+        title={t('brainstormResults.resultTitle', 'Angles')}
+        actions={(
+          <ExportToolbar
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            onDiscuss={onDiscuss}
+            discussLabel={t('brainstormResults.discuss')}
+          />
+        )}
       />
+      <ResearchedSources sources={discoveredSources} />
 
       {!result.topFive?.length && !result.mindmap?.length && !result.buckets?.length && (
         <EmptyState
@@ -275,6 +272,6 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
           </ul>
         </SectionCard>
       )}
-    </StaggeredContainer>
+    </div>
   );
 }

@@ -130,9 +130,11 @@ test('visible Ask advanced controls use the non-streaming contract', async ({ pa
 
   await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Clarify' }).click();
+  await page.getByRole('button', { name: 'Options' }).click();
   for (const name of ['Citations', 'Web search', 'Pros/Cons', 'Arg Map']) {
     await page.getByRole('switch', { name }).click();
   }
+  await page.keyboard.press('Escape');
   await page.getByPlaceholder('Ask your debate coach...').fill('Which assumptions should I define?');
   await page.getByRole('button', { name: 'Send message' }).click();
 

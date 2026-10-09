@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { FileText, FileDown, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
-import { AutoSavedSourcesUndo } from '@/components/features/AutoSavedSourcesUndo';
 
 interface ExportToolbarProps {
   onPdf: () => void;
@@ -12,7 +11,6 @@ interface ExportToolbarProps {
   isExportingGDocs?: boolean;
   onDiscuss?: () => void;
   discussLabel?: string;
-  showUndo?: boolean;
   /** Buttons that appear on the export row, between the EXPORT tag and PDF/DOCX/Google Docs (e.g. Clipboard). */
   extraExports?: ReactNode;
   /** Buttons that appear on the top row (Save, Discuss, Flowcharts, Undo, etc.). */
@@ -21,7 +19,7 @@ interface ExportToolbarProps {
 
 // Unified export bar used by every feature's results view.
 // Two explicit rows, both left-aligned:
-//   Row 1 (top):    secondary actions — Save, Discuss, Flowcharts, Undo, AutoSavedSourcesUndo
+//   Row 1 (top):    secondary actions — Save, Discuss, Flowcharts, Undo
 //   Row 2 (bottom): EXPORT tag, extra export buttons (e.g. Clipboard), PDF, DOCX, Google Docs
 // Layout chosen by user 2026-05-27; see feedback-exports memory.
 export function ExportToolbar({
@@ -31,14 +29,13 @@ export function ExportToolbar({
   isExportingGDocs = false,
   onDiscuss,
   discussLabel,
-  showUndo = false,
   extraExports,
   secondaryActions,
 }: ExportToolbarProps) {
   const { t } = useTranslation();
 
   const hasSecondaryActions = Children.toArray(secondaryActions).filter(Boolean).length > 0;
-  const hasTopRow = hasSecondaryActions || showUndo || !!onDiscuss;
+  const hasTopRow = hasSecondaryActions || !!onDiscuss;
 
   return (
     <div className="flex w-full flex-col items-start gap-2">
@@ -51,7 +48,6 @@ export function ExportToolbar({
               {discussLabel || t('common.discuss', 'Discuss')}
             </Button>
           )}
-          {showUndo && <AutoSavedSourcesUndo />}
         </div>
       )}
       <div className="flex w-full flex-wrap items-center justify-start gap-2">
