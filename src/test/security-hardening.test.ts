@@ -76,7 +76,7 @@ describe('security hardening regressions', () => {
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
     expect(modelCatalog).toContain('id: "z-ai/glm-5.3-flash"');
     expect(modelCatalog).toContain('id: "anthropic/claude-haiku-5.5"');
-    expect(modelCatalog).toContain('id: "openai/gpt-5.6-luna"');
+    expect(modelCatalog).toContain('id: "openai/gpt-6-luna"');
     expect(modelCatalog).toContain('id: "google/gemini-3.8-flash"');
     expect(ai).toContain('function modelForRequest');
     expect(stream).toContain('isModelSelection(rawModel)');

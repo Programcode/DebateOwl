@@ -108,9 +108,9 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
             probabilities: {
               "anthropic/claude-haiku-5.5": 0.96,
               "z-ai/glm-5.3-flash": 0.01,
-              "openai/gpt-5.6-luna": 0.02,
+              "openai/gpt-6-luna": 0.02,
               "google/gemini-3.8-flash": 0.01,
-              "deepseek/deepseek-v4-flash-0731": 0.0,
+              "deepseek/deepseek-v4.1-flash": 0.0,
             },
           },
         },
@@ -265,7 +265,7 @@ Deno.test("streaming Ask rejects advanced modes and toggles before quota or prov
           },
           body: JSON.stringify({
             feature: "ask",
-            model: "openai/gpt-5.6-luna",
+            model: "openai/gpt-6-luna",
             input: { message: "Question", ...testCase.input },
           }),
         }),

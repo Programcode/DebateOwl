@@ -1,6 +1,6 @@
 # Model defaults and the model selector
 
-Every AI tool has a model selector. A new Pro account starts every tool on Claude Opus 5.5, and a Basic (trial) account on Claude Haiku 5.5. Pro-only models show a `Pro` badge and are disabled for Basic accounts. A setting saved with a retired catalog ID (Claude Sonnet 5 or Claude Opus 5) is rewritten to Claude Opus 5.5 on the next load, and the Edge Functions accept the retired ID from an older client and route it to Opus 5.5. The catalog and defaults live in `supabase/functions/_shared/model-catalog.ts`.
+Every AI tool has a model selector. A new Pro account starts every tool on Claude Opus 5.5, and a Basic (trial) account on Claude Haiku 5.5. Pro-only models show a `Pro` badge and are disabled for Basic accounts. A setting saved with a retired catalog ID is rewritten on the next load: GPT-5.6 Luna moves to Claude Haiku 5.5, Claude Sonnet 5 and Opus 5 to Claude Opus 5.5, GPT-5.6 Sol and Terra to GPT-6.1 Sol, and DeepSeek V4 Flash to DeepSeek V4.1 Flash. The Edge Functions resolve a retired ID from an older client the same way. A retired Basic ID never resolves to a Pro model. The catalog and defaults live in `supabase/functions/_shared/model-catalog.ts`.
 
 ## Sub-features
 

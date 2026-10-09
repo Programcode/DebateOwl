@@ -48,9 +48,9 @@ Deno.test("Auto Fast can route logic-heavy work to DeepSeek Flash", async () => 
     feature: "attack",
     input: { caseText: "A long causal chain requiring adversarial logical analysis" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("deepseek/deepseek-v4-flash-0731")),
+    callJevImpl: jevReturning(choiceResult("deepseek/deepseek-v4.1-flash")),
   });
-  if (resolved.resolvedModel !== "deepseek/deepseek-v4-flash-0731" || resolved.usedFallback) {
+  if (resolved.resolvedModel !== "deepseek/deepseek-v4.1-flash" || resolved.usedFallback) {
     throw new Error(`logic-heavy route was not accepted: ${JSON.stringify(resolved)}`);
   }
 });
@@ -61,7 +61,7 @@ Deno.test("Auto Fast falls back to Claude Haiku when Jev is uncertain or unavail
     feature: "ask",
     input: { message: "Help me" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("openai/gpt-5.6-luna", 0.54)),
+    callJevImpl: jevReturning(choiceResult("openai/gpt-6-luna", 0.54)),
   });
   if (uncertain.resolvedModel !== "anthropic/claude-haiku-5.5" || !uncertain.usedFallback) throw new Error("uncertain route did not fall back");
 
@@ -95,7 +95,7 @@ Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
       feature: "generate",
       input: { motion: "Should cities ban cars?" },
       canAccessProModels: false,
-      callJevImpl: jevReturning(choiceResult("openai/gpt-5.6-sol"), observed),
+      callJevImpl: jevReturning(choiceResult("openai/gpt-6.1-sol"), observed),
     });
   } catch (error) {
     if (!(error instanceof Error) || !error.message.includes("Pro")) throw error;
@@ -106,7 +106,7 @@ Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
 });
 
 Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
-  for (const model of ["anthropic/claude-opus-5.5", "anthropic/claude-sonnet-5.5", "openai/gpt-5.6-sol"]) {
+  for (const model of ["anthropic/claude-opus-5.5", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-sol"]) {
     const resolved = await resolveModelSelection({
       requestedModel: AUTO_PRO,
       feature: "generate",

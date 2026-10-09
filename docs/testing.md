@@ -86,7 +86,7 @@ OPENROUTER_API_KEY=... deno run --allow-read --allow-write --allow-env=OPENROUTE
   --allow-net=openrouter.ai scripts/prompt-examples.ts supabase/functions /tmp/after.json
 ```
 
-This sends the fourteen prompt examples to one real model (GPT-5.6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
+This sends the fourteen prompt examples to one real model (GPT-6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
 
 ### Live Jev contract smoke
 
