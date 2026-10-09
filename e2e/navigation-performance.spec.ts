@@ -24,7 +24,7 @@ const privateRoutes = [
   ['/app', { selector: 'main h1', text: 'What are you working on?' }],
   ['/app/generate', { selector: 'main h1', text: 'Generate' }],
   ['/app/attack', { selector: 'main h1', text: 'Attack' }],
-  ['/app/flowchart', { selector: 'main h3', text: 'Argument Flowchart' }],
+  ['/app/flowchart', { selector: 'main h1', text: 'Argument Flowchart' }],
   ['/app/history', { selector: 'main h1', text: 'History' }],
   ['/app/admin', { selector: 'main h3', text: 'Access Denied' }],
 ] as const;
@@ -194,7 +194,7 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
   await page.getByRole('button', { name: 'Reload' }).click();
   await expect.poll(() => attempts).toBe(2);
   await waitForContent(page, attackContent);
-  await expect(page.locator('header')).toBeVisible();
+  await expect(page.getByRole('banner')).toBeVisible();
 });
 
 async function gotoHome(page: Page) {
