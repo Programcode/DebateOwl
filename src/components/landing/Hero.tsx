@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
@@ -32,46 +32,31 @@ const Hero = () => {
             <div className="section-container relative z-10">
                 <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
                     <div>
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="mb-6"
-                        >
-                            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/80">
-                                <Sparkles className="h-4 w-4 text-primary" />
+                        <Reveal onLoad className="mb-6">
+                            {/* rounded-2xl, not a pill: long Spanish and Hungarian copy wraps cleanly. */}
+                            <span className="inline-flex items-start gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/80">
+                                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                 {t('hero.announcement')}
                             </span>
-                        </motion.div>
+                        </Reveal>
 
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.1 }}
-                            className="text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl"
-                        >
-                            {t('hero.headline')}
-                        </motion.h1>
+                        <Reveal onLoad delay={0.05}>
+                            <h1 className="text-balance text-[clamp(2.25rem,1.2rem+4.5vw,4.5rem)] font-bold leading-[1.05] tracking-[-0.03em]">
+                                {t('hero.headline')}
+                            </h1>
+                        </Reveal>
 
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.2 }}
-                            className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl"
-                        >
-                            {t('hero.subheadline')}
-                        </motion.p>
+                        <Reveal onLoad delay={0.1}>
+                            <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+                                {t('hero.subheadline')}
+                            </p>
+                        </Reveal>
 
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.3 }}
-                            className="mt-9 flex flex-col gap-3 sm:flex-row"
-                        >
+                        <Reveal onLoad delay={0.15} className="mt-9 flex flex-col gap-3 sm:flex-row">
                             <Link
                                 to="/app"
                                 {...appPrefetch}
-                                className="btn-primary-gradient shimmer inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
+                                className="btn-primary-gradient inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
                             >
                                 <span className="relative z-10">{t('hero.cta')}</span>
                                 <ArrowRight className="relative z-10 h-5 w-5" />
@@ -82,35 +67,25 @@ const Hero = () => {
                             >
                                 {t('hero.ctaSecondary')}
                             </a>
-                        </motion.div>
+                        </Reveal>
 
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.4 }}
-                            className="mt-8 grid gap-3 sm:grid-cols-3"
-                        >
+                        <Reveal onLoad delay={0.15} className="mt-8 grid gap-3 sm:grid-cols-3">
                             {planHighlights.map((item) => (
-                                <div key={item.label} className="rounded-xl border border-border/70 bg-card/70 p-4 backdrop-blur-sm">
+                                <div key={item.label} className="rounded-xl border border-border/70 bg-card p-4">
                                     <p className="text-xs uppercase tracking-wider text-muted-foreground">{item.label}</p>
                                     <p className="mt-1 text-base font-semibold text-foreground">{item.value}</p>
                                 </div>
                             ))}
-                        </motion.div>
+                        </Reveal>
 
-                        <motion.ul
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.5 }}
-                            className="mt-8 space-y-3"
-                        >
+                        <ul className="mt-8 space-y-3">
                             {trustBullets.map((item) => (
                                 <li key={item} className="flex items-start gap-3 text-sm text-foreground/85">
                                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{item}</span>
                                 </li>
                             ))}
-                        </motion.ul>
+                        </ul>
                     </div>
 
                     <HeroPreview />
@@ -157,14 +132,9 @@ const HeroPreview = () => {
     ];
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.35 }}
-            className="relative"
-        >
+        <Reveal onLoad delay={0.1} className="relative">
             <div className="absolute -inset-8 bg-gradient-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-2xl backdrop-blur-xl">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b border-border/60 px-5 py-3">
                     <div className="flex items-center gap-2">
@@ -174,18 +144,18 @@ const HeroPreview = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 bg-background/95 p-5 lg:grid-cols-[1.05fr_0.95fr]">
-                    <div className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4">
+                <div className="grid grid-cols-1 gap-4 bg-background p-5 lg:grid-cols-[1.05fr_0.95fr]">
+                    <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4">
                         <div className="flex items-center justify-between gap-3">
                             <h3 className="text-base font-semibold text-foreground">{t(`features.${mode}`)}</h3>
-                            <div className="flex rounded-lg border border-border/70 bg-background/70 p-1" role="group" aria-label={t('hero.preview.modeLabel')}>
+                            <div className="flex rounded-lg border border-border/70 bg-background p-1" role="group" aria-label={t('hero.preview.modeLabel')}>
                                 {modes.map((item) => (
                                     <button
                                         key={item.key}
                                         type="button"
                                         aria-pressed={mode === item.key}
                                         onClick={() => setMode(item.key)}
-                                        className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                                     >
                                         {item.label}
                                     </button>
@@ -195,7 +165,7 @@ const HeroPreview = () => {
 
                         <div className="space-y-3">
                             <div className="space-y-1.5">
-                                <label htmlFor="hero-motion" className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                <label htmlFor="hero-motion" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     {t('hero.preview.topicLabel')}
                                 </label>
                                 <input
@@ -208,38 +178,38 @@ const HeroPreview = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1.5">
-                                    <span className="block text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                         {t('hero.preview.sideLabel')}
                                     </span>
                                     <span id="hero-side" className="flex h-9 items-center rounded-md border border-border/70 bg-background px-2 text-sm text-foreground">{t('hero.preview.sidePro')}</span>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className="block text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t('hero.preview.roleLabel')}</span>
+                                    <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('hero.preview.roleLabel')}</span>
                                     <span className="flex h-9 items-center rounded-md border border-border/70 bg-background px-2 text-sm text-foreground">{t('hero.preview.roleValue')}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-4">
+                    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sample.title}</p>
                         </div>
 
                         <div className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-3">
                             <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">{sample.firstLabel}</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-primary">{sample.firstLabel}</p>
                                 <p className="mt-1 text-sm leading-relaxed text-foreground">{sample.first}</p>
                             </div>
                             <div className="border-t border-primary/15 pt-3">
-                                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">{sample.secondLabel}</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-primary">{sample.secondLabel}</p>
                                 <p className="mt-1 text-sm leading-relaxed text-foreground">{sample.second}</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </Reveal>
     );
 };
 

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
-import { Crown, GitBranch, Timer, History, Sparkles, Crosshair, Dumbbell } from "lucide-react";
+import { Crown, GitBranch, Timer, History, Crosshair, Dumbbell } from "lucide-react";
+import { Reveal } from "./Reveal";
 
 const WhatsNew = () => {
     const { t } = useTranslation();
@@ -17,46 +17,29 @@ const WhatsNew = () => {
     return (
         <section id="whats-new" className="relative py-24 bg-secondary/10">
             <div className="section-container">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="mb-14 text-center"
-                >
-                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-medium text-foreground/85">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                        {t('whatsNew.title')}
-                    </div>
-                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
-                        {t('whatsNew.title')}
-                    </h2>
+                <Reveal className="mb-14 text-center">
+                    <h2 className="section-heading">{t('whatsNew.title')}</h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
                         {t('whatsNew.subtitle')}
                     </p>
-                </motion.div>
+                </Reveal>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     {updates.map((update, index) => (
-                        <motion.div
-                            key={update.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.45, delay: index * 0.08 }}
-                            viewport={{ once: true }}
-                            className="group rounded-2xl border border-border/70 bg-card/75 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
-                        >
-                            <div className="mb-4 flex items-center justify-between">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                                    <update.icon className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100" />
+                        <Reveal key={update.title} delay={index * 0.05}>
+                            <div className="h-full rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                                        <update.icon className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                        {update.badge}
+                                    </span>
                                 </div>
-                                <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
-                                    {update.badge}
-                                </span>
+                                <h3 className="text-xl font-semibold text-foreground">{update.title}</h3>
+                                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{update.description}</p>
                             </div>
-                            <h3 className="text-xl font-semibold text-foreground">{update.title}</h3>
-                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{update.description}</p>
-                        </motion.div>
+                        </Reveal>
                     ))}
                 </div>
             </div>

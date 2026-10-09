@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import { GraduationCap, Users, Gavel } from "lucide-react";
 
 const UseCases = () => {
@@ -29,31 +29,17 @@ const UseCases = () => {
     return (
         <section className="py-24 relative">
             <div className="section-container">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="text-center mb-16"
-                >
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                        {t('useCases.title')}
-                    </h2>
+                <Reveal className="text-center mb-16">
+                    <h2 className="section-heading mb-4">{t('useCases.title')}</h2>
                     <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                         {t('useCases.description')}
                     </p>
-                </motion.div>
+                </Reveal>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {personas.map((persona, index) => (
-                        <motion.div
-                            key={persona.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1, duration: 0.5 }}
-                            viewport={{ once: true }}
-                            className="glass-card p-8 rounded-2xl border border-border feature-card"
-                        >
+                        <Reveal key={persona.title} delay={index * 0.05}>
+                        <div className="feature-card h-full p-8">
                             <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center mb-6">
                                 <persona.icon className="w-7 h-7 text-primary" />
                             </div>
@@ -68,7 +54,8 @@ const UseCases = () => {
                                     </li>
                                 ))}
                             </ul>
-                        </motion.div>
+                        </div>
+                        </Reveal>
                     ))}
                 </div>
             </div>

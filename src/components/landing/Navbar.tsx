@@ -1,16 +1,24 @@
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
+import { cn } from "@/lib/utils";
 
 const Navbar = () => {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
-    const shouldReduceMotion = useReducedMotion();
+    const [scrolled, setScrolled] = useState(false);
     const appPrefetch = useRoutePrefetch("/app");
+
+    // The nav is static on load; its edge appears once content scrolls under it.
+    useEffect(() => {
+        const update = () => setScrolled(window.scrollY > 0);
+        update();
+        window.addEventListener("scroll", update, { passive: true });
+        return () => window.removeEventListener("scroll", update);
+    }, []);
 
     const navLinks = [
         { href: "#features", label: t('nav.features') },
@@ -20,11 +28,11 @@ const Navbar = () => {
     ];
 
     return (
-        <motion.nav
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="fixed left-0 right-0 top-[var(--staging-banner-height,0px)] z-50 nav-blur"
+        <nav
+            className={cn(
+                "fixed left-0 right-0 top-[var(--staging-banner-height,0px)] z-50 nav-blur",
+                scrolled || isOpen ? "border-border shadow-sm" : "border-transparent",
+            )}
             aria-label={t('nav.mainNavigation')}
         >
             <div className="section-container">
@@ -54,15 +62,16 @@ const Navbar = () => {
 
                     <div className="hidden items-center gap-3 md:flex">
                         <LanguageSwitcher />
-                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
+                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
                             <ArrowRight className="relative z-10 h-4 w-4" />
                         </Link>
                     </div>
 
                     <button
+                        type="button"
                         onClick={() => setIsOpen(!isOpen)}
-                        className="p-2 text-foreground md:hidden"
+                        className="flex h-11 w-11 items-center justify-center rounded-md text-foreground md:hidden"
                         aria-label={isOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                         aria-expanded={isOpen}
                     >
@@ -71,41 +80,34 @@ const Navbar = () => {
                 </div>
             </div>
 
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
-                        className="border-b border-border bg-background/95 backdrop-blur-xl md:hidden"
-                    >
-                        <div className="section-container flex flex-col gap-4 py-4">
-                            {navLinks.map((link) => (
-                                <a
-                                    key={link.href}
-                                    href={link.href}
-                                    onClick={() => setIsOpen(false)}
-                                    className="py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
-                            <Link
-                                to="/app"
-                                {...appPrefetch}
+            {isOpen && (
+                // Opacity and a 4px drop in 180ms; reduced motion keeps the fade only.
+                <div className="border-b border-border bg-background md:hidden animate-in fade-in-0 slide-in-from-top-1 duration-180 ease-out-strong">
+                    <div className="section-container flex flex-col gap-1 py-4">
+                        {navLinks.map((link) => (
+                            <a
+                                key={link.href}
+                                href={link.href}
                                 onClick={() => setIsOpen(false)}
-                                className="btn-primary-gradient shimmer mt-2 inline-flex items-center justify-center gap-2"
+                                className="flex min-h-11 items-center text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
                             >
-                                <span className="relative z-10">{t('nav.startTrial')}</span>
-                                <ArrowRight className="relative z-10 h-4 w-4" />
-                            </Link>
-                            <LanguageSwitcher />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.nav>
+                                {link.label}
+                            </a>
+                        ))}
+                        <Link
+                            to="/app"
+                            {...appPrefetch}
+                            onClick={() => setIsOpen(false)}
+                            className="btn-primary-gradient mt-2 inline-flex items-center justify-center gap-2"
+                        >
+                            <span className="relative z-10">{t('nav.startTrial')}</span>
+                            <ArrowRight className="relative z-10 h-4 w-4" />
+                        </Link>
+                        <LanguageSwitcher />
+                    </div>
+                </div>
+            )}
+        </nav>
     );
 };
 

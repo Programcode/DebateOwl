@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import { Database, ScanSearch, Sparkles, Network } from "lucide-react";
 
 const DeepDive = () => {
@@ -16,29 +16,15 @@ const DeepDive = () => {
         <section className="py-24 relative overflow-hidden bg-secondary/5">
             <div className="section-container relative z-10">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6 }}
-                        viewport={{ once: true }}
-                    >
-                        <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                            {t('deepDive.title')}
-                        </h2>
+                    <Reveal>
+                        <h2 className="section-heading mb-6">{t('deepDive.title')}</h2>
                         <p className="text-lg text-muted-foreground mb-8">
                             {t('deepDive.subtitle')}
                         </p>
 
                         <div className="space-y-6">
                             {steps.map((step, index) => (
-                                <motion.div
-                                    key={step.title}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1, duration: 0.4 }}
-                                    viewport={{ once: true }}
-                                    className="flex gap-4"
-                                >
+                                <Reveal key={step.title} delay={index * 0.05} className="flex gap-4">
                                     <div className="mt-1 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                         <step.icon className="w-5 h-5 text-primary" />
                                     </div>
@@ -46,18 +32,12 @@ const DeepDive = () => {
                                         <h3 className="font-semibold text-foreground">{step.title}</h3>
                                         <p className="text-sm text-muted-foreground">{step.description}</p>
                                     </div>
-                                </motion.div>
+                                </Reveal>
                             ))}
                         </div>
-                    </motion.div>
+                    </Reveal>
 
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.6 }}
-                        viewport={{ once: true }}
-                        className="relative"
-                    >
+                    <Reveal delay={0.05} className="relative">
                         <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 blur-3xl rounded-full opacity-40" />
                         <div className="glass-card p-8 rounded-2xl border border-border/50 relative overflow-hidden">
                             <div className="space-y-4 font-mono text-sm max-h-[400px] overflow-hidden opacity-90">
@@ -75,7 +55,7 @@ const DeepDive = () => {
                                     <span>{t('deepDive.preview.vectorizing')}</span>
                                 </div>
                                 <div className="p-3 bg-secondary/50 rounded border border-border/50 my-2">
-                                    <span className="text-accent">{t('deepDive.preview.query')}</span>
+                                    <span className="text-foreground">{t('deepDive.preview.query')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <span className="text-cyan-500">➜</span>
@@ -90,7 +70,7 @@ const DeepDive = () => {
                                 </div>
                             </div>
                         </div>
-                    </motion.div>
+                    </Reveal>
                 </div>
             </div>
         </section>
