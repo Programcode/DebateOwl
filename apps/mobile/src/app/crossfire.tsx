@@ -533,7 +533,7 @@ export default function CrossfireScreen() {
             onPress={() => endSession('manual')}
             testID="crossfire-end"
             style={({ pressed }) => [styles.end, { borderColor: colors.border, backgroundColor: colors.input }, pressed && styles.pressed]}>
-            <Text weight="semibold" style={styles.endLabel}>
+            <Text weight="semibold" style={styles.endLabel} numberOfLines={2}>
               {t('crossfire.endSession')}
             </Text>
           </Pressable>
@@ -655,11 +655,12 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15.5, lineHeight: 22, marginTop: -6 },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, width: '100%', maxWidth: 720, alignSelf: 'center' },
   clockText: { fontSize: 14.5, fontVariant: ['tabular-nums'] },
-  clockInfo: { flex: 1, gap: 1 },
+  clockInfo: { flex: 1, minWidth: 0, gap: 1 },
   clockLabel: { fontSize: 13 },
   resolutionLine: { fontSize: 15, lineHeight: 20 },
-  end: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 14, minHeight: 38, justifyContent: 'center' },
-  endLabel: { fontSize: 14.5 },
+  // Long labels ("Munkamenet befejezése") wrap instead of squeezing the resolution.
+  end: { borderWidth: 1, borderRadius: 19, paddingHorizontal: 14, paddingVertical: 6, minHeight: 38, justifyContent: 'center', maxWidth: '38%' },
+  endLabel: { fontSize: 14.5, textAlign: 'center' },
   pressed: { opacity: 0.7 },
   liveContent: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 24, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
   notice: { fontSize: 14, lineHeight: 19 },
