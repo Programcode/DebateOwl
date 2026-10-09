@@ -2418,11 +2418,11 @@
       "statRounds_one": "ronda",
       "statRounds_other": "rondas",
       "spar": "Entrena contra la IA",
-      "sparLine": "{{format}}, tu postura: {{side}}",
+      "sparSide": "Eliges tu postura al empezar la ronda",
       "pickUp": "Continúa donde lo dejaste",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "No se pudo cargar tu debate.",
-      "sideAria": "Tu postura"
+      "viewAria": "Mostrar la preparación de"
     },
     "common": {
       "done": "Listo"
@@ -2438,9 +2438,6 @@
       "oneOffDesc": "Usa una herramienta sin guardar en un debate",
       "newDebate": "Nuevo debate",
       "loadFailed": "No se pudieron cargar tus debates."
-    },
-    "newDebate": {
-      "side": "Tu postura"
     },
     "you": {
       "usage": "{{used}} de {{limit}} usos de IA hoy",

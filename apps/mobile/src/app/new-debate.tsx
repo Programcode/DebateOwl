@@ -8,13 +8,12 @@ import { MainActionButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icon';
-import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
-import { useDebates, type DebateSide } from '@/lib/debate-context';
+import { useDebates } from '@/lib/debate-context';
 import { DEBATE_FORMATS, MAX_MOTION_LENGTH, type DebateFormat } from '@/lib/debates';
 import { useTheme } from '@/theme/use-theme';
 
-/** Start a debate: motion, side and format, like the website's Start new debate dialog. It becomes current. */
+/** Start a debate: motion and format, like the website's Start new debate dialog. It becomes current. */
 export default function NewDebateSheet() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -22,7 +21,6 @@ export default function NewDebateSheet() {
   const { colors } = useTheme();
   const { create } = useDebates();
   const [motion, setMotion] = useState('');
-  const [side, setSide] = useState<DebateSide>('pro');
   const [format, setFormat] = useState<DebateFormat>('custom');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +32,7 @@ export default function NewDebateSheet() {
     setError('');
     try {
       // The website's form saves the role too; it has no role picker here yet, so it keeps the default.
-      await create({ motion, settings: { format, role: 'general' }, side });
+      await create({ motion, settings: { format, role: 'general' } });
       // Closes this sheet and the switcher under it, if it was opened from there.
       router.dismissAll();
     } catch (cause) {
@@ -73,21 +71,6 @@ export default function NewDebateSheet() {
           editable={!saving}
           style={styles.motion}
         />
-
-        <View style={styles.group}>
-          <Text weight="medium" tone="secondary" style={styles.label}>
-            {t('mobile.newDebate.side')}
-          </Text>
-          <SegmentedControl<DebateSide>
-            options={[
-              { value: 'pro', label: t('debate.side.pro') },
-              { value: 'con', label: t('debate.side.con') },
-            ]}
-            value={side}
-            onChange={setSide}
-            disabled={saving}
-          />
-        </View>
 
         <View style={styles.group}>
           <Text weight="medium" tone="secondary" style={styles.label}>

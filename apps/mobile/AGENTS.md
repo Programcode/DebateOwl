@@ -19,7 +19,7 @@ The iOS app (`@debatelab/mobile`): Expo SDK 57, React Native 0.86, React 19, Exp
 - `src/app/`: routes. `sign-in.tsx`; `(tabs)/` with one route group per tab: Debate, Prepare, Practice, Library, You; and the form sheets `debates.tsx` (switcher), `new-debate.tsx` and `delete-account.tsx`, declared in the root `_layout.tsx`.
 - `src/components/`: shared UI. `app-tabs.tsx` uses native tabs; `app-tabs.web.tsx` draws the mock's tab bar for the web preview.
 - `src/lib/`: auth (`auth.tsx`), the Supabase client, session storage (AES key in SecureStore, ciphertext in AsyncStorage) and i18n. `debates.ts`, `settings.tsx`, `subscription.ts` and `account.ts` read and write the website's tables the way its stores do (`src/lib/stores/debate-store.ts`, `settings-store.ts`, `src/hooks/use-subscription.ts`, `src/lib/account.ts`), so the app and the website share one Current Debate and one set of settings. Change them together with the website code they mirror.
-- One-off mode is session-only and never written, as on the website. The side shown on the Debate tab is kept on the device per account and debate, because `debates` has no side column and the website drops unknown keys from a debate's `settings`.
+- One-off mode is session-only and never written, as on the website. Students prepare both sides of a motion, so a debate has no side: the Debate tab's In favor / Against toggle only chooses which side's work it shows, using the website's rule (`'both'` counts for either side, neutral and side-less work for neither). It starts on In favor and is never stored.
 - `src/theme/`: colours from the mocks and the website's dark palette, Inter fonts.
 - `scripts/screenshots.ts`: web-export screenshots. `scripts/render-tab-icons.ts` redraws the tab bar PNGs.
 

@@ -130,29 +130,45 @@ const KIND_BY_TABLE: Record<ResultTable, DebateItemKind> = {
   crossfires: 'crossfire',
 };
 
+/** The two sides a debate is prepared for. */
+export type DebateSide = 'pro' | 'con';
+
+/**
+ * The saved sides that belong to each side's preparation. As on the website's
+ * Current Debate page, 'both' counts for either side and neutral or side-less
+ * work counts for neither.
+ */
+const SIDES_FOR: Record<DebateSide, string[]> = { pro: ['pro', 'both'], con: ['con', 'both'] };
+
 export interface DebateCounts {
   sources: number;
-  results: number;
+  /** Saved results per side. */
+  results: Record<DebateSide, number>;
   rounds: number;
 }
 
-async function countRows(table: string, debateId: string): Promise<number> {
-  const { count, error } = await supabase
+async function countRows(table: string, debateId: string, sides?: string[]): Promise<number> {
+  let query = supabase
     .from(table)
     .select('id', { count: 'exact', head: true })
     .eq('debate_id', debateId);
+  if (sides) query = query.in('side', sides);
+  const { count, error } = await query;
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
 
-/** Sources, saved results and Sparring rounds in one debate. One-off work has no debate and never counts. */
+const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
+
+/** Sources, saved results per side and Sparring rounds in one debate. One-off work has no debate and never counts. */
 export async function fetchDebateCounts(debateId: string): Promise<DebateCounts> {
-  const [sources, rounds, ...results] = await Promise.all([
+  const [sources, rounds, pro, con] = await Promise.all([
     countRows('sources', debateId),
     countRows('sparring_sessions', debateId),
-    ...RESULT_TABLES.map((table) => countRows(table, debateId)),
+    Promise.all(RESULT_TABLES.map((table) => countRows(table, debateId, SIDES_FOR.pro))),
+    Promise.all(RESULT_TABLES.map((table) => countRows(table, debateId, SIDES_FOR.con))),
   ]);
-  return { sources, rounds, results: results.reduce((sum, count) => sum + count, 0) };
+  return { sources, rounds, results: { pro: sum(pro), con: sum(con) } };
 }
 
 /** Library sources per debate, for the switcher's list. */
@@ -168,14 +184,15 @@ export interface DebateItem {
   createdAt: number;
 }
 
-/** The newest saved results and rounds in a debate, like the website's Recent work. */
-export async function fetchRecentWork(debateId: string, limit: number): Promise<DebateItem[]> {
+/** The newest saved results and rounds for one side of a debate, like the website's side lists. */
+export async function fetchRecentWork(debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
   const lists = await Promise.all([
     ...RESULT_TABLES.map(async (table) => {
       const { data, error } = await supabase
         .from(table)
         .select('id,title,created_at')
         .eq('debate_id', debateId)
+        .in('side', SIDES_FOR[side])
         .order('created_at', { ascending: false })
         .limit(limit);
       if (error) throw new Error(error.message);
@@ -187,11 +204,12 @@ export async function fetchRecentWork(debateId: string, limit: number): Promise<
       }));
     }),
     (async () => {
-      // The website lists a round under its motion and orders it by its last update.
+      // The website lists a round under its motion and the side the student spoke, ordered by its last update.
       const { data, error } = await supabase
         .from('sparring_sessions')
         .select('id,motion,updated_at')
         .eq('debate_id', debateId)
+        .eq('user_side', side)
         .order('updated_at', { ascending: false })
         .limit(limit);
       if (error) throw new Error(error.message);

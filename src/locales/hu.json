@@ -2418,11 +2418,11 @@
       "statRounds_one": "forduló",
       "statRounds_other": "forduló",
       "spar": "Gyakorolj az MI ellen",
-      "sparLine": "{{format}}, a te oldalad: {{side}}",
+      "sparSide": "Az oldaladat a forduló elején választod",
       "pickUp": "Folytasd, ahol abbahagytad",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Nem sikerült betölteni a vitát.",
-      "sideAria": "A te oldalad"
+      "viewAria": "Felkészülés megjelenítése"
     },
     "common": {
       "done": "Kész"
@@ -2438,9 +2438,6 @@
       "oneOffDesc": "Eszköz használata vitába mentés nélkül",
       "newDebate": "Új vita",
       "loadFailed": "Nem sikerült betölteni a vitáidat."
-    },
-    "newDebate": {
-      "side": "A te oldalad"
     },
     "you": {
       "usage": "Ma {{used}} / {{limit}} MI-használat",

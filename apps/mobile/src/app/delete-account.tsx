@@ -12,7 +12,7 @@ import { deleteAccount, deletionConfirmation } from '@/lib/account';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/theme/use-theme';
 
-/** Removes what this device kept for the account: its settings and debate sides. */
+/** Removes what this device kept for the account: its settings. */
 async function forgetAccount(userId: string) {
   const keys = await AsyncStorage.getAllKeys();
   await AsyncStorage.multiRemove(keys.filter((key) => key.includes(userId)));

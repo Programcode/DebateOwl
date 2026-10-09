@@ -2418,11 +2418,11 @@
       "statRounds_one": "round",
       "statRounds_other": "rounds",
       "spar": "Spar against the AI",
-      "sparLine": "{{format}}, you speak {{side}}",
+      "sparSide": "You pick your side when the round starts",
       "pickUp": "Pick up where you left off",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Could not load your debate.",
-      "sideAria": "Your side"
+      "viewAria": "Show preparation for"
     },
     "common": {
       "done": "Done"
@@ -2438,9 +2438,6 @@
       "oneOffDesc": "Use a tool without saving to a debate",
       "newDebate": "New debate",
       "loadFailed": "Could not load your debates."
-    },
-    "newDebate": {
-      "side": "Your side"
     },
     "you": {
       "usage": "{{used}} of {{limit}} AI uses today",

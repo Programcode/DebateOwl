@@ -21,7 +21,7 @@
  * therefore answer the app's user_settings reads with the run's language and
  * the System theme; nothing is written. The Debate tab shows the account's
  * real Current Debate, and its empty state comes from answering the
- * current_debates read with no row.
+ * current_debates read with no row. The Debate tab is shot once per side view.
  */
 import { chromium, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -125,6 +125,9 @@ async function shootDebateScreens(page: Page, prefix: string) {
   await page.waitForFunction(() => !document.querySelector('[data-testid="debate-counts"]')?.textContent?.includes('–'));
   await settle(page);
   await shoot(page, `${prefix}-debate`);
+  // Both sides' work is already loaded, so the Against view needs no new request.
+  await page.getByRole('tab', { name: /^(Against|Ellene|En contra)$/ }).click();
+  await shoot(page, `${prefix}-debate-con`);
 
   await page.getByTestId('current-debate-pill').click();
   await page.getByTestId('debates-sheet').waitFor();
@@ -261,7 +264,7 @@ async function main() {
             await shoot(tabPage, `${prefix}-failed`);
             throw error;
           });
-          shots += 3;
+          shots += 4;
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
             await tabPage.goto(`${ORIGIN}${route}`);
             await tabPage.getByRole('tablist').first().waitFor();

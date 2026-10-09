@@ -11,8 +11,15 @@ import type { IconName } from '@/components/icon-paths';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
-import { useDebates, type DebateSide } from '@/lib/debate-context';
-import { fetchDebateCounts, fetchRecentWork, type DebateCounts, type DebateItem, type DebateItemKind } from '@/lib/debates';
+import { useDebates } from '@/lib/debate-context';
+import {
+  fetchDebateCounts,
+  fetchRecentWork,
+  type DebateCounts,
+  type DebateItem,
+  type DebateItemKind,
+  type DebateSide,
+} from '@/lib/debates';
 import { formatWhen } from '@/lib/dates';
 import { mainActionGradient, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -44,7 +51,7 @@ const PRACTICE_KINDS = new Set<DebateItemKind>(['attack', 'crossfire', 'sparring
 export default function DebateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { status, current, oneOff, setOneOff, refresh, sideOf, setSide } = useDebates();
+  const { status, current, oneOff, setOneOff, refresh } = useDebates();
 
   // Debates switched on the website show up when the tab comes back into view.
   const focusedBefore = useRef(false);
@@ -95,8 +102,6 @@ export default function DebateScreen() {
     );
   }
 
-  const side = sideOf(current.id);
-
   return (
     <Screen safeTop gap={0}>
       <SwitcherPill onPress={openSwitcher} />
@@ -104,17 +109,7 @@ export default function DebateScreen() {
       <Text accessibilityRole="header" weight="bold" style={styles.motion} testID="current-debate-motion">
         {current.motion}
       </Text>
-      <View accessibilityLabel={t('mobile.debate.sideAria')}>
-        <SegmentedControl<DebateSide>
-          options={[
-            { value: 'pro', label: t('debate.side.pro') },
-            { value: 'con', label: t('debate.side.con') },
-          ]}
-          value={side}
-          onChange={(next) => setSide(current.id, next)}
-        />
-      </View>
-      <DebateDetails key={current.id} debateId={current.id} side={side} />
+      <DebateDetails key={current.id} debateId={current.id} />
     </Screen>
   );
 }
@@ -150,20 +145,30 @@ function OneOffNotice({ onReturn }: { onReturn: () => void }) {
   );
 }
 
-/** Counts, the main action, the Prepare tools and recent work for one debate. */
-function DebateDetails({ debateId, side }: { debateId: string; side: DebateSide }) {
+/**
+ * Counts, the main action, the Prepare tools and recent work for one debate.
+ * Students prepare both sides, so the toggle only chooses which side's work is
+ * shown. It starts on In favor for each debate and is never stored.
+ */
+function DebateDetails({ debateId }: { debateId: string }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const [view, setView] = useState<DebateSide>('pro');
   const [counts, setCounts] = useState<DebateCounts | null>(null);
-  const [recent, setRecent] = useState<DebateItem[] | null>(null);
+  const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
   const [failed, setFailed] = useState(false);
 
+  // Both sides load together, so switching the view is instant.
   const load = useCallback(async (isCurrent: () => boolean) => {
     try {
-      const [nextCounts, nextRecent] = await Promise.all([fetchDebateCounts(debateId), fetchRecentWork(debateId, RECENT_LIMIT)]);
+      const [nextCounts, pro, con] = await Promise.all([
+        fetchDebateCounts(debateId),
+        fetchRecentWork(debateId, 'pro', RECENT_LIMIT),
+        fetchRecentWork(debateId, 'con', RECENT_LIMIT),
+      ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
-      setRecent(nextRecent);
+      setRecent({ pro, con });
       setFailed(false);
     } catch (cause) {
       if (!isCurrent()) return;
@@ -184,16 +189,29 @@ function DebateDetails({ debateId, side }: { debateId: string; side: DebateSide 
   );
 
   const open = (href: Href) => router.navigate(href);
+  const results = counts?.results[view];
+  const items = recent?.[view] ?? null;
 
   return (
     <>
+      <View accessibilityLabel={t('mobile.debate.viewAria')}>
+        <SegmentedControl<DebateSide>
+          options={[
+            { value: 'pro', label: t('debate.side.pro') },
+            { value: 'con', label: t('debate.side.con') },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </View>
+
       <View style={styles.stats} testID="debate-counts">
         <Stat value={counts?.sources} label={t('mobile.debate.statSources', { count: counts?.sources ?? 0 })} />
-        <Stat value={counts?.results} label={t('mobile.debate.statResults', { count: counts?.results ?? 0 })} />
+        <Stat value={results} label={t('mobile.debate.statResults', { count: results ?? 0 })} />
         <Stat value={counts?.rounds} label={t('mobile.debate.statRounds', { count: counts?.rounds ?? 0 })} />
       </View>
 
-      <SparCard side={side} onPress={() => open('/practice')} />
+      <SparCard onPress={() => open('/practice')} />
 
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('mobile.tabs.prepare')}
@@ -214,17 +232,17 @@ function DebateDetails({ debateId, side }: { debateId: string; side: DebateSide 
           </Text>
           <TextButton label={t('common.retry')} onPress={() => void load(() => true)} />
         </Card>
-      ) : recent === null ? (
+      ) : items === null ? (
         <ActivityIndicator style={styles.loading} />
-      ) : recent.length === 0 ? (
+      ) : items.length === 0 ? (
         <Card>
           <Text tone="secondary" style={styles.body}>
-            {t('debate.noWork')}
+            {t('debate.sideEmpty')}
           </Text>
         </Card>
       ) : (
         <Card style={styles.list}>
-          {recent.map((item, index) => (
+          {items.map((item, index) => (
             <RecentRow
               key={`${item.kind}-${item.id}`}
               item={item}
@@ -251,7 +269,7 @@ function Stat({ value, label }: { value: number | undefined; label: string }) {
   );
 }
 
-function SparCard({ side, onPress }: { side: DebateSide; onPress: () => void }) {
+function SparCard({ onPress }: { onPress: () => void }) {
   const { t } = useTranslation();
   return (
     <Pressable
@@ -266,12 +284,8 @@ function SparCard({ side, onPress }: { side: DebateSide; onPress: () => void }) 
         <Text weight="bold" style={styles.sparTitle}>
           {t('mobile.debate.spar')}
         </Text>
-        <Text style={styles.sparLine}>
-          {t('mobile.debate.sparLine', {
-            format: t('sparring.format.standard'),
-            side: t(side === 'pro' ? 'sparring.pro' : 'sparring.con'),
-          })}
-        </Text>
+        <Text style={styles.sparLine}>{t('sparring.format.standard')}</Text>
+        <Text style={styles.sparLine}>{t('mobile.debate.sparSide')}</Text>
       </View>
       {/* A View, so the web preview paints it above the gradient like the other children. */}
       <View>
