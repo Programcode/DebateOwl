@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { getInstallId, sessionStorage } from './device-storage';
 import { supabase } from './supabase';
@@ -63,25 +63,36 @@ async function functionError(error: unknown): Promise<Error> {
   return error instanceof Error ? error : new Error('Demo sign-in failed.');
 }
 
+/** Signs out without throwing; returns what went wrong, if anything. */
+async function signOutError(scope: 'global' | 'local'): Promise<string | null> {
+  try {
+    const { error } = await supabase.auth.signOut({ scope });
+    return error ? error.message : null;
+  } catch (cause) {
+    return cause instanceof Error ? cause.message : String(cause);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Counts auth changes, so a storage read that lands after a newer change is dropped.
+  const generation = useRef(0);
 
   useEffect(() => {
-    let latest = 0;
     // Offline, supabase-js retries the refresh for up to 30 seconds before its
     // first event, so start from storage instead of holding the splash screen.
     void storedSession().then((stored) => {
-      if (latest !== 0) return;
+      if (generation.current !== 0) return;
       setSession(stored);
       setLoading(false);
     });
     const { data } = supabase.auth.onAuthStateChange((event, next) => {
-      const current = ++latest;
+      const current = ++generation.current;
       if (event === 'INITIAL_SESSION' && next === null) {
         // Offline cold start: stay signed in; the auto-refresh retries once the network is back.
         void storedSession().then((stored) => {
-          if (current !== latest) return;
+          if (current !== generation.current) return;
           setSession(stored);
           setLoading(false);
         });
@@ -119,8 +130,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (verificationError) throw verificationError;
     },
     signOut: async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // supabase-js loads the session before signing out. Offline with an
+      // expired access token that refresh fails, and it returns the error
+      // without removing the stored session. Signing out must still sign out
+      // here, so the stored session is removed whatever the server said.
+      const globalError = await signOutError('global');
+      if (globalError) {
+        console.warn('Sign-out on the server failed; signing out on this device only:', globalError);
+        const localError = await signOutError('local');
+        if (localError) console.warn('Local sign-out failed:', localError);
+      }
+      try {
+        await sessionStorage.removeItem(sessionStorageKey);
+      } catch (cause) {
+        console.warn('Could not remove the stored session:', cause);
+      }
+      generation.current += 1;
+      setSession(null);
+      setLoading(false);
     },
   }), [session, loading]);
 
