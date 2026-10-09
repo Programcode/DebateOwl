@@ -485,9 +485,11 @@ All colors MUST be HSL.
   transition: transform 250ms var(--motion-ease-out-strong);
 }
 
-/* React Flow's 26px canvas controls grow to touch size on phones. */
+/* React Flow's 26px canvas controls grow to touch size on phones. Its stylesheet loads
+   after this one with a content-box 16px + padding, so this needs the extra class. */
 @media (pointer: coarse) {
-  .react-flow__controls-button {
+  .react-flow .react-flow__controls-button {
+    box-sizing: border-box;
     width: 44px;
     height: 44px;
   }
