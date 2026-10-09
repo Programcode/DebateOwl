@@ -281,10 +281,10 @@ export function AppLayout() {
               </DialogPrimitive.Trigger>
               {/* Mobile Nav: a modal panel under the header, with a scrim over the page. */}
               <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong duration-180" />
+                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-[calc(var(--native-safe-top,0px)+var(--staging-banner-height,0px)+4rem)] z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong duration-180"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-[calc(var(--native-safe-top,0px)+var(--staging-banner-height,0px)+4rem)] z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>
@@ -349,7 +349,7 @@ export function AppLayout() {
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">
-            <Link to="/terms" {...termsPrefetch} className="inline-flex items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.terms')}</Link>
+            <Link to="/terms" {...termsPrefetch} className="inline-flex items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
             <Link to="/privacy" {...privacyPrefetch} className="inline-flex items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
           </div>
         </div>
