@@ -46,8 +46,8 @@ test.describe('Hungarian parity', () => {
 
     for (const [path, heading] of [
       ['/login', 'Bejelentkezés a DebateLab-ba'],
-      ['/terms', 'Felhasználási Feltételek'],
-      ['/privacy', 'Adatvédelmi Irányelvek'],
+      ['/terms', 'Felhasználási feltételek'],
+      ['/privacy', 'Adatvédelmi irányelvek'],
       ['/expocit/sources', 'Források'],
     ] as const) {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -77,7 +77,7 @@ test.describe('Hungarian parity', () => {
     await expect(page.getByRole('heading', { name: 'Felkészülés' })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLab-ban!', { timeout: 15_000 });
     await expect(page.locator('[data-test-id="button-primary"]')).toContainText('Következő');
-    await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra Kihagyása');
+    await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra kihagyása');
     await page.locator('[data-test-id="button-skip"]').click();
 
     for (const [route, heading] of [
@@ -131,15 +131,15 @@ test.describe('Hungarian parity', () => {
 
     await page.goto('/app/library', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('textbox', { name: 'Források keresése' })).toBeVisible();
-    await page.getByRole('button', { name: 'Forrás Hozzáadása' }).click();
+    await page.getByRole('button', { name: 'Forrás hozzáadása' }).click();
     await expect(page.getByText('Importálás URL-ből')).toBeVisible();
-    await page.getByRole('button', { name: 'Mentés a Könyvtárba' }).click();
+    await page.getByRole('button', { name: 'Mentés a könyvtárba' }).click();
     // Required fields are checked inline, in Hungarian.
     await expect(page.getByRole('alert').filter({ hasText: 'Adj meg egy címet.' })).toBeVisible();
 
     await page.goto('/app/flowchart', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Betöltés' }).click();
-    await expect(page.getByRole('dialog', { name: 'Mentett Folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Mentett folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
     await page.keyboard.press('Escape');
     // Deleting a node raises a toast, whose close button is localized too.
     await page.getByText('1. érv', { exact: true }).click();
