@@ -7,12 +7,21 @@
  *   npm run -w @debatelab/mobile export:web
  *   PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
  *
+ * ONLY=iphone-light-en limits a run to the combinations whose name starts with it.
+ *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
  * script signs in once through the real sign-in screen and also checks that a
  * cold start without a network keeps the user signed in. The deployed Edge
  * Functions only accept browser calls from a few origins, so for that run use
  * PORT=18080 (http://127.0.0.1:18080). Never print the code or put it in a
  * screenshot.
+ *
+ * Signed in, the app applies the account's saved language and theme, which
+ * would override the locale and colour scheme under test. Screenshot runs
+ * therefore answer the app's user_settings reads with the run's language and
+ * the System theme; nothing is written. The Debate tab shows the account's
+ * real Current Debate, and its empty state comes from answering the
+ * current_debates read with no row.
  */
 import { chromium, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -28,6 +37,7 @@ const DIST = join(__dirname, '../dist');
 const OUT = join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
+const ONLY = process.env.ONLY?.trim() ?? '';
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const STAGING_HOST = new URL(SUPABASE_PROJECTS.staging.url).host;
 const SESSION_KEY = `sb-${STAGING_HOST.split('.')[0]}-auth-token`;
@@ -38,7 +48,8 @@ const DEVICES = {
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
-const SIGNED_IN_ROUTES = { debate: '/', prepare: '/prepare', practice: '/practice', library: '/library', you: '/you' };
+const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', library: '/library', you: '/you' };
+const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -81,6 +92,61 @@ async function shoot(page: Page, name: string) {
   // Let fonts and the colour scheme settle after hydration.
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email')] });
+}
+
+/** Answers user_settings reads with the run's language and the System theme (see the header). */
+async function pinSettings(page: Page, language: string) {
+  await page.route(`${REST}/user_settings*`, async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const response = await route.fetch();
+    const pin = (row: Record<string, unknown>) => ({
+      ...row,
+      ...('language' in row ? { language } : {}),
+      ...('output_language' in row ? { output_language: language } : {}),
+      ...('theme' in row ? { theme: 'system' } : {}),
+    });
+    const body: unknown = await response.json();
+    const json = Array.isArray(body)
+      ? body.map((row) => pin(row as Record<string, unknown>))
+      : body && typeof body === 'object' ? pin(body as Record<string, unknown>) : body;
+    await route.fulfill({ response, json });
+  });
+}
+
+/** Waits until the screen's data has arrived, so no spinner is caught mid-load. */
+async function settle(page: Page) {
+  await page.waitForLoadState('networkidle');
+  await page.waitForFunction(() => document.querySelectorAll('[role="progressbar"]').length === 0, undefined, { timeout: 15_000 });
+}
+
+async function shootDebateScreens(page: Page, prefix: string) {
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await page.waitForFunction(() => !document.querySelector('[data-testid="debate-counts"]')?.textContent?.includes('–'));
+  await settle(page);
+  await shoot(page, `${prefix}-debate`);
+
+  await page.getByTestId('current-debate-pill').click();
+  await page.getByTestId('debates-sheet').waitFor();
+  await settle(page);
+  // Let the sheet finish sliding in.
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-debates-sheet`);
+
+  await page.getByRole('button', { name: /^(New debate|Új vita|Nuevo debate)$/ }).click();
+  await page.getByTestId('new-debate-sheet').waitFor();
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-new-debate`);
+}
+
+async function shootEmptyDebate(page: Page, prefix: string) {
+  await page.route(`${REST}/current_debates*`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', json: [] }),
+  );
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('current-debate-pill').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-debate-empty`);
 }
 
 async function signIn(browser: Browser, problems: string[]): Promise<StorageState> {
@@ -171,6 +237,7 @@ async function main() {
       for (const scheme of SCHEMES) {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
+          if (!prefix.startsWith(ONLY)) continue;
           const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
           const page = await signedOut.newPage();
           watchErrors(page, problems, prefix);
@@ -189,12 +256,25 @@ async function main() {
           const signedIn = await browser.newContext({ ...options, colorScheme: scheme, locale, storageState: session });
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
+          await pinSettings(tabPage, language);
+          await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
+            await shoot(tabPage, `${prefix}-failed`);
+            throw error;
+          });
+          shots += 3;
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
             await tabPage.goto(`${ORIGIN}${route}`);
-            await tabPage.getByRole('tablist').waitFor();
+            await tabPage.getByRole('tablist').first().waitFor();
+            if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
+            await settle(tabPage);
             await shoot(tabPage, `${prefix}-${name}`);
             shots += 1;
           }
+          const emptyPage = await signedIn.newPage();
+          watchErrors(emptyPage, problems, `${prefix} empty`);
+          await pinSettings(emptyPage, language);
+          await shootEmptyDebate(emptyPage, prefix);
+          shots += 1;
           await signedIn.close();
         }
       }
