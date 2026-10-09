@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
+import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
@@ -24,7 +24,6 @@ function normalize(text: string) {
 export default function DebatesSheet() {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { status, debates, current, oneOff, setOneOff, switchTo, refresh } = useDebates();
   const { session } = useAuth();
@@ -76,11 +75,7 @@ export default function DebatesSheet() {
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
-      keyboardShouldPersistTaps="handled"
-      testID="debates-sheet">
+    <SheetScrollView contentContainerStyle={styles.content} testID="debates-sheet">
       <View style={styles.header}>
         <Text accessibilityRole="header" weight="bold" style={styles.title}>
           {t('debate.yourDebates')}
@@ -180,7 +175,6 @@ export default function DebatesSheet() {
           <Switch
             value={oneOff}
             onValueChange={setOneOff}
-            disabled={!current}
             accessibilityLabel={t('mobile.debates.oneOff')}
             trackColor={{ false: colors.border, true: colors.primary }}
             ios_backgroundColor={colors.border}
@@ -196,12 +190,12 @@ export default function DebatesSheet() {
       ) : null}
 
       <PrimaryButton icon="plus" label={t('mobile.debates.newDebate')} onPress={() => router.push('/new-debate')} />
-    </ScrollView>
+    </SheetScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 22, gap: 14, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  content: { gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   search: {

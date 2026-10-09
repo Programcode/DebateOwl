@@ -9,6 +9,7 @@ import { Card, IconTile } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { Icon } from '@/components/icon';
 import { LibraryHeader, type AddSourceKind } from '@/components/library-header';
+import { OneOffNotice } from '@/components/one-off-notice';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
@@ -47,6 +48,8 @@ export default function LibraryScreen() {
   return (
     <Screen>
       <LibraryHeader title={t('mobile.tabs.library')} onAdd={onAdd} disabled={!debateId} />
+      {/* New sources still go to the Current Debate in one-off mode, as on the website, so this only says the mode is on. */}
+      <OneOffNotice message="debate.oneOffActive" />
       {status === 'loading' ? <ActivityIndicator style={styles.loading} /> : null}
       {status !== 'loading' && !debateId ? (
         <Card>

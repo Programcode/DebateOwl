@@ -1,7 +1,7 @@
 import type { Factoid, FactoidsInput } from '@debatelab/core/ai/schemas/factoids';
 import { SafeWebUrlSchema } from '@debatelab/core/ai/schemas/url';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ActionMenu } from '@/components/action-menu';
@@ -18,7 +18,7 @@ import { useDebates } from '@/lib/debate-context';
 import { copyText, sharePdf, shareText } from '@/lib/export';
 import { FACTOIDS_EXPORT_FILE_NAME, factoidsExportHtml } from '@/lib/export-html';
 import { discussFactoidsMessage, factoidsToText } from '@/lib/result-text';
-import { isCompleteFactoids } from '@/lib/results';
+import { readFactoids } from '@/lib/results';
 import { addSource } from '@/lib/sources';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
 
@@ -56,7 +56,9 @@ export default function FactoidsResultScreen() {
   }, [arrival, failed, setNotice, t]);
 
   const result = doc.state.status === 'ready' ? doc.state.result : null;
-  const output = result && isCompleteFactoids(result.output) ? result.output : null;
+  // Saved rows are read through the schema, so an old or broken one shows the notice below instead of crashing.
+  const raw = result?.output;
+  const output = useMemo(() => (raw === undefined ? null : readFactoids(raw)), [raw]);
   const back = backLabel(t, params.from, 'prepare');
 
   if (!result || !output) {

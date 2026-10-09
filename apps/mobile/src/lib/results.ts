@@ -10,7 +10,7 @@ import { transformBrainstormResponse } from '@debatelab/core/ai/brainstorm-outpu
 import { factoidsRequestInput, selectVerifiedFactoids } from '@debatelab/core/ai/factoids-output';
 import { expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
 import { AttackOutputSchema, type AttackInput, type AttackOutput } from '@debatelab/core/ai/schemas/attack';
-import type { BrainstormInput, BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
+import { BrainstormOutputSchema, type BrainstormInput, type BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import { FactoidsOutputSchema, type FactoidsInput, type FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 import type { SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
@@ -104,8 +104,10 @@ export function attackCase(input: AttackInput, options: RequestOptions): Promise
 export function brainstormIdeas(input: BrainstormInput, options: RequestOptions): Promise<ResultWithSources<BrainstormOutput> & ResponseExtras> {
   return postFunction('ai', requestBody('brainstorm', input, options), options.signal, async (response) => {
     const { output, data } = await functionOutput(response);
+    const result = readBrainstorm(output);
+    if (!result) throw new AIError('failed', 'AI response did not match the expected brainstorm schema.');
     return {
-      result: transformBrainstormResponse(output as Record<string, unknown>),
+      result,
       discoveredSources: parseDiscoveredSources(data.discoveredSources),
       ...responseExtras(data),
     };
@@ -283,12 +285,19 @@ export function isCompleteAttack(output: unknown): output is AttackOutput {
   return Boolean(value?.overallAssessment && Array.isArray(value.weaknesses));
 }
 
-/** A brainstorm with no ideas is still complete: the website shows "No ideas returned" or its questions. */
-export function isCompleteBrainstorm(output: unknown): output is BrainstormOutput {
-  return Boolean(output && typeof output === 'object' && !Array.isArray(output));
+/**
+ * A brainstorm, from the model or a saved row, normalized by the website's transform and then
+ * checked against its schema; null when it still does not fit. A brainstorm with no ideas is
+ * still complete: the website shows "No ideas returned" or its questions.
+ */
+export function readBrainstorm(output: unknown): BrainstormOutput | null {
+  if (!output || typeof output !== 'object' || Array.isArray(output)) return null;
+  const parsed = BrainstormOutputSchema.safeParse(transformBrainstormResponse(output as Record<string, unknown>));
+  return parsed.success ? parsed.data : null;
 }
 
-export function isCompleteFactoids(output: unknown): output is FactoidsOutput {
-  const value = output as Partial<FactoidsOutput> | null;
-  return Boolean(value && Array.isArray(value.factoids));
+/** A saved factoids row, checked against the schema its request was checked with; null when it does not fit. */
+export function readFactoids(output: unknown): FactoidsOutput | null {
+  const parsed = FactoidsOutputSchema.safeParse(output);
+  return parsed.success ? parsed.data : null;
 }

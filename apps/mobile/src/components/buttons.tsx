@@ -127,16 +127,20 @@ export function TextButton({
   onPress,
   disabled,
   destructive,
+  accessibilityLabel,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   destructive?: boolean;
+  /** For VoiceOver when the visible label repeats on a list of items. */
+  accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
