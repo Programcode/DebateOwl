@@ -41,7 +41,7 @@ function mockFetchOnce(body: BodyInit | null, init: ResponseInit = { status: 200
   return fetchMock;
 }
 
-const streamConfig = { provider: 'openrouter', model: 'gpt-5.4-mini', temperature: 0.7 } as const;
+const streamConfig = { provider: 'openrouter', model: 'gpt-5.4-mini' } as const;
 const streamOptions = {};
 
 beforeEach(() => {
@@ -88,38 +88,38 @@ describe('AI streaming helpers', () => {
   });
 
   it('enables streaming for basic OpenRouter ask chats', () => {
-    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 })).toBe(true);
-    expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(false);
-    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(false);
-    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', temperature: 0.7 })).toBe(false);
-    expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x', temperature: 0.7 })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'openai/gpt-5.6-luna' })).toBe(true);
+    expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini' })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview' })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001' })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x' })).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
       { citationMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
       { webSearch: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
       { prosConsMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
       { argumentMapMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
       { mode: 'clarify' }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
       { mode: 'general' }
     )).toBe(true);
     for (const mode of ['clarify', 'summarize', 'proscons', 'argumentmap']) {
       expect(isAskStreamingSupported(
-        { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+        { provider: 'openrouter', model: 'openai/gpt-5.6-luna' },
         { mode }
       )).toBe(false);
     }

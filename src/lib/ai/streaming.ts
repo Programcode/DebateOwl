@@ -210,7 +210,6 @@ export async function streamAskChat(
         ...(debateContext ? { debateContext } : {}),
         provider,
         model: config.model,
-        temperature: config.temperature,
         reasoningEffort: config.reasoningEffort ?? 'low',
       }),
       signal: controller.signal,
