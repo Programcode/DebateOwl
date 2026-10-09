@@ -1,5 +1,5 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -48,6 +48,7 @@ const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
 export default function AskScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
@@ -265,6 +266,16 @@ export default function AskScreen() {
       }
     }
   };
+
+  // Discuss on a case or an attack opens Ask with the website's message and sends it once.
+  const prompted = useRef(false);
+  useEffect(() => {
+    if (prompted.current || !prompt?.trim() || !userId) return;
+    prompted.current = true;
+    void send(prompt, []);
+    // send reads refs and state setters; it runs once per opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt, userId]);
 
   // Retrying replaces the unanswered question instead of asking it twice.
   const retry = (question: string) => {

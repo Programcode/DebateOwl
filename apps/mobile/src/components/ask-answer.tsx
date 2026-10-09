@@ -6,34 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Chip, CiteBadge } from './chip';
+import { firstUrl, hostOf, openCitation, shorten, type CitationTarget } from './citation-target';
 import { MarkdownView } from './markdown-view';
 import { Text } from './text';
 
 import type { Source } from '@/lib/sources';
-
-interface CitationTarget {
-  n: number;
-  label: string;
-  url?: string;
-  sourceId?: string;
-}
-
-/** The first web address in a citation's source, as the website's getFirstUrl. */
-function firstUrl(text?: string): string | undefined {
-  return text?.match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[),.;!?]+$/g, '');
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
-
-function shorten(text: string, max = 42): string {
-  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
-}
 
 /** Each citation as a chip: a Library source opens its detail, a web address opens the in-app browser. */
 function citationTargets(output: AskOutput | undefined, library: Source[]): CitationTarget[] {
@@ -62,10 +39,7 @@ export function AskAnswer({ content, output, streaming, library }: { content: st
   const cited = new Set(targets.map((target) => target.url).filter(Boolean));
   const webSources = (output?.searchInfo?.webSearchUsed ? output.searchInfo.sources : []).filter((item) => !cited.has(item.url));
 
-  const open = (target: CitationTarget | undefined) => {
-    if (target?.sourceId) router.push({ pathname: '/source/[id]', params: { id: target.sourceId } });
-    else if (target?.url) void WebBrowser.openBrowserAsync(target.url);
-  };
+  const open = (target: CitationTarget | undefined) => openCitation(router, target);
 
   return (
     <View style={styles.answer} testID={streaming ? 'ask-streaming' : 'ask-answer'}>

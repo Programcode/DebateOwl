@@ -25,6 +25,9 @@ export const palette = {
     tabBar: 'rgba(248,250,252,0.84)',
     destructive: '#dc2626',
     success: '#16a34a',
+    warning: '#d97706',
+    tileBorder: '#bae6fd',
+    tileText: '#0c4a6e',
   },
   dark: {
     background: '#0f172a',
@@ -47,6 +50,9 @@ export const palette = {
     tabBar: 'rgba(15,23,42,0.84)',
     destructive: '#f87171',
     success: '#4ade80',
+    warning: '#fbbf24',
+    tileBorder: '#1e4a6b',
+    tileText: '#e0f2fe',
   },
 } as const;
 

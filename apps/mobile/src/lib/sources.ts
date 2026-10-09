@@ -82,14 +82,28 @@ export async function fetchSource(userId: string, id: string): Promise<Source | 
   return data ? fromRow(data as SourceRow) : null;
 }
 
-/** Saves a source to a debate in the General folder, as the website's Library does. */
+/**
+ * Saves a source to a debate, as the website's session store does: in the
+ * General folder unless another is named, as the Library adds them, or in
+ * Auto-saved with research metadata, as Generate and Attack keep their sources.
+ */
 export async function addSource(
   userId: string,
-  input: { title: string; content: string; type: SourceType; origin?: string | null; debateId: string },
+  input: {
+    title: string;
+    content: string;
+    type: SourceType;
+    origin?: string | null;
+    debateId: string;
+    folder?: string;
+    isActive?: boolean;
+    metadata?: Record<string, unknown> | null;
+  },
 ): Promise<Source> {
+  const folder = input.folder?.trim() || DEFAULT_FOLDER;
   const folderResult = await supabase
     .from('source_folders')
-    .upsert({ user_id: userId, name: DEFAULT_FOLDER }, { onConflict: 'user_id,name' });
+    .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
   if (folderResult.error) throw new Error(folderResult.error.message);
   const { data, error } = await supabase
     .from('sources')
@@ -100,15 +114,27 @@ export async function addSource(
       content: input.content,
       type: input.type,
       origin: input.origin || null,
-      folder: DEFAULT_FOLDER,
-      is_active: true,
-      metadata: null,
+      folder,
+      is_active: input.isActive ?? true,
+      metadata: input.metadata ?? null,
     })
     .select(SOURCE_COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the source');
   notifySourcesChanged();
   return fromRow(data as SourceRow);
+}
+
+/** The sources in one debate's folder, as the website's undo for auto-saved research finds them. */
+export async function fetchSourceIdsInFolder(userId: string, debateId: string, folder: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('sources')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('debate_id', debateId)
+    .eq('folder', folder);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { id: string }[]).map((row) => row.id);
 }
 
 export async function removeSource(userId: string, id: string): Promise<void> {

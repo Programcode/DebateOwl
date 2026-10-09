@@ -1,0 +1,354 @@
+import { Children, Fragment, isValidElement, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Chip, CiteBadge } from './chip';
+import type { CitationTarget } from './citation-target';
+import { Icon } from './icon';
+import { MarkdownView } from './markdown-view';
+import { Text } from './text';
+
+import { radius } from '@/theme/colors';
+import { useTheme } from '@/theme/use-theme';
+
+/**
+ * A result read as a document, as in mock 03: a large title and meta line, a
+ * pale-blue framing card, numbered arguments that collapse, quotes with a
+ * left rule and citation chips, and the next steps pinned above the home bar.
+ * Generate and Attack use these; Brainstorm and Factoids will too.
+ */
+
+const BODY = 15.5;
+const PINNED_HEIGHT = 54;
+
+/** The scrolling page under the header, leaving room for the pinned actions. */
+export function DocumentScreen({ header, children, actions, notice, testID }: { header: ReactNode; children: ReactNode; actions?: ReactNode; notice?: string; testID?: string }) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom - 6, 14);
+  return (
+    <View style={[styles.root, { backgroundColor: colors.card }]} testID={testID}>
+      {header}
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[styles.content, { paddingBottom: (actions ? PINNED_HEIGHT + 24 : 16) + bottom }]}>
+        {children}
+      </ScrollView>
+      {notice ? (
+        <View
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={[styles.notice, { bottom: bottom + (actions ? PINNED_HEIGHT + 12 : 0), backgroundColor: colors.foreground }]}
+          testID="document-notice">
+          <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
+        </View>
+      ) : null}
+      {actions ? (
+        <View style={[styles.pinned, { bottom }]}>
+          {/* The pinned buttons share the width equally, as in the mock. */}
+          {Children.map(unwrapFragment(actions), (action) => (action ? <View style={styles.pinnedItem}>{action}</View> : null))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function unwrapFragment(node: ReactNode): ReactNode {
+  return isValidElement<{ children?: ReactNode }>(node) && node.type === Fragment ? node.props.children : node;
+}
+
+export function DocumentTitle({ title, meta }: { title: string; meta?: string }) {
+  return (
+    <View style={styles.titleBlock}>
+      <Text accessibilityRole="header" weight="bold" style={styles.title} selectable>
+        {title}
+      </Text>
+      {meta ? (
+        <Text tone="faint" style={styles.meta}>
+          {meta}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** The pale-blue card the document opens with. */
+export function FramingCard({ blocks }: { blocks: { label: string; text: string }[] }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.framing, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} testID="document-framing">
+      {blocks.map((block, index) => (
+        <View key={index} style={styles.framingBlock}>
+          <Text weight="semibold" style={[styles.framingLabel, { color: colors.chipSelectedForeground }]}>
+            {block.label}
+          </Text>
+          <Text style={[styles.framingText, { color: colors.tileText }]} selectable>
+            {block.text}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export interface NumberedItem {
+  key: string;
+  title: string;
+  /** What a collapsed item says under its title, such as "2 pieces of evidence". */
+  summary: string;
+  body: ReactNode;
+}
+
+/**
+ * Numbered items that open one at a time or together. The first is open. An
+ * open item gets its own card; neighbouring closed items share one, as in the mock.
+ */
+export function NumberedItems({ items, testID }: { items: NumberedItem[]; testID?: string }) {
+  const { colors } = useTheme();
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(items[0] ? [items[0].key] : []));
+  const toggle = (key: string) =>
+    setOpen((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  // Runs of closed items share a card.
+  const groups: { open: boolean; entries: { item: NumberedItem; n: number }[] }[] = [];
+  items.forEach((item, index) => {
+    const isOpen = open.has(item.key);
+    const last = groups[groups.length - 1];
+    if (!isOpen && last && !last.open) last.entries.push({ item, n: index + 1 });
+    else groups.push({ open: isOpen, entries: [{ item, n: index + 1 }] });
+  });
+
+  return (
+    <View style={styles.items} testID={testID}>
+      {groups.map((group) => (
+        <View key={group.entries[0].item.key} style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {group.entries.map(({ item, n }, index) => (
+            <Fragment key={item.key}>
+              {index > 0 ? <View style={[styles.divider, { backgroundColor: colors.line }]} /> : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: group.open }}
+                onPress={() => toggle(item.key)}
+                testID="document-item"
+                style={({ pressed }) => [styles.itemHeader, pressed && styles.pressed]}>
+                <Text weight="bold" style={[styles.itemNumber, { color: colors.primary }, group.open && styles.itemNumberOpen]}>
+                  {n}
+                </Text>
+                <View style={styles.itemHeaderText}>
+                  <Text weight={group.open ? 'bold' : 'semibold'} style={group.open ? styles.itemTitleOpen : styles.itemTitle} numberOfLines={group.open ? undefined : 1}>
+                    {item.title}
+                  </Text>
+                  {group.open ? null : (
+                    <Text tone="faint" style={styles.itemSummary} numberOfLines={1}>
+                      {item.summary}
+                    </Text>
+                  )}
+                </View>
+                <Icon name={group.open ? 'chevronUp' : 'chevronDown'} color={colors.tabInactive} size={20} />
+              </Pressable>
+              {group.open ? <View style={styles.itemBody}>{item.body}</View> : null}
+            </Fragment>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Body text that may carry Markdown, as the website renders model output. */
+export function Paragraph({ text, tone = 'secondary' }: { text: string; tone?: 'foreground' | 'secondary' }) {
+  return <MarkdownView source={text} size={BODY} tone={tone} />;
+}
+
+/** A labelled line, like the website's "Impact:" rows. */
+export function Labeled({ label, text, italic }: { label: string; text: string; italic?: boolean }) {
+  return (
+    <Text tone="secondary" style={styles.labeled} selectable>
+      <Text weight="semibold" tone="faint" style={styles.labeled}>
+        {label.replace(/:?$/, ':')}{' '}
+      </Text>
+      <Text tone="foreground" style={[styles.labeled, italic && styles.italic]}>
+        {text}
+      </Text>
+    </Text>
+  );
+}
+
+/** A quote with the mock's left rule, followed by its citation chips. */
+export function Quote({ text, chips = [], onCite, italic }: { text: string; chips?: CitationTarget[]; onCite?: (target: CitationTarget) => void; italic?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.quote, { borderLeftColor: colors.primary }]}>
+      <Text style={[styles.quoteText, italic && styles.italic]} selectable>
+        {text}
+        {chips.map((chip) => (
+          <Text key={chip.n} accessibilityRole="button" accessibilityLabel={chip.label} onPress={onCite ? () => onCite(chip) : undefined}>
+            {' '}
+            <CiteBadge n={chip.n} />
+          </Text>
+        ))}
+      </Text>
+    </View>
+  );
+}
+
+/** The sources behind citation chips, as a row of chips. */
+export function SourceChips({ chips, onCite }: { chips: CitationTarget[]; onCite: (target: CitationTarget) => void }) {
+  if (chips.length === 0) return null;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips}>
+      {chips.map((chip) => (
+        <Chip key={chip.n} label={chip.label} leading={<CiteBadge n={chip.n} />} onPress={() => onCite(chip)} />
+      ))}
+    </ScrollView>
+  );
+}
+
+export function SectionHeading({ title, description }: { title: string; description?: string }) {
+  return (
+    <View style={[styles.sectionHead, styles.sectionHeading]}>
+      <Text accessibilityRole="header" weight="bold" style={styles.sectionTitle}>
+        {title}
+      </Text>
+      {description ? (
+        <Text tone="faint" style={styles.sectionDescription}>
+          {description}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** A titled part of the document, in the same card style as the arguments. */
+export function DocSection({ title, description, children, testID }: { title: string; description?: string; children: ReactNode; testID?: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.section} testID={testID}>
+      <View style={styles.sectionHead}>
+        <Text accessibilityRole="header" weight="bold" style={styles.sectionTitle}>
+          {title}
+        </Text>
+        {description ? (
+          <Text tone="faint" style={styles.sectionDescription}>
+            {description}
+          </Text>
+        ) : null}
+      </View>
+      <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>{children}</View>
+    </View>
+  );
+}
+
+/** A small heading inside a section. */
+export function SubHeading({ children }: { children: string }) {
+  return (
+    <Text weight="semibold" tone="faint" style={styles.subHeading}>
+      {children}
+    </Text>
+  );
+}
+
+export function Bullets({ items, marker = '•', color }: { items: string[]; marker?: string; color?: string }) {
+  const { colors } = useTheme();
+  if (items.length === 0) return null;
+  return (
+    <View style={styles.bullets}>
+      {items.map((item, index) => (
+        <View key={index} style={styles.bullet}>
+          <Text weight="bold" style={[styles.bulletMarker, { color: color ?? colors.primary }]}>
+            {marker}
+          </Text>
+          <Text style={styles.bulletText} selectable>
+            {item}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** A small outlined label, such as a severity or "Needs Source". */
+export function Tag({ label, color, icon }: { label: string; color?: string; icon?: 'alert' }) {
+  const { colors } = useTheme();
+  const tint = color ?? colors.secondary;
+  return (
+    <View style={[styles.tag, { borderColor: tint }]}>
+      {icon ? <Icon name={icon} color={tint} size={13} /> : null}
+      <Text weight="semibold" style={[styles.tagText, { color: tint }]}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+export function Divider() {
+  const { colors } = useTheme();
+  return <View style={[styles.divider, { backgroundColor: colors.line }]} />;
+}
+
+/** A tinted box inside an item, such as the website's "Improved Version". */
+export function Callout({ title, children }: { title: string; children: ReactNode }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.callout, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]}>
+      <Text weight="semibold" style={[styles.calloutTitle, { color: colors.chipSelectedForeground }]}>
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  content: { paddingHorizontal: 18, paddingTop: 4, gap: 12, width: '100%', maxWidth: 680, alignSelf: 'center' },
+  pinned: { position: 'absolute', left: 14, right: 14, flexDirection: 'row', gap: 10 },
+  pinnedItem: { flex: 1 },
+  pressed: { opacity: 0.7 },
+  notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },
+  noticeText: { fontSize: 15, lineHeight: 20, textAlign: 'center' },
+  titleBlock: { gap: 6, marginBottom: 4 },
+  title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
+  meta: { fontSize: 15, lineHeight: 20 },
+  framing: { borderWidth: 1, borderRadius: radius.card + 1, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  framingBlock: { gap: 4 },
+  framingLabel: { fontSize: 15 },
+  framingText: { fontSize: 15.5, lineHeight: 22.5 },
+  items: { gap: 10 },
+  itemCard: { borderWidth: 1, borderRadius: radius.card + 1, overflow: 'hidden' },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13, minHeight: 64 },
+  itemNumber: { fontSize: 17, minWidth: 14 },
+  itemNumberOpen: { alignSelf: 'flex-start', marginTop: 1 },
+  itemHeaderText: { flex: 1, gap: 2 },
+  itemTitle: { fontSize: 16.5, lineHeight: 22 },
+  itemTitleOpen: { fontSize: 17.5, lineHeight: 23 },
+  itemSummary: { fontSize: 14.5, lineHeight: 19 },
+  itemBody: { paddingLeft: 42, paddingRight: 16, paddingBottom: 16, gap: 10, marginTop: -4 },
+  labeled: { fontSize: BODY, lineHeight: 22 },
+  italic: { fontStyle: 'italic' },
+  quote: { borderLeftWidth: 3.5, paddingLeft: 12, paddingVertical: 2 },
+  quoteText: { fontSize: 15, lineHeight: 22 },
+  chipRow: { flexGrow: 0, marginHorizontal: -16 },
+  chips: { gap: 8, paddingHorizontal: 16 },
+  section: { gap: 8, marginTop: 8 },
+  sectionHead: { gap: 2, marginHorizontal: 2 },
+  sectionHeading: { marginTop: 8 },
+  sectionTitle: { fontSize: 19, lineHeight: 25, letterSpacing: -0.2 },
+  sectionDescription: { fontSize: 14, lineHeight: 19 },
+  sectionCard: { borderWidth: 1, borderRadius: radius.card + 1, padding: 16, gap: 12 },
+  subHeading: { fontSize: 14, lineHeight: 19 },
+  bullets: { gap: 6 },
+  bullet: { flexDirection: 'row', gap: 8 },
+  bulletMarker: { fontSize: BODY, lineHeight: 22, minWidth: 12 },
+  bulletText: { flex: 1, fontSize: BODY, lineHeight: 22 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2 },
+  tagText: { fontSize: 12.5, lineHeight: 17 },
+  divider: { height: 1 },
+  callout: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 4 },
+  calloutTitle: { fontSize: 14.5 },
+});

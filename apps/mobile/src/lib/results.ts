@@ -1,0 +1,209 @@
+import {
+  AUTO_SAVED_FOLDER,
+  autoSavedSourceRow,
+  parseDiscoveredSources,
+  retainedDiscoveredSources,
+  type DiscoveredSource,
+  type ResultWithSources,
+} from '@debatelab/core/ai/discovered-sources';
+import { expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
+import { AttackOutputSchema, type AttackInput, type AttackOutput } from '@debatelab/core/ai/schemas/attack';
+import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
+
+import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
+import type { FeatureConfig } from './feature-config';
+import { addSource, fetchSourceIdsInFolder, removeSource } from './sources';
+import { supabase } from './supabase';
+
+/**
+ * Generate and Attack, sent and saved the way the website does it:
+ * generateCase and attackCase in src/lib/ai/client.ts for the requests and
+ * their researched sources, and recordResult and saveCurrentCase in
+ * src/lib/stores/session-store.ts for the saved rows.
+ */
+
+export type ResultKind = 'case' | 'attack';
+
+const TABLES = { case: 'cases', attack: 'attacks' } as const satisfies Record<ResultKind, string>;
+
+export interface OutputFor {
+  case: GenerateOutput;
+  attack: AttackOutput;
+}
+
+export interface SavedResult<K extends ResultKind> {
+  id: string;
+  kind: K;
+  title: string;
+  side: string | null;
+  debateId: string | null;
+  createdAt: number;
+  input: Record<string, unknown>;
+  output: OutputFor[K];
+}
+
+interface RequestOptions {
+  config: FeatureConfig;
+  language: string;
+  /** Absent for one-off work. */
+  debateContext?: DebateContextRequest;
+  signal?: AbortSignal;
+}
+
+function requestBody(feature: 'generate' | 'attack', input: Record<string, unknown>, options: RequestOptions) {
+  return {
+    feature,
+    input: { ...input, language: options.language },
+    provider: PROVIDER,
+    model: options.config.model,
+    temperature: options.config.temperature,
+    reasoningEffort: options.config.reasoningEffort,
+    // Servers from before Current Debate context read only this field.
+    sourceIds: options.debateContext?.sourceIds ?? [],
+    ...(options.debateContext ? { debateContext: options.debateContext } : {}),
+  };
+}
+
+/** A generated case, checked like the website checks it and stamped with the local time and motion. */
+export function generateCase(input: GenerateInput, options: RequestOptions): Promise<ResultWithSources<GenerateOutput>> {
+  return postFunction('ai', requestBody('generate', input, options), options.signal, async (response) => {
+    const { output, data } = await functionOutput(response);
+    const parsed = GenerateOutputSchema.safeParse(transformGenerateResponse(output as Record<string, unknown>));
+    if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected generate schema.');
+    const result = parsed.data;
+    if (result.contentions.length !== expectedContentionCount(input.length)) {
+      throw new AIError('failed', 'AI response did not contain the expected number of contentions.');
+    }
+    result.metadata.generatedAt = new Date().toISOString();
+    result.metadata.motion = input.motion;
+    return { result, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
+  });
+}
+
+export function attackCase(input: AttackInput, options: RequestOptions): Promise<ResultWithSources<AttackOutput>> {
+  return postFunction('ai', requestBody('attack', input, options), options.signal, async (response) => {
+    const { output, data } = await functionOutput(response);
+    const parsed = AttackOutputSchema.safeParse(output);
+    if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected attack schema.');
+    return { result: parsed.data, discoveredSources: parseDiscoveredSources(data.discoveredSources) };
+  });
+}
+
+/**
+ * Keeps the researched sources worth keeping in the debate's Auto-saved
+ * folder, one at a time, as the website does. One-off research is not kept.
+ * A source that fails to save is skipped; the count of failures is returned.
+ */
+export async function autosaveSources(userId: string, sources: DiscoveredSource[], capturedVia: 'generate' | 'attack', debateId: string | null): Promise<{ saved: number; failed: number }> {
+  if (!debateId) return { saved: 0, failed: 0 };
+  let saved = 0;
+  let failed = 0;
+  for (const source of retainedDiscoveredSources(sources)) {
+    try {
+      await addSource(userId, { ...autoSavedSourceRow(source, capturedVia), debateId });
+      saved += 1;
+    } catch (cause) {
+      console.warn('Could not save a researched source:', cause instanceof Error ? cause.message : cause);
+      failed += 1;
+    }
+  }
+  return { saved, failed };
+}
+
+/** The website's rule for its undo: every source in the debate's Auto-saved folder. */
+export function fetchAutoSavedSourceIds(userId: string, debateId: string): Promise<string[]> {
+  return fetchSourceIdsInFolder(userId, debateId, AUTO_SAVED_FOLDER);
+}
+
+export async function removeSources(userId: string, ids: string[]): Promise<{ succeeded: number; failed: number }> {
+  const results = await Promise.allSettled(ids.map((id) => removeSource(userId, id)));
+  const succeeded = results.filter((result) => result.status === 'fulfilled').length;
+  return { succeeded, failed: results.length - succeeded };
+}
+
+/**
+ * Every read and write below also filters on the user. Row level security is
+ * the real boundary; the filter keeps a wrong session from mixing accounts.
+ */
+
+/** Saves a result into its debate, as the website's recordResult. Returns the new row's id. */
+export async function recordResult<K extends ResultKind>(
+  userId: string,
+  kind: K,
+  record: { title: string; input: unknown; output: OutputFor[K]; debateId: string; side: string },
+): Promise<string> {
+  const { data, error } = await supabase
+    .from(TABLES[kind])
+    .insert({
+      user_id: userId,
+      debate_id: record.debateId,
+      side: record.side,
+      title: record.title.slice(0, 300) || 'Untitled',
+      input: record.input ?? {},
+      output: record.output,
+    })
+    .select('id')
+    .single();
+  if (error || !data) throw new Error(error?.message ?? `Could not save the ${kind}`);
+  return (data as { id: string }).id;
+}
+
+/** Saves a case outside any debate, as the website's Save button does for unrecorded work. */
+export async function saveCase(userId: string, title: string, output: GenerateOutput): Promise<string> {
+  const { data, error } = await supabase
+    .from('cases')
+    .insert({ user_id: userId, title, input: {}, output })
+    .select('id')
+    .single();
+  if (error || !data) throw new Error(error?.message ?? 'Could not save the case');
+  return (data as { id: string }).id;
+}
+
+interface ResultRow {
+  id: string;
+  title: string;
+  side: string | null;
+  debate_id: string | null;
+  created_at: string;
+  input: unknown;
+  output: unknown;
+}
+
+export async function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
+  const { data, error } = await supabase
+    .from(TABLES[kind])
+    .select('id,title,side,debate_id,created_at,input,output')
+    .eq('user_id', userId)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const row = data as ResultRow;
+  return {
+    id: row.id,
+    kind,
+    title: row.title,
+    side: row.side,
+    debateId: row.debate_id,
+    createdAt: new Date(row.created_at).getTime(),
+    input: row.input && typeof row.input === 'object' && !Array.isArray(row.input) ? (row.input as Record<string, unknown>) : {},
+    output: row.output as OutputFor[K],
+  };
+}
+
+export async function deleteResult(userId: string, kind: ResultKind, id: string): Promise<void> {
+  const { error } = await supabase.from(TABLES[kind]).delete().eq('user_id', userId).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** The guard the website's results pages use: an old or broken row shows a notice instead of a crash. */
+export function isCompleteCase(output: unknown): output is GenerateOutput {
+  const value = output as Partial<GenerateOutput> | null;
+  return Boolean(value?.caseStructure && Array.isArray(value.contentions) && value.predictedOpponentCase && Array.isArray(value.counters));
+}
+
+export function isCompleteAttack(output: unknown): output is AttackOutput {
+  const value = output as Partial<AttackOutput> | null;
+  return Boolean(value?.overallAssessment && Array.isArray(value.weaknesses));
+}
