@@ -2,12 +2,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
+import { SheetScrollView } from '@/components/sheet';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
@@ -22,7 +22,6 @@ function webUrl(origin: string | null): string | null {
 export default function SourceSheet() {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
@@ -49,10 +48,7 @@ export default function SourceSheet() {
   const url = webUrl(source?.origin ?? null);
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
-      testID="source-sheet">
+    <SheetScrollView contentContainerStyle={styles.content} testID="source-sheet">
       <View style={styles.header}>
         <View style={styles.headerText}>
           {source ? (
@@ -106,12 +102,12 @@ export default function SourceSheet() {
           </Card>
         </>
       )}
-    </ScrollView>
+    </SheetScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 18, gap: 14, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  content: { paddingTop: 18, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   headerText: { flex: 1 },
   kind: { flexDirection: 'row', alignItems: 'center', gap: 9 },

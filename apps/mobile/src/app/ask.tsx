@@ -11,6 +11,7 @@ import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
+import { OneOffNotice } from '@/components/one-off-notice';
 import { Text } from '@/components/text';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
@@ -353,7 +354,9 @@ export default function AskScreen() {
         contentContainerStyle={styles.messagesContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
+        // A streamed answer grows every 30 ms; restarting an animated scroll each time stutters.
+        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: streaming === null })}>
+        <OneOffNotice />
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>
             <Text weight="semibold" style={styles.emptyTitle}>
