@@ -2384,5 +2384,24 @@
   },
   "offlineIndicator": {
     "label": "Offline mód"
+  },
+  "mobile": {
+    "tabs": {
+      "debate": "Vita",
+      "prepare": "Felkészülés",
+      "practice": "Gyakorlás",
+      "library": "Könyvtár",
+      "you": "Profil"
+    },
+    "signIn": {
+      "subtitle": "Használd az e-mail-címedet vagy az esemény szervezőjétől kapott demókódot."
+    },
+    "placeholder": {
+      "title": "Még nincs az appban",
+      "body": "A DebateLab ezen része hamarosan az appba is megérkezik. Addig a weboldalon használhatod."
+    },
+    "debate": {
+      "comingSoon": "Vitát indítani és váltani a következő frissítéssel tudsz majd az appban."
+    }
   }
 }

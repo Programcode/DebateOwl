@@ -7,7 +7,8 @@
     "node": "22.x"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "dev": "vite",

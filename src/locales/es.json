@@ -2384,5 +2384,24 @@
   },
   "offlineIndicator": {
     "label": "Modo sin conexión"
+  },
+  "mobile": {
+    "tabs": {
+      "debate": "Debate",
+      "prepare": "Preparar",
+      "practice": "Practicar",
+      "library": "Biblioteca",
+      "you": "Tú"
+    },
+    "signIn": {
+      "subtitle": "Usa tu email o un código demo del organizador de tu evento."
+    },
+    "placeholder": {
+      "title": "Aún no está en la app",
+      "body": "Esta parte de DebateLab llegará pronto a la app. Mientras tanto, úsala en la web."
+    },
+    "debate": {
+      "comingSoon": "Podrás iniciar y cambiar de debate en la app con la próxima actualización."
+    }
   }
 }
