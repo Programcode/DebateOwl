@@ -114,6 +114,17 @@ export function signalBetween(previous: number, current: number): TimerSignal | 
   return null;
 }
 
+/**
+ * The signal due between two readings of the time left, as the screen redraws.
+ * Time left only falls while the clock runs, so every fall is checked, also one
+ * that ends in a pause: pausing as 1:01 turns to 1:00 still beeps. A fresh
+ * clock (a reset or another speech) moves the reading up and sounds nothing.
+ */
+export function signalFor(previous: number, current: number, clock: TimerClock): TimerSignal | null {
+  if (clock.startedAt === null && clock.elapsedBeforeMs === 0) return null;
+  return signalBetween(previous, current);
+}
+
 export function formatClock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }

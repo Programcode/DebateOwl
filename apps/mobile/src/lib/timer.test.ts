@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { idleClock, pauseClock, remainingSeconds, signalBetween, startClock } from './timer';
+import { idleClock, pauseClock, remainingSeconds, signalBetween, signalFor, startClock, type TimerClock, type TimerSignal } from './timer';
 
 const T0 = 1_000_000;
 
@@ -35,5 +35,45 @@ describe('timer signals', () => {
   it('sounds only time up when a background gap crossed both thresholds', () => {
     expect(signalBetween(150, 0)).toBe('double-beep');
     expect(signalBetween(150, 30)).toBe('beep');
+  });
+});
+
+describe('timer signals across a pause', () => {
+  /** Reads the clock as the screen does on each redraw, collecting the signals it sounds. */
+  function reader(clock: TimerClock, now: number) {
+    let last = remainingSeconds(clock, now);
+    const heard: TimerSignal[] = [];
+    return {
+      heard,
+      read(next: TimerClock, at: number) {
+        const current = remainingSeconds(next, at);
+        const due = signalFor(last, current, next);
+        last = current;
+        if (due) heard.push(due);
+      },
+    };
+  }
+
+  it('beeps once when a pause lands as 1:01 turns to 1:00, and not again on resume', () => {
+    let clock = startClock(idleClock(2), T0);
+    const screen = reader(clock, T0);
+    screen.read(clock, T0 + 59_200); // shows 1:01
+    clock = pauseClock(clock, T0 + 60_100); // real time left is now 59.9 s, shown as 1:00
+    screen.read(clock, T0 + 60_100);
+    clock = startClock(clock, T0 + 90_000);
+    screen.read(clock, T0 + 91_000); // 0:59
+    expect(screen.heard).toEqual(['beep']);
+  });
+
+  it('sounds nothing when a reset or another speech moves the time left', () => {
+    let clock = startClock(idleClock(2), T0);
+    const screen = reader(clock, T0);
+    screen.read(clock, T0 + 30_000); // 1:30
+    // A fresh one-minute clock drops the reading from 1:30 to 1:00 without the speech running.
+    clock = idleClock(1);
+    screen.read(clock, T0 + 30_000);
+    clock = idleClock(4);
+    screen.read(clock, T0 + 30_000);
+    expect(screen.heard).toEqual([]);
   });
 });

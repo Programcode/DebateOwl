@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { TextButton } from './buttons';
+import { OneOffNotice } from './one-off-notice';
 import { Text } from './text';
 
 import type { AIErrorKind } from '@/lib/ai-request';
@@ -25,18 +26,15 @@ export function ToolTitle({ title, subtitle }: { title: string; subtitle: string
   );
 }
 
-/** Where new work will be saved, as the website's CurrentDebateStrip says it. */
+/** Where new work will be saved, as the website's CurrentDebateStrip says it. In one-off mode it offers the way back to the Current Debate. */
 export function WorkingIn() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { current, oneOff } = useDebates();
+  if (oneOff) return <OneOffNotice />;
   return (
-    <View style={[styles.strip, { borderColor: colors.border }, oneOff && styles.dashed]} testID="working-in">
-      {oneOff ? (
-        <Text tone="secondary" style={styles.stripText}>
-          {t('debate.oneOffStrip')}
-        </Text>
-      ) : current ? (
+    <View style={[styles.strip, { borderColor: colors.border }]} testID="working-in">
+      {current ? (
         <Text tone="secondary" style={styles.stripText} numberOfLines={2}>
           {`${t('debate.workingIn')} `}
           <Text weight="semibold" style={styles.stripText}>
@@ -108,7 +106,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
   subtitle: { fontSize: 16, lineHeight: 22 },
   strip: { borderWidth: 1, borderRadius: radius.field, paddingHorizontal: 14, paddingVertical: 10 },
-  dashed: { borderStyle: 'dashed' },
   stripText: { fontSize: 14.5, lineHeight: 20 },
   error: { borderWidth: 1, borderRadius: radius.card, padding: 14, gap: 4 },
   errorTitle: { fontSize: 16 },

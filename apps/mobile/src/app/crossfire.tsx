@@ -25,7 +25,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
-import { AIError, isAbortError, type ResponseExtras } from '@/lib/ai-request';
+import { abortError, AIError, isAbortError, type ResponseExtras } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
@@ -38,6 +38,8 @@ import {
   crossfireSignal,
   crossfireTurn,
   recordCrossfire,
+  untilAborted,
+  withTurnDeadline,
 } from '@/lib/crossfire';
 import { useDebates } from '@/lib/debate-context';
 import { fetchFeatureConfig } from '@/lib/feature-config';
@@ -110,6 +112,8 @@ export default function CrossfireScreen() {
   const [notice, setNotice] = useState('');
   const [activeSources, setActiveSources] = useState<number | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  // The finished round still to be recorded in its debate.
+  const pendingRecord = useRef<{ sessionId: string; forUser: string; debateId: string } | null>(null);
   const signalRequests = useRef(new Set<AbortController>());
   const live = useRef(true);
   const owner = useRef(userId);
@@ -190,12 +194,16 @@ export default function CrossfireScreen() {
     });
   }, [t]);
 
-  const requestContext = useCallback(async (forUser: string, debateId: string | null) => {
-    const [config, context] = await Promise.all([
-      // The website sends Crossfire with the Ask tool's model settings.
-      fetchFeatureConfig(forUser, 'ask'),
-      debateId ? buildDebateContext(forUser, debateId, 'crossfire', 'both') : Promise.resolve(undefined),
-    ]);
+  // Read inside the request's deadline and abort, so a stalled read neither outlasts 75 s nor survives leaving.
+  const requestContext = useCallback(async (forUser: string, debateId: string | null, signal: AbortSignal) => {
+    const [config, context] = await untilAborted(
+      Promise.all([
+        // The website sends Crossfire with the Ask tool's model settings.
+        fetchFeatureConfig(forUser, 'ask'),
+        debateId ? buildDebateContext(forUser, debateId, 'crossfire', 'both') : Promise.resolve(undefined),
+      ]),
+      signal,
+    );
     return { config, context };
   }, []);
 
@@ -205,12 +213,15 @@ export default function CrossfireScreen() {
     requestRef.current = controller;
     const debateId = debateTarget.current;
     try {
-      const { config, context } = await requestContext(forUser, debateId);
-      if (controller.signal.aborted) return;
-      const { reply, ...extras } = await crossfireTurn(
-        { operation: 'next-turn', config: snapshot.config, transcript: snapshot.turns, expectedReply },
-        { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal: controller.signal },
-      );
+      const { config, reply, ...extras } = await withTurnDeadline(controller.signal, async (signal) => {
+        const { config, context } = await requestContext(forUser, debateId, signal);
+        if (signal.aborted) throw abortError();
+        const turn = await crossfireTurn(
+          { operation: 'next-turn', config: snapshot.config, transcript: snapshot.turns, expectedReply },
+          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal },
+        );
+        return { config, ...turn };
+      });
       if (controller.signal.aborted) return;
       dispatch({ type: 'ai-turn-received', turn: nextTurn(snapshot.turns.length + 1, 'ai', reply.type, reply.text) });
       afterResponse(forUser, debateId, extras);
@@ -241,31 +252,37 @@ export default function CrossfireScreen() {
     requestRef.current = controller;
     const debateId = debateTarget.current;
     try {
-      const { config, context } = await requestContext(forUser, debateId);
+      const { debrief, ...extras } = await withTurnDeadline(controller.signal, async (signal) => {
+        const { config, context } = await requestContext(forUser, debateId, signal);
+        if (signal.aborted) throw abortError();
+        return crossfireDebrief(
+          { operation: 'debrief', config: snapshot.config, transcript: snapshot.turns },
+          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal },
+        );
+      });
       if (controller.signal.aborted) return;
-      const { debrief, ...extras } = await crossfireDebrief(
-        { operation: 'debrief', config: snapshot.config, transcript: snapshot.turns },
-        { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal: controller.signal },
-      );
-      if (controller.signal.aborted) return;
-      const action = { type: 'debrief-received' as const, debrief };
-      const finished = crossfireReducer(snapshot, action);
-      dispatch(action);
+      // The effect below saves the finished round from the state it reaches, with any signal that came in meanwhile.
+      if (debateId) pendingRecord.current = { sessionId: snapshot.sessionId, forUser, debateId };
+      dispatch({ type: 'debrief-received', debrief });
       afterResponse(forUser, debateId, extras);
-      // A round that finishes here is recorded in its debate once; one-off rounds are not saved, as on the website.
-      if (finished.phase === 'complete' && debateId) {
-        recordCrossfire(forUser, debateId, finished).catch((cause: unknown) => {
-          console.warn('Could not save the crossfire to the debate:', cause instanceof Error ? cause.message : cause);
-          if (live.current && owner.current === forUser) setNotice(t('debate.recordFailed'));
-        });
-      }
     } catch (cause) {
       if (controller.signal.aborted || isAbortError(cause)) return;
       if (cause instanceof AIError && cause.kind === 'debateMissing') void refresh();
       const { kind, message } = classify(cause, true);
       dispatch({ type: 'debrief-failed', errorKind: kind, message });
     }
-  }, [afterResponse, outputLanguage, refresh, requestContext, t]);
+  }, [afterResponse, outputLanguage, refresh, requestContext]);
+
+  // A round that finishes here is recorded in its debate once, from its latest state, as CrossfirePage does; one-off rounds are not saved.
+  useEffect(() => {
+    const pending = pendingRecord.current;
+    if (!pending || state.phase !== 'complete' || state.sessionId !== pending.sessionId) return;
+    pendingRecord.current = null;
+    recordCrossfire(pending.forUser, pending.debateId, state).catch((cause: unknown) => {
+      console.warn('Could not save the crossfire to the debate:', cause instanceof Error ? cause.message : cause);
+      if (live.current && owner.current === pending.forUser) setNotice(t('debate.recordFailed'));
+    });
+  }, [state, t]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active' || !userId) return;
@@ -610,9 +627,15 @@ export default function CrossfireScreen() {
       {inputKind ? (
         <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 12), borderTopColor: colors.line, backgroundColor: colors.tabBar }]}>
           <View style={styles.composerColumn}>
-            <Text weight="medium" tone="secondary" style={styles.composerLabel}>
-              {inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}
-            </Text>
+            <View style={styles.composerLabelRow}>
+              <Text weight="medium" tone="secondary" style={styles.composerLabel}>
+                {inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}
+              </Text>
+              {/* The website's count; plural forms need the Intl.PluralRules polyfill on Hermes. */}
+              <Text tone="faint" style={styles.composerCount} testID="crossfire-count">
+                {t('crossfire.charactersRemaining', { count: MAX_CROSSFIRE_TURN_CHARS - draftTurn.length })}
+              </Text>
+            </View>
             <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
               <TextInput
                 value={draftTurn}
@@ -674,7 +697,9 @@ const styles = StyleSheet.create({
   waitBody: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   composerColumn: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 6 },
-  composerLabel: { fontSize: 13.5, marginLeft: 6 },
+  composerLabelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginHorizontal: 6 },
+  composerLabel: { fontSize: 13.5 },
+  composerCount: { fontSize: 12.5 },
   inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 24, paddingLeft: 16, paddingRight: 6, paddingVertical: 6, minHeight: 48 },
   input: { flex: 1, fontSize: 17, fontFamily: fontFamily.regular, paddingTop: 7, paddingBottom: 7, maxHeight: 140 },
   send: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },

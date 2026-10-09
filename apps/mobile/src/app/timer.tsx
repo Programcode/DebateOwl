@@ -15,7 +15,7 @@ import {
   idleClock,
   pauseClock,
   remainingSeconds,
-  signalBetween,
+  signalFor,
   startClock,
   TIMER_FORMATS,
   type TimerClock,
@@ -66,16 +66,15 @@ export default function TimerScreen() {
     };
   }, [clock.startedAt]);
 
-  // Signals fire as the time left crosses a threshold, and the clock stops at zero.
+  // Signals fire as the time left crosses a threshold, also when a pause lands on it, and the clock stops at zero.
   const lastRemaining = useRef(remaining);
   useEffect(() => {
     const previous = lastRemaining.current;
     lastRemaining.current = remaining;
-    if (clock.startedAt === null) return;
-    const due = signalBetween(previous, remaining);
+    const due = signalFor(previous, remaining, clock);
     if (due) signal(due, sound);
-    if (remaining === 0) setClock((current) => pauseClock(current, Date.now()));
-  }, [clock.startedAt, remaining, signal, sound]);
+    if (remaining === 0 && clock.startedAt !== null) setClock((current) => pauseClock(current, Date.now()));
+  }, [clock, remaining, signal, sound]);
 
   const selectSpeech = (index: number, formatSpeeches = format.speeches) => {
     const next = formatSpeeches[index];
