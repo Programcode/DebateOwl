@@ -5,6 +5,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { interFonts } from '@/theme/fonts';
@@ -22,7 +23,7 @@ export default function RootLayout() {
 
 function Root() {
   const [fontsLoaded, fontError] = useFonts(interFonts);
-  const { session, loading } = useAuth();
+  const { session, loading, settled } = useAuth();
   const { scheme, colors } = useTheme();
   const ready = (fontsLoaded || fontError !== null) && !loading;
 
@@ -48,14 +49,21 @@ function Root() {
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-        <Stack.Protected guard={session !== null}>
-          <Stack.Screen name="(tabs)" />
-        </Stack.Protected>
-        <Stack.Protected guard={session === null}>
-          <Stack.Screen name="sign-in" />
-        </Stack.Protected>
-      </Stack>
+      {/* The screenshot script waits for auth-settled before it checks an offline cold start. */}
+      <View style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+          <Stack.Protected guard={session !== null}>
+            <Stack.Screen name="(tabs)" />
+          </Stack.Protected>
+          <Stack.Protected guard={session === null}>
+            <Stack.Screen name="sign-in" />
+          </Stack.Protected>
+        </Stack>
+      </View>
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

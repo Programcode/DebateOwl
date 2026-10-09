@@ -108,7 +108,7 @@ npm run -w @debatelab/mobile export:web
 PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
 ```
 
-Screenshots go to `.verify/mobile-shots/`: sign-in at iPhone and iPad sizes, light and dark, English and Hungarian. With `STAGING_DEMO_CODE` set, the script also signs in to staging, captures the five tabs, and checks that a cold start without a network keeps the user signed in. Use the seeded Pro code from `~/.config/debatelab/staging-access.env` (see [staging.md](staging.md)), load it inside the command without printing it, and serve on `PORT=18080`: the deployed Edge Functions only accept browser calls from allowed origins such as `http://127.0.0.1:18080`.
+Screenshots go to `.verify/mobile-shots/`: sign-in at iPhone and iPad sizes, light and dark, English and Hungarian. With `STAGING_DEMO_CODE` set, the script also signs in to staging, captures the five tabs, and checks that a cold start without a network keeps the user signed in, also after supabase-js's first auth event settles (about 30 seconds offline). Use the seeded Pro code from `~/.config/debatelab/staging-access.env` (see [staging.md](staging.md)), load it inside the command without printing it, and serve on `PORT=18080`: the deployed Edge Functions only accept browser calls from allowed origins such as `http://127.0.0.1:18080`.
 
 ### Expo Go on Adam's iPhone
 

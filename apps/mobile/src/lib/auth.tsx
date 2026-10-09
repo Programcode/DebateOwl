@@ -9,6 +9,8 @@ type AuthContextValue = {
   session: Session | null;
   /** True until the stored session has been read. */
   loading: boolean;
+  /** True once supabase-js's first auth event has been handled. Offline that takes about 30 seconds. */
+  settled: boolean;
   signInWithEmailOtp: (email: string) => Promise<void>;
   verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signInWithDemoCode: (code: string) => Promise<void>;
@@ -76,6 +78,7 @@ async function signOutError(scope: 'global' | 'local'): Promise<string | null> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [settled, setSettled] = useState(false);
   // Counts auth changes, so a storage read that lands after a newer change is dropped.
   const generation = useRef(0);
 
@@ -95,11 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (current !== generation.current) return;
           setSession(stored);
           setLoading(false);
+          setSettled(true);
         });
         return;
       }
       setSession(next);
       setLoading(false);
+      setSettled(true);
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -107,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     session,
     loading,
+    settled,
     signInWithEmailOtp: async (email) => {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
@@ -149,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setLoading(false);
     },
-  }), [session, loading]);
+  }), [session, loading, settled]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

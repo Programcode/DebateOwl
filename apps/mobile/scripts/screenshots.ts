@@ -124,6 +124,11 @@ async function checkOfflineColdStart(browser: Browser, state: StorageState, prob
   await page.goto(`${ORIGIN}/`);
   await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 60_000 });
   const offlineMs = Date.now() - started;
+  // The tabs first render from storage. supabase-js's own first event comes
+  // after its offline retries (about 30 s) and must not sign the user out.
+  await page.getByTestId('auth-settled').waitFor({ state: 'attached', timeout: 60_000 });
+  const settledMs = Date.now() - started;
+  const tabsShown = await page.getByRole('tab', { name: 'Debate' }).isVisible();
   const signInShown = await page.getByRole('button', { name: 'Send code' }).isVisible();
   const stored = await page.evaluate((key) => localStorage.getItem(key) !== null, SESSION_KEY);
   await shoot(page, 'offline-cold-start');
@@ -142,9 +147,10 @@ async function checkOfflineColdStart(browser: Browser, state: StorageState, prob
     .then(() => true, () => false);
   await context.close();
 
-  console.log(`offline cold start: tabs shown after ${offlineMs} ms, sign-in shown: ${signInShown}, session kept: ${stored}`);
+  console.log(`offline cold start: tabs shown after ${offlineMs} ms, auth settled after ${settledMs} ms`);
+  console.log(`after settling offline: tabs shown: ${tabsShown}, sign-in shown: ${signInShown}, session kept: ${stored}`);
   console.log(`back online: session refreshed: ${refreshed}`);
-  if (signInShown || !stored || !refreshed) throw new Error('Offline cold start signed the user out');
+  if (!tabsShown || signInShown || !stored || !refreshed) throw new Error('Offline cold start signed the user out');
 }
 
 async function main() {
