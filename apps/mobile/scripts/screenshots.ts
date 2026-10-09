@@ -558,6 +558,9 @@ async function shootCrossfireScreens(context: BrowserContext, prefix: string, la
   await page.getByTestId('crossfire-live').waitFor({ timeout: 15_000 });
   for (const [index, question] of text.questions.entries()) {
     await page.getByTestId('crossfire-input').fill(question);
+    // The count is a plural string; without plural rules it shows its key instead.
+    const count = (await page.getByTestId('crossfire-count').textContent()) ?? '';
+    if (!/\d/.test(count) || count.includes('charactersRemaining')) throw new Error(`Crossfire character count read "${count}"`);
     await page.getByTestId('crossfire-send').click();
     await page.getByTestId('crossfire-turn').nth(index * 2 + 1).waitFor({ timeout: 15_000 });
     await page.getByTestId('crossfire-signal').nth(index).waitFor({ timeout: 15_000 });

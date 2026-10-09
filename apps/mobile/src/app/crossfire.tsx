@@ -610,9 +610,15 @@ export default function CrossfireScreen() {
       {inputKind ? (
         <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 12), borderTopColor: colors.line, backgroundColor: colors.tabBar }]}>
           <View style={styles.composerColumn}>
-            <Text weight="medium" tone="secondary" style={styles.composerLabel}>
-              {inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}
-            </Text>
+            <View style={styles.composerLabelRow}>
+              <Text weight="medium" tone="secondary" style={styles.composerLabel}>
+                {inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}
+              </Text>
+              {/* The website's count; plural forms need the Intl.PluralRules polyfill on Hermes. */}
+              <Text tone="faint" style={styles.composerCount} testID="crossfire-count">
+                {t('crossfire.charactersRemaining', { count: MAX_CROSSFIRE_TURN_CHARS - draftTurn.length })}
+              </Text>
+            </View>
             <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
               <TextInput
                 value={draftTurn}
@@ -674,7 +680,9 @@ const styles = StyleSheet.create({
   waitBody: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   composerColumn: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 6 },
-  composerLabel: { fontSize: 13.5, marginLeft: 6 },
+  composerLabelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginHorizontal: 6 },
+  composerLabel: { fontSize: 13.5 },
+  composerCount: { fontSize: 12.5 },
   inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 24, paddingLeft: 16, paddingRight: 6, paddingVertical: 6, minHeight: 48 },
   input: { flex: 1, fontSize: 17, fontFamily: fontFamily.regular, paddingTop: 7, paddingBottom: 7, maxHeight: 140 },
   send: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
