@@ -106,8 +106,14 @@ export default function SparringScreen() {
   const live = useRef(true);
   const owner = useRef(userId);
 
+  // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
+    if (owner.current === userId) return;
     owner.current = userId;
+    requestRef.current?.abort();
+    sessionRef.current = null;
+    setSession(null);
+    setRequest({ status: 'idle' });
   }, [userId]);
 
   /** The one way the round changes: kept for the session as it changes, as the website keeps it in the tab. */
