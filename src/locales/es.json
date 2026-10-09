@@ -2446,6 +2446,32 @@
     },
     "deleteAccount": {
       "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."
+    },
+    "library": {
+      "add": "Añadir una fuente",
+      "pasteLink": "Pegar un enlace",
+      "writeNote": "Escribir una nota",
+      "search_one": "Buscar en {{count}} fuente",
+      "search_other": "Buscar en {{count}} fuentes",
+      "filters": {
+        "all": "Todas",
+        "files": "Archivos",
+        "links": "Enlaces",
+        "notes": "Notas"
+      },
+      "types": {
+        "url": "Enlace",
+        "text": "Nota",
+        "file": "Archivo"
+      },
+      "metaAdded": "{{type}}, se añadió {{when}}",
+      "metaCited_one": "{{type}}, aparece en {{count}} resultado",
+      "metaCited_other": "{{type}}, aparece en {{count}} resultados",
+      "loadFailed": "No se pudieron cargar tus fuentes.",
+      "deleteFailed": "No se pudo eliminar la fuente. Inténtalo de nuevo.",
+      "saveFailed": "No se pudo guardar la fuente. Inténtalo de nuevo.",
+      "sourceMissing": "Esta fuente ya no está en tu biblioteca.",
+      "openPage": "Abre la página en el navegador"
     }
   }
 }
