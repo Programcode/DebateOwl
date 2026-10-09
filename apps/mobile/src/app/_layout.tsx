@@ -8,6 +8,8 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { DebateProvider } from '@/lib/debate-context';
+import { SettingsProvider, useSettings } from '@/lib/settings';
 import { interFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
@@ -16,7 +18,11 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Root />
+      <SettingsProvider>
+        <DebateProvider>
+          <Root />
+        </DebateProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }
@@ -24,8 +30,10 @@ export default function RootLayout() {
 function Root() {
   const [fontsLoaded, fontError] = useFonts(interFonts);
   const { session, loading, settled } = useAuth();
+  const { ready: settingsReady } = useSettings();
   const { scheme, colors } = useTheme();
-  const ready = (fontsLoaded || fontError !== null) && !loading;
+  // Settings come from the device here, so the app opens in the account's language and theme.
+  const ready = (fontsLoaded || fontError !== null) && !loading && settingsReady;
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();

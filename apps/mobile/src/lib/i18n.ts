@@ -8,8 +8,8 @@ import en from '../../../../src/locales/en.json';
 import es from '../../../../src/locales/es.json';
 import hu from '../../../../src/locales/hu.json';
 
-/** The device language when DebateLab has it, otherwise English. The settings choice arrives with the You tab. */
-function deviceLanguage(): AppLanguage {
+/** The device language when DebateLab has it, otherwise English. Signed in, the account's choice wins (see settings.tsx). */
+export function deviceLanguage(): AppLanguage {
   const code = getLocales()[0]?.languageCode;
   return isAppLanguage(code) ? code : 'en';
 }
