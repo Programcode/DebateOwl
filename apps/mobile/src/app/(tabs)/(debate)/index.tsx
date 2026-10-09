@@ -281,6 +281,7 @@ function SparCard({ side, onPress }: { side: DebateSide; onPress: () => void }) 
   );
 }
 
+// Long one-word labels (Hungarian "Folyamatábra") shrink to fit on iOS; the web preview cannot shrink text, so it truncates them.
 function ToolTile({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   const { colors } = useTheme();
   return (
@@ -292,8 +293,8 @@ function ToolTile({ icon, label, onPress }: { icon: IconName; label: string; onP
         { backgroundColor: colors.card, borderColor: colors.border },
         pressed && styles.pressed,
       ]}>
-      <IconTile name={icon} size={42} />
-      <Text weight="semibold" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit>
+      <IconTile name={icon} size={38} />
+      <Text weight="semibold" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
         {label}
       </Text>
     </Pressable>
@@ -385,13 +386,13 @@ const styles = StyleSheet.create({
     flexBasis: '45%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderWidth: 1,
     borderRadius: radius.card,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
   },
-  tileLabel: { flex: 1, fontSize: 16 },
+  tileLabel: { flex: 1, fontSize: 15.5 },
   list: { padding: 0, gap: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 14 },
   rowText: { flex: 1, gap: 2 },

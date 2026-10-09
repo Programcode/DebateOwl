@@ -163,7 +163,7 @@ export default function DebatesSheet() {
 
       <Card style={styles.oneOffCard}>
         <View style={styles.oneOff}>
-          <View style={[styles.oneOffIcon, { backgroundColor: colors.segmentTrack }]}>
+          <View style={[styles.oneOffIcon, { backgroundColor: colors.line }]}>
             <Icon name="x" color={colors.secondary} size={21} />
           </View>
           <View style={styles.rowText}>
