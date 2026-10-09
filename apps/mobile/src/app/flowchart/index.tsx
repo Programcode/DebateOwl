@@ -138,7 +138,7 @@ export default function FlowchartScreen() {
 
   const openCard = (node: FlowNode) => {
     if (!scope || !open) return;
-    router.push({ pathname: '/flowchart/claim', params: { scope, map: open.key, node: node.id } });
+    router.push({ pathname: '/flowchart/claim', params: { scope, map: open.draft.handle, node: node.id } });
   };
 
   /** Runs a save or delete for the map on screen, as the account and map were when the student chose it. */
@@ -169,7 +169,8 @@ export default function FlowchartScreen() {
       // The held map becomes the new row; the map it was saved from (if any) goes back to its saved
       // state. Edits made while it saved stay held and unsaved, and the map on screen stays on screen.
       updateDraft(at.scope, at.key, (current) => (current.doc === at.draft.doc ? saved : { ...saved, doc: current.doc, edited: true }));
-      if (requestedId) {
+      // A list-opened screen follows the new row only while that map is still the one on screen; a map chosen meanwhile stays.
+      if (requestedId && openDraft(at.scope)?.draft.handle === at.draft.handle) {
         setFound({ id: row.id, scope: at.scope });
         setRequestedId(row.id);
       }
@@ -262,7 +263,7 @@ export default function FlowchartScreen() {
       <DocumentHeader
         backLabel={back}
         actions={actions}
-        buttons={draft && scope && open ? [{ key: 'add', label: t('flowchart.addNode'), symbol: 'plus', icon: 'plus', onPress: () => router.push({ pathname: '/flowchart/card', params: { scope, map: open.key } }) }] : []}
+        buttons={draft && scope && open ? [{ key: 'add', label: t('flowchart.addNode'), symbol: 'plus', icon: 'plus', onPress: () => router.push({ pathname: '/flowchart/card', params: { scope, map: open.draft.handle } }) }] : []}
       />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.head}>

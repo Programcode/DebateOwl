@@ -26,7 +26,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { confirmDestructive } from '@/lib/confirm';
-import { getDraft, updateDraft, useFlowchartDrafts } from '@/lib/flowchart-drafts';
+import { findDraft, updateDraft, useFlowchartDrafts } from '@/lib/flowchart-drafts';
 import { cardKind, linkLine, linkSummary, typeLabel } from '@/lib/flowchart-text';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -50,13 +50,15 @@ export default function ClaimSheet() {
   const flow = useFlowColors();
   const { scope, map, node: nodeId } = useLocalSearchParams<{ scope: string; map: string; node: string }>();
   useFlowchartDrafts();
-  const draft = scope && map ? getDraft(scope, map) : undefined;
+  // `map` is the map's handle, so a save that changes its key while the sheet is open keeps it.
+  const held = scope && map ? findDraft(scope, map) : null;
+  const draft = held?.draft;
   const node = draft && nodeId ? findNode(draft.doc, nodeId) : undefined;
   const [mode, setMode] = useState<'view' | 'link' | 'edit'>('view');
   const [kind, setKind] = useState<FlowEdgeKind>(() => defaultKind(node?.data.type ?? 'contention'));
   const [typeMenu, setTypeMenu] = useState(false);
 
-  if (!draft || !node) {
+  if (!held || !draft || !node) {
     return (
       <SheetScrollView testID="claim-sheet">
         <Text tone="secondary" style={styles.body}>
@@ -67,7 +69,7 @@ export default function ClaimSheet() {
     );
   }
 
-  const change = (edit: Parameters<typeof updateDraft>[2]) => updateDraft(scope, map, edit);
+  const change = (edit: Parameters<typeof updateDraft>[2]) => updateDraft(scope, held.key, edit);
   const { responds, answeredBy } = cardLinks(draft.doc, node.id);
   const links = [...responds.map((link) => ({ link, direction: 'responds' as const })), ...answeredBy.map((link) => ({ link, direction: 'answeredBy' as const }))];
   const deletable = canDeleteCard(node.id);

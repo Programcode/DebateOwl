@@ -7,7 +7,7 @@ import { TextButton } from '@/components/buttons';
 import { CardForm } from '@/components/flowchart-card-form';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
-import { getDraft, updateDraft, useFlowchartDrafts } from '@/lib/flowchart-drafts';
+import { findDraft, updateDraft, useFlowchartDrafts } from '@/lib/flowchart-drafts';
 
 /** "+": the website's Add Node dialog as a form sheet. The card joins the map on screen. */
 export default function AddCardSheet() {
@@ -15,7 +15,9 @@ export default function AddCardSheet() {
   const router = useRouter();
   const { scope, map } = useLocalSearchParams<{ scope: string; map: string }>();
   useFlowchartDrafts();
-  const draft = scope && map ? getDraft(scope, map) : undefined;
+  // `map` is the map's handle, so a save that changes its key while the sheet is open keeps it.
+  const held = scope && map ? findDraft(scope, map) : null;
+  const draft = held?.draft;
 
   return (
     <SheetScrollView testID="card-sheet">
@@ -33,7 +35,7 @@ export default function AddCardSheet() {
           initial={{ label: '', description: '', type: 'contention', strength: 'moderate' }}
           submitLabel={t('flowchart.addNode')}
           onSubmit={(fields) => {
-            updateDraft(scope, map, (current) => ({ ...current, doc: addCard(current.doc, fields, Date.now()).doc, edited: true }));
+            if (held) updateDraft(scope, held.key, (current) => ({ ...current, doc: addCard(current.doc, fields, Date.now()).doc, edited: true }));
             router.back();
           }}
         />

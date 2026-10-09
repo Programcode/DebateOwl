@@ -35,6 +35,8 @@ export default function SavedMapsSheet() {
   const [opening, setOpening] = useState<number | null>(null);
   const [failedOpen, setFailedOpen] = useState(false);
   const loads = useRef(0);
+  // Only the latest tap may open a map; an earlier one still loading is dropped.
+  const selections = useRef(0);
   const live = useRef(true);
   const owner = useRef(userId);
   owner.current = userId;
@@ -69,6 +71,7 @@ export default function SavedMapsSheet() {
 
   const choose = async (item: FlowchartSummary, index: number) => {
     if (!scope || !userId) return;
+    const selection = ++selections.current;
     const held = getDraft(scope, item.id);
     if (held) {
       showDraft(scope, held);
@@ -80,7 +83,7 @@ export default function SavedMapsSheet() {
     setFailedOpen(false);
     try {
       const row = await fetchFlowchart(forUser, item.id);
-      if (!live.current || owner.current !== forUser) return;
+      if (!live.current || owner.current !== forUser || selections.current !== selection) return;
       if (!row) {
         setFailedOpen(true);
         void load();
@@ -90,9 +93,9 @@ export default function SavedMapsSheet() {
       router.back();
     } catch (cause) {
       console.warn('Could not open the flowchart:', cause instanceof Error ? cause.message : cause);
-      if (live.current) setFailedOpen(true);
+      if (live.current && selections.current === selection) setFailedOpen(true);
     } finally {
-      if (live.current) setOpening(null);
+      if (live.current && selections.current === selection) setOpening(null);
     }
   };
 
@@ -107,6 +110,7 @@ export default function SavedMapsSheet() {
       });
       if (!confirmed || !live.current) return;
     }
+    selections.current += 1;
     showDraft(scope, newDraft(debateId, starterFlowchart(t)), { replace: true });
     router.back();
   };
@@ -115,7 +119,9 @@ export default function SavedMapsSheet() {
     <Pressable
       key={key}
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      // While a map opens, the rows wait for it.
+      accessibilityState={{ selected, disabled: opening !== null }}
+      disabled={opening !== null}
       onPress={onPress}
       style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, pressed && styles.pressed]}
       testID="saved-map">

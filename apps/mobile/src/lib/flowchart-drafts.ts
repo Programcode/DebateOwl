@@ -23,6 +23,12 @@ export interface FlowchartDraft {
   doc: FlowchartDocument;
   /** Changed since it was opened or last saved. */
   edited: boolean;
+  /**
+   * Which map this is for the session. Saving changes the key a map is held
+   * under (a new map becomes its row), but not its handle, so a sheet open on
+   * the map keeps it and its unsaved text.
+   */
+  handle: string;
 }
 
 interface Scope {
@@ -36,6 +42,12 @@ export const NEW_MAP = 'new';
 const scopes = sessionSlot(() => new Map<string, Scope>());
 const listeners = new Set<() => void>();
 let version = 0;
+let handles = 0;
+
+function nextHandle(): string {
+  handles += 1;
+  return `map-${handles}`;
+}
 
 function emit() {
   version += 1;
@@ -63,12 +75,12 @@ export function scopeDebateId(scope: string): string | null {
 }
 
 export function savedDraft(row: SavedFlowchart): FlowchartDraft {
-  return { savedId: row.id, title: row.title, debateId: row.debateId, createdAt: row.createdAt, doc: row.doc, edited: false };
+  return { savedId: row.id, title: row.title, debateId: row.debateId, createdAt: row.createdAt, doc: row.doc, edited: false, handle: nextHandle() };
 }
 
 /** A map not saved yet: the website's starter map, in the debate (or one-off work) it will be saved to. */
 export function newDraft(debateId: string | null, doc: FlowchartDocument): FlowchartDraft {
-  return { savedId: null, title: '', debateId, createdAt: null, doc, edited: false };
+  return { savedId: null, title: '', debateId, createdAt: null, doc, edited: false, handle: nextHandle() };
 }
 
 export function draftKey(draft: Pick<FlowchartDraft, 'savedId'>): string {
@@ -95,6 +107,14 @@ export function getDraft(scope: string, key: string): FlowchartDraft | undefined
   return scopes.get().get(scope)?.drafts.get(key);
 }
 
+/** A held map by its handle, under whatever key it is held now. */
+export function findDraft(scope: string, handle: string): { key: string; draft: FlowchartDraft } | null {
+  for (const [key, draft] of scopes.get().get(scope)?.drafts ?? []) {
+    if (draft.handle === handle) return { key, draft };
+  }
+  return null;
+}
+
 /** Puts a map on screen. Edits already held for it stay unless `replace` is set. Returns its key. */
 export function showDraft(scope: string, draft: FlowchartDraft, options: { replace?: boolean } = {}): string {
   const entry = scopeFor(scope);
@@ -105,12 +125,12 @@ export function showDraft(scope: string, draft: FlowchartDraft, options: { repla
   return key;
 }
 
-/** Changes one held map. Resolves false when it is no longer held, for example after the account changed. */
+/** Changes one held map, which keeps its handle. Resolves false when it is no longer held, for example after the account changed. */
 export function updateDraft(scope: string, key: string, change: (draft: FlowchartDraft) => FlowchartDraft): boolean {
   const entry = scopes.get().get(scope);
   const draft = entry?.drafts.get(key);
   if (!entry || !draft) return false;
-  const next = change(draft);
+  const next = { ...change(draft), handle: draft.handle };
   entry.drafts.delete(key);
   entry.drafts.set(draftKey(next), next);
   if (entry.open === key) entry.open = draftKey(next);
