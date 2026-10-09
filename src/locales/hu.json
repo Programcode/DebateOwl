@@ -1,6 +1,5 @@
 {
   "nav": {
-    "home": "Kezdőlap",
     "workspaces": "Munkaterek",
     "generate": "Generálás",
     "attack": "Támadás",
@@ -24,10 +23,10 @@
     "more": "Továbbiak",
     "mainNavigation": "Fő navigáció",
     "mobileNavigation": "Mobil navigáció",
-    "currentDebate": "Aktuális vita"
+    "currentDebate": "Aktuális vita",
+    "tools": "Eszközök"
   },
   "navDesc": {
-    "home": "Mód választása",
     "workspaces": "Közös esetírás",
     "generate": "Érvek építése",
     "attack": "Gyengeségek keresése",
@@ -41,7 +40,8 @@
     "flowchart": "Érvek térképezése",
     "history": "Mentett elemek",
     "currentDebate": "Tétel, források és eredmények",
-    "settings": "Nyelv, fiók és adatok"
+    "settings": "Nyelv, fiók és adatok",
+    "tools": "Eszköz választása"
   },
   "workspaces": {
     "title": "Munkaterek",
@@ -244,7 +244,8 @@
     "copy": "Másolás",
     "deleted": "Törölve",
     "discuss": "Megvitatás",
-    "retry": "Újrapróbálás"
+    "retry": "Újrapróbálás",
+    "undo": "Visszavonás"
   },
   "aiClient": {
     "inputShortened": "A bemenet rövidítve lett",
@@ -355,7 +356,8 @@
     "flowchart": "Folyamatábra",
     "flowchartDesc": "Térképezd az állításokat és cáfolatokat.",
     "history": "Előzmények",
-    "historyDesc": "Nyisd meg újra a mentett eseteket, chateket és korábbi felkészüléseket."
+    "historyDesc": "Nyisd meg újra a mentett eseteket, chateket és korábbi felkészüléseket.",
+    "heading": "Min dolgozol most?"
   },
   "generate": {
     "emptyTitle": "Az Eseted Vár",
@@ -501,7 +503,9 @@
     "deletingAccount": "Törlés...",
     "deleteAccountSuccess": "Fiók törölve",
     "deleteAccountSuccessDesc": "A fiókodat és minden adatát véglegesen töröltük.",
-    "deleteAccountFailed": "A fiók nem lett törölve"
+    "deleteAccountFailed": "A fiók nem lett törölve",
+    "signingOut": "Kijelentkezés…",
+    "deletingData": "Törlés…"
   },
   "login": {
     "title": "Bejelentkezés a DebateLab-ba",
@@ -538,7 +542,18 @@
     "demoCodeHint": "Add meg az esemény szervezőjétől kapott kódot.",
     "redirecting": "Átirányítás...",
     "failed": "Nem sikerült elindítani a bejelentkezést",
-    "tryAgain": "Próbáld újra."
+    "tryAgain": "Próbáld újra.",
+    "backHome": "Vissza a DebateLabhez",
+    "errors": {
+      "demoNotFound": "Nincs ilyen demókód.",
+      "demoUnusable": "Ez a demókód nem használható.",
+      "demoDisabled": "Ezt a demókódot letiltották.",
+      "demoExpired": "Ez a demókód lejárt.",
+      "demoUsedUp": "Ezzel a demókóddal már nem lehet többször belépni.",
+      "rateLimited": "Túl sok próbálkozás. Próbáld újra később.",
+      "codeExpired": "Ez a kód lejárt. Kérj újat.",
+      "network": "A DebateLab nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra."
+    }
   },
   "admin": {
     "demoAccess": "Demóhozzáférés",
@@ -670,7 +685,14 @@
         "user": "Felhasználó",
         "admin": "Adminisztrátor",
         "banned": "Kitiltott"
-      }
+      },
+      "confirmMakeAdmin": "Adminná teszed: {{email}}?",
+      "confirmMakeAdminDesc": "Az adminok megnyithatják az adminoldalt, és módosíthatják mások szerepkörét és csomagját.",
+      "confirmBan": "Letiltod: {{email}}?",
+      "confirmBanDesc": "Addig nem használhatja a DebateLabet, amíg fel nem oldod a tiltást.",
+      "confirmUnban": "Feloldod a tiltást: {{email}}?",
+      "confirmRemoveAdmin": "Elveszed az admin jogot: {{email}}?",
+      "confirmRoleDesc": "Átlagos felhasználó lesz."
     },
     "promos": {
       "createTitle": "Promóciós kód létrehozása",
@@ -1344,7 +1366,8 @@
     "limitReached": "Napi hozzáférés szünetel",
     "limitReachedDesc": "Ma {{current}} / {{limit}} benne foglalt MI használatot használtál fel. A hozzáférés éjfélkor (UTC) frissül.",
     "upgrade": "Frissítés Pro-ra - $5/hó",
-    "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés"
+    "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés",
+    "notNow": "Most nem"
   },
   "modelModal": {
     "title": "Pro érvelés",
@@ -1620,12 +1643,8 @@
     "sortOldest": "Hozzáadás dátuma (legrégebbi)",
     "sortTitle": "Név (A–Z)",
     "sortFolder": "Mappa",
-    "folderCreated": "Mappa létrehozva",
-    "folderCreatedDesc": "Az új forrásokat már ide is mentheted.",
     "allFolders": "Minden mappa",
     "importUrlRequired": "Adj meg egy importálandó URL-t.",
-    "importReady": "Forrás kész",
-    "importReadyDesc": "Mentés előtt nézd át a kinyert szöveget.",
     "importFailed": "Import sikertelen",
     "importFailedDesc": "Nem sikerült importálni ezt a forrást.",
     "duplicateSource": "A forrás már a könyvtárban van",
@@ -1648,16 +1667,10 @@
     "groundingDisabled": "Megalapozás Letiltva",
     "groundingActiveDesc": "Az MI válaszok használják a forrásaidat",
     "groundingDisabledDesc": "Az MI válaszok nincsenek megalapozva",
-    "errorRequired": "A cím és tartalom kötelező",
-    "sourceAdded": "Forrás Hozzáadva",
-    "sourceAddedDesc": "A forrásod elérhető megalapozáshoz.",
     "clearFailed": "Nem sikerült törölni a forrásokat",
     "clearConfirm": "Biztosan törölni szeretnéd az összes forrást?",
     "importUrlHelp": "Az automatikus importálás szerkeszthető piszkozatot hoz létre. Nézd át, mielőtt a könyvtárba mented.",
     "unsupportedFile": "Nem támogatott fájl",
-    "totalSources": "Összes forrás",
-    "activeSources": "Aktív források",
-    "syncedFolders": "Szinkronizált mappák",
     "manualSource": "Kézi forrás",
     "searchSources": "Források keresése",
     "searchPlaceholder": "Keresés forrásokban, mappákban vagy tartalomban...",
@@ -1667,14 +1680,8 @@
     "deactivateFolder": "Deaktiválás",
     "deleteFolderDesc": "A mappában lévő források átkerülnek az Általános mappába. Maguk a források nem törlődnek.",
     "deleteFolderTitle": "Törlöd a mappát?",
-    "deleteSourceDesc": "Ezzel eltávolítod a forrást a szinkronizált könyvtáradból.",
-    "deleteSourceTitle": "Törlöd a forrást?",
     "folderActions": "Mappaműveletek",
     "folderActionsDesc": "Nevezd át vagy töröld a mappát, illetve állítsd be, hogy a benne lévő forrásokat felhasználja-e az MI a válaszai megalapozásához.",
-    "folderActivated": "Mappa aktiválva",
-    "folderActivatedDesc": "A mappa összes forrása aktív.",
-    "folderDeactivated": "Mappa deaktiválva",
-    "folderDeactivatedDesc": "A források mentve maradnak, de az MI nem használja őket a válaszai megalapozásához.",
     "folderDeleted": "Mappa törölve",
     "folderDeletedDesc": "A források átkerültek az Általános mappába.",
     "folderMergeConfirm": "Már van ilyen nevű mappa. Áthelyezed bele a forrásokat?",
@@ -1684,13 +1691,22 @@
     "noMatchingSourcesDesc": "Próbálj más keresést vagy mappát.",
     "renameFolder": "Mappa átnevezése",
     "sourceCopied": "A forrás a vágólapra másolva.",
-    "sourceDeleted": "Forrás eltávolítva.",
     "sourceUpdated": "Forrás frissítve",
     "sourceUpdatedDesc": "A forrás módosításai mentve.",
     "typeLabel": "Típus",
     "untitledSource": "Névtelen forrás",
     "useForGrounding": "Felhasználás az MI válaszainak megalapozásához",
-    "useForGroundingDesc": "Az inaktív források mentve maradnak, de a generálás nem használja őket."
+    "useForGroundingDesc": "Az inaktív források mentve maradnak, de a generálás nem használja őket.",
+    "titleRequired": "Adj meg egy címet.",
+    "contentRequired": "Add meg a forrás szövegét.",
+    "sourceDeletedTitle": "Törölve: {{title}}",
+    "restoreFailed": "Nem sikerült visszaállítani a forrást",
+    "deleteFailed": "Nem sikerült törölni a forrást.",
+    "readingFile": "Fájl beolvasása…",
+    "summary": "{{total}} forrás · {{active}} aktív · {{folders}} mappa",
+    "mergeFolderTitle": "Összevonod ezzel: {{name}}?",
+    "mergeFolders": "Mappák összevonása",
+    "openOrigin": "{{title}} megnyitása új lapon"
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",
@@ -1710,15 +1726,9 @@
     "loadFailed": "Nem sikerült betölteni a megosztott tartalmat",
     "contentNotFound": "Ez a megosztott tartalom már nem elérhető",
     "goToApp": "Ugrás az Appba",
-    "importToAccount": "Importálás a Fiókba",
     "openApp": "App Megnyitása",
     "sharedOn": "Megosztva",
-    "views": "megtekintés",
-    "loginRequired": "Bejelentkezés Szükséges",
-    "loginRequiredDesc": "Jelentkezz be a tartalom fiókodba importálásához.",
-    "importNotAvailable": "Az importálás még nem elérhető",
-    "importNotAvailableDesc": "A megosztott tartalom fiókba mentése hamarosan érkezik.",
-    "importFailed": "Nem sikerült importálni a tartalmat"
+    "views": "megtekintés"
   },
   "privacyPage": {
     "title": "Adatvédelmi Irányelvek",
@@ -2075,7 +2085,6 @@
   "langSwitcher": {
     "label": "Nyelv",
     "title": "Nyelv",
-    "description": "Válaszd ki az alkalmazás nyelvét és az AI válaszok nyelvét.",
     "uiLanguage": "Felület nyelve",
     "outputLanguage": "AI kimenet nyelve"
   },
@@ -2181,7 +2190,8 @@
   },
   "routeError": {
     "heading": "Az oldal nem tölthető be",
-    "reload": "Újratöltés"
+    "reload": "Újratöltés",
+    "home": "Ugrás a kezdőlapra"
   },
   "sourcesPage": {
     "title": "Források",
@@ -2321,7 +2331,10 @@
     "offerDesc": "A vita együtt tartja a tételt, a forrásait és az eredményeidet, és minden eszköz ezt használja.",
     "offerNotNow": "Most nem, csak egyszer használom",
     "itemCount_one": "{{count}} elem",
-    "itemCount_other": "{{count}} elem"
+    "itemCount_other": "{{count}} elem",
+    "viewAll": "Összes megtekintése ({{total}})",
+    "switching": "Váltás…",
+    "deleting": "Törlés…"
   },
   "debateContext": {
     "using": "Felhasználva: {{list}}",

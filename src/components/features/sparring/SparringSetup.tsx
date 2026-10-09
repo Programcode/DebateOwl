@@ -87,7 +87,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
                   <Swords className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl">{t('sparring.setup.setMotion', 'Set the motion')}</CardTitle>
+                  <CardTitle>{t('sparring.setup.setMotion', 'Set the motion')}</CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -114,7 +114,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">{t('sparring.setup.pickSide', 'Pick your side')}</CardTitle>
+              <CardTitle>{t('sparring.setup.pickSide', 'Pick your side')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2.5 sm:grid-cols-2">
               {(['pro', 'con'] as const).map((side) => {
@@ -145,7 +145,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">{t('sparring.setup.choosePressure', 'Choose the pressure')}</CardTitle>
+              <CardTitle>{t('sparring.setup.choosePressure', 'Choose the pressure')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2.5 md:grid-cols-3">
               {DIFFICULTIES.map((level) => {

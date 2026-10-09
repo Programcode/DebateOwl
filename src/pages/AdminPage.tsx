@@ -450,6 +450,9 @@ export default function AdminPage() {
     const [demoCodesError, setDemoCodesError] = useState<string | null>(null);
     const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
     const [giftTarget, setGiftTarget] = useState<User | null>(null);
+    // Role changes are consequential and silent to the affected user, so each one asks first.
+    const [roleChange, setRoleChange] = useState<{ user: User; role: 'admin' | 'banned' | 'user' } | null>(null);
+    const [roleSaving, setRoleSaving] = useState(false);
     const [giftDays, setGiftDays] = useState(30);
     const [giftNotes, setGiftNotes] = useState('');
     const [giftSubmitting, setGiftSubmitting] = useState(false);
@@ -605,6 +608,17 @@ export default function AdminPage() {
             setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
         } catch (err) {
             toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.users.roleUpdateFailed'), variant: 'destructive' });
+        }
+    };
+
+    const confirmRoleChange = async () => {
+        if (!roleChange || roleSaving) return;
+        setRoleSaving(true);
+        try {
+            await handleSetUserRole(roleChange.user.id, roleChange.role);
+        } finally {
+            setRoleSaving(false);
+            setRoleChange(null);
         }
     };
 
@@ -994,22 +1008,22 @@ export default function AdminPage() {
                                                         </Button>
                                                     )}
                                                     {user.role === 'banned' ? (
-                                                        <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
+                                                        <Button size="sm" variant="outline" onClick={() => setRoleChange({ user, role: 'user' })}>
                                                             <UserCheck className="h-4 w-4 mr-1" />
                                                             {t('admin.users.unban')}
                                                         </Button>
                                                     ) : user.role !== 'admin' ? (
                                                         <>
-                                                            <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'admin')}>
+                                                            <Button size="sm" variant="outline" onClick={() => setRoleChange({ user, role: 'admin' })}>
                                                                 {t('admin.users.makeAdmin')}
                                                             </Button>
-                                                            <Button size="sm" variant="destructive" onClick={() => handleSetUserRole(user.id, 'banned')}>
+                                                            <Button size="sm" variant="destructive" onClick={() => setRoleChange({ user, role: 'banned' })}>
                                                                 <Ban className="h-4 w-4 mr-1" />
                                                                 {t('admin.users.ban')}
                                                             </Button>
                                                         </>
                                                     ) : (
-                                                        <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
+                                                        <Button size="sm" variant="outline" onClick={() => setRoleChange({ user, role: 'user' })}>
                                                             {t('admin.users.removeAdmin')}
                                                         </Button>
                                                     )}
@@ -1242,6 +1256,39 @@ export default function AdminPage() {
                 </Tabs>
             </div>
 
+            <Dialog open={roleChange !== null} onOpenChange={(open) => { if (!open && !roleSaving) setRoleChange(null); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {roleChange?.role === 'admin'
+                                ? t('admin.users.confirmMakeAdmin', { email: roleChange.user.email })
+                                : roleChange?.role === 'banned'
+                                    ? t('admin.users.confirmBan', { email: roleChange.user.email })
+                                    : roleChange?.user.role === 'banned'
+                                        ? t('admin.users.confirmUnban', { email: roleChange?.user.email })
+                                        : t('admin.users.confirmRemoveAdmin', { email: roleChange?.user.email })}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {roleChange?.role === 'admin'
+                                ? t('admin.users.confirmMakeAdminDesc')
+                                : roleChange?.role === 'banned'
+                                    ? t('admin.users.confirmBanDesc')
+                                    : t('admin.users.confirmRoleDesc')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setRoleChange(null)} disabled={roleSaving}>{t('admin.cancel')}</Button>
+                        <Button type="button" variant={roleChange?.role === 'banned' ? 'destructive' : 'default'} onClick={() => void confirmRoleChange()} disabled={roleSaving}>
+                            {roleSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {roleChange?.role === 'admin'
+                                ? t('admin.users.makeAdmin')
+                                : roleChange?.role === 'banned'
+                                    ? t('admin.users.ban')
+                                    : roleChange?.user.role === 'banned' ? t('admin.users.unban') : t('admin.users.removeAdmin')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <Dialog open={giftTarget !== null} onOpenChange={(open) => { if (!open) closeGiftDialog(); }}>
                 <DialogContent>
                     <DialogHeader>

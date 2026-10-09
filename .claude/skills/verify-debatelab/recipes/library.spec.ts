@@ -7,8 +7,8 @@ const motion = "Public transport should be free";
 
 async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill(title);
-  await page.getByRole("textbox", { name: "Paste source content..." }).fill(content);
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
+  await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
@@ -37,6 +37,12 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await evidence.json("02-grounding", { activeInPrompt: true, pausedInPrompt: false });
 
   await page.goto("/app/library");
+  // Deleting a source acts at once; the toast's Undo saves it again.
+  await page.getByRole("button", { name: "Delete Paused study", exact: true }).click();
+  await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(1);
+  await evidence.step("Deleted Paused study, then restored it with Undo");
   await page.getByRole("button", { name: "Delete Paused study", exact: true }).click();
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
   await page.reload();
@@ -58,7 +64,7 @@ test("lib-import: a web page imports into the Library", async ({ signedIn: page,
   await page.getByRole("button", { name: "Add Source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
   await page.getByRole("button", { name: "Import URL" }).click();
-  await expect(page.getByText("Source Ready", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(page.getByText("Import preview", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("01-import-ready");
   await page.getByRole("button", { name: "Save imported source" }).click();
   await expect.poll(async () => {

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,8 +36,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
-const SOURCE_LIST_HEIGHT = 600;
-
 interface SourceRowProps {
   source: Source;
   onRemove: (source: Source) => void;
@@ -66,84 +64,93 @@ function SourceRow({
 
   return (
     <div className="px-1 pb-2">
+      {/* The row is clickable for pointers; the title button is the keyboard and screen-reader target. */}
       <div
-        role="button"
-        tabIndex={0}
         onClick={() => onOpen(source)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            onOpen(source);
-          }
-        }}
-        className={`flex h-[84px] cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors motion-list-item hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
+        className={`flex min-h-[84px] cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors motion-list-item hover:border-primary/40 hover:bg-accent/40 ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className={`shrink-0 rounded-md p-1.5 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
             {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              {source.origin?.startsWith('http') ? (
-                <a href={source.origin} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium text-foreground transition-colors hover:text-primary">
-                  {source.title}
-                  <ExternalLink className="h-3 w-3 shrink-0" />
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpen(source);
+                }}
+                className="min-w-0 truncate rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {source.title}
+              </button>
+              {source.origin?.startsWith('http') && (
+                <a
+                  href={source.origin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-primary"
+                  aria-label={t('libraryPage.openOrigin', { title: source.title, defaultValue: 'Open {{title}} in a new tab' })}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
-              ) : (
-                <span className="truncate text-sm font-medium">{source.title}</span>
               )}
-              <Badge variant="outline" className="shrink-0 py-0 text-[9px]">
+              <Badge variant="outline" className="shrink-0 py-0">
                 {t(`libraryPage.${source.type}Source`, source.type.toUpperCase())}
               </Badge>
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
+            {/* Badges wrap on narrow rows; the text preview only fits beside them on wider screens. */}
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
               <Badge
                 variant="secondary"
-                className="shrink-0 max-w-[200px] truncate py-0 text-[10px]"
+                className="max-w-[200px] shrink-0 truncate py-0 font-medium"
                 title={`${folderLabel}: ${sourceFolderLabel}`}
               >
                 <Folder className="mr-1 h-3 w-3 shrink-0" />
                 <span className="truncate">{sourceFolderLabel}</span>
               </Badge>
               {source.metadata?.semantic?.lastUsedInCase && (
-                <Badge variant="outline" className="shrink-0 border-primary/30 bg-primary/10 py-0 text-[10px] text-primary">
+                <Badge variant="outline" className="shrink-0 border-primary/30 bg-primary/10 py-0 font-medium text-primary">
                   {t('sourceQuality.usedInCase')}
                 </Badge>
               )}
               {source.metadata?.semantic && (
-                <Badge variant="outline" className="shrink-0 py-0 text-[10px]">
+                <Badge variant="outline" className="shrink-0 py-0 font-medium">
                   {t('sourceQuality.importance', { level: t(`sourceQuality.levels.${source.metadata.semantic.importance}`) })}
                 </Badge>
               )}
               {source.metadata?.semantic && (
-                <Badge variant="outline" className="shrink-0 py-0 text-[10px]">
+                <Badge variant="outline" className="shrink-0 py-0 font-medium">
                   {t('sourceQuality.strength', { level: t(`sourceQuality.levels.${source.metadata.semantic.strength}`) })}
                 </Badge>
               )}
-              <span className="truncate text-[11px] text-muted-foreground">{source.content}</span>
+              <span className="hidden min-w-0 flex-1 truncate text-xs text-muted-foreground sm:inline">{source.content}</span>
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-destructive"
+            className="h-9 w-9 text-destructive"
             onClick={(event) => {
               event.stopPropagation();
               onRemove(source);
             }}
             aria-label={t('libraryPage.deleteSourceLabel', { title: source.title })}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </Button>
-          <Switch
-            checked={source.isActive}
-            onClick={(event) => event.stopPropagation()}
-            onCheckedChange={() => onToggle(source.id)}
-            aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
-          />
+          <div className="flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" onClick={(event) => event.stopPropagation()}>
+            <Switch
+              checked={source.isActive}
+              onCheckedChange={() => onToggle(source.id)}
+              aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -178,6 +185,14 @@ export default function LibraryPage() {
 
   const [isAdding, setIsAdding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isImportingFile, setIsImportingFile] = useState(false);
+  const [addErrors, setAddErrors] = useState<{ title?: string; content?: string }>({});
+  const [draftErrors, setDraftErrors] = useState<{ title?: string; content?: string }>({});
+  const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+  const addTitleRef = useRef<HTMLInputElement>(null);
+  const addContentRef = useRef<HTMLTextAreaElement>(null);
+  const draftTitleRef = useRef<HTMLInputElement>(null);
+  const draftContentRef = useRef<HTMLTextAreaElement>(null);
   const [newSource, setNewSource] = useState({
     title: '',
     content: '',
@@ -214,16 +229,21 @@ export default function LibraryPage() {
     warnings?: string[];
   } | null>(null);
 
+  // Required fields are checked inline: the message sits under the field and focus moves to it.
+  const requiredErrors = (title: string, content: string) => ({
+    title: title.trim() ? undefined : t('libraryPage.titleRequired', 'Add a title.'),
+    content: content.trim() ? undefined : t('libraryPage.contentRequired', 'Add the source text.'),
+  });
+
   const handleAdd = async () => {
-    if (!newSource.title || !newSource.content) {
-      toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
-      return;
-    }
+    const errors = requiredErrors(newSource.title, newSource.content);
+    setAddErrors(errors);
+    if (errors.title) return addTitleRef.current?.focus();
+    if (errors.content) return addContentRef.current?.focus();
     // The Library always shows the Current Debate, even while tools run one-off.
     await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
     setNewSource({ title: '', content: '', type: 'text', origin: '', folder: newSource.folder });
     setIsAdding(false);
-    toast({ title: t('libraryPage.sourceAdded'), description: t('libraryPage.sourceAddedDesc') });
   };
 
   const handleImportUrl = async () => {
@@ -245,7 +265,6 @@ export default function LibraryPage() {
         domain: imported.domain,
         excerpt: imported.excerpt,
       });
-      toast({ title: t('libraryPage.importReady'), description: t('libraryPage.importReadyDesc') });
     } catch (error) {
       toast({
         title: t('libraryPage.importFailed'),
@@ -257,8 +276,10 @@ export default function LibraryPage() {
     }
   };
 
-  const handleFileImport = async (file: File | undefined) => {
+  const handleFileImport = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
     if (!file) return;
+    setIsImportingFile(true);
     try {
       const imported = await importSourceFile(file);
       setImportPreview({
@@ -279,6 +300,10 @@ export default function LibraryPage() {
         description: isSourceError ? error.message : t('libraryPage.fileReadFailed'),
         variant: 'destructive',
       });
+    } finally {
+      setIsImportingFile(false);
+      // Reset so picking the same file again fires a change.
+      input.value = '';
     }
   };
 
@@ -304,7 +329,6 @@ export default function LibraryPage() {
     setImportPreview(null);
     setImportUrl('');
     setIsAdding(false);
-    toast({ title: t('libraryPage.sourceAdded'), description: t('libraryPage.sourceAddedDesc') });
   };
 
   const handleClearLibrary = async () => {
@@ -381,6 +405,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     if (!selectedSource) return;
+    setDraftErrors({});
     setSourceDraft({
       title: selectedSource.title,
       content: selectedSource.content,
@@ -401,27 +426,48 @@ export default function LibraryPage() {
     setSelectedFolder(folder);
     setNewFolderName('');
     setNewFolderOpen(false);
-    toast({
-      title: t('libraryPage.folderCreated', 'Folder created'),
-      description: t('libraryPage.folderCreatedDesc', 'New sources can now be saved there.'),
+  };
+  // A source can be put back exactly, so deleting acts at once and offers Undo instead of asking first.
+  const handleRemoveSource = (source: Source) => {
+    if (selectedSourceId === source.id) setSelectedSourceId(null);
+    void Promise.resolve(removeSource(source.id)).then(() => {
+      toast({
+        title: t('libraryPage.sourceDeletedTitle', { title: source.title, defaultValue: 'Deleted {{title}}' }),
+        action: {
+          label: t('common.undo', 'Undo'),
+          onClick: () => {
+            void addSource({
+              title: source.title,
+              content: source.content,
+              type: source.type,
+              origin: source.origin,
+              folder: source.folder,
+              isActive: source.isActive,
+              metadata: source.metadata,
+              debateId: source.debateId ?? null,
+            }).catch(() => toast({ title: t('libraryPage.restoreFailed', 'Could not restore the source'), variant: 'destructive' }));
+          },
+        },
+      });
+    }).catch(() => {
+      toast({ title: t('common.error', 'Error'), description: t('libraryPage.deleteFailed', 'Could not delete the source.'), variant: 'destructive' });
     });
   };
-  const handleRemoveSource = (source: Source) => {
-    void Promise.resolve(removeSource(source.id)).then(() => {
-      if (selectedSourceId === source.id) {
-        setSelectedSourceId(null);
-      }
-      toast({ title: t('common.deleted', 'Deleted'), description: t('libraryPage.sourceDeleted', 'Source removed.') });
-    });
+  const renameFolderTo = async (from: string, nextName: string) => {
+    await renameSourceFolder(from, nextName);
+    setSelectedFolder(nextName);
+    toast({ title: t('libraryPage.folderRenamed', 'Folder renamed'), description: t('libraryPage.folderRenamedDesc', 'Sources in this folder were moved to the new name.') });
   };
   const handleRenameFolder = async () => {
     if (selectedFolder === 'all' || selectedFolder === 'General') return;
     const nextName = folderRenameValue.trim();
     if (!nextName || nextName === selectedFolder) return;
-    if (folders.includes(nextName) && !window.confirm(t('libraryPage.folderMergeConfirm', 'A folder with this name already exists. Merge sources into it?'))) return;
-    await renameSourceFolder(selectedFolder, nextName);
-    setSelectedFolder(nextName);
-    toast({ title: t('libraryPage.folderRenamed', 'Folder renamed'), description: t('libraryPage.folderRenamedDesc', 'Sources in this folder were moved to the new name.') });
+    // Merging into an existing folder can't be split again, so it asks first.
+    if (folders.includes(nextName)) {
+      setMergeTarget(nextName);
+      return;
+    }
+    await renameFolderTo(selectedFolder, nextName);
   };
   const handleDeleteSelectedFolder = async () => {
     if (selectedFolder === 'all' || selectedFolder === 'General') return;
@@ -432,17 +478,13 @@ export default function LibraryPage() {
   const handleSetSelectedFolderActive = async (isActive: boolean) => {
     if (selectedFolder === 'all') return;
     await setFolderActive(selectedFolder, isActive);
-    toast({
-      title: isActive ? t('libraryPage.folderActivated', 'Folder activated') : t('libraryPage.folderDeactivated', 'Folder deactivated'),
-      description: isActive ? t('libraryPage.folderActivatedDesc', 'All sources in this folder are active.') : t('libraryPage.folderDeactivatedDesc', 'Sources stay saved but will not ground AI outputs.'),
-    });
   };
   const handleSaveSourceDraft = async () => {
     if (!selectedSource) return;
-    if (!sourceDraft.title.trim() || !sourceDraft.content.trim()) {
-      toast({ title: t('common.error'), description: t('libraryPage.errorRequired'), variant: "destructive" });
-      return;
-    }
+    const errors = requiredErrors(sourceDraft.title, sourceDraft.content);
+    setDraftErrors(errors);
+    if (errors.title) return draftTitleRef.current?.focus();
+    if (errors.content) return draftContentRef.current?.focus();
 
     await updateSource(selectedSource.id, {
       title: sourceDraft.title,
@@ -473,13 +515,18 @@ export default function LibraryPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('libraryPage.title')}</h1>
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground">{t('libraryPage.title')}</h1>
             {currentDebate ? (
-              <p className="mt-2 text-sm text-muted-foreground" data-testid="library-debate">
-                {t('debate.librarySources', 'Sources for')}{' '}
-                <span className="break-words font-medium text-foreground">{currentDebate.motion}</span>{' '}
-                <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDebateDialog('switch')}>{t('debate.change', 'Change')}</Button>
-              </p>
+              <>
+                <p className="mt-2 text-sm text-muted-foreground" data-testid="library-debate">
+                  {t('debate.librarySources', 'Sources for')}{' '}
+                  <span className="break-words font-medium text-foreground">{currentDebate.motion}</span>{' '}
+                  <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDebateDialog('switch')}>{t('debate.change', 'Change')}</Button>
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t('libraryPage.summary', { total: sourceLibrary.length, active: activeSourceCount, folders: folders.length, defaultValue: '{{total}} sources · {{active}} active · {{folders}} folders' })}
+                </p>
+              </>
             ) : (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3 text-sm" data-testid="library-debate">
                 <span className="text-muted-foreground">{t('debate.libraryNeedsDebate', 'Select or create a debate before adding or importing sources.')}</span>
@@ -492,18 +539,6 @@ export default function LibraryPage() {
               <Button variant="outline" size="sm" disabled={!currentDebate} onClick={() => setIsAdding(!isAdding)}>
                 <Plus className="h-4 w-4 mr-1" /> {isAdding ? t('libraryPage.cancel') : t('libraryPage.addSource')}
               </Button>
-              <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-                <SelectTrigger className="h-9 w-[160px]">
-                  <Folder className="h-4 w-4 mr-1" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('libraryPage.allFolders', 'All')}</SelectItem>
-                  {folders.map((f) => (
-                    <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Popover open={newFolderOpen} onOpenChange={setNewFolderOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -544,7 +579,7 @@ export default function LibraryPage() {
                 </PopoverContent>
               </Popover>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                <SelectTrigger className="h-9 w-[150px]" aria-label={t('libraryPage.sortBy', 'Sort by')}>
+                <SelectTrigger className="h-9 w-[180px]" aria-label={t('libraryPage.sortBy', 'Sort by')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -560,7 +595,7 @@ export default function LibraryPage() {
               </Select>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" className="text-destructive" disabled={isClearing}>
+                <Button variant="ghost" size="sm" className="text-destructive" disabled={isClearing}>
                   <Trash2 className="h-4 w-4 mr-2" /> {isClearing ? t('libraryPage.clearing') : t('libraryPage.clearAll')}
                 </Button>
               </AlertDialogTrigger>
@@ -571,27 +606,12 @@ export default function LibraryPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void handleClearLibrary()}>
+                  <AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={() => void handleClearLibrary()}>
                     {t('libraryPage.clearAll')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </div>
-        </div>
-
-        <div className="mb-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border bg-card px-4 py-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.totalSources', 'Total sources')}</p>
-            <p className="mt-1 text-2xl font-semibold">{sourceLibrary.length}</p>
-          </div>
-          <div className="rounded-lg border bg-card px-4 py-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.activeSources', 'Active sources')}</p>
-            <p className="mt-1 text-2xl font-semibold">{activeSourceCount}</p>
-          </div>
-          <div className="rounded-lg border bg-card px-4 py-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">{t('libraryPage.syncedFolders', 'Synced folders')}</p>
-            <p className="mt-1 text-2xl font-semibold">{folders.length}</p>
           </div>
         </div>
 
@@ -604,6 +624,21 @@ export default function LibraryPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* One folder for whatever this form saves, imported or typed. */}
+              <div className="space-y-2">
+                <Label htmlFor="new-source-folder">{t('libraryPage.folder', 'Folder')}</Label>
+                <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
+                  <SelectTrigger id="new-source-folder">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['General', ...folders.filter(f => f !== 'General')].map((f) => (
+                      <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('libraryPage.newFolderHint', 'Need a new folder? Use the "New folder" button up top.')}</p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="source-url">{t('libraryPage.importUrlLabel')}</Label>
                 <div className="flex gap-2">
@@ -624,16 +659,18 @@ export default function LibraryPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="source-file">{t('libraryPage.importFileLabel')}</Label>
-                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden">
-                  <label htmlFor="source-file" className="cursor-pointer">
-                    <Upload className="h-4 w-4 mr-2" />
-                    {t('libraryPage.chooseFile')}
+                {/* The real input is invisible, so the label shows its focus ring. */}
+                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2">
+                  <label htmlFor="source-file" className="cursor-pointer" aria-busy={isImportingFile}>
+                    {isImportingFile ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {isImportingFile ? t('libraryPage.readingFile', 'Reading file…') : t('libraryPage.chooseFile')}
                     <input
                       id="source-file"
                       type="file"
+                      disabled={isImportingFile}
                       accept=".txt,.md,.markdown,.csv,.json,.pdf,.docx,text/plain,text/markdown,text/csv,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       className="absolute inset-0 cursor-pointer opacity-0"
-                      onChange={(event) => void handleFileImport(event.target.files?.[0])}
+                      onChange={(event) => void handleFileImport(event.currentTarget)}
                     />
                   </label>
                 </Button>
@@ -671,19 +708,6 @@ export default function LibraryPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('libraryPage.folder', 'Folder')}</Label>
-                    <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                          <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="import-content">{t('libraryPage.contentLabel')}</Label>
                     <Textarea
                       id="import-content"
@@ -702,35 +726,37 @@ export default function LibraryPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>{t('libraryPage.titleLabel')}</Label>
+                <Label htmlFor="new-source-title">{t('libraryPage.titleLabel')}</Label>
                 <Input
+                  id="new-source-title"
+                  ref={addTitleRef}
                   placeholder={t('libraryPage.titlePlaceholder')}
                   value={newSource.title}
-                  onChange={(e) => setNewSource({ ...newSource, title: e.target.value })}
+                  aria-invalid={Boolean(addErrors.title)}
+                  aria-describedby={addErrors.title ? 'new-source-title-error' : undefined}
+                  onChange={(e) => {
+                    setNewSource({ ...newSource, title: e.target.value });
+                    if (addErrors.title) setAddErrors({ ...addErrors, title: undefined });
+                  }}
                 />
+                {addErrors.title && <p id="new-source-title-error" role="alert" className="text-sm text-destructive">{addErrors.title}</p>}
               </div>
               <div className="space-y-2">
-                <Label>{t('libraryPage.contentLabel')}</Label>
+                <Label htmlFor="new-source-content">{t('libraryPage.contentLabel')}</Label>
                 <Textarea
+                  id="new-source-content"
+                  ref={addContentRef}
                   placeholder={t('libraryPage.contentPlaceholder')}
                   className="min-h-[120px]"
                   value={newSource.content}
-                  onChange={(e) => setNewSource({ ...newSource, content: e.target.value })}
+                  aria-invalid={Boolean(addErrors.content)}
+                  aria-describedby={addErrors.content ? 'new-source-content-error' : undefined}
+                  onChange={(e) => {
+                    setNewSource({ ...newSource, content: e.target.value });
+                    if (addErrors.content) setAddErrors({ ...addErrors, content: undefined });
+                  }}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('libraryPage.folder', 'Folder')}</Label>
-                <Select value={newSource.folder} onValueChange={(f) => setNewSource({ ...newSource, folder: f })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['General', ...folders.filter(f => f !== 'General')].map((f) => (
-                      <SelectItem key={f} value={f}>{getFolderName(f)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">{t('libraryPage.newFolderHint', 'Need a new folder? Use the "New folder" button up top.')}</p>
+                {addErrors.content && <p id="new-source-content-error" role="alert" className="text-sm text-destructive">{addErrors.content}</p>}
               </div>
               <Button onClick={() => void handleAdd()} className="w-full">{t('libraryPage.saveToLibrary')}</Button>
             </CardContent>
@@ -742,7 +768,7 @@ export default function LibraryPage() {
             <CardHeader className="space-y-4">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
-                <CardTitle className="text-xl">{t('libraryPage.yourKBTitle')}</CardTitle>
+                <CardTitle>{t('libraryPage.yourKBTitle')}</CardTitle>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
@@ -774,13 +800,14 @@ export default function LibraryPage() {
                     </Button>
                   )}
                 </div>
-                <div className="flex gap-1 overflow-x-auto pb-1">
+                <div className="flex gap-1 overflow-x-auto pb-1" role="group" aria-label={t('libraryPage.folder', 'Folder')}>
                   {['all', ...folders].map((folder) => (
                     <Button
                       key={folder}
                       type="button"
                       variant={selectedFolder === folder ? 'default' : 'outline'}
                       size="sm"
+                      aria-pressed={selectedFolder === folder}
                       className="shrink-0"
                       onClick={() => setSelectedFolder(folder)}
                     >
@@ -877,7 +904,8 @@ export default function LibraryPage() {
                   </p>
                 </div>
               ) : (
-                <div className="scrollbar-thin overflow-y-auto pr-1 stagger-enter" style={{ height: SOURCE_LIST_HEIGHT }}>
+                // Phones scroll the page; only wide screens get a bounded inner list.
+                <div className="lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
                   {visibleSources.map((source) => (
                     <SourceRow
                       key={source.id}
@@ -914,6 +942,23 @@ export default function LibraryPage() {
           </Card>
         </div>
       </div>
+      <AlertDialog open={mergeTarget !== null} onOpenChange={(open) => !open && setMergeTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('libraryPage.mergeFolderTitle', { name: mergeTarget ?? '', defaultValue: 'Merge into {{name}}?' })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('libraryPage.folderMergeConfirm', 'A folder with this name already exists. Merge sources into it?')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (mergeTarget) void renameFolderTo(selectedFolder, mergeTarget);
+              setMergeTarget(null);
+            }}>
+              {t('libraryPage.mergeFolders', 'Merge folders')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Sheet open={Boolean(selectedSource)} onOpenChange={(open) => !open && setSelectedSourceId(null)}>
         <SheetContent side="right" className="flex w-full flex-col overflow-hidden p-0 sm:max-w-xl">
           {selectedSource && (
@@ -953,15 +998,22 @@ export default function LibraryPage() {
                     <Label htmlFor="source-detail-title">{t('libraryPage.titleLabel')}</Label>
                     <Input
                       id="source-detail-title"
+                      ref={draftTitleRef}
                       value={sourceDraft.title}
-                      onChange={(event) => setSourceDraft({ ...sourceDraft, title: event.target.value })}
+                      aria-invalid={Boolean(draftErrors.title)}
+                      aria-describedby={draftErrors.title ? 'source-detail-title-error' : undefined}
+                      onChange={(event) => {
+                        setSourceDraft({ ...sourceDraft, title: event.target.value });
+                        if (draftErrors.title) setDraftErrors({ ...draftErrors, title: undefined });
+                      }}
                     />
+                    {draftErrors.title && <p id="source-detail-title-error" role="alert" className="text-sm text-destructive">{draftErrors.title}</p>}
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>{t('libraryPage.folder', 'Folder')}</Label>
+                      <Label htmlFor="source-detail-folder">{t('libraryPage.folder', 'Folder')}</Label>
                       <Select value={sourceDraft.folder || 'General'} onValueChange={(folder) => setSourceDraft({ ...sourceDraft, folder })}>
-                        <SelectTrigger>
+                        <SelectTrigger id="source-detail-folder">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -972,9 +1024,9 @@ export default function LibraryPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>{t('libraryPage.typeLabel', 'Type')}</Label>
+                      <Label htmlFor="source-detail-type">{t('libraryPage.typeLabel', 'Type')}</Label>
                       <Select value={sourceDraft.type} onValueChange={(type) => setSourceDraft({ ...sourceDraft, type: type as Source['type'] })}>
-                        <SelectTrigger>
+                        <SelectTrigger id="source-detail-type">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1009,10 +1061,17 @@ export default function LibraryPage() {
                     <Label htmlFor="source-detail-content">{t('libraryPage.contentLabel')}</Label>
                     <Textarea
                       id="source-detail-content"
+                      ref={draftContentRef}
                       className="min-h-[320px] resize-y"
                       value={sourceDraft.content}
-                      onChange={(event) => setSourceDraft({ ...sourceDraft, content: event.target.value })}
+                      aria-invalid={Boolean(draftErrors.content)}
+                      aria-describedby={draftErrors.content ? 'source-detail-content-error' : undefined}
+                      onChange={(event) => {
+                        setSourceDraft({ ...sourceDraft, content: event.target.value });
+                        if (draftErrors.content) setDraftErrors({ ...draftErrors, content: undefined });
+                      }}
                     />
+                    {draftErrors.content && <p id="source-detail-content-error" role="alert" className="text-sm text-destructive">{draftErrors.content}</p>}
                   </div>
                 </div>
               </div>
@@ -1022,26 +1081,10 @@ export default function LibraryPage() {
                     <Copy className="mr-2 h-4 w-4" />
                     {t('common.copy', 'Copy')}
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button type="button" variant="ghost" className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {t('common.delete', 'Delete')}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t('libraryPage.deleteSourceTitle', 'Delete source?')}</AlertDialogTitle>
-                        <AlertDialogDescription>{t('libraryPage.deleteSourceDesc', 'This removes the source from your synced library.')}</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleRemoveSource(selectedSource)}>
-                          {t('common.delete', 'Delete')}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button type="button" variant="ghost" className="text-destructive" onClick={() => handleRemoveSource(selectedSource)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('common.delete', 'Delete')}
+                  </Button>
                 </div>
                 <Button type="button" onClick={() => void handleSaveSourceDraft()}>
                   <Save className="mr-2 h-4 w-4" />

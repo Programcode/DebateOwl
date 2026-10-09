@@ -37,7 +37,7 @@ test('mounts the app before Jam recorder modules resolve', { tag: '@smoke' }, as
   });
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('main').getByRole('heading', { name: 'DebateLab', exact: true, level: 1 })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('main').getByRole('heading', { name: 'What are you working on?', exact: true, level: 1 })).toBeVisible({ timeout: 5_000 });
   expect(await page.evaluate(() => {
     const jam = (window as Window & { __jam__?: { exports?: { metadata?: unknown } } }).__jam__;
     return typeof jam?.exports?.metadata === 'function';

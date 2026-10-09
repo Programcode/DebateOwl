@@ -80,10 +80,10 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
                 <span>
                   <span className="flex items-center gap-2">
                     {m.name}
-                    {m.isProOnly && <Badge variant="outline" className="text-[10px] px-1 py-0">Pro</Badge>}
+                    {m.isProOnly && <Badge variant="outline" className="text-xs px-1 py-0">Pro</Badge>}
                   </span>
                   {m.isAuto && (
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
                       {m.id === 'auto-fast'
                         ? t('modelSelector.autoFastDescription', 'Fast routing, usually GLM')
                         : t('modelSelector.autoProDescription', 'Routes among the strongest models')}

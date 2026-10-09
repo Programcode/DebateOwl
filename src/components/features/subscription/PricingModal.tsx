@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Sparkles, Zap, Crown } from 'lucide-react';
 import { redirectToCheckout, redeemPromoCode } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/use-subscription';
 
 interface PricingModalProps {
   open: boolean;
@@ -78,6 +79,10 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
     }
   };
 
+  // Badge the plan the user is actually on, not Free for everyone.
+  const { tier } = useSubscription();
+  const onFree = tier === 'legacy_free' || tier === 'expired';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -96,7 +101,7 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
           <div className="rounded-lg border p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">{t('pricingModal.free')}</h3>
-              <Badge variant="secondary">{t('pricingModal.current')}</Badge>
+              {onFree && <Badge variant="secondary">{t('pricingModal.current')}</Badge>}
             </div>
             <p className="text-2xl font-bold">{t('pricingModal.freePrice')}<span className="text-sm font-normal text-muted-foreground">{t('pricingModal.freePeriod')}</span></p>
             <ul className="space-y-2 text-sm">
@@ -119,6 +124,8 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
             </div>
             <div className="flex items-center justify-between mt-1">
               <h3 className="font-semibold">{t('pricingModal.pro')}</h3>
+              {tier === 'pro' && <Badge variant="secondary">{t('pricingModal.current')}</Badge>}
+              {tier === 'trial' && <Badge variant="secondary">{t('settings.tierTrial')}</Badge>}
             </div>
             <p className="text-2xl font-bold">{t('pricingModal.proPrice')}<span className="text-sm font-normal text-muted-foreground">{t('pricingModal.proPeriod')}</span></p>
             <ul className="space-y-2 text-sm">

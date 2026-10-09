@@ -49,7 +49,7 @@ async function skipOnboarding(page: Page) {
   });
 }
 
-// Tools open from Home; the header carries only Home, Current debate, Library and History.
+// Tools open from the Tools page; the header carries only Tools, Current debate, Library and History.
 function homeToolLink(page: Page, tool: string) {
   return page.locator(`main [data-tour="mode-${tool}"]`);
 }
@@ -57,9 +57,9 @@ function homeToolLink(page: Page, tool: string) {
 async function openHome(page: Page) {
   if ((page.viewportSize()?.width ?? 1280) < 1024) {
     await page.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Home/ }).click();
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Tools/ }).click();
   } else {
-    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Home' }).click();
+    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Tools' }).click();
   }
   await expect(page).toHaveURL(/\/app$/);
 }

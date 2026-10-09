@@ -144,7 +144,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
                 step={1}
                 onValueChange={([value]) => setValue('sourceCount', value, { shouldDirty: true })}
               />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>3</span>
                 <span>15</span>
               </div>

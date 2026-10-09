@@ -1,4 +1,4 @@
-import { Loader2, Megaphone, X } from 'lucide-react';
+import { Megaphone, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { UserAnnouncement } from '@/lib/announcements';
@@ -7,7 +7,6 @@ interface AnnouncementBannerProps {
   announcement: UserAnnouncement;
   position: number;
   total: number;
-  dismissing: boolean;
   error: string | null;
   onDismiss: () => void;
 }
@@ -16,7 +15,6 @@ export function AnnouncementBanner({
   announcement,
   position,
   total,
-  dismissing,
   error,
   onDismiss,
 }: AnnouncementBannerProps) {
@@ -50,14 +48,9 @@ export function AnnouncementBanner({
           size="icon"
           className="h-11 w-11 shrink-0"
           onClick={onDismiss}
-          disabled={dismissing}
           aria-label={t('announcements.dismissLabel', { title: announcement.title })}
         >
-          {dismissing ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <X className="h-4 w-4" aria-hidden="true" />
-          )}
+          <X className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </section>

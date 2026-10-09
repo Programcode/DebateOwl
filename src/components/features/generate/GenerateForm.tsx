@@ -272,7 +272,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
                     { value: 'aggressive', label: t('generateForm.toneAggressive') },
                   ]}
                 />
-                <p className="text-[11px] text-muted-foreground">{t('generateForm.styleNote')}</p>
+                <p className="text-xs text-muted-foreground">{t('generateForm.styleNote')}</p>
               </div>
             </div>
           </div>

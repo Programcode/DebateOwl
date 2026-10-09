@@ -310,7 +310,7 @@ export function SparringRound({
                 const current = index === session.currentTurnIndex && session.phase === 'round';
                 return (
                   <div key={turn.id} className={cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors', current && 'bg-primary/10 text-foreground', complete && 'text-muted-foreground', !current && !complete && 'text-muted-foreground/70')}>
-                    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-mono tabular-nums', complete ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : current ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground')}>
+                    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-mono tabular-nums', complete ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : current ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground')}>
                       {complete ? <Check className="h-3.5 w-3.5" aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
                     </span>
                     <span className="min-w-0 flex-1">

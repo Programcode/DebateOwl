@@ -3,10 +3,30 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { Drawer } from "vaul";
 
 import { cn } from "@/lib/utils";
 
-const Sheet = SheetPrimitive.Root;
+// On phones a side sheet becomes a bottom sheet you can drag down to dismiss (Vaul:
+// velocity-based dismissal and rubber-banding); wider screens keep the side sheet.
+const PHONE_QUERY = "(max-width: 639px)";
+const subscribePhone = (onChange: () => void) => {
+  const query = window.matchMedia(PHONE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+const isPhone = () => window.matchMedia(PHONE_QUERY).matches;
+
+const SheetDrawerContext = React.createContext(false);
+
+const Sheet = ({ children, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) => {
+  const phone = React.useSyncExternalStore(subscribePhone, isPhone, () => false);
+  return (
+    <SheetDrawerContext.Provider value={phone}>
+      {phone ? <Drawer.Root {...props}>{children}</Drawer.Root> : <SheetPrimitive.Root {...props}>{children}</SheetPrimitive.Root>}
+    </SheetDrawerContext.Provider>
+  );
+};
 
 const SheetTrigger = SheetPrimitive.Trigger;
 
@@ -55,15 +75,42 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, ...props }, ref) => {
     const { t } = useTranslation();
+    const drawer = React.useContext(SheetDrawerContext);
+    const close = (
+      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none pointer-coarse:after:absolute pointer-coarse:after:-inset-3.5">
+        <X className="h-4 w-4" />
+        <span className="sr-only">{t('common.close')}</span>
+      </SheetPrimitive.Close>
+    );
+
+    if (drawer) {
+      return (
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
+          <Drawer.Content
+            ref={ref}
+            className={cn(
+              "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-xl border-t bg-background shadow-lg",
+              className,
+              // Whatever width the side sheet asked for, the bottom sheet spans the screen.
+              "inset-x-0 w-full max-w-none pb-[var(--native-safe-bottom,0px)]",
+            )}
+            {...props}
+          >
+            <div aria-hidden="true" className="mx-auto mb-1 mt-2.5 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30" />
+            {children}
+            {close}
+          </Drawer.Content>
+        </Drawer.Portal>
+      );
+    }
+
     return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
         {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none pointer-coarse:after:absolute pointer-coarse:after:-inset-3.5">
-          <X className="h-4 w-4" />
-          <span className="sr-only">{t('common.close')}</span>
-        </SheetPrimitive.Close>
+        {close}
       </SheetPrimitive.Content>
     </SheetPortal>
     );

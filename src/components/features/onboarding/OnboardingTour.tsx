@@ -101,24 +101,32 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
     useEffect(() => {
         if (hasCompletedOnboarding || location.pathname !== '/app') return;
 
-        // Small delay to ensure DOM is ready on the mode overview.
-        const autoStartDelay = typeof performance === 'undefined' || eligibleAt === undefined
-            ? 500
-            : Math.max(0, 500 - (performance.now() - eligibleAt));
-        const timer = setTimeout(() => {
-            prepareTour();
-            startTour();
-        }, autoStartDelay);
-        return () => clearTimeout(timer);
+        // Start as soon as the first target exists, not after a fixed delay; give up waiting after 500ms.
+        const startedAt = typeof performance === 'undefined' ? Date.now() : performance.now();
+        const waitedBefore = typeof performance === 'undefined' || eligibleAt === undefined ? 0 : startedAt - eligibleAt;
+        const deadline = startedAt + Math.max(0, 500 - waitedBefore);
+        let frame = 0;
+        const tryStart = () => {
+            const now = typeof performance === 'undefined' ? Date.now() : performance.now();
+            if (document.querySelector('[data-tour="current-debate"]') || now >= deadline) {
+                prepareTour();
+                startTour();
+                return;
+            }
+            frame = requestAnimationFrame(tryStart);
+        };
+        frame = requestAnimationFrame(tryStart);
+        return () => cancelAnimationFrame(frame);
     }, [eligibleAt, hasCompletedOnboarding, location.pathname, prepareTour, startTour]);
 
     useEffect(() => {
         if (isTourRunning) prepareTour();
     }, [isTourRunning, location.pathname, prepareTour]);
 
-    // Prevent broken tooltips if user navigates away from the app mid-tour
+    // The tour belongs to the Tools page. Leaving it pauses the tour, so a step never
+    // floats over another page's form pointing at nothing; it resumes on return.
     useEffect(() => {
-        if (isTourRunning && !location.pathname.startsWith('/app')) {
+        if (isTourRunning && location.pathname !== '/app') {
             stopTour();
         }
     }, [isTourRunning, location.pathname, stopTour]);

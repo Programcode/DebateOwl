@@ -87,7 +87,7 @@ test.describe('Hungarian parity', () => {
       ['factoids', 'Tények'],
       ['ask', 'Kérdezés'],
     ] as const) {
-      // Tools open from Home; the header keeps only Home, Current debate, Library and History.
+      // Tools open from the Tools page; the header keeps only Tools, Current debate, Library and History.
       // Navigate in-app: a reload would rerun the init script and restart the tour.
       await page.locator('header a[href="/app"]').first().click();
       await page.locator(`main [data-tour="mode-${route}"]`).click();

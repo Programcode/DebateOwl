@@ -1,6 +1,5 @@
 {
   "nav": {
-    "home": "Home",
     "workspaces": "Workspaces",
     "generate": "Generate",
     "attack": "Attack",
@@ -24,10 +23,10 @@
     "more": "More",
     "mainNavigation": "Main navigation",
     "mobileNavigation": "Mobile navigation",
-    "currentDebate": "Current debate"
+    "currentDebate": "Current debate",
+    "tools": "Tools"
   },
   "navDesc": {
-    "home": "Choose a mode",
     "workspaces": "Write cases together",
     "generate": "Build arguments",
     "attack": "Find weaknesses",
@@ -41,7 +40,8 @@
     "flowchart": "Map arguments",
     "history": "Saved items",
     "currentDebate": "Motion, sources, and results",
-    "settings": "Language, account, and data"
+    "settings": "Language, account, and data",
+    "tools": "Choose a tool"
   },
   "workspaces": {
     "title": "Workspaces",
@@ -244,7 +244,8 @@
     "copy": "Copy",
     "deleted": "Deleted",
     "discuss": "Discuss",
-    "retry": "Retry"
+    "retry": "Retry",
+    "undo": "Undo"
   },
   "aiClient": {
     "inputShortened": "Input was shortened",
@@ -355,7 +356,8 @@
     "flowchart": "Flowchart",
     "flowchartDesc": "Map claims and rebuttals.",
     "history": "History",
-    "historyDesc": "Reopen saved cases, chats, and previous prep sessions."
+    "historyDesc": "Reopen saved cases, chats, and previous prep sessions.",
+    "heading": "What are you working on?"
   },
   "generate": {
     "emptyTitle": "Ready to Generate",
@@ -501,7 +503,9 @@
     "deletingAccount": "Deleting...",
     "deleteAccountSuccess": "Account deleted",
     "deleteAccountSuccessDesc": "Your account and all of its data have been permanently deleted.",
-    "deleteAccountFailed": "Account not deleted"
+    "deleteAccountFailed": "Account not deleted",
+    "signingOut": "Signing out…",
+    "deletingData": "Deleting…"
   },
   "login": {
     "title": "Sign in to DebateLab",
@@ -538,7 +542,18 @@
     "demoCodeHint": "Enter the code provided by your event host.",
     "redirecting": "Redirecting...",
     "failed": "Could not start sign in",
-    "tryAgain": "Please try again."
+    "tryAgain": "Please try again.",
+    "backHome": "Back to DebateLab",
+    "errors": {
+      "demoNotFound": "Demo code not found.",
+      "demoUnusable": "This demo code cannot be used.",
+      "demoDisabled": "This demo code has been disabled.",
+      "demoExpired": "This demo code has expired.",
+      "demoUsedUp": "This demo code has no uses left.",
+      "rateLimited": "Too many attempts. Try again later.",
+      "codeExpired": "That code has expired. Send a new one.",
+      "network": "Can't reach DebateLab. Check your connection and try again."
+    }
   },
   "admin": {
     "demoAccess": "Demo access",
@@ -670,7 +685,14 @@
         "user": "User",
         "admin": "Admin",
         "banned": "Banned"
-      }
+      },
+      "confirmMakeAdmin": "Make {{email}} an admin?",
+      "confirmMakeAdminDesc": "Admins can open the admin page and change other users' roles and plans.",
+      "confirmBan": "Ban {{email}}?",
+      "confirmBanDesc": "They can't use DebateLab until you unban them.",
+      "confirmUnban": "Unban {{email}}?",
+      "confirmRemoveAdmin": "Remove admin from {{email}}?",
+      "confirmRoleDesc": "They become a regular user."
     },
     "promos": {
       "createTitle": "Create Promo Code",
@@ -1344,7 +1366,8 @@
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "upgrade": "Upgrade to Pro - $5/mo",
-    "upgradeNote": "More AI prep access + high reasoning"
+    "upgradeNote": "More AI prep access + high reasoning",
+    "notNow": "Not now"
   },
   "modelModal": {
     "title": "Pro Reasoning",
@@ -1622,12 +1645,8 @@
     "sortOldest": "Date added (oldest)",
     "sortTitle": "Name (A–Z)",
     "sortFolder": "Folder",
-    "folderCreated": "Folder created",
-    "folderCreatedDesc": "New sources can now be saved there.",
     "allFolders": "All folders",
     "importUrlRequired": "Enter a URL to import.",
-    "importReady": "Source Ready",
-    "importReadyDesc": "Review the extracted text before saving.",
     "importFailed": "Import Failed",
     "importFailedDesc": "Could not import this source.",
     "duplicateSource": "Source already in library",
@@ -1636,9 +1655,6 @@
     "saveToLibrary": "Save to Library",
     "addNewTitle": "Add New Source",
     "yourKBTitle": "Your Knowledge Base",
-    "totalSources": "Total sources",
-    "activeSources": "Active sources",
-    "syncedFolders": "Synced folders",
     "manualSource": "Manual source",
     "searchSources": "Search sources",
     "searchPlaceholder": "Search sources, folders, or content...",
@@ -1656,9 +1672,6 @@
     "groundingDisabled": "Grounding Disabled",
     "groundingActiveDesc": "AI responses use your sources",
     "groundingDisabledDesc": "AI responses are not grounded",
-    "errorRequired": "Title and content are required",
-    "sourceAdded": "Source Added",
-    "sourceAddedDesc": "Your source is now available for grounding.",
     "clearFailed": "Failed to clear sources",
     "clearConfirm": "Are you sure you want to clear all sources?",
     "activateFolder": "Activate",
@@ -1667,14 +1680,8 @@
     "deactivateFolder": "Deactivate",
     "deleteFolderDesc": "Sources in this folder will move to General. The sources themselves will not be deleted.",
     "deleteFolderTitle": "Delete folder?",
-    "deleteSourceDesc": "This removes the source from your synced library.",
-    "deleteSourceTitle": "Delete source?",
     "folderActions": "Folder actions",
     "folderActionsDesc": "Rename, delete, or change grounding for every source in this folder.",
-    "folderActivated": "Folder activated",
-    "folderActivatedDesc": "All sources in this folder are active.",
-    "folderDeactivated": "Folder deactivated",
-    "folderDeactivatedDesc": "Sources stay saved but will not ground AI outputs.",
     "folderDeleted": "Folder deleted",
     "folderDeletedDesc": "Sources were moved to General.",
     "folderMergeConfirm": "A folder with this name already exists. Merge sources into it?",
@@ -1684,13 +1691,22 @@
     "noMatchingSourcesDesc": "Try a different search or folder.",
     "renameFolder": "Rename folder",
     "sourceCopied": "Source copied to clipboard.",
-    "sourceDeleted": "Source removed.",
     "sourceUpdated": "Source updated",
     "sourceUpdatedDesc": "Your source changes were saved.",
     "typeLabel": "Type",
     "untitledSource": "Untitled source",
     "useForGrounding": "Use for AI grounding",
-    "useForGroundingDesc": "Inactive sources stay saved but are ignored by generation."
+    "useForGroundingDesc": "Inactive sources stay saved but are ignored by generation.",
+    "titleRequired": "Add a title.",
+    "contentRequired": "Add the source text.",
+    "sourceDeletedTitle": "Deleted {{title}}",
+    "restoreFailed": "Could not restore the source",
+    "deleteFailed": "Could not delete the source.",
+    "readingFile": "Reading file…",
+    "summary": "{{total}} sources · {{active}} active · {{folders}} folders",
+    "mergeFolderTitle": "Merge into {{name}}?",
+    "mergeFolders": "Merge folders",
+    "openOrigin": "Open {{title}} in a new tab"
   },
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",
@@ -1710,15 +1726,9 @@
     "loadFailed": "Failed to load shared content",
     "contentNotFound": "This shared content is no longer available",
     "goToApp": "Go to App",
-    "importToAccount": "Import to Account",
     "openApp": "Open App",
     "sharedOn": "Shared on",
-    "views": "views",
-    "loginRequired": "Login Required",
-    "loginRequiredDesc": "Sign in to import this content to your account.",
-    "importNotAvailable": "Importing isn't available yet",
-    "importNotAvailableDesc": "Saving shared content to your account is coming soon.",
-    "importFailed": "Failed to import content"
+    "views": "views"
   },
   "privacyPage": {
     "title": "Privacy Policy",
@@ -2075,7 +2085,6 @@
   "langSwitcher": {
     "label": "Language",
     "title": "Language",
-    "description": "Choose the app language and the language used in AI outputs.",
     "uiLanguage": "Interface language",
     "outputLanguage": "AI output language"
   },
@@ -2181,7 +2190,8 @@
   },
   "routeError": {
     "heading": "Unable to load this page",
-    "reload": "Reload"
+    "reload": "Reload",
+    "home": "Go to Home"
   },
   "sourcesPage": {
     "title": "Sources",
@@ -2321,7 +2331,10 @@
     "offerDesc": "A debate keeps this motion, its sources, and your results together, and every tool uses it.",
     "offerNotNow": "Not now, use it once",
     "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items"
+    "itemCount_other": "{{count}} items",
+    "viewAll": "View all ({{total}})",
+    "switching": "Switching…",
+    "deleting": "Deleting…"
   },
   "debateContext": {
     "using": "Using {{list}}",

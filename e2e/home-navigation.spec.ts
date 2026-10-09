@@ -16,7 +16,7 @@ test('home groups the eight main tools and keeps utility routes visible', async 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
 
   const main = page.locator('main');
-  await expect(main.getByRole('heading', { name: 'DebateLab' })).toBeVisible({ timeout: 15_000 });
+  await expect(main.getByRole('heading', { name: 'What are you working on?', level: 1 })).toBeVisible({ timeout: 15_000 });
   await expect(main.getByRole('heading', { name: 'Prepare' })).toBeVisible();
   await expect(main.getByRole('heading', { name: 'Practice' })).toBeVisible();
   await expect(main.getByRole('heading', { name: 'Utilities' })).toBeVisible();
@@ -110,12 +110,11 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
 
-  // Mobile keeps the logo, language, theme, and menu on the first row; Settings lives in the menu.
+  // Mobile keeps the logo, language, and menu on the first row; Settings and the theme live in the menu and Settings.
   const languageControl = page.getByRole('button', { name: 'Language' });
-  const themeControl = page.getByRole('button', { name: 'Toggle theme' });
   const menuControl = page.getByRole('button', { name: 'Open menu' });
   const debateControl = page.getByTestId('current-debate-mobile');
-  const controls = [languageControl, themeControl, menuControl, debateControl];
+  const controls = [languageControl, menuControl, debateControl];
 
   await expect(page.getByAltText('DebateLab logo')).toBeVisible();
   for (const control of controls) await expect(control).toBeVisible();
@@ -138,7 +137,7 @@ test('desktop header fits without internal or document overflow at supported wid
   }
 });
 
-test('mobile menu holds only Home, Current debate, Library, History, and Settings', async ({ page }) => {
+test('mobile menu holds only Tools, Current debate, Library, History, and Settings', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Open menu' }).click();

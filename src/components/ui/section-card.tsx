@@ -37,7 +37,7 @@ export function SectionCard({
           <div className="flex items-center gap-2">
             {icon && <div className="text-primary">{icon}</div>}
             <div>
-              <CardTitle className="text-lg">{title}</CardTitle>
+              <CardTitle>{title}</CardTitle>
               {description && <CardDescription>{description}</CardDescription>}
             </div>
           </div>
