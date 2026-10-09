@@ -102,6 +102,7 @@ export function AppLayout() {
   const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
   const dismissedAnnouncementIds = useRef(new Set<string>());
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
   const lastRequestAtRef = useRef<number | null>(null);
   const activeUserIdRef = useRef<string | null>(null);
@@ -182,6 +183,22 @@ export function AppLayout() {
     return () => window.clearTimeout(timer);
   }, [announcements, announcementsUserId, userId]);
 
+  // The mobile menu opens just below the whole header (two rows on phones), whatever its height.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const update = () => root.style.setProperty('--app-header-bottom', `${header.getBoundingClientRect().bottom}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    window.addEventListener('scroll', update, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', update);
+    };
+  }, []);
+
   // Dismiss is optimistic: the banner goes at once and comes back only if the server refuses.
   const handleDismissAnnouncement = async (announcementId: string) => {
     const requestUserId = userId;
@@ -209,6 +226,7 @@ export function AppLayout() {
     <div className="native-safe-screen flex flex-col bg-background">
       {/* Header: the edge appears once content scrolls under it. */}
       <header
+        ref={headerRef}
         className={cn(
           "native-safe-top sticky top-[var(--staging-banner-height,0px)] z-50 border-b bg-card/80 backdrop-blur-xl transition-colors",
           scrolled ? "border-border/60" : "border-transparent",
@@ -284,7 +302,7 @@ export function AppLayout() {
                 <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-[calc(var(--native-safe-top,0px)+var(--staging-banner-height,0px)+4rem)] z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-[var(--app-header-bottom,8rem)] z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>

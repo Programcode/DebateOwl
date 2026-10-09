@@ -438,7 +438,7 @@ All colors MUST be HSL.
   }
 
   .native-mobile-menu {
-    max-height: calc(100dvh - 4rem - var(--native-safe-top, 0px));
+    max-height: calc(100dvh - var(--app-header-bottom, 8rem));
   }
 }
 
