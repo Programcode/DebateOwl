@@ -36,6 +36,10 @@
  * rendered in a page of its own, and the "Copy as text" output is written
  * next to the screenshots.
  *
+ * Crossfire screenshots never call a model and never save: the page answers
+ * each turn, signal and debrief with fixed text in the run's language, and
+ * answers the crossfire write locally.
+ *
  * The Timer runs on Playwright's clock, so its minutes pass at once, and the
  * run checks that it signalled one beep at the last minute and two at time up.
  */
@@ -436,6 +440,112 @@ async function shootAskScreens(context: BrowserContext, prefix: string, language
   await streaming.close();
 }
 
+// A made-up Crossfire exchange and debrief, in English and Hungarian, so the Hungarian shots carry no English model text.
+const CROSSFIRE_TEXT = {
+  en: {
+    argument: 'Banning private cars from city centres cuts roadside pollution and gives streets back to people who walk, cycle and take the bus.',
+    questions: ['Who checks that the exemptions for carers actually work?', 'What happens to shops that depend on drivers?'],
+    answers: [
+      'Councils already issue permits for carers and shift workers, so the checks exist before the ban starts.',
+      'Footfall studies show shops gain visitors when streets close to traffic, though a few car-dependent stores may lose trade.',
+    ],
+    debrief: {
+      concession: 'The opponent admitted that some car-dependent stores may lose trade (T4).',
+      controlled: 'Asking who checks the exemptions forced a concrete answer about permits.',
+      missed: 'You could have pressed on how many permits a typical city issues.',
+      better: 'How many permits would a city of a million people need to issue?',
+      reason: 'A number tests whether the exemptions undercut the health benefit.',
+      strongest: 'The question about shops drew out a concession you can use in rebuttal.',
+    },
+  },
+  hu: {
+    argument: 'Ha kitiltjuk a magánautókat a belvárosból, csökken az út menti szennyezés, és az utcák visszakerülnek a gyalogosokhoz, a biciklisekhez és a buszokhoz.',
+    questions: ['Ki ellenőrzi, hogy a gondozóknak adott kivételek valóban működnek?', 'Mi lesz azokkal a boltokkal, amelyek az autósokból élnek?'],
+    answers: [
+      'Az önkormányzatok már most is adnak engedélyt a gondozóknak és a műszakban dolgozóknak, így az ellenőrzés a tilalom előtt megvan.',
+      'A forgalmi felmérések szerint a boltok több látogatót kapnak, ha az utcát lezárják, bár néhány autós vásárlókra épülő üzlet veszíthet.',
+    ],
+    debrief: {
+      concession: 'Az ellenfél elismerte, hogy néhány autós vásárlókra épülő üzlet veszíthet (T4).',
+      controlled: 'A kivételek ellenőrzéséről szóló kérdés konkrét választ kényszerített ki az engedélyekről.',
+      missed: 'Rákérdezhettél volna, hány engedélyt ad ki egy átlagos város.',
+      better: 'Hány engedélyt kellene kiadnia egy egymilliós városnak?',
+      reason: 'Egy szám megmutatja, hogy a kivételek nem rontják-e le az egészségügyi hasznot.',
+      strongest: 'A boltokról szóló kérdés olyan engedményt hozott, amelyet a cáfolatban felhasználhatsz.',
+    },
+  },
+} as const;
+
+/** Fakes Crossfire's AI calls and its save for this page (see the header). Replies follow the request, as the client checks them. */
+async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) {
+  const text = CROSSFIRE_TEXT[language];
+  await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
+    const body = route.request().postDataJSON() as { feature?: string; input?: { operation?: string; expectedReply?: 'question' | 'answer'; transcript?: { id: string }[] } } | null;
+    if (body?.feature !== 'crossfire') return route.abort();
+    const input = body.input ?? {};
+    const turns = input.transcript ?? [];
+    const exchange = Math.floor(turns.length / 2) % text.answers.length;
+    let output: unknown;
+    let extra: Record<string, unknown> = {};
+    if (input.operation === 'next-turn') {
+      const type = input.expectedReply ?? 'answer';
+      output = { type, text: type === 'answer' ? text.answers[exchange] : text.questions[exchange] };
+      extra = { signalToken: 'screenshot-signal' };
+    } else if (input.operation === 'signal') {
+      output = { signal: { answerTurnId: `T${turns.length + 1}`, answerQuality: exchange === 0 ? 'direct' : 'partial', answerQualityConfidence: 0.82, concession: exchange === 0 ? 'none' : 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.81 } };
+    } else {
+      const d = text.debrief;
+      output = {
+        concessionsSecured: [{ turnIds: ['T3', 'T4'], claim: d.concession }],
+        controlledQuestions: [{ turnIds: ['T1', 'T2'], claim: d.controlled }],
+        weakOrRepetitiveQuestions: [],
+        evasiveOrIncompleteAnswers: [],
+        missedFollowUps: [{ turnIds: ['T2'], claim: d.missed }],
+        betterFollowUpQuestions: [{ turnIds: ['T2'], question: d.better, reason: d.reason }],
+        strongestExchange: { turnIds: ['T3', 'T4'], claim: d.strongest },
+      };
+    }
+    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output, ...extra } });
+  });
+  await page.route(`${REST}/crossfires*`, (route) =>
+    route.request().method() === 'POST' ? route.fulfill({ status: 201, json: { id: '00000000-0000-4000-8000-00000000cf01' } }) : route.continue(),
+  );
+}
+
+/** Crossfire from the Practice tab: the setup, a typed exchange with its live signals, and the debrief, all from fixed outputs. */
+async function shootCrossfireScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const text = CROSSFIRE_TEXT[language === 'hu' ? 'hu' : 'en'];
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} crossfire`);
+  await pinSettings(page, language);
+  await fakeCrossfire(page, language === 'hu' ? 'hu' : 'en');
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-crossfire').click({ timeout: 30_000 });
+  await page.getByTestId('crossfire-setup').waitFor({ timeout: 15_000 });
+  // The resolution comes from the Current Debate, so the round attaches to it without the motion question.
+  await page.waitForFunction(() => (document.querySelector('[data-testid="crossfire-resolution"]') as HTMLTextAreaElement | null)?.value.trim());
+  await page.getByTestId('crossfire-argument').fill(text.argument);
+  await settle(page);
+  await shoot(page, `${prefix}-crossfire-setup`);
+
+  await page.getByRole('button', { name: /^(Start crossfire|Keresztkérdezés indítása|Iniciar interrogatorio)$/ }).click();
+  await page.getByTestId('crossfire-live').waitFor({ timeout: 15_000 });
+  for (const [index, question] of text.questions.entries()) {
+    await page.getByTestId('crossfire-input').fill(question);
+    await page.getByTestId('crossfire-send').click();
+    await page.getByTestId('crossfire-turn').nth(index * 2 + 1).waitFor({ timeout: 15_000 });
+    await page.getByTestId('crossfire-signal').nth(index).waitFor({ timeout: 15_000 });
+  }
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-crossfire-exchange`);
+
+  await page.getByTestId('crossfire-end').click();
+  await page.getByTestId('crossfire-debrief').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-crossfire-debrief`);
+  await page.close();
+}
+
 /**
  * The Timer from the Practice tab: idle, running, and after time up. The page's
  * clock is Playwright's, so minutes pass at once; the web preview records the
@@ -617,6 +727,8 @@ async function main() {
           await shootResultScreens(signedIn, prefix, language, problems);
           shots += 9;
           await shootTimerScreens(signedIn, prefix, language, problems);
+          shots += 3;
+          await shootCrossfireScreens(signedIn, prefix, language, problems);
           shots += 3;
           await signedIn.close();
         }

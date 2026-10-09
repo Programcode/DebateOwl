@@ -88,6 +88,7 @@ function Root() {
             <Stack.Screen name="attack/[id]" />
             {/* Live practice screens, full screen with no tab bar, as the live round in mock 05. */}
             <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="crossfire" />
           </Stack.Protected>
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />

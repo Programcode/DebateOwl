@@ -80,12 +80,18 @@ export async function payloadOf(response: { json: () => Promise<unknown> }): Pro
 
 export type FunctionResponse = Awaited<ReturnType<typeof fetch>>;
 
-/** One POST with the website's headers, a 200 s timeout and the caller's abort. */
-export async function postFunction<T>(path: string, body: Record<string, unknown>, signal: AbortSignal | undefined, run: (response: FunctionResponse) => Promise<T>): Promise<T> {
+/** One POST with the website's headers, its timeout (200 s unless the feature sets its own) and the caller's abort. */
+export async function postFunction<T>(
+  path: string,
+  body: Record<string, unknown>,
+  signal: AbortSignal | undefined,
+  run: (response: FunctionResponse) => Promise<T>,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<T> {
   // The deadline and the caller's abort start before the session read, so
   // leaving the screen while the token refreshes never sends the request.
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const abortForCaller = () => controller.abort();
   signal?.addEventListener('abort', abortForCaller);
   if (signal?.aborted) controller.abort();

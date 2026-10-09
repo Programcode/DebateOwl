@@ -2531,6 +2531,9 @@
       "ofTotal": "összesen {{total}}",
       "next": "Következő beszéd",
       "reset": "Visszaállítás"
+    },
+    "crossfire": {
+      "voiceLater": "Az alkalmazás következő verziójával érkezik."
     }
   }
 }

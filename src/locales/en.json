@@ -2531,6 +2531,9 @@
       "ofTotal": "of {{total}}",
       "next": "Next speech",
       "reset": "Reset"
+    },
+    "crossfire": {
+      "voiceLater": "Coming with the app build."
     }
   }
 }

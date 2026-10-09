@@ -10,7 +10,7 @@ import { Screen } from '@/components/screen';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/use-theme';
 
-/** The Practice tools. Attack, Ask and Timer open full screen; the others say they are on their way. */
+/** The Practice tools. Attack, Ask, Crossfire and Timer open full screen; the others say they are on their way. */
 export default function PracticeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -30,7 +30,9 @@ export default function PracticeScreen() {
                   ? router.push({ pathname: '/attack', params: { from: 'practice' } })
                   : tool.key === 'timer'
                     ? router.push('/timer')
-                    : router.push({ pathname: '/soon/[tool]', params: { tool: tool.key } })}
+                    : tool.key === 'crossfire'
+                      ? router.push({ pathname: '/crossfire', params: { from: 'practice' } })
+                      : router.push({ pathname: '/soon/[tool]', params: { tool: tool.key } })}
             testID={`practice-tool-${tool.key}`}
             style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
             <IconTile name={tool.icon} size={42} />
