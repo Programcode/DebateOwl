@@ -22,15 +22,11 @@ import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
+import { estimateAiTimeUsedSeconds } from '@/lib/sparring/session';
 
 function readableError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message;
   return fallback;
-}
-
-function estimateAiTimeUsedSeconds(content: string, limit: number) {
-  const words = content.trim() ? content.trim().split(/\s+/).length : 0;
-  return Math.min(limit, Math.max(1, Math.round((words / 140) * 60)));
 }
 
 export default function SparringPage() {
