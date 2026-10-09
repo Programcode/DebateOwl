@@ -36,6 +36,12 @@
  * rendered in a page of its own, and the "Copy as text" output is written
  * next to the screenshots. Brainstorm and Factoids are shot the same way,
  * from a fixed brainstorm and fixed factoids, and save nothing.
+ *
+ * Flowchart screenshots read fixed saved maps: the page answers every
+ * flowcharts read with two made-up maps in the website's React Flow shape (or
+ * none for one-off work, which shows the starter map) and answers writes
+ * locally. The one-off shot turns one-off mode on in memory, as the switcher
+ * does, and never taps a debate row.
  */
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -469,6 +475,148 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   await page.close();
 }
 
+// Made-up saved maps in the website's React Flow shape, after mock A.
+const FLOW_NODE = (id: string, x: number, y: number, label: string, type: string, strength?: string) => ({
+  id, type: 'custom', position: { x, y }, width: 220, height: 96,
+  data: { label, description: '', type, ...(strength ? { strength } : {}) },
+});
+const FAKE_FLOWCHART = {
+  nodes: [
+    FLOW_NODE('thesis', 400, 50, 'Ban private cars from city centres', 'thesis'),
+    FLOW_NODE('c1', 150, 200, 'Air quality is a health duty', 'contention', 'strong'),
+    FLOW_NODE('c2', 400, 200, 'Streets belong to people', 'contention', 'moderate'),
+    FLOW_NODE('c3', 650, 200, 'Fewer road deaths', 'dropped'),
+    FLOW_NODE('a1', 150, 350, 'Shift workers have no alternative', 'attack'),
+    FLOW_NODE('a2', 400, 350, 'Small shops lose customers', 'attack'),
+    FLOW_NODE('r1', 150, 500, 'Night buses follow demand', 'rebuttal'),
+  ],
+  edges: [
+    { id: 'e-thesis-c1', source: 'thesis', target: 'c1', animated: true, markerEnd: { type: 'arrowclosed' } },
+    { id: 'e-thesis-c2', source: 'thesis', target: 'c2', animated: true, markerEnd: { type: 'arrowclosed' } },
+    { id: 'e-thesis-c3', source: 'thesis', target: 'c3', animated: true, markerEnd: { type: 'arrowclosed' } },
+    { id: 'reactflow__edge-c1-a1', source: 'c1', sourceHandle: null, target: 'a1', targetHandle: null, animated: true, label: 'Attack', style: { stroke: '#ef4444', strokeWidth: 2 }, markerEnd: { type: 'arrowclosed' } },
+    { id: 'e-c2-a2', source: 'c2', target: 'a2', style: { stroke: '#ef4444' }, markerEnd: { type: 'arrowclosed' } },
+    { id: 'reactflow__edge-a1-r1', source: 'a1', sourceHandle: null, target: 'r1', targetHandle: null, animated: true, label: 'Rebuttal', style: { stroke: '#3b82f6', strokeWidth: 2 }, markerEnd: { type: 'arrowclosed' } },
+  ],
+};
+const FAKE_FLOWCHART_ROWS = [
+  { id: '00000000-0000-4000-8000-00000000f10a', title: 'Car ban: first speech', created_at: '2026-10-09T09:12:00.000Z', ...FAKE_FLOWCHART },
+  { id: '00000000-0000-4000-8000-00000000f10b', title: 'Practice round map', created_at: '2026-10-02T17:40:00.000Z', nodes: FAKE_FLOWCHART.nodes.slice(0, 3), edges: FAKE_FLOWCHART.edges.slice(0, 2) },
+];
+
+/** Answers flowcharts reads with the made-up maps, none for one-off work, and writes locally (see the header). */
+async function fakeFlowcharts(page: Page) {
+  // The maps belong to the debate the last list was read for.
+  let debateId: string | null = null;
+  await page.route(`${REST}/flowcharts*`, (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const single = (request.headers().accept ?? '').includes('vnd.pgrst.object');
+    if (request.method() === 'DELETE') return route.fulfill({ status: 204 });
+    if (request.method() !== 'GET') {
+      const row = { ...FAKE_FLOWCHART_ROWS[0], id: '00000000-0000-4000-8000-00000000f1ff', debate_id: debateId };
+      return route.fulfill({ status: 201, json: single ? row : [row] });
+    }
+    const scope = url.searchParams.get('debate_id');
+    if (scope) debateId = scope === 'is.null' ? null : scope.replace(/^eq\./, '');
+    const id = url.searchParams.get('id')?.replace(/^eq\./, '');
+    const rows = (scope === 'is.null' ? [] : FAKE_FLOWCHART_ROWS)
+      .filter((row) => !id || row.id === id)
+      .map((row) => ({ ...row, debate_id: debateId }));
+    return route.fulfill({ status: 200, json: single ? rows[0] ?? null : rows });
+  });
+}
+
+/** Flow, Map, the claim sheet, adding a card, the saved maps, the menu and Export, from fixed maps. Nothing is saved. */
+async function shootFlowchart(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} flowchart`);
+  page.on('dialog', (dialog) => void dialog.dismiss());
+  await pinSettings(page, language);
+  await fakeFlowcharts(page);
+  await page.goto(`${ORIGIN}/prepare`);
+  await page.getByTestId('prepare-tool-flowchart').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await page.getByTestId('prepare-tool-flowchart').click();
+  await page.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-flowchart-flow`);
+
+  await page.getByRole('tab', { name: /^(Map|Térkép|Mapa)$/ }).click();
+  await page.getByTestId('map-tree').waitFor();
+  await shoot(page, `${prefix}-flowchart-map`);
+
+  await page.getByTestId('map-card').filter({ hasText: 'Small shops lose customers' }).click();
+  await page.getByTestId('claim-sheet').waitFor();
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-flowchart-claim`);
+  await page.getByTestId('claim-link').click();
+  await page.getByTestId('link-targets').waitFor();
+  await shoot(page, `${prefix}-flowchart-link`);
+  await page.goBack();
+  await page.getByTestId('flowchart-screen').waitFor();
+
+  await page.getByTestId('document-add').click();
+  await page.getByTestId('card-sheet').waitFor();
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-flowchart-add-card`);
+  await page.goBack();
+
+  await page.getByTestId('flowchart-maps').click();
+  await page.getByTestId('maps-sheet').waitFor();
+  await page.getByTestId('saved-map').nth(1).waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-flowchart-maps`);
+  await page.goBack();
+
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menu').waitFor();
+  await shoot(page, `${prefix}-flowchart-menu`);
+  // Save, Save as, Saved Flowcharts, Export, Delete map.
+  await page.getByRole('menuitem').nth(3).click();
+  await page.getByTestId('export-menu').waitFor();
+  await shoot(page, `${prefix}-flowchart-export-menu`);
+  await page.getByTestId('export-menu').getByRole('menuitem').first().click();
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem').nth(3).click();
+  await page.getByTestId('export-menu').getByRole('menuitem').nth(1).click();
+  const exported = await page.evaluate(() => (window as unknown as { __debatelabExport?: { html?: string; fileName?: string; copied?: string } }).__debatelabExport ?? {});
+  if (!exported.html || !exported.copied) throw new Error('Flowchart export did not hand over the PDF HTML or the copied text');
+  await writeFile(join(OUT, `${prefix}-flowchart-copy.txt`), exported.copied);
+  const pdf = await context.newPage();
+  await pdf.setViewportSize({ width: 794, height: 1123 });
+  await pdf.setContent(exported.html);
+  await pdf.screenshot({ path: join(OUT, `${prefix}-flowchart-pdf-html.png`), fullPage: true });
+  await pdf.close();
+  console.log(`${prefix} flowchart: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
+  await page.close();
+
+  // One-off work has its own maps; with none saved, the starter map shows under the one-off notice.
+  const oneOff = await context.newPage();
+  watchErrors(oneOff, problems, `${prefix} flowchart one-off`);
+  await pinSettings(oneOff, language);
+  await fakeFlowcharts(oneOff);
+  await oneOff.goto(`${ORIGIN}/`);
+  await oneOff.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await settle(oneOff);
+  await oneOff.getByTestId('current-debate-pill').click();
+  await oneOff.getByTestId('debates-sheet').waitFor();
+  await settle(oneOff);
+  const toggle = oneOff.getByTestId('debates-sheet').getByRole('switch');
+  await toggle.click();
+  if (!(await toggle.isChecked())) throw new Error('The one-off switch did not turn on');
+  await oneOff.getByTestId('debates-sheet').getByRole('button', { name: /^(Done|Kész|Listo)$/ }).click();
+  await oneOff.getByTestId('debates-sheet').waitFor({ state: 'detached' });
+  await oneOff.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+  await oneOff.getByTestId('prepare-tool-flowchart').waitFor({ timeout: 30_000 });
+  await oneOff.getByTestId('prepare-tool-flowchart').click();
+  await oneOff.getByTestId('flowchart-screen').getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
+  await oneOff.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
+  await settle(oneOff);
+  await shoot(oneOff, `${prefix}-flowchart-oneoff`);
+  await oneOff.close();
+}
+
 async function shootLibraryScreens(page: Page, prefix: string) {
   await page.goto(`${ORIGIN}/library`);
   await page.getByTestId('library-add').waitFor({ timeout: 30_000 });
@@ -678,6 +826,8 @@ async function main() {
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 6;
           }
+          await shootFlowchart(signedIn, prefix, language, problems);
+          shots += 10;
           await signedIn.close();
         }
       }
