@@ -42,16 +42,16 @@ Deno.test("Auto Fast normally resolves to Claude Haiku for a Basic user", async 
   }
 });
 
-Deno.test("Auto Fast can route logic-heavy work to DeepSeek Flash", async () => {
+Deno.test("Auto Fast can route long-context work to Muse Spark", async () => {
   const resolved = await resolveModelSelection({
     requestedModel: AUTO_FAST,
     feature: "attack",
-    input: { caseText: "A long causal chain requiring adversarial logical analysis" },
+    input: { caseText: "A very long multilingual case file requiring broad context handling" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("deepseek/deepseek-v4.1-flash")),
+    callJevImpl: jevReturning(choiceResult("meta/muse-spark-1.3-contributor")),
   });
-  if (resolved.resolvedModel !== "deepseek/deepseek-v4.1-flash" || resolved.usedFallback) {
-    throw new Error(`logic-heavy route was not accepted: ${JSON.stringify(resolved)}`);
+  if (resolved.resolvedModel !== "meta/muse-spark-1.3-contributor" || resolved.usedFallback) {
+    throw new Error(`long-context route was not accepted: ${JSON.stringify(resolved)}`);
   }
 });
 
@@ -122,7 +122,7 @@ Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
     feature: "generate",
     input: { motion: "Complex international law motion" },
     canAccessProModels: true,
-    callJevImpl: jevReturning(choiceResult("meta/muse-spark-1.3")),
+    callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash")),
   });
   if (outsidePool.resolvedModel !== "anthropic/claude-opus-5.5" || !outsidePool.usedFallback) {
     throw new Error("Auto Pro accepted a model outside its pool");
@@ -132,13 +132,13 @@ Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
 Deno.test("manual model selections bypass Jev", async () => {
   const observed = { calls: 0 };
   const resolved = await resolveModelSelection({
-    requestedModel: "google/gemini-3.8-flash",
+    requestedModel: "openai/gpt-6-luna",
     feature: "ask",
     input: { message: "Hi" },
     canAccessProModels: false,
     callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash"), observed),
   });
-  if (resolved.resolvedModel !== "google/gemini-3.8-flash" || resolved.requestedModel !== "google/gemini-3.8-flash") {
+  if (resolved.resolvedModel !== "openai/gpt-6-luna" || resolved.requestedModel !== "openai/gpt-6-luna") {
     throw new Error("manual selection changed");
   }
   if (observed.calls !== 0) throw new Error("manual selection called Jev");

@@ -50,7 +50,7 @@ test("model-pro-default: a new Pro account starts on Claude Opus 5.5 and generat
   await evidence.shot("02-generated-with-opus");
 });
 
-test("model-basic-default: a Basic account starts on Claude Haiku 5.5 and Pro models stay locked", async ({ signedIn: page, user, evidence }) => {
+test("model-basic-default: a Basic account starts on Claude Haiku 5.5 with only Haiku, Luna and Muse Spark unlocked", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
   // Demo sign-in grants Pro; turn the account into a fresh trial with nothing saved.
   await updateSettings(userId, {
@@ -68,9 +68,12 @@ test("model-basic-default: a Basic account starts on Claude Haiku 5.5 and Pro mo
   await selector.click();
   await expect(page.getByRole("option", { name: /Claude Opus 5\.5/ })).toBeDisabled();
   await expect(page.getByRole("option", { name: /Claude Sonnet 5\.5/ })).toBeDisabled();
+  await expect(page.getByRole("option", { name: /Gemini 3\.8 Flash/ })).toBeDisabled();
+  await expect(page.getByRole("option", { name: /GPT-6 Luna/ })).toBeEnabled();
+  await expect(page.getByRole("option", { name: /Muse Spark 1\.3/ })).toBeEnabled();
   await evidence.shot("01-basic-model-list");
   await page.keyboard.press("Escape");
-  await evidence.step("Basic account: selector shows Claude Haiku 5.5, Opus and Sonnet 5.5 locked behind Pro");
+  await evidence.step("Basic account: selector shows Claude Haiku 5.5; Luna and Muse Spark enabled; Opus, Sonnet and Gemini locked behind Pro");
 
   await generateOnce(page);
   const { data: usage } = await admin.from("ai_requests").select("feature,status,model").eq("user_id", userId);

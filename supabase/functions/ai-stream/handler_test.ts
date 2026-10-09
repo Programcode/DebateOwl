@@ -107,10 +107,8 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
             confidence: 0.96,
             probabilities: {
               "anthropic/claude-haiku-5.5": 0.96,
-              "z-ai/glm-5.3-flash": 0.01,
               "openai/gpt-6-luna": 0.02,
-              "google/gemini-3.8-flash": 0.01,
-              "deepseek/deepseek-v4.1-flash": 0.0,
+              "meta/muse-spark-1.3-contributor": 0.02,
             },
           },
         },

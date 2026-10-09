@@ -19,10 +19,8 @@ const MAX_ROUTING_STATE_CHARS = 8_000;
 
 const FAST_CANDIDATES = {
   "anthropic/claude-haiku-5.5": "Default for ordinary DebateLab work: cases, rebuttals, coaching, and structured output.",
-  "z-ai/glm-5.3-flash": "Best for efficient long-context requests that are mostly extraction or summarizing.",
   "openai/gpt-6-luna": "Best for short latency-sensitive conversation and simple coaching.",
-  "google/gemini-3.8-flash": "Best for very long input, multilingual output, or broad context handling.",
-  "deepseek/deepseek-v4.1-flash": "Best for logic-heavy analysis, adversarial attack, or structured reasoning at low cost.",
+  "meta/muse-spark-1.3-contributor": "Best for very long input, multilingual output, or broad context handling.",
 } as const;
 
 const PRO_CANDIDATES = {

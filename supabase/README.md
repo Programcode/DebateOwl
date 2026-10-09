@@ -36,7 +36,7 @@ supabase/tests/            pgTAP database and policy tests
 
 Both endpoints accept an optional `debateContext` of IDs (`debateId`, `side`, `sourceIds`, `outputs`). `_shared/debate-context-loader.ts` loads the matching material with the service role, filtering every query by the caller's user ID and the one debate, and returns 404 for a debate the caller does not own before any quota is reserved. Requests without it still accept the legacy `sourceIds` field.
 
-Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Claude Haiku 5.5 is the Basic default and Claude Opus 5.5 the Pro default; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
+Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Basic accounts get Claude Haiku 5.5 (the default), GPT-6 Luna, and Muse Spark 1.3 Contributor; Claude Opus 5.5 is the Pro default; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
 
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, cost, entitlement, CORS, and control logic lives in `_shared`.
 

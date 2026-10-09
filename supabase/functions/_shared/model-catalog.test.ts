@@ -22,8 +22,7 @@ Deno.test("model catalog marks only the approved Pro entries as Pro-only", () =>
   const basic = new Set([
     "anthropic/claude-haiku-5.5",
     "openai/gpt-6-luna",
-    "google/gemini-3.8-flash",
-    "deepseek/deepseek-v4.1-flash",
+    "meta/muse-spark-1.3-contributor",
   ]);
   for (const entry of MODEL_CATALOG) {
     if (entry.isProOnly === basic.has(entry.id)) throw new Error(`incorrect tier for ${entry.id}`);
@@ -55,7 +54,7 @@ Deno.test("trial and unsupported Pro reasoning resolve server-side", () => {
 
 Deno.test("retired model IDs resolve to catalog models without crossing into Pro", () => {
   const retiredBasic = ["openai/gpt-5.6-luna", "deepseek/deepseek-v4-flash-0731"];
-  const retiredPro = ["anthropic/claude-sonnet-5", "anthropic/claude-opus-5", "openai/gpt-5.6-sol", "openai/gpt-5.6-terra"];
+  const retiredPro = ["anthropic/claude-sonnet-5", "anthropic/claude-opus-5", "openai/gpt-5.6-sol", "openai/gpt-5.6-terra", "meta/muse-spark-1.3"];
   for (const id of [...retiredBasic, ...retiredPro]) {
     const successor = retiredModelSuccessor(id);
     const entry = successor && getModelCatalogEntry(successor);
