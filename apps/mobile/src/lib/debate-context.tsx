@@ -10,6 +10,7 @@ import {
   type Debate,
   type DebateSettings,
 } from './debates';
+import { keepIfSame } from './keep-if-same';
 
 type Status = 'loading' | 'ready' | 'error';
 
@@ -54,7 +55,8 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     try {
       const next = await fetchDebates(forUser);
       if (owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
-      setDebates(next.debates);
+      // Refreshes run on every Debate tab focus; an unchanged list keeps its identity so the tabs do not re-render.
+      setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
     } catch (cause) {

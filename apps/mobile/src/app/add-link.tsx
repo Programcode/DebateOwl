@@ -2,12 +2,12 @@ import type { SourceImportOutput } from '@debatelab/core/ai/schemas/source-impor
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 import { MainActionButton, PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Field } from '@/components/field';
+import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
@@ -22,7 +22,6 @@ import { useTheme } from '@/theme/use-theme';
 export default function AddLinkSheet() {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
   const { current } = useDebates();
@@ -73,78 +72,72 @@ export default function AddLinkSheet() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
-        keyboardShouldPersistTaps="handled"
-        testID="add-link-sheet">
-        <View style={styles.header}>
-          <Text accessibilityRole="header" weight="bold" style={styles.title}>
-            {t('mobile.library.pasteLink')}
-          </Text>
-          <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={busy === 'save'} />
-        </View>
+    <SheetScrollView contentContainerStyle={styles.content} testID="add-link-sheet">
+      <View style={styles.header}>
+        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+          {t('mobile.library.pasteLink')}
+        </Text>
+        <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={busy === 'save'} />
+      </View>
 
-        {!current ? (
-          <Text tone="secondary" style={styles.body}>
-            {t('debate.libraryNeedsDebate')}
-          </Text>
-        ) : (
-          <>
-            <Field
-              label={t('libraryPage.importUrlLabel')}
-              placeholder={t('libraryPage.importUrlPlaceholder')}
-              hint={t('libraryPage.importUrlHelp')}
-              value={url}
-              onChangeText={(next) => {
-                setUrl(next);
-                setDraft(null);
-              }}
-              keyboardType="url"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-              returnKeyType="go"
-              onSubmitEditing={() => void runImport()}
-              editable={busy === null}
-            />
-            {!draft ? (
-              <PrimaryButton label={t('libraryPage.importUrl')} busy={busy === 'import'} disabled={!url.trim()} onPress={() => void runImport()} />
-            ) : (
-              <>
-                <Text weight="medium" tone="secondary" style={styles.label}>
-                  {t('libraryPage.importPreview')}
+      {!current ? (
+        <Text tone="secondary" style={styles.body}>
+          {t('debate.libraryNeedsDebate')}
+        </Text>
+      ) : (
+        <>
+          <Field
+            label={t('libraryPage.importUrlLabel')}
+            placeholder={t('libraryPage.importUrlPlaceholder')}
+            hint={t('libraryPage.importUrlHelp')}
+            value={url}
+            onChangeText={(next) => {
+              setUrl(next);
+              setDraft(null);
+            }}
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+            returnKeyType="go"
+            onSubmitEditing={() => void runImport()}
+            editable={busy === null}
+          />
+          {!draft ? (
+            <PrimaryButton label={t('libraryPage.importUrl')} busy={busy === 'import'} disabled={!url.trim()} onPress={() => void runImport()} />
+          ) : (
+            <>
+              <Text weight="medium" tone="secondary" style={styles.label}>
+                {t('libraryPage.importPreview')}
+              </Text>
+              <Card>
+                <Field label={t('libraryPage.titleLabel')} value={title} onChangeText={setTitle} editable={busy === null} />
+                <Text tone="faint" style={styles.meta}>
+                  {`${draft.domain} · ${draft.wordCount} ${t('libraryPage.words')}`}
                 </Text>
-                <Card>
-                  <Field label={t('libraryPage.titleLabel')} value={title} onChangeText={setTitle} editable={busy === null} />
-                  <Text tone="faint" style={styles.meta}>
-                    {`${draft.domain} · ${draft.wordCount} ${t('libraryPage.words')}`}
+                {draft.excerpt ? (
+                  <Text tone="secondary" style={styles.body} numberOfLines={5}>
+                    {draft.excerpt}
                   </Text>
-                  {draft.excerpt ? (
-                    <Text tone="secondary" style={styles.body} numberOfLines={5}>
-                      {draft.excerpt}
-                    </Text>
-                  ) : null}
-                </Card>
-                <MainActionButton label={t('libraryPage.saveImported')} busy={busy === 'save'} disabled={!title.trim()} onPress={() => void save()} />
-              </>
-            )}
-          </>
-        )}
+                ) : null}
+              </Card>
+              <MainActionButton label={t('libraryPage.saveImported')} busy={busy === 'save'} disabled={!title.trim()} onPress={() => void save()} />
+            </>
+          )}
+        </>
+      )}
 
-        {error ? (
-          <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
-            {error}
-          </Text>
-        ) : null}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {error ? (
+        <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
+          {error}
+        </Text>
+      ) : null}
+    </SheetScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 22, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  content: { gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 21 },

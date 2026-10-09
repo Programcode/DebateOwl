@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.adam.debatelab",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
     },
     "android": {
       "adaptiveIcon": {

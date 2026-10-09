@@ -1,3 +1,11 @@
+// Hermes has no Intl.PluralRules, and without it i18next cannot pick `_one`/`_other` keys
+// and shows the raw key. The polyfill only installs where it is missing, so the web keeps
+// the browser's. It must load before i18next initialises below.
+import '@formatjs/intl-pluralrules/polyfill.js';
+import '@formatjs/intl-pluralrules/locale-data/en.js';
+import '@formatjs/intl-pluralrules/locale-data/es.js';
+import '@formatjs/intl-pluralrules/locale-data/hu.js';
+
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import { getLocales } from 'expo-localization';
 import i18n from 'i18next';

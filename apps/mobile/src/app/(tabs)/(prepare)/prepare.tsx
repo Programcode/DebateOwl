@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
+import { OneOffNotice } from '@/components/one-off-notice';
 import { PREPARE_TOOLS, type PrepareTool } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { ScreenTitle } from '@/components/screen-title';
@@ -14,6 +15,7 @@ import { WorkRow, workHref } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { fetchPrepareWork, type DebateItem } from '@/lib/debates';
+import { keepIfSame } from '@/lib/keep-if-same';
 import { useTheme } from '@/theme/use-theme';
 
 const SAVED_LIMIT = 30;
@@ -25,7 +27,7 @@ export default function PrepareScreen() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
-  const { current, oneOff } = useDebates();
+  const { current } = useDebates();
   const debateId = current?.id ?? null;
   // Each load belongs to the debate it was read for, so another debate's results never show, or open, under this one.
   const [loaded, setLoaded] = useState<{ debateId: string; items: DebateItem[] | null; failed: boolean } | null>(null);
@@ -45,7 +47,8 @@ export default function PrepareScreen() {
     try {
       const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT);
       if (!isCurrent()) return;
-      setLoaded({ debateId: forDebate, items: next, failed: false });
+      // Every focus rereads the list; an unchanged one keeps its identity, so the rows do not re-render.
+      setLoaded((previous) => keepIfSame(previous, { debateId: forDebate, items: next, failed: false }));
     } catch (cause) {
       if (!isCurrent()) return;
       console.warn('Could not load saved results:', cause instanceof Error ? cause.message : cause);
@@ -66,6 +69,7 @@ export default function PrepareScreen() {
   return (
     <Screen>
       <ScreenTitle title={t('mobile.tabs.prepare')} />
+      <OneOffNotice />
       <Card style={styles.list}>
         {PREPARE_TOOLS.map((tool, index) => (
           <Pressable
@@ -91,9 +95,10 @@ export default function PrepareScreen() {
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('mobile.prepare.saved')}
       </Text>
-      {oneOff || !debateId ? (
+      {/* The Current Debate's results stay listed in one-off mode, as on the Debate tab and the website's home. */}
+      {!debateId ? (
         <Text tone="secondary" style={styles.body}>
-          {oneOff ? t('debate.oneOffStrip') : t('debate.noCurrentStrip')}
+          {t('debate.noCurrentStrip')}
         </Text>
       ) : failed ? (
         <Card>
