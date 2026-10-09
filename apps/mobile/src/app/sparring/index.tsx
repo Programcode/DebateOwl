@@ -288,7 +288,8 @@ export default function SparringScreen() {
 
   const submit = () => {
     const latest = sessionRef.current;
-    if (!latest || !userId) return;
+    // A second tap after the speech went in lands on the opponent's turn; it is not a rejected speech.
+    if (!latest || !userId || latest.phase !== 'round' || currentSparringTurn(latest)?.speaker !== 'user') return;
     Keyboard.dismiss();
     const next = submitSparringSpeech(latest, latest.draft, { now: Date.now(), createId: newSparringId });
     if (!next) {
