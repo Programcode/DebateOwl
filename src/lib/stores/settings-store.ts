@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
+import { canAccessProModels as canAccessProModelsFor } from '@debatelab/core/ai/pro-access';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -128,25 +129,15 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
 }
 
 async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
-  const tier = settings.subscription_tier;
-  const graceEnd = typeof settings.grace_period_ends_at === 'string'
-    ? new Date(settings.grace_period_ends_at)
-    : null;
-  if ((tier === 'pro' || tier === 'legacy_free') && graceEnd && graceEnd > new Date()) return true;
-  if (tier !== 'pro') return false;
-
-  const userId = await getUserId();
-  if (!userId) return null;
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('status, current_period_end')
-    .eq('user_id', userId);
-  if (error) return null;
-  return Boolean(data?.some((subscription) =>
-    (subscription.status === 'active' || subscription.status === 'trialing')
-    && subscription.current_period_end
-    && new Date(subscription.current_period_end) > new Date()
-  ));
+  return canAccessProModelsFor(settings, async () => {
+    const userId = await getUserId();
+    if (!userId) return null;
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', userId);
+    return error ? null : data ?? [];
+  });
 }
 
 async function getUserId() {

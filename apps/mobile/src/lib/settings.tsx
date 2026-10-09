@@ -1,4 +1,6 @@
 import { getDefaultFeatureConfigs } from '@debatelab/core/ai/feature-configs';
+import { canAccessProModels } from '@debatelab/core/ai/pro-access';
+import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '@debatelab/core/contract/model-catalog';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -63,26 +65,55 @@ function isEmptyObject(value: unknown): boolean {
 }
 
 /**
+ * The starting model the website would pick for this student, or null when
+ * their Pro access can't be read right now.
+ */
+async function defaultModelFor(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('subscription_tier,grace_period_ends_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const pro = await canAccessProModels(data, async () => {
+    const { data: rows, error: billingError } = await supabase
+      .from('subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', userId);
+    return billingError ? null : rows ?? [];
+  });
+  if (pro === null) return null;
+  return pro ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
+}
+
+/**
  * The sign-up trigger provisions the row and clients may only update it, as in
  * the website's settings store. Only the changed column is written, plus the
  * website's default feature_configs while the row has none: the website reads
  * an empty feature_configs as "never saved" and would replace this setting
- * with the browser's. The filter keeps configs saved in the meantime.
+ * with the browser's. The defaults use the Pro model when the student has Pro
+ * access, as the website's would, because the website never upgrades configs
+ * once they are saved. The filter keeps configs saved in the meantime.
+ *
+ * Returns whether the row's feature_configs is known to be filled in. When Pro
+ * access can't be read, only the column is written, so the next save retries.
  */
 async function writeSetting(userId: string, key: SettingKey, value: string, configsMayBeEmpty: boolean) {
   const changes = { [COLUMNS[key]]: value, updated_at: new Date().toISOString() };
-  if (configsMayBeEmpty) {
+  const model = configsMayBeEmpty ? await defaultModelFor(userId) : null;
+  if (model) {
     const { data, error } = await supabase
       .from('user_settings')
-      .update({ ...changes, feature_configs: getDefaultFeatureConfigs() })
+      .update({ ...changes, feature_configs: getDefaultFeatureConfigs(model) })
       .eq('user_id', userId)
       .containedBy('feature_configs', {})
       .select('user_id');
     if (error) throw new Error(error.message);
-    if (data && data.length > 0) return;
+    if (data && data.length > 0) return true;
   }
   const { error } = await supabase.from('user_settings').update(changes).eq('user_id', userId);
   if (error) throw new Error(error.message);
+  return !configsMayBeEmpty || model !== null;
 }
 
 /**
@@ -171,8 +202,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const previous = latest.current[key];
     apply({ ...latest.current, [key]: value }, forUser);
     try {
-      await writeSetting(forUser, key, value, configsSaved.current !== true);
-      if (owner.current === forUser) configsSaved.current = true;
+      const filled = await writeSetting(forUser, key, value, configsSaved.current !== true);
+      if (filled && owner.current === forUser) configsSaved.current = true;
     } catch (cause) {
       if (owner.current === forUser && versions.current[key] === version) {
         apply({ ...latest.current, [key]: previous }, forUser);

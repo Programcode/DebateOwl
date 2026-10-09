@@ -14,7 +14,8 @@ const defaultConfig: ProviderConfig = {
  * The model settings each tool starts with. The website saves these in
  * user_settings.feature_configs, and the app writes them too when it saves the
  * first setting, because the website reads an empty feature_configs as "never
- * saved".
+ * saved". Both pass DEFAULT_PRO_MODEL when canAccessProModels (pro-access.ts)
+ * says the student has Pro access.
  */
 export const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
   generate: { ...defaultConfig, model },
