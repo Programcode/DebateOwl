@@ -21,6 +21,7 @@ import { useDebates } from '@/lib/debate-context';
 import { copyText, sharePdf } from '@/lib/export';
 import { FLOWCHART_EXPORT_FILE_NAME, flowchartExportHtml } from '@/lib/export-html';
 import {
+  findDraft,
   findSavedDraft,
   forgetDraft,
   newDraft,
@@ -168,9 +169,11 @@ export default function FlowchartScreen() {
       const saved = savedDraft(row);
       // The held map becomes the new row; the map it was saved from (if any) goes back to its saved
       // state. Edits made while it saved stay held and unsaved, and the map on screen stays on screen.
-      updateDraft(at.scope, at.key, (current) => (current.doc === at.draft.doc ? saved : { ...saved, doc: current.doc, edited: true }));
+      // It is found by its handle, because a new map started meanwhile takes the unsaved map's key.
+      const now = findDraft(at.scope, at.draft.handle);
+      if (now) updateDraft(at.scope, now.key, (current) => (current.doc === at.draft.doc ? saved : { ...saved, doc: current.doc, edited: true }));
       // A list-opened screen follows the new row only while that map is still the one on screen; a map chosen meanwhile stays.
-      if (requestedId && openDraft(at.scope)?.draft.handle === at.draft.handle) {
+      if (now && requestedId && openDraft(at.scope)?.draft.handle === at.draft.handle) {
         setFound({ id: row.id, scope: at.scope });
         setRequestedId(row.id);
       }

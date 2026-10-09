@@ -69,7 +69,11 @@ export default function ClaimSheet() {
     );
   }
 
-  const change = (edit: Parameters<typeof updateDraft>[2]) => updateDraft(scope, held.key, edit);
+  // Found again when it runs: a save while a confirm was open may have moved the map to a new key.
+  const change = (edit: Parameters<typeof updateDraft>[2]) => {
+    const now = findDraft(scope, map);
+    if (now) updateDraft(scope, now.key, edit);
+  };
   const { responds, answeredBy } = cardLinks(draft.doc, node.id);
   const links = [...responds.map((link) => ({ link, direction: 'responds' as const })), ...answeredBy.map((link) => ({ link, direction: 'answeredBy' as const }))];
   const deletable = canDeleteCard(node.id);

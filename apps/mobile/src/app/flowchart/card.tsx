@@ -35,7 +35,8 @@ export default function AddCardSheet() {
           initial={{ label: '', description: '', type: 'contention', strength: 'moderate' }}
           submitLabel={t('flowchart.addNode')}
           onSubmit={(fields) => {
-            if (held) updateDraft(scope, held.key, (current) => ({ ...current, doc: addCard(current.doc, fields, Date.now()).doc, edited: true }));
+            const now = findDraft(scope, map);
+            if (now) updateDraft(scope, now.key, (current) => ({ ...current, doc: addCard(current.doc, fields, Date.now()).doc, edited: true }));
             router.back();
           }}
         />
