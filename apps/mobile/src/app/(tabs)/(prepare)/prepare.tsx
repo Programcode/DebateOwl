@@ -7,7 +7,7 @@ import { TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { OneOffNotice } from '@/components/one-off-notice';
-import { PREPARE_TOOLS, type PrepareTool } from '@/components/prepare-tools';
+import { PREPARE_TOOLS, prepareToolHref, type PrepareTool } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { ScreenTitle } from '@/components/screen-title';
 import { Text } from '@/components/text';
@@ -34,8 +34,7 @@ export default function PrepareScreen() {
   const items = loaded?.debateId === debateId ? loaded.items : null;
   const failed = loaded?.debateId === debateId && loaded.failed;
 
-  const openTool = (tool: PrepareTool) =>
-    tool === 'generate' ? router.push({ pathname: '/generate', params: { from: 'prepare' } }) : router.push({ pathname: '/coming/[tool]', params: { tool } });
+  const openTool = (tool: PrepareTool) => router.push(prepareToolHref(tool, 'prepare'));
 
   // Every load, from focus or Retry, takes a number; only the newest may write, so a late Retry for another debate never replaces this one's.
   const loads = useRef(0);

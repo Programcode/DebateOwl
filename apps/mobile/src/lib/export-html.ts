@@ -1,4 +1,6 @@
 import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
+import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
+import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -123,4 +125,70 @@ export function attackExportHtml(result: AttackOutput, t: Translate): string {
     if (result.weighingAnalysis.improvementSuggestions?.length) parts.push(`<h3>${escape(t('export.improvementSuggestions'))}</h3>${bullets(result.weighingAnalysis.improvementSuggestions)}`);
   }
   return page(t('export.caseAttack'), `${t('export.overallScore')}: ${score}/100`, parts.join(''), t);
+}
+
+// The website's Brainstorm and Factoids PDFs open with a table; these pages draw it the same way.
+const TABLE_STYLE = `<style>
+  table { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 9.5pt; break-inside: auto; }
+  th { background: #0284c7; color: #fff; text-align: left; padding: 6px 8px; font-weight: 700; }
+  td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top; }
+  tr { break-inside: avoid; }
+</style>`;
+
+function table(headers: string[], rows: string[][]): string {
+  return `<table><thead><tr>${headers.map((header) => `<th>${escape(header)}</th>`).join('')}</tr></thead><tbody>${
+    rows.map((row) => `<tr>${row.map((cell) => `<td>${escape(cell)}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
+}
+
+/** The website's PDF file name (exportBrainstormToPdf). */
+export const BRAINSTORM_EXPORT_FILE_NAME = 'BrainstormResults.pdf';
+/** The website's PDF file name (exportFactoidsToPdf). */
+export const FACTOIDS_EXPORT_FILE_NAME = 'ResearchFactoids.pdf';
+
+export function brainstormExportHtml(result: BrainstormOutput, t: Translate): string {
+  const parts: string[] = [TABLE_STYLE];
+  if (result.topFive?.length) {
+    parts.push(`<h2>${escape(t('export.topArgumentAngles'))}</h2>`);
+    parts.push(table(
+      [t('export.rank'), t('export.title'), t('export.description'), t('export.side'), t('export.whyTop')],
+      result.topFive.map((item) => [`#${item.rank}`, item.idea?.title || '', item.idea?.description || '', item.idea?.side?.toUpperCase() || '', item.whyTop || '']),
+    ));
+  }
+  if (result.mindmap?.length) {
+    parts.push(`<h2>${escape(t('export.argumentCategories'))}</h2>`);
+    result.mindmap.forEach((category) => {
+      parts.push(`<h3>${escape(category.category)}</h3>`);
+      parts.push(bullets((category.items ?? []).map((idea) => `${idea.title}: ${idea.description}`)));
+    });
+  }
+  if (result.buckets?.length) {
+    parts.push(`<h2>${escape(t('export.strategicBuckets'))}</h2>`);
+    result.buckets.forEach((bucket) => parts.push(`<p><span class="label">${escape(bucket.name)}:</span> ${escape(bucket.keyInsight)}</p>`));
+  }
+  if (result.nextSteps?.length) parts.push(`<h2>${escape(t('export.recommendedNextSteps'))}</h2>${bullets(result.nextSteps)}`);
+  if (result.warningsAndTradeoffs?.length) parts.push(`<h2>${escape(t('export.warningsAndTradeoffs'))}</h2>${bullets(result.warningsAndTradeoffs)}`);
+  return page(t('export.brainstormResults'), t('export.topIdeasCount', { count: result.topFive?.length || 0 }), parts.join(''), t);
+}
+
+export function factoidsExportHtml(result: FactoidsOutput, t: Translate): string {
+  const factoids = result.factoids ?? [];
+  const verified = factoids.filter((f) => f.citation?.verified === 'verified').length;
+  const parts: string[] = [TABLE_STYLE];
+  if (factoids.length) {
+    parts.push(`<h2>${escape(t('export.keyFactsAndEvidence'))}</h2>`);
+    parts.push(table(
+      [t('export.claim'), t('export.keyFigure'), t('export.source'), t('export.statusLabel'), t('export.relevance')],
+      factoids.map((f) => [f.shortClaim || '', f.keyFigure || '', f.citation?.title || '', t(`export.status.${f.citation?.verified || 'pending'}`), `${f.relevanceScore || 0}%`]),
+    ));
+    parts.push(`<h2>${escape(t('export.detailedAnalysis'))}</h2>`);
+    factoids.forEach((f, i) => {
+      parts.push(`<div class="block"><h3><span class="number">${i + 1}.</span>${escape(f.shortClaim)}</h3>${
+        paragraph(t('export.context'), f.context || 'N/A')}${paragraph(t('export.limitations'), f.limitations || 'N/A')}${paragraph(t('export.howToUse'), f.howToUse || 'N/A')}${
+        f.citation?.url ? paragraph(t('export.source'), f.citation.url) : ''}</div>`);
+    });
+  }
+  if (result.searchSuggestions?.length) parts.push(`<h2>${escape(t('export.furtherResearchSuggestions'))}</h2>${bullets(result.searchSuggestions)}`);
+  if (result.warnings?.length) parts.push(`<h2>${escape(t('export.warnings'))}</h2>${bullets(result.warnings)}`);
+  return page(t('export.researchFactoids'), t('export.factoidsSummary', { count: factoids.length, verified }), parts.join(''), t);
 }

@@ -37,7 +37,8 @@
  * for the "generating" shot, and answers case, attack and source writes
  * locally. The PDF export's HTML (the web export cannot run expo-print) is
  * rendered in a page of its own, and the "Copy as text" output is written
- * next to the screenshots.
+ * next to the screenshots. Brainstorm and Factoids are shot the same way,
+ * from a fixed brainstorm and fixed factoids, and save nothing.
  */
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -318,16 +319,50 @@ const FAKE_ROW = (table: string) => ({
   created_at: new Date().toISOString(),
 });
 
-/** Fakes Generate's and Attack's AI calls and saves for this page (see the header). `hold` keeps Generate waiting. */
-async function fakeResults(page: Page, hold: boolean) {
+// A made-up brainstorm in the shape the model returns (Top 5), before the website's transform.
+const FAKE_BRAINSTORM = {
+  needsMoreInfo: false,
+  topFive: [
+    { rank: 1, whyTop: 'It turns a convenience debate into a health one.', idea: { id: 'a', title: 'Cleaner air for children', description: 'Traffic fumes peak at school gates; closing centres to cars cuts them where children walk.', side: 'pro', strength: 'strong', tradeoffs: ['Needs air-quality data'], relatedTo: [] } },
+    { rank: 2, whyTop: 'Shops are the opposition’s strongest group.', idea: { id: 'b', title: 'Footfall helps local shops', description: 'People on foot stop more often than drivers passing through.', side: 'pro', strength: 'moderate', tradeoffs: ['Evidence varies by city size'], relatedTo: [] } },
+    { rank: 3, whyTop: 'Pre-empts the fairness attack.', idea: { id: 'c', title: 'Who loses access', description: 'Carers, disabled drivers and night-shift workers rely on cars.', side: 'con', strength: 'strong', tradeoffs: [], relatedTo: [] } },
+    { rank: 4, whyTop: 'A cheap, concrete mechanism.', idea: { id: 'd', title: 'Faster buses', description: 'Empty streets let buses keep to their timetable.', side: 'pro', strength: 'moderate', tradeoffs: [], relatedTo: [] } },
+    { rank: 5, whyTop: 'Frames the debate on space, not cars.', idea: { id: 'e', title: 'Street space as a public good', description: 'Parking takes space that could be parks or cafés.', side: 'neutral', strength: 'weak', tradeoffs: ['Abstract for some judges'], relatedTo: [] } },
+  ],
+  nextSteps: ['Find one city that closed its centre and measured the air', 'Prepare an answer on exemptions'],
+  warningsAndTradeoffs: ['The footfall evidence comes from large cities.'],
+};
+// Made-up factoids: three verified, one unverified that the website's selection drops.
+const FAKE_FACTOIDS = {
+  factoids: [
+    { id: 'f1', shortClaim: 'Asthma admissions fell after a city centre closed to cars', keyFigure: '−12% in two years', context: 'A made-up city compared admissions before and after its car-free zone.', limitations: 'One city; other changes happened at the same time.', citation: { title: 'Clean Streets Review', publisher: 'Example Health Institute', date: '2024', url: 'https://example.org/clean-streets', verified: 'verified' }, howToUse: 'Lead with it in the first argument.', relevanceScore: 92 },
+    { id: 'f2', shortClaim: 'Shops in pedestrian streets report more visits', keyFigure: '+18% footfall', context: 'Counts on three streets before and after closure.', limitations: 'Weekday counts only.', citation: { title: 'Footfall Study', publisher: 'Example Retail Council', date: '2023', url: 'https://example.org/footfall', verified: 'verified' }, howToUse: 'Answer the shopkeepers’ objection.', relevanceScore: 81 },
+    { id: 'f3', shortClaim: 'Buses ran closer to their timetable', keyFigure: '4 minutes saved per trip', context: 'Average delay on routes through the centre.', limitations: 'Peak hours only.', citation: { title: 'Transit Report', publisher: 'Example Transport Board', url: 'https://example.org/transit-report', verified: 'verified' }, howToUse: 'Use it for the access argument.', relevanceScore: 74 },
+    { id: 'f4', shortClaim: 'An unverified claim', keyFigure: '?', context: '', limitations: '', citation: { title: 'Unknown', publisher: 'Unknown', verified: 'unverified' }, howToUse: '', relevanceScore: 10 },
+  ],
+  searchSuggestions: ['car-free city centre asthma study', 'pedestrian zone retail footfall'],
+  warnings: ['Most studies come from large European cities.'],
+  verificationStatus: 'complete',
+};
+
+type FakeFeature = 'generate' | 'brainstorm' | 'factoids';
+
+/** Fakes the tools' AI calls and saves for this page (see the header). `hold` keeps that tool waiting. */
+async function fakeResults(page: Page, hold: FakeFeature | null) {
+  const outputs: Record<string, { output: unknown; discoveredSources: unknown[] }> = {
+    generate: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES },
+    attack: { output: FAKE_ATTACK, discoveredSources: [] },
+    brainstorm: { output: FAKE_BRAINSTORM, discoveredSources: FAKE_SOURCES },
+    factoids: { output: FAKE_FACTOIDS, discoveredSources: FAKE_SOURCES },
+  };
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
     const feature = (route.request().postDataJSON() as { feature?: string } | null)?.feature;
-    if (feature === 'generate' && hold) return; // Never answered: the page shows its progress state.
-    if (feature === 'generate') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES } });
-    if (feature === 'attack') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output: FAKE_ATTACK, discoveredSources: [] } });
+    if (feature && feature === hold) return; // Never answered: the page shows its progress state.
+    const json = feature ? outputs[feature] : undefined;
+    if (json) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json });
     return route.abort();
   });
-  for (const table of ['cases', 'attacks', 'sources', 'source_folders']) {
+  for (const table of ['cases', 'attacks', 'brainstorms', 'factoids', 'sources', 'source_folders']) {
     await page.route(`${REST}/${table}*`, (route) =>
       route.request().method() === 'POST' ? route.fulfill({ status: 201, json: FAKE_ROW(table) }) : route.continue(),
     );
@@ -341,7 +376,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
     watchErrors(page, problems, `${prefix} results`);
     page.on('dialog', (dialog) => void dialog.dismiss());
     await pinSettings(page, language);
-    await fakeResults(page, hold);
+    await fakeResults(page, hold ? 'generate' : null);
     return page;
   };
 
@@ -396,6 +431,67 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);
+  await page.close();
+}
+
+const TOOLS = {
+  brainstorm: { field: 'brainstorm-motion', submit: /^(Start Brainstorming|Ötletelés Indítása|Comenzar Lluvia de Ideas)$/, document: 'brainstorm-document', working: 'brainstorming' },
+  factoids: { field: 'factoids-claim', submit: /^(Find Factoids|Tények Keresése|Buscar Datos)$/, document: 'factoids-document', working: 'finding-factoids' },
+} as const;
+const FACTOIDS_CLAIM = 'Car-free city centres cut asthma admissions';
+
+/** Brainstorm or Factoids: the form, its progress, the document open and collapsed, and Export, from fixed outputs. */
+async function shootTool(context: BrowserContext, prefix: string, language: string, problems: string[], tool: keyof typeof TOOLS) {
+  const spec = TOOLS[tool];
+  const open = async (hold: boolean) => {
+    const page = await context.newPage();
+    watchErrors(page, problems, `${prefix} ${tool}`);
+    page.on('dialog', (dialog) => void dialog.dismiss());
+    await pinSettings(page, language);
+    await fakeResults(page, hold ? tool : null);
+    await page.goto(`${ORIGIN}/prepare`);
+    await page.getByTestId(`prepare-tool-${tool}`).waitFor({ timeout: 30_000 });
+    await settle(page);
+    await page.getByTestId(`prepare-tool-${tool}`).click();
+    await page.getByTestId(spec.field).waitFor({ timeout: 30_000 });
+    // Brainstorm takes the Current Debate's motion; Factoids research a claim the student types.
+    if (tool === 'brainstorm') await page.waitForFunction((id) => (document.querySelector(`[data-testid="${id}"]`) as HTMLTextAreaElement | null)?.value.trim(), spec.field);
+    else await page.getByTestId(spec.field).fill(FACTOIDS_CLAIM);
+    return page;
+  };
+
+  const waiting = await open(true);
+  await shoot(waiting, `${prefix}-${tool}-form`);
+  await waiting.getByRole('button', { name: spec.submit }).click();
+  await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
+  await shoot(waiting, `${prefix}-${spec.working}`);
+  await waiting.close();
+
+  const page = await open(false);
+  await page.getByRole('button', { name: spec.submit }).click();
+  await page.getByTestId(spec.document).waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-${tool}`);
+  // Close the open item, so every item shows collapsed.
+  await page.getByTestId('document-item').first().click();
+  await shoot(page, `${prefix}-${tool}-collapsed`);
+  await page.getByTestId('document-item').first().click();
+
+  await page.getByTestId('export-button').click();
+  await page.getByTestId('export-menu').waitFor();
+  await shoot(page, `${prefix}-${tool}-export-menu`);
+  await page.getByTestId('export-menu').getByRole('menuitem').first().click();
+  await page.getByTestId('export-button').click();
+  await page.getByTestId('export-menu').getByRole('menuitem').nth(1).click();
+  const exported = await page.evaluate(() => (window as unknown as { __debatelabExport?: { html?: string; fileName?: string; copied?: string } }).__debatelabExport ?? {});
+  if (!exported.html || !exported.copied) throw new Error(`${tool} export did not hand over the PDF HTML or the copied text`);
+  await writeFile(join(OUT, `${prefix}-${tool}-copy.txt`), exported.copied);
+  const pdf = await context.newPage();
+  await pdf.setViewportSize({ width: 794, height: 1123 });
+  await pdf.setContent(exported.html);
+  await pdf.screenshot({ path: join(OUT, `${prefix}-${tool}-pdf-html.png`), fullPage: true });
+  await pdf.close();
+  console.log(`${prefix} ${tool}: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
   await page.close();
 }
 
@@ -477,6 +573,13 @@ async function shootOneOffTools(page: Page, prefix: string) {
   await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
   await settle(page);
   await shoot(page, `${prefix}-prepare-oneoff`);
+  // Brainstorm and Factoids say it through the same strip; a reload would end one-off mode, so go back in the app.
+  for (const tool of ['brainstorm', 'factoids'] as const) {
+    await page.getByTestId(`prepare-tool-${tool}`).click();
+    await page.getByTestId(`${tool}-screen`).getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
+    await page.goBack();
+    await page.getByTestId('prepare-tool-generate').filter({ visible: true }).waitFor();
+  }
   await page.getByTestId('prepare-tool-generate').click();
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   const notice = page.getByTestId('generate-screen').getByTestId('one-off-notice');
@@ -644,6 +747,10 @@ async function main() {
           shots += 3;
           await shootResultScreens(signedIn, prefix, language, problems);
           shots += 9;
+          for (const tool of ['brainstorm', 'factoids'] as const) {
+            await shootTool(signedIn, prefix, language, problems, tool);
+            shots += 6;
+          }
           const oneOffPage = await signedIn.newPage();
           watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
           await pinSettings(oneOffPage, language);
