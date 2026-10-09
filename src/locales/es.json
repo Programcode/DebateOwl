@@ -2521,10 +2521,26 @@
         "tooLarge": "Es demasiado largo para enviarlo. Acórtalo y vuelve a intentarlo.",
         "debateMissing": "Este debate ya no existe. Elige otro debate y vuelve a intentarlo.",
         "failed": "Algo salió mal. Inténtalo de nuevo."
-      }
+      },
+      "deleteBrainstormTitle": "¿Eliminar la lluvia de ideas?",
+      "deleteBrainstormDesc": "Esto elimina la lluvia de ideas de tu historial.",
+      "deleteFactoidsTitle": "¿Eliminar los datos?",
+      "deleteFactoidsDesc": "Esto elimina los datos de tu historial."
     },
     "attack": {
       "caseRequired": "Pega o escribe el caso que quieres atacar."
+    },
+    "brainstorm": {
+      "strengths": {
+        "strong": "Fuerte",
+        "moderate": "Moderada",
+        "weak": "Débil"
+      },
+      "ideaCount_one": "{{count}} idea",
+      "ideaCount_other": "{{count}} ideas"
+    },
+    "factoids": {
+      "claimRequired": "Escribe una afirmación."
     }
   }
 }

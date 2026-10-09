@@ -8,7 +8,7 @@ import { MainActionButton, TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
-import { PREPARE_TOOLS } from '@/components/prepare-tools';
+import { PREPARE_TOOLS, prepareToolHref } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
@@ -205,10 +205,7 @@ function DebateDetails({ debateId }: { debateId: string }) {
             key={tool.key}
             icon={tool.icon}
             label={t(`nav.${tool.key}`)}
-            onPress={() =>
-              tool.key === 'generate'
-                ? router.push({ pathname: '/generate', params: { from: 'debate' } })
-                : router.push({ pathname: '/coming/[tool]', params: { tool: tool.key } })}
+            onPress={() => router.push(prepareToolHref(tool.key, 'debate'))}
           />
         ))}
       </View>
