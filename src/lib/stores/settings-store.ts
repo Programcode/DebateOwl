@@ -57,15 +57,14 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
 const defaultConfig: ProviderConfig = {
   provider: DEFAULT_PROVIDER,
   model: DEFAULT_MODEL,
-  temperature: 0.7,
   reasoningEffort: 'low',
 };
 
 const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
   generate: { ...defaultConfig, model },
   attack: { ...defaultConfig, model },
-  brainstorm: { ...defaultConfig, model, temperature: 0.9 },
-  factoids: { ...defaultConfig, model, temperature: 0.3 },
+  brainstorm: { ...defaultConfig, model },
+  factoids: { ...defaultConfig, model },
   ask: { ...defaultConfig, model },
   sparring: { ...defaultConfig, model },
 });
@@ -91,9 +90,6 @@ function normalizeFeatureConfig(
 ): ProviderConfig {
   const candidate = asRecord(value);
   const model = normalizeModelId(candidate?.model, fallback.model);
-  const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
-    ? candidate.temperature
-    : fallback.temperature;
   const reasoningEffort = isReasoningEffort(candidate?.reasoningEffort)
     ? candidate.reasoningEffort
     : fallback.reasoningEffort ?? 'low';
@@ -105,7 +101,6 @@ function normalizeFeatureConfig(
       : !allowProModels && getModelCatalogEntry(model)?.isProOnly
         ? DEFAULT_MODEL
         : model,
-    temperature,
     reasoningEffort,
   };
 }
@@ -129,7 +124,7 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   const features = Object.keys(expected) as FeatureTab[];
   if (!saved || Object.keys(saved).length !== features.length) return false;
 
-  const allowedKeys = new Set(['provider', 'model', 'temperature', 'reasoningEffort']);
+  const allowedKeys = new Set(['provider', 'model', 'reasoningEffort']);
   return features.every((feature) => {
     const config = asRecord(saved[feature]);
     if (!config) return false;
@@ -137,7 +132,6 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
     return Object.keys(config).every((key) => allowedKeys.has(key))
       && config.provider === target.provider
       && config.model === target.model
-      && config.temperature === target.temperature
       && config.reasoningEffort === target.reasoningEffort;
   });
 }

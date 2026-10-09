@@ -541,7 +541,6 @@ async function callSupabaseAI<T = unknown>(
       input,
       provider,
       model: config.model,
-      temperature: config.temperature,
       reasoningEffort: config.reasoningEffort ?? 'low',
       sourceIds,
       ...(debateContext ? { debateContext } : {}),
@@ -1456,7 +1455,7 @@ function sparringRequestKey(
   voice = false,
 ): string {
   const authScope = getActiveUserId() ?? getActiveAccessToken() ?? 'signed-out';
-  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, debateId, input, config.provider, config.model, config.temperature, config.reasoningEffort, voice]);
+  return JSON.stringify([authScope, workspaceContext?.workspaceId ?? null, debateId, input, config.provider, config.model, config.reasoningEffort, voice]);
 }
 
 /** Generate the opponent's next speech for a validated sparring turn. */

@@ -228,7 +228,6 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (!providerKey) return jsonResponse({ error: "OpenRouter is not configured" }, 500, corsHeaders);
 
   const history = normalizeHistory(input.history);
-  const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const startedAt = Date.now();
 
   const stream = new ReadableStream({
@@ -271,7 +270,6 @@ export async function handleRequest(req: Request): Promise<Response> {
           stream: true,
           stream_options: { include_usage: true },
         };
-        if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
         const response = await fetch(`${OPENROUTER_API_URL}/v1/chat/completions`, {
           method: "POST",

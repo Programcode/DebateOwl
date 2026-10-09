@@ -28,14 +28,14 @@ export interface SparringHandlerOptions {
 // branch runs here, and score persistence follows output validation.
 export async function handleSparring(ctx: FeatureContext, options: SparringHandlerOptions): Promise<Response> {
   const feature = "sparring" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor } = ctx;
   const { request: sparringRequest, database: sparringDatabase, claimToken: sparringScoreClaimToken } = options;
   if (!sparringRequest) throw new Error("Invalid sparring request");
 
   const systemPrompt = await buildSystemPromptFor(feature);
   const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
   const output = cleanGeneratedText(aiResult.output);
   const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
   const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);

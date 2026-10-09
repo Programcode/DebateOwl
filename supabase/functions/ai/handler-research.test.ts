@@ -727,7 +727,9 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
       if ("sort" in provider || "order" in provider) throw new Error(`sort/order disabled balanced routing for ${entry.id}`);
       if ((body.response_format as Record<string, unknown>)?.type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
-      if (entry.supportsTemperature !== ("temperature" in body)) throw new Error(`temperature support mismatch for ${entry.id}`);
+      // With require_parameters, one endpoint without temperature support
+      // turns the whole request into a routing 404 (Claude Opus 5 did).
+      if ("temperature" in body) throw new Error(`temperature was sent for ${entry.id}`);
     }
     for (const [offset, effort] of ["low", "medium", "high"].entries()) {
       const body = openRouterBodies[MODEL_CATALOG.length + offset];

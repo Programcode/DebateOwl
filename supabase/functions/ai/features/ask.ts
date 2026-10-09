@@ -22,7 +22,7 @@ const MAX_ASK_CONTEXT_LENGTH = 32000;
 // ASK: Optionally run web search and include URL context from chat
 export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   const feature = "ask" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
   const history = (sanitizedInput.history as Array<{ role: string; content: string }>) || [];
   const message = String(sanitizedInput.message || "");
   const mode = String(sanitizedInput.mode || "general");
@@ -97,7 +97,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
   const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
   const messages = [...history, { role: "user", content: prompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
   const output = cleanGeneratedText(aiResult.output);
 
   if (output && typeof output === "object") {

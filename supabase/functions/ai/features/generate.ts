@@ -26,7 +26,7 @@ import type { FeatureContext } from "./types.ts";
 // GENERATE: Use deep research for evidence-backed arguments
 export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const feature = "generate" as const;
-  const { req, userId, provider, model, temperature, reasoningEffort, workSignal, sources, sourceAssessments, sourceDecisionCandidates, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const { req, userId, provider, model, reasoningEffort, workSignal, sources, sourceAssessments, sourceDecisionCandidates, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
   const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
   const side = String(sanitizedInput.side || "pro");
   const format = String(sanitizedInput.format || "custom");
@@ -81,7 +81,7 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
   const output = cleanGeneratedText(aiResult.output);
 
   // Preserve model evidence warnings when research exists. If research
