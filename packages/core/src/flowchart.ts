@@ -19,7 +19,7 @@ export type FlowStrength = (typeof FLOW_STRENGTHS)[number];
 
 export interface FlowNodeData {
   label: string;
-  description?: string;
+  description?: string | null;
   type: FlowNodeType;
   strength?: FlowStrength;
   [key: string]: unknown;
@@ -73,6 +73,7 @@ export function isFlowNode(value: unknown): value is FlowNode {
     typeof value.position.y === 'number' &&
     isRecord(value.data) &&
     typeof value.data.label === 'string' &&
+    (value.data.description === undefined || value.data.description === null || typeof value.data.description === 'string') &&
     isNodeType(value.data.type)
   );
 }

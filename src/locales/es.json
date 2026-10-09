@@ -2541,6 +2541,75 @@
     },
     "factoids": {
       "claimRequired": "Escribe una afirmación."
+    },
+    "flowchart": {
+      "untitled": "Mapa sin guardar",
+      "notSaved": "Aún sin guardar",
+      "edited": "Editado, sin guardar",
+      "savedWhen": "Guardado {{when}}",
+      "flow": "Flujo",
+      "map": "Mapa",
+      "columns": {
+        "yourCase": "Tu caso",
+        "attacks": "Sus ataques",
+        "rebuttals": "Tus refutaciones"
+      },
+      "emptyColumn": "Aún no hay tarjetas",
+      "attacksMeta": "ataca: {{claim}}",
+      "rebutsMeta": "refuta: {{claim}}",
+      "notAnswered": "Aún sin respuesta",
+      "via": {
+        "support": "apoya",
+        "attack": "atacado por",
+        "rebuttal": "refutado por"
+      },
+      "quoted": "“{{label}}”",
+      "summary": {
+        "supports": "Apoya {{claims}}.",
+        "attacks": "Ataca {{claims}}.",
+        "rebuts": "Refuta {{claims}}.",
+        "supportedBy_one": "Lo apoya {{count}} afirmación.",
+        "supportedBy_other": "Lo apoyan {{count}} afirmaciones.",
+        "attackedBy_one": "Lo ataca {{count}} afirmación.",
+        "attackedBy_other": "Lo atacan {{count}} afirmaciones.",
+        "rebuttedBy_one": "Lo refuta {{count}} afirmación.",
+        "rebuttedBy_other": "Lo refutan {{count}} afirmaciones.",
+        "none": "Aún no está vinculada a otras tarjetas."
+      },
+      "links": {
+        "responds": {
+          "support": "Apoya {{claim}}",
+          "attack": "Ataca {{claim}}",
+          "rebuttal": "Refuta {{claim}}"
+        },
+        "answeredBy": {
+          "support": "Apoyada por {{claim}}",
+          "attack": "Atacada por {{claim}}",
+          "rebuttal": "Refutada por {{claim}}"
+        }
+      },
+      "linksTitle": "Vínculos",
+      "linkClaim": "Vincular afirmación",
+      "linkTitle": "Vincular a una afirmación",
+      "linkHint": "Elige la afirmación a la que responde esta tarjeta y cómo responde.",
+      "alreadyLinked": "Ya vinculada",
+      "removeLink": "Quitar vínculo: {{link}}",
+      "changeType": "Cambiar tipo",
+      "cardGone": "Esta tarjeta ya no está en el mapa.",
+      "mapGone": "Este mapa ya no está abierto. Vuelve al Diagrama.",
+      "saveAs": "Guardar como…",
+      "deleteMap": "Eliminar mapa",
+      "deleteMapTitle": "¿Eliminar este mapa?",
+      "deleteMapDesc": "“{{title}}” se eliminará de tus diagramas guardados. No se puede deshacer.",
+      "missing": "Este mapa se eliminó en otro lugar. Usa Guardar como para conservarlo.",
+      "mapMissing": "Este diagrama se eliminó o no está en tu cuenta.",
+      "openLatest": "Abrir el mapa más reciente",
+      "loadFailed": "No se pudieron cargar tus diagramas.",
+      "openFailed": "No se pudo abrir ese mapa. Inténtalo de nuevo.",
+      "newMap": "Nuevo mapa",
+      "discardTitle": "¿Empezar un mapa nuevo?",
+      "discardDesc": "Tu mapa sin guardar se sustituirá por el mapa inicial.",
+      "startNew": "Empezar nuevo"
     }
   }
 }

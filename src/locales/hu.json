@@ -2541,6 +2541,75 @@
     },
     "factoids": {
       "claimRequired": "Írj be egy állítást."
+    },
+    "flowchart": {
+      "untitled": "Mentetlen térkép",
+      "notSaved": "Még nincs mentve",
+      "edited": "Módosítva, nincs mentve",
+      "savedWhen": "Mentve: {{when}}",
+      "flow": "Oszlopok",
+      "map": "Térkép",
+      "columns": {
+        "yourCase": "Saját érvelésed",
+        "attacks": "Támadásaik",
+        "rebuttals": "Cáfolataid"
+      },
+      "emptyColumn": "Még nincs kártya",
+      "attacksMeta": "támadja: {{claim}}",
+      "rebutsMeta": "cáfolja: {{claim}}",
+      "notAnswered": "Még nincs megválaszolva",
+      "via": {
+        "support": "alátámasztás",
+        "attack": "támadás",
+        "rebuttal": "cáfolat"
+      },
+      "quoted": "„{{label}}”",
+      "summary": {
+        "supports": "Alátámasztja: {{claims}}.",
+        "attacks": "Támadja: {{claims}}.",
+        "rebuts": "Cáfolja: {{claims}}.",
+        "supportedBy_one": "{{count}} állítás támasztja alá.",
+        "supportedBy_other": "{{count}} állítás támasztja alá.",
+        "attackedBy_one": "{{count}} állítás támadja.",
+        "attackedBy_other": "{{count}} állítás támadja.",
+        "rebuttedBy_one": "{{count}} állítás cáfolja.",
+        "rebuttedBy_other": "{{count}} állítás cáfolja.",
+        "none": "Még nincs kapcsolata más kártyákkal."
+      },
+      "links": {
+        "responds": {
+          "support": "Alátámasztja: {{claim}}",
+          "attack": "Támadja: {{claim}}",
+          "rebuttal": "Cáfolja: {{claim}}"
+        },
+        "answeredBy": {
+          "support": "Alátámasztó: {{claim}}",
+          "attack": "Támadó: {{claim}}",
+          "rebuttal": "Cáfolat: {{claim}}"
+        }
+      },
+      "linksTitle": "Kapcsolatok",
+      "linkClaim": "Összekapcsolás",
+      "linkTitle": "Kapcsolás egy állításhoz",
+      "linkHint": "Válaszd ki, melyik állításra válaszol ez a kártya, és hogyan.",
+      "alreadyLinked": "Már össze van kapcsolva",
+      "removeLink": "Kapcsolat törlése: {{link}}",
+      "changeType": "Típus módosítása",
+      "cardGone": "Ez a kártya már nincs a térképen.",
+      "mapGone": "Ez a térkép már nincs megnyitva. Menj vissza a folyamatábrához.",
+      "saveAs": "Mentés másként…",
+      "deleteMap": "Térkép törlése",
+      "deleteMapTitle": "Törlöd ezt a térképet?",
+      "deleteMapDesc": "A(z) „{{title}}” törlődik a mentett folyamatábrák közül. Ez nem vonható vissza.",
+      "missing": "Ezt a térképet máshol törölték. A megtartásához használd a Mentés másként lehetőséget.",
+      "mapMissing": "Ez a folyamatábra törölve lett, vagy nem a fiókodhoz tartozik.",
+      "openLatest": "A legújabb térkép megnyitása",
+      "loadFailed": "Nem sikerült betölteni a folyamatábráidat.",
+      "openFailed": "Nem sikerült megnyitni a térképet. Próbáld újra.",
+      "newMap": "Új térkép",
+      "discardTitle": "Új térképet kezdesz?",
+      "discardDesc": "A mentetlen térképed helyére a kezdő térkép kerül.",
+      "startNew": "Új kezdése"
     }
   }
 }
