@@ -116,20 +116,22 @@ The phone loads the app from a Metro dev server on the VPS over the tailnet. Sta
 
 ```bash
 PREVIEW=~/.claude/skills/tailnet-preview/scripts/preview
-HOST=$(tailscale status --self --json | jq -r .Self.DNSName | sed 's/\.$//')
+HOST=$(tailscale status --self --json | jq -r '.Self.TailscaleIPs[0]')
 cd apps/mobile
 $PREVIEW run 9230 "debatelab mobile expo-go" -- env REACT_NATIVE_PACKAGER_HOSTNAME=$HOST CI=1 npx expo start --port 9230
 ```
 
-`REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro put the tailnet name in the manifest, so Expo Go fetches the bundle from `http://<host>:9230`. The firewall accepts all traffic on `tailscale0`, so the phone reaches that port directly. In Expo Go, enter `exp://<host>:9230` as the URL, or open that link in Safari. `CI=1` stops Expo waiting for keyboard input in the background. To check the server without a phone:
+`REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro put the VPS's tailnet IP in the manifest, so Expo Go fetches the bundle from `http://<ip>:9230`. iOS allows plain HTTP to IP addresses on local networks, and the firewall accepts all traffic on `tailscale0`, so the phone reaches that port directly. In Expo Go, enter `exp://<ip>:9230` as the URL, or open that link in Safari. `CI=1` stops Expo waiting for keyboard input in the background. To check the server without a phone:
 
 ```bash
 curl -s -H 'expo-platform: ios' http://127.0.0.1:9230/ | jq -r .launchAsset.url
 ```
 
-The URL must start with `http://<host>:9230/`.
+The URL must start with `http://<ip>:9230/`.
 
-If iOS refuses the plain-HTTP bundle URL because of App Transport Security, there are two fallbacks. Set `REACT_NATIVE_PACKAGER_HOSTNAME` to the tailnet IP (`tailscale status --self --json | jq -r '.Self.TailscaleIPs[0]'`), since iOS allows plain HTTP to IP addresses on local networks. Or use the HTTPS URL that `run` publishes (`https://<host>:91xx`) by also setting `EXPO_PACKAGER_PROXY_URL=https://<host>:91xx`, so the manifest points at the HTTPS proxy.
+Do not use the MagicDNS name (`codex-remote.<tailnet>.ts.net`) as the hostname. The VPS cannot resolve its own MagicDNS name, and Metro's CLI looks the hostname up while it runs: it crashes with `getaddrinfo ENOTFOUND` a few seconds after the phone connects. If you need HTTPS, use the URL that `run` publishes (`https://<name>:91xx`) by also setting `EXPO_PACKAGER_PROXY_URL=https://<name>:91xx`, so the manifest points at the HTTPS proxy.
+
+To sign the CLI in to an Expo account, run `npx expo login` from `apps/mobile`, where the Expo CLI is installed. Its `--browser` and `--sso` options hand the login back to a callback on `localhost` on the VPS, so a login opened in a laptop's browser cannot finish. Use the username and password prompt (`-u <name>`, then the password on stdin with `-p -`).
 
 Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
 
