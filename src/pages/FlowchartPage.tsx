@@ -394,8 +394,13 @@ export default function FlowchartPage() {
     };
 
     // A saved flowchart can be saved again exactly, so delete acts at once and offers Undo.
+    // One delete per chart at a time: a second click while the first is in flight would
+    // offer a second Undo, and two Undos would save two copies.
+    const [deletingFlowchartIds, setDeletingFlowchartIds] = useState<ReadonlySet<string>>(new Set());
     const handleDeleteFlowchart = async (item: (typeof savedFlowcharts)[number], e: React.MouseEvent) => {
         e.stopPropagation();
+        if (deletingFlowchartIds.has(item.id)) return;
+        setDeletingFlowchartIds((ids) => new Set(ids).add(item.id));
         try {
             await deleteSavedFlowchart(item.id);
             toast(t('flowchart.deletedNamed', { title: item.title, defaultValue: 'Deleted {{title}}' }), {
@@ -409,6 +414,12 @@ export default function FlowchartPage() {
             });
         } catch {
             toast.error(t('flowchart.deleteFailedToast'));
+        } finally {
+            setDeletingFlowchartIds((ids) => {
+                const next = new Set(ids);
+                next.delete(item.id);
+                return next;
+            });
         }
     };
 
@@ -567,6 +578,7 @@ export default function FlowchartPage() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-9 w-9 text-destructive"
+                                                        disabled={deletingFlowchartIds.has(item.id)}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             void handleDeleteFlowchart(item, e);
