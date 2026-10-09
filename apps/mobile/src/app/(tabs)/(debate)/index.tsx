@@ -8,6 +8,7 @@ import { MainActionButton, TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
+import { OneOffNotice } from '@/components/one-off-notice';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
@@ -52,7 +53,7 @@ const PRACTICE_KINDS = new Set<DebateItemKind>(['attack', 'crossfire', 'sparring
 export default function DebateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { status, current, oneOff, setOneOff, refresh } = useDebates();
+  const { status, current, refresh } = useDebates();
 
   // Debates switched on the website show up when the tab comes back into view.
   const focusedBefore = useRef(false);
@@ -90,6 +91,7 @@ export default function DebateScreen() {
     return (
       <Screen safeTop>
         <SwitcherPill onPress={openSwitcher} />
+        <OneOffNotice />
         <View style={styles.emptyText}>
           <Text accessibilityRole="header" weight="bold" style={styles.emptyTitle}>
             {t('debate.noCurrentTitle')}
@@ -106,7 +108,7 @@ export default function DebateScreen() {
   return (
     <Screen safeTop gap={0}>
       <SwitcherPill onPress={openSwitcher} />
-      {oneOff ? <OneOffNotice onReturn={() => setOneOff(false)} /> : null}
+      <OneOffNotice style={styles.notice} />
       <Text accessibilityRole="header" weight="bold" style={styles.motion} testID="current-debate-motion">
         {current.motion}
       </Text>
@@ -130,19 +132,6 @@ function SwitcherPill({ onPress }: { onPress: () => void }) {
       </Text>
       <Icon name="chevronDown" color={colors.tileForeground} size={17} />
     </Pressable>
-  );
-}
-
-function OneOffNotice({ onReturn }: { onReturn: () => void }) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.notice, { borderColor: colors.border }]}>
-      <Text tone="secondary" style={styles.noticeText}>
-        {t('debate.oneOffStrip')}
-      </Text>
-      <TextButton label={t('debate.returnToDebate')} onPress={onReturn} />
-    </View>
   );
 }
 
@@ -361,16 +350,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   pillLabel: { fontSize: 15 },
-  notice: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: radius.field,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    alignItems: 'flex-start',
-  },
-  noticeText: { fontSize: 14, lineHeight: 19 },
+  notice: { marginTop: 12 },
   emptyText: { gap: 8 },
   emptyTitle: { fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
   motion: { fontSize: 27, lineHeight: 32, letterSpacing: -0.6, marginTop: 12, marginBottom: 15 },

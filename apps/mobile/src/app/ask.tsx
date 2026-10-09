@@ -11,6 +11,7 @@ import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
+import { OneOffNotice } from '@/components/one-off-notice';
 import { Text } from '@/components/text';
 import {
   askOnce,
@@ -336,6 +337,7 @@ export default function AskScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
+        <OneOffNotice />
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>
             <Text weight="semibold" style={styles.emptyTitle}>
