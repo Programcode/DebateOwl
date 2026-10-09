@@ -393,7 +393,7 @@ export default function TimerPage() {
                 variant="outline"
                 className="h-16 w-16 shadow-sm"
                 onClick={resetTimer}
-                aria-label={t('timer.resetKey', 'Reset timer')}
+                aria-label={t('timer.reset', 'Reset timer')}
               >
                 <RotateCcw className="h-6 w-6" />
               </Button>

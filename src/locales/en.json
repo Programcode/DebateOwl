@@ -1418,6 +1418,7 @@
     "timeUpSignal": "Time's up signal",
     "twoBeeps": "Two beeps",
     "spaceStartStop": "Space to start/stop",
+    "reset": "Reset timer",
     "resetKey": "R to reset",
     "arrowsChange": "Arrows to change speaker",
     "speeches": {

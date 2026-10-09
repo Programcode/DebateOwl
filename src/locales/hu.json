@@ -1418,6 +1418,7 @@
     "timeUpSignal": "Idő lejárt jelzés",
     "twoBeeps": "Két sípolás",
     "spaceStartStop": "Szóköz az indításhoz/megállításhoz",
+    "reset": "Időmérő visszaállítása",
     "resetKey": "R az újraindításhoz",
     "arrowsChange": "Nyilak a beszélő váltásához",
     "speeches": {

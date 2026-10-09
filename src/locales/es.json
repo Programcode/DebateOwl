@@ -1418,6 +1418,7 @@
     "timeUpSignal": "Señal de tiempo agotado",
     "twoBeeps": "Dos pitidos",
     "spaceStartStop": "Espacio para iniciar/detener",
+    "reset": "Reiniciar temporizador",
     "resetKey": "R para reiniciar",
     "arrowsChange": "Flechas para cambiar orador",
     "speeches": {
