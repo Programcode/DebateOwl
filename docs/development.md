@@ -95,6 +95,44 @@ Follow existing functional React, Zustand, Zod, and shadcn/Radix patterns. Reuse
 
 Run the closest unit or component test while changing behavior. Run lint, type checking, and build before handing work off.
 
+## Mobile app
+
+The iOS app lives in [`apps/mobile/`](../apps/mobile/AGENTS.md). The root `npm ci` installs it with every other workspace, and the root `lint` and `typecheck` cover it. Install its dependencies with `npx expo install <package>` from `apps/mobile`, and only native modules that Expo Go bundles.
+
+### Screenshots on the VPS
+
+The web export renders the app's screens in Chromium. It has no native tab bar, large titles, sheets or gestures, so it shows layout, copy and colour, not iOS behaviour.
+
+```bash
+npm run -w @debatelab/mobile export:web
+PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
+```
+
+Screenshots go to `.verify/mobile-shots/`: sign-in at iPhone and iPad sizes, light and dark, English and Hungarian. With `STAGING_DEMO_CODE` set, the script also signs in to staging, captures the five tabs, and checks that a cold start without a network keeps the user signed in, also after supabase-js's first auth event settles (about 30 seconds offline). Use the seeded Pro code from `~/.config/debatelab/staging-access.env` (see [staging.md](staging.md)), load it inside the command without printing it, and serve on `PORT=18080`: the deployed Edge Functions only accept browser calls from allowed origins such as `http://127.0.0.1:18080`.
+
+### Expo Go on Adam's iPhone
+
+The phone loads the app from a Metro dev server on the VPS over the tailnet. Start it through the `tailnet-preview` skill's `run` mode from the worktree, so it is tracked and cleaned up, with a free local port in `9200-9299`:
+
+```bash
+PREVIEW=~/.claude/skills/tailnet-preview/scripts/preview
+HOST=$(tailscale status --self --json | jq -r .Self.DNSName | sed 's/\.$//')
+cd apps/mobile
+$PREVIEW run 9230 "debatelab mobile expo-go" -- env REACT_NATIVE_PACKAGER_HOSTNAME=$HOST CI=1 npx expo start --port 9230
+```
+
+`REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro put the tailnet name in the manifest, so Expo Go fetches the bundle from `http://<host>:9230`. The firewall accepts all traffic on `tailscale0`, so the phone reaches that port directly. In Expo Go, enter `exp://<host>:9230` as the URL, or open that link in Safari. `CI=1` stops Expo waiting for keyboard input in the background. To check the server without a phone:
+
+```bash
+curl -s -H 'expo-platform: ios' http://127.0.0.1:9230/ | jq -r .launchAsset.url
+```
+
+The URL must start with `http://<host>:9230/`.
+
+If iOS refuses the plain-HTTP bundle URL because of App Transport Security, there are two fallbacks. Set `REACT_NATIVE_PACKAGER_HOSTNAME` to the tailnet IP (`tailscale status --self --json | jq -r '.Self.TailscaleIPs[0]'`), since iOS allows plain HTTP to IP addresses on local networks. Or use the HTTPS URL that `run` publishes (`https://<host>:91xx`) by also setting `EXPO_PACKAGER_PROXY_URL=https://<host>:91xx`, so the manifest points at the HTTPS proxy.
+
+Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
+
 ## Collaboration service
 
 The local PostgreSQL-backed Hocuspocus service lives under `services/collaboration/`. It backs the collaborative Workspace, which is hidden and on hold; its routes register only when `VITE_COLLABORATION_URL` is set. Run its focused tests with:

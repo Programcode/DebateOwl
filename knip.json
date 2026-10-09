@@ -38,6 +38,20 @@
       "project": [
         "src/**/*.ts"
       ]
+    },
+    "apps/mobile": {
+      "entry": [
+        "src/app/**/*.{ts,tsx}",
+        "src/**/*.test.ts",
+        "scripts/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "expo-updates"
+      ]
     }
   },
   "ignoreBinaries": [

@@ -7,7 +7,8 @@
     "node": "22.x"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "dev": "vite",
@@ -19,7 +20,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint . && npm run lint:repo",
     "lint:repo": "knip --no-config-hints && node scripts/check-repo-rules.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.agentic.json && tsc --noEmit -p packages/core/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.agentic.json && tsc --noEmit -p packages/core/tsconfig.json && npm run -w @debatelab/mobile typecheck",
     "preview": "vite preview",
     "smoke:jev": "node scripts/smoke-jev.mjs",
     "test": "vitest run",

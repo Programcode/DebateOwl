@@ -5,11 +5,17 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", ".remember", "packages/**/node_modules", "packages/**/dist"] },
+  {
+    ignores: [
+      "dist", "coverage", ".remember", "packages/**/node_modules", "packages/**/dist",
+      "apps/**/node_modules", "apps/mobile/.expo", "apps/mobile/dist", "apps/mobile/ios", "apps/mobile/android",
+      "apps/mobile/expo-env.d.ts",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
-    ignores: ["packages/**"],
+    ignores: ["packages/**", "apps/**"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -59,6 +65,36 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // The Expo app runs in React Native, so it gets no browser globals and no
+    // react-refresh rule (Metro has its own Fast Refresh). See apps/mobile/AGENTS.md.
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ["apps/mobile/**/*.{ts,tsx}"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: { ...globals.es2021, __DEV__: "readonly" },
+    },
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "@typescript-eslint/no-unused-vars": "off",
+      // Metro bundles images through require().
+      "@typescript-eslint/no-require-imports": ["error", { allow: ["\\.png$"] }],
+      "no-restricted-globals": [
+        "error",
+        ...["window", "document", "localStorage", "sessionStorage", "location"].map((name) => ({
+          name,
+          message: "The app has no DOM on iOS. Put web-only code in a .web.ts(x) file.",
+        })),
+      ],
+    },
+  },
+  {
+    // The web preview and the Node scripts that drive it may use browser and Node globals.
+    files: ["apps/mobile/**/*.web.{ts,tsx}", "apps/mobile/scripts/**/*.ts"],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    rules: { "no-restricted-globals": "off" },
   },
   {
     // A promise nobody awaits or catches turns a failed write into an

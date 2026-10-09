@@ -76,6 +76,7 @@ Key entry points:
 ```text
 src/                 React client, stores, hooks, and unit tests
 packages/core/       Platform-neutral shared code: schemas, validation, languages
+apps/mobile/         Expo iOS app (Expo Router, React 19)
 supabase/            Edge Functions, migrations, pgTAP tests, local config
 e2e/                 Playwright browser, full-stack, live, staging, and canary tests
 services/            Collaboration service for the hidden Workspace
