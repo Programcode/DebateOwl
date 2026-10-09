@@ -38,11 +38,15 @@ test("flow-edit: a flowchart node is deleted, the chart is saved, and it loads b
   const title = `Verify flow ${Date.now()}`;
   await page.goto("/app/flowchart");
   await page.getByText("Argument 1", { exact: true }).first().click();
+  // A node can be put back exactly, so it deletes at once and the toast offers Undo.
   await page.getByRole("button", { name: "Delete" }).last().click();
-  const confirm = page.getByRole("alertdialog");
-  await expect(confirm.getByText("Delete node?")).toBeVisible();
-  await confirm.getByRole("button", { name: "Delete node" }).click();
-  await expect(page.getByText("Node deleted").first()).toBeVisible();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(page.getByText("Argument 1", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("Argument 1", { exact: true })).toHaveCount(1);
+  await evidence.step("Deleted Argument 1, then restored it with Undo");
+  await page.getByText("Argument 1", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Delete" }).last().click();
   await expect(page.getByText("Argument 1", { exact: true })).toHaveCount(0);
   await evidence.shot("01-node-deleted");
 
