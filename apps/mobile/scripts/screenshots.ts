@@ -35,6 +35,9 @@
  * locally. The PDF export's HTML (the web export cannot run expo-print) is
  * rendered in a page of its own, and the "Copy as text" output is written
  * next to the screenshots.
+ *
+ * The Timer runs on Playwright's clock, so its minutes pass at once, and the
+ * run checks that it signalled one beep at the last minute and two at time up.
  */
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -433,6 +436,41 @@ async function shootAskScreens(context: BrowserContext, prefix: string, language
   await streaming.close();
 }
 
+/**
+ * The Timer from the Practice tab: idle, running, and after time up. The page's
+ * clock is Playwright's, so minutes pass at once; the web preview records the
+ * signals it would sound (timer-signals.web.ts) and the run checks them.
+ */
+async function shootTimerScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} timer`);
+  await pinSettings(page, language);
+  await page.clock.install();
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-timer').click({ timeout: 30_000 });
+  await page.getByTestId('timer-screen').waitFor({ timeout: 15_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-timer`);
+
+  // The first Standard speech is 4:00. After 1:14 it shows 2:46 and keeps running.
+  await page.getByTestId('timer-toggle').click();
+  await page.clock.fastForward('01:14');
+  await page.getByTestId('timer-time').filter({ hasText: '2:46' }).waitFor();
+  await shoot(page, `${prefix}-timer-running`);
+
+  // Past the last minute and on to time up: one beep, then two.
+  await page.clock.fastForward('01:50');
+  await page.getByTestId('timer-time').filter({ hasText: '0:56' }).waitFor();
+  await page.clock.fastForward('01:00');
+  await page.getByTestId('timer-time').filter({ hasText: '0:00' }).waitFor();
+  await page.waitForTimeout(100);
+  const signals = await page.evaluate(() => (window as unknown as { __debatelabTimerSignals?: { signal: string; sound: boolean }[] }).__debatelabTimerSignals ?? []);
+  const heard = signals.map((item) => item.signal).join(',');
+  if (heard !== 'beep,double-beep') throw new Error(`Timer signals were ${heard || 'none'}, expected beep,double-beep`);
+  await shoot(page, `${prefix}-timer-time-up`);
+  await page.close();
+}
+
 async function shootEmptyDebate(page: Page, prefix: string) {
   await page.route(`${REST}/current_debates*`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', json: [] }),
@@ -578,6 +616,8 @@ async function main() {
           shots += 3;
           await shootResultScreens(signedIn, prefix, language, problems);
           shots += 9;
+          await shootTimerScreens(signedIn, prefix, language, problems);
+          shots += 3;
           await signedIn.close();
         }
       }

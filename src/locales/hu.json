@@ -2525,6 +2525,12 @@
     },
     "attack": {
       "caseRequired": "Illeszd be vagy írd le a megtámadandó esetet."
+    },
+    "timer": {
+      "speechOf": "{{n}}. beszéd / {{of}}",
+      "ofTotal": "összesen {{total}}",
+      "next": "Következő beszéd",
+      "reset": "Visszaállítás"
     }
   }
 }

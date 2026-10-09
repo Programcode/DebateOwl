@@ -2525,6 +2525,12 @@
     },
     "attack": {
       "caseRequired": "Paste or write the case you want attacked."
+    },
+    "timer": {
+      "speechOf": "Speech {{n}} of {{of}}",
+      "ofTotal": "of {{total}}",
+      "next": "Next speech",
+      "reset": "Reset"
     }
   }
 }
