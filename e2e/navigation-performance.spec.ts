@@ -21,7 +21,7 @@ const publicRoutes = [
 ] as const;
 
 const privateRoutes = [
-  ['/app', { selector: 'main h1', text: 'DebateLab' }],
+  ['/app', { selector: 'main h1', text: 'What are you working on?' }],
   ['/app/generate', { selector: 'main h1', text: 'Generate' }],
   ['/app/attack', { selector: 'main h1', text: 'Attack' }],
   ['/app/flowchart', { selector: 'main h3', text: 'Argument Flowchart' }],
@@ -91,7 +91,7 @@ test('workspaces stay unavailable without a collaboration endpoint', async ({ pa
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
 
   await expect(page.locator('a[href="/app/workspaces"]')).toHaveCount(0);
   await page.goto('/app/workspaces', { waitUntil: 'domcontentloaded' });
@@ -119,7 +119,7 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   await stubSupabaseSession(page);
   await skipOnboarding(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
 
   await page.evaluate(() => {
     window.__baselineAppLayout = document.querySelector('header')?.parentElement;
@@ -187,7 +187,7 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
 
   await skipOnboarding(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
   await homeToolLink(page, 'attack').click();
 
   await expect(page.getByRole('heading', { name: 'Unable to load this page' })).toBeVisible();
@@ -202,7 +202,7 @@ async function gotoHome(page: Page) {
   await stubSupabaseSession(page);
   await skipOnboarding(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
 }
 
 async function attackLink(page: Page) {

@@ -104,7 +104,8 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         // Start as soon as the first target exists, not after a fixed delay; give up waiting after 500ms.
         const startedAt = typeof performance === 'undefined' ? Date.now() : performance.now();
         const waitedBefore = typeof performance === 'undefined' || eligibleAt === undefined ? 0 : startedAt - eligibleAt;
-        const deadline = startedAt + Math.max(0, 500 - waitedBefore);
+        const autoStartDelay = Math.max(0, 500 - waitedBefore);
+        const deadline = startedAt + autoStartDelay;
         let frame = 0;
         const tryStart = () => {
             const now = typeof performance === 'undefined' ? Date.now() : performance.now();

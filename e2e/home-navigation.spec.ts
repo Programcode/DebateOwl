@@ -65,8 +65,8 @@ test('onboarding keeps its original start schedule after a delayed lazy chunk', 
     const response = await route.fetch();
     const source = await response.text();
     const body = source.replace(
-      /const\s+timer\s*=\s*setTimeout\(\(\)\s*=>\s*\{/,
-      'window.localStorage.setItem("__onboarding-auto-start-delay", String(autoStartDelay));\n        const timer = setTimeout(() => {',
+      /const\s+deadline\s*=\s*startedAt\s*\+\s*autoStartDelay;/,
+      'window.localStorage.setItem("__onboarding-auto-start-delay", String(autoStartDelay));\n        const deadline = startedAt + autoStartDelay;',
     );
     if (body === source) throw new Error('Unable to instrument the onboarding auto-start delay');
     await new Promise((resolve) => setTimeout(resolve, 750));
