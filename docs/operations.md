@@ -41,6 +41,7 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 [`vercel.json`](../vercel.json) owns:
 
 - the Vite build command and `dist` output;
+- the install command, which installs only the root package and `@debatelab/core` so the deploy never installs the iOS app's React Native tree;
 - SPA fallback to `index.html`;
 - no-cache headers for `/`, `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;
