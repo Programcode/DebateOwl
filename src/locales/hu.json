@@ -259,7 +259,7 @@
     "factoidsTitle": "Tények"
   },
   "modelSelector": {
-    "autoFastDescription": "Gyors útválasztás, általában GLM-mel",
+    "autoFastDescription": "Gyors útválasztás, általában Claude Haikuval",
     "autoProDescription": "A legerősebb modellek közül választ",
     "reasoning": "Érvelés",
     "reasoningLow": "Alacsony",
@@ -932,7 +932,7 @@
     "trialFeature4": "3 napos hozzáférés",
     "proFeature1": "Bővített MI felkészülési hozzáférés",
     "proFeature2": "Mind a 11 felkészülési eszköz",
-    "proFeature3": "Mind a 10 modell, köztük a Sonnet, Opus, Muse Spark és GLM Flash",
+    "proFeature3": "Mind a 11 modell, köztük a Claude Opus és Sonnet, a Muse Spark és a GLM Flash",
     "proFeature4": "Elsőbbségi támogatás",
     "proFeature5": "Active Grounding™ kutatás",
     "startTrial": "Ingyenes Próba Indítása",
@@ -946,9 +946,9 @@
   "faq": {
     "title": "Gyakran Ismételt Kérdések",
     "q1": "Mennyibe kerül a DebateLab?",
-    "a1": "A DebateLab 3 napos ingyenes próbát kínál. Ezután a Pro $5/hó + adó bővített hozzáférést és mind a 10 modellt kínálja.",
+    "a1": "A DebateLab 3 napos ingyenes próbát kínál. Ezután a Pro $5/hó + adó bővített hozzáférést és mind a 11 modellt kínálja.",
     "q2": "Mit kapok a Pro-val?",
-    "a2": "Bővített MI felkészülési hozzáférés mind a 10 modellel, köztük a Sonnet, Opus, Muse Spark és GLM Flash modellekkel, Active Grounding™ kutatással és elsőbbségi támogatással.",
+    "a2": "Bővített MI felkészülési hozzáférés mind a 11 modellel, köztük a Claude Opus és Sonnet, a Muse Spark és a GLM Flash modellekkel, Active Grounding™ kutatással és elsőbbségi támogatással.",
     "q3": "Lemondhatom az előfizetésem?",
     "a3": "Igen, bármikor lemondhatod a Beállítások oldalon. A számlázási időszak végéig megtartod a hozzáférést.",
     "q4": "Az MI kitalál dolgokat?",
@@ -1356,7 +1356,7 @@
   },
   "pricingModal": {
     "title": "Frissítés Pro-ra",
-    "subtitle": "Oldd fel a magasabb használati keretet, mind a 10 modellt és a beállítható érvelést.",
+    "subtitle": "Oldd fel a magasabb használati keretet, mind a 11 modellt és a beállítható érvelést.",
     "free": "Ingyenes",
     "pro": "Pro",
     "current": "Jelenlegi",
@@ -1370,7 +1370,7 @@
     "freeFeature3": "Minden vitafunkció",
     "freeFeature4": "3 napos ingyenes próba",
     "proFeature1": "Bővített MI felkészülési hozzáférés",
-    "proFeature2": "Mind a 10 modell, köztük a Sonnet, Opus, Muse Spark és GLM Flash",
+    "proFeature2": "Mind a 11 modell, köztük a Claude Opus és Sonnet, a Muse Spark és a GLM Flash",
     "proFeature3": "Mélyreható kutatás Exa-val",
     "proFeature4": "Elsőbbségi feldolgozás",
     "proFeature5": "Minden vitafunkció",

@@ -288,8 +288,8 @@ npx playwright test --config=playwright.production.config.ts
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);
 - `ai` returns 401, not a 5xx, to an unauthenticated call;
 - the canary account signs in, opens Generate, and Settings shows its Pro plan (a row-level-security read), without spending an AI request;
-- the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`;
-- the canary account generates a three-contention case with GPT-5.6 Luna through `ai`.
+- the dedicated canary account gets a streamed Claude Haiku 5.5 answer from `ai-stream`;
+- the canary account generates a three-contention case with Claude Haiku 5.5 through `ai`.
 
 The last two checks are the only production writes, and they touch only the canary account: its `ai_requests` usage rows and whatever the Generate page saves for it. The dedicated canary account has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
 

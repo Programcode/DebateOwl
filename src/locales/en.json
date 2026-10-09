@@ -259,7 +259,7 @@
     "factoidsTitle": "Factoids"
   },
   "modelSelector": {
-    "autoFastDescription": "Fast routing, usually GLM",
+    "autoFastDescription": "Fast routing, usually Claude Haiku",
     "autoProDescription": "Routes among the strongest models",
     "reasoning": "Reasoning",
     "reasoningLow": "Low",
@@ -932,7 +932,7 @@
     "trialFeature4": "3-day access",
     "proFeature1": "Expanded AI prep access",
     "proFeature2": "All 11 prep modes",
-    "proFeature3": "All 10 models, including Sonnet, Opus, Muse Spark, and GLM Flash",
+    "proFeature3": "All 11 models, including Claude Opus and Sonnet, Muse Spark, and GLM Flash",
     "proFeature4": "Priority support",
     "proFeature5": "Active Grounding™ research",
     "startTrial": "Start Free Trial",
@@ -946,9 +946,9 @@
   "faq": {
     "title": "Frequently Asked Questions",
     "q1": "How much does DebateLab cost?",
-    "a1": "DebateLab offers a 3-day free trial. After that, Pro is $5/month + tax for expanded access and all 10 models.",
+    "a1": "DebateLab offers a 3-day free trial. After that, Pro is $5/month + tax for expanded access and all 11 models.",
     "q2": "What do I get with Pro?",
-    "a2": "Expanded AI prep access, all 10 models including Sonnet, Opus, Muse Spark, and GLM Flash, Active Grounding™ research, and priority support.",
+    "a2": "Expanded AI prep access, all 11 models including Claude Opus and Sonnet, Muse Spark, and GLM Flash, Active Grounding™ research, and priority support.",
     "q3": "Can I cancel my subscription?",
     "a3": "Yes, you can cancel anytime from your Settings page. You'll retain access until the end of your billing period.",
     "q4": "Does the AI make things up?",
@@ -1356,7 +1356,7 @@
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
-    "subtitle": "Unlock higher usage limits, all 10 models, and configurable reasoning.",
+    "subtitle": "Unlock higher usage limits, all 11 models, and configurable reasoning.",
     "free": "Free",
     "pro": "Pro",
     "current": "Current",
@@ -1370,7 +1370,7 @@
     "freeFeature3": "All debate features",
     "freeFeature4": "3-day free trial",
     "proFeature1": "Expanded AI prep access",
-    "proFeature2": "All 10 models, including Sonnet, Opus, Muse Spark, and GLM Flash",
+    "proFeature2": "All 11 models, including Claude Opus and Sonnet, Muse Spark, and GLM Flash",
     "proFeature3": "Deep research with Exa",
     "proFeature4": "Priority processing",
     "proFeature5": "All debate features",

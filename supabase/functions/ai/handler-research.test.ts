@@ -655,7 +655,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       decisionBodies.push(body);
       const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
       const labels = Object.keys(questions.model.criteria);
-      const choice = labels.includes("z-ai/glm-5.3-flash") ? "z-ai/glm-5.3-flash" : "openai/gpt-5.6-sol";
+      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-opus-5.5";
       return jsonResponse({
         model: "typesafe/jev-1.13",
         answers: {
@@ -689,7 +689,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (response.status !== 200) throw new Error(`${entry.id} returned ${response.status}: ${await response.text()}`);
     }
     for (const effort of ["low", "medium", "high"]) {
-      const response = await requestForModel("anthropic/claude-sonnet-5", "pro", effort);
+      const response = await requestForModel("anthropic/claude-sonnet-5.5", "pro", effort);
       if (response.status !== 200) throw new Error(`Pro ${effort} returned ${response.status}: ${await response.text()}`);
     }
     for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
@@ -702,7 +702,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoFastBasic = await requestForModel("auto-fast", "trial");
     if (autoFastBasic.status !== 200) throw new Error(`Basic Auto Fast returned ${autoFastBasic.status}: ${await autoFastBasic.text()}`);
     const autoFastPayload = await autoFastBasic.json();
-    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "z-ai/glm-5.3-flash") {
+    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "anthropic/claude-haiku-5.5") {
       throw new Error(`Auto Fast metadata was wrong: ${JSON.stringify(autoFastPayload.meta)}`);
     }
     const autoProBasic = await requestForModel("auto-pro", "trial");
@@ -710,7 +710,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoPro = await requestForModel("auto-pro", "pro");
     if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
     const autoProPayload = await autoPro.json();
-    if (autoProPayload.meta?.resolvedModel !== "openai/gpt-5.6-sol") {
+    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-opus-5.5") {
       throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
     }
 
@@ -739,8 +739,13 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
-    if (openRouterBodies.at(-2)?.model !== "z-ai/glm-5.3-flash") throw new Error("Auto Fast did not call GLM");
-    if (openRouterBodies.at(-1)?.model !== "openai/gpt-5.6-sol") throw new Error("Auto Pro did not call Sol");
+    if (openRouterBodies.at(-2)?.model !== "anthropic/claude-haiku-5.5") throw new Error("Auto Fast did not call Haiku");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("Auto Pro did not call Opus");
+
+    // A stale client still sending a retired ID reaches its successor, not a 400.
+    const retired = await requestForModel("anthropic/claude-sonnet-5", "pro");
+    if (retired.status !== 200) throw new Error(`retired Sonnet 5 returned ${retired.status}: ${await retired.text()}`);
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("retired Sonnet 5 did not reach Opus 5.5");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;

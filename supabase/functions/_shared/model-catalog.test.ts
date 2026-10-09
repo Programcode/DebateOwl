@@ -19,6 +19,7 @@ Deno.test("every catalog model supports the forced trial effort and both default
 
 Deno.test("model catalog marks only the approved Pro entries as Pro-only", () => {
   const basic = new Set([
+    "anthropic/claude-haiku-5.5",
     "openai/gpt-5.6-luna",
     "google/gemini-3.8-flash",
     "deepseek/deepseek-v4-flash-0731",
@@ -41,7 +42,7 @@ Deno.test("trial and unsupported Pro reasoning resolve server-side", () => {
   if (effectiveReasoningEffort("openai/gpt-5.6-luna", "high", false) !== "low") {
     throw new Error("trial request did not force low");
   }
-  if (effectiveReasoningEffort("anthropic/claude-sonnet-5", "medium", true) !== "medium") {
+  if (effectiveReasoningEffort("anthropic/claude-opus-5.5", "medium", true) !== "medium") {
     throw new Error("native Pro medium was changed");
   }
   for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {

@@ -29,15 +29,15 @@ function jevReturning(result: JevDecisionResult, observed?: { calls: number; sta
   };
 }
 
-Deno.test("Auto Fast normally resolves to GLM for a Basic user", async () => {
+Deno.test("Auto Fast normally resolves to Claude Haiku for a Basic user", async () => {
   const resolved = await resolveModelSelection({
     requestedModel: AUTO_FAST,
     feature: "generate",
     input: { motion: "This house would subsidize public transit", language: "en" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash")),
+    callJevImpl: jevReturning(choiceResult("anthropic/claude-haiku-5.5")),
   });
-  if (resolved.requestedModel !== AUTO_FAST || resolved.resolvedModel !== "z-ai/glm-5.3-flash" || resolved.usedFallback) {
+  if (resolved.requestedModel !== AUTO_FAST || resolved.resolvedModel !== "anthropic/claude-haiku-5.5" || resolved.usedFallback) {
     throw new Error(`unexpected Auto Fast resolution: ${JSON.stringify(resolved)}`);
   }
 });
@@ -55,7 +55,7 @@ Deno.test("Auto Fast can route logic-heavy work to DeepSeek Flash", async () => 
   }
 });
 
-Deno.test("Auto Fast falls back to GLM when Jev is uncertain or unavailable", async () => {
+Deno.test("Auto Fast falls back to Claude Haiku when Jev is uncertain or unavailable", async () => {
   const uncertain = await resolveModelSelection({
     requestedModel: AUTO_FAST,
     feature: "ask",
@@ -63,7 +63,7 @@ Deno.test("Auto Fast falls back to GLM when Jev is uncertain or unavailable", as
     canAccessProModels: false,
     callJevImpl: jevReturning(choiceResult("openai/gpt-5.6-luna", 0.54)),
   });
-  if (uncertain.resolvedModel !== "z-ai/glm-5.3-flash" || !uncertain.usedFallback) throw new Error("uncertain route did not fall back");
+  if (uncertain.resolvedModel !== "anthropic/claude-haiku-5.5" || !uncertain.usedFallback) throw new Error("uncertain route did not fall back");
 
   const unavailable = await resolveModelSelection({
     requestedModel: AUTO_FAST,
@@ -72,7 +72,7 @@ Deno.test("Auto Fast falls back to GLM when Jev is uncertain or unavailable", as
     canAccessProModels: false,
     callJevImpl: () => Promise.reject(Object.assign(new Error("provider unavailable"), { usage: { inputTokens: 9, outputTokens: 0 } })),
   });
-  if (unavailable.resolvedModel !== "z-ai/glm-5.3-flash" || !unavailable.usedFallback) throw new Error("failed route did not fall back");
+  if (unavailable.resolvedModel !== "anthropic/claude-haiku-5.5" || !unavailable.usedFallback) throw new Error("failed route did not fall back");
   if (unavailable.jevUsage?.inputTokens !== 9) throw new Error("failed route usage was discarded");
 });
 
@@ -82,9 +82,9 @@ Deno.test("Auto Fast ignores a Jev label outside its candidate set", async () =>
     feature: "generate",
     input: { motion: "Should cities ban cars?" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("anthropic/claude-opus-5")),
+    callJevImpl: jevReturning(choiceResult("anthropic/claude-opus-5.5")),
   });
-  if (resolved.resolvedModel !== "z-ai/glm-5.3-flash" || !resolved.usedFallback) throw new Error("unsupported label escaped candidate gate");
+  if (resolved.resolvedModel !== "anthropic/claude-haiku-5.5" || !resolved.usedFallback) throw new Error("unsupported label escaped candidate gate");
 });
 
 Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
@@ -106,7 +106,7 @@ Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
 });
 
 Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
-  for (const model of ["openai/gpt-5.6-sol", "anthropic/claude-opus-5", "anthropic/claude-sonnet-5"]) {
+  for (const model of ["anthropic/claude-opus-5.5", "anthropic/claude-sonnet-5.5", "openai/gpt-5.6-sol"]) {
     const resolved = await resolveModelSelection({
       requestedModel: AUTO_PRO,
       feature: "generate",
@@ -124,7 +124,7 @@ Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
     canAccessProModels: true,
     callJevImpl: jevReturning(choiceResult("meta/muse-spark-1.3")),
   });
-  if (outsidePool.resolvedModel !== "anthropic/claude-sonnet-5" || !outsidePool.usedFallback) {
+  if (outsidePool.resolvedModel !== "anthropic/claude-opus-5.5" || !outsidePool.usedFallback) {
     throw new Error("Auto Pro accepted a model outside its pool");
   }
 });

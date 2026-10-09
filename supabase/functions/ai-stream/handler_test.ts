@@ -103,13 +103,14 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
         answers: {
           model: {
             type: "choice",
-            choice: "z-ai/glm-5.3-flash",
+            choice: "anthropic/claude-haiku-5.5",
             confidence: 0.96,
             probabilities: {
-              "z-ai/glm-5.3-flash": 0.96,
+              "anthropic/claude-haiku-5.5": 0.96,
+              "z-ai/glm-5.3-flash": 0.01,
               "openai/gpt-5.6-luna": 0.02,
               "google/gemini-3.8-flash": 0.01,
-              "deepseek/deepseek-v4-flash-0731": 0.01,
+              "deepseek/deepseek-v4-flash-0731": 0.0,
             },
           },
         },
@@ -154,10 +155,10 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     assertIncludes(body, "event: final");
     assertIncludes(body, '"response":"Szia Adam"');
     assertIncludes(body, '"requestedModel":"auto-fast"');
-    assertIncludes(body, '"resolvedModel":"z-ai/glm-5.3-flash"');
+    assertIncludes(body, '"resolvedModel":"anthropic/claude-haiku-5.5"');
 
     const messages = providerRequest?.messages as Array<{ role: string; content: string }> | undefined;
-    if (providerRequest?.model !== "z-ai/glm-5.3-flash") {
+    if (providerRequest?.model !== "anthropic/claude-haiku-5.5") {
       throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
     }
     const streamOptions = providerRequest?.stream_options as { include_usage?: unknown } | undefined;
