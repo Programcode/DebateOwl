@@ -30,7 +30,10 @@ function applyTheme(resolved: ResolvedTheme, animate: boolean) {
 
     // One 200ms crossfade of the whole page instead of every surface easing at its own speed.
     if (typeof document.startViewTransition === 'function') {
-        document.startViewTransition(swap);
+        const transition = document.startViewTransition(swap);
+        // A newer switch skips this one's animation; the class swap still runs, so that's fine.
+        transition.ready.catch(() => {});
+        transition.finished.catch(() => {});
         return;
     }
 
