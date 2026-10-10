@@ -1,5 +1,5 @@
 // src/App.tsx
-import { Component, Suspense, lazy, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -236,8 +236,12 @@ function TimedOnboardingTour() {
 function ScrollToTopOnNavigate(): null {
   const { pathname, hash } = useLocation();
   const navigationType = useNavigationType();
+  const previous = useRef({ pathname, hash });
   useEffect(() => {
-    if (navigationType === "POP" || hash) return;
+    // Only a new page: query-only updates (History's ?tab=) keep their place.
+    const changed = previous.current.pathname !== pathname || previous.current.hash !== hash;
+    previous.current = { pathname, hash };
+    if (!changed || navigationType === "POP" || hash) return;
     window.scrollTo(0, 0);
   }, [pathname, hash, navigationType]);
   return null;
