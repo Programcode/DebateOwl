@@ -3,7 +3,7 @@ import { Component, Suspense, lazy, useEffect, useState, type ErrorInfo, type Re
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
@@ -228,6 +228,21 @@ function TimedOnboardingTour() {
   );
 }
 
+/**
+ * A new page starts at the top. Router links keep the window's scroll position, so a
+ * footer link would open Terms at its bottom. Back and Forward (POP) keep the browser's
+ * own restoration, and #anchor links scroll themselves.
+ */
+function ScrollToTopOnNavigate(): null {
+  const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+  useEffect(() => {
+    if (navigationType === "POP" || hash) return;
+    window.scrollTo(0, 0);
+  }, [pathname, hash, navigationType]);
+  return null;
+}
+
 function AppRoutes() {
   useSessionStorageSync();
 
@@ -290,6 +305,7 @@ const App = () => (
             <OfflineIndicator />
             <StagingBanner />
             <BrowserRouter useTransitions={false}>
+              <ScrollToTopOnNavigate />
               <LocalizedRouteErrorBoundary>
                 <AppRoutes />
               </LocalizedRouteErrorBoundary>
