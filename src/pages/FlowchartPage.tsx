@@ -23,7 +23,6 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
-import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -555,35 +554,29 @@ export default function FlowchartPage() {
                                             </div>
                                         ) : (
                                             savedFlowcharts.map((item) => (
+                                                // Load and Delete are sibling buttons, not a button inside a clickable row,
+                                                // so no click or key press on one can reach the other.
                                                 <div
                                                     key={item.id}
-                                                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
-                                                    onClick={() => handleLoadFlowchart(item.data)}
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onKeyDown={(event) => {
-                                                        if (event.key === 'Enter' || event.key === ' ') {
-                                                            event.preventDefault();
-                                                            handleLoadFlowchart(item.data);
-                                                        }
-                                                    }}
+                                                    className="flex items-center gap-2 rounded-lg border bg-card p-1 pr-2 transition-colors hover:bg-accent/50"
                                                 >
-                                                    <div className="space-y-1">
-                                                        <div className="font-medium">{item.title}</div>
+                                                    <button
+                                                        type="button"
+                                                        className="min-w-0 flex-1 space-y-1 rounded-md p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        onClick={() => handleLoadFlowchart(item.data)}
+                                                    >
+                                                        <div className="font-medium break-words">{item.title}</div>
                                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
                                                             {formatRelativeDate(item.createdAt)}
                                                         </div>
-                                                    </div>
+                                                    </button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        // Busy, not disabled: a disabled button lets the click fall through to the
-                                                        // row, which would load this chart. The handler ignores repeat clicks.
-                                                        className={cn('h-9 w-9 text-destructive', deletingFlowchartIds.has(item.id) && 'opacity-50')}
-                                                        aria-disabled={deletingFlowchartIds.has(item.id)}
+                                                        className="h-9 w-9 shrink-0 text-destructive"
+                                                        disabled={deletingFlowchartIds.has(item.id)}
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
                                                             void handleDeleteFlowchart(item, e);
                                                         }}
                                                         aria-label={t('flowchart.deleteNamed', { title: item.title, defaultValue: 'Delete {{title}}' })}
