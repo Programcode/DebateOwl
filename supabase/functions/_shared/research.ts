@@ -78,7 +78,6 @@ export interface ResearchDeps {
     model: string;
     systemPrompt: string;
     messages: Array<{ role: string; content: string }>;
-    temperature: number;
     reasoningEffort: ReasoningEffort;
     signal?: AbortSignal;
   }) => Promise<{ output: unknown }>;
@@ -376,7 +375,6 @@ export async function decideAskSearch(
       model: deps.model,
       systemPrompt: ASK_SEARCH_DECISION_PROMPT,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0,
       reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
     });
@@ -415,7 +413,6 @@ async function generateFollowUpQueries(
       model: deps.model,
       systemPrompt: QUERY_GENERATION_PROMPT,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
       reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
     });

@@ -32,10 +32,10 @@ async function signInAsCanary(page: Page, { aiRequest }: { aiRequest: boolean })
   }, data.session);
 }
 
-// GPT-5.6 Luna is the Basic default, so this is the path most users take.
-async function pickLuna(page: Page, feature: string) {
+// Claude Haiku 5.5 is the Basic default, so this is the path most users take.
+async function pickBasicDefault(page: Page, feature: string) {
   await page.getByRole("combobox", { name: `Select AI model for ${feature}` }).click();
-  await page.getByRole("option", { name: /GPT-5\.6 Luna/ }).first().click();
+  await page.getByRole("option", { name: /Claude Haiku 5\.5/ }).first().click();
 }
 
 test("the production site loads and guards the app", async ({ page, baseURL }) => {
@@ -89,7 +89,7 @@ test("the canary account signs in and loads its account", async ({ page }) => {
 test("the canary account gets a streamed answer from a real model", async ({ page }) => {
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/ask");
-  await pickLuna(page, "ask");
+  await pickBasicDefault(page, "ask");
   await page.getByPlaceholder("Ask your debate coach...").fill("Reply with one short sentence: what is a rebuttal?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: 90_000 });
   await page.getByRole("button", { name: "Send message" }).click();
@@ -111,7 +111,7 @@ test("the canary account generates a case", async ({ page }) => {
   test.setTimeout(180_000);
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/generate");
-  await pickLuna(page, "generate");
+  await pickBasicDefault(page, "generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
   const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
   await page.getByRole("button", { name: "Generate Debate Case" }).click();

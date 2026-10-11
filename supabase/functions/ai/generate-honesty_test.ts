@@ -128,7 +128,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         },
         body: JSON.stringify({
           feature: "generate",
-          model: "openai/gpt-5.6-luna",
+          model: "openai/gpt-6-luna",
           input: {
             motion: "Should schools teach media literacy?",
             side: "pro",
@@ -177,7 +177,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         },
         body: JSON.stringify({
           feature: "generate",
-          model: "openai/gpt-5.6-luna",
+          model: "openai/gpt-6-luna",
           input: {
             motion: "Should schools teach media literacy?",
             side: "pro",

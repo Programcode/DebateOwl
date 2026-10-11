@@ -65,7 +65,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Question", mode: "\u200Bgeneral", citationMode: "false" },
       }),
     }));
@@ -94,7 +94,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       const languageResponse = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feature, model: "openai/gpt-5.6-luna", input }),
+        body: JSON.stringify({ feature, model: "openai/gpt-6-luna", input }),
       }));
       if (languageResponse.status !== 400) throw new Error(`${feature} invalid language returned ${languageResponse.status}`);
       if (!(await languageResponse.text()).includes(`${feature}.language`)) throw new Error(`${feature} invalid language was accepted`);
@@ -109,7 +109,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Question", mode: "general", citationMode: "false" },
       }),
     }));
@@ -146,7 +146,7 @@ Deno.test("AI handler rejects missing, empty, and invalid bearer tokens with the
       },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Question", mode: "general" },
       }),
     }));
@@ -269,7 +269,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
       },
       body: JSON.stringify({
         feature: "factoids",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: {
           claim: "solar energy costs",
           direction: "for",
@@ -379,7 +379,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input }),
     }));
     if (response.status !== 200) throw new Error(`Ask handler returned ${response.status}: ${await response.text()}`);
     const mainRequest = providerBodies.find((body) => {
@@ -512,7 +512,7 @@ Deno.test("AI handler ranks stable library sources and returns bounded assessmen
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Compare the evidence", mode: "general", webSearch: false },
         sourceIds: [sourceA, sourceB],
       }),
@@ -575,7 +575,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
     body: JSON.stringify({
       feature: "crossfire",
-      model: "openai/gpt-5.6-luna",
+      model: "openai/gpt-6-luna",
       input: {
         operation: "next-turn",
         config: config(mode),
@@ -587,7 +587,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
   const requestSignal = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], reply: { type: "question" | "answer"; text: string }, signalToken: string) => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "crossfire", model: "openai/gpt-5.6-luna", input: { operation: "signal", config: config(mode), transcript, reply, signalToken } }),
+    body: JSON.stringify({ feature: "crossfire", model: "openai/gpt-6-luna", input: { operation: "signal", config: config(mode), transcript, reply, signalToken } }),
   }));
 
   try {
@@ -655,7 +655,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       decisionBodies.push(body);
       const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
       const labels = Object.keys(questions.model.criteria);
-      const choice = labels.includes("z-ai/glm-5.3-flash") ? "z-ai/glm-5.3-flash" : "openai/gpt-5.6-sol";
+      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-opus-5.5";
       return jsonResponse({
         model: "typesafe/jev-1.13",
         answers: {
@@ -689,10 +689,10 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (response.status !== 200) throw new Error(`${entry.id} returned ${response.status}: ${await response.text()}`);
     }
     for (const effort of ["low", "medium", "high"]) {
-      const response = await requestForModel("anthropic/claude-sonnet-5", "pro", effort);
+      const response = await requestForModel("anthropic/claude-sonnet-5.5", "pro", effort);
       if (response.status !== 200) throw new Error(`Pro ${effort} returned ${response.status}: ${await response.text()}`);
     }
-    for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
+    for (const model of ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
       const response = await requestForModel(model, "pro", "medium");
       if (response.status !== 200) throw new Error(`Pro medium ${model} returned ${response.status}: ${await response.text()}`);
     }
@@ -702,7 +702,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoFastBasic = await requestForModel("auto-fast", "trial");
     if (autoFastBasic.status !== 200) throw new Error(`Basic Auto Fast returned ${autoFastBasic.status}: ${await autoFastBasic.text()}`);
     const autoFastPayload = await autoFastBasic.json();
-    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "z-ai/glm-5.3-flash") {
+    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "anthropic/claude-haiku-5.5") {
       throw new Error(`Auto Fast metadata was wrong: ${JSON.stringify(autoFastPayload.meta)}`);
     }
     const autoProBasic = await requestForModel("auto-pro", "trial");
@@ -710,7 +710,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoPro = await requestForModel("auto-pro", "pro");
     if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
     const autoProPayload = await autoPro.json();
-    if (autoProPayload.meta?.resolvedModel !== "openai/gpt-5.6-sol") {
+    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-opus-5.5") {
       throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
     }
 
@@ -727,7 +727,9 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
       if ("sort" in provider || "order" in provider) throw new Error(`sort/order disabled balanced routing for ${entry.id}`);
       if ((body.response_format as Record<string, unknown>)?.type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
-      if (entry.supportsTemperature !== ("temperature" in body)) throw new Error(`temperature support mismatch for ${entry.id}`);
+      // With require_parameters, one endpoint without temperature support
+      // turns the whole request into a routing 404 (Claude Opus 5 did).
+      if ("temperature" in body) throw new Error(`temperature was sent for ${entry.id}`);
     }
     for (const [offset, effort] of ["low", "medium", "high"].entries()) {
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
@@ -737,8 +739,13 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
-    if (openRouterBodies.at(-2)?.model !== "z-ai/glm-5.3-flash") throw new Error("Auto Fast did not call GLM");
-    if (openRouterBodies.at(-1)?.model !== "openai/gpt-5.6-sol") throw new Error("Auto Pro did not call Sol");
+    if (openRouterBodies.at(-2)?.model !== "anthropic/claude-haiku-5.5") throw new Error("Auto Fast did not call Haiku");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("Auto Pro did not call Opus");
+
+    // A stale client still sending a retired ID reaches its successor, not a 400.
+    const retired = await requestForModel("anthropic/claude-sonnet-5", "pro");
+    if (retired.status !== 200) throw new Error(`retired Sonnet 5 returned ${retired.status}: ${await retired.text()}`);
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("retired Sonnet 5 did not reach Opus 5.5");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;
@@ -779,7 +786,7 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
     const withZero = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     }));
     await withZero.text();
     if (streamBodies[0]?.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("stream output cap was not enforced");
@@ -789,7 +796,7 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
     const withoutUsage = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     }));
     await withoutUsage.text();
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error(`missing stream cost was estimated: ${JSON.stringify(usageRows.at(-1))}`);
@@ -820,7 +827,7 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   const request = () => new Request("http://127.0.0.1/functions/v1/ai-stream", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
   });
 
   const testState = globalThis as typeof globalThis & { __testTier?: string };
@@ -889,7 +896,7 @@ Deno.test("cancelled JSON repair keeps observed tokens but makes the total cost 
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
       signal: caller.signal,
     }));
     if (response.status !== 500) throw new Error(`cancelled repair returned ${response.status}`);
@@ -951,7 +958,7 @@ Deno.test("stream terminal events stop an open upstream promptly", async () => {
   const request = (signal?: AbortSignal) => new Request("http://127.0.0.1/functions/v1/ai-stream", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     signal,
   });
   const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => await Promise.race([

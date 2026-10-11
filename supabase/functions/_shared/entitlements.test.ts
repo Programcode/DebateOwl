@@ -104,7 +104,7 @@ Deno.test("banned users are refused before any quota is consumed", async () => {
     user_roles: { role: "banned" },
     get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
   }, async () => {
-    const result = await checkRateLimit("user-1", "openai/gpt-5.6-luna");
+    const result = await checkRateLimit("user-1", "openai/gpt-6-luna");
     assertEquals(result.allowed, false, "allowed");
     assertEquals(result.code, "banned", "code");
     assertEquals(result.statusCode, 403, "statusCode");
