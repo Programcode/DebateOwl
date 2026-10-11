@@ -8,10 +8,11 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
@@ -66,7 +67,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">{t('attackResults.whyWeak')} </span>
-          <Markdown className="inline">{weakness.whyWeak}</Markdown>
+          <Markdown inline>{weakness.whyWeak}</Markdown>
         </div>
         <div>
           <span className="font-medium text-muted-foreground">{t('attackResults.opponentAttack')} </span>
@@ -159,18 +160,28 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
   };
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {/* Researched sources with quality provenance */}
-      {discoveredSources && discoveredSources.length > 0 && (
-        <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
-          <SourceQualityList sources={discoveredSources} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </div>
-      )}
+      <ResultHeader
+        title={t('attackResults.resultTitle', 'Critique')}
+        actions={(
+          <ExportToolbar
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            onDiscuss={onDiscuss}
+            discussLabel={t('attackResults.discuss')}
+            secondaryActions={onPracticeCrossfire ? (
+              <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
+                <Flame className="mr-2 h-4 w-4" />
+                {t('crossfire.openFromResult', 'Open in Crossfire')}
+              </Button>
+            ) : undefined}
+          />
+        )}
+      />
+      <ResearchedSources sources={discoveredSources} />
       {/* Overall Assessment */}
       <SectionCard
         title={t('attackResults.overall')}
@@ -192,22 +203,6 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
               value={overallAssessment.score}
               className="h-3"
             />
-            <div className="mt-3">
-              <ExportToolbar
-                onPdf={handlePdfExport}
-                onDocx={handleDocxExport}
-                onGoogleDocs={handleGoogleDocsExport}
-                isExportingGDocs={isExportingGDocs}
-                onDiscuss={onDiscuss}
-                discussLabel={t('attackResults.discuss')}
-                secondaryActions={onPracticeCrossfire ? (
-                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
-                    <Flame className="mr-2 h-4 w-4" />
-                    {t('crossfire.openFromResult', 'Open in Crossfire')}
-                  </Button>
-                ) : undefined}
-              />
-            </div>
           </div>
 
           <div className="flex gap-4 text-sm">
@@ -338,6 +333,6 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
           </div>
         </SectionCard>
       )}
-    </StaggeredContainer >
+    </div>
   );
 }

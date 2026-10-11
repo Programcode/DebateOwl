@@ -192,13 +192,16 @@ test("gen-error: a provider failure shows an error and the retry succeeds", asyn
   await fake.fail("generate", 500);
   await openGenerate(page);
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await expect(page.getByText("Generation Failed", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
+  // The failure stays on the page, with Retry, until the next run.
+  const failure = page.getByRole("alert").filter({ hasText: "Generation Failed" });
+  await expect(failure).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("01-failed");
   await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeEnabled();
 
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await failure.getByRole("button", { name: "Retry" }).click();
   const body = await response;
+  await expect(failure).toHaveCount(0);
   await expect(page.getByText((body.output as unknown as CaseOutput).caseStructure.thesis).first()).toBeVisible();
   await evidence.shot("02-retried");
 });

@@ -191,7 +191,8 @@ export interface SessionState {
   saveCurrentFactoids: (title: string) => Promise<void>;
   loadSavedFactoids: (id: string) => void;
 
-  addAskMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  /** Pass the streaming bubble's id so the stored reply keeps its identity and doesn't remount. */
+  addAskMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string }) => void;
   setAskLoading: (loading: boolean) => void;
   setAskStreamingAssistant: (message: StreamingAskMessage | null) => void;
   appendAskStreamingDelta: (text: string) => void;
@@ -946,7 +947,7 @@ export const useSessionStore = create<SessionState>()(
       addAskMessage: (message) => set((state) => ({
         askMessages: [
           ...state.askMessages,
-          { ...message, id: generateId(), timestamp: Date.now() },
+          { ...message, id: message.id ?? generateId(), timestamp: Date.now() },
         ],
       })),
       setAskLoading: (loading) => set({ askLoading: loading }),
@@ -1079,9 +1080,18 @@ export const useSessionStore = create<SessionState>()(
       },
 
       deleteSavedFlowchart: async (id) => {
+        // Write first: the page offers Undo (a fresh save) only once the row is really gone.
+        // Signed out, charts are local only; signed in, a failed user lookup fails the delete
+        // instead of quietly skipping the server row.
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (session) {
+          const userId = await getUserId();
+          if (!userId) throw new Error('[SessionStore] Could not confirm the signed-in user to delete a flowchart');
+          const result = await applyUserScopedIdFilter(supabase.from('flowcharts').delete(), userId, id);
+          throwOnWriteError(result, 'delete flowchart');
+        }
         set((state) => ({ savedFlowcharts: state.savedFlowcharts.filter((c) => c.id !== id) }));
-        const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('flowcharts').delete(), userId, id);
       },
 
       hydrateFromServer: async () => {

@@ -49,7 +49,10 @@ test("Factoids returns verified evidence with working citations", async ({ signe
 
 test("Ask with web search shows the sources it used", async ({ signedIn: page }) => {
   await page.goto("/app/ask");
+  // The Ask switches live in the Options popover above the message box.
+  await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#web-search-mode").click();
+  await page.keyboard.press("Escape");
   await page.getByPlaceholder("Ask your debate coach...").fill("What did recent studies find about fare-free public transport ridership?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();

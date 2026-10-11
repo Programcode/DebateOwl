@@ -93,7 +93,10 @@ test("ask-stream: Ask streams a coaching answer and records usage", async ({ sig
 
 test("ask-cited: Ask in citation mode uses the structured endpoint", async ({ signedIn: page, evidence }) => {
   await page.goto("/app/ask");
+  // The Ask switches live in the Options popover above the message box.
+  await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#citation-mode").click();
+  await page.keyboard.press("Escape");
   await page.getByPlaceholder("Ask your debate coach...").fill("Which evidence supports fare-free transit?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();
@@ -106,7 +109,10 @@ test("ask-cited: Ask in citation mode uses the structured endpoint", async ({ si
 
 test("ask-web: Ask with web search shows the sources it used", async ({ signedIn: page, evidence }) => {
   await page.goto("/app/ask");
+  // The Ask switches live in the Options popover above the message box.
+  await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#web-search-mode").click();
+  await page.keyboard.press("Escape");
   await page.getByPlaceholder("Ask your debate coach...").fill("What did recent studies find about fare-free public transport ridership?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();

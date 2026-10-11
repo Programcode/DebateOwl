@@ -12,6 +12,7 @@ import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDeba
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ModelSelector';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/layout/PageHeader';
 import {
   SPARRING_FORMATS,
   buildSparringTurns,
@@ -75,7 +76,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{t('nav.sparring', 'Sparring')}</h1>
+      <PageHeader className="mb-0" title={t('nav.sparring', 'Sparring')} />
       {banner}
 
       <form onSubmit={handleSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">

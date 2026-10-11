@@ -1,5 +1,5 @@
 // src/pages/FlowchartPage.tsx
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactFlow, {
     Node,
@@ -19,10 +19,12 @@ import ReactFlow, {
     useReactFlow,
     useStore,
     useStoreApi,
+    type ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useSessionStore, FlowchartData } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -44,16 +46,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
     Plus,
     Download,
@@ -151,6 +143,12 @@ function LocalizedControls() {
     );
 }
 
+// 12px handles get an invisible 44px hit area on touch.
+const HANDLE_CLASS = "!bg-white/50 !w-3 !h-3 !border-2 !border-white/80 pointer-coarse:after:absolute pointer-coarse:after:-inset-4 pointer-coarse:after:content-['']";
+
+// Edges are static; rebuttals are dashed so they read apart from support without motion.
+const REBUTTAL_DASH = '6 4';
+
 // Custom node component
 function CustomNode({ data }: { data: FlowNodeData }) {
     const { t } = useTranslation();
@@ -166,7 +164,7 @@ function CustomNode({ data }: { data: FlowNodeData }) {
         <div
             className={`px-4 py-3 shadow-lg rounded-lg border-2 ${colors.border} ${colors.bg} ${colors.text} min-w-[150px] max-w-[250px] relative`}
         >
-            <Handle type="target" position={Position.Top} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
+            <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
             <div className="flex items-center gap-2 mb-1">
                 {nodeIcons[data.type]}
                 <Badge variant="secondary" className="text-xs uppercase bg-white/20">
@@ -190,7 +188,7 @@ function CustomNode({ data }: { data: FlowNodeData }) {
                     {t(strengthTranslationKeys[data.strength])}
                 </Badge>
             )}
-            <Handle type="source" position={Position.Bottom} className="!bg-white/50 !w-3 !h-3 !border-2 !border-white/80" />
+            <Handle type="source" position={Position.Bottom} className={HANDLE_CLASS} />
         </div>
     );
 }
@@ -199,10 +197,10 @@ const nodeTypes = {
     custom: CustomNode,
 };
 
-const edgeStyles: Record<EdgeKind, { label: string; stroke: string }> = {
+const edgeStyles: Record<EdgeKind, { label: string; stroke: string; dash?: string }> = {
     support: { label: 'Support', stroke: '#10b981' },
     attack: { label: 'Attack', stroke: '#ef4444' },
-    rebuttal: { label: 'Rebuttal', stroke: '#3b82f6' },
+    rebuttal: { label: 'Rebuttal', stroke: '#3b82f6', dash: REBUTTAL_DASH },
 };
 
 // Initial sample data
@@ -248,11 +246,11 @@ function createInitialNodes(t: TFunction): Node<FlowNodeData>[] {
 }
 
 const initialEdges: Edge[] = [
-    { id: 'e-thesis-c1', source: 'thesis', target: 'c1', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-thesis-c2', source: 'thesis', target: 'c2', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-thesis-c3', source: 'thesis', target: 'c3', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
+    { id: 'e-thesis-c1', source: 'thesis', target: 'c1', markerEnd: { type: MarkerType.ArrowClosed } },
+    { id: 'e-thesis-c2', source: 'thesis', target: 'c2', markerEnd: { type: MarkerType.ArrowClosed } },
+    { id: 'e-thesis-c3', source: 'thesis', target: 'c3', markerEnd: { type: MarkerType.ArrowClosed } },
     { id: 'e-c1-a1', source: 'c1', target: 'a1', style: { stroke: '#ef4444' }, markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-a1-r1', source: 'a1', target: 'r1', style: { stroke: '#3b82f6' }, markerEnd: { type: MarkerType.ArrowClosed } },
+    { id: 'e-a1-r1', source: 'a1', target: 'r1', style: { stroke: '#3b82f6', strokeDasharray: REBUTTAL_DASH }, markerEnd: { type: MarkerType.ArrowClosed } },
 ];
 
 export default function FlowchartPage() {
@@ -277,13 +275,24 @@ export default function FlowchartPage() {
     const [saveTitle, setSaveTitle] = useState('');
     const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
 
+    // Node ids repeat across charts, so a node's Undo belongs to the chart it was deleted
+    // from: loading another chart retires that Undo.
+    const chartVersion = useRef(0);
+    const nodeUndoToast = useRef<string | number | null>(null);
+    const replaceChart = useCallback((data: FlowchartData) => {
+        chartVersion.current += 1;
+        if (nodeUndoToast.current !== null) toast.dismiss(nodeUndoToast.current);
+        nodeUndoToast.current = null;
+        setNodes(data.nodes);
+        setEdges(data.edges);
+    }, [setNodes, setEdges]);
+
     useEffect(() => {
         if (pendingFlowchartData) {
-            setNodes(pendingFlowchartData.nodes);
-            setEdges(pendingFlowchartData.edges);
+            replaceChart(pendingFlowchartData);
             setPendingFlowchartData(null);
         }
-    }, [pendingFlowchartData, setNodes, setEdges, setPendingFlowchartData]);
+    }, [pendingFlowchartData, replaceChart, setPendingFlowchartData]);
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [newNodeLabel, setNewNodeLabel] = useState('');
@@ -291,7 +300,9 @@ export default function FlowchartPage() {
     const [newNodeType, setNewNodeType] = useState<NodeType>('contention');
     const [newNodeStrength, setNewNodeStrength] = useState<'strong' | 'moderate' | 'weak'>('moderate');
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
-    const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false);
+    const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
+    const canvasRef = useRef<HTMLDivElement>(null);
+    const [layoutAnimating, setLayoutAnimating] = useState(false);
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
     const [selectedEdgeType, setSelectedEdgeType] = useState<EdgeKind>('support');
 
@@ -302,9 +313,8 @@ export default function FlowchartPage() {
                 addEdge(
                     {
                         ...connection,
-                        animated: true,
                         label: edgeStyle.label,
-                        style: { stroke: edgeStyle.stroke, strokeWidth: 2 },
+                        style: { stroke: edgeStyle.stroke, strokeWidth: 2, ...(edgeStyle.dash ? { strokeDasharray: edgeStyle.dash } : {}) },
                         markerEnd: { type: MarkerType.ArrowClosed },
                     },
                     eds
@@ -337,10 +347,15 @@ export default function FlowchartPage() {
             );
             setEditingNodeId(null);
         } else {
+            // A new node appears in the middle of what the user is looking at.
+            const rect = canvasRef.current?.getBoundingClientRect();
+            const centre = rect && flowInstance
+                ? flowInstance.screenToFlowPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+                : { x: 400, y: 250 };
             const newNode: Node<FlowNodeData> = {
                 id: `node-${Date.now()}`,
                 type: 'custom',
-                position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
+                position: { x: centre.x - 100, y: centre.y - 40 },
                 data: {
                     label: newNodeLabel,
                     description: newNodeDescription,
@@ -354,7 +369,7 @@ export default function FlowchartPage() {
         setNewNodeLabel('');
         setNewNodeDescription('');
         setIsAddDialogOpen(false);
-    }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, editingNodeId, setNodes]);
+    }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, editingNodeId, setNodes, flowInstance]);
 
     const handleSaveFlowchart = async () => {
         if (!saveTitle.trim()) return;
@@ -372,20 +387,39 @@ export default function FlowchartPage() {
     };
 
     const handleLoadFlowchart = (data: FlowchartData) => {
-        setNodes(data.nodes);
-        setEdges(data.edges);
+        replaceChart(data);
         setSelectedNode(null);
         setIsLoadDialogOpen(false);
         toast.success(t('flowchart.loadedToast'));
     };
 
-    const handleDeleteFlowchart = async (id: string, e: React.MouseEvent) => {
+    // A saved flowchart can be saved again exactly, so delete acts at once and offers Undo.
+    // One delete per chart at a time: a second click while the first is in flight would
+    // offer a second Undo, and two Undos would save two copies.
+    const [deletingFlowchartIds, setDeletingFlowchartIds] = useState<ReadonlySet<string>>(new Set());
+    const handleDeleteFlowchart = async (item: (typeof savedFlowcharts)[number], e: React.MouseEvent) => {
         e.stopPropagation();
+        if (deletingFlowchartIds.has(item.id)) return;
+        setDeletingFlowchartIds((ids) => new Set(ids).add(item.id));
         try {
-            await deleteSavedFlowchart(id);
-            toast.success(t('flowchart.deletedToast'));
-        } catch (error) {
+            await deleteSavedFlowchart(item.id);
+            toast(t('flowchart.deletedNamed', { title: item.title, defaultValue: 'Deleted {{title}}' }), {
+                action: {
+                    label: t('common.undo', 'Undo'),
+                    onClick: () => {
+                        void saveFlowchart(item.title, item.data, item.debateId ?? null)
+                            .catch(() => toast.error(t('flowchart.restoreFailed', 'Could not restore the flowchart')));
+                    },
+                },
+            });
+        } catch {
             toast.error(t('flowchart.deleteFailedToast'));
+        } finally {
+            setDeletingFlowchartIds((ids) => {
+                const next = new Set(ids);
+                next.delete(item.id);
+                return next;
+            });
         }
     };
 
@@ -409,14 +443,27 @@ export default function FlowchartPage() {
         setIsAddDialogOpen(true);
     }, []);
 
+    // Deleting a node acts at once; Undo puts the node and its edges back.
     const deleteSelectedNode = useCallback(() => {
         if (!selectedNode || selectedNode === 'thesis') return;
+        const removedNode = nodes.find((n) => n.id === selectedNode);
+        if (!removedNode) return;
+        const removedEdges = edges.filter((e) => e.source === selectedNode || e.target === selectedNode);
         setNodes((nds) => nds.filter((n) => n.id !== selectedNode));
         setEdges((eds) => eds.filter((e) => e.source !== selectedNode && e.target !== selectedNode));
         setSelectedNode(null);
-        setIsDeleteNodeDialogOpen(false);
-        toast.success(t('flowchart.nodeDeletedToast'));
-    }, [selectedNode, setNodes, setEdges, t]);
+        const version = chartVersion.current;
+        nodeUndoToast.current = toast(t('flowchart.nodeDeletedNamed', { label: removedNode.data.label, defaultValue: 'Deleted {{label}}' }), {
+            action: {
+                label: t('common.undo', 'Undo'),
+                onClick: () => {
+                    if (chartVersion.current !== version) return;
+                    setNodes((nds) => (nds.some((n) => n.id === removedNode.id) ? nds : [...nds, removedNode]));
+                    setEdges((eds) => [...eds, ...removedEdges.filter((edge) => !eds.some((e) => e.id === edge.id))]);
+                },
+            },
+        });
+    }, [selectedNode, nodes, edges, setNodes, setEdges, t]);
 
     const autoLayout = useCallback(() => {
         const lanes: Record<NodeType, number> = {
@@ -432,6 +479,9 @@ export default function FlowchartPage() {
             return acc;
         }, {} as Record<NodeType, string[]>);
 
+        // Nodes glide to their lanes (a transition only while laying out, so dragging stays direct),
+        // and the view fits the result in step.
+        setLayoutAnimating(true);
         setNodes((currentNodes) => currentNodes.map((node) => {
             const group = grouped[node.data.type] || [node.id];
             const index = group.indexOf(node.id);
@@ -439,10 +489,9 @@ export default function FlowchartPage() {
             const x = 400 + (index - (group.length - 1) / 2) * spacing;
             return { ...node, position: { x, y: lanes[node.data.type] } };
         }));
-        window.setTimeout(() => {
-            document.querySelector('.react-flow__controls-fitview')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        }, 80);
-    }, [nodes, setNodes]);
+        requestAnimationFrame(() => void flowInstance?.fitView({ duration: 250, padding: 0.2 }));
+        window.setTimeout(() => setLayoutAnimating(false), 300);
+    }, [nodes, setNodes, flowInstance]);
 
     const exportToPng = useCallback(() => {
         const flowElement = document.querySelector('.react-flow') as HTMLElement;
@@ -476,19 +525,12 @@ export default function FlowchartPage() {
     }, [nodes]);
 
     return (
-        <div className="space-y-6">
+        <div className="container space-y-6 px-4 py-8">
             <WorkspaceToolScope context={workspace.context} />
+            <PageHeader className="mb-0" title={t('flowchart.title')} />
             <Card>
-                <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
+                <CardHeader className="pb-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                                <GitBranch className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                                <CardTitle>{t('flowchart.title')}</CardTitle>
-                            </div>
-                        </div>
                         <div className="flex flex-wrap gap-2">
                             {/* Load Dialog */}
                             <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
@@ -512,35 +554,32 @@ export default function FlowchartPage() {
                                             </div>
                                         ) : (
                                             savedFlowcharts.map((item) => (
+                                                // Load and Delete are sibling buttons, not a button inside a clickable row,
+                                                // so no click or key press on one can reach the other.
                                                 <div
                                                     key={item.id}
-                                                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
-                                                    onClick={() => handleLoadFlowchart(item.data)}
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onKeyDown={(event) => {
-                                                        if (event.key === 'Enter' || event.key === ' ') {
-                                                            event.preventDefault();
-                                                            handleLoadFlowchart(item.data);
-                                                        }
-                                                    }}
+                                                    className="flex items-center gap-2 rounded-lg border bg-card p-1 pr-2 transition-colors hover:bg-accent/50"
                                                 >
-                                                    <div className="space-y-1">
-                                                        <div className="font-medium">{item.title}</div>
+                                                    <button
+                                                        type="button"
+                                                        className="min-w-0 flex-1 space-y-1 rounded-md p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        onClick={() => handleLoadFlowchart(item.data)}
+                                                    >
+                                                        <div className="font-medium break-words">{item.title}</div>
                                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
                                                             {formatRelativeDate(item.createdAt)}
                                                         </div>
-                                                    </div>
+                                                    </button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 text-destructive opacity-70 hover:opacity-100"
+                                                        className="h-9 w-9 shrink-0 text-destructive"
+                                                        disabled={deletingFlowchartIds.has(item.id)}
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            void handleDeleteFlowchart(item.id, e);
+                                                            void handleDeleteFlowchart(item, e);
                                                         }}
-                                                        aria-label={t('common.delete', 'Delete')}
+                                                        aria-label={t('flowchart.deleteNamed', { title: item.title, defaultValue: 'Delete {{title}}' })}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -660,7 +699,7 @@ export default function FlowchartPage() {
                                         <GitBranch className="h-4 w-4 mr-2" />
                                         {t('flowchart.edit')}
                                     </Button>
-                                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteNodeDialogOpen(true)}>
+                                    <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
                                         <Trash2 className="h-4 w-4 mr-2" />
                                         {t('flowchart.delete')}
                                     </Button>
@@ -733,7 +772,7 @@ export default function FlowchartPage() {
                                                 {t('flowchart.edit')}
                                             </Button>
                                             {selectedNode !== 'thesis' && (
-                                                <Button variant="destructive" size="sm" onClick={() => setIsDeleteNodeDialogOpen(true)}>
+                                                <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
                                                     <Trash2 className="h-4 w-4 mr-2" />
                                                     {t('flowchart.delete')}
                                                 </Button>
@@ -746,8 +785,12 @@ export default function FlowchartPage() {
                     )}
 
                     {/* Flow Canvas */}
-                    <div className="h-[50vh] min-h-[400px] w-full">
+                    <div ref={canvasRef} className={`h-[50vh] min-h-[400px] w-full${layoutAnimating ? ' flow-layout-animating' : ''}`}>
                         <ReactFlow
+                            onInit={setFlowInstance}
+                            // The page scrolls under the wheel; zoom uses pinch, the controls, or Ctrl+wheel.
+                            zoomOnScroll={false}
+                            preventScrolling={false}
                             nodes={nodes}
                             edges={edges}
                             onNodesChange={onNodesChange}
@@ -781,27 +824,6 @@ export default function FlowchartPage() {
                 </CardContent>
             </Card>
 
-            <AlertDialog open={isDeleteNodeDialogOpen} onOpenChange={setIsDeleteNodeDialogOpen}>
-                <AlertDialogContent style={{ zIndex: 51 }}>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>{t('flowchart.deleteNodeTitle')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t('flowchart.deleteNodeDescription', {
-                                label: nodes.find((node) => node.id === selectedNode)?.data.label,
-                            })}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>{t('flowchart.deleteNodeCancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={deleteSelectedNode}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            {t('flowchart.deleteNodeConfirm')}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
 
             {/* Legend */}
             <Card>

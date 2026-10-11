@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save, PanelLeftOpen, PlusCircle } from 'lucide-react';
+import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save, PanelLeftOpen, PlusCircle, Square, SlidersHorizontal, ArrowDown, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Markdown } from '@/components/ui/markdown';
@@ -16,7 +16,8 @@ import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/valida
 import { formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
 import { ModelSelector } from '@/components/ModelSelector';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useReducedMotion } from 'framer-motion';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ListeningIndicator } from '@/components/features/voice/ListeningIndicator';
 
 interface Message {
   id: string;
@@ -28,9 +29,23 @@ interface Message {
   output?: any;
 }
 
+/** A failed or rejected send, shown in the chat above the composer. */
+export interface AskChatError {
+  title: string;
+  description?: string;
+  onRetry?: () => void;
+}
+
 interface AskChatProps {
   messages: Message[];
+  /** The reply being streamed, rendered after the stored messages. */
+  streamingMessage?: Message | null;
   isLoading: boolean;
+  error?: AskChatError | null;
+  onDismissError?: () => void;
+  /** Stops the reply in progress. */
+  onStop?: () => void;
+  /** Resolves false when the message was rejected, so the composer keeps the text. */
   onSend: (
     message: string,
     mode: string,
@@ -39,7 +54,7 @@ interface AskChatProps {
     prosConsMode: boolean,
     argumentMapMode: boolean,
     files?: File[]
-  ) => void;
+  ) => boolean | void | Promise<boolean | void>;
   onClear: () => void;
   onSaveChat?: () => void;
   savedChats?: SavedChatSummary[];
@@ -61,13 +76,23 @@ const modeOptions = [
   { id: 'clarify', labelKey: 'askChat.modeClarify', icon: HelpCircle },
 ];
 
-const LOADING_MESSAGES_KEYS = [
-  'askChat.thinking',
-  'askChat.researching',
-  'askChat.analyzing',
-  'askChat.generatingResponse',
-  'askChat.almostThere',
-];
+// Within this distance of the bottom, new text keeps the view pinned to the latest message.
+const AT_BOTTOM_PX = 80;
+
+/** Seconds since `since`, ticking once a second while `active`. */
+function useElapsedSeconds(active: boolean) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!active) {
+      setElapsed(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, [active]);
+  return elapsed;
+}
 
 function getFirstUrl(text?: string) {
   return text?.match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[),.;!?]+$/g, '');
@@ -85,7 +110,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   const output = message.output;
 
   return (
-    <div className={cn('flex gap-3 message-enter', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('flex gap-3', isUser ? 'justify-end' : 'animate-in fade-in-0 slide-in-from-bottom-1 duration-150 ease-out-strong justify-start')}>
       <div
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-3 space-y-3 relative group',
@@ -113,11 +138,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </Button>
         )}
         <div className="text-sm">
-          {message.content ? (
-            <Markdown>{message.content}</Markdown>
-          ) : message.isStreaming ? (
-            <span className="text-muted-foreground">{t('askChat.typing', 'Typing')}</span>
-          ) : null}
+          {message.content ? <Markdown>{message.content}</Markdown> : null}
           {message.isStreaming && (
             <span className="streaming-caret" aria-hidden="true" />
           )}
@@ -356,7 +377,7 @@ function SavedChatsPanel({
   );
 }
 
-export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, savedChats = [], onLoadChat, onSaveSource, contextControl }: AskChatProps) {
+export function AskChat({ messages, streamingMessage, isLoading, error, onDismissError, onStop, onSend, onClear, onSaveChat, savedChats = [], onLoadChat, onSaveSource, contextControl }: AskChatProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('general');
@@ -365,33 +386,44 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
   const [prosConsMode, setProsConsMode] = useState(false);
   const [argumentMapMode, setArgumentMapMode] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
-  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [searchingWeb, setSearchingWeb] = useState(false);
+  const [showJump, setShowJump] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Starts pinned; scrolling up to read unpins until the user returns to the bottom.
+  const atBottomRef = useRef(true);
   const { toast } = useToast();
-  const shouldReduceMotion = useReducedMotion();
 
   const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport } = useSpeechToText();
-  const hasStreamingMessage = messages.some((message) => message.isStreaming);
+  const waitingForText = isLoading && !streamingMessage?.content;
+  const elapsed = useElapsedSeconds(waitingForText);
 
-  // Auto-scroll to bottom on new messages or streaming content
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: shouldReduceMotion ? 'auto' : 'smooth' });
-  }, [messages, shouldReduceMotion]);
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= AT_BOTTOM_PX;
+    if (atBottomRef.current) setShowJump(false);
+  };
 
-  // Cycle through loading messages
-  useEffect(() => {
-    if (!isLoading) {
-      setLoadingMessageIndex(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      setLoadingMessageIndex(prev => (prev + 1) % LOADING_MESSAGES_KEYS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isLoading]);
+  const jumpToLatest = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    atBottomRef.current = true;
+    setShowJump(false);
+  };
+
+  // New text follows only a reader who is already at the bottom, and only inside the
+  // chat, never the window. Otherwise a "Jump to latest" pill appears.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (atBottomRef.current) el.scrollTop = el.scrollHeight;
+    else setShowJump(true);
+  }, [messages, streamingMessage?.content, waitingForText, error]);
 
   useEffect(() => {
     if (transcript) {
@@ -399,13 +431,28 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
     }
   }, [transcript]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && files.length === 0) || isLoading) return;
-    onSend(input.trim(), mode, citationMode, webSearch, prosConsMode, argumentMapMode, files);
+    const sent = input;
+    const sentFiles = files;
+    setSearchingWeb(webSearch);
+    // Sending scrolls to the new question.
+    atBottomRef.current = true;
     setInput('');
     setFiles([]);
     resetTranscript();
+    const accepted = await onSend(sent.trim(), mode, citationMode, webSearch, prosConsMode, argumentMapMode, sentFiles);
+    // A rejected message comes back into the box so the user can shorten it.
+    if (accepted === false) {
+      setInput((current) => current || sent);
+      setFiles((current) => (current.length ? current : sentFiles));
+    }
+  };
+
+  const handleStop = () => {
+    onStop?.();
+    inputRef.current?.focus();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -471,7 +518,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
             <SheetTitle>{t('askChat.savedChats', 'Saved chats')}</SheetTitle>
             <SheetDescription>{t('askChat.savedChatsDesc', 'Resume prior coaching conversations.')}</SheetDescription>
           </SheetHeader>
-          <div className="mt-4 h-[calc(100vh-8rem)]">
+          <div className="mt-4 h-[60dvh] sm:h-[calc(100dvh-8rem)]">
             <SavedChatsPanel
               savedChats={savedChats}
               onLoadChat={onLoadChat}
@@ -485,7 +532,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
       <div className={cn('grid gap-3', desktopSidebarOpen ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
         <aside className="hidden lg:block">
           {desktopSidebarOpen ? (
-            <Card className="flex h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20">
+            <Card className="flex h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20">
               <CardHeader className="shrink-0 pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
@@ -505,7 +552,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
             <Button
               variant="outline"
               size="icon"
-              className="h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] w-12 border-primary/20"
+              className="h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] w-12 border-primary/20"
               onClick={() => setDesktopSidebarOpen(true)}
               aria-label={t('askChat.openSavedChats', 'Open saved chats')}
             >
@@ -514,7 +561,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
           )}
         </aside>
 
-    <Card className="flex flex-col h-[calc(100vh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
+    <Card className="flex flex-col h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
       <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -542,9 +589,9 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
       </CardHeader>
 
       {/* Messages */}
-      <CardContent className="flex-1 overflow-hidden p-0">
-        <ScrollArea className="h-full p-4">
-          {messages.length === 0 ? (
+      <CardContent className="relative flex-1 overflow-hidden p-0">
+        <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto overscroll-contain p-4">
+          {messages.length === 0 && !streamingMessage ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6">
               <MessageCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
               <h3 className="font-medium text-foreground mb-1">{t('askChat.startConversation')}</h3>
@@ -554,29 +601,33 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} onSave={onSaveSource} />
+              {/* One keyed list: the finished reply keeps the streaming bubble's id and position, so it isn't remounted. */}
+              {(streamingMessage && !messages.some((message) => message.id === streamingMessage.id) ? [...messages, streamingMessage] : messages).map((message) => (
+                <MessageBubble key={message.id} message={message} onSave={message === streamingMessage ? undefined : onSaveSource} />
               ))}
-              {isLoading && !hasStreamingMessage && (
-                <div className="motion-swap flex gap-3" role="status" aria-live="polite" aria-atomic="true">
-                  <div className="motion-shimmer bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="typing-indicator">
-                        <span className="typing-dot" />
-                        <span className="typing-dot" />
-                        <span className="typing-dot" />
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {t(LOADING_MESSAGES_KEYS[loadingMessageIndex])}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              {waitingForText && (
+                // One true status line: what is happening, and how long it has taken once that matters.
+                <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+                  <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground [animation-duration:600ms]" aria-hidden="true" />
+                  {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}
+                  {elapsed >= 5 && <span className="tabular-nums">{t('askChat.elapsed', { seconds: elapsed, defaultValue: '{{seconds}}s' })}</span>}
+                </p>
               )}
-              <div ref={messagesEndRef} />
             </div>
           )}
-        </ScrollArea>
+        </div>
+        {showJump && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={jumpToLatest}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full shadow-md"
+          >
+            <ArrowDown className="h-4 w-4" aria-hidden="true" />
+            {t('askChat.jumpToLatest', 'Jump to latest')}
+          </Button>
+        )}
       </CardContent>
 
       <div className="shrink-0 border-t border-border p-4 space-y-2">
@@ -596,45 +647,50 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
-              <Quote className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="citation-mode" className="text-xs">{t('askChat.citations')}</Label>
-              <Switch
-                id="citation-mode"
-                checked={citationMode}
-                onCheckedChange={setCitationMode}
-              />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className="gap-2">
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              {t('askChat.options', 'Options')}
+              {[citationMode, webSearch, prosConsMode, argumentMapMode].filter(Boolean).length > 0 && (
+                <span className="rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary tabular-nums">{[citationMode, webSearch, prosConsMode, argumentMapMode].filter(Boolean).length}</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-72 space-y-1 p-3">
+              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                <Label htmlFor="citation-mode" className="flex items-center gap-2 text-sm font-normal">
+                  <Quote className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {t('askChat.citations')}
+                </Label>
+                <Switch id="citation-mode" checked={citationMode} onCheckedChange={setCitationMode} />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                <Label htmlFor="web-search-mode" className="flex items-center gap-2 text-sm font-normal">
+                  <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {t('askChat.webSearch')}
+                </Label>
+                <Switch id="web-search-mode" checked={webSearch} onCheckedChange={setWebSearch} />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                <Label htmlFor="pros-cons-mode" className="flex items-center gap-2 text-sm font-normal">
+                  <List className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {t('askChat.modeProsCons')}
+                </Label>
+                <Switch id="pros-cons-mode" checked={prosConsMode} onCheckedChange={setProsConsMode} />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                <Label htmlFor="argument-map-mode" className="flex items-center gap-2 text-sm font-normal">
+                  <Map className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {t('askChat.modeArgMap')}
+                </Label>
+                <Switch id="argument-map-mode" checked={argumentMapMode} onCheckedChange={setArgumentMapMode} />
+              </div>
+            <div className="border-t pt-2">
+              <ModelSelector feature="ask" className="w-full" />
             </div>
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="web-search-mode" className="text-xs">{t('askChat.webSearch')}</Label>
-              <Switch
-                id="web-search-mode"
-                checked={webSearch}
-                onCheckedChange={setWebSearch}
-              />
-            </div>
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
-              <List className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="pros-cons-mode" className="text-xs">{t('askChat.modeProsCons')}</Label>
-              <Switch
-                id="pros-cons-mode"
-                checked={prosConsMode}
-                onCheckedChange={setProsConsMode}
-              />
-            </div>
-            <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 transition-all duration-200 hover:border-primary/30">
-              <Map className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="argument-map-mode" className="text-xs">{t('askChat.modeArgMap')}</Label>
-              <Switch
-                id="argument-map-mode"
-                checked={argumentMapMode}
-                onCheckedChange={setArgumentMapMode}
-              />
-            </div>
-            <ModelSelector feature="ask" className="w-44 shrink-0" />
-        </div>
+          </PopoverContent>
+        </Popover>
 
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -653,6 +709,7 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
             ))}
           </div>
         )}
+        {isListening && <ListeningIndicator label={t('askChat.placeholderListening')} />}
         {voiceError && (
           <p className="text-sm text-destructive">
             {voiceError === 'not-allowed'
@@ -661,9 +718,29 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
           </p>
         )}
 
+        {error && (
+          <div role="alert" className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-foreground">{error.title}</p>
+              {error.description && <p className="text-muted-foreground">{error.description}</p>}
+            </div>
+            <div className="flex shrink-0 gap-1">
+              {error.onRetry && (
+                <Button type="button" size="sm" variant="outline" onClick={error.onRetry}>{t('common.retry', 'Retry')}</Button>
+              )}
+              {onDismissError && (
+                <Button type="button" size="icon" variant="ghost" className="h-9 w-9" onClick={onDismissError} aria-label={t('common.close', 'Close')}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {contextControl}
 
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form onSubmit={(event) => void handleSubmit(event)} className="flex gap-2">
           <Input
             type="file"
             multiple
@@ -690,22 +767,28 @@ export function AskChat({ messages, isLoading, onSend, onClear, onSaveChat, save
               onClick={toggleListening}
               title={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}
               aria-label={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}
-              className={isListening ? "animate-pulse" : ""}
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </Button>
           )}
 
+          {/* The box stays editable while a reply streams, so the next question can be typed. */}
           <Input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isListening ? t('askChat.placeholderListening') : t('askChat.placeholder')}
-            disabled={isLoading}
             className="flex-1"
           />
-          <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading} aria-label={t('askChat.send')}>
-            <Send className="h-4 w-4" />
-          </Button>
+          {isLoading && onStop ? (
+            <Button type="button" variant="outline" onClick={handleStop} aria-label={t('askChat.stop', 'Stop answering')}>
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </Button>
+          ) : (
+            <Button type="submit" disabled={(!input.trim() && files.length === 0) || isLoading} aria-label={t('askChat.send')}>
+              <Send className="h-4 w-4" />
+            </Button>
+          )}
         </form>
       </div>
     </Card>

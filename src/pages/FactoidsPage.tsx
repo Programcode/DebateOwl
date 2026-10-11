@@ -1,18 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
-import { factoids, askChat, type DiscoveredSource } from '@/lib/ai/client';
+import { factoids, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
-import { StreamingIndicator } from '@/components/ui/streaming-indicator';
-import { AnimatedSection } from '@/components/ui/animated-section';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { factoidsDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
@@ -21,38 +25,50 @@ import { DebateRequiredError } from '@/lib/stores/session-store';
 
 export default function FactoidsPage() {
   const workspace = useWorkspaceToolScope('factoids');
-  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addAskMessage, setAskLoading, askMessages, addSource, setFactoidsForm, recordResult } = useSessionStore();
+  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addSource, setFactoidsForm, recordResult } = useSessionStore(useShallow((state) => ({
+    factoidsResult: state.factoidsResult,
+    factoidsLoading: state.factoidsLoading,
+    factoidsForm: state.factoidsForm,
+    setFactoidsResult: state.setFactoidsResult,
+    setFactoidsLoading: state.setFactoidsLoading,
+    addSource: state.addSource,
+    setFactoidsForm: state.setFactoidsForm,
+    recordResult: state.recordResult,
+  })));
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
-  const askConfig = getFeatureConfig('ask');
   const { toast } = useToast();
+  const run = useToolRun('factoids');
+  const results = useRevealResults();
+  const lastInput = useRef<FactoidsInput | null>(null);
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
   const handleSubmit = async (data: FactoidsInput) => {
+    lastInput.current = data;
+    const signal = run.start();
     setDiscoveredSources([]);
     setFactoidsLoading(true);
     // Factoids research a claim, not the motion, so it follows the Current Debate directly.
     const debateId = workspace.context ? null : activeDebateId();
     try {
-      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId);
+      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       setDiscoveredSources(sources);
       setFactoidsResult(result);
       await workspace.attach(data, result);
       if (debateId) {
         await recordInDebate(() => recordResult('factoids', { title: data.claim, input: data, output: result, debateId, side: 'neutral' }));
       }
-      toast({ title: t('factoids.complete', 'Research complete'), description: t('factoids.completeDesc', 'Verified evidence is ready.'), variant: 'success' });
+      results.reveal();
     } catch (error) {
+      if (isCanceled(error, signal)) return;
       console.error('Failed to find factoids:', error);
       if (!subError.handleSubscriptionError(error)) {
-        toast({
-          title: t('factoids.failed'),
-          description: getUserFacingAIError(error),
-          variant: "destructive",
-        });
+        run.setError({ title: t('factoids.failed'), description: getUserFacingAIError(error) });
       }
     } finally {
       setFactoidsLoading(false);
@@ -85,66 +101,34 @@ export default function FactoidsPage() {
     }
   };
 
-  const handleDiscuss = async () => {
-    if (!factoidsResult) return;
-
-    const summary = `I'd like to discuss the evidence I found.
-    
-    **Factoids:**
-    ${factoidsResult.factoids.slice(0, 3).map(f => `- ${f.shortClaim} (${f.citation.publisher})`).join('\n')}
-    
-    How can I best use this evidence?`;
-
-    addAskMessage({ role: 'user', content: summary });
-    navigate('/app/ask');
-
-    setAskLoading(true);
-    try {
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content
-      }));
-
-      const result = await askChat(summary, history, 'general', askConfig);
-
-      addAskMessage({
-        role: 'assistant',
-        content: result.response,
-        output: result
-      });
-    } catch (error) {
-      console.error('Failed to discuss result:', error);
-      if (!subError.handleSubscriptionError(error)) {
-        toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
-      }
-    } finally {
-      setAskLoading(false);
-    }
+  const handleDiscuss = () => {
+    if (factoidsResult) openDiscussion(navigate, factoidsDiscussPrompt(factoidsResult, t));
   };
 
   return (
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.factoids')}</h1>
-          </div>
-        </AnimatedSection>
+        <PageHeader title={t('nav.factoids')} />
         <CurrentDebateStrip hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* Form */}
-          <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <FactoidsForm onSubmit={handleSubmit} isLoading={factoidsLoading} debateContext={!workspace.context} />
-          </AnimatedSection>
+          </div>
 
           {/* Results */}
-          <div>
+          <div ref={results.ref} className="scroll-mt-24">
+            {run.error && (
+              <ToolRunErrorPanel
+                error={run.error}
+                onRetry={lastInput.current ? () => void handleSubmit(lastInput.current!) : undefined}
+                onDismiss={run.clearError}
+              />
+            )}
             {factoidsLoading ? (
-              <div key="factoids-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8">
-                <StreamingIndicator messages={[t('factoidsForm.loadingMsg1'), t('factoidsForm.loadingMsg2'), t('factoidsForm.loadingMsg3'), t('factoidsForm.loadingMsg4'), t('factoidsForm.loadingMsg5')]} />
-              </div>
+              <ToolRunStatus label={t('factoids.working', 'Searching for evidence…')} onCancel={run.cancel} />
             ) : factoidsResult ? (
               <div key="factoids-results">
                 <FactoidsResults
@@ -156,13 +140,7 @@ export default function FactoidsPage() {
                 />
               </div>
             ) : (
-              <div key="factoids-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-secondary/30 bg-secondary/5 p-8 text-center">
-                <div className="text-6xl mb-4">📚</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{t('factoids.emptyTitle')}</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {t('factoids.emptyDesc')}
-                </p>
-              </div>
+              <EmptyState icon={BookOpen} title={t('factoids.emptyTitle')} description={t('factoids.emptyDesc')} />
             )}
           </div>
         </div>

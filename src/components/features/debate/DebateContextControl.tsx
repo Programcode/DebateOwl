@@ -84,11 +84,11 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
   const base = `flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm ${className}`;
 
   if (!debateId || !plan || !summary) {
+    // With no Current Debate the page's debate strip already says so; one notice is enough.
+    if (!(oneOff && debateIdOverride === undefined)) return null;
     return (
       <p className={`${base} border-dashed border-border bg-muted/40 text-muted-foreground`} data-testid="debate-context-control">
-        {oneOff && debateIdOverride === undefined
-          ? t('debateContext.oneOff', 'One-off mode: no Current Debate material will be used or saved.')
-          : t('debateContext.noDebate', 'No Current Debate, so no debate material will be used.')}
+        {t('debateContext.oneOff', 'One-off mode: no Current Debate material will be used or saved.')}
       </p>
     );
   }

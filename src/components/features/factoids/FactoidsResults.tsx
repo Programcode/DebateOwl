@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
 import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { openExternalUrl } from '@/lib/native';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
@@ -201,31 +202,22 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
   };
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      <ExportToolbar
-        onPdf={handlePdfExport}
-        onDocx={handleDocxExport}
-        onGoogleDocs={handleGoogleDocsExport}
-        isExportingGDocs={isExportingGDocs}
-        onDiscuss={onDiscuss}
-        discussLabel={t('factoidsResults.discuss')}
+      <ResultHeader
+        title={t('factoidsResults.resultTitle', 'Evidence')}
+        actions={(
+          <ExportToolbar
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            onDiscuss={onDiscuss}
+            discussLabel={t('factoidsResults.discuss')}
+          />
+        )}
       />
-
-      {discoveredSources && discoveredSources.length > 0 && (
-        <section
-          aria-labelledby="factoids-consulted-sources"
-          className="rounded-lg border bg-card/50 p-4 sm:p-5"
-        >
-          <h3 id="factoids-consulted-sources" className="mb-2 text-sm font-medium">
-            {t('sourceQuality.researchedSources')}
-          </h3>
-          <SourceQualityList sources={discoveredSources} className="[&_a]:break-words" />
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </section>
-      )}
+      <ResearchedSources sources={discoveredSources} />
 
       {/* Verification Status */}
       <SectionCard
@@ -304,6 +296,6 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
           ))}
         </div>
       </SectionCard>
-    </StaggeredContainer>
+    </div>
   );
 }

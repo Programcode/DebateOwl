@@ -236,7 +236,9 @@ describe('SparringPage voice rounds', () => {
     const aiSpeech = useSparringStore.getState().currentSession!.speeches[1];
     expect(aiSpeech.content).toBe('A narrower policy does the same for less.');
     expect(JSON.stringify(useSparringStore.getState().currentSession)).not.toContain('[sighs]');
-    expect(screen.getByText('A narrower policy does the same for less.')).toBeInTheDocument();
+    // The reply is in the transcript, and pinned above the composer while the user answers it.
+    expect(within(screen.getByRole('region', { name: 'Transcript' })).getByText('A narrower policy does the same for less.')).toBeInTheDocument();
+    expect(within(screen.getByRole('article', { name: 'Opponent’s last speech' })).getByText('A narrower policy does the same for less.')).toBeInTheDocument();
     expect(screen.queryByText(/\[sighs\]/)).not.toBeInTheDocument();
 
     // The student's clock waits for the opponent to finish, then runs.

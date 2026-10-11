@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { FactoidsInputSchema, type FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -63,17 +63,6 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
 
   return (
     <Card className="border-secondary/30">
-      <CardHeader className="bg-gradient-to-br from-secondary/10 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/20">
-            <BookOpen className="h-5 w-5 text-secondary-foreground" />
-          </div>
-          <div>
-            <CardTitle>{t('factoidsForm.title')}</CardTitle>
-            <CardDescription>{t('factoidsForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Claim Input */}

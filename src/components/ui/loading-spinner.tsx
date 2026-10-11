@@ -6,6 +6,7 @@ interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+/** One ring on a fast linear spin; a quicker spin reads as a quicker load. */
 export function LoadingSpinner({ className, size = 'md' }: LoadingSpinnerProps) {
   const sizeClasses = {
     sm: 'h-4 w-4',
@@ -14,11 +15,10 @@ export function LoadingSpinner({ className, size = 'md' }: LoadingSpinnerProps) 
   };
 
   return (
-    <div className={cn('relative inline-flex items-center justify-center', sizeClasses[size], className)}>
-      <span className="motion-ping-ring absolute inset-0 rounded-full border border-current opacity-40" />
-      <span className="absolute inset-0 rounded-full border border-current opacity-20" />
-      <span className="h-full w-full animate-spin rounded-full border-2 border-current border-t-transparent text-primary" />
-    </div>
+    <span
+      className={cn('inline-block shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-primary [animation-duration:700ms]', sizeClasses[size], className)}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -28,14 +28,9 @@ interface LoadingOverlayProps {
 
 export function LoadingOverlay({ message = 'Processing...' }: LoadingOverlayProps) {
   return (
-    <div className="motion-swap absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-lg bg-background/80 backdrop-blur-sm">
-      <div>
-        <LoadingSpinner size="lg" />
-      </div>
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-lg bg-background/90">
+      <LoadingSpinner size="lg" />
       <p className="text-sm font-medium text-muted-foreground" role="status" aria-live="polite">{message}</p>
-      <div className="h-1 w-40 overflow-hidden rounded-full bg-muted">
-        <div className="motion-loading-bar h-full rounded-full bg-primary" />
-      </div>
     </div>
   );
 }

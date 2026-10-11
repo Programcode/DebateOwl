@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { AlertCircle, Bot, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
+import { AlertCircle, Bot, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, Loader2, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import { VoiceMicControl } from '@/components/features/voice/VoiceMicControl';
 import { measureDelivery, type SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import type { AppLanguage } from '@/lib/languages';
+import { ClockAnnouncer, RoundClock, clockTone } from '@/components/features/practice/RoundClock';
 
 const MAX_SPEECH_CHARS = 6_000;
 
@@ -73,7 +74,9 @@ export function SparringRound({
     ? t(`sparring.roleGuidance.${currentTurn.kind}`, SCHOOL_ROLE_GUIDANCE[currentTurn.kind])
     : t('sparring.round.yourSpeechDescription', 'Make the case in the time you have. The opponent will respond to this text.');
   const timerProgress = currentTurn?.timeLimitSeconds ? Math.max(0, Math.min(100, (session.timerRemainingSeconds / currentTurn.timeLimitSeconds) * 100)) : 0;
-  const isUrgent = session.timerRemainingSeconds <= 30 && session.timerRemainingSeconds > 0;
+  const tone = clockTone(session.timerRemainingSeconds);
+  const isUrgent = tone === 'warning';
+  const latestOpponentSpeech = session.speeches.at(-1)?.speaker === 'ai' ? session.speeches.at(-1) : undefined;
   const timeExpired = session.timerRemainingSeconds <= 0
     || (session.timerDeadline !== null && session.timerDeadline <= Date.now());
 
@@ -154,12 +157,15 @@ export function SparringRound({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{judging ? t('sparring.round.complete', 'Round complete') : currentTurn ? t('sparring.round.turnOf', 'Turn {{current}} of {{total}}', { current: session.currentTurnIndex + 1, total: session.turns.length }) : t('sparring.round.preparingResult', 'Preparing your result')}</p>
                   <p className="mt-1 text-lg font-semibold text-foreground">{judging ? t('sparring.round.judgeReading', 'The judge is reading the transcript.') : currentTurn ? t(`sparring.turns.${currentTurn.id}`, currentTurn.label) : t('sparring.round.scoring', 'Scoring the round')}</p>
                 </div>
-                <div className={cn('flex items-center gap-2 font-mono text-3xl font-semibold tabular-nums tracking-tight', isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')} aria-label={judging ? t('sparring.round.noTimer', 'No timer while judging') : t('sparring.round.timeRemaining', '{{time}} remaining', { time: formatRoundTime(session.timerRemainingSeconds) })}>
-                  <Clock3 className="h-6 w-6" aria-hidden="true" />
-                  <span>{judging ? '--:--' : formatRoundTime(session.timerRemainingSeconds)}</span>
+                <div className="flex items-center gap-2 text-3xl">
+                  <Clock3 className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+                  {judging
+                    ? <span className="font-semibold tabular-nums text-muted-foreground" aria-label={t('sparring.round.noTimer', 'No timer while judging')}>--:--</span>
+                    : <RoundClock secondsLeft={session.timerRemainingSeconds} label={t('sparring.round.timeRemaining', '{{time}} remaining', { time: formatRoundTime(session.timerRemainingSeconds) })} />}
+                  {!judging && <ClockAnnouncer secondsLeft={session.timerRemainingSeconds} running={session.timerRunning} />}
                 </div>
               </div>
-              <Progress value={judging ? 0 : timerProgress} className={cn('mt-5 h-2', isUrgent ? '[&>div]:bg-amber-500' : '[&>div]:bg-primary')} aria-label={t('sparring.round.timeRemaining', 'Time remaining')} />
+              <Progress value={judging ? 0 : timerProgress} className={cn('mt-5 h-2', tone === 'over' ? '[&>div]:bg-destructive' : isUrgent ? '[&>div]:bg-amber-500' : '[&>div]:bg-primary')} aria-label={t('sparring.round.timeRemaining', 'Time remaining')} />
               {!judging && userTurn && (
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => session.timerRunning ? pauseTimer() : resumeTimer()} disabled={session.timerRemainingSeconds <= 0}>
@@ -188,10 +194,7 @@ export function SparringRound({
                   </>
                 ) : (
                   <>
-                    <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary" aria-hidden="true">
-                      <span className="absolute inset-0 animate-ping rounded-2xl bg-primary/10 motion-reduce:animate-none" />
-                      <Bot className="relative h-7 w-7" />
-                    </div>
+                    <Loader2 className="h-7 w-7 animate-spin text-primary [animation-duration:700ms]" aria-hidden="true" />
                     <h2 className="mt-5 text-lg font-semibold">{t('sparring.round.judgeWeighing', 'Judge is weighing the round')}</h2>
                     <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{t('sparring.round.judgeDescription', 'Reading the claims, responses, and strategic choices. This usually takes one request.')}</p>
                   </>
@@ -200,6 +203,17 @@ export function SparringRound({
             </Card>
           ) : (
             <>
+              {userTurn && latestOpponentSpeech && (
+                // What you're answering stays in view above the composer, not below it in the transcript.
+                <article className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-labelledby="sparring-latest-opponent">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <h2 id="sparring-latest-opponent" className="text-sm font-semibold">{t('sparring.round.latestOpponent', 'Opponent’s last speech')}</h2>
+                    <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${latestOpponentSpeech.turnId}`, latestOpponentSpeech.role)}</span>
+                  </div>
+                  <div className="mt-3 max-h-60 overflow-y-auto text-sm leading-7 text-foreground/90"><Markdown>{latestOpponentSpeech.content}</Markdown></div>
+                </article>
+              )}
               {userTurn ? (
                 <Card className="border-primary/30 shadow-sm">
                   <CardHeader className="pb-4">
@@ -224,7 +238,7 @@ export function SparringRound({
                       disabled={judging}
                     />
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-muted-foreground">{isOnline ? <><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">⌘</kbd> {t('common.or')} <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Ctrl</kbd> + <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Enter</kbd> {t('sparring.round.toSubmit', 'to submit')}</> : t('sparring.round.offlineCannotSubmit', 'Reconnect to submit this speech.')}</p>
+                      <p className="text-xs text-muted-foreground">{isOnline ? <span className="pointer-coarse:hidden"><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">⌘</kbd> {t('common.or')} <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Ctrl</kbd> + <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono">Enter</kbd> {t('sparring.round.toSubmit', 'to submit')}</span> : t('sparring.round.offlineCannotSubmit', 'Reconnect to submit this speech.')}</p>
                       <Button type="button" onClick={() => void submitSpeech()} disabled={!canSubmit} className="sm:min-w-36">
                         {t('sparring.round.submitSpeech', 'Submit speech')} <Send className="h-4 w-4" aria-hidden="true" />
                       </Button>
@@ -245,13 +259,12 @@ export function SparringRound({
                       </>
                     ) : (
                       <>
-                        <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-foreground" aria-hidden="true">
-                          <span className={cn('absolute inset-0 rounded-2xl bg-primary/10', aiLoading && 'animate-pulse motion-reduce:animate-none')} />
-                          <Bot className="relative h-7 w-7" />
-                        </div>
+                        {/* One indicator: a spinner while the opponent works, its icon otherwise. */}
+                        {aiLoading
+                          ? <Loader2 className="h-7 w-7 animate-spin text-primary [animation-duration:700ms]" aria-hidden="true" />
+                          : <Bot className="h-7 w-7 text-muted-foreground" aria-hidden="true" />}
                         <h2 className="mt-5 text-lg font-semibold">{aiLoading ? t('sparring.round.opponentThinking', 'Opponent is thinking') : t('sparring.round.opponentUpNext', 'Opponent is up next')}</h2>
                         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{aiLoading ? t('sparring.round.opponentThinkingDescription', 'It is reading the motion and your speeches before choosing a response.') : t('sparring.round.opponentUpNextDescription', 'The next response will appear here.')}</p>
-                        {aiLoading && <div className="mt-5 flex items-center gap-1.5" aria-label={t('sparring.round.aiThinking', 'AI is thinking')}><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.2s] motion-reduce:animate-none" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.1s] motion-reduce:animate-none" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary motion-reduce:animate-none" /></div>}
                       </>
                     )}
                   </CardContent>

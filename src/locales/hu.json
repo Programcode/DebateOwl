@@ -375,8 +375,6 @@
     "flowchartImportFailedDesc": "Nem sikerült folyamatábrát építeni az eset adataiból.",
     "flowchartNoData": "Nincs érvényes esetadat az importhoz.",
     "caseTitle": "Az eset címe",
-    "complete": "A generálás elkészült",
-    "completeDesc": "Elkészült a vitaeseted.",
     "noUndo": "Nincs mit visszavonni",
     "regenerated": "A szakasz újragenerálva",
     "regeneratedDesc": "A kiválasztott szakasz frissült.",
@@ -385,21 +383,20 @@
     "saveCase": "Eset mentése",
     "undone": "Visszaállítva",
     "undoneDesc": "Az előző generálás betöltve.",
-    "saveFailedDesc": "Nem sikerült menteni az esetet. Próbáld újra."
+    "saveFailedDesc": "Nem sikerült menteni az esetet. Próbáld újra.",
+    "working": "Az eseted megírása…"
   },
   "attack": {
     "emptyTitle": "Kegyetlen Mód",
     "emptyDesc": "Illeszd be az érvedet kíméletlen kritikáért, logikai hibák azonosításáért és megvalósítható javításokért.",
     "failed": "Támadás Elemzés Sikertelen",
-    "complete": "A támadáselemzés elkészült",
-    "completeDesc": "Elkészült a kritika."
+    "working": "Az eseted átnézése…"
   },
   "brainstorm": {
     "emptyTitle": "Kreatív Szögek Feloldása",
     "emptyDesc": "Írd le az indítványodat szokatlan érvelési szögek felfedezéséhez, kompromisszumok azonosításához és legerősebb pozícióid megtalálásához.",
     "failed": "Ötletelés Sikertelen",
-    "complete": "Az ötletelés elkészült",
-    "completeDesc": "Elkészültek az érvelési ötleteid."
+    "working": "Szempontok keresése…"
   },
   "factoids": {
     "emptyTitle": "Győztes Bizonyítékok",
@@ -407,9 +404,8 @@
     "failed": "Kutatás Sikertelen",
     "savedToLibrary": "Mentve a Könyvtárba",
     "savedToLibraryDesc": "Ez a bizonyíték mostantól elérhető megalapozáshoz.",
-    "complete": "A kutatás elkészült",
-    "completeDesc": "Elkészültek az ellenőrzött bizonyítékok.",
-    "saveFailed": "Nem sikerült menteni a forrást."
+    "saveFailed": "Nem sikerült menteni a forrást.",
+    "working": "Bizonyítékok keresése…"
   },
   "ask": {
     "failed": "Hiba",
@@ -426,12 +422,10 @@
     "retryableFailedDesc": "Nem sikerült elérni az MI-t. Ellenőrizd a kapcsolatot, majd próbáld újra.",
     "saveFailed": "A mentés sikertelen",
     "saveFailedDesc": "Nem sikerült menteni a chatet. Próbáld újra.",
-    "sourceSaveFailedDesc": "Nem sikerült menteni a forrást. Próbáld újra."
+    "sourceSaveFailedDesc": "Nem sikerült menteni a forrást. Próbáld újra.",
+    "stopped": "Leállítottad ezt a választ, mielőtt elkészült volna."
   },
-  "chat": {
-    "error": "Chat Hiba",
-    "errorDesc": "Nem sikerült választ generálni."
-  },
+  "chat": {},
   "settings": {
     "title": "Beállítások",
     "aiOutputLanguage": "Nyelv (Felület + MI Kimenet)",
@@ -1040,8 +1034,6 @@
     "title": "Kéréslimit Túllépve"
   },
   "generateForm": {
-    "title": "Vitaeset Generálása",
-    "subtitle": "Készíts strukturált érveket bármilyen indítványhoz",
     "motion": "Indítvány / Téma",
     "motionPlaceholder": "pl. Ez a ház úgy véli, hogy a mesterséges intelligencia több munkahelyet teremt, mint amennyit megszüntet",
     "side": "Oldal",
@@ -1073,11 +1065,6 @@
     "startVoice": "Hangbevitel indítása",
     "stopVoice": "Hangbevitel leállítása",
     "dictate": "Diktáld az indítványt",
-    "loadingMsg1": "Indítvány olvasása...",
-    "loadingMsg2": "Érvelési láncok építése...",
-    "loadingMsg3": "Beszédre kész hatások írása...",
-    "loadingMsg4": "Ellenérvek előkészítése...",
-    "loadingMsg5": "Eset véglegesítése...",
     "styleNote": "A írásstílust befolyásolja; a kutatást nem változtatja meg."
   },
   "generateResults": {
@@ -1126,11 +1113,12 @@
     "exportError": "Váratlan hiba történt az exportálás során",
     "copiedToClipboard": "Vágólapra másolva",
     "copyFailed": "Nem sikerült a vágólapra másolni",
-    "undo": "Visszavonás"
+    "undo": "Visszavonás",
+    "resultTitle": "Az eseted",
+    "unverified": "Ellenőrizetlen",
+    "unresearchedCaveat": "MI által készült, és ezt a bizonyítékot nem támasztja alá webes kutatás. Ellenőrizd a tényeket és a forrásokat, mielőtt egy fordulóban használod."
   },
   "attackForm": {
-    "title": "Támadás az Esetem Ellen",
-    "subtitle": "Találd meg a gyengeségeket és kapj javítási javaslatokat",
     "argument": "Az Érved",
     "argumentPlaceholder": "Illeszd be a vitaesetedet vagy érvedet ide...",
     "options": "Beállítások",
@@ -1148,12 +1136,7 @@
     "analyzeWeighing": "Súlyozás Elemzése",
     "analyzeWeighingDesc": "Hatás-összehasonlítás és prioritizálás értékelése",
     "analyzing": "Eset Elemzése...",
-    "submit": "Gyengeségek Keresése",
-    "loadingMsg1": "Esetstruktúra elemzése...",
-    "loadingMsg2": "Logikai rések keresése...",
-    "loadingMsg3": "Cáfolatok kidolgozása...",
-    "loadingMsg4": "Feltételezések tesztelése...",
-    "loadingMsg5": "Kritika véglegesítése..."
+    "submit": "Gyengeségek Keresése"
   },
   "attackResults": {
     "overall": "Összesített Értékelés",
@@ -1195,11 +1178,10 @@
     "exportFailedGdocs": "Nem sikerült exportálni Google Docs-ba",
     "exportError": "Váratlan hiba történt az exportálás során",
     "weaknessesCount_one": "{{count}} probléma található, súlyosság szerint rendezve",
-    "weaknessesCount_other": "{{count}} probléma található, súlyosság szerint rendezve"
+    "weaknessesCount_other": "{{count}} probléma található, súlyosság szerint rendezve",
+    "resultTitle": "Kritika"
   },
   "brainstormForm": {
-    "title": "Ötletelés",
-    "subtitle": "Fedezz fel érvelési szögeket együttműködve",
     "motion": "Indítvány / Téma",
     "motionPlaceholder": "pl. Az Univerzális Alapjövedelmet globálisan be kellene vezetni",
     "side": "Vizsgálandó Oldal",
@@ -1213,12 +1195,7 @@
     "existing": "Ami Már Megvan (Opcionális)",
     "existingPlaceholder": "Oszd meg az ötleteidet vagy szögeket, amiket már fontolóra vettél...",
     "generating": "Ötletek Generálása...",
-    "submit": "Ötletelés Indítása",
-    "loadingMsg1": "Szögek feltárása...",
-    "loadingMsg2": "Ötletek összekapcsolása...",
-    "loadingMsg3": "Szokatlan utak keresése...",
-    "loadingMsg4": "Rangsorolás eredetiség szerint...",
-    "loadingMsg5": "Ötletelés véglegesítése..."
+    "submit": "Ötletelés Indítása"
   },
   "brainstormResults": {
     "clarification": "Pontosítás Szükséges",
@@ -1242,11 +1219,10 @@
     "exportFailedGdocs": "Nem sikerült exportálni Google Docs-ba",
     "exportError": "Váratlan hiba történt az exportálás során",
     "noIdeasDesc": "Próbálj pontosabb tételt vagy más kimeneti formátumot, majd ötletelj újra.",
-    "noIdeasTitle": "Nem születtek ötletek"
+    "noIdeasTitle": "Nem születtek ötletek",
+    "resultTitle": "Szempontok"
   },
   "factoidsForm": {
-    "title": "Bizonyítékok Keresése",
-    "subtitle": "Találj vitakész tényeket ellenőrzött hivatkozásokkal",
     "claim": "Állítás",
     "claimPlaceholder": "pl. A megújuló energia költséghatékonyabb, mint a fosszilis tüzelőanyagok",
     "direction": "Álláspont",
@@ -1263,12 +1239,7 @@
     "sourceGovernment": "Kormányzati Források",
     "sourceNews": "Fő Hírek",
     "finding": "Bizonyítékok Keresése...",
-    "submit": "Tények Keresése",
-    "loadingMsg1": "Adatbázisok keresése...",
-    "loadingMsg2": "Hivatkozások ellenőrzése...",
-    "loadingMsg3": "Források keresztellenőrzése...",
-    "loadingMsg4": "Rangsorolás megbízhatóság szerint...",
-    "loadingMsg5": "Bizonyítékok véglegesítése..."
+    "submit": "Tények Keresése"
   },
   "factoidsResults": {
     "verificationStatus": "Ellenőrzési Állapot",
@@ -1300,12 +1271,12 @@
     "exportFailedGdocs": "Nem sikerült exportálni Google Docs-ba",
     "exportError": "Váratlan hiba történt az exportálás során",
     "noVerified": "Nem találtunk megfelelő, ellenőrzött forrásokat. Próbálj más forrástípust vagy hosszabb időszakot.",
-    "useSuggestion": "Keresés erre"
+    "useSuggestion": "Keresés erre",
+    "resultTitle": "Bizonyítékok"
   },
   "askChat": {
     "title": "Kérdezd az Edződ",
     "subtitle": "Kapj válaszokat vitakérdésekre",
-    "typing": "Gépelés",
     "startConversation": "Indíts beszélgetést",
     "startDesc": "Kérdezz bármit vitastratégiáról, érvekről, vagy kérj segítséget az esetedhez.",
     "modeGeneral": "Általános",
@@ -1340,11 +1311,6 @@
     "tooManyFiles": "Túl sok fájl",
     "tooManyFilesDesc": "Egyszerre legfeljebb {{max}} fájlt tölthetsz fel.",
     "fileValidationFailed": "Fájl érvényesítés sikertelen",
-    "thinking": "Gondolkodás...",
-    "researching": "Kutatás...",
-    "analyzing": "Elemzés...",
-    "generatingResponse": "Válasz generálása...",
-    "almostThere": "Mindjárt kész...",
     "savedChats": "Mentett beszélgetések",
     "savedChatsDesc": "Folytasd a korábbi edzői beszélgetéseket.",
     "openSavedChats": "Mentett beszélgetések megnyitása",
@@ -1358,7 +1324,13 @@
     "messageCount_one": "{{count}} üzenet",
     "messageCount_other": "{{count}} üzenet",
     "savedCount_one": "{{count}} mentve",
-    "savedCount_other": "{{count}} mentve"
+    "savedCount_other": "{{count}} mentve",
+    "working": "Dolgozom…",
+    "searchingWeb": "Keresés a weben…",
+    "elapsed": "{{seconds}} mp",
+    "jumpToLatest": "Ugrás a legújabbra",
+    "stop": "Válasz leállítása",
+    "options": "Beállítások"
   },
   "limitModal": {
     "trialEnded": "Ingyenes Próba Lejárt",
@@ -1446,6 +1418,7 @@
     "timeUpSignal": "Idő lejárt jelzés",
     "twoBeeps": "Két sípolás",
     "spaceStartStop": "Szóköz az indításhoz/megállításhoz",
+    "reset": "Időmérő visszaállítása",
     "resetKey": "R az újraindításhoz",
     "arrowsChange": "Nyilak a beszélő váltásához",
     "speeches": {
@@ -1484,7 +1457,8 @@
       }
     },
     "disableSound": "Hang kikapcsolása",
-    "enableSound": "Hang bekapcsolása"
+    "enableSound": "Hang bekapcsolása",
+    "resetDone": "Időmérő visszaállítva"
   },
   "flowchart": {
     "title": "Érvelési Folyamatábra",
@@ -1529,13 +1503,7 @@
     "savedToast": "Folyamatábra sikeresen mentve",
     "saveFailedToast": "Nem sikerült menteni a folyamatábrát",
     "loadedToast": "Folyamatábra betöltve",
-    "deletedToast": "Folyamatábra törölve",
     "deleteFailedToast": "Nem sikerült törölni a folyamatábrát",
-    "deleteNodeTitle": "Csomópont törlése?",
-    "deleteNodeDescription": "A(z) „{{label}}” csomópont és minden kapcsolata törlődik. Ez a művelet nem vonható vissza.",
-    "deleteNodeConfirm": "Csomópont törlése",
-    "deleteNodeCancel": "Mégse",
-    "nodeDeletedToast": "Csomópont törölve",
     "starter": {
       "thesisLabel": "A tézised",
       "thesisDesc": "Kattints a szerkesztéshez vagy új csomópont hozzáadásához",
@@ -1560,7 +1528,11 @@
     "zoomOut": "Kicsinyítés",
     "fitView": "Teljes nézet",
     "toggleInteractivity": "Vászon zárolása vagy feloldása",
-    "miniMap": "Folyamatábra áttekintése"
+    "miniMap": "Folyamatábra áttekintése",
+    "deletedNamed": "Törölve: {{title}}",
+    "deleteNamed": "{{title}} törlése",
+    "restoreFailed": "Nem sikerült visszaállítani a folyamatábrát",
+    "nodeDeletedNamed": "Törölve: {{label}}"
   },
   "historyPage": {
     "title": "Előzmények",
@@ -2026,7 +1998,6 @@
       "opponentUpNext": "Az ellenfél következik",
       "opponentThinkingDescription": "A válasz előtt elolvassa az indítványt és a beszédeidet.",
       "opponentUpNextDescription": "A következő válasz itt jelenik meg.",
-      "aiThinking": "Az MI gondolkodik",
       "transcript": "Átirat",
       "transcriptDescription": "Minden beküldött beszéd itt marad a bíró számára.",
       "submittedCount": "{{count}} beküldve",
@@ -2042,7 +2013,8 @@
       "totalWords_one": "{{count}} szó",
       "totalWords_other": "{{count}} szó",
       "wordCount_one": "{{count}} szó",
-      "wordCount_other": "{{count}} szó"
+      "wordCount_other": "{{count}} szó",
+      "latestOpponent": "Az ellenfél utolsó beszéde"
     },
     "scorecard": {
       "eyebrow": "Forduló értékelése",
@@ -2350,7 +2322,6 @@
     "leftOut_other": "{{count}} elem kimarad, hogy a kérés beleférjen a keretbe.",
     "review": "Áttekintés",
     "oneOff": "Egyszeri mód: az aktuális vita anyagai nem kerülnek felhasználásra és mentésre.",
-    "noDebate": "Nincs aktuális vita, ezért vitaanyag sem kerül felhasználásra.",
     "reviewTitle": "Mit használ ez a kérés",
     "reviewDesc": "Az itteni változtatások csak a következő kérésre érvényesek. A kitűzött eredmények addig maradnak benne, amíg le nem veszed őket.",
     "debateHeading": "Vita",
@@ -2398,5 +2369,50 @@
   },
   "offlineIndicator": {
     "label": "Offline mód"
+  },
+  "tools": {
+    "elapsed": "{{seconds}} mp",
+    "aiCaveat": "MI által készült. Ellenőrizd a tényeket és a forrásokat, mielőtt egy fordulóban használod.",
+    "researchedSources": "Felkutatott források ({{total}})"
+  },
+  "discuss": {
+    "attack": {
+      "intro": "Szeretném megbeszélni az esetem kritikáját.",
+      "assessment": "Összegzés",
+      "score": "Pontszám",
+      "weaknesses": "Fő gyengeségek",
+      "ask": "Segítesz javítani rajta?"
+    },
+    "brainstorm": {
+      "intro": "Szeretném megbeszélni ezeket az ötleteket.",
+      "topIdeas": "Legjobb ötletek",
+      "buckets": "Fő csoportok",
+      "ask": "Segítesz kifejteni valamelyiket?"
+    },
+    "generate": {
+      "intro": "Szeretném megbeszélni az imént elkészült esetet.",
+      "thesis": "Tézis",
+      "arguments": "Érvek",
+      "ask": "Finomíthatunk rajta?"
+    },
+    "factoids": {
+      "intro": "Szeretném megbeszélni a talált bizonyítékokat.",
+      "factoids": "Bizonyítékok",
+      "ask": "Hogyan használhatom a legjobban ezeket a bizonyítékokat?"
+    }
+  },
+  "aiErrors": {
+    "genericProvider": "Az MI-szolgáltató",
+    "quota": "{{provider}}: elfogyott a keret. Szólj az oldal adminisztrátorának.",
+    "config": "{{provider}}: hibás beállítás. Szólj az oldal adminisztrátorának.",
+    "rateLimit": "{{provider}}: túl sok kérés. Próbáld újra később.",
+    "unavailable": "{{provider}}: átmenetileg nem érhető el. Próbáld újra később.",
+    "safety": "{{provider}}: biztonsági okokból elutasította a kérést. Próbáld másképp megfogalmazni.",
+    "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra később.",
+    "unexpected": "Váratlan hiba történt"
+  },
+  "clock": {
+    "timeUp": "Lejárt az idő.",
+    "remaining": "Még {{time}}."
   }
 }

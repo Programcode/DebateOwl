@@ -144,14 +144,14 @@ test('a spoken sparring round works on the browser voice when the server has no 
   await startVoiceSparring(page);
 
   await speakSpeech(page, 'Affirmative constructive', 'Um, universal access removes the price barrier for every rider.');
-  await expect(page.getByText('Opponent reply 1:')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transcript' }).getByText('Opponent reply 1:')).toBeVisible();
   // The browser voice reads the reply, without the audio tag.
   await expect.poll(() => spokenByBrowser(page)).toBe('Opponent reply 1: a narrower pass reaches the same riders for less.');
   expect(voiceRequests).toHaveLength(1);
   expect(voiceRequests[0]).toEqual({ feature: 'sparring', text: '[sighs] Opponent reply 1: a narrower pass reaches the same riders for less.', token: 'token-1' });
 
   await speakSpeech(page, 'First affirmative rebuttal', 'A pass still leaves an eligibility gap, you know.');
-  await expect(page.getByText('Opponent reply 2:')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transcript' }).getByText('Opponent reply 2:')).toBeVisible();
   await expect.poll(() => spokenByBrowser(page)).toContain('Opponent reply 2:');
   // After the missing-key answer the page does not ask the voice function again.
   expect(voiceRequests).toHaveLength(1);

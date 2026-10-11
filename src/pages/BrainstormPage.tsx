@@ -1,19 +1,22 @@
 // src/pages/BrainstormPage.tsx
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { BrainstormForm } from '@/components/features/brainstorm/BrainstormForm';
 import { BrainstormResults } from '@/components/features/brainstorm/BrainstormResults';
-import { brainstorm, askChat, type DiscoveredSource } from '@/lib/ai/client';
+import { brainstorm, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
-import { useToast } from '@/hooks/use-toast';
-import { StreamingIndicator } from '@/components/ui/streaming-indicator';
-import { AnimatedSection } from '@/components/ui/animated-section';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { brainstormDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
@@ -21,12 +24,20 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function BrainstormPage() {
   const workspace = useWorkspaceToolScope('brainstorm');
-  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, addAskMessage, setAskLoading, askMessages, recordResult } = useSessionStore();
+  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, recordResult } = useSessionStore(useShallow((state) => ({
+    brainstormResult: state.brainstormResult,
+    brainstormLoading: state.brainstormLoading,
+    brainstormForm: state.brainstormForm,
+    setBrainstormResult: state.setBrainstormResult,
+    setBrainstormLoading: state.setBrainstormLoading,
+    recordResult: state.recordResult,
+  })));
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('brainstorm');
-  const askConfig = getFeatureConfig('ask');
-  const { toast } = useToast();
+  const run = useToolRun('brainstorm');
+  const results = useRevealResults();
+  const lastRun = useRef<{ data: BrainstormInput; debateId: string | null } | null>(null);
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
@@ -36,109 +47,65 @@ export default function BrainstormPage() {
 
   const submitBrainstorm = async (data: BrainstormInput, debateId: string | null) => {
     const target = { debateId };
+    lastRun.current = { data, debateId };
+    const signal = run.start();
     setBrainstormLoading(true);
     try {
-      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId);
+      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
       setBrainstormResult(result);
       await workspace.attach(data, result);
       if (target.debateId) {
         await recordInDebate(() => recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
       }
-      toast({ title: t('brainstorm.complete', 'Brainstorm complete'), description: t('brainstorm.completeDesc', 'Your argument angles are ready.'), variant: 'success' });
+      results.reveal();
     } catch (error) {
+      if (isCanceled(error, signal)) return;
       console.error('Failed to brainstorm:', error);
       if (!subError.handleSubscriptionError(error)) {
-        toast({
-          title: t('brainstorm.failed'),
-          description: getUserFacingAIError(error),
-          variant: "destructive",
-        });
+        run.setError({ title: t('brainstorm.failed'), description: getUserFacingAIError(error) });
       }
     } finally {
       setBrainstormLoading(false);
     }
   };
 
-  const handleDiscuss = async () => {
-    if (!brainstormResult) return;
-
-    // Construct summary based on available output
-    let summary = "I'd like to discuss these brainstormed ideas.\n\n";
-
-    if (brainstormResult.topFive) {
-      summary += "**Top Ideas:**\n" + brainstormResult.topFive.map((i) => {
-        const side = i.idea.side ? t(`brainstormResults.${i.idea.side}`, i.idea.side) : 'N/A';
-        return `- ${i.idea.title} (${side})`;
-      }).join('\n');
-    } else if (brainstormResult.buckets) {
-      summary += "**Key Buckets:**\n" + brainstormResult.buckets.map(b => `- ${b.name}: ${b.keyInsight}`).join('\n');
-    }
-
-    summary += "\n\nCan you help me expand on one of these?";
-
-    addAskMessage({ role: 'user', content: summary });
-    navigate('/app/ask');
-
-    setAskLoading(true);
-    try {
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content
-      }));
-
-      const result = await askChat(summary, history, 'general', askConfig);
-
-      addAskMessage({
-        role: 'assistant',
-        content: result.response,
-        output: result
-      });
-    } catch (error) {
-      console.error('Failed to discuss result:', error);
-      if (!subError.handleSubscriptionError(error)) {
-        toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
-      }
-    } finally {
-      setAskLoading(false);
-    }
+  const handleDiscuss = () => {
+    if (brainstormResult) openDiscussion(navigate, brainstormDiscussPrompt(brainstormResult, t));
   };
 
   return (
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.brainstorm')}</h1>
-          </div>
-        </AnimatedSection>
+        <PageHeader title={t('nav.brainstorm')} />
         <CurrentDebateStrip side={brainstormForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* Form */}
-          <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <BrainstormForm onSubmit={handleSubmit} isLoading={brainstormLoading} debatePrefill={!workspace.context} />
-          </AnimatedSection>
+          </div>
 
           {/* Results */}
-          <div>
+          <div ref={results.ref} className="scroll-mt-24">
+            {run.error && (
+              <ToolRunErrorPanel
+                error={run.error}
+                onRetry={lastRun.current ? () => void submitBrainstorm(lastRun.current!.data, lastRun.current!.debateId) : undefined}
+                onDismiss={run.clearError}
+              />
+            )}
             {brainstormLoading ? (
-              <div key="brainstorm-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8">
-                <StreamingIndicator messages={[t('brainstormForm.loadingMsg1'), t('brainstormForm.loadingMsg2'), t('brainstormForm.loadingMsg3'), t('brainstormForm.loadingMsg4'), t('brainstormForm.loadingMsg5')]} />
-              </div>
+              <ToolRunStatus label={t('brainstorm.working', 'Finding angles…')} onCancel={run.cancel} />
             ) : brainstormResult ? (
               <div key="brainstorm-results">
                 <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
               </div>
             ) : (
-              <div key="brainstorm-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center">
-                <div className="text-6xl mb-4">💡</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{t('brainstorm.emptyTitle')}</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {t('brainstorm.emptyDesc')}
-                </p>
-              </div>
+              <EmptyState icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />
             )}
           </div>
         </div>

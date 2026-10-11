@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { AIProviderError } from './client';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -12,7 +13,7 @@ function providerLabel(provider?: string, message = ''): string {
   if (/openai/i.test(message)) return 'OpenAI';
   if (/anthropic|claude/i.test(message)) return 'Anthropic';
   if (/google|gemini/i.test(message)) return 'Google';
-  return 'AI provider';
+  return i18n.t('aiErrors.genericProvider', 'AI provider');
 }
 
 export function getUserFacingAIError(error: unknown): string {
@@ -28,7 +29,7 @@ export function getUserFacingAIError(error: unknown): string {
       normalized.includes('quota') ||
       normalized.includes('billing details')
     ) {
-      return `${provider} quota exceeded. Please inform the site admin.`;
+      return i18n.t('aiErrors.quota', { provider, defaultValue: '{{provider}} quota exceeded. Please inform the site admin.' });
     }
 
     if (
@@ -38,11 +39,11 @@ export function getUserFacingAIError(error: unknown): string {
       normalized.includes('api key') ||
       normalized.includes('unauthorized')
     ) {
-      return `${provider} is not configured correctly. Please inform the site admin.`;
+      return i18n.t('aiErrors.config', { provider, defaultValue: '{{provider}} is not configured correctly. Please inform the site admin.' });
     }
 
     if (normalized.includes('rate limit') || normalized.includes('rate_limit') || normalized.includes('too many requests')) {
-      return `${provider} rate limit exceeded. Please try again later.`;
+      return i18n.t('aiErrors.rateLimit', { provider, defaultValue: '{{provider}} rate limit exceeded. Please try again later.' });
     }
 
     if (
@@ -51,15 +52,15 @@ export function getUserFacingAIError(error: unknown): string {
       normalized.includes('service unavailable') ||
       normalized.includes('503')
     ) {
-      return `${provider} is temporarily unavailable. Please try again later.`;
+      return i18n.t('aiErrors.unavailable', { provider, defaultValue: '{{provider}} is temporarily unavailable. Please try again later.' });
     }
 
     if (normalized.includes('content policy') || normalized.includes('safety') || normalized.includes('blocked')) {
-      return `${provider} blocked this request for safety reasons. Try rephrasing your input.`;
+      return i18n.t('aiErrors.safety', { provider, defaultValue: '{{provider}} blocked this request for safety reasons. Try rephrasing your input.' });
     }
 
-    return 'The AI provider returned an unexpected error. Please try again later.';
+    return i18n.t('aiErrors.unexpectedProvider', 'The AI provider returned an unexpected error. Please try again later.');
   }
 
-  return error instanceof Error ? error.message : 'An unexpected error occurred';
+  return error instanceof Error ? error.message : i18n.t('aiErrors.unexpected', 'An unexpected error occurred');
 }

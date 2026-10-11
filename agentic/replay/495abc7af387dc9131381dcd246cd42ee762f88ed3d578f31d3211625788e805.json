@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T09:21:22.438Z",
+  "createdAt": "2026-10-09T12:10:08.347Z",
   "payload": {
     "actions": [
       {
@@ -22,14 +22,6 @@
             "index": 1,
             "of": 2
           }
-        }
-      },
-      {
-        "name": "tap",
-        "summary": "tap button \"Delete node\"",
-        "target": {
-          "role": "button",
-          "name": "Delete node"
         }
       },
       {
@@ -72,7 +64,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Deleted the Argument 1 node and saved the flowchart as “Zoo ban flow.” The app confirmed “Node deleted” and “Flowchart saved successfully.”.",
+    "summary": "Argument 1 was already deleted (cached replay), and the flowchart was saved with title 'Zoo ban flow'. The screen confirms 'Flowchart saved successfully'.",
     "startPath": "/app/flowchart",
     "endPath": "/app/flowchart",
     "endAnchors": [
@@ -109,6 +101,6 @@
         "name": "Opening Flowchart"
       }
     ],
-    "endWaitMs": 13409
+    "endWaitMs": 14370
   }
 }

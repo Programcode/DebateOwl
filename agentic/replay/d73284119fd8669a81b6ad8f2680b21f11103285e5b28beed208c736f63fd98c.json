@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:44:38.227Z",
+  "createdAt": "2026-10-09T12:12:49.396Z",
   "payload": {
     "actions": [
       {
@@ -34,20 +34,10 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Searched factoids for “Cities with free buses have fewer cars downtown.” Research completed; the results screen confirms “Found 0 Factoids” and reports no verified matching sources.",
+    "summary": "Factoid search completed for the statement",
     "startPath": "/app/factoids",
     "endPath": "/app/factoids",
     "endAnchors": [
-      {
-        "role": "button",
-        "name": "Close"
-      },
-      {
-        "text": "Research complete"
-      },
-      {
-        "text": "Verified evidence is ready."
-      },
       {
         "role": "heading",
         "name": "Factoids"
@@ -56,14 +46,25 @@
         "text": "No current debate. Results stay one-off until you start one."
       },
       {
-        "role": "heading",
-        "name": "Find Evidence"
-      },
-      {
-        "text": "Get debate-ready factoids with verified citations"
-      },
-      {
         "text": "*"
+      },
+      {
+        "role": "textbox",
+        "name": "Statement *",
+        "placeholder": "e.g., Renewable energy is more cost-effective than fossil fuels",
+        "value": "Cities with free buses have fewer cars downtown."
+      },
+      {
+        "text": "Position"
+      },
+      {
+        "text": "In favor"
+      },
+      {
+        "text": "Source Type"
+      },
+      {
+        "text": "Any Reputable Source"
       }
     ],
     "goneAnchors": [
@@ -72,6 +73,6 @@
         "name": "Opening Factoids"
       }
     ],
-    "endWaitMs": 14622
+    "endWaitMs": 29790
   }
 }

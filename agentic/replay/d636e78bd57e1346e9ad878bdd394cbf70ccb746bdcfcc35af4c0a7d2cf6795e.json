@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:41:41.696Z",
+  "createdAt": "2026-10-09T12:13:49.892Z",
   "payload": {
     "actions": [
       {
@@ -34,7 +34,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Asked the debate coach, “How do I weigh access against cost in a rebuttal?” The conversation displays the question and a response: “FAKE-PROVIDER streamed answer: weigh access against cost.”",
+    "summary": "The question",
     "startPath": "/app/ask",
     "endPath": "/app/ask",
     "endAnchors": [
@@ -62,7 +62,8 @@
         "text": "FAKE-PROVIDER streamed answer: weigh access against cost."
       },
       {
-        "text": "Citations"
+        "role": "button",
+        "name": "Options"
       }
     ],
     "goneAnchors": [
@@ -71,6 +72,6 @@
         "name": "Opening Ask"
       }
     ],
-    "endWaitMs": 12792
+    "endWaitMs": 48628
   }
 }

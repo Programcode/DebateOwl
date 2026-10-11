@@ -49,7 +49,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Voice rounds](./voice-rounds.md): spoken Sparring and Crossfire on the browser voice, with no ElevenLabs key (`recipes/voice-rounds.spec.ts`).
 - [Workspace autosave](./workspace-autosave.md): a slow Crossfire or Sparring save from a Workspace never overwrites newer text (`recipes/workspace-autosave.spec.ts`). Needs `up --collab`; skips without it.
 - [Account data](./account-data.md): Download my data and Delete account, each proven against a bystander (`recipes/account-data.spec.ts`); Delete All My Data scoped against a bystander (`e2e/full-stack/account-data.spec.ts`).
-- Account: output language reaching the model from a new device, flowchart node delete, save and load, and the speech timer (`recipes/account.spec.ts`).
+- Account: output language reaching the model from a new device, flowchart node delete (at once, with an `Undo` toast; no confirm dialog), save and load, and the speech timer (`R` resets only while paused) (`recipes/account.spec.ts`).
 - Billing: expired account blocked, promo code restores access (`recipes/billing.spec.ts`); signed, forged, and replayed Stripe webhooks (`e2e/full-stack/billing.spec.ts`).
 - Admin announcements and the non-admin block (`e2e/full-stack/admin.spec.ts`), public share links (`e2e/full-stack/public.spec.ts`), and Workspaces with live collaboration and invites (`e2e/workspace-collaboration.spec.ts`).
 

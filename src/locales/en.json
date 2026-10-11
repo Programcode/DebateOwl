@@ -375,8 +375,6 @@
     "flowchartImportFailedDesc": "Could not build flowchart from case data.",
     "flowchartNoData": "No valid case data to import.",
     "caseTitle": "Case title",
-    "complete": "Generate complete",
-    "completeDesc": "Your debate case is ready.",
     "noUndo": "Nothing to undo",
     "regenerated": "Section regenerated",
     "regeneratedDesc": "The selected section has been refreshed.",
@@ -385,21 +383,20 @@
     "saveCase": "Save case",
     "undone": "Reverted",
     "undoneDesc": "Loaded previous generation.",
-    "saveFailedDesc": "The case could not be saved. Please try again."
+    "saveFailedDesc": "The case could not be saved. Please try again.",
+    "working": "Writing your case…"
   },
   "attack": {
     "emptyTitle": "No Mercy Mode",
     "emptyDesc": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.",
     "failed": "Attack Analysis Failed",
-    "complete": "Attack analysis complete",
-    "completeDesc": "The critique is ready."
+    "working": "Reviewing your case…"
   },
   "brainstorm": {
     "emptyTitle": "Unlock Creative Angles",
     "emptyDesc": "Describe your motion to explore unconventional argument angles, identify tradeoffs, and find your strongest positions.",
     "failed": "Brainstorming Failed",
-    "complete": "Brainstorm complete",
-    "completeDesc": "Your argument angles are ready."
+    "working": "Finding angles…"
   },
   "factoids": {
     "emptyTitle": "Evidence That Wins",
@@ -407,9 +404,8 @@
     "failed": "Research Failed",
     "savedToLibrary": "Saved to Library",
     "savedToLibraryDesc": "This evidence is now available for grounding.",
-    "complete": "Research complete",
-    "completeDesc": "Verified evidence is ready.",
-    "saveFailed": "Could not save source."
+    "saveFailed": "Could not save source.",
+    "working": "Searching for evidence…"
   },
   "ask": {
     "failed": "Error",
@@ -426,12 +422,10 @@
     "retryableFailedDesc": "Couldn't reach the AI. Check your connection and retry.",
     "saveFailed": "Save failed",
     "saveFailedDesc": "The chat could not be saved. Please try again.",
-    "sourceSaveFailedDesc": "The source could not be saved. Please try again."
+    "sourceSaveFailedDesc": "The source could not be saved. Please try again.",
+    "stopped": "You stopped this answer before it finished."
   },
-  "chat": {
-    "error": "Chat Error",
-    "errorDesc": "Failed to generate response."
-  },
+  "chat": {},
   "settings": {
     "title": "Settings",
     "aiOutputLanguage": "Language (UI + AI Output)",
@@ -1040,8 +1034,6 @@
     "title": "Rate Limit Exceeded"
   },
   "generateForm": {
-    "title": "Generate Debate Case",
-    "subtitle": "Create structured arguments for any motion",
     "motion": "Motion / Topic",
     "motionPlaceholder": "e.g., This house believes that artificial intelligence will create more jobs than it destroys",
     "side": "Side",
@@ -1073,11 +1065,6 @@
     "startVoice": "Start voice input",
     "stopVoice": "Stop voice input",
     "dictate": "Dictate your motion",
-    "loadingMsg1": "Reading the motion...",
-    "loadingMsg2": "Building warrant chains...",
-    "loadingMsg3": "Writing speech-ready impacts...",
-    "loadingMsg4": "Preparing counters...",
-    "loadingMsg5": "Finalizing the case...",
     "styleNote": "Guides writing style; it does not change research."
   },
   "generateResults": {
@@ -1126,11 +1113,12 @@
     "exportError": "An unexpected error occurred during export",
     "copiedToClipboard": "Copied to clipboard",
     "copyFailed": "Unable to copy to clipboard",
-    "undo": "Undo"
+    "undo": "Undo",
+    "resultTitle": "Your case",
+    "unverified": "Unverified",
+    "unresearchedCaveat": "AI-generated, and no web research backs this evidence. Check facts and sources before using them in a round."
   },
   "attackForm": {
-    "title": "Attack My Case",
-    "subtitle": "Find weaknesses and get improvement suggestions",
     "argument": "Your Argument",
     "argumentPlaceholder": "Paste your debate case or argument here...",
     "options": "Options",
@@ -1148,12 +1136,7 @@
     "analyzeWeighing": "Analyze Weighing",
     "analyzeWeighingDesc": "Evaluate impact comparison and prioritization",
     "analyzing": "Analyzing Case...",
-    "submit": "Find Weaknesses",
-    "loadingMsg1": "Analyzing the case structure...",
-    "loadingMsg2": "Finding logical gaps...",
-    "loadingMsg3": "Crafting rebuttals...",
-    "loadingMsg4": "Stress-testing assumptions...",
-    "loadingMsg5": "Finalizing the critique..."
+    "submit": "Find Weaknesses"
   },
   "attackResults": {
     "overall": "Overall Assessment",
@@ -1195,11 +1178,10 @@
     "exportFailedGdocs": "Failed to export to Google Docs",
     "exportError": "An unexpected error occurred during export",
     "weaknessesCount_one": "{{count}} issue found, sorted by severity",
-    "weaknessesCount_other": "{{count}} issues found, sorted by severity"
+    "weaknessesCount_other": "{{count}} issues found, sorted by severity",
+    "resultTitle": "Critique"
   },
   "brainstormForm": {
-    "title": "Brainstorm Ideas",
-    "subtitle": "Explore argument angles collaboratively",
     "motion": "Motion / Topic",
     "motionPlaceholder": "e.g., Universal Basic Income should be implemented globally",
     "side": "Side to Explore",
@@ -1213,12 +1195,7 @@
     "existing": "What You Already Have (Optional)",
     "existingPlaceholder": "Share any ideas or angles you've already considered...",
     "generating": "Generating Ideas...",
-    "submit": "Start Brainstorming",
-    "loadingMsg1": "Exploring angles...",
-    "loadingMsg2": "Connecting ideas...",
-    "loadingMsg3": "Finding unconventional paths...",
-    "loadingMsg4": "Ranking by originality...",
-    "loadingMsg5": "Finalizing brainstorm..."
+    "submit": "Start Brainstorming"
   },
   "brainstormResults": {
     "clarification": "Clarification Needed",
@@ -1242,11 +1219,10 @@
     "exportFailedGdocs": "Failed to export to Google Docs",
     "exportError": "An unexpected error occurred during export",
     "noIdeasDesc": "Try a more specific motion or switch the output format, then brainstorm again.",
-    "noIdeasTitle": "No ideas returned"
+    "noIdeasTitle": "No ideas returned",
+    "resultTitle": "Angles"
   },
   "factoidsForm": {
-    "title": "Find Evidence",
-    "subtitle": "Get debate-ready factoids with verified citations",
     "claim": "Statement",
     "claimPlaceholder": "e.g., Renewable energy is more cost-effective than fossil fuels",
     "direction": "Position",
@@ -1263,12 +1239,7 @@
     "sourceGovernment": "Government Sources",
     "sourceNews": "Major News",
     "finding": "Finding Evidence...",
-    "submit": "Find Factoids",
-    "loadingMsg1": "Searching databases...",
-    "loadingMsg2": "Verifying citations...",
-    "loadingMsg3": "Cross-referencing sources...",
-    "loadingMsg4": "Ranking by reliability...",
-    "loadingMsg5": "Finalizing evidence..."
+    "submit": "Find Factoids"
   },
   "factoidsResults": {
     "verificationStatus": "Verification Status",
@@ -1300,12 +1271,12 @@
     "exportFailedGdocs": "Failed to export to Google Docs",
     "exportError": "An unexpected error occurred during export",
     "noVerified": "No verified matching sources were found. Try a broader source type or timeframe.",
-    "useSuggestion": "Search this"
+    "useSuggestion": "Search this",
+    "resultTitle": "Evidence"
   },
   "askChat": {
     "title": "Ask Your Coach",
     "subtitle": "Get answers to debate questions",
-    "typing": "Typing",
     "startConversation": "Start a conversation",
     "startDesc": "Ask anything about debate strategy, arguments, or get help with your case.",
     "modeGeneral": "General",
@@ -1349,16 +1320,17 @@
     "tooManyFiles": "Too many files",
     "tooManyFilesDesc": "You can only upload up to {{max}} files at once.",
     "fileValidationFailed": "File validation failed",
-    "thinking": "Thinking...",
-    "researching": "Researching...",
-    "analyzing": "Analyzing...",
-    "generatingResponse": "Generating response...",
-    "almostThere": "Almost there...",
     "save": "Save",
     "messageCount_one": "{{count}} message",
     "messageCount_other": "{{count}} messages",
     "savedCount_one": "{{count}} saved",
-    "savedCount_other": "{{count}} saved"
+    "savedCount_other": "{{count}} saved",
+    "working": "Working…",
+    "searchingWeb": "Searching the web…",
+    "elapsed": "{{seconds}}s",
+    "jumpToLatest": "Jump to latest",
+    "stop": "Stop answering",
+    "options": "Options"
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
@@ -1446,6 +1418,7 @@
     "timeUpSignal": "Time's up signal",
     "twoBeeps": "Two beeps",
     "spaceStartStop": "Space to start/stop",
+    "reset": "Reset timer",
     "resetKey": "R to reset",
     "arrowsChange": "Arrows to change speaker",
     "speeches": {
@@ -1484,7 +1457,8 @@
       }
     },
     "disableSound": "Disable sound",
-    "enableSound": "Enable sound"
+    "enableSound": "Enable sound",
+    "resetDone": "Timer reset"
   },
   "flowchart": {
     "title": "Argument Flowchart",
@@ -1529,13 +1503,7 @@
     "savedToast": "Flowchart saved successfully",
     "saveFailedToast": "Failed to save flowchart",
     "loadedToast": "Flowchart loaded",
-    "deletedToast": "Flowchart deleted",
     "deleteFailedToast": "Failed to delete flowchart",
-    "deleteNodeTitle": "Delete node?",
-    "deleteNodeDescription": "{{label}} and all of its connections will be removed. This cannot be undone.",
-    "deleteNodeConfirm": "Delete node",
-    "deleteNodeCancel": "Cancel",
-    "nodeDeletedToast": "Node deleted",
     "starter": {
       "thesisLabel": "Your Thesis",
       "thesisDesc": "Click to edit or add new nodes",
@@ -1560,7 +1528,11 @@
     "zoomOut": "Zoom out",
     "fitView": "Fit view",
     "toggleInteractivity": "Lock or unlock the canvas",
-    "miniMap": "Flowchart overview"
+    "miniMap": "Flowchart overview",
+    "deletedNamed": "Deleted {{title}}",
+    "deleteNamed": "Delete {{title}}",
+    "restoreFailed": "Could not restore the flowchart",
+    "nodeDeletedNamed": "Deleted {{label}}"
   },
   "historyPage": {
     "title": "History",
@@ -2026,7 +1998,6 @@
       "opponentUpNext": "Opponent is up next",
       "opponentThinkingDescription": "It is reading the motion and your speeches before choosing a response.",
       "opponentUpNextDescription": "The next response will appear here.",
-      "aiThinking": "AI is thinking",
       "transcript": "Transcript",
       "transcriptDescription": "Every submitted speech stays here for the judge.",
       "submittedCount": "{{count}} submitted",
@@ -2042,7 +2013,8 @@
       "totalWords_one": "{{count}} word",
       "totalWords_other": "{{count}} words",
       "wordCount_one": "{{count}} word",
-      "wordCount_other": "{{count}} words"
+      "wordCount_other": "{{count}} words",
+      "latestOpponent": "Opponent’s last speech"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -2350,7 +2322,6 @@
     "leftOut_other": "{{count}} items are left out to fit the request.",
     "review": "Review",
     "oneOff": "One-off mode: no Current Debate material will be used or saved.",
-    "noDebate": "No Current Debate, so no debate material will be used.",
     "reviewTitle": "What this request will use",
     "reviewDesc": "Changes here apply to your next request only. Pinned results stay included until you unpin them.",
     "debateHeading": "Debate",
@@ -2398,5 +2369,50 @@
   },
   "offlineIndicator": {
     "label": "Offline mode"
+  },
+  "tools": {
+    "elapsed": "{{seconds}}s",
+    "aiCaveat": "AI-generated. Check facts and sources before using them in a round.",
+    "researchedSources": "Researched sources ({{total}})"
+  },
+  "discuss": {
+    "attack": {
+      "intro": "I'd like to discuss the critique of my case.",
+      "assessment": "Overall assessment",
+      "score": "Score",
+      "weaknesses": "Top weaknesses",
+      "ask": "Can you help me improve this?"
+    },
+    "brainstorm": {
+      "intro": "I'd like to discuss these brainstormed ideas.",
+      "topIdeas": "Top ideas",
+      "buckets": "Key buckets",
+      "ask": "Can you help me expand on one of these?"
+    },
+    "generate": {
+      "intro": "I'd like to discuss the case we just generated.",
+      "thesis": "Thesis",
+      "arguments": "Arguments",
+      "ask": "Can we refine this?"
+    },
+    "factoids": {
+      "intro": "I'd like to discuss the evidence I found.",
+      "factoids": "Evidence",
+      "ask": "How can I best use this evidence?"
+    }
+  },
+  "aiErrors": {
+    "genericProvider": "AI provider",
+    "quota": "{{provider}} quota exceeded. Please inform the site admin.",
+    "config": "{{provider}} is not configured correctly. Please inform the site admin.",
+    "rateLimit": "{{provider}} rate limit exceeded. Please try again later.",
+    "unavailable": "{{provider}} is temporarily unavailable. Please try again later.",
+    "safety": "{{provider}} blocked this request for safety reasons. Try rephrasing your input.",
+    "unexpectedProvider": "The AI provider returned an unexpected error. Please try again later.",
+    "unexpected": "An unexpected error occurred"
+  },
+  "clock": {
+    "timeUp": "Time is up.",
+    "remaining": "{{time}} left."
   }
 }

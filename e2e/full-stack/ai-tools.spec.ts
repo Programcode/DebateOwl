@@ -53,7 +53,10 @@ test("Ask streams a coaching answer and records usage", async ({ signedIn: page,
 
 test("Ask with citations uses the structured endpoint", async ({ signedIn: page }) => {
   await page.goto("/app/ask");
+  // The Ask switches live in the Options popover above the message box.
+  await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#citation-mode").click();
+  await page.keyboard.press("Escape");
   await page.getByPlaceholder("Ask your debate coach...").fill("Which evidence supports fare-free transit?");
   await page.getByRole("button", { name: "Send message" }).click();
 

@@ -1,12 +1,13 @@
 // src/pages/GeneratePage.tsx
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { GenerateForm } from '@/components/features/generate/GenerateForm';
 import { GenerateResults } from '@/components/features/generate/GenerateResults';
-import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError, type DiscoveredSource } from '@/lib/ai/client';
+import { generateCase, isAIAuthError, isAIRateLimitError, isTimeoutError, type DiscoveredSource } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
@@ -18,11 +19,12 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save } from 'lucide-react';
-import { StreamingIndicator } from '@/components/ui/streaming-indicator';
-import { AnimatedSection } from '@/components/ui/animated-section';
+import { Save, Target } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { generateDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
-import { useReducedMotion } from 'framer-motion';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
 import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
@@ -32,7 +34,20 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function GeneratePage() {
   const workspace = useWorkspaceToolScope('generate');
-  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore();
+  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, saveCurrentCase, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore(useShallow((state) => ({
+    generateResult: state.generateResult,
+    generateLoading: state.generateLoading,
+    generateRegeneratingSection: state.generateRegeneratingSection,
+    generateForm: state.generateForm,
+    setGenerateResult: state.setGenerateResult,
+    setGenerateLoading: state.setGenerateLoading,
+    setGenerateRegeneratingSection: state.setGenerateRegeneratingSection,
+    saveCurrentCase: state.saveCurrentCase,
+    setPendingFlowchartData: state.setPendingFlowchartData,
+    autosavedCases: state.autosavedCases,
+    recordResult: state.recordResult,
+    updateRecordedResult: state.updateRecordedResult,
+  })));
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   // The debate row this page's current result was recorded into, if any.
   const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
@@ -40,23 +55,14 @@ export default function GeneratePage() {
   const [resultDebateId, setResultDebateId] = useState<string | null | undefined>(undefined);
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
-  const askConfig = getFeatureConfig('ask');
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
-  const shouldReduceMotion = useReducedMotion();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [successfulGenerationSequence, setSuccessfulGenerationSequence] = useState(0);
-  const resultsAnchorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (successfulGenerationSequence === 0) return;
-    const timer = window.setTimeout(() => {
-      resultsAnchorRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth', block: 'start' });
-    }, 100);
-    return () => window.clearTimeout(timer);
-  }, [shouldReduceMotion, successfulGenerationSequence]);
+  const run = useToolRun('generate');
+  const results = useRevealResults();
+  const lastRun = useRef<{ data: GenerateInput; debateId: string | null } | null>(null);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
 
@@ -77,9 +83,13 @@ export default function GeneratePage() {
 
   const submitGenerate = async (data: GenerateInput, debateId: string | null) => {
     const target = { debateId };
+    lastRun.current = { data, debateId };
+    const signal = run.start();
     setGenerateLoading(true);
     try {
-      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId);
+      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       // Always stamp with real local time and motion
       if (result.metadata) {
         result.metadata.generatedAt = new Date().toISOString();
@@ -93,22 +103,22 @@ export default function GeneratePage() {
       if (target.debateId) {
         setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
       }
-      setSuccessfulGenerationSequence((sequence) => sequence + 1);
-      toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
+      results.reveal();
     } catch (error) {
+      if (isCanceled(error, signal)) return;
       console.error('Failed to generate case:', error);
 
       // Handle subscription errors with modals
       if (subError.handleSubscriptionError(error)) return;
 
       if (isAIAuthError(error)) {
-        toast({ title: t('generate.authRequired'), description: error.message, variant: "destructive" });
+        run.setError({ title: t('generate.authRequired'), description: getUserFacingAIError(error) });
       } else if (isAIRateLimitError(error)) {
-        toast({ title: t('rateLimit.title'), description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} uses)` : ''}`, variant: "destructive" });
+        run.setError({ title: t('rateLimit.title'), description: getUserFacingAIError(error) });
       } else if (isTimeoutError(error)) {
-        toast({ title: t('generate.timeout'), description: t('generate.timeoutDesc'), variant: "destructive" });
+        run.setError({ title: t('generate.timeout'), description: t('generate.timeoutDesc') });
       } else {
-        toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: "destructive" });
+        run.setError({ title: t('generate.failed'), description: getUserFacingAIError(error) });
       }
     } finally {
       setGenerateLoading(false);
@@ -189,43 +199,8 @@ export default function GeneratePage() {
     }
   };
 
-  const handleDiscuss = async () => {
-    if (!generateResult) return;
-
-    const summary = `I'd like to discuss the case we just generated.
-    
-    **Thesis:** ${generateResult.caseStructure.thesis}
-    
-    **Arguments:**
-    ${generateResult.contentions.map((c, i) => `${i + 1}. ${c.claim}`).join('\n')}
-    
-    Can we refine this?`;
-
-    addAskMessage({ role: 'user', content: summary });
-    navigate('/app/ask');
-
-    setAskLoading(true);
-    try {
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content
-      }));
-
-      const result = await askChat(summary, history, 'general', askConfig);
-
-      addAskMessage({
-        role: 'assistant',
-        content: result.response,
-        output: result
-      });
-    } catch (error) {
-      console.error('Failed to discuss result:', error);
-      if (!subError.handleSubscriptionError(error)) {
-        toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
-      }
-    } finally {
-      setAskLoading(false);
-    }
+  const handleDiscuss = () => {
+    if (generateResult) openDiscussion(navigate, generateDiscussPrompt(generateResult, t));
   };
 
   const handlePracticeCrossfire = () => {
@@ -283,7 +258,6 @@ export default function GeneratePage() {
           id: `e-thesis-${id}`,
           source: 'thesis',
           target: id,
-          animated: true,
           markerEnd: { type: MarkerType.ArrowClosed }
         });
       });
@@ -345,7 +319,7 @@ export default function GeneratePage() {
             id: `e-${parentId}-${id}`,
             source: parentId,
             target: id,
-            style: { stroke: '#3b82f6' },
+            style: { stroke: '#3b82f6', strokeDasharray: '6 4' },
             markerEnd: { type: MarkerType.ArrowClosed }
           });
         });
@@ -365,27 +339,28 @@ export default function GeneratePage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.generate')}</h1>
-          </div>
-        </AnimatedSection>
+        <PageHeader title={t('nav.generate')} />
         <CurrentDebateStrip side={generateForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)]">
           {/* Form */}
-          <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading || regeneratingSection !== null} debatePrefill={!workspace.context} />
-          </AnimatedSection>
+          </div>
 
           {/* Results */}
-          <div>
+          <div ref={results.ref} className="scroll-mt-24">
+            {run.error && (
+              <ToolRunErrorPanel
+                error={run.error}
+                onRetry={lastRun.current ? () => void submitGenerate(lastRun.current!.data, lastRun.current!.debateId) : undefined}
+                onDismiss={run.clearError}
+              />
+            )}
             {generateLoading ? (
-              <div key="generate-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
-                <StreamingIndicator messages={[t('generateForm.loadingMsg1'), t('generateForm.loadingMsg2'), t('generateForm.loadingMsg3'), t('generateForm.loadingMsg4'), t('generateForm.loadingMsg5')]} />
-              </div>
+              <ToolRunStatus label={t('generate.working', 'Writing your case…')} onCancel={run.cancel} />
             ) : generateResult ? (
-              <div ref={resultsAnchorRef} key="generate-results" id="generate-results" className="space-y-4">
+              <div key="generate-results" id="generate-results" className="space-y-4">
                 <GenerateResults
                   result={generateResult}
                   discoveredSources={discoveredSources}
@@ -399,13 +374,7 @@ export default function GeneratePage() {
                 />
               </div>
             ) : (
-              <div key="generate-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
-                <div className="mb-4 text-6xl">🎯</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{t('generate.emptyTitle')}</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {t('generate.emptyDesc')}
-                </p>
-              </div>
+              <EmptyState icon={Target} title={t('generate.emptyTitle')} description={t('generate.emptyDesc')} />
             )}
           </div>
         </div>

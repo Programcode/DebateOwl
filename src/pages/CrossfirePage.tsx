@@ -52,6 +52,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { cn } from '@/lib/utils';
+import { ClockAnnouncer, RoundClock } from '@/components/features/practice/RoundClock';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { CurrentDebateStrip, useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
@@ -114,11 +115,38 @@ function restoreState(userId: string | undefined, prefill: CrossfirePrefill | un
   } : undefined));
 }
 
-function formatRemaining(milliseconds: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1_000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+/**
+ * The live round clock ticks on its own, so the page doesn't re-render twice a second
+ * during a round. It calls onExpire once when time runs out.
+ */
+function CrossfireClock({ endsAt, onExpire }: { endsAt: number; onExpire: () => void }) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState(() => Date.now());
+  const expireRef = useRef(onExpire);
+  expireRef.current = onExpire;
+  const firedRef = useRef(false);
+  useEffect(() => {
+    firedRef.current = false;
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= endsAt && !firedRef.current) {
+        firedRef.current = true;
+        expireRef.current();
+      }
+    };
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [endsAt]);
+  const seconds = Math.max(0, Math.ceil((endsAt - now) / 1_000));
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-2 text-center">
+      <span className="flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" aria-hidden="true" />{t('crossfire.timerLabel')}</span>
+      <RoundClock secondsLeft={seconds} label={t('crossfire.timerLabel')} className="mt-0.5 block text-xl" />
+      <ClockAnnouncer secondsLeft={seconds} running />
+    </div>
+  );
 }
 
 function handleRadioKeys<T extends string>(
@@ -313,7 +341,6 @@ export default function CrossfirePage() {
   }, []);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const [now, setNow] = useState(Date.now());
   const [formError, setFormError] = useState('');
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
@@ -418,12 +445,6 @@ export default function CrossfirePage() {
     }).catch(() => toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' }));
   }, [recordResult, roundDebateId, state, t, workspace.context]);
 
-  useEffect(() => {
-    if (state.phase !== 'active') return;
-    setNow(Date.now());
-    const interval = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(interval);
-  }, [state.phase]);
 
   const runNextTurn = useCallback(async (
     snapshot: Extract<CrossfireState, { phase: 'active' }>,
@@ -526,9 +547,6 @@ export default function CrossfirePage() {
     if (next.phase === 'debriefing') void runDebrief(next);
   }, [runDebrief, state, t]);
 
-  useEffect(() => {
-    if (state.phase === 'active' && now >= state.endsAt) endSession('timer');
-  }, [endSession, now, state]);
 
   const startSession = () => {
     if (state.phase !== 'setup') return;
@@ -907,7 +925,8 @@ export default function CrossfirePage() {
   }
 
   const inputKind = expectedUserTurnKind(state);
-  const remaining = state.endsAt - now;
+  // The composer stays open while the AI works, so the next turn can be drafted; only sending waits.
+  const composerKind = inputKind ?? (state.config.mode === 'question-ai' ? 'question' : state.turns.length > 0 ? 'answer' : null);
   return (
     <div className={cn(stateMotionClass, 'container px-4 py-6 md:py-8')}>
       <WorkspaceToolScope context={workspace.context} />
@@ -919,12 +938,10 @@ export default function CrossfirePage() {
               <Badge variant="secondary">{t(`crossfire.style${state.config.style[0].toUpperCase()}${state.config.style.slice(1)}`)}</Badge>
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{t('crossfire.title')}</h1>
+            <p className="mt-1 max-w-3xl break-words text-sm text-muted-foreground">{state.config.resolution}</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg border border-border bg-card px-4 py-2 text-center" role="timer" aria-label={t('crossfire.timerLabel')}>
-              <span className="flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{t('crossfire.timerLabel')}</span>
-              <span className="mt-0.5 block font-mono text-xl font-semibold tabular-nums">{formatRemaining(remaining)}</span>
-            </div>
+            <CrossfireClock endsAt={state.endsAt} onExpire={() => endSession('timer')} />
             <Button data-testid="end-crossfire" variant="outline" disabled={!canEndCrossfireSession(state)} onClick={() => endSession('manual')}>
               {t('crossfire.endSession')}
             </Button>
@@ -965,10 +982,10 @@ export default function CrossfirePage() {
           </div>
         )}
 
-        {inputKind && (
+        {composerKind && (
           <Card>
             <CardContent className="space-y-3 p-4 sm:p-5">
-              <Label htmlFor="crossfire-input">{inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}</Label>
+              <Label htmlFor="crossfire-input">{composerKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}</Label>
               {voiceActive && <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void stopCapture()} />}
               <Textarea
                 id="crossfire-input"
@@ -982,14 +999,14 @@ export default function CrossfirePage() {
                     void submitTurn();
                   }
                 }}
-                placeholder={voiceActive ? t('voiceRound.mic.draftPlaceholder') : inputKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
+                placeholder={voiceActive ? t('voiceRound.mic.draftPlaceholder') : composerKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
                 className="min-h-28 resize-y"
               />
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-xs text-muted-foreground">{t('crossfire.charactersRemaining', { count: MAX_CROSSFIRE_TURN_CHARS - draftTurn.length })}</span>
-                <Button data-testid="submit-turn" onClick={() => void submitTurn()} disabled={!draftTurn.trim() && !listening}>
+                <Button data-testid="submit-turn" onClick={() => void submitTurn()} disabled={!inputKind || (!draftTurn.trim() && !listening)}>
                   <Send className="mr-2 h-4 w-4" />
-                  {inputKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
+                  {composerKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
                 </Button>
               </div>
             </CardContent>
@@ -999,6 +1016,8 @@ export default function CrossfirePage() {
     </div>
   );
 }
+
+const NEW_TURN_MS = 1_000;
 
 function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMotion: boolean | null }) {
   const { t } = useTranslation();
@@ -1016,9 +1035,11 @@ function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMot
             <motion.article
               key={turn.id}
               id={`crossfire-turn-${turn.id}`}
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18 }}
+              // Only a turn that just arrived fades in; a phase change re-renders the
+              // transcript without replaying every card.
+              initial={reduceMotion || Date.now() - turn.createdAt > NEW_TURN_MS ? false : { opacity: 0, transform: 'translateY(4px)' }}
+              animate={{ opacity: 1, transform: 'translateY(0px)' }}
+              transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
               className={cn(
                 'scroll-mt-24 rounded-lg border p-4',
                 turn.speaker === 'user' ? 'ml-auto max-w-[92%] border-primary/25 bg-primary/5' : 'mr-auto max-w-[92%] border-border bg-card',

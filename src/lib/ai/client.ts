@@ -1287,11 +1287,12 @@ function expectedContentionCount(length: GenerateInput['length']): number {
   }
 }
 
-export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<GenerateOutput>> {
+export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal): Promise<ResultWithSources<GenerateOutput>> {
   const inputWithLanguage = withOutputLanguage(input as unknown as Record<string, unknown>);
   const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
     workspaceContext,
     debateId,
+    signal,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
@@ -1308,10 +1309,11 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
   return response;
 }
 
-export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<AttackOutput>> {
+export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal): Promise<ResultWithSources<AttackOutput>> {
   const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
     debateId,
+    signal,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1324,10 +1326,11 @@ export async function attackCase(input: AttackInput, config: ProviderConfig, wor
   return response;
 }
 
-export async function brainstorm(input: BrainstormInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<BrainstormOutput>> {
+export async function brainstorm(input: BrainstormInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal): Promise<ResultWithSources<BrainstormOutput>> {
   const response = await callSupabaseAI<ResultWithSources<BrainstormOutput>>('brainstorm', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
     debateId,
+    signal,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {
@@ -1340,7 +1343,7 @@ export async function brainstorm(input: BrainstormInput, config: ProviderConfig,
   return response;
 }
 
-export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null): Promise<ResultWithSources<FactoidsOutput>> {
+export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal): Promise<ResultWithSources<FactoidsOutput>> {
   const inputWithLanguage = withOutputLanguage({
     ...input,
     region: input.region?.trim() || 'Global',
@@ -1349,6 +1352,7 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig, wor
   const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
     workspaceContext,
     debateId,
+    signal,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const parsed = FactoidsOutputSchema.safeParse(data.output);
