@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import { Check, Crown, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
@@ -29,29 +29,16 @@ const Pricing = () => {
             <div className="absolute inset-0 animated-grid opacity-40" />
 
             <div className="section-container relative z-10">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="mb-14 text-center"
-                >
-                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
-                        {t('pricing.title')}
-                    </h2>
+                <Reveal className="mb-14 text-center">
+                    <h2 className="section-heading">{t('pricing.title')}</h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
                         {t('pricing.subtitle')}
                     </p>
-                </motion.div>
+                </Reveal>
 
                 <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        viewport={{ once: true }}
-                        className="rounded-2xl border border-border/70 bg-card/80 p-7 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
-                    >
+                    <Reveal>
+                    <div className="h-full rounded-2xl border border-border/70 bg-card p-7 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
                             <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -65,7 +52,7 @@ const Pricing = () => {
 
                         <ul className="mt-6 space-y-3">
                             {TRIAL_FEATURES.map((feature) => (
-                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90 transition-colors duration-200 hover:text-foreground">
+                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
                                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{feature}</span>
                                 </li>
@@ -76,15 +63,11 @@ const Pricing = () => {
                             <Zap className="h-4 w-4" />
                             {t('pricing.startTrial')}
                         </Link>
-                    </motion.div>
+                    </div>
+                    </Reveal>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                        viewport={{ once: true }}
-                        className="relative rounded-2xl border-2 border-primary/45 bg-card/85 p-7 shadow-xl backdrop-blur ring-1 ring-primary/10 transition-all duration-300 hover:-translate-y-1 motion-reduce:hover:translate-y-0"
-                    >
+                    <Reveal delay={0.05}>
+                    <div className="relative h-full rounded-2xl border-2 border-primary/45 bg-card p-7 shadow-xl ring-1 ring-primary/10 transition-[border-color,box-shadow] duration-200 hover:border-primary/60">
                         <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
                             <Sparkles className="h-3.5 w-3.5" />
                             {t('pricing.recommended')}
@@ -103,29 +86,24 @@ const Pricing = () => {
 
                         <ul className="mt-6 space-y-3">
                             {PRO_FEATURES.map((feature) => (
-                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90 transition-colors duration-200 hover:text-foreground">
+                                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
                                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{feature}</span>
                                 </li>
                             ))}
                         </ul>
 
-                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient shimmer mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
+                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
                             <Crown className="relative z-10 h-4 w-4" />
                             <span className="relative z-10">{t('pricing.subscribe')}</span>
                         </Link>
-                    </motion.div>
+                    </div>
+                    </Reveal>
                 </div>
 
-                <motion.p
-                    initial={{ opacity: 0, y: 12 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.2 }}
-                    viewport={{ once: true }}
-                    className="mt-7 text-center text-sm text-muted-foreground"
-                >
+                <p className="mt-7 text-center text-sm text-muted-foreground">
                     {t('pricing.noFreePlan')}
-                </motion.p>
+                </p>
             </div>
         </section>
     );

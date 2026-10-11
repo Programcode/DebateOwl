@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { WebTelemetry } from "./components/WebTelemetry";
 import "./i18n";
+import "@fontsource-variable/inter";
 import "./index.css";
 import { registerServiceWorker } from "./register-service-worker";
 import { initializeObservability } from "./lib/observability";

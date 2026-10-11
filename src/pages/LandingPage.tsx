@@ -1,6 +1,5 @@
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
-import SocialProof from "@/components/landing/SocialProof";
 import Features from "@/components/landing/Features";
 import DeepDive from "@/components/landing/DeepDive";
 import UseCases from "@/components/landing/UseCases";
@@ -17,7 +16,6 @@ const LandingPage = () => {
             <Navbar />
             <main>
                 <Hero />
-                <SocialProof />
                 <WhatsNew />
                 <Features />
                 <Pricing />

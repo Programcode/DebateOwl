@@ -5,7 +5,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 
 const FAQ = () => {
     const { t } = useTranslation();
@@ -21,23 +21,12 @@ const FAQ = () => {
     return (
         <section id="faq" className="bg-secondary/5 py-24">
             <div className="section-container max-w-3xl">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="mb-12 text-center"
-                >
-                    <h2 className="mb-4 text-3xl font-bold tracking-tight">{t('faq.title')}</h2>
+                <Reveal className="mb-12 text-center">
+                    <h2 className="section-heading mb-4">{t('faq.title')}</h2>
                     <p className="text-muted-foreground">{t('faq.subtitle')}</p>
-                </motion.div>
+                </Reveal>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    viewport={{ once: true }}
-                >
+                <Reveal delay={0.05}>
                     <Accordion type="single" collapsible className="w-full">
                         {faqs.map((faq, index) => (
                             <AccordionItem key={index} value={`item-${index}`}>
@@ -48,7 +37,7 @@ const FAQ = () => {
                             </AccordionItem>
                         ))}
                     </Accordion>
-                </motion.div>
+                </Reveal>
             </div>
         </section>
     );

@@ -6,7 +6,6 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## In progress
 
-- **Design audit.** UI audit against Emil Kowalski's Apple-design and motion skills: broken toast stacking, collapsed text-colour tokens, a global CSS layer that overrides the primitives, touch and reduced-motion gaps, wayfinding and undo. Shipping as a four-PR stack: Foundations, Shell, AI tools, Landing. Plan: [2026-10-09 design audit](2026-10-09-design-audit.md).
 - **Staging that tracks main.** Audit of staging, the VPS sync timer, the seed, and what to delete. Plan: [2026-10-03 staging loop](2026-10-03-staging-loop.md). Previews come from #95 and the staging spec fix from #100.
 
 ## Backlog
@@ -23,6 +22,7 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 These plans are finished. Most of their files were removed and git history keeps them. The linked plans below are kept as the record, and each says `**Status:** Shipped`.
 
+- Design audit: UI audit against Emil Kowalski's Apple-design and motion skills, shipped as a four-PR stack (Foundations #124, Shell #126, AI tools, Landing): fixed toast stacking, text-colour tokens, the global CSS override layer, touch and reduced-motion gaps, wayfinding, undo and the landing loops. Plan: [2026-10-09 design audit](2026-10-09-design-audit.md).
 - Missing translation keys: 90 literal keys and 40 count forms added to each catalog. Plan: [2026-10-02 missing translation keys](2026-10-02-missing-translation-keys.md).
 - Voice Sparring and Crossfire: #84. Plan kept as the record: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
 - Debate-aware AI and smaller modules: #75. Plan kept as the record: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
