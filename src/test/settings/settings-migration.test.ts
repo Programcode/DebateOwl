@@ -51,7 +51,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 const features = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'sparring'] as const;
 const savedWithTemperature = Object.fromEntries(features.map((feature) => [
   feature,
-  { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7, reasoningEffort: 'low' },
+  { provider: 'openrouter', model: 'openai/gpt-6-luna', temperature: 0.7, reasoningEffort: 'low' },
 ]));
 
 describe('settings hydration cleanup', () => {
@@ -73,7 +73,7 @@ describe('settings hydration cleanup', () => {
 
     const saved = db.row.feature_configs as Record<string, Row>;
     expect(Object.keys(saved.ask)).not.toContain('temperature');
-    expect(saved.ask.model).toBe('openai/gpt-5.6-luna');
+    expect(saved.ask.model).toBe('openai/gpt-6-luna');
   });
 
   it('does not overwrite a settings save that lands before the cleanup', async () => {
@@ -83,7 +83,7 @@ describe('settings hydration cleanup', () => {
         ...db.row,
         feature_configs: {
           ...savedWithTemperature,
-          ask: { provider: 'openrouter', model: 'google/gemini-3.8-flash', reasoningEffort: 'low' },
+          ask: { provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', reasoningEffort: 'low' },
         },
         updated_at: '2026-10-09T17:00:00.000Z',
       };
@@ -92,6 +92,6 @@ describe('settings hydration cleanup', () => {
     await useSettingsStore.getState().hydrateFromServer();
 
     const saved = db.row.feature_configs as Record<string, Row>;
-    expect(saved.ask.model).toBe('google/gemini-3.8-flash');
+    expect(saved.ask.model).toBe('meta/muse-spark-1.3-contributor');
   });
 });

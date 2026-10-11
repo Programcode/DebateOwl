@@ -31,6 +31,7 @@ import {
   isModelSelection,
   isReasoningEffort,
   MAX_REQUEST_OUTPUT_TOKENS,
+  retiredModelSuccessor,
   type ModelCatalogEntry,
   type ModelSelection,
   type ReasoningEffort,
@@ -122,7 +123,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
-  const rawModel = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  const sentModel = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  const rawModel = retiredModelSuccessor(sentModel) ?? sentModel;
   if (!isModelSelection(rawModel)) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
   const requestedModel: ModelSelection = rawModel;
   const requestedReasoningEffort = body.reasoningEffort === undefined

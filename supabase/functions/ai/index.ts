@@ -30,6 +30,7 @@ import {
   effectiveReasoningEffort,
   isModelSelection,
   isReasoningEffort,
+  retiredModelSuccessor,
   type ModelCatalogEntry,
   type ModelSelection,
 } from "../_shared/model-catalog.ts";
@@ -145,7 +146,8 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
   const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
   const rawInput = body.input;
-  const rawModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  const sentModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  const rawModel = retiredModelSuccessor(sentModel) ?? sentModel;
   if (!isModelSelection(rawModel)) {
     log(requestId, "WARN", "Rejected unsupported model/provider combination", { model: rawModel });
     return badRequest("Unsupported model or provider combination", corsHeaders);

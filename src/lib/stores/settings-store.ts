@@ -10,6 +10,7 @@ import {
   getModelCatalogEntry,
   isAutoModelSelection,
   isReasoningEffort,
+  retiredModelSuccessor,
 } from '../../../supabase/functions/_shared/model-catalog';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
@@ -80,7 +81,7 @@ function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): str
   const model = value.trim();
   if (isAutoModelSelection(model)) return model;
   if (getModelCatalogEntry(model)) return model;
-  return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
+  return retiredModelSuccessor(model) ?? LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
 }
 
 function normalizeFeatureConfig(
