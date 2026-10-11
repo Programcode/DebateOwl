@@ -29,41 +29,41 @@ function jevReturning(result: JevDecisionResult, observed?: { calls: number; sta
   };
 }
 
-Deno.test("Auto Fast normally resolves to GLM for a Basic user", async () => {
+Deno.test("Auto Fast normally resolves to Claude Haiku for a Basic user", async () => {
   const resolved = await resolveModelSelection({
     requestedModel: AUTO_FAST,
     feature: "generate",
     input: { motion: "This house would subsidize public transit", language: "en" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash")),
+    callJevImpl: jevReturning(choiceResult("anthropic/claude-haiku-5.5")),
   });
-  if (resolved.requestedModel !== AUTO_FAST || resolved.resolvedModel !== "z-ai/glm-5.3-flash" || resolved.usedFallback) {
+  if (resolved.requestedModel !== AUTO_FAST || resolved.resolvedModel !== "anthropic/claude-haiku-5.5" || resolved.usedFallback) {
     throw new Error(`unexpected Auto Fast resolution: ${JSON.stringify(resolved)}`);
   }
 });
 
-Deno.test("Auto Fast can route logic-heavy work to DeepSeek Flash", async () => {
+Deno.test("Auto Fast can route long-context work to Muse Spark", async () => {
   const resolved = await resolveModelSelection({
     requestedModel: AUTO_FAST,
     feature: "attack",
-    input: { caseText: "A long causal chain requiring adversarial logical analysis" },
+    input: { caseText: "A very long multilingual case file requiring broad context handling" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("deepseek/deepseek-v4-flash-0731")),
+    callJevImpl: jevReturning(choiceResult("meta/muse-spark-1.3-contributor")),
   });
-  if (resolved.resolvedModel !== "deepseek/deepseek-v4-flash-0731" || resolved.usedFallback) {
-    throw new Error(`logic-heavy route was not accepted: ${JSON.stringify(resolved)}`);
+  if (resolved.resolvedModel !== "meta/muse-spark-1.3-contributor" || resolved.usedFallback) {
+    throw new Error(`long-context route was not accepted: ${JSON.stringify(resolved)}`);
   }
 });
 
-Deno.test("Auto Fast falls back to GLM when Jev is uncertain or unavailable", async () => {
+Deno.test("Auto Fast falls back to Claude Haiku when Jev is uncertain or unavailable", async () => {
   const uncertain = await resolveModelSelection({
     requestedModel: AUTO_FAST,
     feature: "ask",
     input: { message: "Help me" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("openai/gpt-5.6-luna", 0.54)),
+    callJevImpl: jevReturning(choiceResult("openai/gpt-6-luna", 0.54)),
   });
-  if (uncertain.resolvedModel !== "z-ai/glm-5.3-flash" || !uncertain.usedFallback) throw new Error("uncertain route did not fall back");
+  if (uncertain.resolvedModel !== "anthropic/claude-haiku-5.5" || !uncertain.usedFallback) throw new Error("uncertain route did not fall back");
 
   const unavailable = await resolveModelSelection({
     requestedModel: AUTO_FAST,
@@ -72,7 +72,7 @@ Deno.test("Auto Fast falls back to GLM when Jev is uncertain or unavailable", as
     canAccessProModels: false,
     callJevImpl: () => Promise.reject(Object.assign(new Error("provider unavailable"), { usage: { inputTokens: 9, outputTokens: 0 } })),
   });
-  if (unavailable.resolvedModel !== "z-ai/glm-5.3-flash" || !unavailable.usedFallback) throw new Error("failed route did not fall back");
+  if (unavailable.resolvedModel !== "anthropic/claude-haiku-5.5" || !unavailable.usedFallback) throw new Error("failed route did not fall back");
   if (unavailable.jevUsage?.inputTokens !== 9) throw new Error("failed route usage was discarded");
 });
 
@@ -82,9 +82,9 @@ Deno.test("Auto Fast ignores a Jev label outside its candidate set", async () =>
     feature: "generate",
     input: { motion: "Should cities ban cars?" },
     canAccessProModels: false,
-    callJevImpl: jevReturning(choiceResult("anthropic/claude-opus-5")),
+    callJevImpl: jevReturning(choiceResult("anthropic/claude-opus-5.5")),
   });
-  if (resolved.resolvedModel !== "z-ai/glm-5.3-flash" || !resolved.usedFallback) throw new Error("unsupported label escaped candidate gate");
+  if (resolved.resolvedModel !== "anthropic/claude-haiku-5.5" || !resolved.usedFallback) throw new Error("unsupported label escaped candidate gate");
 });
 
 Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
@@ -95,7 +95,7 @@ Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
       feature: "generate",
       input: { motion: "Should cities ban cars?" },
       canAccessProModels: false,
-      callJevImpl: jevReturning(choiceResult("openai/gpt-5.6-sol"), observed),
+      callJevImpl: jevReturning(choiceResult("openai/gpt-6.1-sol"), observed),
     });
   } catch (error) {
     if (!(error instanceof Error) || !error.message.includes("Pro")) throw error;
@@ -106,7 +106,7 @@ Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
 });
 
 Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
-  for (const model of ["openai/gpt-5.6-sol", "anthropic/claude-opus-5", "anthropic/claude-sonnet-5"]) {
+  for (const model of ["anthropic/claude-opus-5.5", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-sol"]) {
     const resolved = await resolveModelSelection({
       requestedModel: AUTO_PRO,
       feature: "generate",
@@ -122,9 +122,9 @@ Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
     feature: "generate",
     input: { motion: "Complex international law motion" },
     canAccessProModels: true,
-    callJevImpl: jevReturning(choiceResult("meta/muse-spark-1.3")),
+    callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash")),
   });
-  if (outsidePool.resolvedModel !== "anthropic/claude-sonnet-5" || !outsidePool.usedFallback) {
+  if (outsidePool.resolvedModel !== "anthropic/claude-opus-5.5" || !outsidePool.usedFallback) {
     throw new Error("Auto Pro accepted a model outside its pool");
   }
 });
@@ -132,13 +132,13 @@ Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
 Deno.test("manual model selections bypass Jev", async () => {
   const observed = { calls: 0 };
   const resolved = await resolveModelSelection({
-    requestedModel: "google/gemini-3.8-flash",
+    requestedModel: "openai/gpt-6-luna",
     feature: "ask",
     input: { message: "Hi" },
     canAccessProModels: false,
     callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash"), observed),
   });
-  if (resolved.resolvedModel !== "google/gemini-3.8-flash" || resolved.requestedModel !== "google/gemini-3.8-flash") {
+  if (resolved.resolvedModel !== "openai/gpt-6-luna" || resolved.requestedModel !== "openai/gpt-6-luna") {
     throw new Error("manual selection changed");
   }
   if (observed.calls !== 0) throw new Error("manual selection called Jev");

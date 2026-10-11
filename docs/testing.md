@@ -86,7 +86,7 @@ OPENROUTER_API_KEY=... deno run --allow-read --allow-write --allow-env=OPENROUTE
   --allow-net=openrouter.ai scripts/prompt-examples.ts supabase/functions /tmp/after.json
 ```
 
-This sends the fourteen prompt examples to one real model (GPT-5.6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
+This sends the fourteen prompt examples to one real model (GPT-6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
 
 ### Live Jev contract smoke
 
@@ -215,7 +215,7 @@ To check one feature by hand, or keep evidence for a change, use the same stack 
 LIVE_PROVIDERS=1 LIVE_OPENROUTER_API_KEY=... LIVE_EXA_API_KEY=... ./.superset/db-gate.sh
 ```
 
-Live mode uses the same locked stack but skips pgTAP and the fake-provider specs. It runs `e2e/live/` on desktop Chromium against real OpenRouter, Jev, and Exa. Imported web pages are fetched live too. The fake provider becomes a recording proxy. It forwards every chat call to OpenRouter with the model pinned to `LIVE_MODEL` (default `meta/muse-spark-1.3-contributor`; CI reads the `LIVE_MODEL` repository variable, which is unset), passes Jev decisions through unchanged, and refuses calls past `MAX_UPSTREAM_CALLS` (200). The default is the cheapest model that supports every request parameter the app sends, including `response_format` and reasoning effort. It is test-only and not in the app catalog, so users cannot pick it. Meta is its only provider, so an outage there fails the gate instead of failing over.
+Live mode uses the same locked stack but skips pgTAP and the fake-provider specs. It runs `e2e/live/` on desktop Chromium against real OpenRouter, Jev, and Exa. Imported web pages are fetched live too. The fake provider becomes a recording proxy. It forwards every chat call to OpenRouter with the model pinned to `LIVE_MODEL` (default `meta/muse-spark-1.3-contributor`; CI reads the `LIVE_MODEL` repository variable, which is unset), passes Jev decisions through unchanged, and refuses calls past `MAX_UPSTREAM_CALLS` (200). The default is the cheapest model that supports every request parameter the app sends, including `response_format` and reasoning effort. It is also the Basic catalog model "Muse Spark 1.3", so a live run that selects it cannot be told apart from the pin by the upstream model alone; recipes check the requested model instead. Meta is its only provider, so an outage there fails the gate instead of failing over.
 
 The specs cover web-researched case generation, verified Factoids citations, Ask with web search, URL import, streamed Ask, Attack, Brainstorm, a judged sparring round, and Crossfire with live Jev signals. Outputs vary, so tests assert structure rather than text:
 
@@ -288,8 +288,8 @@ npx playwright test --config=playwright.production.config.ts
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);
 - `ai` returns 401, not a 5xx, to an unauthenticated call;
 - the canary account signs in, opens Generate, and Settings shows its Pro plan (a row-level-security read), without spending an AI request;
-- the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`;
-- the canary account generates a three-contention case with GPT-5.6 Luna through `ai`.
+- the dedicated canary account gets a streamed Claude Haiku 5.5 answer from `ai-stream`;
+- the canary account generates a three-contention case with Claude Haiku 5.5 through `ai`.
 
 The last two checks are the only production writes, and they touch only the canary account: its `ai_requests` usage rows and whatever the Generate page saves for it. The dedicated canary account has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
 

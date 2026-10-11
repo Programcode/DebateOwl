@@ -30,6 +30,7 @@ import {
   effectiveReasoningEffort,
   isModelSelection,
   isReasoningEffort,
+  retiredModelSuccessor,
   type ModelCatalogEntry,
   type ModelSelection,
 } from "../_shared/model-catalog.ts";
@@ -145,7 +146,8 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
   const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
   const rawInput = body.input;
-  const rawModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  const sentModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
+  const rawModel = retiredModelSuccessor(sentModel) ?? sentModel;
   if (!isModelSelection(rawModel)) {
     log(requestId, "WARN", "Rejected unsupported model/provider combination", { model: rawModel });
     return badRequest("Unsupported model or provider combination", corsHeaders);
@@ -159,7 +161,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     ? undefined
     : isReasoningEffort(body.reasoningEffort) ? body.reasoningEffort : null;
   if (requestedReasoningEffort === null) return badRequest("Invalid reasoning effort", corsHeaders);
-  const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   // A voice round. It sits beside `input` so servers from before voice ignore it.
   const voiceRequested = body.voice === true;
   // The per-user custom system prompt was replaced by each Current Debate's
@@ -610,7 +611,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     model: modelEntry.id,
     requestedReasoningEffort: requestedReasoningEffort ?? "medium",
     reasoningEffort,
-    supportsTemperature: modelEntry.supportsTemperature,
   });
 
   const startTime = Date.now();
@@ -628,7 +628,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     },
     callModel: async (args) => {
       try {
-        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.temperature, args.reasoningEffort, args.signal);
+        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, args.signal);
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
@@ -683,7 +683,6 @@ export async function handleRequest(req: Request): Promise<Response> {
       userId,
       provider,
       model,
-      temperature,
       reasoningEffort,
       workSignal,
       voice: voiceRequested,
@@ -748,7 +747,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     const systemPrompt = await buildSystemPromptFor(feature);
     const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
     const messages = [{ role: "user", content: userPrompt }];
-    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
     const output = cleanGeneratedText(fallbackResult.output);
 
     const latencyMs = Date.now() - startTime;

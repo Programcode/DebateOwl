@@ -100,7 +100,7 @@ test('visible Ask advanced controls use the non-streaming contract', async ({ pa
         outputLanguage: 'en',
         theme: 'light',
         featureConfigs: {
-          ask: { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+          ask: { provider: 'openai', model: 'gpt-5.4-mini' },
         },
       },
       version: 0,

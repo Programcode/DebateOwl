@@ -37,7 +37,7 @@ vi.mock('@/lib/voice/opponent-voice', () => ({
   },
 }));
 
-const CONFIG: ProviderConfig = { provider: 'mock', model: 'local', temperature: 0.4 };
+const CONFIG: ProviderConfig = { provider: 'mock', model: 'local' };
 const SETTINGS = { outputLanguage: 'en' as const, getFeatureConfig: vi.fn((): ProviderConfig => CONFIG) };
 
 vi.mock('@/lib/stores/settings-store', () => ({

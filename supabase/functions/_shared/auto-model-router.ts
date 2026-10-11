@@ -18,16 +18,15 @@ const ROUTING_CONFIDENCE = 0.55;
 const MAX_ROUTING_STATE_CHARS = 8_000;
 
 const FAST_CANDIDATES = {
-  "z-ai/glm-5.3-flash": "Default for ordinary structured DebateLab work and efficient long-context requests.",
-  "openai/gpt-5.6-luna": "Best for short latency-sensitive conversation and simple coaching.",
-  "google/gemini-3.8-flash": "Best for very long input, multilingual output, or broad context handling.",
-  "deepseek/deepseek-v4-flash-0731": "Best for logic-heavy analysis, adversarial attack, or structured reasoning at low cost.",
+  "anthropic/claude-haiku-5.5": "Default for ordinary DebateLab work: cases, rebuttals, coaching, and structured output.",
+  "openai/gpt-6-luna": "Best for short latency-sensitive conversation and simple coaching.",
+  "meta/muse-spark-1.3-contributor": "Best for very long input, multilingual output, or broad context handling.",
 } as const;
 
 const PRO_CANDIDATES = {
-  "openai/gpt-5.6-sol": "Best for complex structured reasoning and reliable multi-part analysis.",
-  "anthropic/claude-opus-5": "Best for nuanced rhetoric, adversarial critique, and demanding long-form writing.",
-  "anthropic/claude-sonnet-5": "Balanced choice for professional work when no specialist clearly wins.",
+  "anthropic/claude-opus-5.5": "Default for professional DebateLab work: nuanced rhetoric, adversarial critique, and long-form writing.",
+  "anthropic/claude-sonnet-5.5": "Best for quick, simpler Pro requests where speed matters more than depth.",
+  "openai/gpt-6.1-sol": "Best for complex structured reasoning and reliable multi-part analysis.",
 } as const;
 
 type AutoCandidate = keyof typeof FAST_CANDIDATES | keyof typeof PRO_CANDIDATES;
@@ -73,7 +72,7 @@ function routingState(args: ResolveModelSelectionArgs) {
 }
 
 function fallbackFor(selection: typeof AUTO_FAST | typeof AUTO_PRO): AutoCandidate {
-  return selection === AUTO_FAST ? "z-ai/glm-5.3-flash" : "anthropic/claude-sonnet-5";
+  return selection === AUTO_FAST ? "anthropic/claude-haiku-5.5" : "anthropic/claude-opus-5.5";
 }
 
 function isAbort(error: unknown, signal?: AbortSignal): boolean {

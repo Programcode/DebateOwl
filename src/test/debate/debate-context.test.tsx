@@ -128,7 +128,7 @@ describe('Current Debate context in requests and the Review control', () => {
   });
 
   const brainstormInput = { motion: 'This House would make public transport free', side: 'pro' as const, outputMode: 'topfive' as const, language: 'en' };
-  const config = { provider: 'openrouter' as const, model: 'openai/gpt-5.6-luna', temperature: 0.7 };
+  const config = { provider: 'openrouter' as const, model: 'openai/gpt-6-luna' };
   const lastBody = () => (supabaseMock.functions.invoke.mock.calls.at(-1) as unknown as [string, { body: Record<string, unknown> }])[1].body;
 
   it('sends IDs only, and a Review choice lasts for exactly one successful request', async () => {

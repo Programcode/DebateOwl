@@ -24,7 +24,7 @@ vi.mock('@/lib/stores/session-store', () => ({
 
 vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: () => ({
-    getFeatureConfig: () => ({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 }),
+    getFeatureConfig: () => ({ provider: 'google', model: 'gemini-3-flash-preview' }),
     outputLanguage: 'es',
   }),
 }));

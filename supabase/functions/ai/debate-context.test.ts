@@ -126,7 +126,7 @@ function aiRequest(body: Record<string, unknown>, path = "ai"): Request {
   return new Request(`http://127.0.0.1/functions/v1/${path}`, {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "openai/gpt-5.6-luna", ...body }),
+    body: JSON.stringify({ model: "openai/gpt-6-luna", ...body }),
   });
 }
 
