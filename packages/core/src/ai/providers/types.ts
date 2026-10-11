@@ -26,6 +26,5 @@ export const AVAILABLE_MODELS = MODEL_CATALOG;
 export interface ProviderConfig {
   provider: string;
   model: string;
-  temperature: number;
   reasoningEffort?: ReasoningEffort;
 }

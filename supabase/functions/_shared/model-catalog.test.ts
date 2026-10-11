@@ -5,6 +5,7 @@ import {
   getModelCatalogEntry,
   isReasoningEffort,
   MODEL_CATALOG,
+  retiredModelSuccessor,
 } from "./model-catalog.ts";
 
 Deno.test("every catalog model supports the forced trial effort and both defaults resolve to valid tiers", () => {
@@ -19,9 +20,9 @@ Deno.test("every catalog model supports the forced trial effort and both default
 
 Deno.test("model catalog marks only the approved Pro entries as Pro-only", () => {
   const basic = new Set([
-    "openai/gpt-5.6-luna",
-    "google/gemini-3.8-flash",
-    "deepseek/deepseek-v4-flash-0731",
+    "anthropic/claude-haiku-5.5",
+    "openai/gpt-6-luna",
+    "meta/muse-spark-1.3-contributor",
   ]);
   for (const entry of MODEL_CATALOG) {
     if (entry.isProOnly === basic.has(entry.id)) throw new Error(`incorrect tier for ${entry.id}`);
@@ -38,15 +39,27 @@ Deno.test("reasoning effort validator accepts only the product values", () => {
 });
 
 Deno.test("trial and unsupported Pro reasoning resolve server-side", () => {
-  if (effectiveReasoningEffort("openai/gpt-5.6-luna", "high", false) !== "low") {
+  if (effectiveReasoningEffort("openai/gpt-6-luna", "high", false) !== "low") {
     throw new Error("trial request did not force low");
   }
-  if (effectiveReasoningEffort("anthropic/claude-sonnet-5", "medium", true) !== "medium") {
+  if (effectiveReasoningEffort("anthropic/claude-opus-5.5", "medium", true) !== "medium") {
     throw new Error("native Pro medium was changed");
   }
-  for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
+  for (const model of ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
     if (effectiveReasoningEffort(model, "medium", true) !== "low") {
       throw new Error(`unsupported Pro medium was not lowered for ${model}`);
     }
   }
+});
+
+Deno.test("retired model IDs resolve to catalog models without crossing into Pro", () => {
+  const retiredBasic = ["openai/gpt-5.6-luna", "deepseek/deepseek-v4-flash-0731"];
+  const retiredPro = ["anthropic/claude-sonnet-5", "anthropic/claude-opus-5", "openai/gpt-5.6-sol", "openai/gpt-5.6-terra", "meta/muse-spark-1.3"];
+  for (const id of [...retiredBasic, ...retiredPro]) {
+    const successor = retiredModelSuccessor(id);
+    const entry = successor && getModelCatalogEntry(successor);
+    if (!entry) throw new Error(`retired ${id} has no catalog successor`);
+    if (retiredBasic.includes(id) && entry.isProOnly) throw new Error(`retired Basic ${id} resolves to Pro ${entry.id}`);
+  }
+  if (retiredModelSuccessor(DEFAULT_MODEL) !== undefined) throw new Error("a current model was treated as retired");
 });

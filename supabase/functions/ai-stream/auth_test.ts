@@ -21,7 +21,7 @@ const send = (authorization?: string) =>
       "Content-Type": "application/json",
       ...(authorization === undefined ? {} : { Authorization: authorization }),
     },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Question", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Question", mode: "general" } }),
   });
 
 Deno.test("ai-stream refuses missing, empty, non-Bearer and rejected tokens with the shared auth errors", async () => {
