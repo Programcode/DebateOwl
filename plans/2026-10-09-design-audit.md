@@ -1,6 +1,6 @@
 # Design audit: Apple design and Emil Kowalski standards
 
-**Status:** Shipped. Audit of `main` at `56a94d7` on 2026-10-09, fixed in the four-PR stack in [Suggested order of work](#suggested-order-of-work). Rows marked ✅ are done, with the PR that did them; rows marked ➖ were changed or skipped, with the reason in the row.
+**Status:** Shipped. Audit of `main` at `56a94d7` on 2026-10-09, fixed in the four-PR stack in [Suggested order of work](#suggested-order-of-work). Rows marked ✅ are done, with the PR that did them; no rows were skipped.
 
 ## What this is
 
@@ -148,7 +148,7 @@ Rows follow Emil Kowalski's required Before / After / Why format. The tiers foll
 | ✅ PR3 · `AskChat.tsx:693`, `GenerateForm.tsx:142-154`, `VoiceMicControl.tsx:41`; `TimerPage.tsx:334`, `SparringRound.tsx:150`, `:157`, `CrossfirePage.tsx:924-926` | Three listening indicators and three countdown urgency treatments; the Timer goes calm again at 0:00 | One `<ListeningIndicator>` and one `<RoundClock>`: amber at 30s or less, destructive at 0:00 | Things that look the same should behave the same. |
 | ✅ PR3 · `TimerPage.tsx:334` | `font-mono` (Space Mono) with `tracking-tighter` on the digits | Inter with `tabular-nums` and `tracking-[-0.02em]` | The wide colon reads "4 : 00"; negative tracking on a monospace face fights its design. |
 | ✅ PR4 · `landing/*` section h2s; `Features.tsx:37` | Different sizes and tracking per section; the orb's `-translate-y-1/2` is overridden by its keyframe | One `.section-heading`; position the orb with `top` | Cohesion; the orb jumps under reduced motion. |
-| ➖ PR2 · Login (`LoginPage.tsx:157-161`), app header logo | The login card shows a generic sparkle tile; the app shows the tree-and-scales logo in a white tile in both themes | The real mark on Login; a dark-mode variant of the logo tile | Brand consistency across surfaces. PR2 puts the real mark on Login and the public pages. The dark-mode tile is not done: `favicon-72.png` is RGB with no alpha, so the white is baked into the mark and a dark variant needs a new asset. |
+| ✅ PR2 · Login (`LoginPage.tsx:157-161`), app header logo | The login card shows a generic sparkle tile; the app shows the tree-and-scales logo in a white tile in both themes | The real mark on Login; a dark-mode variant of the logo tile | Brand consistency across surfaces. PR2 puts the real mark on Login and the public pages. The dark-mode tile stays as it is, by Adam's decision on 2026-10-11; no new asset. |
 
 ### 6. Accessibility
 
