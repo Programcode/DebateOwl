@@ -29,7 +29,7 @@ export interface CrossfireHandlerOptions {
 // apply, and the combined prompt stays inside a fixed character budget.
 export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHandlerOptions): Promise<Response> {
   const feature = "crossfire" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, startTime, recordMainResult } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, startTime, recordMainResult } = ctx;
   const { input: crossfireInput, sources: crossfireSources, workspaceSources } = options;
 
   if (!crossfireInput) throw new Error("Crossfire input was not validated");
@@ -62,7 +62,6 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     model,
     systemPrompt,
     [{ role: "user", content: userPrompt }],
-    temperature,
     reasoningEffort,
     workSignal,
   ));

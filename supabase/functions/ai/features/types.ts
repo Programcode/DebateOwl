@@ -14,7 +14,6 @@ export interface FeatureContext {
   userId: string;
   provider: Provider;
   model: string;
-  temperature: number;
   reasoningEffort: ReasoningEffort;
   /** Caller cancellation combined with the shared request budget. */
   workSignal: AbortSignal;

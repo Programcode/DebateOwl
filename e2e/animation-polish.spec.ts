@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seedCurrentDebate, stubSupabaseSession } from './helpers/auth';
 import { stubAIResponses } from './fixtures/ai-responses';
 
-const featureConfig = { provider: 'openrouter', model: 'z-ai/glm-5.3-flash', temperature: 0.7 };
+const featureConfig = { provider: 'openrouter', model: 'z-ai/glm-5.3-flash' };
 const STATE_TIMEOUT_MS = 15_000;
 
 async function prepareMotionFixture(page: Page, reducedMotion: 'no-preference' | 'reduce') {

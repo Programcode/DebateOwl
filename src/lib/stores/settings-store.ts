@@ -10,6 +10,7 @@ import {
   getModelCatalogEntry,
   isAutoModelSelection,
   isReasoningEffort,
+  retiredModelSuccessor,
 } from '../../../supabase/functions/_shared/model-catalog';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
@@ -57,15 +58,14 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
 const defaultConfig: ProviderConfig = {
   provider: DEFAULT_PROVIDER,
   model: DEFAULT_MODEL,
-  temperature: 0.7,
   reasoningEffort: 'low',
 };
 
 const getDefaultFeatureConfigs = (model: string = DEFAULT_MODEL): Record<FeatureTab, ProviderConfig> => ({
   generate: { ...defaultConfig, model },
   attack: { ...defaultConfig, model },
-  brainstorm: { ...defaultConfig, model, temperature: 0.9 },
-  factoids: { ...defaultConfig, model, temperature: 0.3 },
+  brainstorm: { ...defaultConfig, model },
+  factoids: { ...defaultConfig, model },
   ask: { ...defaultConfig, model },
   sparring: { ...defaultConfig, model },
 });
@@ -81,7 +81,7 @@ function normalizeModelId(value: unknown, fallback: string = DEFAULT_MODEL): str
   const model = value.trim();
   if (isAutoModelSelection(model)) return model;
   if (getModelCatalogEntry(model)) return model;
-  return LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
+  return retiredModelSuccessor(model) ?? LEGACY_MODEL_SUCCESSORS[model] ?? DEFAULT_MODEL;
 }
 
 function normalizeFeatureConfig(
@@ -91,9 +91,6 @@ function normalizeFeatureConfig(
 ): ProviderConfig {
   const candidate = asRecord(value);
   const model = normalizeModelId(candidate?.model, fallback.model);
-  const temperature = typeof candidate?.temperature === 'number' && Number.isFinite(candidate.temperature)
-    ? candidate.temperature
-    : fallback.temperature;
   const reasoningEffort = isReasoningEffort(candidate?.reasoningEffort)
     ? candidate.reasoningEffort
     : fallback.reasoningEffort ?? 'low';
@@ -105,7 +102,6 @@ function normalizeFeatureConfig(
       : !allowProModels && getModelCatalogEntry(model)?.isProOnly
         ? DEFAULT_MODEL
         : model,
-    temperature,
     reasoningEffort,
   };
 }
@@ -129,7 +125,7 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   const features = Object.keys(expected) as FeatureTab[];
   if (!saved || Object.keys(saved).length !== features.length) return false;
 
-  const allowedKeys = new Set(['provider', 'model', 'temperature', 'reasoningEffort']);
+  const allowedKeys = new Set(['provider', 'model', 'reasoningEffort']);
   return features.every((feature) => {
     const config = asRecord(saved[feature]);
     if (!config) return false;
@@ -137,7 +133,6 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
     return Object.keys(config).every((key) => allowedKeys.has(key))
       && config.provider === target.provider
       && config.model === target.model
-      && config.temperature === target.temperature
       && config.reasoningEffort === target.reasoningEffort;
   });
 }
@@ -189,13 +184,22 @@ async function updateSettings(payload: {
   }
 }
 
-async function persistMigratedFeatureConfigs(featureConfigs: Record<FeatureTab, ProviderConfig>) {
+// The cleanup rewrites the whole feature_configs snapshot it read, so it only
+// applies while the row is unchanged since that read. A settings save that
+// lands first moves updated_at and wins; the next hydration retries.
+async function persistMigratedFeatureConfigs(
+  featureConfigs: Record<FeatureTab, ProviderConfig>,
+  readUpdatedAt: string | null,
+) {
   const userId = await getUserId();
   if (!userId) return;
-  const { error } = await supabase
+  const update = supabase
     .from('user_settings')
     .update({ feature_configs: featureConfigs, updated_at: new Date().toISOString() })
     .eq('user_id', userId);
+  const { error } = await (readUpdatedAt === null
+    ? update.is('updated_at', null)
+    : update.eq('updated_at', readUpdatedAt));
   if (error) {
     console.warn('[SettingsStore] Failed to persist migrated settings:', error.message);
   }
@@ -324,8 +328,11 @@ export const useSettingsStore = create<SettingsState>()(
             feature_configs: mergedConfigs,
             custom_system_prompt: customSystemPrompt ?? null,
           });
-        } else if (configsNeedMigration) {
-          await persistMigratedFeatureConfigs(mergedConfigs);
+        } else if (configsNeedMigration && get().featureConfigs === mergedConfigs) {
+          await persistMigratedFeatureConfigs(
+            mergedConfigs,
+            typeof data.updated_at === 'string' ? data.updated_at : null,
+          );
         }
       },
       resetLocalData: (preserveLanguage = false) => {

@@ -101,12 +101,11 @@ export async function callAI(
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
-  temperature: number,
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal
 ): Promise<AIResult> {
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, temperature, reasoningEffort, signal);
+    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal);
   } catch (err) {
     if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
 
@@ -118,7 +117,6 @@ export async function callAI(
         model,
         `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
         withJsonRepairPrompt(messages),
-        0,
         reasoningEffort,
         signal,
       );
@@ -169,7 +167,6 @@ export async function callAIOnce(
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
-  temperature: number,
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal
 ): Promise<AIResult> {
@@ -177,7 +174,6 @@ export async function callAIOnce(
   return await callOpenRouter(
     [{ role: "system", content: systemPrompt }, ...messages],
     model,
-    temperature,
     reasoningEffort,
     signal,
   );
@@ -199,7 +195,6 @@ export function createRequestBudgetSignal(
 export async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
   model: string,
-  temperature: number,
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal,
 ): Promise<AIResult> {
@@ -216,7 +211,6 @@ export async function callOpenRouter(
     // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
     provider: { require_parameters: true },
   };
-  if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
   const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
