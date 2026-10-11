@@ -30,7 +30,7 @@ export function SectionCard({
 }: SectionCardProps) {
   const { t } = useTranslation();
   return (
-    <Card className={cn('card-hover-glow relative overflow-hidden', className)}>
+    <Card className={cn('relative overflow-hidden', className)}>
       {isLoading && <LoadingOverlay message={t('common.regenerating', 'Regenerating {{title}}…', { title })} />}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
@@ -47,7 +47,7 @@ export function SectionCard({
               size="icon"
               onClick={onRegenerate}
               disabled={isLoading || regenerateDisabled}
-              className="h-8 w-8 shrink-0 hover-icon-spin"
+              className="h-8 w-8 shrink-0"
               aria-label={t('common.regenerate', 'Regenerate {{title}}', { title })}
             >
               <RefreshCw className="h-4 w-4" />

@@ -17,27 +17,30 @@ All colors MUST be HSL.
     --card: 210 40% 98%;
     --card-foreground: 222 47% 11%;
 
-    --popover: 214 31% 91%;
+    --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 200 98% 39%;
+    --primary: 200 98% 33%;
     --primary-foreground: 204 100% 97%;
 
     --secondary: 215 24% 26%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 215 20% 65%;
-    --muted-foreground: 222 47% 11%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 40%;
 
-    --accent: 210 40% 98%;
-    --accent-foreground: 215 19% 34%;
+    --accent: 214 32% 89%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 72% 50%;
+    --destructive: 0 72% 47%;
     --destructive-foreground: 0 85% 97%;
 
+    --success: 142 72% 27%;
+    --success-foreground: 138 76% 97%;
+
     --border: 212 26% 83%;
-    --input: 212 26% 83%;
-    --ring: 200 98% 39%;
+    --input: 215 16% 55%;
+    --ring: 200 98% 33%;
 
     --radius: 0.5rem;
 
@@ -95,31 +98,34 @@ All colors MUST be HSL.
     --secondary: 212 26% 83%;
     --secondary-foreground: 228 84% 4%;
 
-    --muted: 215 16% 46%;
-    --muted-foreground: 210 40% 98%;
+    --muted: 217 30% 22%;
+    --muted-foreground: 215 20% 70%;
 
-    --accent: 228 84% 4%;
-    --accent-foreground: 215 20% 65%;
+    --accent: 217 32% 20%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive-foreground: 0 86% 10%;
+
+    --success: 142 69% 58%;
+    --success-foreground: 144 61% 10%;
 
     --border: 215 19% 34%;
-    --input: 215 19% 34%;
+    --input: 215 16% 47%;
     --ring: 198 93% 59%;
     --chart-1: 199 95% 73%;
     --chart-2: 211 96% 78%;
     --chart-3: 215 20% 65%;
     --chart-4: 215 16% 46%;
     --chart-5: 215 19% 34%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 4px 6px -1px hsl(0 0% 0% / 0.45);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 8px 10px -1px hsl(0 0% 0% / 0.45);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.6);
   }
 }
 
@@ -136,27 +142,59 @@ All colors MUST be HSL.
     min-height: 100%;
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   ::selection {
     background: hsl(var(--primary) / 0.2);
     color: hsl(var(--foreground));
   }
 
   :root {
+    --motion-duration-press: 100ms;
     --motion-duration-fast: 160ms;
-    --motion-duration-normal: 260ms;
+    --motion-duration-normal: 200ms;
     --motion-duration-slow: 420ms;
     --motion-ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
-    --motion-press-scale: 0.985;
+    --motion-ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+    --motion-press-scale: 0.97;
+
+    --native-safe-top: env(safe-area-inset-top, 0px);
+    --native-safe-right: env(safe-area-inset-right, 0px);
+    --native-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --native-safe-left: env(safe-area-inset-left, 0px);
   }
 
   html {
     scroll-behavior: smooth;
   }
 
-  html, body {
-    transition: background-color var(--motion-duration-slow) var(--motion-ease-fluid),
-                color var(--motion-duration-slow) var(--motion-ease-fluid);
+  /* One focus system. Primitives that draw their own ring use focus-visible:outline-none. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
+
+  button, a, input, select, textarea, [role="button"] {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-fluid);
+  }
+}
+
+/* The theme switch crossfades once (ThemeProvider) instead of rippling at three speeds. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: var(--motion-ease-out-strong);
+}
+
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
 }
 
 /* Landing Page Utilities */
@@ -182,22 +220,26 @@ All colors MUST be HSL.
     background: linear-gradient(135deg, hsl(200 92% 32%) 0%, hsl(169 72% 34%) 100%);
   }
 
-  .btn-primary-gradient:hover::before {
-    @apply opacity-100;
-  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary-gradient:hover::before {
+      @apply opacity-100;
+    }
 
-  .btn-primary-gradient:hover {
-    @apply shadow-xl;
-    box-shadow: 0 10px 40px hsl(var(--primary) / 0.3);
+    .btn-primary-gradient:hover {
+      @apply shadow-xl;
+      box-shadow: 0 10px 40px hsl(var(--primary) / 0.3);
+    }
   }
 
   .btn-secondary-outline {
     @apply px-6 py-3 font-semibold text-foreground rounded-xl border border-border bg-card transition-all duration-300 shadow-sm;
   }
 
-  .btn-secondary-outline:hover {
-    @apply bg-secondary border-primary/30 shadow-md;
-    color: hsl(var(--secondary-foreground));
+  @media (hover: hover) and (pointer: fine) {
+    .btn-secondary-outline:hover {
+      @apply bg-secondary border-primary/30 shadow-md;
+      color: hsl(var(--secondary-foreground));
+    }
   }
 
   .shimmer {
@@ -225,10 +267,12 @@ All colors MUST be HSL.
     transform-style: preserve-3d;
   }
 
-  .feature-card:hover {
-    @apply border-primary/40;
-    box-shadow: 0 20px 40px hsl(var(--foreground) / 0.08);
-    transform: translateY(-4px) rotateX(2deg) rotateY(2deg);
+  @media (hover: hover) and (pointer: fine) {
+    .feature-card:hover {
+      @apply border-primary/40;
+      box-shadow: 0 20px 40px hsl(var(--foreground) / 0.08);
+      transform: translateY(-4px) rotateX(2deg) rotateY(2deg);
+    }
   }
 
   .orb {
@@ -271,31 +315,24 @@ All colors MUST be HSL.
     @apply backdrop-blur-xl bg-background/90 border-b border-border shadow-sm;
   }
 
+  /* Press feedback: 100ms in, 160ms release. The hover lift is opt-in (.motion-lift)
+     and only on devices that really hover, so a tap never leaves a button raised. */
   .motion-press {
     transition-property: transform, box-shadow, background-color, border-color, color, opacity;
     transition-duration: var(--motion-duration-fast);
     transition-timing-function: var(--motion-ease-fluid);
-    will-change: transform;
   }
 
-  .motion-press:not(:disabled):not([aria-disabled='true']):hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
+  @media (hover: hover) and (pointer: fine) {
+    .motion-lift:not(:disabled):not([aria-disabled='true']):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
+    }
   }
 
   .motion-press:not(:disabled):not([aria-disabled='true']):active {
-    transform: translateY(0) scale(var(--motion-press-scale));
-    box-shadow: 0 4px 12px hsl(var(--foreground) / 0.06);
-  }
-
-  .motion-press > svg,
-  .motion-press [data-motion-icon='true'] {
-    transition: transform var(--motion-duration-fast) var(--motion-ease-fluid), opacity var(--motion-duration-fast) var(--motion-ease-fluid);
-  }
-
-  .motion-press:not(:disabled):not([aria-disabled='true']):hover > svg,
-  .motion-press:not(:disabled):not([aria-disabled='true']):hover [data-motion-icon='true'] {
-    transform: translateY(-0.5px) scale(1.04);
+    transform: scale(var(--motion-press-scale));
+    transition-duration: var(--motion-duration-press);
   }
 
   .motion-surface {
@@ -310,15 +347,13 @@ All colors MUST be HSL.
     transition-timing-function: var(--motion-ease-fluid);
   }
 
+  /* Rows change colour on hover; they never lift, because lifting implies a card you can pick up. */
   .motion-list-item {
-    transition-property: transform, box-shadow, border-color, background-color, opacity;
+    transition-property: box-shadow, border-color, background-color, opacity;
     transition-duration: var(--motion-duration-normal);
     transition-timing-function: var(--motion-ease-fluid);
   }
 
-  .motion-list-item:hover {
-    transform: translateY(-1px);
-  }
 
   .motion-reveal {
     animation: motion-reveal var(--motion-duration-slow) var(--motion-ease-fluid) both;
@@ -358,9 +393,9 @@ All colors MUST be HSL.
     opacity: 0;
     transform: translateY(-4px);
     transition:
-      grid-template-rows var(--motion-duration-normal) var(--motion-ease-fluid),
-      opacity var(--motion-duration-normal) var(--motion-ease-fluid),
-      transform var(--motion-duration-normal) var(--motion-ease-fluid);
+      grid-template-rows var(--motion-duration-normal) var(--motion-ease-out-strong),
+      opacity var(--motion-duration-normal) var(--motion-ease-out-strong),
+      transform var(--motion-duration-normal) var(--motion-ease-out-strong);
   }
 
   .motion-expand[data-open='true'] {
@@ -387,6 +422,10 @@ All colors MUST be HSL.
 
   .native-safe-bottom {
     padding-bottom: max(calc(var(--native-safe-bottom, 0px) + 1rem), 1rem);
+  }
+
+  .native-safe-fixed-bottom {
+    bottom: calc(var(--native-safe-bottom, 0px) + 1rem);
   }
 
   .native-main-content {
@@ -438,86 +477,15 @@ All colors MUST be HSL.
   border-radius: 3px;
 }
 
-*::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.5);
+@media (hover: hover) and (pointer: fine) {
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
 }
 
 /* Scroll margin for anchor links under sticky header */
 [id] {
   scroll-margin-top: 5rem;
-}
-
-/* Animated marching ants border on hover */
-.border-dashed:hover {
-  border-color: transparent;
-  background-image: repeating-linear-gradient(
-    0deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  ),
-  repeating-linear-gradient(
-    90deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  ),
-  repeating-linear-gradient(
-    180deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  ),
-  repeating-linear-gradient(
-    270deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-  background-size: 1px 100%, 100% 1px, 1px 100%, 100% 1px;
-  background-repeat: no-repeat;
-  animation: marching-ants 0.4s linear infinite;
-}
-
-@keyframes marching-ants {
-  0% { background-position: 0 0, -10px 0, 100% -10px, 0 100%; }
-  100% { background-position: 0 -10px, 0 0, 100% 0, -10px 100%; }
-}
-
-/* ===== APPLE-LEVEL MICRO-INTERACTIONS ===== */
-
-/* Global smooth transitions on all interactive elements */
-@layer base {
-  button, a, input, select, textarea, [role="button"] {
-    transition-property: transform, box-shadow, border-color, background-color, color, opacity;
-    transition-duration: var(--motion-duration-fast);
-    transition-timing-function: var(--motion-ease-fluid);
-  }
-
-  /* Smooth focus ring with glow */
-  :focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5), 0 0 12px hsl(var(--primary) / 0.2);
-    border-radius: var(--radius);
-    transition: box-shadow var(--motion-duration-fast) var(--motion-ease-fluid);
-  }
-
-  /* Card hover glow border */
-  .card-hover-glow {
-    transition: border-color var(--motion-duration-normal) var(--motion-ease-fluid),
-                box-shadow var(--motion-duration-normal) var(--motion-ease-fluid),
-                transform var(--motion-duration-normal) var(--motion-ease-fluid);
-  }
-
-  .card-hover-glow:hover {
-    border-color: hsl(var(--primary) / 0.3);
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1), 0 8px 24px hsl(var(--primary) / 0.08);
-    transform: translateY(-2px);
-  }
 }
 
 /* Staggered list entrance */
@@ -561,8 +529,10 @@ All colors MUST be HSL.
   pointer-events: none;
 }
 
-.nav-glow:hover::after {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .nav-glow:hover::after {
+    opacity: 1;
+  }
 }
 
 /* Active nav indicator pill */
@@ -594,18 +564,6 @@ All colors MUST be HSL.
   }
 }
 
-/* Input focus glow */
-input:focus, textarea:focus, select:focus {
-  border-color: hsl(var(--primary) / 0.5) !important;
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1), 0 0 8px hsl(var(--primary) / 0.08) !important;
-}
-
-/* Progress bar glow pulse */
-[role="progressbar"] > div {
-  box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
-  transition: width 0.5s var(--motion-ease-fluid);
-}
-
 /* Sonner's mobile toaster sets width: 100% plus a left offset, which pushes
    it past the viewport and widens the whole page on phones. */
 @media (max-width: 600px) {
@@ -615,38 +573,6 @@ input:focus, textarea:focus, select:focus {
 
   [data-sonner-toaster] [data-sonner-toast] {
     width: 100% !important;
-  }
-}
-
-/* Toast slide-in */
-[data-sonner-toaster] [data-sonner-toast] {
-  animation: toast-slide-in 0.3s var(--motion-ease-fluid) both !important;
-}
-
-@keyframes toast-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Modal/dialog backdrop blur + entrance */
-[data-state="open"][role="dialog"] {
-  animation: dialog-enter 0.25s var(--motion-ease-fluid) both;
-}
-
-@keyframes dialog-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 
@@ -676,179 +602,6 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
-/* ===== ADDITIONAL MICRO-INTERACTIONS ===== */
-
-/* Switch toggle bounce */
-[role="switch"][data-state="checked"] > span {
-  animation: switch-bounce 0.3s var(--motion-ease-fluid);
-}
-
-@keyframes switch-bounce {
-  0% { transform: translateX(0) scale(1); }
-  40% { transform: translateX(100%) scale(0.85, 1.15); }
-  70% { transform: translateX(100%) scale(1.05, 0.95); }
-  100% { transform: translateX(100%) scale(1); }
-}
-
-/* Checkbox tick draw */
-[role="checkbox"][data-state="checked"] svg {
-  animation: check-draw 0.2s ease-out both;
-}
-
-@keyframes check-draw {
-  from { stroke-dashoffset: 20; opacity: 0; }
-  to { stroke-dashoffset: 0; opacity: 1; }
-}
-
-
-/* Tooltip entrance */
-[data-state="delayed-open"][data-side] {
-  animation: tooltip-in 0.15s var(--motion-ease-fluid) both;
-}
-
-[data-state="closed"][data-side] {
-  animation: tooltip-out 0.1s ease-in both;
-}
-
-@keyframes tooltip-in {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes tooltip-out {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.96); }
-}
-
-/* Dropdown menu items stagger */
-[role="menu"] [role="menuitem"],
-[data-radix-collection-item] {
-  animation: menu-item-in 0.15s var(--motion-ease-fluid) both;
-}
-
-[role="menu"] [role="menuitem"]:nth-child(1) { animation-delay: 0ms; }
-[role="menu"] [role="menuitem"]:nth-child(2) { animation-delay: 30ms; }
-[role="menu"] [role="menuitem"]:nth-child(3) { animation-delay: 60ms; }
-[role="menu"] [role="menuitem"]:nth-child(4) { animation-delay: 90ms; }
-[role="menu"] [role="menuitem"]:nth-child(5) { animation-delay: 120ms; }
-
-@keyframes menu-item-in {
-  from { opacity: 0; transform: translateX(-4px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-/* Select dropdown items */
-[role="option"] {
-  transition: background-color 0.1s, transform 0.1s;
-}
-
-[role="option"]:active {
-  transform: scale(0.98);
-}
-
-/* Accordion expand/collapse */
-[data-state="open"] > [data-accordion-content] {
-  animation: accordion-open 0.25s var(--motion-ease-fluid);
-}
-
-@keyframes accordion-open {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Tab indicator slide */
-[role="tablist"] [data-state="active"] {
-  position: relative;
-}
-
-[role="tablist"] [data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: hsl(var(--primary));
-  border-radius: 1px;
-  animation: tab-slide 0.2s var(--motion-ease-fluid) both;
-}
-
-@keyframes tab-slide {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-
-/* Icon spin on hover (for refresh/reload buttons) */
-button:hover > svg.lucide-rotate-ccw,
-button:hover > svg.lucide-refresh-cw {
-  animation: icon-spin 0.5s var(--motion-ease-fluid);
-}
-
-@keyframes icon-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
-}
-
-/* Copy button feedback */
-button:active > svg.lucide-copy,
-button:active > svg.lucide-clipboard {
-  animation: copy-bounce 0.2s ease-out;
-}
-
-@keyframes copy-bounce {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.8); }
-  100% { transform: scale(1); }
-}
-
-/* Trash icon shake on hover */
-button:hover > svg.lucide-trash-2,
-button:hover > svg.lucide-trash {
-  animation: trash-shake 0.3s ease-in-out;
-}
-
-@keyframes trash-shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-8deg); }
-  75% { transform: rotate(8deg); }
-}
-
-/* Heart/bookmark fill animation */
-button:active > svg.lucide-bookmark,
-button:active > svg.lucide-heart {
-  animation: heart-pop 0.3s var(--motion-ease-fluid);
-}
-
-@keyframes heart-pop {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.3); }
-  60% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-
-/* Slider thumb pulse when dragging */
-[role="slider"]:active::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: hsl(var(--primary) / 0.2);
-  animation: slider-pulse 0.6s ease-out infinite;
-}
-
-@keyframes slider-pulse {
-  0% { transform: scale(1); opacity: 0.4; }
-  100% { transform: scale(1.8); opacity: 0; }
-}
-
-
-/* Smooth counter/number transitions */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-  transition: transform 0.2s var(--motion-ease-fluid);
-}
-
-
 /* Subtle parallax tilt on card hover */
 .tilt-card {
   transition: transform 0.3s var(--motion-ease-fluid);
@@ -856,8 +609,10 @@ button:active > svg.lucide-heart {
   perspective: 1000px;
 }
 
-.tilt-card:hover {
-  transform: rotateX(-1deg) rotateY(1deg) translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .tilt-card:hover {
+    transform: rotateX(-1deg) rotateY(1deg) translateY(-2px);
+  }
 }
 
 @keyframes gridMove {
@@ -1061,13 +816,8 @@ button:active > svg.lucide-heart {
 }
 
 
-/* Icon spin on hover for interactive elements */
-.hover-icon-spin:hover > svg {
-  transform: rotate(90deg);
-  transition: transform 0.3s var(--motion-ease-fluid);
-}
-
-
+/* Reduced motion is gentler, not zero: opacity and colour still ease, nothing travels
+   or scales, overlays fade, and loading indicators pulse instead of freezing. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1076,24 +826,101 @@ button:active > svg.lucide-heart {
   *,
   *::before,
   *::after {
-    animation: none !important;
     scroll-behavior: auto !important;
-    transition: none !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow, fill, stroke !important;
+    animation-name: none !important;
+  }
+
+  /* Overlay enter and exit (tailwindcss-animate) keep their timing as plain fades. */
+  .animate-in,
+  [data-state='open'][class*='animate-in'],
+  [data-state='delayed-open'][class*='animate-in'],
+  [data-state='instant-open'][class*='animate-in'],
+  [data-state='active'][class*='animate-in'],
+  .motion-reveal,
+  .motion-swap,
+  .message-enter,
+  .stagger-enter > * {
+    animation-name: motion-fade-in !important;
+  }
+
+  [data-state='closed'][class*='animate-out'] {
+    animation-name: motion-fade-out !important;
+  }
+
+  /* Spinners and live indicators become a slow opacity pulse so they never look hung. */
+  .animate-spin,
+  .motion-ping-ring,
+  .typing-dot,
+  .streaming-caret {
+    animation-name: motion-pulse !important;
+    animation-duration: 1.2s !important;
+    animation-timing-function: ease-in-out !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .animate-pulse {
+    animation-name: pulse !important;
   }
 
   .motion-press,
   .motion-press:hover,
   .motion-press:active,
-  .motion-list-item,
-  .motion-list-item:hover,
-  .motion-reveal,
-  .motion-swap,
+  .motion-lift:hover,
   .motion-expand,
-  .motion-loading-bar,
-  .motion-ping-ring,
-  .motion-shimmer::after,
-  .card-hover-glow:hover,
-  .feature-card:hover {
+  .feature-card:hover,
+  .tilt-card:hover {
     transform: none !important;
+  }
+}
+
+@keyframes motion-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Translucent, blurred surfaces turn solid when the user asks for less transparency
+   or more contrast, and keep a visible edge in forced-colours mode. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  [class*='backdrop-blur'],
+  .nav-blur,
+  .glass-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--foreground) / 0.35) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: 215 25% 27%;
+    --border: 215 16% 47%;
+  }
+
+  .dark {
+    --muted-foreground: 213 27% 84%;
+    --border: 215 16% 57%;
+  }
+}
+
+@media (forced-colors: active) {
+  [class*='backdrop-blur'],
+  .nav-blur,
+  .glass-card {
+    border: 1px solid CanvasText;
   }
 }

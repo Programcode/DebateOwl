@@ -6,6 +6,7 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## In progress
 
+- **Design audit.** UI audit against Emil Kowalski's Apple-design and motion skills: broken toast stacking, collapsed text-colour tokens, a global CSS layer that overrides the primitives, touch and reduced-motion gaps, wayfinding and undo. Shipping as a four-PR stack: Foundations, Shell, AI tools, Landing. Plan: [2026-10-09 design audit](2026-10-09-design-audit.md).
 - **Staging that tracks main.** Audit of staging, the VPS sync timer, the seed, and what to delete. Plan: [2026-10-03 staging loop](2026-10-03-staging-loop.md). Previews come from #95 and the staging spec fix from #100.
 
 ## Backlog

@@ -232,7 +232,7 @@ function SourceRow({ source, onChange }: { source: ContextSourceItem; onChange: 
   const id = `debate-context-source-${source.id}`;
   const note = source.included ? statusNote(source, t) : (!source.active ? t('debateContext.inactive', 'Turned off in your Library.') : null);
   return (
-    <li className="flex items-start gap-3 rounded-md px-1 py-1.5">
+    <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
       <Checkbox id={id} checked={source.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-sm">
         <span className="block break-words">{source.title}</span>
@@ -248,7 +248,7 @@ function OutputRow({ output, onChange, onPin, pinDisabled }: { output: ContextOu
   const note = output.included ? statusNote(output, t) : null;
   const kind = t(`debate.kinds.${output.ref.kind}`);
   return (
-    <li className="flex items-start gap-3 rounded-md px-1 py-1.5">
+    <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
       <Checkbox id={id} checked={output.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-sm">
         <span className="block break-words">{output.title || kind}</span>

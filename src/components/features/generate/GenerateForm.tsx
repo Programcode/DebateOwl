@@ -217,7 +217,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
                 <SlidersHorizontal className="h-4 w-4" />
                 {t('generateForm.moreOptions')}
               </span>
-              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${advancedOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform duration-150 ease-out-strong ${advancedOpen ? 'rotate-180' : ''}`} />
             </Button>
           </div>
 

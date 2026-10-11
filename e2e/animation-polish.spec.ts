@@ -70,7 +70,8 @@ test('removes non-essential route and state movement for reduced motion', async 
   const options = await openGenerateOptions(page);
 
   await expect(page.locator('[data-route-transition-ms]')).toHaveCount(0);
-  await expect.poll(() => options.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s');
+  // Reduced motion keeps gentle fades but nothing that moves: no transform, height or grid-row transitions.
+  await expect.poll(() => options.evaluate((element) => getComputedStyle(element).transitionProperty)).not.toMatch(/transform|grid-template-rows|height|all/);
   await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => animation.playState === 'running').length)).toBe(0);
   await page.screenshot({ path: testInfo.outputPath('reduced-empty-options.png'), fullPage: true });
 

@@ -1,9 +1,13 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 import typography from "@tailwindcss/typography";
+import plugin from "tailwindcss/plugin";
 
 export default {
   darkMode: ["class"],
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   content: ["./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -48,7 +52,18 @@ export default {
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
+  			},
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				foreground: 'hsl(var(--success-foreground))'
   			}
+  		},
+  		transitionDuration: {
+  			'120': '120ms'
+  		},
+  		transitionTimingFunction: {
+  			'out-strong': 'cubic-bezier(0.23, 1, 0.32, 1)',
+  			drawer: 'cubic-bezier(0.32, 0.72, 0, 1)'
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -74,8 +89,8 @@ export default {
   			}
   		},
   		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-down': 'accordion-down 0.2s cubic-bezier(0.23, 1, 0.32, 1)',
+  			'accordion-up': 'accordion-up 0.2s cubic-bezier(0.23, 1, 0.32, 1)'
   		},
   		fontFamily: {
   			sans: [
@@ -123,5 +138,12 @@ export default {
   		}
   	}
   },
-  plugins: [tailwindcssAnimate, typography],
+  plugins: [
+    tailwindcssAnimate,
+    typography,
+    // Touch-sized hit areas only where the primary pointer is a finger.
+    plugin(({ addVariant }) => {
+      addVariant("pointer-coarse", "@media (pointer: coarse)");
+    }),
+  ],
 } satisfies Config;
