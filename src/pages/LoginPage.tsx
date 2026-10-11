@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
+import { localizeAuthError } from '@/lib/auth-errors';
 
 type AuthMode = 'email' | 'demo';
 type AuthStatus = 'idle' | 'submitting' | 'code-sent' | 'verifying' | 'success' | 'error';
@@ -32,6 +33,8 @@ export default function LoginPage() {
   const [demoCode, setDemoCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const otpInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const demoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -46,6 +49,13 @@ export default function LoginPage() {
     if (authStatus === 'code-sent') otpInputRef.current?.focus();
   }, [authStatus]);
 
+  // An error is shown under the field it is about, and focus moves there.
+  useEffect(() => {
+    if (authStatus !== 'error') return;
+    const field = authMode === 'demo' ? demoInputRef : emailSent ? otpInputRef : emailInputRef;
+    field.current?.focus();
+  }, [authStatus, authMode, emailSent]);
+
   const handleGoogleSignIn = async () => {
     setIsRedirecting(true);
     try {
@@ -54,7 +64,7 @@ export default function LoginPage() {
       setIsRedirecting(false);
       toast({
         title: t('login.failed', 'Could not start sign in'),
-        description: error instanceof Error ? error.message : t('login.tryAgain', 'Please try again.'),
+        description: localizeAuthError(error, t, 'login.tryAgain', 'Please try again.'),
         variant: 'destructive',
       });
     }
@@ -86,7 +96,7 @@ export default function LoginPage() {
       setAuthStatus('code-sent');
     } catch (error) {
       setAuthStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : t('login.emailOtpError', 'Could not send code.'));
+      setErrorMessage(localizeAuthError(error, t, 'login.emailOtpError', 'Could not send code.'));
     }
   };
 
@@ -107,7 +117,7 @@ export default function LoginPage() {
       setAuthStatus('success');
     } catch (error) {
       setAuthStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : t('login.verifyOtpError', 'Could not verify code.'));
+      setErrorMessage(localizeAuthError(error, t, 'login.verifyOtpError', 'Could not verify code.'));
     }
   };
 
@@ -120,7 +130,7 @@ export default function LoginPage() {
       setAuthStatus('code-sent');
     } catch (error) {
       setAuthStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : t('login.emailOtpError', 'Could not send code.'));
+      setErrorMessage(localizeAuthError(error, t, 'login.emailOtpError', 'Could not send code.'));
     }
   };
 
@@ -140,18 +150,29 @@ export default function LoginPage() {
       setAuthStatus('success');
     } catch (error) {
       setAuthStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : t('login.demoError', 'Could not sign in with demo code.'));
+      setErrorMessage(localizeAuthError(error, t, 'login.demoError', 'Could not sign in with demo code.'));
     }
   };
 
   const isSubmitting = authStatus === 'submitting' || authStatus === 'verifying';
+  const hasError = authStatus === 'error' && Boolean(errorMessage);
+  const fieldError = (id: string) => hasError && (
+    <p id={id} className="text-sm text-destructive" role="alert">{errorMessage}</p>
+  );
+  const describedBy = (hintId: string, errorId: string) => hasError ? `${hintId} ${errorId}` : hintId;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-4 py-8">
+      <div className="w-full max-w-md">
+        <Link to="/" className="inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground pointer-coarse:min-h-11">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {t('login.backHome', 'Back to DebateLab')}
+        </Link>
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-white dark:bg-slate-800">
+            <img src="/favicon-72.png" alt="" width={48} height={48} className="h-full w-full object-cover" />
           </div>
           {/* The page heading, styled like CardTitle (which renders an h3). */}
           <h1 className="text-2xl font-semibold leading-none tracking-tight">{t('login.title')}</h1>
@@ -194,10 +215,11 @@ export default function LoginPage() {
                       maxLength={6}
                       value={otp}
                       onChange={(event) => setOtp(event.target.value)}
-                      aria-describedby="login-otp-hint"
+                      aria-describedby={describedBy('login-otp-hint', 'login-otp-error')}
                       aria-invalid={authStatus === 'error'}
                       disabled={isSubmitting || authStatus === 'success'}
                     />
+                    {fieldError('login-otp-error')}
                     <p id="login-otp-hint" className="text-xs text-muted-foreground">
                       {t('login.codeSentDesc', 'Check your email for the six-digit code.')}
                     </p>
@@ -217,6 +239,7 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <Label htmlFor="login-email">{t('login.emailLabel', 'Email address')}</Label>
                     <Input
+                      ref={emailInputRef}
                       id="login-email"
                       name="email"
                       type="email"
@@ -225,9 +248,10 @@ export default function LoginPage() {
                       placeholder={t('login.emailPlaceholder', 'you@example.com')}
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
-                      aria-describedby="login-email-hint"
+                      aria-describedby={describedBy('login-email-hint', 'login-email-error')}
                       aria-invalid={authStatus === 'error'}
                     />
+                    {fieldError('login-email-error')}
                     <p id="login-email-hint" className="text-xs text-muted-foreground">
                       {t('login.emailHint', 'We\'ll send a six-digit code.')}
                     </p>
@@ -243,6 +267,7 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label htmlFor="login-demo-code">{t('login.demoCodeLabel', 'Demo code')}</Label>
                   <Input
+                    ref={demoInputRef}
                     id="login-demo-code"
                     name="demoCode"
                     type="text"
@@ -251,9 +276,10 @@ export default function LoginPage() {
                     maxLength={14}
                     value={demoCode}
                     onChange={(event) => setDemoCode(event.target.value)}
-                    aria-describedby="login-demo-code-hint"
+                    aria-describedby={describedBy('login-demo-code-hint', 'login-demo-code-error')}
                     aria-invalid={authStatus === 'error'}
                   />
+                  {fieldError('login-demo-code-error')}
                   <p id="login-demo-code-hint" className="text-xs text-muted-foreground">
                     {t('login.demoCodeHint', 'Enter the code provided by your event host.')}
                   </p>
@@ -265,18 +291,13 @@ export default function LoginPage() {
             </TabsContent>
           </Tabs>
           {authStatus === 'code-sent' && (
-            <p className="mt-4 text-sm text-green-600" role="status" aria-live="polite">
+            <p className="mt-4 text-sm text-success" role="status" aria-live="polite">
               {t('login.codeSent', 'Code sent')}
             </p>
           )}
           {authStatus === 'success' && (
-            <p className="mt-4 text-sm text-green-600" role="status" aria-live="polite">
+            <p className="mt-4 text-sm text-success" role="status" aria-live="polite">
               {t('login.signedIn', 'Signed in')}
-            </p>
-          )}
-          {authStatus === 'error' && errorMessage && (
-            <p className="mt-4 text-sm text-destructive" role="alert">
-              {errorMessage}
             </p>
           )}
         </CardContent>

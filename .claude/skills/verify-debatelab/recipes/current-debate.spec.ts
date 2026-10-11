@@ -14,8 +14,8 @@ const LIVE_AWARE_TIMEOUT = LIVE ? 900_000 : 150_000;
 async function addSource(page: Page, title: string, content: string) {
   await page.goto("/app/library");
   await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill(title);
-  await page.getByRole("textbox", { name: "Paste source content..." }).fill(content);
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
+  await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }

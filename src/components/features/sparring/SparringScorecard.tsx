@@ -105,7 +105,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">{t('sparring.scorecard.categoryNotes', 'Category notes')}</CardTitle>
+          <CardTitle>{t('sparring.scorecard.categoryNotes', 'Category notes')}</CardTitle>
           <CardDescription>{spokenRound ? t('voiceRound.scorecard.categoryNotesDescription') : t('sparring.scorecard.categoryNotesDescription', 'Specific reasons behind every score. Delivery is judged from the written speech, not audio.')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -121,8 +121,8 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
                 </div>
               </div>
               <div className="mt-3 space-y-2" aria-hidden="true">
-                <div className="flex items-center gap-2"><span className="w-12 text-[11px] text-muted-foreground">{t('sparring.user', 'You')}</span><div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${(category.userScore / 25) * 100}%` }} /></div></div>
-                <div className="flex items-center gap-2"><span className="w-12 text-[11px] text-muted-foreground">{t('sparring.scorecard.aiShort', 'AI')}</span><div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-muted-foreground/50" style={{ width: `${(category.aiScore / 25) * 100}%` }} /></div></div>
+                <div className="flex items-center gap-2"><span className="w-12 text-xs text-muted-foreground">{t('sparring.user', 'You')}</span><div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${(category.userScore / 25) * 100}%` }} /></div></div>
+                <div className="flex items-center gap-2"><span className="w-12 text-xs text-muted-foreground">{t('sparring.scorecard.aiShort', 'AI')}</span><div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-muted-foreground/50" style={{ width: `${(category.aiScore / 25) * 100}%` }} /></div></div>
               </div>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">{category.feedback}</p>
             </article>

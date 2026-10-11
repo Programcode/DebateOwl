@@ -70,7 +70,7 @@ test("a web page imports into the Library", async ({ signedIn: page, user }) => 
   await page.getByRole("button", { name: "Add Source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
   await page.getByRole("button", { name: "Import URL" }).click();
-  await expect(page.getByText("Source Ready", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText("Import preview", { exact: true })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Save imported source" }).click();
 
   await expect.poll(async () => {

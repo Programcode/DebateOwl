@@ -30,9 +30,14 @@ describe('five-day Current Debate gate', () => {
     expect(dialog).toHaveTextContent('This House would ban homework');
     const buttons = Array.from(dialog.querySelectorAll('button')).map((button) => button.textContent);
     expect(buttons).toEqual(['Switch debate', 'Start new debate', 'Continue']);
-    // Escape does not dismiss it.
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('treats Escape as Continue, so the gate never traps the user', async () => {
+    seedCurrentDebate({ lastActivityAt: Date.now() - 6 * DAY });
+    renderGate();
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(Date.now() - useDebateStore.getState().debates[0].lastActivityAt).toBeLessThan(1000);
   });
 
   it('stays out of the way before five days and before the server state loads', () => {

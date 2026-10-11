@@ -7,8 +7,8 @@ const motion = "Public transport should be free";
 
 async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill(title);
-  await page.getByRole("textbox", { name: "Paste source content..." }).fill(content);
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
+  await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
@@ -37,13 +37,28 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await evidence.json("02-grounding", { activeInPrompt: true, pausedInPrompt: false });
 
   await page.goto("/app/library");
+  const userId = await user.userId();
+  const pausedRow = async () =>
+    ((await admin.from("sources").select("id,created_at,is_active").eq("user_id", userId).eq("title", "Paused study")).data ?? [])
+      // The client keeps milliseconds; Postgres keeps microseconds.
+      .map((row) => ({ id: row.id, at: Math.floor(Date.parse(row.created_at)), active: row.is_active }));
+  const before = await pausedRow();
+  expect(before).toHaveLength(1);
+  // Deleting a source acts at once; the toast's Undo puts the same row back (same id, so a
+  // per-request exclusion still applies, and the same date, so it keeps its place).
+  await page.getByRole("button", { name: "Delete Paused study", exact: true }).click();
+  await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
+  await expect.poll(pausedRow).toEqual([]);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(1);
+  await expect.poll(pausedRow).toEqual(before);
+  await evidence.step("Deleted Paused study, then restored the same row with Undo");
   await page.getByRole("button", { name: "Delete Paused study", exact: true }).click();
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("switch", { name: "Toggle Active study" })).toBeVisible();
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).toHaveCount(0);
   // Live research can save the web sources it found, so check only the two added here.
-  const userId = await user.userId();
   const { data: debate } = await admin.from("debates").select("id").eq("user_id", userId).eq("motion", motion).single();
   const { data } = await admin.from("sources").select("title,is_active,debate_id").eq("user_id", userId).in("title", ["Active study", "Paused study"]);
   expect(data).toEqual([{ title: "Active study", is_active: true, debate_id: debate?.id }]);
@@ -58,7 +73,7 @@ test("lib-import: a web page imports into the Library", async ({ signedIn: page,
   await page.getByRole("button", { name: "Add Source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
   await page.getByRole("button", { name: "Import URL" }).click();
-  await expect(page.getByText("Source Ready", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(page.getByText("Import preview", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("01-import-ready");
   await page.getByRole("button", { name: "Save imported source" }).click();
   await expect.poll(async () => {

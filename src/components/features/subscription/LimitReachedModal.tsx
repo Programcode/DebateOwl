@@ -42,6 +42,9 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
             <Zap className="h-4 w-4 mr-2" />
             {t('limitModal.upgrade')}
           </Button>
+          <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
+            {t('limitModal.notNow', 'Not now')}
+          </Button>
           <p className="text-xs text-muted-foreground text-center mt-1">
             {t('limitModal.upgradeNote')}
           </p>

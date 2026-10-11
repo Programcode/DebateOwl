@@ -87,7 +87,7 @@ test.describe('Hungarian parity', () => {
       ['factoids', 'Tények'],
       ['ask', 'Kérdezés'],
     ] as const) {
-      // Tools open from Home; the header keeps only Home, Current debate, Library and History.
+      // Tools open from the Tools page; the header keeps only Tools, Current debate, Library and History.
       // Navigate in-app: a reload would rerun the init script and restart the tour.
       await page.locator('header a[href="/app"]').first().click();
       await page.locator(`main [data-tour="mode-${route}"]`).click();
@@ -134,11 +134,19 @@ test.describe('Hungarian parity', () => {
     await page.getByRole('button', { name: 'Forrás Hozzáadása' }).click();
     await expect(page.getByText('Importálás URL-ből')).toBeVisible();
     await page.getByRole('button', { name: 'Mentés a Könyvtárba' }).click();
-    await expect(page.locator('[data-sonner-toast] [data-close-button]')).toHaveAttribute('aria-label', 'Bezárás');
+    // Required fields are checked inline, in Hungarian.
+    await expect(page.getByRole('alert').filter({ hasText: 'Adj meg egy címet.' })).toBeVisible();
 
     await page.goto('/app/flowchart', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Betöltés' }).click();
     await expect(page.getByRole('dialog', { name: 'Mentett Folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    // Deleting a node raises a toast, whose close button is localized too.
+    await page.getByText('1. érv', { exact: true }).click();
+    await page.getByRole('button', { name: 'Törlés' }).last().click();
+    const confirmNodeDelete = page.getByRole('button', { name: 'Csomópont törlése' });
+    if (await confirmNodeDelete.isVisible().catch(() => false)) await confirmNodeDelete.click();
+    await expect(page.locator('[data-sonner-toast] [data-close-button]')).toHaveAttribute('aria-label', 'Bezárás');
 
     await page.goto('/app/timer', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('timer', { name: 'Időmérő kijelző' })).toBeVisible();

@@ -1,6 +1,5 @@
 {
   "nav": {
-    "home": "Inicio",
     "workspaces": "Espacios",
     "generate": "Generar",
     "attack": "Atacar",
@@ -24,10 +23,10 @@
     "more": "Más",
     "mainNavigation": "Navegación principal",
     "mobileNavigation": "Navegación móvil",
-    "currentDebate": "Debate actual"
+    "currentDebate": "Debate actual",
+    "tools": "Herramientas"
   },
   "navDesc": {
-    "home": "Elegir un modo",
     "workspaces": "Redactar casos en equipo",
     "generate": "Construir argumentos",
     "attack": "Encontrar debilidades",
@@ -41,7 +40,8 @@
     "flowchart": "Mapear argumentos",
     "history": "Elementos guardados",
     "currentDebate": "Moción, fuentes y resultados",
-    "settings": "Idioma, cuenta y datos"
+    "settings": "Idioma, cuenta y datos",
+    "tools": "Elegir una herramienta"
   },
   "workspaces": {
     "title": "Espacios de trabajo",
@@ -244,7 +244,8 @@
     "copy": "Copiar",
     "deleted": "Eliminado",
     "discuss": "Discutir",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "undo": "Deshacer"
   },
   "aiClient": {
     "inputShortened": "La entrada se acortó",
@@ -355,7 +356,8 @@
     "flowchart": "Diagrama",
     "flowchartDesc": "Mapea afirmaciones y refutaciones.",
     "history": "Historial",
-    "historyDesc": "Reabre casos guardados, chats y sesiones de preparación anteriores."
+    "historyDesc": "Reabre casos guardados, chats y sesiones de preparación anteriores.",
+    "heading": "¿En qué estás trabajando?"
   },
   "generate": {
     "emptyTitle": "Tu Caso Te Espera",
@@ -501,7 +503,9 @@
     "deletingAccount": "Eliminando...",
     "deleteAccountSuccess": "Cuenta eliminada",
     "deleteAccountSuccessDesc": "Tu cuenta y todos sus datos se han eliminado para siempre.",
-    "deleteAccountFailed": "La cuenta no se eliminó"
+    "deleteAccountFailed": "La cuenta no se eliminó",
+    "signingOut": "Cerrando sesión…",
+    "deletingData": "Eliminando…"
   },
   "login": {
     "title": "Iniciar Sesión en DebateLab",
@@ -538,7 +542,18 @@
     "demoCodeHint": "Introduce el código que te proporcionó el organizador del evento.",
     "redirecting": "Redirigiendo...",
     "failed": "No se pudo iniciar sesión",
-    "tryAgain": "Inténtalo de nuevo."
+    "tryAgain": "Inténtalo de nuevo.",
+    "backHome": "Volver a DebateLab",
+    "errors": {
+      "demoNotFound": "No se encontró el código de demostración.",
+      "demoUnusable": "Este código de demostración no se puede usar.",
+      "demoDisabled": "Este código de demostración está desactivado.",
+      "demoExpired": "Este código de demostración ha caducado.",
+      "demoUsedUp": "Este código de demostración ya no tiene usos.",
+      "rateLimited": "Demasiados intentos. Inténtalo más tarde.",
+      "codeExpired": "Ese código ha caducado. Solicita uno nuevo.",
+      "network": "No se puede conectar con DebateLab. Revisa tu conexión e inténtalo de nuevo."
+    }
   },
   "admin": {
     "demoAccess": "Acceso demo",
@@ -670,7 +685,14 @@
         "user": "Usuario",
         "admin": "Administrador",
         "banned": "Bloqueado"
-      }
+      },
+      "confirmMakeAdmin": "¿Hacer administrador a {{email}}?",
+      "confirmMakeAdminDesc": "Los administradores pueden abrir la página de administración y cambiar los roles y planes de otros usuarios.",
+      "confirmBan": "¿Bloquear a {{email}}?",
+      "confirmBanDesc": "No podrá usar DebateLab hasta que lo desbloquees.",
+      "confirmUnban": "¿Desbloquear a {{email}}?",
+      "confirmRemoveAdmin": "¿Quitar el rol de administrador a {{email}}?",
+      "confirmRoleDesc": "Pasará a ser un usuario normal."
     },
     "promos": {
       "createTitle": "Crear código promocional",
@@ -1344,7 +1366,8 @@
     "limitReached": "Acceso diario pausado",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "upgrade": "Actualizar a Pro - $5/mes",
-    "upgradeNote": "Más acceso a preparación con IA + razonamiento alto"
+    "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
+    "notNow": "Ahora no"
   },
   "modelModal": {
     "title": "Razonamiento Pro",
@@ -1620,12 +1643,8 @@
     "sortOldest": "Fecha de adición (más antigua)",
     "sortTitle": "Nombre (A–Z)",
     "sortFolder": "Carpeta",
-    "folderCreated": "Carpeta creada",
-    "folderCreatedDesc": "Ahora puedes guardar nuevas fuentes ahí.",
     "allFolders": "Todas las carpetas",
     "importUrlRequired": "Introduce una URL para importar.",
-    "importReady": "Fuente lista",
-    "importReadyDesc": "Revisa el texto extraído antes de guardarlo.",
     "importFailed": "Error al importar",
     "importFailedDesc": "No se pudo importar esta fuente.",
     "duplicateSource": "La fuente ya está en la biblioteca",
@@ -1648,16 +1667,10 @@
     "groundingDisabled": "Fundamentación Desactivada",
     "groundingActiveDesc": "Las respuestas de IA usan tus fuentes",
     "groundingDisabledDesc": "Las respuestas de IA no están fundamentadas",
-    "errorRequired": "El título y contenido son obligatorios",
-    "sourceAdded": "Fuente Añadida",
-    "sourceAddedDesc": "Tu fuente está disponible para fundamentación.",
     "clearFailed": "Error al borrar fuentes",
     "clearConfirm": "¿Estás seguro de que quieres borrar todas las fuentes?",
     "importUrlHelp": "La importación automática crea un borrador editable. Revísalo antes de guardarlo en tu biblioteca.",
     "unsupportedFile": "Archivo no compatible",
-    "totalSources": "Fuentes totales",
-    "activeSources": "Fuentes activas",
-    "syncedFolders": "Carpetas sincronizadas",
     "manualSource": "Fuente manual",
     "searchSources": "Buscar fuentes",
     "searchPlaceholder": "Buscar en fuentes, carpetas o contenido...",
@@ -1667,14 +1680,8 @@
     "deactivateFolder": "Desactivar",
     "deleteFolderDesc": "Las fuentes de esta carpeta se moverán a General. Las fuentes no se eliminarán.",
     "deleteFolderTitle": "¿Eliminar carpeta?",
-    "deleteSourceDesc": "Esto eliminará la fuente de tu biblioteca sincronizada.",
-    "deleteSourceTitle": "¿Eliminar fuente?",
     "folderActions": "Acciones de carpeta",
     "folderActionsDesc": "Cambia el nombre, elimina la carpeta o ajusta el uso de todas sus fuentes para fundamentar las respuestas de la IA.",
-    "folderActivated": "Carpeta activada",
-    "folderActivatedDesc": "Todas las fuentes de esta carpeta están activas.",
-    "folderDeactivated": "Carpeta desactivada",
-    "folderDeactivatedDesc": "Las fuentes siguen guardadas, pero no se usarán para fundamentar las respuestas de la IA.",
     "folderDeleted": "Carpeta eliminada",
     "folderDeletedDesc": "Las fuentes se movieron a General.",
     "folderMergeConfirm": "Ya existe una carpeta con ese nombre. ¿Quieres combinar las fuentes en ella?",
@@ -1684,13 +1691,23 @@
     "noMatchingSourcesDesc": "Prueba otra búsqueda o carpeta.",
     "renameFolder": "Cambiar nombre de carpeta",
     "sourceCopied": "Fuente copiada al portapapeles.",
-    "sourceDeleted": "Fuente eliminada.",
     "sourceUpdated": "Fuente actualizada",
     "sourceUpdatedDesc": "Se guardaron los cambios de la fuente.",
     "typeLabel": "Tipo",
     "untitledSource": "Fuente sin título",
     "useForGrounding": "Usar para fundamentar respuestas de la IA",
-    "useForGroundingDesc": "Las fuentes inactivas siguen guardadas, pero no se usan al generar contenido."
+    "useForGroundingDesc": "Las fuentes inactivas siguen guardadas, pero no se usan al generar contenido.",
+    "titleRequired": "Añade un título.",
+    "contentRequired": "Añade el texto de la fuente.",
+    "sourceDeletedTitle": "Se eliminó {{title}}",
+    "restoreFailed": "No se pudo restaurar la fuente",
+    "deleteFailed": "No se pudo eliminar la fuente.",
+    "readingFile": "Leyendo el archivo…",
+    "summary": "{{total}} fuentes · {{active}} activas · {{folders}} carpetas",
+    "mergeFolderTitle": "¿Fusionar con {{name}}?",
+    "mergeFolders": "Fusionar carpetas",
+    "mergeFailed": "No se pudieron fusionar las carpetas. Inténtalo de nuevo.",
+    "openOrigin": "Abrir {{title}} en una pestaña nueva"
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
@@ -1710,15 +1727,9 @@
     "loadFailed": "Error al cargar contenido compartido",
     "contentNotFound": "Este contenido compartido ya no está disponible",
     "goToApp": "Ir a la App",
-    "importToAccount": "Importar a Cuenta",
     "openApp": "Abrir App",
     "sharedOn": "Compartido el",
-    "views": "vistas",
-    "loginRequired": "Inicio de Sesión Requerido",
-    "loginRequiredDesc": "Inicia sesión para importar este contenido a tu cuenta.",
-    "importNotAvailable": "La importación aún no está disponible",
-    "importNotAvailableDesc": "Guardar contenido compartido en tu cuenta estará disponible próximamente.",
-    "importFailed": "Error al importar contenido"
+    "views": "vistas"
   },
   "privacyPage": {
     "title": "Política de Privacidad",
@@ -2075,7 +2086,6 @@
   "langSwitcher": {
     "label": "Idioma",
     "title": "Idioma",
-    "description": "Elige el idioma de la app y el idioma usado en las respuestas de IA.",
     "uiLanguage": "Idioma de la interfaz",
     "outputLanguage": "Idioma de salida de IA"
   },
@@ -2181,7 +2191,8 @@
   },
   "routeError": {
     "heading": "No se pudo cargar esta página",
-    "reload": "Recargar"
+    "reload": "Recargar",
+    "home": "Ir al inicio"
   },
   "sourcesPage": {
     "title": "Fuentes",
@@ -2321,7 +2332,10 @@
     "offerDesc": "Un debate mantiene juntos la moción, sus fuentes y tus resultados, y todas las herramientas lo usan.",
     "offerNotNow": "Ahora no, usarla una vez",
     "itemCount_one": "{{count}} elemento",
-    "itemCount_other": "{{count}} elementos"
+    "itemCount_other": "{{count}} elementos",
+    "viewAll": "Ver todo ({{total}})",
+    "switching": "Cambiando…",
+    "deleting": "Eliminando…"
   },
   "debateContext": {
     "using": "Usando {{list}}",

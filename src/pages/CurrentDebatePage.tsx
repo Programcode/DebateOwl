@@ -1,24 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  ArrowRight,
-  BookOpen,
-  Crosshair,
-  Database,
-  Dumbbell,
-  GitBranch,
-  Lightbulb,
-  MessageCircle,
-  Pencil,
-  Sparkles,
-  Swords,
-  type LucideIcon,
-} from 'lucide-react';
+import { Database, Pencil, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { PRACTICE_TOOLS, PREPARE_TOOLS, ToolLink } from '@/components/features/tools/tool-links';
 import { DebateForm } from '@/components/features/debate/DebateForm';
 import { sideLabelKey } from '@/components/features/debate/CurrentDebateStrip';
 import { useAllDebateItems, useOpenDebateItem, type DebateItem } from '@/components/features/debate/debate-items';
@@ -27,16 +16,17 @@ import { formatEuropeanDateTime, formatRelativeDate } from '@/lib/date-format';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 
-const TOOLS: Array<{ key: string; href: string; icon: LucideIcon }> = [
-  { key: 'generate', href: '/app/generate', icon: Sparkles },
-  { key: 'brainstorm', href: '/app/brainstorm', icon: Lightbulb },
-  { key: 'factoids', href: '/app/factoids', icon: BookOpen },
-  { key: 'flowchart', href: '/app/flowchart', icon: GitBranch },
-  { key: 'attack', href: '/app/attack', icon: Swords },
-  { key: 'ask', href: '/app/ask', icon: MessageCircle },
-  { key: 'crossfire', href: '/app/crossfire', icon: Crosshair },
-  { key: 'sparring', href: '/app/sparring', icon: Dumbbell },
-];
+const TOOLS = [...PREPARE_TOOLS, ...PRACTICE_TOOLS];
+
+function ViewAll({ to, count, shown }: { to: string; count: number; shown: number }) {
+  const { t } = useTranslation();
+  if (count <= shown) return null;
+  return (
+    <Button asChild variant="link" size="sm" className="mt-2 h-auto px-0">
+      <Link to={to}>{t('debate.viewAll', { total: count, defaultValue: 'View all ({{total}})' })}</Link>
+    </Button>
+  );
+}
 
 function ItemRow({ item }: { item: DebateItem }) {
   const { t } = useTranslation();
@@ -65,13 +55,14 @@ function SideSection({ side, items }: { side: 'pro' | 'con'; items: DebateItem[]
   return (
     <Card className="h-full border-border/70 bg-card/60" data-testid={`debate-side-${side}`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg">{t(sideLabelKey(side))}</CardTitle>
+        <CardTitle>{t(sideLabelKey(side))}</CardTitle>
         <Badge variant="secondary">{t('debate.itemCount', { count: relevant.length, defaultValue: '{{count}} items' })}</Badge>
       </CardHeader>
       <CardContent>
         {relevant.length === 0
           ? <p className="text-sm text-muted-foreground">{t('debate.sideEmpty', 'No work for this side yet.')}</p>
           : <ul>{relevant.slice(0, 4).map((item) => <ItemRow key={`${item.kind}-${item.id}`} item={item} />)}</ul>}
+        <ViewAll to="/app/history" count={relevant.length} shown={4} />
       </CardContent>
     </Card>
   );
@@ -109,22 +100,32 @@ export default function CurrentDebatePage() {
   return (
     <div className="container px-4 py-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <header className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">{t('nav.currentDebate', 'Current debate')}</p>
-          <h1 className="break-words text-3xl font-bold tracking-tight text-foreground" data-testid="current-debate-motion">{debate.motion}</h1>
-          <p className="text-sm text-muted-foreground">
+        <PageHeader
+          className="mb-0"
+          eyebrow={t('nav.currentDebate', 'Current debate')}
+          title={debate.motion}
+          titleTestId="current-debate-motion"
+          meta={<>
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
             {' · '}
             {t('debate.counts', { sources: debateSources.length, outputs: items.length, defaultValue: '{{sources}} sources · {{outputs}} outputs' })}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditing((value) => !value)}>
-              <Pencil className="mr-1 h-4 w-4" aria-hidden="true" />{t('debate.editSettings', 'Edit settings')}
+          </>}
+          actions={<>
+            <Button variant="ghost" size="sm" onClick={() => setEditing((value) => !value)}>
+              <Pencil className="h-4 w-4" aria-hidden="true" />{t('debate.editSettings', 'Edit settings')}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openDialog('switch')}>{t('debate.switch', 'Switch debate')}</Button>
-            <Button variant="outline" size="sm" onClick={() => openDialog('create')}>{t('debate.startNew', 'Start new debate')}</Button>
+            <Button variant="ghost" size="sm" onClick={() => openDialog('switch')}>{t('debate.switch', 'Switch debate')}</Button>
+            <Button variant="ghost" size="sm" onClick={() => openDialog('create')}>{t('debate.startNew', 'Start new debate')}</Button>
+          </>}
+        />
+
+        {/* The tools are the main thing to do here, so they come first. */}
+        <section aria-labelledby="debate-tools-title">
+          <h2 id="debate-tools-title" className="mb-3 text-lg font-semibold tracking-tight">{t('debate.tools', 'Prepare and practice')}</h2>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {TOOLS.map((tool) => <ToolLink key={tool.key} tool={tool} variant="tile" />)}
           </div>
-        </header>
+        </section>
 
         {editing ? (
           <Card>
@@ -161,7 +162,7 @@ export default function CurrentDebatePage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="border-border/70 bg-card/60" data-testid="debate-sources">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg">{t('debate.sources', 'Sources')}</CardTitle>
+              <CardTitle>{t('debate.sources', 'Sources')}</CardTitle>
               <Button asChild variant="ghost" size="sm">
                 <Link to="/app/library"><Database className="mr-1 h-4 w-4" aria-hidden="true" />{t('nav.library', 'Library')}</Link>
               </Button>
@@ -174,36 +175,22 @@ export default function CurrentDebatePage() {
                     {debateSources.slice(0, 6).map((source) => <li key={source.id} className="truncate">{source.title}</li>)}
                   </ul>
                 )}
+              <ViewAll to="/app/library" count={debateSources.length} shown={6} />
             </CardContent>
           </Card>
           <Card className="border-border/70 bg-card/60" data-testid="debate-recent">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">{t('debate.recentWork', 'Recent work')}</CardTitle>
+              <CardTitle>{t('debate.recentWork', 'Recent work')}</CardTitle>
             </CardHeader>
             <CardContent>
               {items.length === 0
                 ? <p className="text-sm text-muted-foreground">{t('debate.noWork', 'Results from any tool appear here automatically.')}</p>
                 : <ul>{items.slice(0, 6).map((item) => <ItemRow key={`${item.kind}-${item.id}`} item={item} />)}</ul>}
+              <ViewAll to="/app/history" count={items.length} shown={6} />
             </CardContent>
           </Card>
         </div>
 
-        <section aria-labelledby="debate-tools-title">
-          <h2 id="debate-tools-title" className="mb-3 text-lg font-semibold tracking-tight">{t('debate.tools', 'Prepare and practice')}</h2>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {TOOLS.map((tool) => (
-              <Link
-                key={tool.key}
-                to={tool.href}
-                className="motion-press group flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2.5 text-sm font-medium hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <tool.icon className="h-4 w-4 text-primary" aria-hidden="true" />
-                <span className="flex-1">{t(`nav.${tool.key}`)}</span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

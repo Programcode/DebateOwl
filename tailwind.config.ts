@@ -59,7 +59,8 @@ export default {
   			}
   		},
   		transitionDuration: {
-  			'120': '120ms'
+  			'120': '120ms',
+  			'180': '180ms'
   		},
   		transitionTimingFunction: {
   			'out-strong': 'cubic-bezier(0.23, 1, 0.32, 1)',

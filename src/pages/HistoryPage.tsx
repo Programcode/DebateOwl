@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -25,9 +24,17 @@ import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnsortedWork } from '@/components/features/debate/UnsortedWork';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 /** History scope value for work that belongs to no debate. */
 const OUTSIDE_DEBATES = 'outside';
+
+const HISTORY_TABS = ['cases', 'chats', 'attacks', 'brainstorms', 'factoids', 'sparring'] as const;
+type HistoryTab = (typeof HISTORY_TABS)[number];
+const isHistoryTab = (value: string | null): value is HistoryTab => HISTORY_TABS.includes(value as HistoryTab);
+
+// Lists scroll with the page on phones; wide screens get a bounded inner list.
+const LIST_CLASS = 'space-y-4 lg:max-h-[500px] lg:overflow-y-auto lg:pr-4';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
@@ -51,6 +58,17 @@ export default function HistoryPage() {
   const loadSparringSession = useSparringStore((state) => state.loadSavedSession);
   const deleteSparringSession = useSparringStore((state) => state.deleteSavedSession);
   const { toast } = useToast();
+  // The open tab lives in the URL, so Back from a loaded item returns to it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: HistoryTab = isHistoryTab(tabParam) ? tabParam : 'cases';
+  const setTab = (value: string) => {
+    if (!isHistoryTab(value)) return;
+    setSearchParams((params) => {
+      params.set('tab', value);
+      return params;
+    }, { replace: true });
+  };
   const [caseToDelete, setCaseToDelete] = useState<{ id: string; title: string } | null>(null);
   const [sparringSessionToDelete, setSparringSessionToDelete] = useState<{ id: string; motion: string } | null>(null);
 
@@ -116,7 +134,7 @@ export default function HistoryPage() {
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8 space-y-4">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('historyPage.title')}</h1>
+          <PageHeader className="mb-0" title={t('historyPage.title')} />
           <Select value={scope} onValueChange={setScopeChoice}>
             <SelectTrigger className="w-full sm:max-w-xl" aria-label={t('debate.historyScope', 'Show work from')}>
               <SelectValue />
@@ -133,7 +151,7 @@ export default function HistoryPage() {
         </div>
 
         {scope === OUTSIDE_DEBATES ? <UnsortedWork /> : (
-        <Tabs defaultValue="cases" className="space-y-6">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
             <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
@@ -152,10 +170,10 @@ export default function HistoryPage() {
                 {savedCases.length === 0 ? (
                   <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4 stagger-enter">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedCases.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors motion-list-item">
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
@@ -174,7 +192,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -216,8 +234,8 @@ export default function HistoryPage() {
                 {savedAttacks.length === 0 ? (
                   <EmptyState icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedAttacks.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
@@ -232,7 +250,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -246,8 +264,8 @@ export default function HistoryPage() {
                 {savedBrainstorms.length === 0 ? (
                   <EmptyState icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedBrainstorms.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
@@ -262,7 +280,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -276,8 +294,8 @@ export default function HistoryPage() {
                 {savedFactoids.length === 0 ? (
                   <EmptyState icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedFactoids.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
@@ -292,7 +310,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -312,8 +330,8 @@ export default function HistoryPage() {
                     onAction={() => navigate('/app/sparring')}
                   />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {sparringSessions.map((session) => (
                         <div key={session.id} className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/5">
                           <div className="min-w-0 space-y-1">
@@ -342,7 +360,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -359,7 +377,7 @@ export default function HistoryPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteCase}>{t('common.delete', 'Delete')}</AlertDialogAction>
+              <AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={confirmDeleteCase}>{t('common.delete', 'Delete')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -373,7 +391,7 @@ export default function HistoryPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteSparringSession}>{t('common.delete', 'Delete')}</AlertDialogAction>
+              <AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={confirmDeleteSparringSession}>{t('common.delete', 'Delete')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

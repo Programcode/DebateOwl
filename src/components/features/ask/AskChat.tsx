@@ -145,7 +145,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-medium text-foreground">{citation.claim}</span>
                     <span className={cn(
-                      'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                      'shrink-0 rounded px-1.5 py-0.5 text-xs font-medium',
                       citation.verified ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                     )}>
                       {citation.verified ? t('askChat.verified') : t('askChat.unverified')}
@@ -189,16 +189,16 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                   <li key={`${source.url}-${i}`} className="rounded-md border border-border/60 bg-muted/20 p-2 text-xs">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {source.qualityLabel && (
-                        <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', sourceQualityClass(source.qualityLabel))}>
+                        <span className={cn('rounded px-1.5 py-0.5 text-xs font-medium', sourceQualityClass(source.qualityLabel))}>
                           {t(`sourceQuality.labels.${source.qualityLabel}`, source.qualityLabel)}
                         </span>
                       )}
                       {source.sourceType && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                           {t(`sourceQuality.types.${source.sourceType}`, source.sourceType)}
                         </span>
                       )}
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                         {source.verified ? t('askChat.verified') : t('askChat.unverified')}
                       </span>
                     </div>
@@ -278,7 +278,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </div>
         )}
 
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {(() => {
             try {
               const parts: string[] = [];

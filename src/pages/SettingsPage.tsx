@@ -31,14 +31,16 @@ import { EnvironmentSwitcher } from '@/components/features/settings/EnvironmentS
 import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { APP_LANGUAGES, isAppLanguage } from '@/lib/languages';
 
 
+// Tinted badges keep their label readable (white on amber or green was about 2:1).
 const tierLabels: Record<string, { labelKey: string; color: string }> = {
-  trial: { labelKey: 'settings.tierTrial', color: 'bg-blue-500' },
-  pro: { labelKey: 'settings.tierPro', color: 'bg-amber-500' },
-  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'bg-green-500' },
-  expired: { labelKey: 'settings.tierExpired', color: 'bg-red-500' },
+  trial: { labelKey: 'settings.tierTrial', color: 'border-blue-500/30 bg-blue-500/15 text-blue-800 dark:text-blue-300' },
+  pro: { labelKey: 'settings.tierPro', color: 'border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' },
+  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'border-success/30 bg-success/15 text-success' },
+  expired: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
 };
 
 export default function SettingsPage() {
@@ -57,6 +59,8 @@ export default function SettingsPage() {
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [accountConfirmation, setAccountConfirmation] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deletingData, setDeletingData] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
   // Must match deletionConfirmation in supabase/functions/account/index.ts.
   const expectedAccountConfirmation = user?.email || 'DELETE';
@@ -92,6 +96,8 @@ export default function SettingsPage() {
       return;
     }
 
+    if (deletingData) return;
+    setDeletingData(true);
     void clearAllData().then(() => {
       clearLocalData();
       setDeleteDialogOpen(false);
@@ -100,7 +106,7 @@ export default function SettingsPage() {
     }).catch((error) => {
       console.error('Failed to delete data:', error);
       toast({ title: t('settings.deleteFailed'), description: t('settings.deleteFailedDesc'), variant: "destructive" });
-    });
+    }).finally(() => setDeletingData(false));
   };
 
   const handleDownloadData = async () => {
@@ -141,10 +147,13 @@ export default function SettingsPage() {
   };
 
   const handleSignOut = () => {
+    if (signingOut) return;
+    setSigningOut(true);
     void signOut()
       .then(() => resetSparringLocalData())
       .catch((error) => {
         console.error('Failed to sign out:', error);
+        setSigningOut(false);
         toast({ title: t('common.error', 'Error'), description: t('settings.signOutFailed', 'Could not sign out. Please try again.'), variant: 'destructive' });
       });
   };
@@ -179,14 +188,7 @@ export default function SettingsPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Settings className="h-5 w-5 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
-          </div>
-        </div>
+        <PageHeader className="mb-8" icon={<Settings />} title={t('settings.title')} />
 
         {/* Subscription Status */}
         <Card className="mb-8 border-primary/20">
@@ -203,7 +205,7 @@ export default function SettingsPage() {
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
+                    <Badge variant="outline" className={tierInfo.color}>{t(tierInfo.labelKey)}</Badge>
                     {subscription.tier === 'trial' && subscription.trialEndsAt && (
                       <span className="text-sm text-muted-foreground">
                         {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
@@ -304,8 +306,8 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
                 <p className="font-medium break-all">{user?.email || t('settings.unknownUser')}</p>
               </div>
-              <Button variant="outline" className="shrink-0" onClick={handleSignOut}>
-                {t('settings.signOut')}
+              <Button variant="outline" className="shrink-0" onClick={handleSignOut} disabled={signingOut}>
+                {signingOut ? t('settings.signingOut', 'Signing out…') : t('settings.signOut')}
               </Button>
             </div>
             <div className="flex flex-col gap-3 border-t border-primary/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -321,9 +323,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {user && adminRole.isPending && (
-          <div role="status" aria-label={t('settings.loading')} className="my-8 h-40 animate-pulse rounded-lg bg-muted motion-reduce:animate-none" />
-        )}
+        {/* Nothing renders while the admin check runs: almost nobody is an admin. */}
         {user && adminRole.isError && (
           <div role="alert" className="my-8 flex items-center gap-3 text-sm">
             <p>{t('settings.adminAccessFailed', 'Could not check admin access.')}</p>
@@ -383,7 +383,7 @@ export default function SettingsPage() {
         onOpenChange={setPricingOpen}
         onPromoRedeemed={() => void subscription.refresh()}
       />
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!deletingData) setDeleteDialogOpen(open); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('settings.deleteDialogTitle')}</DialogTitle>
@@ -399,12 +399,13 @@ export default function SettingsPage() {
               onChange={(event) => setDeleteEmail(event.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && deleteEmail === user?.email) handleDeleteAllData(); }}
               placeholder={user?.email || ''}
+              disabled={deletingData}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
-            <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email}>
-              {t('settings.deleteAllData')}
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deletingData}>{t('common.cancel', 'Cancel')}</Button>
+            <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email || deletingData}>
+              {deletingData ? t('settings.deletingData', 'Deleting…') : t('settings.deleteAllData')}
             </Button>
           </DialogFooter>
         </DialogContent>

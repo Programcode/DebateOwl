@@ -22,11 +22,11 @@ Preconditions:
 
 - Doctor passes. The user is signed in (`signedIn` fixture). A Current Debate exists: `await startDebate(page, motion)`. Without one, `Add Source` stays disabled.
 
-- **Add.** Click the button named `Add Source`. Fill the textbox named `Source title...`, fill the textbox named `Paste source content...` with a unique marker, and click `Save to Library`. The switch named `Toggle <title>` is checked. `sources` has a row with `is_active: true` and the debate's `debate_id`.
+- **Add.** Click the button named `Add Source`. Fill the textbox named `Title` (exact), fill the textbox named `Content` (exact) with a unique marker, and click `Save to Library`. Leaving either empty shows an inline error under the field and moves focus to it. The switch named `Toggle <title>` is checked. `sources` has a row with `is_active: true` and the debate's `debate_id`.
 - **Toggle.** Click the switch named `Toggle <title>`. It becomes not checked.
 - **Ground.** Go to `/app/brainstorm`; the motion is prefilled from the debate. Run it (see [ai-tools](./ai-tools.md)). `providerCall("brainstorm").system` contains the active marker and does not contain the paused marker.
-- **Delete.** Click the button named `Delete <title>` (use `exact`). The switch count drops to 0, and stays 0 after `page.reload()`. `sources` no longer has the title.
-- **Import.** In the add panel, fill `Import from URL` and click `Import URL`. `Source Ready` appears, then `Save imported source` stores a row whose `origin` is the URL.
+- **Delete.** Click the button named `Delete <title>` (use `exact`). It deletes at once, with no confirmation, and a toast `Deleted <title>` offers `Undo`, which saves the source again. The switch count drops to 0, and stays 0 after `page.reload()`. `sources` no longer has the title.
+- **Import.** In the add panel, fill `Import from URL` and click `Import URL`. The `Import preview` panel appears, then `Save imported source` stores a row whose `origin` is the URL.
 - **Erase.** On Settings, click `Delete All My Data`. In the dialog, fill `Type your email to confirm` with `user.email` and click the dialog's `Delete All My Data`. The text `Data Deleted` appears, and `sources` for the user is `[]`.
 
 ## Gotchas
