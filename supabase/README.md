@@ -28,7 +28,7 @@ supabase/tests/            pgTAP database and policy tests
 
 ### AI and practice
 
-- `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity.
+- `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity. Once a sparring scorecard is saved it sends a `sparring_scored` push to the scorer's phones (see [Push notifications](#push-notifications)).
 - `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
 - `voice`: authenticated text-to-speech for the opponent in voice rounds. It accepts one segment of at most 1,000 characters with the token `ai` signed for it, so it speaks only server-written text. It answers `voice_unavailable` without `ELEVENLABS_API_KEY`, enforces the per-user daily voice cap through `consume_daily_quota` under the `voice` key, calls ElevenLabs (`eleven_v4` for sparring, `eleven_v4_turbo` for Crossfire), and records each request in `ai_requests` as `voice_sparring` or `voice_crossfire`. Every failure is a JSON error with a code, and the browser then reads the reply with its own voice.
 
@@ -75,9 +75,27 @@ Other shared modules own:
 - crossfire response validation;
 - audio-tag handling and signed voice tokens for voice rounds (`voice-tags.ts`, which the browser also imports, and `voice-token.ts`);
 - the pinned OpenRouter Jev Decisions client, automatic model routing, semantic source decisions, and Crossfire signals;
-- announcement input validation.
+- announcement input validation;
+- push notifications through the Expo push service (`push.ts`).
 
 Move code into `_shared` only when multiple functions use the same boundary or policy. Feature-specific behavior stays with its handler.
+
+## Push notifications
+
+The iOS app files its Expo push token through the `register_push_token` RPC (`20261014120000_push_tokens.sql`). The function writes only the caller's `auth.uid()`, moves a token to the current account when a second account signs in on the same phone, keeps one token per install and ten per account, and turns a disabled token back on. Clients can read and delete only their own `push_tokens` rows and cannot insert or update them directly. `push_tickets` is service-role only and carries no user ID; deleting a token or an account deletes its tickets.
+
+[`functions/_shared/push.ts`](functions/_shared/push.ts) sends through `https://exp.host/--/api/v2/push/send`, so the same code serves Expo Go, development and store builds. It reads tokens with the service role for the user IDs named by each notification, builds every message from the notification of the user who owns the token row, and drops rows for anyone else. Messages carry fixed, localized copy (`en`, `es`, `hu`, from the token's locale) and IDs only, never debate content, because they show on a lock screen. It sends in batches of 100, stores the tickets, turns a token off when a ticket or receipt says `DeviceNotRegistered`, and never throws into the request that triggered it. There is no scheduled receipts job: each send first reads the receipts that are at least 15 minutes old and forgets tickets older than Expo's 24-hour receipt window.
+
+Wired triggers:
+
+- `sparring_scored`: the `ai` function, after the scorecard is saved, through `EdgeRuntime.waitUntil` so the response does not wait for Expo.
+
+Not wired yet:
+
+- `trial_ending`: needs a scheduled job. `user_settings.trial_ends_at` holds the date, and no migration schedules anything yet. A daily pg_cron and pg_net call, or a VPS timer, would call a service-role path that selects users whose trial ends within a day and has not been notified, records that, and calls `deliverPush`.
+- `announcements`: the hook point is `create-announcement` in [`functions/admin/index.ts`](functions/admin/index.ts). It needs a store method for `target_type = 'all'`, has to respect `starts_at` (a scheduled announcement sends when it starts, not when it is created) and `target_user_ids`, and should use fixed copy that points into the app rather than the administrator's title, under the lock-screen rule above.
+
+Deploying push to a project is the migration first, then the `ai` function; neither needs a new secret. `EXPO_ACCESS_TOKEN` is optional and unset: it is needed only if enhanced push security is turned on for the Expo project. A token reaches a phone only once the app has an EAS project ID; see [`../apps/mobile/AGENTS.md`](../apps/mobile/AGENTS.md).
 
 ## Authentication boundary
 
@@ -124,6 +142,8 @@ The stack begins at port `54321` and is not parallel-safe across worktrees. Coor
 
 The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
 
+`20261014120000_push_tokens.sql` is additive: it creates `push_tokens`, `push_tickets` and `register_push_token`. See [Push notifications](#push-notifications).
+
 `20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 
 `20260926090100_legacy_debate_cleanup.sql` defines `private.purge_legacy_debate_material`, which deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. The migration does not call it, so applying it deletes nothing; legacy rows stay in the Unsorted view. Running the purge on a remote project is a separate, destructive step that needs explicit authorization for that environment. Work created after the rollout is never touched, however late it runs.
@@ -164,6 +184,7 @@ Document names, never values. Depending on deployed features, server-side config
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;
 - sparring integrity material, which also signs voice tokens;
 - Google export configuration;
+- `EXPO_ACCESS_TOKEN`, optional and unset, only if enhanced push security is on for the Expo project;
 - allowed origins and environment-specific application URLs.
 
 Supabase injects `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Every deployed project, staging included, also needs:
