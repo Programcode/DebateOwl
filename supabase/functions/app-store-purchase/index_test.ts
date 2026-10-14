@@ -107,6 +107,9 @@ Deno.test("an unverifiable purchase is refused before anything is applied", asyn
     [await ownTransaction({ environment: "Sandbox" }), 400, "wrong_environment"],
     [await ownTransaction({ type: "Non-Consumable" }), 422, "unsupported_product"],
     ["not-a-jws", 400, "malformed"],
+    // A signature segment that is not base64url, and a date no Date can hold.
+    [(await ownTransaction()).replace(/[^.]+$/, "not!base64"), 400, "malformed"],
+    [await ownTransaction({ expiresDate: 1e20 }), 400, "malformed"],
   ];
   for (const [signedTransaction, status, code] of cases) {
     const { applied, post } = harness();

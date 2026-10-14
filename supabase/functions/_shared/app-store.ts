@@ -84,7 +84,13 @@ export function appStoreConfigFromEnv(): AppStoreConfig {
 
 function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
-  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+  let binary: string;
+  try {
+    binary = atob(base64);
+  } catch {
+    throw new AppStoreVerificationError("malformed", "JWS segment is not base64url");
+  }
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 function decodeJson(segment: string): Record<string, unknown> {
@@ -216,8 +222,10 @@ function text(value: unknown, field: string): string {
 }
 
 function time(value: unknown, field: string): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new AppStoreVerificationError("malformed", `${field} is missing`);
-  return new Date(value).toISOString();
+  const date = typeof value === "number" ? new Date(value) : null;
+  // A finite number past Date's range gives an invalid date, which toISOString throws on.
+  if (!date || Number.isNaN(date.getTime())) throw new AppStoreVerificationError("malformed", `${field} is missing or out of range`);
+  return date.toISOString();
 }
 
 function optionalTime(value: unknown, field: string): string | undefined {

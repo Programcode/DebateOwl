@@ -106,6 +106,12 @@ Deno.test("a payload changed after signing fails", async () => {
   await rejectsWith(() => verifyTransaction(`${head}.${forged}.${signature}`, config, roots), "invalid_signature");
 });
 
+Deno.test("signed data that cannot be decoded is malformed, not an unexpected error", async () => {
+  const [head, payload] = (await signJws(chain, transactionPayload())).split(".");
+  await rejectsWith(() => verifyTransaction(`${head}.${payload}.not!base64`, config, roots), "malformed");
+  await rejectsWith(async () => await verifyTransaction(await signJws(chain, transactionPayload({ expiresDate: 1e20 })), config, roots), "malformed");
+});
+
 Deno.test("a transaction for another bundle fails", async () => {
   await rejectsWith(
     async () => await verifyTransaction(await signJws(chain, transactionPayload({ bundleId: "com.example.other" })), config, roots),

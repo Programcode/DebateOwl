@@ -121,6 +121,9 @@ Deno.test("a notification that fails verification is refused and applies nothing
     [await signedNotification("DID_RENEW", undefined, {}, { bundleId: "com.example.other" }), "wrong_app"],
     [await signedNotification("DID_RENEW", undefined, {}, { environment: "Sandbox" }), "wrong_environment"],
     ["not-a-jws", "malformed"],
+    // A signature segment that is not base64url, and a date no Date can hold.
+    [(await signedNotification("DID_RENEW", undefined)).replace(/[^.]+$/, "not!base64"), "malformed"],
+    [await signedNotification("DID_RENEW", undefined, { expiresDate: 1e20 }), "malformed"],
   ];
   for (const [signedPayload, code] of cases) {
     const { applied, post } = harness();
