@@ -1,3 +1,4 @@
+import { entitlementRows } from "../_shared/testing/entitlement.ts";
 const environment = {
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_ANON_KEY: "test-anon-key",
@@ -69,13 +70,8 @@ Deno.test("generate marks every contention when research has no citable sources"
         if (url.pathname.includes("/rest/v1/user_roles")) {
           return jsonResponse({ role: "user" });
         }
-        if (url.pathname.includes("/rest/v1/user_settings")) {
-          return jsonResponse({
-            subscription_tier: "trial",
-            daily_limit_override: 50,
-            trial_ends_at: "2099-01-01T00:00:00.000Z",
-            grace_period_ends_at: null,
-          });
+        if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) {
+          return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
         }
         if (url.pathname.includes("/rest/v1/rate_limits")) {
           return jsonResponse({ limit_value: 50 });
