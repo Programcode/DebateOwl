@@ -3,6 +3,8 @@ import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/co
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
+import { debateListScopes, deletedListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -61,26 +63,34 @@ function fromRow(row: SourceRow): Source {
  * the real boundary; the filter keeps a wrong session from mixing accounts.
  */
 
-/** One debate's sources, newest first, as the website's Library lists them by default. */
-export async function fetchSources(userId: string, debateId: string): Promise<Source[]> {
-  const { data, error } = await supabase
+/** One debate's sources, newest first, as the website's Library lists them by default. Offline, the saved copy. */
+export function fetchSources(userId: string, debateId: string, mark?: CopyMark): Promise<Source[]> {
+  return cachedRead(userId, 'sources', debateId, () => loadSources(userId, debateId), mark);
+}
+
+async function loadSources(userId: string, debateId: string): Promise<Source[]> {
+  const { data, error, status } = await supabase
     .from('sources')
     .select(SOURCE_COLUMNS)
     .eq('user_id', userId)
     .eq('debate_id', debateId)
     .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as SourceRow[]).map(fromRow);
 }
 
-export async function fetchSource(userId: string, id: string): Promise<Source | null> {
-  const { data, error } = await supabase
+export function fetchSource(userId: string, id: string, mark?: CopyMark): Promise<Source | null> {
+  return cachedRead(userId, 'source', id, () => loadSource(userId, id), mark);
+}
+
+async function loadSource(userId: string, id: string): Promise<Source | null> {
+  const { data, error, status } = await supabase
     .from('sources')
     .select(SOURCE_COLUMNS)
     .eq('user_id', userId)
     .eq('id', id)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw readFailed(error, status);
   return data ? fromRow(data as SourceRow) : null;
 }
 
@@ -123,6 +133,7 @@ export async function addSource(
     .select(SOURCE_COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the source');
+  afterWrite(userId, [{ group: 'sources', key: input.debateId }, ...debateListScopes(input.debateId, 'source')]);
   notifySourcesChanged();
   return fromRow(data as SourceRow);
 }
@@ -142,8 +153,14 @@ export async function fetchSourceIdsInFolder(userId: string, debateId: string, f
 /** Removes a source; with a debate, only while the source is still in that debate. */
 export async function removeSource(userId: string, id: string, debateId?: string): Promise<void> {
   const query = supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
-  const { error } = await (debateId ? query.eq('debate_id', debateId) : query);
+  const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query).select('debate_id');
   if (error) throw new Error(error.message);
+  // The deleted row names its debate, whose Library and counts change. With no row, every Library may hold it.
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  const libraries: CopyScope[] = deletedFrom.length > 0
+    ? deletedFrom.flatMap((debate) => (debate ? [{ group: 'sources' as const, key: debate }] : []))
+    : [{ group: 'sources' }];
+  afterWrite(userId, [{ group: 'source', key: id }, ...libraries, ...deletedListScopes(deletedFrom, 'source')]);
   notifySourcesChanged();
 }
 
@@ -175,6 +192,8 @@ export async function applySourceAssessments(userId: string, debateId: string, a
   const results = await Promise.all(
     Array.from(updates, ([id, metadata]) => supabase.from('sources').update({ metadata }).eq('user_id', userId).eq('debate_id', debateId).eq('id', id)),
   );
+  // The Library and the source sheet show how often a source was used.
+  afterWrite(userId, [{ group: 'sources', key: debateId }, ...Array.from(updates.keys(), (id) => ({ group: 'source' as const, key: id }))]);
   notifySourcesChanged();
   const failed = results.find((result) => result.error);
   if (failed?.error) throw new Error(failed.error.message);

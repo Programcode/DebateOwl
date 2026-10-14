@@ -2428,6 +2428,9 @@
     "common": {
       "done": "Done"
     },
+    "offline": {
+      "notice": "Offline: showing saved copies. AI and saving wait for the connection."
+    },
     "debates": {
       "search": "Search motions",
       "noMatches": "No debates match your search.",

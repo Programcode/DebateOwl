@@ -4,6 +4,7 @@ const addSource = vi.hoisted(() => vi.fn());
 
 vi.mock('./supabase', () => ({ supabase: {} }));
 vi.mock('expo/fetch', () => ({ fetch: vi.fn() }));
+vi.mock('./offline-cache', () => ({ cachedRead: vi.fn(), afterWrite: vi.fn(), updateCopy: vi.fn(), readFailed: vi.fn() }));
 vi.mock('./sources', () => ({ addSource, applySourceAssessments: vi.fn(), fetchSourceIdsInFolder: vi.fn(), removeSource: vi.fn() }));
 
 import { autosaveSources, readBrainstorm, readFactoids } from './results';

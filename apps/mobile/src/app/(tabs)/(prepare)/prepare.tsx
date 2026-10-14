@@ -15,6 +15,7 @@ import { WorkRow, workHref } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { fetchPrepareWork, type DebateItem } from '@/lib/debates';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { keepIfSame } from '@/lib/keep-if-same';
 import { useTheme } from '@/theme/use-theme';
 
@@ -38,13 +39,14 @@ export default function PrepareScreen() {
 
   // Every load, from focus or Retry, takes a number; only the newest may write, so a late Retry for another debate never replaces this one's.
   const loads = useRef(0);
+  const copies = useCopyHolder();
   const load = useCallback(async () => {
     if (!userId || !debateId) return;
     const forDebate = debateId;
     const request = ++loads.current;
     const isCurrent = () => loads.current === request;
     try {
-      const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT);
+      const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT, copies.mark());
       if (!isCurrent()) return;
       // Every focus rereads the list; an unchanged one keeps its identity, so the rows do not re-render.
       setLoaded((previous) => keepIfSame(previous, { debateId: forDebate, items: next, failed: false }));
@@ -53,16 +55,17 @@ export default function PrepareScreen() {
       console.warn('Could not load saved results:', cause instanceof Error ? cause.message : cause);
       setLoaded({ debateId: forDebate, items: null, failed: true });
     }
-  }, [userId, debateId]);
+  }, [userId, debateId, copies]);
 
-  // Reload on focus, so a case generated a moment ago, or on the website, shows up.
+  // Reload on focus, so a case generated a moment ago, or on the website, shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
     useCallback(() => {
       void load();
       return () => {
         loads.current += 1;
+        copies.release();
       };
-    }, [load]),
+    }, [load, copies]),
   );
 
   return (

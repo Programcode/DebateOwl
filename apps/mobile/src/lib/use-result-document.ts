@@ -9,6 +9,7 @@ import { useDebates } from './debate-context';
 import { forgetOpenResult, keepOpenResult, openResult, updateOpenResult, type OpenResult } from './open-results';
 import { deleteResult, fetchAutoSavedSourceIds, fetchResult, removeSources, saveCase, type ArrivalNotice, type ResultKind } from './results';
 import { fetchSources, subscribeSourcesChanged, type Source } from './sources';
+import { useCopyHolder } from './use-copy-holder';
 
 export type DocumentState<K extends ResultKind> =
   | { status: 'loading' }
@@ -64,6 +65,8 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
   const [busy, setBusy] = useState(false);
   const live = useRef(true);
   const owner = useRef(userId);
+  const resultCopies = useCopyHolder();
+  const libraryCopies = useCopyHolder();
   owner.current = userId;
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -89,7 +92,7 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
       return;
     }
     let active = true;
-    fetchResult(userId, kind, id)
+    fetchResult(userId, kind, id, resultCopies.mark())
       .then((row) => {
         if (!active) return;
         if (!row) {
@@ -107,7 +110,7 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
     return () => {
       active = false;
     };
-  }, [userId, kind, id]);
+  }, [userId, kind, id, resultCopies]);
 
   const result = state.status === 'ready' ? state.result : null;
   const resultDebateId = result?.debateId ?? null;
@@ -116,11 +119,12 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
   useEffect(() => {
     if (!userId || !resultDebateId) {
       setLibrary([]);
+      libraryCopies.release();
       return;
     }
     let active = true;
     const load = () =>
-      fetchSources(userId, resultDebateId)
+      fetchSources(userId, resultDebateId, libraryCopies.mark())
         .then((next) => {
           if (active) setLibrary(next);
         })
@@ -131,7 +135,7 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
       active = false;
       unsubscribe();
     };
-  }, [userId, resultDebateId]);
+  }, [userId, resultDebateId, libraryCopies]);
 
   // The website's undo covers the Current Debate's Auto-saved folder, also in one-off mode.
   const currentId = current?.id ?? null;

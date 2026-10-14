@@ -6,6 +6,7 @@ const fetchMock = vi.hoisted(() => vi.fn());
 const getSession = vi.hoisted(() => vi.fn(() => new Promise<never>(() => {})));
 vi.mock('./supabase', () => ({ supabase: { auth: { getSession } } }));
 vi.mock('expo/fetch', () => ({ fetch: fetchMock }));
+vi.mock('./offline-cache', () => ({ afterWrite: vi.fn(), cachedRead: vi.fn(), readFailed: vi.fn(), updateCopy: vi.fn() }));
 
 import { AIError, postFunction, untilAborted } from './ai-request';
 import { withTurnDeadline } from './crossfire';

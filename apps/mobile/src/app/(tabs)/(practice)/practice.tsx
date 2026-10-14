@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { keepIfSame } from '@/lib/keep-if-same';
 import { fetchSparringRounds, type SparringRoundSummary } from '@/lib/sparring';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 const ROUNDS_LIMIT = 5;
@@ -44,13 +45,14 @@ export default function PracticeScreen() {
 
   // Every load takes a number; only the newest may write, so a slow load for another debate never replaces this one's.
   const loads = useRef(0);
+  const copies = useCopyHolder();
   const load = useCallback(async () => {
     if (!userId) return;
     const forDebate = debateId;
     const request = ++loads.current;
     const isCurrent = () => loads.current === request;
     try {
-      const items = await fetchSparringRounds(userId, forDebate, ROUNDS_LIMIT);
+      const items = await fetchSparringRounds(userId, forDebate, ROUNDS_LIMIT, copies.mark());
       if (!isCurrent()) return;
       setRounds((previous) => keepIfSame(previous, { debateId: forDebate, items, failed: false }));
     } catch (cause) {
@@ -58,16 +60,17 @@ export default function PracticeScreen() {
       console.warn('Could not load sparring rounds:', cause instanceof Error ? cause.message : cause);
       setRounds({ debateId: forDebate, items: null, failed: true });
     }
-  }, [userId, debateId]);
+  }, [userId, debateId, copies]);
 
-  // Reload on focus, so a round just judged or deleted shows up.
+  // Reload on focus, so a round just judged or deleted shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
     useCallback(() => {
       void load();
       return () => {
         loads.current += 1;
+        copies.release();
       };
-    }, [load]),
+    }, [load, copies]),
   );
 
   const items = rounds?.debateId === debateId ? rounds.items : null;

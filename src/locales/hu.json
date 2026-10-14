@@ -2428,6 +2428,9 @@
     "common": {
       "done": "Kész"
     },
+    "offline": {
+      "notice": "Offline: a mentett másolatokat látod. Az MI és a mentés megvárja a kapcsolatot."
+    },
     "debates": {
       "search": "Tételek keresése",
       "noMatches": "Nincs a keresésnek megfelelő vita.",

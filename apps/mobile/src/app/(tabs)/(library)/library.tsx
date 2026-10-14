@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { fetchSources, removeSource, subscribeSourcesChanged, type Source, type SourceType } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 type Filter = 'all' | SourceType;
@@ -75,13 +76,14 @@ function SourceList({ debateId }: { debateId: string }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const loads = useRef(0);
+  const copies = useCopyHolder();
   const userId = session?.user.id ?? null;
 
   const load = useCallback(async () => {
     if (!userId) return;
     const load = ++loads.current;
     try {
-      const next = await fetchSources(userId, debateId);
+      const next = await fetchSources(userId, debateId, copies.mark());
       if (load !== loads.current) return;
       setSources(next);
       setFailed(false);
@@ -90,13 +92,15 @@ function SourceList({ debateId }: { debateId: string }) {
       console.warn('Could not load sources:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [userId, debateId]);
+  }, [userId, debateId, copies]);
 
   // Sources added on the website show up when the tab comes back into view.
+  // Out of view, its saved copies no longer count for the offline notice.
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [load]),
+      return () => copies.release();
+    }, [load, copies]),
   );
   useEffect(() => subscribeSourcesChanged(() => void load()), [load]);
 

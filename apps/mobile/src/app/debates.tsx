@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { fetchSourceCounts, type Debate } from '@/lib/debates';
 import { formatRelativeDate, isToday } from '@/lib/dates';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -32,6 +33,7 @@ export default function DebatesSheet() {
   const [sourceCounts, setSourceCounts] = useState<Record<string, number>>({});
   const [switching, setSwitching] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const copies = useCopyHolder();
 
   useEffect(() => {
     void refresh();
@@ -41,7 +43,7 @@ export default function DebatesSheet() {
   useEffect(() => {
     if (!userId || !ids) return;
     let active = true;
-    fetchSourceCounts(userId, ids.split(','))
+    fetchSourceCounts(userId, ids.split(','), copies.mark())
       .then((counts) => {
         if (active) setSourceCounts(counts);
       })
@@ -49,7 +51,7 @@ export default function DebatesSheet() {
     return () => {
       active = false;
     };
-  }, [userId, ids]);
+  }, [userId, ids, copies]);
 
   const visible = useMemo(() => {
     const needle = normalize(query);

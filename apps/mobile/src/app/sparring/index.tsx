@@ -41,7 +41,7 @@ import { fetchFeatureConfig } from '@/lib/feature-config';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { useSettings } from '@/lib/settings';
-import { attachSparring, judgeSparring, newSparringId, SparringResponseError, sparringDraft, sparringTurn } from '@/lib/sparring';
+import { attachSparring, judgeSparring, newSparringId, noteJudgedRound, SparringResponseError, sparringDraft, sparringTurn } from '@/lib/sparring';
 import { formatClock } from '@/lib/timer';
 import { tapTurnStart, useKeepAwakeWhile } from '@/lib/timer-signals';
 import { radius } from '@/theme/colors';
@@ -152,6 +152,8 @@ export default function SparringScreen() {
         { action: 'score', sessionId: snapshot.id, motion: snapshot.motion, userSide: snapshot.userSide, format: snapshot.format, difficulty: snapshot.difficulty, speeches: snapshot.speeches, language: outputLanguage },
         { config, debateId: snapshot.debateId ?? null, signal: controller.signal },
       );
+      // The server saved the round as judged, so this account's saved lists change whatever happens next.
+      noteJudgedRound(forUser, snapshot.id, snapshot.debateId ?? null);
       if (controller.signal.aborted || owner.current !== forUser) return;
       const latest = sessionRef.current;
       const completed = latest?.id === snapshot.id ? completeSparringSession(latest, scorecard, Date.now()) : null;
@@ -160,7 +162,7 @@ export default function SparringScreen() {
       commit(completed);
       // The server saved the judged round before it answered; file it in its debate.
       if (completed.debateId) {
-        attachSparring(completed.id, completed.debateId, completed.userSide).catch((cause: unknown) => {
+        attachSparring(forUser, completed.id, completed.debateId, completed.userSide).catch((cause: unknown) => {
           console.warn('Could not file the round in its debate:', cause instanceof Error ? cause.message : cause);
           if (live.current && owner.current === forUser) setNotice(t('debate.recordFailed'));
         });
