@@ -235,11 +235,13 @@ GRANT EXECUTE ON FUNCTION public.effective_entitlement(uuid, timestamptz) TO aut
 -- to a user and must match an existing row's user; data for a linked row may
 -- come without it.
 --
--- Ordering: a transaction replaces the stored one when it expires later (a
--- renewal, upgrade or new period), or when it is the same transaction signed
--- later (a refund, revocation or its reversal). A refund of an older
--- period therefore leaves the current period alone, and an exact replay
--- changes nothing. Renewal info replaces the stored renewal info when it was
+-- Ordering: a transaction replaces the stored one when Apple charged it later
+-- (purchaseDate: a renewal, upgrade, downgrade or resubscription), or when it
+-- is the same transaction signed later (a refund, revocation, its reversal or
+-- a renewal-date extension). Expiry cannot order them: an upgrade from a
+-- yearly to a monthly plan expires sooner. A refund of an older period
+-- therefore leaves the current period alone, and an exact replay changes
+-- nothing. Renewal info replaces the stored renewal info when it was
 -- signed later.
 --
 -- Returns applied, stale (nothing newer), duplicate (notification seen),
@@ -258,6 +260,7 @@ SET search_path = ''
 AS $$
 DECLARE
   v_original_id text := p_transaction->>'originalTransactionId';
+  v_purchased timestamptz := (p_transaction->>'purchaseDate')::timestamptz;
   v_expires timestamptz := (p_transaction->>'expiresDate')::timestamptz;
   v_signed timestamptz := (p_transaction->>'signedDate')::timestamptz;
   v_renewal_signed timestamptz := (p_renewal->>'signedDate')::timestamptz;
@@ -308,7 +311,7 @@ BEGIN
             p_transaction->>'productId',
             p_transaction->>'transactionId',
             p_transaction->>'environment',
-            (p_transaction->>'purchaseDate')::timestamptz,
+            v_purchased,
             v_expires,
             (p_transaction->>'revocationDate')::timestamptz,
             (p_transaction->>'revocationReason')::integer,
@@ -341,7 +344,7 @@ BEGIN
           product_id = p_transaction->>'productId',
           transaction_id = p_transaction->>'transactionId',
           environment = p_transaction->>'environment',
-          purchased_at = (p_transaction->>'purchaseDate')::timestamptz,
+          purchased_at = v_purchased,
           expires_at = v_expires,
           revoked_at = (p_transaction->>'revocationDate')::timestamptz,
           revocation_reason = (p_transaction->>'revocationReason')::integer,
@@ -350,7 +353,7 @@ BEGIN
           updated_at = now()
         WHERE original_transaction_id = v_original_id
           AND (
-            v_expires > v_row.expires_at
+            v_purchased > v_row.purchased_at
             OR (p_transaction->>'transactionId' = v_row.transaction_id AND v_signed > v_row.transaction_signed_at)
           );
         v_changed := FOUND;
@@ -381,3 +384,50 @@ $$;
 
 REVOKE ALL ON FUNCTION public.apply_app_store_transaction(uuid, jsonb, jsonb, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_app_store_transaction(uuid, jsonb, jsonb, jsonb) TO service_role;
+
+-- ============================================================
+-- ACCOUNT DELETION
+-- ============================================================
+
+-- The server cannot cancel an App Store subscription; only the customer can,
+-- in Apple's subscription settings. The plan now also says whether Apple may
+-- still bill the user: a subscription that is not revoked, has not turned off
+-- auto-renew, and ended less than 60 days ago (Apple's longest billing retry)
+-- or not at all. The account function passes that on so the app can send the
+-- user to Apple's settings. The rest of the plan is unchanged from
+-- 20261001100000_account_deletion_and_export.sql, and CREATE OR REPLACE keeps
+-- its service-role-only grants.
+CREATE OR REPLACE FUNCTION public.account_deletion_plan(p_user_id uuid)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT jsonb_build_object(
+    'stripe_customer_ids', (
+      SELECT coalesce(jsonb_agg(DISTINCT customer.id ORDER BY customer.id), '[]'::jsonb)
+      FROM (
+        SELECT subscription.stripe_customer_id AS id
+        FROM public.subscriptions AS subscription
+        WHERE subscription.user_id = p_user_id AND subscription.stripe_customer_id IS NOT NULL
+        UNION
+        SELECT recorded.customer_id FROM public.stripe_customers AS recorded WHERE recorded.user_id = p_user_id
+      ) AS customer
+    ),
+    'storage_objects', (
+      SELECT coalesce(jsonb_agg(jsonb_build_object('bucket_id', object.bucket_id, 'name', object.name)), '[]'::jsonb)
+      FROM storage.objects AS object
+      -- Storage sets the owner from the uploader's session. source_files.storage_key
+      -- is user-writable, so it must never select objects for deletion.
+      WHERE object.owner = p_user_id OR object.owner_id = p_user_id::text
+    ),
+    'app_store_subscription_active', EXISTS (
+      SELECT 1 FROM public.app_store_subscriptions AS store
+      WHERE store.user_id = p_user_id
+        AND store.revoked_at IS NULL
+        AND store.auto_renew IS DISTINCT FROM false
+        AND greatest(store.expires_at, coalesce(store.grace_period_expires_at, store.expires_at)) > now() - interval '60 days'
+    )
+  );
+$$;

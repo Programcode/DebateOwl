@@ -266,9 +266,10 @@ SELECT is(
     'stripe_customer_ids', jsonb_build_array('cus_leaver', 'cus_leaver_checkout'),
     'storage_objects', jsonb_build_array(
       jsonb_build_object('bucket_id', 'account-test', 'name', 'leaver/notes.txt')
-    )
+    ),
+    'app_store_subscription_active', true
   ),
-  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names'
+  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names, and flags the App Store subscription Apple keeps billing'
 );
 RESET ROLE;
 

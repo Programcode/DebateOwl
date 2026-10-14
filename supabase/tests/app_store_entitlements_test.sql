@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(73);
+SELECT plan(79);
 
 -- Returns how many rows a statement changed; a privilege or RLS rejection changes none.
 CREATE FUNCTION pg_temp.rows_changed(statement text)
@@ -70,7 +70,7 @@ RETURNS jsonb LANGUAGE sql AS $$
   ))
 $$;
 
-INSERT INTO auth.users (id) SELECT ('e0000000-0000-4000-8000-0000000000' || lpad(n::text, 2, '0'))::uuid FROM generate_series(1, 40) AS n;
+INSERT INTO auth.users (id) SELECT ('e0000000-0000-4000-8000-0000000000' || lpad(n::text, 2, '0'))::uuid FROM generate_series(1, 41) AS n;
 
 -- ============================================================
 -- Privileges
@@ -354,6 +354,49 @@ SELECT results_eq(
   $$VALUES (true, true)$$,
   'so the grace period survives it'
 );
+
+-- An upgrade from a yearly to a monthly plan: Apple charged it later, but it
+-- expires sooner, so purchaseDate (not expiry) must order the two.
+SELECT pg_temp.settings('e0000000-0000-4000-8000-000000000033', 'expired', NULL, NULL);
+SELECT is(
+  public.apply_app_store_transaction('e0000000-0000-4000-8000-000000000033',
+    pg_temp.tx('o6', 't1', 'basic', now() + interval '300 days', now() - interval '2 hours')
+      || jsonb_build_object('purchaseDate', now() - interval '65 days')),
+  'applied', 'a yearly Basic purchase is applied');
+SELECT is(
+  public.apply_app_store_transaction(NULL,
+    pg_temp.tx('o6', 't2', 'pro', now() + interval '30 days', now() - interval '1 hour')
+      || jsonb_build_object('purchaseDate', now())),
+  'applied', 'an upgrade charged later replaces it although it expires sooner');
+SELECT is(pg_temp.plan_of('e0000000-0000-4000-8000-000000000033'), 'pro/50/true/app_store', 'so the upgrade grants Pro');
+SELECT is(
+  public.apply_app_store_transaction(NULL,
+    pg_temp.tx('o6', 't1', 'basic', now() + interval '300 days', now() - interval '30 minutes')
+      || jsonb_build_object('purchaseDate', now() - interval '65 days')),
+  'stale', 'a late copy of the yearly transaction cannot undo the upgrade');
+
+-- ============================================================
+-- Account deletion: whether Apple may still bill the user
+-- ============================================================
+
+SELECT pg_temp.store('e0000000-0000-4000-8000-000000000037', 'pro', now() + interval '10 days');
+SELECT pg_temp.store('e0000000-0000-4000-8000-000000000038', 'pro', now() + interval '10 days');
+UPDATE public.app_store_subscriptions SET auto_renew = false WHERE user_id = 'e0000000-0000-4000-8000-000000000038';
+SELECT pg_temp.store('e0000000-0000-4000-8000-000000000039', 'pro', now() + interval '10 days', NULL, now() - interval '1 hour');
+SELECT pg_temp.store('e0000000-0000-4000-8000-000000000040', 'pro', now() - interval '61 days');
+SELECT pg_temp.store('e0000000-0000-4000-8000-000000000041', 'basic', now() - interval '30 days');
+UPDATE public.app_store_subscriptions SET auto_renew = true WHERE user_id = 'e0000000-0000-4000-8000-000000000041';
+SELECT results_eq(
+  $$SELECT (public.account_deletion_plan(id) ->> 'app_store_subscription_active')::boolean FROM (VALUES
+      ('e0000000-0000-4000-8000-000000000037'::uuid), ('e0000000-0000-4000-8000-000000000038'::uuid),
+      ('e0000000-0000-4000-8000-000000000039'::uuid), ('e0000000-0000-4000-8000-000000000040'::uuid),
+      ('e0000000-0000-4000-8000-000000000009'::uuid)) AS users(id)$$,
+  $$VALUES (true), (false), (false), (false), (false)$$,
+  'deletion flags a renewing App Store subscription, not one with auto-renew off, revoked, long ended, or absent'
+);
+SELECT is(
+  (public.account_deletion_plan('e0000000-0000-4000-8000-000000000041') ->> 'app_store_subscription_active')::boolean,
+  true, 'a lapsed subscription Apple may still be retrying is flagged');
 
 -- ============================================================
 -- Isolation: users read only their own entitlements
