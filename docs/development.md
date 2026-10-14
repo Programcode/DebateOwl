@@ -97,7 +97,7 @@ Run the closest unit or component test while changing behavior. Run lint, type c
 
 ## Mobile app
 
-The iOS app lives in [`apps/mobile/`](../apps/mobile/AGENTS.md). The root `npm ci` installs it with every other workspace, and the root `lint` and `typecheck` cover it. Install its dependencies with `npx expo install <package>` from `apps/mobile`, and only native modules that Expo Go bundles.
+The iOS app lives in [`apps/mobile/`](../apps/mobile/AGENTS.md). The root `npm ci` installs it with every other workspace, and the root `lint` and `typecheck` cover it. Install its dependencies with `npx expo install <package>` from `apps/mobile`. The app must keep running in the App Store's Expo Go; a native module Expo Go lacks belongs only to the [development build](#development-build).
 
 ### Screenshots on the VPS
 
@@ -118,10 +118,10 @@ The phone loads the app from a Metro dev server on the VPS over the tailnet. Sta
 PREVIEW=~/.claude/skills/tailnet-preview/scripts/preview
 HOST=$(tailscale status --self --json | jq -r '.Self.TailscaleIPs[0]')
 cd apps/mobile
-$PREVIEW run 9230 "debatelab mobile expo-go" -- env REACT_NATIVE_PACKAGER_HOSTNAME=$HOST CI=1 npx expo start --port 9230
+$PREVIEW run 9230 "debatelab mobile expo-go" -- env REACT_NATIVE_PACKAGER_HOSTNAME=$HOST CI=1 npx expo start --go --port 9230
 ```
 
-`REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro put the VPS's tailnet IP in the manifest, so Expo Go fetches the bundle from `http://<ip>:9230`. iOS allows plain HTTP to IP addresses on local networks, and the firewall accepts all traffic on `tailscale0`, so the phone reaches that port directly. In Expo Go, enter `exp://<ip>:9230` as the URL, or open that link in Safari. `CI=1` stops Expo waiting for keyboard input in the background. To check the server without a phone:
+`REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro put the VPS's tailnet IP in the manifest, so Expo Go fetches the bundle from `http://<ip>:9230`. iOS allows plain HTTP to IP addresses on local networks, and the firewall accepts all traffic on `tailscale0`, so the phone reaches that port directly. In Expo Go, enter `exp://<ip>:9230` as the URL, or open that link in Safari. `CI=1` stops Expo waiting for keyboard input in the background. `--go` is needed because `expo-dev-client` is installed: without it Expo starts in development-client mode. To check the server without a phone:
 
 ```bash
 curl -s -H 'expo-platform: ios' http://127.0.0.1:9230/ | jq -r .launchAsset.url
@@ -134,6 +134,129 @@ Do not use the MagicDNS name (`codex-remote.<tailnet>.ts.net`) as the hostname. 
 To sign the CLI in to an Expo account, run `npx expo login` from `apps/mobile`, where the Expo CLI is installed. Its `--browser` and `--sso` options hand the login back to a callback on `localhost` on the VPS, so a login opened in a laptop's browser cannot finish. Use the username and password prompt (`-u <name>`, then the password on stdin with `-p -`).
 
 Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
+
+### Development build
+
+A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for dictation now, and later Google sign-in (Expo Go cannot receive OAuth redirects) and the lock-screen timer. Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
+
+[`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with two switches:
+
+- No `DEBATELAB_BUILD`: the Expo Go and web export config, unchanged.
+- `DEBATELAB_BUILD=dev`: adds `expo-dev-client`, `expo-speech-recognition` with the microphone and speech prompts (English in Info.plist, Spanish and Hungarian as `InfoPlist.strings` from `mobile.permissions` in the catalogs) and `CFBundleAllowMixedLocalizations`. The `development` profile in [`apps/mobile/eas.json`](../apps/mobile/eas.json) sets it.
+- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.adam.debatelab.ExpoWidgetsTarget`) and the App Group on both targets, which a Live Activity needs. Set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
+
+`nativeCapabilities()` in `apps/mobile/src/lib/native-capabilities.ts` tells the app at runtime what the binary has. Feature code checks it and never imports a dev-build module at the top level, so Expo Go keeps working.
+
+To see what a mode produces without a Mac, from `apps/mobile`:
+
+```bash
+DEBATELAB_BUILD=dev CI=1 npx expo config --json --type introspect   # Info.plist and entitlements, in memory
+```
+
+`npx expo prebuild --platform ios --no-install --clean` writes the full `ios/` project. It is heavy. Run it under the RAM lock, in a copy of `apps/mobile`, and delete the output. `ios/` is never committed.
+
+**Budget.** Every iOS build is a cloud build (EAS cannot build iOS on Linux). The free plan has about 15 a month. Build only when native code, permissions, entitlements, extensions or the Expo SDK change; at most one a day and three a week without asking Adam; batch native changes; never retry a failed build before reading its log and fixing the cause. Record each build's ID and reason in its PR.
+
+**Credentials.** Adam's Signulous certificate (`.p12` and its password) and provisioning profile (`.mobileprovision`), and an EAS token, arrive through ProtoPi secret requests. Store them in `~/.config/debatelab/ios-signing/` (folder mode 700, files 600) as `cert.p12`, `p12-password`, `profile.mobileprovision` and `eas-token`, never in the repo, a log or chat. EAS signs with them as local credentials: `credentials.json` in `apps/mobile` points at those files. Git ignores it, and you delete it after the build.
+
+#### Build day
+
+Run these in order from the primary checkout (`/home/codex/Projects/DebateLab`) on the merged branch with a clean tree. EAS uploads the git working tree, and the build must match a commit. Stop at the first check that fails and tell Adam.
+
+**1. Decode the profile and check it before anything else.**
+
+```bash
+S=~/.config/debatelab/ios-signing
+openssl smime -inform der -verify -noverify -in $S/profile.mobileprovision -out $S/profile.plist 2>/dev/null
+python3 - $S/profile.plist <<'EOF'
+import hashlib, plistlib, sys
+p = plistlib.load(open(sys.argv[1], 'rb'))
+e = p['Entitlements']
+print('application-identifier:', e.get('application-identifier'))  # TEAM.* is a wildcard
+print('expires:', p['ExpirationDate'])
+print('all devices (enterprise):', p.get('ProvisionsAllDevices', False))
+print('listed devices:', len(p.get('ProvisionedDevices', [])))
+print('get-task-allow:', e.get('get-task-allow'))  # true means a development profile
+print('app groups:', e.get('com.apple.security.application-groups'))
+print('push:', e.get('aps-environment'))
+print('entitlement keys:', sorted(e))
+for cert in p.get('DeveloperCertificates', []):
+    print('profile cert SHA-1:', hashlib.sha1(cert).hexdigest().upper())
+EOF
+openssl pkcs12 -legacy -in $S/cert.p12 -passin file:$S/p12-password -nokeys -clcerts \
+  | openssl x509 -noout -fingerprint -sha1 -enddate | sed '/Fingerprint/s/://g'
+```
+
+Go on only if all of these hold:
+
+- the profile has not expired, and neither has the certificate (`notAfter`);
+- `application-identifier` is `<team>.*` or `<team>.com.adam.debatelab`;
+- the profile is enterprise (`all devices` true) or ad hoc with Adam's iPhone UDID among its devices: ask Adam for the UDID. A development profile (`get-task-allow` true) is not what EAS internal distribution expects; ask Adam first;
+- the `.p12`'s SHA-1 equals one of the profile's certificate SHA-1s.
+
+Set `DEBATELAB_APP_GROUP` (in the profile's `env` in `eas.json`) only if `app groups` lists a group. Otherwise this build has no Live Activity.
+
+**2. Link the EAS project, once.**
+
+```bash
+cd apps/mobile
+export EXPO_TOKEN="$(cat $S/eas-token)"
+npx eas-cli@24.13.0 init --non-interactive
+```
+
+`eas init` cannot edit `app.config.ts`, so it prints the project ID. Add `owner: '<account>'` and `extra: { eas: { projectId: '<id>' } }` to the config, commit, and build from that commit. Expo Go's config gains those two fields, which is expected.
+
+**3. Count the builds already used.**
+
+```bash
+npx eas-cli@24.13.0 build:list --platform ios --json --non-interactive --limit 50 | python3 -c '
+import datetime, json, sys
+now = datetime.datetime.now(datetime.timezone.utc)
+made = [datetime.datetime.fromisoformat(b["createdAt"].replace("Z", "+00:00")) for b in json.load(sys.stdin)]
+print("this month:", sum((t.year, t.month) == (now.year, now.month) for t in made),
+      "| last 7 days:", sum(now - t < datetime.timedelta(days=7) for t in made),
+      "| last 24 h:", sum(now - t < datetime.timedelta(days=1) for t in made))'
+```
+
+Stop if the last 24 hours already has one build or the last 7 days three.
+
+**4. Write the credentials file without printing the password.**
+
+```bash
+python3 - $S <<'EOF'
+import json, os, sys
+s = sys.argv[1]
+cert = {'path': f'{s}/cert.p12', 'password': open(f'{s}/p12-password').read().strip()}
+target = {'provisioningProfilePath': f'{s}/profile.mobileprovision', 'distributionCertificate': cert}
+# With DEBATELAB_APP_GROUP the widget extension is a second target with its own entry:
+# {'ios': {'DebateLab': target, 'ExpoWidgetsTarget': target}}, with a profile valid for both.
+fd = os.open('credentials.json', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+os.write(fd, json.dumps({'ios': target}).encode())
+os.close(fd)
+EOF
+git status --short   # credentials.json must not appear
+```
+
+**5. Start the build and do not wait for it.**
+
+```bash
+npx eas-cli@24.13.0 build --platform ios --profile development --non-interactive --no-wait
+```
+
+Put the build ID, its URL and the reason for the build in the PR. Check it later with `npx eas-cli@24.13.0 build:view <id> --json`. If it fails, read the log before anything else.
+
+**6. Clean up.**
+
+```bash
+rm -f credentials.json $S/profile.plist
+unset EXPO_TOKEN
+```
+
+#### Installing it
+
+The finished build's page on expo.dev has an Install button and a QR code. Adam opens it on the iPhone in Safari and installs. For an enterprise certificate, iOS then asks to trust the developer under Settings › General › VPN & Device Management. If iOS asks for Developer Mode, it is under Settings › Privacy & Security.
+
+The installed app opens the development client. Start Metro as for Expo Go, but with `--dev-client` instead of `--go`, and enter `http://<ip>:9230` in the client.
 
 ## Collaboration service
 
