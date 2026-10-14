@@ -29,7 +29,7 @@ import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { LiveTopBar, MainRoundControl, RoundIconButton, SideControl } from '@/components/round-controls';
 import { SegmentedControl } from '@/components/segmented-control';
-import { RoundNotesSheet, SparringScorecardScreen } from '@/components/sparring-views';
+import { SparringScorecardScreen } from '@/components/sparring-views';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
@@ -41,7 +41,7 @@ import { fetchFeatureConfig } from '@/lib/feature-config';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { useSettings } from '@/lib/settings';
-import { attachSparring, judgeSparring, newSparringId, SparringResponseError, sparringDraft, sparringNotes, sparringTurn } from '@/lib/sparring';
+import { attachSparring, judgeSparring, newSparringId, SparringResponseError, sparringDraft, sparringTurn } from '@/lib/sparring';
 import { formatClock } from '@/lib/timer';
 import { tapTurnStart, useKeepAwakeWhile } from '@/lib/timer-signals';
 import { radius } from '@/theme/colors';
@@ -473,8 +473,6 @@ function LiveRound({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { colors } = useTheme();
-  const [notesOpen, setNotesOpen] = useState(false);
-  const [notes, setNotes] = useState(() => sparringNotes.get()[session.id] ?? '');
   const [keyboard, setKeyboard] = useState(false);
   const [expanded, setExpanded] = useState(false);
   useKeepAwakeWhile(true);
@@ -487,11 +485,6 @@ function LiveRound({
       hide.remove();
     };
   }, []);
-
-  const saveNotes = (value: string) => {
-    setNotes(value);
-    sparringNotes.set({ ...sparringNotes.get(), [session.id]: value });
-  };
 
   const judging = session.phase === 'judging';
   const turn = currentSparringTurn(session);
@@ -529,7 +522,8 @@ function LiveRound({
       <Stack.Screen options={{ headerShown: false }} />
       <LiveTopBar
         left={<RoundIconButton icon="x" label={t('common.close')} onPress={onClose} testID="sparring-close" />}
-        right={<RoundIconButton icon="branch" label={t('mobile.sparring.notes')} onPress={() => setNotesOpen(true)} testID="sparring-flow" />}
+        // The Flowchart opens above the round on the Current Debate's map; the round keeps running underneath.
+        right={<RoundIconButton icon="branch" label={t('nav.flowchart')} onPress={() => router.push({ pathname: '/flowchart', params: { from: 'sparring' } })} testID="sparring-flow" />}
         title={judging ? t('sparring.round.complete') : turnLabel}
         subtitle={judging ? pressure : t('mobile.sparring.turnOf', { current: session.currentTurnIndex + 1, total: session.turns.length, pressure })}
       />
@@ -661,8 +655,6 @@ function LiveRound({
           <SideControl icon="reset" label={t('mobile.timer.reset')} onPress={onReset} disabled={!userTurn} testID="sparring-reset" />
         </View>
       )}
-
-      <RoundNotesSheet visible={notesOpen} notes={notes} onChangeNotes={saveNotes} speeches={session.speeches} onClose={() => setNotesOpen(false)} />
     </KeyboardAvoidingView>
   );
 }

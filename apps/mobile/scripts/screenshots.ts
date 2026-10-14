@@ -47,7 +47,8 @@
  * Sparring screenshots never call a model and never save: the page answers
  * each opponent turn and the judge with fixed text in the run's language
  * (holding them open for the "opponent" and "judging" shots), and answers
- * the attach_to_debate call locally. The run checks the turn-start taps.
+ * the attach_to_debate call locally. The run checks the turn-start taps. The
+ * flow button's Flowchart reads the fixed maps described below.
  *
  * The Timer runs on Playwright's clock, so its minutes pass at once, and the
  * run checks that it signalled one beep at the last minute and two at time up.
@@ -912,6 +913,7 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   watchErrors(page, problems, `${prefix} sparring`);
   await pinSettings(page, language);
   const fake = await fakeSparring(page, language === 'hu' ? 'hu' : 'en');
+  await fakeFlowcharts(page);
   await page.goto(`${ORIGIN}/practice`);
   await page.getByTestId('practice-tool-sparring').click({ timeout: 30_000 });
   await page.getByTestId('sparring-setup').waitFor({ timeout: 15_000 });
@@ -939,6 +941,14 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
       await shoot(page, `${prefix}-sparring-your-turn`);
       // The student's clock runs from the moment the turn starts.
       await page.getByTestId('sparring-time').filter({ hasText: /^6:5\d$/ }).waitFor({ timeout: 5_000 });
+      // The flow button opens the Flowchart above the round, and the round is still there on the way back.
+      await page.getByTestId('sparring-flow').click();
+      await page.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
+      await settle(page);
+      await shoot(page, `${prefix}-sparring-flowchart`);
+      await page.goBack();
+      await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
+      if ((await page.getByTestId('sparring-input').inputValue()) !== speech) problems.push(`${prefix} sparring: the speech draft was lost after the Flowchart`);
     }
     if (index === text.speeches.length - 1) fake.hold('score');
     await page.getByTestId('sparring-main').click();
@@ -1192,7 +1202,7 @@ async function main() {
           await shootCrossfireScreens(signedIn, prefix, language, problems);
           shots += 3;
           await shootSparringScreens(signedIn, prefix, language, problems);
-          shots += 5;
+          shots += 6;
           await shootFlowchart(signedIn, prefix, language, problems);
           shots += 10;
           const oneOffPage = await signedIn.newPage();

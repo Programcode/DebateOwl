@@ -134,6 +134,3 @@ export function newSparringId(): string {
  * signed-in account and is forgotten when that changes.
  */
 export const sparringDraft = sessionSlot<SparringSession | null>(() => null);
-
-/** Notes the student takes during a round, by round id, for the session. */
-export const sparringNotes = sessionSlot<Record<string, string>>(() => ({}));

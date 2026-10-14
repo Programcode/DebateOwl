@@ -5,13 +5,11 @@ import type { TFunction } from 'i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { PrimaryButton, SecondaryButton, TextButton } from './buttons';
+import { PrimaryButton, SecondaryButton } from './buttons';
 import { Bullets, DocSection, DocumentScreen, Paragraph } from './document';
 import { DocumentHeader } from './document-header';
-import { SegmentedControl } from './segmented-control';
-import { SheetScrollView } from './sheet';
 import { Text } from './text';
 
 import { useAuth } from '@/lib/auth';
@@ -20,7 +18,6 @@ import { confirmDestructive } from '@/lib/confirm';
 import { shareText } from '@/lib/export';
 import { deleteSparringRound } from '@/lib/sparring';
 import { mainActionGradient, radius } from '@/theme/colors';
-import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
 const CATEGORY_MAX = 25;
@@ -275,64 +272,6 @@ export function SparringTranscript({ speeches }: { speeches: SparringSpeech[] })
   );
 }
 
-/**
- * The flow button's sheet: notes the student keeps during the round, and the
- * transcript so far. SheetScrollView is the sheet's root, as every sheet's is.
- */
-export function RoundNotesSheet({
-  visible,
-  notes,
-  onChangeNotes,
-  speeches,
-  onClose,
-}: {
-  visible: boolean;
-  notes: string;
-  onChangeNotes: (value: string) => void;
-  speeches: SparringSpeech[];
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
-  const [view, setView] = useState<'notes' | 'transcript'>('notes');
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SheetScrollView contentContainerStyle={styles.sheet} testID="sparring-notes">
-        <View style={styles.sheetHead}>
-          <Text accessibilityRole="header" weight="bold" style={styles.sheetTitle}>
-            {t('mobile.sparring.notes')}
-          </Text>
-          <TextButton label={t('mobile.sparring.done')} onPress={onClose} />
-        </View>
-        <SegmentedControl<'notes' | 'transcript'>
-          value={view}
-          onChange={setView}
-          options={[
-            { value: 'notes', label: t('mobile.sparring.notes') },
-            { value: 'transcript', label: t('sparring.round.transcript') },
-          ]}
-        />
-        {view === 'notes' ? (
-          <TextInput
-            value={notes}
-            onChangeText={onChangeNotes}
-            multiline
-            placeholder={t('mobile.sparring.notesPlaceholder')}
-            placeholderTextColor={colors.tabInactive}
-            accessibilityLabel={t('mobile.sparring.notes')}
-            style={[styles.notesInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.input }]}
-            testID="sparring-notes-input"
-          />
-        ) : (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <SparringTranscript speeches={speeches} />
-          </View>
-        )}
-      </SheetScrollView>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
   scorecard: { gap: 12 },
   heading: { gap: 2, marginBottom: 2 },
@@ -367,8 +306,4 @@ const styles = StyleSheet.create({
   speechHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
   speaker: { fontSize: 15, flexShrink: 1 },
   used: { fontSize: 13.5, fontVariant: ['tabular-nums'] },
-  sheet: { paddingTop: 18, gap: 16 },
-  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sheetTitle: { fontSize: 22 },
-  notesInput: { minHeight: 260, borderWidth: 1, borderRadius: radius.field, padding: 14, fontSize: 16.5, lineHeight: 23, fontFamily: fontFamily.regular, textAlignVertical: 'top' },
 });
