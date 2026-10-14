@@ -1,4 +1,4 @@
-import { cachedRead } from './offline-cache';
+import { cachedRead, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -87,8 +87,8 @@ async function loadDebates(userId: string): Promise<{ debates: Debate[]; current
     supabase.from('debates').select(DEBATE_COLUMNS).eq('user_id', userId).order('last_activity_at', { ascending: false }),
     supabase.from('current_debates').select('debate_id').eq('user_id', userId).maybeSingle(),
   ]);
-  if (debatesResult.error) throw new Error(debatesResult.error.message);
-  if (currentResult.error) throw new Error(currentResult.error.message);
+  if (debatesResult.error) throw readFailed(debatesResult.error, debatesResult.status);
+  if (currentResult.error) throw readFailed(currentResult.error, currentResult.status);
   const debates = ((debatesResult.data ?? []) as DebateRow[]).map(fromRow);
   const currentId = (currentResult.data as { debate_id?: string } | null)?.debate_id ?? null;
   return {
@@ -166,8 +166,8 @@ async function countRows(userId: string, table: string, debateId: string, sides?
     .eq('user_id', userId)
     .eq('debate_id', debateId);
   if (sides) query = query.in('side', sides);
-  const { count, error } = await query;
-  if (error) throw new Error(error.message);
+  const { count, error, status } = await query;
+  if (error) throw readFailed(error, status);
   return count ?? 0;
 }
 
@@ -212,8 +212,8 @@ async function fetchResultRows(userId: string, debateId: string, table: ResultTa
     .eq('user_id', userId)
     .eq('debate_id', debateId);
   if (sides) query = query.in('side', sides);
-  const { data, error } = await query.order('created_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await query.order('created_at', { ascending: false }).limit(limit);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row): DebateItem => ({
     id: row.id,
     kind: KIND_BY_TABLE[table],
@@ -234,7 +234,7 @@ async function loadRecentWork(userId: string, debateId: string, side: DebateSide
     ...RESULT_TABLES.map((table) => fetchResultRows(userId, debateId, table, SIDES_FOR[side], limit)),
     (async () => {
       // The website lists a judged round under its motion and the side the student spoke, ordered by its last update.
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('sparring_sessions')
         .select('id,motion,updated_at')
         .eq('user_id', userId)
@@ -243,7 +243,7 @@ async function loadRecentWork(userId: string, debateId: string, side: DebateSide
         .eq('status', 'complete')
         .order('updated_at', { ascending: false })
         .limit(limit);
-      if (error) throw new Error(error.message);
+      if (error) throw readFailed(error, status);
       return ((data ?? []) as { id: string; motion: string; updated_at: string }[]).map((row): DebateItem => ({
         id: row.id,
         kind: 'sparring',

@@ -14,7 +14,7 @@ import * as Crypto from 'expo-crypto';
 import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
-import { cachedRead, forgetCopy } from './offline-cache';
+import { cachedRead, forgetCopy, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -94,8 +94,8 @@ export async function fetchSparringRound(userId: string, id: string): Promise<Sp
 }
 
 async function loadSparringRound(userId: string, id: string): Promise<SparringSession | null> {
-  const { data, error } = await supabase.from('sparring_sessions').select(SPARRING_SESSION_COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await supabase.from('sparring_sessions').select(SPARRING_SESSION_COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
+  if (error) throw readFailed(error, status);
   return data ? parseSavedSparringRows([data])[0] ?? null : null;
 }
 
@@ -117,8 +117,8 @@ export async function fetchSparringRounds(userId: string, debateId: string | nul
 async function loadSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {
   let query = supabase.from('sparring_sessions').select('id,motion,user_side,updated_at').eq('user_id', userId).eq('status', 'complete');
   query = debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null);
-  const { data, error } = await query.order('updated_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await query.order('updated_at', { ascending: false }).limit(limit);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; motion: string; user_side: SparringSide; updated_at: string }[]).map((row) => ({
     id: row.id,
     motion: row.motion,

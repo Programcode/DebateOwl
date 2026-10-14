@@ -1,6 +1,6 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 
-import { cachedRead } from './offline-cache';
+import { cachedRead, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -65,8 +65,8 @@ async function loadChats(userId: string, debateId: string | null): Promise<ChatS
     .select('id,title,created_at,messages(count)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null));
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null));
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string; messages: { count: number }[] }[]).map((row) => ({
     id: row.id,
     title: row.title,
@@ -84,8 +84,8 @@ async function loadChat(userId: string, chatId: string): Promise<{ debateId: str
     supabase.from('chats').select('debate_id').eq('user_id', userId).eq('id', chatId).single(),
     supabase.from('messages').select('id,role,content,output,created_at').eq('chat_id', chatId).order('created_at', { ascending: true }),
   ]);
-  if (chat.error) throw new Error(chat.error.message);
-  if (messages.error) throw new Error(messages.error.message);
+  if (chat.error) throw readFailed(chat.error, chat.status);
+  if (messages.error) throw readFailed(messages.error, messages.status);
   return {
     debateId: (chat.data as { debate_id: string | null }).debate_id ?? null,
     messages: ((messages.data ?? []) as MessageRow[]).map((row) => ({

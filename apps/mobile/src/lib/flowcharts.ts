@@ -1,6 +1,6 @@
 import { readFlowchart, type FlowchartDocument } from '@debatelab/core/flowchart';
 
-import { cachedRead, forgetCopy } from './offline-cache';
+import { cachedRead, forgetCopy, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -51,8 +51,8 @@ export function fetchFlowchartList(userId: string, debateId: string | null): Pro
 
 async function loadFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
   const query = supabase.from('flowcharts').select('id,title,created_at').eq('user_id', userId);
-  const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null)).order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null)).order('created_at', { ascending: false });
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row) => ({
     id: row.id,
     title: row.title,
@@ -65,8 +65,8 @@ export function fetchFlowchart(userId: string, id: string): Promise<SavedFlowcha
 }
 
 async function loadFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
-  const { data, error } = await supabase.from('flowcharts').select(COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await supabase.from('flowcharts').select(COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
+  if (error) throw readFailed(error, status);
   return data ? fromRow(data as FlowchartRow) : null;
 }
 

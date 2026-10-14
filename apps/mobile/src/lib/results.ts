@@ -18,7 +18,7 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 
 import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
-import { cachedRead, forgetCopy } from './offline-cache';
+import { cachedRead, forgetCopy, readFailed } from './offline-cache';
 import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -254,13 +254,13 @@ export function fetchResult<K extends ResultKind>(userId: string, kind: K, id: s
 }
 
 async function loadResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from(TABLES[kind])
     .select('id,title,side,debate_id,created_at,input,output')
     .eq('user_id', userId)
     .eq('id', id)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw readFailed(error, status);
   if (!data) return null;
   const row = data as ResultRow;
   return {

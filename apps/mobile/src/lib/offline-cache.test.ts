@@ -22,7 +22,8 @@ vi.mock('expo-network', () => ({
   getNetworkStateAsync: async () => ({ isConnected: true, isInternetReachable: true }),
 }));
 
-const offlineFailure = () => Promise.reject(new Error('Network request failed'));
+// A read that got no answer from the server, as supabase-js reports it (status 0). Set by load().
+let offlineFailure: () => Promise<never>;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -37,6 +38,7 @@ async function load() {
   vi.resetModules();
   const cache = await import('./offline-cache');
   const status = await import('./network-status');
+  offlineFailure = () => Promise.reject(cache.readFailed({ message: 'TypeError: Network request failed' }, 0));
   return { ...cache, ...status };
 }
 
@@ -52,9 +54,9 @@ describe('saved copies between accounts', () => {
     await expect(cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual(['A secret source']);
 
     setCacheOwner('user-b');
-    await expect(cachedRead('user-b', 'sources', 'debate-1', offlineFailure)).rejects.toThrow('Network request failed');
+    await expect(cachedRead('user-b', 'sources', 'debate-1', offlineFailure)).rejects.toThrow('TypeError: Network request failed');
     // A's own key is not readable either once B owns the cache.
-    await expect(cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).rejects.toThrow('Network request failed');
+    await expect(cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).rejects.toThrow('TypeError: Network request failed');
     expect([...storage.keys()].some((key) => key.includes('user-a'))).toBe(false);
     expect([...storage.values()].some((value) => value.includes('A secret source'))).toBe(false);
   });
@@ -156,5 +158,45 @@ describe('offline', () => {
     await cachedRead('user-a', 'sources', 'flush', offlineFailure).catch(() => undefined);
     await expect(cachedRead('user-a', 'sources', 'debate-0', offlineFailure)).rejects.toThrow();
     await expect(cachedRead('user-a', 'sources', 'debate-20', offlineFailure)).resolves.toEqual([20]);
+  });
+});
+
+describe('which failures fall back', () => {
+  it('serves the copy when no answer came back from the server', async () => {
+    const { cachedRead, setCacheOwner } = await load();
+    setCacheOwner('user-a');
+    await cachedRead('user-a', 'sources', 'debate-1', async () => ['source']);
+    await expect(cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual(['source']);
+  });
+
+  it('throws a refused session, a policy error or any other server answer instead of serving the copy', async () => {
+    const { cachedRead, readFailed, setCacheOwner } = await load();
+    setCacheOwner('user-a');
+    await cachedRead('user-a', 'sources', 'debate-1', async () => ['source']);
+    const refusals = [
+      readFailed({ message: 'JWT expired' }, 401),
+      readFailed({ message: 'permission denied for table sources' }, 403),
+      readFailed({ message: 'Server error' }, 500),
+      new Error('Flowchart rows did not check out'),
+    ];
+    for (const refusal of refusals) {
+      await expect(cachedRead('user-a', 'sources', 'debate-1', () => Promise.reject(refusal))).rejects.toBe(refusal);
+    }
+  });
+});
+
+describe('the saved-copies notice', () => {
+  it('stays while another screen still shows a copy, and goes when that copy is read from the server', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'source', 'source-1', async () => 'text');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['source']);
+    await cache.cachedRead('user-a', 'source', 'source-1', offlineFailure);
+    const shown = () => cache.getOfflineStatus().savedCopies;
+    expect(shown()).toBe(true);
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['source']);
+    expect(shown()).toBe(true);
+    await cache.cachedRead('user-a', 'source', 'source-1', async () => 'text');
+    expect(shown()).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/co
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
-import { cachedRead, forgetCopy } from './offline-cache';
+import { cachedRead, forgetCopy, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -68,13 +68,13 @@ export function fetchSources(userId: string, debateId: string): Promise<Source[]
 }
 
 async function loadSources(userId: string, debateId: string): Promise<Source[]> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from('sources')
     .select(SOURCE_COLUMNS)
     .eq('user_id', userId)
     .eq('debate_id', debateId)
     .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as SourceRow[]).map(fromRow);
 }
 
@@ -83,13 +83,13 @@ export function fetchSource(userId: string, id: string): Promise<Source | null> 
 }
 
 async function loadSource(userId: string, id: string): Promise<Source | null> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from('sources')
     .select(SOURCE_COLUMNS)
     .eq('user_id', userId)
     .eq('id', id)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw readFailed(error, status);
   return data ? fromRow(data as SourceRow) : null;
 }
 

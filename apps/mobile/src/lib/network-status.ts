@@ -3,15 +3,15 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * Whether the app is reading saved copies instead of the network. expo-network
- * says when the device is offline; a read that fell back to a saved copy says
- * so too, which covers a network that is up but cannot reach the server. The
- * next read that reaches the server clears that.
+ * says when the device is offline; offline-cache.ts says while any screen's
+ * data is a saved copy, which covers a network that is up but cannot reach
+ * the server. Each copy counts until its own data is read from the server again.
  */
 
 export interface OfflineStatus {
   /** expo-network reports no connection. */
   offline: boolean;
-  /** The last read was answered from a saved copy. */
+  /** Some data on screen is a saved copy, not the server's answer. */
   savedCopies: boolean;
 }
 
@@ -34,12 +34,8 @@ export function isKnownOffline(): boolean {
   return status.offline;
 }
 
-export function noteSavedCopy() {
-  update({ savedCopies: true });
-}
-
-export function noteNetworkRead() {
-  update({ savedCopies: false });
+export function setSavedCopiesShown(savedCopies: boolean) {
+  update({ savedCopies });
 }
 
 /** Follows the device's connection until the returned function is called. */
@@ -64,6 +60,10 @@ function subscribe(listener: () => void) {
   };
 }
 
+export function getOfflineStatus(): OfflineStatus {
+  return status;
+}
+
 export function useOfflineStatus(): OfflineStatus {
-  return useSyncExternalStore(subscribe, () => status, () => status);
+  return useSyncExternalStore(subscribe, getOfflineStatus, getOfflineStatus);
 }
