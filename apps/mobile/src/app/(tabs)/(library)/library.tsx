@@ -1,7 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { TextButton } from '@/components/buttons';
@@ -13,10 +13,12 @@ import { OneOffNotice } from '@/components/one-off-notice';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
+import { SourceView } from '@/components/source-view';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
+import { LIBRARY_ROOMY_WIDTH, LIST_WIDTH, SIDEBAR_WIDTH, useLayoutClass } from '@/lib/layout';
 import { fetchSources, removeSource, subscribeSourcesChanged, type Source, type SourceType } from '@/lib/sources';
 import { useTheme } from '@/theme/use-theme';
 
@@ -36,14 +38,20 @@ function matches(source: Source, query: string): boolean {
   return !needle || [source.title, source.content, source.origin ?? ''].some((value) => value.toLocaleLowerCase().includes(needle));
 }
 
-/** The Current Debate's sources, as in mock 04. It shows the Current Debate even in one-off mode, like the website. */
+/**
+ * The Current Debate's sources, as in mock 04. It shows the Current Debate even in one-off mode, like the website.
+ * On iPad the list and the open source sit side by side (iPad mock A).
+ */
 export default function LibraryScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { status, current } = useDebates();
   const debateId = current?.id ?? null;
+  const layout = useLayoutClass();
 
   const onAdd = (kind: AddSourceKind) => router.push(kind === 'link' ? '/add-link' : '/new-note');
+
+  if (layout !== 'phone') return <LibrarySplit wide={layout === 'wide'} onAdd={onAdd} />;
 
   return (
     <Screen>
@@ -64,7 +72,77 @@ export default function LibraryScreen() {
   );
 }
 
-function SourceList({ debateId }: { debateId: string }) {
+/** The iPad Library: the list on the left, the source it opened on the right, in place of the source sheet. */
+function LibrarySplit({ wide, onAdd }: { wide: boolean; onAdd: (kind: AddSourceKind) => void }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const { session } = useAuth();
+  const { status, current } = useDebates();
+  const userId = session?.user.id ?? null;
+  const debateId = current?.id ?? null;
+  // The selection belongs to the account and debate it was made in; switching either clears it.
+  const [selected, setSelected] = useState<{ userId: string; debateId: string; id: string } | null>(null);
+  const shown = selected && selected.userId === userId && selected.debateId === debateId ? selected.id : null;
+  const listWidth = width - (wide ? SIDEBAR_WIDTH : 0) >= LIBRARY_ROOMY_WIDTH ? LIST_WIDTH.libraryRoomy : LIST_WIDTH.library;
+
+  return (
+    <View style={styles.split}>
+      <ScrollView
+        style={[styles.listPane, { width: listWidth, borderRightColor: colors.line }]}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.listContent}>
+        <LibraryHeader title={t('mobile.tabs.library')} onAdd={onAdd} disabled={!debateId} />
+        <OneOffNotice message="debate.oneOffActive" />
+        {status === 'loading' ? <ActivityIndicator style={styles.loading} /> : null}
+        {status !== 'loading' && !debateId ? (
+          <Card>
+            <Text tone="secondary" style={styles.body}>
+              {t('debate.libraryNeedsDebate')}
+            </Text>
+            <TextButton label={t('debate.switch')} onPress={() => router.push('/debates')} />
+          </Card>
+        ) : null}
+        {debateId && userId ? (
+          <SourceList
+            key={debateId}
+            debateId={debateId}
+            selectedId={shown}
+            onOpen={(source) => setSelected({ userId, debateId, id: source.id })}
+            onRemoved={(id) => setSelected((previous) => (previous?.id === id ? null : previous))}
+          />
+        ) : null}
+      </ScrollView>
+      <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.detailContent} testID={shown ? 'source-sheet' : 'source-empty'}>
+        {shown && userId ? (
+          <SourceView key={`${userId}:${debateId}:${shown}`} id={shown} />
+        ) : (
+          <View style={styles.pick}>
+            <Icon name="library" color={colors.tabInactive} size={30} />
+            <Text tone="faint" style={styles.body}>
+              {t('mobile.library.pickSource')}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+function SourceList({
+  debateId,
+  selectedId,
+  onOpen,
+  onRemoved,
+}: {
+  debateId: string;
+  /** The source open beside the list on iPad. */
+  selectedId?: string | null;
+  /** Opens a source beside the list instead of in the source sheet. */
+  onOpen?: (source: Source) => void;
+  onRemoved?: (id: string) => void;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const { session } = useAuth();
@@ -118,6 +196,7 @@ function SourceList({ debateId }: { debateId: string }) {
     try {
       await removeSource(userId, source.id);
       setSources((previous) => previous?.filter((item) => item.id !== source.id) ?? previous);
+      onRemoved?.(source.id);
       return true;
     } catch (cause) {
       console.warn('Could not delete the source:', cause instanceof Error ? cause.message : cause);
@@ -184,7 +263,8 @@ function SourceList({ debateId }: { debateId: string }) {
               key={source.id}
               source={source}
               first={index === 0}
-              onOpen={() => router.push({ pathname: '/source/[id]', params: { id: source.id } })}
+              selected={selectedId === source.id}
+              onOpen={() => (onOpen ? onOpen(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } }))}
               onDelete={() => remove(source)}
             />
           ))}
@@ -195,7 +275,19 @@ function SourceList({ debateId }: { debateId: string }) {
 }
 
 /** A source row; swipe left to delete, with a confirmation, as on iOS. */
-function SourceRow({ source, first, onOpen, onDelete }: { source: Source; first: boolean; onOpen: () => void; onDelete: () => Promise<boolean> }) {
+function SourceRow({
+  source,
+  first,
+  selected = false,
+  onOpen,
+  onDelete,
+}: {
+  source: Source;
+  first: boolean;
+  selected?: boolean;
+  onOpen: () => void;
+  onDelete: () => Promise<boolean>;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
@@ -226,16 +318,17 @@ function SourceRow({ source, first, onOpen, onDelete }: { source: Source; first:
       )}>
       <Pressable
         accessibilityRole="button"
+        accessibilityState={selected ? { selected } : undefined}
         accessibilityActions={[{ name: 'delete', label: t('common.delete') }]}
         onAccessibilityAction={(event) => {
           if (event.nativeEvent.actionName === 'delete') void remove();
         }}
         onPress={onOpen}
         testID="source-row"
-        style={({ pressed }) => [styles.row, { backgroundColor: colors.card }, pressed && styles.pressed]}>
+        style={({ pressed }) => [styles.row, { backgroundColor: selected ? colors.tile : colors.card }, pressed && styles.pressed]}>
         <IconTile name={SOURCE_ICONS[source.type]} size={42} />
         <View style={styles.rowText}>
-          <Text weight="semibold" style={styles.rowTitle} numberOfLines={1}>
+          <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={1}>
             {source.title || t('libraryPage.untitledSource')}
           </Text>
           <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
@@ -261,4 +354,10 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   deleteAction: { width: 92, alignItems: 'center', justifyContent: 'center', gap: 3 },
   deleteLabel: { color: '#ffffff', fontSize: 13 },
+  split: { flex: 1, flexDirection: 'row' },
+  listPane: { flexGrow: 0, flexShrink: 0, borderRightWidth: StyleSheet.hairlineWidth },
+  listContent: { paddingHorizontal: 20, paddingBottom: 32, gap: 16 },
+  detailPane: { flex: 1 },
+  detailContent: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 48, gap: 14 },
+  pick: { alignItems: 'center', gap: 10, paddingTop: 120 },
 });
