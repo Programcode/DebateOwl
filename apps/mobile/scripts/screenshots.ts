@@ -931,7 +931,13 @@ async function signIn(browser: Browser, problems: string[]): Promise<StorageStat
   await page.getByRole('tab', { name: 'Demo code' }).click();
   await page.getByRole('textbox').fill(DEMO_CODE ?? '');
   await page.getByRole('button', { name: 'Sign in with demo code' }).click();
-  await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 30_000 });
+  await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 30_000 }).catch(async (error: unknown) => {
+    const alert = await page.getByRole('alert').first().textContent({ timeout: 1_000 }).catch(() => null);
+    // The field shows the code in plain text; empty it so the screenshot never holds it.
+    await page.getByRole('textbox').fill('');
+    await shoot(page, 'sign-in-failed');
+    throw new Error(`Demo-code sign-in did not finish${alert ? `: ${alert}` : ''}`, { cause: error });
+  });
   if (authHosts.length === 0 || authHosts.some((host) => host !== STAGING_HOST)) {
     throw new Error(`Sign-in reached ${[...new Set(authHosts)].join(', ') || 'no backend'}, expected ${STAGING_HOST}`);
   }
