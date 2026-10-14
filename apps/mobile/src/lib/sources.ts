@@ -156,7 +156,7 @@ export async function removeSource(userId: string, id: string, debateId?: string
   const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query).select('debate_id');
   if (error) throw new Error(error.message);
   // The deleted row names its debate, whose Library and counts change.
-  const deletedFrom = ((data ?? []) as { debate_id: string }[]).map((row) => row.debate_id);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).flatMap((row) => (row.debate_id ? [row.debate_id] : []));
   afterWrite(userId, [{ group: 'source', key: id }, ...deletedFrom.flatMap((debate) => [{ group: 'sources' as const, key: debate }, ...debateListScopes(debate, 'source')])]);
   notifySourcesChanged();
 }
