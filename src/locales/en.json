@@ -2422,7 +2422,8 @@
       "pickUp": "Pick up where you left off",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Could not load your debate.",
-      "viewAria": "Show preparation for"
+      "viewAria": "Show preparation for",
+      "recentSources": "Recent sources"
     },
     "common": {
       "done": "Done"
@@ -2471,7 +2472,8 @@
       "deleteFailed": "Could not delete the source. Try again.",
       "saveFailed": "Could not save the source. Try again.",
       "sourceMissing": "This source is no longer in your Library.",
-      "openPage": "Opens the page in the browser"
+      "openPage": "Opens the page in the browser",
+      "pickSource": "Pick a source to read it here."
     },
     "ask": {
       "placeholder": "Ask your coach",
@@ -2629,6 +2631,9 @@
       "discardTitle": "Start a new map?",
       "discardDesc": "Your unsaved map will be replaced by the starter map.",
       "startNew": "Start new"
+    },
+    "document": {
+      "onThisPage": "On this page"
     }
   }
 }

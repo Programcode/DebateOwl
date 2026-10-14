@@ -2422,7 +2422,8 @@
       "pickUp": "Continúa donde lo dejaste",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "No se pudo cargar tu debate.",
-      "viewAria": "Mostrar la preparación de"
+      "viewAria": "Mostrar la preparación de",
+      "recentSources": "Fuentes recientes"
     },
     "common": {
       "done": "Listo"
@@ -2471,7 +2472,8 @@
       "deleteFailed": "No se pudo eliminar la fuente. Inténtalo de nuevo.",
       "saveFailed": "No se pudo guardar la fuente. Inténtalo de nuevo.",
       "sourceMissing": "Esta fuente ya no está en tu biblioteca.",
-      "openPage": "Abre la página en el navegador"
+      "openPage": "Abre la página en el navegador",
+      "pickSource": "Elige una fuente para leerla aquí."
     },
     "ask": {
       "placeholder": "Pregunta a tu coach",
@@ -2629,6 +2631,9 @@
       "discardTitle": "¿Empezar un mapa nuevo?",
       "discardDesc": "Tu mapa sin guardar se sustituirá por el mapa inicial.",
       "startNew": "Empezar nuevo"
+    },
+    "document": {
+      "onThisPage": "En esta página"
     }
   }
 }
