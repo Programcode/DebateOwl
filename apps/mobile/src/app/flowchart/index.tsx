@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionMenu } from '@/components/action-menu';
 import { TextButton } from '@/components/buttons';
+import { ClaimInspector } from '@/components/claim-panel';
 import { DocumentHeader, type HeaderAction } from '@/components/document-header';
 import { FlowColumnsView, FlowLegend, MapTreeView } from '@/components/flowchart-views';
 import { Icon } from '@/components/icon';
@@ -35,6 +36,7 @@ import {
 } from '@/lib/flowchart-drafts';
 import { flowchartToText } from '@/lib/flowchart-text';
 import { deleteFlowchart, fetchFlowchart, fetchFlowchartList, insertFlowchart, updateFlowchart } from '@/lib/flowcharts';
+import { PANE_WIDTH, useLayoutClass } from '@/lib/layout';
 import { useTheme } from '@/theme/use-theme';
 
 const NOTICE_MS = 3500;
@@ -42,8 +44,9 @@ const NOTICE_MS = 3500;
 /**
  * The website's Flowchart in mock A's phone look: the Current Debate's newest
  * saved map (or the starter map), as role columns (Flow) or a tree (Map).
- * Tapping a card opens its claim sheet; "+" adds a card; "..." saves, saves
- * as, deletes and exports. Edits stay in session memory until saved.
+ * Tapping a card opens its claim sheet, or on iPad its claim docked beside the
+ * map (iPad mock C); "+" adds a card; "..." saves, saves as, deletes and
+ * exports. Edits stay in session memory until saved.
  */
 export default function FlowchartScreen() {
   const { t } = useTranslation();
@@ -67,6 +70,9 @@ export default function FlowchartScreen() {
   const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState<'export' | null>(null);
   const [notice, setNoticeState] = useState('');
+  const layout = useLayoutClass();
+  // The card docked in the iPad inspector, with the map it was opened on.
+  const [claim, setClaim] = useState<{ scope: string; map: string; node: string } | null>(null);
 
   const live = useRef(true);
   const owner = useRef(userId);
@@ -139,8 +145,14 @@ export default function FlowchartScreen() {
 
   const openCard = (node: FlowNode) => {
     if (!scope || !open) return;
+    if (layout !== 'phone') {
+      setClaim({ scope, map: open.draft.handle, node: node.id });
+      return;
+    }
     router.push({ pathname: '/flowchart/claim', params: { scope, map: open.draft.handle, node: node.id } });
   };
+  // The inspector shows only a card of the map on screen; another map or debate closes it.
+  const docked = layout !== 'phone' && claim && claim.scope === scope && claim.map === open?.draft.handle ? claim : null;
 
   /** Runs a save or delete for the map on screen, as the account and map were when the student chose it. */
   const act = async (work: (forUser: string, at: { scope: string; key: string; draft: FlowchartDraft }) => Promise<void>) => {
@@ -261,112 +273,141 @@ export default function FlowchartScreen() {
 
   const shownFailure = failure && failure.scope === (requestedId ? null : scopeKey(activeDebateId)) ? failure.kind : null;
 
+  const header = (
+    <DocumentHeader
+      backLabel={back}
+      actions={actions}
+      buttons={draft && scope && open ? [{ key: 'add', label: t('flowchart.addNode'), symbol: 'plus', icon: 'plus', onPress: () => router.push({ pathname: '/flowchart/card', params: { scope, map: open.draft.handle } }) }] : []}
+    />
+  );
+  const page = (
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
+      <View style={styles.head}>
+        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+          {t('nav.flowchart')}
+        </Text>
+        {draft && scope ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${t('flowchart.savedFlowcharts')}: ${mapTitle}`}
+            onPress={() => router.push({ pathname: '/flowchart/maps', params: { scope } })}
+            style={({ pressed }) => [styles.mapRow, pressed && styles.pressed]}
+            testID="flowchart-maps">
+            <View style={styles.mapText}>
+              <Text weight="semibold" style={styles.mapTitle} numberOfLines={1}>
+                {mapTitle}
+              </Text>
+              <Text tone="faint" style={styles.mapMeta} numberOfLines={1}>
+                {draft.edited
+                  ? t('mobile.flowchart.edited')
+                  : draft.createdAt
+                    ? t('mobile.flowchart.savedWhen', { when: formatWhen(draft.createdAt) })
+                    : t('mobile.flowchart.notSaved')}
+              </Text>
+            </View>
+            {busy ? <ActivityIndicator color={colors.primary} /> : <Icon name="chevronDown" color={colors.primary} size={20} />}
+          </Pressable>
+        ) : null}
+        {oneOff ? <OneOffNotice /> : null}
+        <SegmentedControl
+          options={[
+            { value: 'flow', label: t('mobile.flowchart.flow') },
+            { value: 'map', label: t('mobile.flowchart.map') },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </View>
+      {draft ? (
+        view === 'flow' ? (
+          <>
+            <FlowLegend />
+            <FlowColumnsView doc={draft.doc} onOpen={openCard} selectedId={docked?.node} />
+          </>
+        ) : (
+          <MapTreeView doc={draft.doc} onOpen={openCard} selectedId={docked?.node} />
+        )
+      ) : shownFailure ? (
+        <View style={styles.state}>
+          <Text tone="secondary" style={styles.stateText}>
+            {shownFailure === 'missing' ? t('mobile.flowchart.mapMissing') : t('mobile.flowchart.loadFailed')}
+          </Text>
+          {shownFailure === 'missing' ? (
+            <TextButton label={t('mobile.flowchart.openLatest')} onPress={() => setRequestedId(null)} />
+          ) : (
+            <TextButton label={t('common.retry')} onPress={() => setAttempt((n) => n + 1)} />
+          )}
+        </View>
+      ) : (
+        <View style={styles.state}>
+          <ActivityIndicator color={colors.primary} accessibilityLabel={t('common.loading')} />
+        </View>
+      )}
+    </ScrollView>
+  );
+  const toast = notice ? (
+    <View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      style={[styles.notice, { bottom: Math.max(insets.bottom, 14) + 8, backgroundColor: colors.foreground }]}
+      testID="document-notice">
+      <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
+    </View>
+  ) : null;
+  const exportMenu = (
+    <ActionMenu
+      visible={menu === 'export'}
+      title={t('common.export')}
+      testID="export-menu"
+      items={[
+        { key: 'pdf', label: t('common.pdf'), icon: 'file' },
+        { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+      ]}
+      cancelLabel={t('common.cancel')}
+      onClose={() => setMenu(null)}
+      onSelect={(choice) => {
+        if (!draft) return;
+        const meta = t('mobile.debate.itemMeta', { kind: t('debate.kinds.flowchart'), when: formatWhen(draft.createdAt ?? Date.now()) });
+        if (choice === 'pdf') runExport(() => sharePdf(flowchartExportHtml(mapTitle, meta, draft.doc, t), FLOWCHART_EXPORT_FILE_NAME, mapTitle));
+        if (choice === 'copy')
+          runExport(async () => {
+            await copyText(flowchartToText(mapTitle, draft.doc, t));
+            setNotice(t('generateResults.copiedToClipboard'));
+          });
+      }}
+    />
+  );
+
+  if (layout !== 'phone') {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background }]} testID="flowchart-screen">
+        {header}
+        <View style={styles.split}>
+          <View style={styles.canvas}>
+            {page}
+            {toast}
+          </View>
+          {docked ? <ClaimInspector claim={docked} width={PANE_WIDTH[layout]} onClose={() => setClaim(null)} /> : null}
+        </View>
+        {exportMenu}
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]} testID="flowchart-screen">
-      <DocumentHeader
-        backLabel={back}
-        actions={actions}
-        buttons={draft && scope && open ? [{ key: 'add', label: t('flowchart.addNode'), symbol: 'plus', icon: 'plus', onPress: () => router.push({ pathname: '/flowchart/card', params: { scope, map: open.draft.handle } }) }] : []}
-      />
-      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
-        <View style={styles.head}>
-          <Text accessibilityRole="header" weight="bold" style={styles.title}>
-            {t('nav.flowchart')}
-          </Text>
-          {draft && scope ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${t('flowchart.savedFlowcharts')}: ${mapTitle}`}
-              onPress={() => router.push({ pathname: '/flowchart/maps', params: { scope } })}
-              style={({ pressed }) => [styles.mapRow, pressed && styles.pressed]}
-              testID="flowchart-maps">
-              <View style={styles.mapText}>
-                <Text weight="semibold" style={styles.mapTitle} numberOfLines={1}>
-                  {mapTitle}
-                </Text>
-                <Text tone="faint" style={styles.mapMeta} numberOfLines={1}>
-                  {draft.edited
-                    ? t('mobile.flowchart.edited')
-                    : draft.createdAt
-                      ? t('mobile.flowchart.savedWhen', { when: formatWhen(draft.createdAt) })
-                      : t('mobile.flowchart.notSaved')}
-                </Text>
-              </View>
-              {busy ? <ActivityIndicator color={colors.primary} /> : <Icon name="chevronDown" color={colors.primary} size={20} />}
-            </Pressable>
-          ) : null}
-          {oneOff ? <OneOffNotice /> : null}
-          <SegmentedControl
-            options={[
-              { value: 'flow', label: t('mobile.flowchart.flow') },
-              { value: 'map', label: t('mobile.flowchart.map') },
-            ]}
-            value={view}
-            onChange={setView}
-          />
-        </View>
-        {draft ? (
-          view === 'flow' ? (
-            <>
-              <FlowLegend />
-              <FlowColumnsView doc={draft.doc} onOpen={openCard} />
-            </>
-          ) : (
-            <MapTreeView doc={draft.doc} onOpen={openCard} />
-          )
-        ) : shownFailure ? (
-          <View style={styles.state}>
-            <Text tone="secondary" style={styles.stateText}>
-              {shownFailure === 'missing' ? t('mobile.flowchart.mapMissing') : t('mobile.flowchart.loadFailed')}
-            </Text>
-            {shownFailure === 'missing' ? (
-              <TextButton label={t('mobile.flowchart.openLatest')} onPress={() => setRequestedId(null)} />
-            ) : (
-              <TextButton label={t('common.retry')} onPress={() => setAttempt((n) => n + 1)} />
-            )}
-          </View>
-        ) : (
-          <View style={styles.state}>
-            <ActivityIndicator color={colors.primary} accessibilityLabel={t('common.loading')} />
-          </View>
-        )}
-      </ScrollView>
-      {notice ? (
-        <View
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={[styles.notice, { bottom: Math.max(insets.bottom, 14) + 8, backgroundColor: colors.foreground }]}
-          testID="document-notice">
-          <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
-        </View>
-      ) : null}
-      <ActionMenu
-        visible={menu === 'export'}
-        title={t('common.export')}
-        testID="export-menu"
-        items={[
-          { key: 'pdf', label: t('common.pdf'), icon: 'file' },
-          { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
-        ]}
-        cancelLabel={t('common.cancel')}
-        onClose={() => setMenu(null)}
-        onSelect={(choice) => {
-          if (!draft) return;
-          const meta = t('mobile.debate.itemMeta', { kind: t('debate.kinds.flowchart'), when: formatWhen(draft.createdAt ?? Date.now()) });
-          if (choice === 'pdf') runExport(() => sharePdf(flowchartExportHtml(mapTitle, meta, draft.doc, t), FLOWCHART_EXPORT_FILE_NAME, mapTitle));
-          if (choice === 'copy')
-            runExport(async () => {
-              await copyText(flowchartToText(mapTitle, draft.doc, t));
-              setNotice(t('generateResults.copiedToClipboard'));
-            });
-        }}
-      />
+      {header}
+      {page}
+      {toast}
+      {exportMenu}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  split: { flex: 1, flexDirection: 'row' },
+  canvas: { flex: 1 },
   content: { paddingTop: 4, gap: 14 },
   head: { paddingHorizontal: 16, gap: 12, width: '100%', maxWidth: 980, alignSelf: 'center' },
   title: { fontSize: 32, lineHeight: 38, letterSpacing: -0.9 },

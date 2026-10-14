@@ -603,7 +603,10 @@ async function shootFlowchart(context: BrowserContext, prefix: string, language:
   await page.getByTestId('claim-link').click();
   await page.getByTestId('link-targets').waitFor();
   await shoot(page, `${prefix}-flowchart-link`);
-  await page.goBack();
+  // On iPad the claim is docked beside the map, so it closes instead of going back.
+  const docked = page.getByTestId('claim-close');
+  if (await docked.isVisible()) await docked.click();
+  else await page.goBack();
   await page.getByTestId('flowchart-screen').waitFor();
 
   await page.getByTestId('document-add').click();
