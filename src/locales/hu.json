@@ -441,6 +441,7 @@
     "system": "Rendszer",
     "subscription": "Előfizetés",
     "tierTrial": "Ingyenes próba",
+    "tierBasic": "Alap",
     "tierPro": "Pro",
     "tierLegacyFree": "Korábbi ingyenes",
     "tierExpired": "Lejárt",

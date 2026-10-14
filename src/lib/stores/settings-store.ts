@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
-import { canAccessProModels as canAccessProModelsFor } from '@debatelab/core/ai/pro-access';
+import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -128,16 +128,11 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   });
 }
 
-async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
-  return canAccessProModelsFor(settings, async () => {
-    const userId = await getUserId();
-    if (!userId) return null;
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId);
-    return error ? null : data ?? [];
-  });
+/** Whether the plan includes Pro models, or null when it can't be read. */
+async function canAccessProModels(): Promise<boolean | null> {
+  const userId = await getUserId();
+  if (!userId) return null;
+  return (await readEntitlement(supabase, userId))?.canAccessProModels ?? null;
 }
 
 async function getUserId() {
@@ -265,7 +260,7 @@ export const useSettingsStore = create<SettingsState>()(
           .single();
         if (error || !data) return;
 
-        const allowProModels = await canAccessProModels(data);
+        const allowProModels = await canAccessProModels();
         if (allowProModels === null) return;
         const mergedConfigs = normalizeFeatureConfigs(
           data.feature_configs,

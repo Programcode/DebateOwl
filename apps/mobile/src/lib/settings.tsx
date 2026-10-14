@@ -1,5 +1,5 @@
 import { getDefaultFeatureConfigs } from '@debatelab/core/ai/feature-configs';
-import { canAccessProModels } from '@debatelab/core/ai/pro-access';
+import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '@debatelab/core/contract/model-catalog';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -70,21 +70,9 @@ function isEmptyObject(value: unknown): boolean {
  * their Pro access can't be read right now.
  */
 async function defaultModelFor(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('subscription_tier,grace_period_ends_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error || !data) return null;
-  const pro = await canAccessProModels(data, async () => {
-    const { data: rows, error: billingError } = await supabase
-      .from('subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId);
-    return billingError ? null : rows ?? [];
-  });
-  if (pro === null) return null;
-  return pro ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
+  const entitlement = await readEntitlement(supabase, userId);
+  if (!entitlement) return null;
+  return entitlement.canAccessProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
 }
 
 /**

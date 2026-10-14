@@ -1,5 +1,5 @@
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
-import { canAccessProModels } from '@debatelab/core/ai/pro-access';
+import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -76,19 +76,13 @@ function normalizeConfig(value: unknown, fallback: FeatureConfig, allowProModels
 export async function fetchFeatureConfig(userId: string, feature: FeatureTab): Promise<FeatureConfig> {
   const { data, error } = await supabase
     .from('user_settings')
-    .select('feature_configs, subscription_tier, grace_period_ends_at')
+    .select('feature_configs')
     .eq('user_id', userId)
     .maybeSingle();
   if (error || !data) return defaultConfig(feature);
-  // Null when it cannot be told, as on the website, which then keeps its defaults.
-  const allowProModels = await canAccessProModels(data, async () => {
-    const { data: rows, error: billingError } = await supabase
-      .from('subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId);
-    return billingError ? null : rows ?? [];
-  });
-  if (allowProModels === null) return defaultConfig(feature);
+  // Unknown when the plan cannot be read, as on the website, which then keeps its defaults.
+  const allowProModels = (await readEntitlement(supabase, userId))?.canAccessProModels;
+  if (allowProModels === undefined) return defaultConfig(feature);
   const fallback = defaultConfig(feature, allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL);
   return normalizeConfig(asRecord(data.feature_configs)?.[feature], fallback, allowProModels);
 }
