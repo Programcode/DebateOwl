@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storage = vi.hoisted(() => new Map<string, string>());
+// A Supabase client whose queries answer with the next queued result, for the modules that write.
+const supabase = vi.hoisted(() => ({ results: [] as unknown[], from: () => undefined as unknown }));
+vi.mock('./supabase', () => ({ supabase }));
 const network = vi.hoisted(() => ({ listener: null as ((state: { isConnected: boolean; isInternetReachable: boolean }) => void) | null }));
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -33,17 +36,27 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function query(result: unknown): unknown {
+  const builder: unknown = new Proxy({}, {
+    get: (_target, prop) => (prop === 'then' ? (resolve: (value: unknown) => void) => resolve(result) : () => builder),
+  });
+  return builder;
+}
+supabase.from = () => query(supabase.results.shift() ?? { data: null, error: null, status: 200 });
+
 // A fresh module per test: the owner and tickets are module state, as in the app.
 async function load() {
   vi.resetModules();
   const cache = await import('./offline-cache');
   const status = await import('./network-status');
+  const writers = { ...(await import('./debates')), ...(await import('./sources')), ...(await import('./flowcharts')) };
   offlineFailure = () => Promise.reject(cache.readFailed({ message: 'TypeError: Network request failed' }, 0));
-  return { ...cache, ...status };
+  return { ...cache, ...status, ...writers };
 }
 
 beforeEach(() => {
   storage.clear();
+  supabase.results = [];
 });
 
 describe('saved copies between accounts', () => {
@@ -114,12 +127,12 @@ describe('stale answers', () => {
   });
 
   it('a read already running when a row is deleted does not bring its copy back', async () => {
-    const { cachedRead, forgetCopy, setCacheOwner } = await load();
+    const { cachedRead, afterWrite, setCacheOwner } = await load();
     setCacheOwner('user-a');
     await cachedRead('user-a', 'result:case', 'case-1', async () => 'saved case');
     const slow = deferred<string>();
     const running = cachedRead('user-a', 'result:case', 'case-1', () => slow.promise);
-    forgetCopy('user-a', 'result:case', 'case-1');
+    afterWrite('user-a', [{ group: 'result:case', key: 'case-1' }]);
     slow.resolve('saved case');
     await running;
     await expect(cachedRead('user-a', 'result:case', 'case-1', offlineFailure)).rejects.toThrow();
@@ -198,5 +211,73 @@ describe('the saved-copies notice', () => {
     expect(shown()).toBe(true);
     await cache.cachedRead('user-a', 'source', 'source-1', async () => 'text');
     expect(shown()).toBe(false);
+  });
+});
+
+describe('after a write', () => {
+  const flowchartRow = (title: string) => ({ id: 'map-1', title, debate_id: 'debate-1', nodes: [], edges: [], created_at: '2026-10-14T10:00:00.000Z' });
+
+  it('a read started before saving over a map cannot bring the old map back, and offline opens the saved one', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    supabase.results.push({ data: flowchartRow('Before'), error: null, status: 200 });
+    await cache.fetchFlowchart('user-a', 'map-1');
+    const slow = deferred<unknown>();
+    const before = cache.cachedRead('user-a', 'flowchart', 'map-1', () => slow.promise);
+    supabase.results.push({ data: [flowchartRow('After')], error: null, status: 200 });
+    await expect(cache.updateFlowchart('user-a', 'map-1', { nodes: [], edges: [] })).resolves.toBe(true);
+    slow.resolve({ title: 'Before' });
+    await before;
+    await expect(cache.cachedRead('user-a', 'flowchart', 'map-1', offlineFailure)).resolves.toMatchObject({ title: 'After' });
+  });
+
+  it('a change to a debate stops a list read already running for it, and leaves other debates alone', async () => {
+    const { cachedRead, afterWrite, debateListScopes, setCacheOwner } = await load();
+    setCacheOwner('user-a');
+    await cachedRead('user-a', 'debate-lists', 'recent:debate-1:pro:5', async () => ['old']);
+    await cachedRead('user-a', 'debate-lists', 'recent:debate-2:pro:5', async () => ['other']);
+    const slow = deferred<string[]>();
+    const running = cachedRead('user-a', 'debate-lists', 'recent:debate-1:pro:5', () => slow.promise);
+    afterWrite('user-a', debateListScopes('debate-1', 'case'));
+    slow.resolve(['old']);
+    await running;
+    await expect(cachedRead('user-a', 'debate-lists', 'recent:debate-1:pro:5', offlineFailure)).rejects.toThrow();
+    await expect(cachedRead('user-a', 'debate-lists', 'recent:debate-2:pro:5', offlineFailure)).resolves.toEqual(['other']);
+  });
+
+  it('deleting a source drops it from the Library and the counts that held it', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => [{ id: 'source-1', content: 'full text' }]);
+    await cache.cachedRead('user-a', 'source', 'source-1', async () => ({ id: 'source-1', content: 'full text' }));
+    await cache.cachedRead('user-a', 'debate-lists', 'counts:debate-1', async () => ({ sources: 1 }));
+    await cache.cachedRead('user-a', 'debate-lists', 'source-counts:debate-1,debate-2', async () => ({ 'debate-1': 1 }));
+    await cache.cachedRead('user-a', 'sources', 'debate-2', async () => [{ id: 'source-2' }]);
+    supabase.results.push({ data: [{ debate_id: 'debate-1' }], error: null, status: 200 });
+    await cache.removeSource('user-a', 'source-1');
+    await cache.cachedRead('user-a', 'sources', 'flush', offlineFailure).catch(() => undefined);
+    expect([...storage.values()].some((value) => value.includes('full text'))).toBe(false);
+    await expect(cache.cachedRead('user-a', 'debate-lists', 'counts:debate-1', offlineFailure)).rejects.toThrow();
+    await expect(cache.cachedRead('user-a', 'debate-lists', 'source-counts:debate-1,debate-2', offlineFailure)).rejects.toThrow();
+    await expect(cache.cachedRead('user-a', 'sources', 'debate-2', offlineFailure)).resolves.toEqual([{ id: 'source-2' }]);
+  });
+
+  it('switching debates changes the saved Current Debate, so an offline restart opens the new one', async () => {
+    let cache = await load();
+    cache.setCacheOwner('user-a');
+    const row = (id: string, at: string) => ({ id, motion: id, settings: {}, instructions: '', last_activity_at: at, created_at: at });
+    supabase.results.push(
+      { data: [row('debate-1', '2026-10-14T10:00:00.000Z'), row('debate-2', '2026-10-13T10:00:00.000Z')], error: null, status: 200 },
+      { data: { debate_id: 'debate-1' }, error: null, status: 200 },
+    );
+    await cache.fetchDebates('user-a');
+    await cache.switchDebate('user-a', 'debate-2');
+    await cache.cachedRead('user-a', 'sources', 'flush', offlineFailure).catch(() => undefined);
+
+    cache = await load();
+    cache.setCacheOwner('user-a');
+    const offline = await cache.cachedRead<{ debates: { id: string }[]; currentId: string }>('user-a', 'debates', 'all', offlineFailure);
+    expect(offline.currentId).toBe('debate-2');
+    expect(offline.debates[0].id).toBe('debate-2');
   });
 });

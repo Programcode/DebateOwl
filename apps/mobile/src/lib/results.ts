@@ -18,7 +18,8 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 
 import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
-import { cachedRead, forgetCopy, readFailed } from './offline-cache';
+import { debateListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed } from './offline-cache';
 import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -224,6 +225,7 @@ export async function recordResult<K extends ResultKind>(
     .select('id')
     .single();
   if (error || !data) throw new Error(error?.message ?? `Could not save the ${kind}`);
+  afterWrite(userId, debateListScopes(record.debateId, kind));
   return (data as { id: string }).id;
 }
 
@@ -276,9 +278,10 @@ async function loadResult<K extends ResultKind>(userId: string, kind: K, id: str
 }
 
 export async function deleteResult(userId: string, kind: ResultKind, id: string): Promise<void> {
-  const { error } = await supabase.from(TABLES[kind]).delete().eq('user_id', userId).eq('id', id);
+  const { data, error } = await supabase.from(TABLES[kind]).delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
-  forgetCopy(userId, `result:${kind}`, id);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  afterWrite(userId, [{ group: `result:${kind}`, key: id }, ...deletedFrom.flatMap((debate) => debateListScopes(debate, kind))]);
 }
 
 /** The guard the website's results pages use: an old or broken row shows a notice instead of a crash. */

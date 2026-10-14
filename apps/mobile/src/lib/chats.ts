@@ -1,6 +1,7 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 
-import { cachedRead, readFailed } from './offline-cache';
+import { debateListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -117,6 +118,7 @@ export async function saveChat(userId: string, record: ChatRecord, messages: Cha
     if (error || !data) throw new Error(error?.message ?? 'Could not save the chat');
     chatId = (data as { id: string }).id;
     debateId = activeDebateId;
+    afterWrite(userId, [{ group: 'chats', key: debateId }, ...debateListScopes(debateId, 'chat')]);
   }
   const pending = messages.slice(record.persisted);
   const { error } = await supabase.from('messages').insert(pending.map((message) => ({
@@ -128,5 +130,7 @@ export async function saveChat(userId: string, record: ChatRecord, messages: Cha
   })));
   // The chat exists now; keep it so the next save adds these messages to it instead of creating another.
   if (error) throw new ChatSaveError(error.message, { chatId, debateId, persisted: record.persisted });
+  // The conversation and the message count in its debate's list changed.
+  afterWrite(userId, [{ group: 'chat', key: chatId }, { group: 'chats', key: debateId ?? 'one-off' }]);
   return { chatId, debateId, persisted: messages.length };
 }

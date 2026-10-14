@@ -1,6 +1,7 @@
 import { readFlowchart, type FlowchartDocument } from '@debatelab/core/flowchart';
 
-import { cachedRead, forgetCopy, readFailed } from './offline-cache';
+import { debateListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed, updateCopy } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -78,7 +79,10 @@ export async function insertFlowchart(userId: string, input: { title: string; de
     .select(COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the flowchart');
-  return fromRow(data as FlowchartRow);
+  const saved = fromRow(data as FlowchartRow);
+  afterWrite(userId, [{ group: 'flowcharts', key: saved.debateId ?? 'one-off' }, ...debateListScopes(saved.debateId, 'flowchart')]);
+  updateCopy(userId, 'flowchart', saved.id, () => saved);
+  return saved;
 }
 
 /** Saves over a map the app opened. Resolves false when the row is gone, for example deleted on the website. */
@@ -88,13 +92,20 @@ export async function updateFlowchart(userId: string, id: string, doc: Flowchart
     .update({ nodes: doc.nodes, edges: doc.edges, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('id', id)
-    .select('id');
+    .select(COLUMNS);
   if (error) throw new Error(error.message);
-  return (data ?? []).length > 0;
+  const row = ((data ?? []) as FlowchartRow[])[0];
+  // The saved copy becomes the map as saved, so offline it opens this version; a gone row drops it.
+  updateCopy(userId, 'flowchart', id, () => (row ? fromRow(row) : undefined));
+  return Boolean(row);
 }
 
 export async function deleteFlowchart(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from('flowcharts').delete().eq('user_id', userId).eq('id', id);
+  const { data, error } = await supabase.from('flowcharts').delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
-  forgetCopy(userId, 'flowchart', id);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  afterWrite(userId, [
+    { group: 'flowchart', key: id },
+    ...deletedFrom.flatMap((debate) => [{ group: 'flowcharts' as const, key: debate ?? 'one-off' }, ...debateListScopes(debate, 'flowchart')]),
+  ]);
 }

@@ -84,8 +84,10 @@ let generation = 0;
 // from a read that started later, so a slow answer never overwrites a newer one.
 let tickets = 0;
 const newest = new Map<string, number>();
-// A write that changed many keys of a group at once stops every read that started before it.
-const floors = new Map<CacheGroup, number>();
+// A write that changed several keys at once stops the reads of those keys that
+// started before it. Kept only while such a read is still running.
+let floors: { scope: CopyScope; ticket: number }[] = [];
+const running = new Set<number>();
 // The copies screens are showing right now instead of the server's answer.
 // A key leaves when it is read from the server again, or when a write drops it.
 const shown = new Map<string, CacheGroup>();
@@ -105,7 +107,7 @@ export function setCacheOwner(userId: string | null) {
   owner = userId;
   generation += 1;
   newest.clear();
-  floors.clear();
+  floors = [];
   shown.clear();
   setSavedCopiesShown(false);
   index = null;
@@ -146,10 +148,22 @@ function readCopy<T>(userId: string, group: CacheGroup, key: string): Promise<{ 
 function writeCopy(userId: string, group: CacheGroup, key: string, value: unknown, ticket: number, gen: number): Promise<void> {
   const storageKey = entryKey(userId, group, key);
   return queue(async () => {
-    if (gen !== generation || userId !== owner || ticket < (newest.get(storageKey) ?? 0) || ticket < (floors.get(group) ?? 0)) return;
-    newest.set(storageKey, ticket);
-    await storeEntry(userId, group, storageKey, value);
+    try {
+      if (gen !== generation || userId !== owner || ticket < (newest.get(storageKey) ?? 0)) return;
+      if (floors.some((floor) => floor.ticket > ticket && inScope(userId, floor.scope, group, storageKey))) return;
+      newest.set(storageKey, ticket);
+      await storeEntry(userId, group, storageKey, value);
+    } finally {
+      settle(ticket);
+    }
   });
+}
+
+/** A read is done with its ticket; floors that no running read started before are dropped. */
+function settle(ticket: number) {
+  running.delete(ticket);
+  const oldest = running.size > 0 ? Math.min(...running) : Infinity;
+  floors = floors.filter((floor) => floor.ticket > oldest);
 }
 
 /** Stores a copy and drops the group's oldest beyond its limit. Runs inside the queue. */
@@ -195,9 +209,11 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
   const ticket = ++tickets;
   const gen = generation;
   const storageKey = entryKey(userId, group, key);
+  running.add(ticket);
   if (isKnownOffline()) {
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
     if (copy) {
+      settle(ticket);
       if (gen === generation) noteShown(storageKey, group, true);
       return copy.value;
     }
@@ -206,6 +222,7 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
   try {
     value = await load();
   } catch (cause) {
+    settle(ticket);
     if (!isUnreachable(cause)) throw cause;
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
     if (!copy) throw cause;
@@ -218,19 +235,24 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
 }
 
 /**
- * The copies a write changed: one key, every key of the group that names an
- * id (a debate, `one-off` or a row), or the whole group.
+ * The copies a write changed: one `key`, or every key of the group that starts
+ * with `prefix` and names the id `about` (a debate, `one-off` or a row), or
+ * the whole group.
  */
-export type CopyScope = { group: CacheGroup; key: string } | { group: CacheGroup; about: string } | { group: CacheGroup };
+export interface CopyScope {
+  group: CacheGroup;
+  key?: string;
+  prefix?: string;
+  about?: string;
+}
 
 const keyOf = (userId: string, group: CacheGroup, storageKey: string) => storageKey.slice(entryKey(userId, group, '').length);
 
 function inScope(userId: string, scope: CopyScope, group: CacheGroup, storageKey: string): boolean {
   if (scope.group !== group) return false;
   const key = keyOf(userId, group, storageKey);
-  if ('key' in scope) return key === scope.key;
-  if ('about' in scope) return key.split(/[:,]/).includes(scope.about);
-  return true;
+  if (scope.key !== undefined) return key === scope.key;
+  return (!scope.prefix || key.startsWith(scope.prefix)) && (!scope.about || key.split(/[:,]/).includes(scope.about));
 }
 
 /**
@@ -243,8 +265,8 @@ export function afterWrite(userId: string, scopes: CopyScope[]) {
   if (userId !== owner) return;
   const ticket = ++tickets;
   for (const scope of scopes) {
-    if ('key' in scope) newest.set(entryKey(userId, scope.group, scope.key), ticket);
-    else floors.set(scope.group, ticket);
+    if (scope.key !== undefined) newest.set(entryKey(userId, scope.group, scope.key), ticket);
+    else if (running.size > 0) floors.push({ scope, ticket });
   }
   for (const [storageKey, group] of shown) {
     if (scopes.some((scope) => inScope(userId, scope, group, storageKey))) shown.delete(storageKey);
@@ -281,7 +303,3 @@ export function updateCopy<T>(userId: string, group: CacheGroup, key: string, up
   }).catch(warn('Could not update a saved copy'));
 }
 
-/** Drops one copy after its row was deleted. */
-export function forgetCopy(userId: string, group: CacheGroup, key: string) {
-  afterWrite(userId, [{ group, key }]);
-}

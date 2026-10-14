@@ -1,4 +1,4 @@
-import { cachedRead, readFailed } from './offline-cache';
+import { cachedRead, readFailed, updateCopy, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -65,11 +65,22 @@ export function sortDebates(debates: Debate[]): Debate[] {
   return [...debates].sort((a, b) => b.lastActivityAt - a.lastActivityAt);
 }
 
+interface DebateList {
+  debates: Debate[];
+  currentId: string | null;
+}
+
+/** Keeps the saved debates list in step with a write, so an offline restart opens what the student chose. */
+function keepInCopy(userId: string, change: (list: DebateList) => DebateList) {
+  updateCopy<DebateList>(userId, 'debates', 'all', (copy) => copy && change(copy));
+}
+
 async function setCurrentPointer(userId: string, debateId: string) {
   const { error } = await supabase
     .from('current_debates')
     .upsert({ user_id: userId, debate_id: debateId, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) throw new Error(error.message);
+  keepInCopy(userId, (list) => ({ ...list, currentId: list.debates.some((debate) => debate.id === debateId) ? debateId : list.currentId }));
 }
 
 /**
@@ -78,11 +89,11 @@ async function setCurrentPointer(userId: string, debateId: string) {
  */
 
 /** Every debate, newest activity first, and the current one when it is still in the list. Offline, the saved copy. */
-export function fetchDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
+export function fetchDebates(userId: string): Promise<DebateList> {
   return cachedRead(userId, 'debates', 'all', () => loadDebates(userId));
 }
 
-async function loadDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
+async function loadDebates(userId: string): Promise<DebateList> {
   const [debatesResult, currentResult] = await Promise.all([
     supabase.from('debates').select(DEBATE_COLUMNS).eq('user_id', userId).order('last_activity_at', { ascending: false }),
     supabase.from('current_debates').select('debate_id').eq('user_id', userId).maybeSingle(),
@@ -111,6 +122,7 @@ export async function createDebate(
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not create debate');
   const debate = fromRow(data as DebateRow);
+  keepInCopy(userId, (list) => ({ ...list, debates: sortDebates([debate, ...list.debates.filter((item) => item.id !== debate.id)]) }));
   await setCurrentPointer(userId, debate.id);
   return debate;
 }
@@ -123,6 +135,8 @@ export async function switchDebate(userId: string, debateId: string): Promise<nu
   await supabase.from('debates').update({ last_activity_at: new Date(now).toISOString() })
     .eq('id', debateId)
     .eq('user_id', userId);
+  // As the Debate provider shows it: the switch counts as activity even when the timestamp was not saved.
+  keepInCopy(userId, (list) => ({ ...list, debates: sortDebates(list.debates.map((item) => (item.id === debateId ? { ...item, lastActivityAt: now } : item))) }));
   return now;
 }
 
@@ -257,6 +271,21 @@ async function loadRecentWork(userId: string, debateId: string, side: DebateSide
 
 /** The Prepare tools' tables. */
 const PREPARE_TABLES = ['cases', 'brainstorms', 'factoids', 'flowcharts'] as const satisfies readonly ResultTable[];
+const PREPARE_KINDS = new Set<DebateItemKind>(PREPARE_TABLES.map((table) => KIND_BY_TABLE[table]));
+
+/**
+ * The saved counts and lists of one debate that a write changed: adding or
+ * removing a source changes its counts; a saved result or round also changes
+ * the recent work, and a Prepare result the Prepare list.
+ */
+export function debateListScopes(debateId: string | null, change: 'source' | DebateItemKind): CopyScope[] {
+  if (!debateId) return [];
+  const scopes: CopyScope[] = [{ group: 'debate-lists', key: `counts:${debateId}` }];
+  if (change === 'source') return [...scopes, { group: 'debate-lists', prefix: 'source-counts:', about: debateId }];
+  scopes.push({ group: 'debate-lists', prefix: `recent:${debateId}:` });
+  if (PREPARE_KINDS.has(change)) scopes.push({ group: 'debate-lists', prefix: `prepare:${debateId}:` });
+  return scopes;
+}
 
 /** A debate's saved Prepare results for both sides, newest first, for the Prepare tab. */
 export function fetchPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {

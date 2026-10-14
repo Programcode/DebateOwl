@@ -3,7 +3,8 @@ import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/co
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
-import { cachedRead, forgetCopy, readFailed } from './offline-cache';
+import { debateListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -132,6 +133,7 @@ export async function addSource(
     .select(SOURCE_COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the source');
+  afterWrite(userId, [{ group: 'sources', key: input.debateId }, ...debateListScopes(input.debateId, 'source')]);
   notifySourcesChanged();
   return fromRow(data as SourceRow);
 }
@@ -151,9 +153,11 @@ export async function fetchSourceIdsInFolder(userId: string, debateId: string, f
 /** Removes a source; with a debate, only while the source is still in that debate. */
 export async function removeSource(userId: string, id: string, debateId?: string): Promise<void> {
   const query = supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
-  const { error } = await (debateId ? query.eq('debate_id', debateId) : query);
+  const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query).select('debate_id');
   if (error) throw new Error(error.message);
-  forgetCopy(userId, 'source', id);
+  // The deleted row names its debate, whose Library and counts change.
+  const deletedFrom = ((data ?? []) as { debate_id: string }[]).map((row) => row.debate_id);
+  afterWrite(userId, [{ group: 'source', key: id }, ...deletedFrom.flatMap((debate) => [{ group: 'sources' as const, key: debate }, ...debateListScopes(debate, 'source')])]);
   notifySourcesChanged();
 }
 
@@ -185,6 +189,8 @@ export async function applySourceAssessments(userId: string, debateId: string, a
   const results = await Promise.all(
     Array.from(updates, ([id, metadata]) => supabase.from('sources').update({ metadata }).eq('user_id', userId).eq('debate_id', debateId).eq('id', id)),
   );
+  // The Library and the source sheet show how often a source was used.
+  afterWrite(userId, [{ group: 'sources', key: debateId }, ...Array.from(updates.keys(), (id) => ({ group: 'source' as const, key: id }))]);
   notifySourcesChanged();
   const failed = results.find((result) => result.error);
   if (failed?.error) throw new Error(failed.error.message);

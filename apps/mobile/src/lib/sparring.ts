@@ -14,7 +14,8 @@ import * as Crypto from 'expo-crypto';
 import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
-import { cachedRead, forgetCopy, readFailed } from './offline-cache';
+import { debateListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -82,10 +83,23 @@ export function judgeSparring(input: SparringScoreInput, options: RequestOptions
   });
 }
 
+/** The saved lists a judged round appears in, or leaves, in this debate or outside every debate. */
+const roundListScopes = (debateId: string | null): CopyScope[] => [{ group: 'sparring-rounds', prefix: `${debateId ?? 'one-off'}:` }];
+
+/**
+ * Called once the judge answered: the server saved the round as judged, so it
+ * now shows in the lists of the debate it was started in, or outside every debate.
+ */
+export function noteJudgedRound(userId: string, id: string, debateId: string | null) {
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundListScopes(debateId), ...debateListScopes(debateId, 'sparring')]);
+}
+
 /** Files a judged round in its debate under the side the student spoke, as the store's attachSessionToDebate. */
-export async function attachSparring(id: string, debateId: string, side: SparringSide): Promise<void> {
+export async function attachSparring(userId: string, id: string, debateId: string, side: SparringSide): Promise<void> {
   const { error } = await supabase.rpc('attach_to_debate', { p_kind: 'sparring', p_id: id, p_debate_id: debateId, p_side: side });
   if (error) throw new Error(error.message);
+  // The round may have been outside every debate until now.
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundListScopes(debateId), ...roundListScopes(null), ...debateListScopes(debateId, 'sparring')]);
 }
 
 /** A saved, judged round; null when there is none or it does not check out. Offline, the saved copy. */
@@ -128,9 +142,10 @@ async function loadSparringRounds(userId: string, debateId: string | null, limit
 }
 
 export async function deleteSparringRound(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from('sparring_sessions').delete().eq('user_id', userId).eq('id', id);
+  const { data, error } = await supabase.from('sparring_sessions').delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
-  forgetCopy(userId, 'sparring', id);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...deletedFrom.flatMap((debate) => [...roundListScopes(debate), ...debateListScopes(debate, 'sparring')])]);
 }
 
 /** A new round's id. The server takes it as the saved row's id, so it must be a UUID. */
