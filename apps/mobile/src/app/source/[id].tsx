@@ -12,6 +12,7 @@ import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { fetchSource, type Source } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 function webUrl(origin: string | null): string | null {
@@ -28,11 +29,12 @@ export default function SourceSheet() {
   const userId = session?.user.id ?? null;
   const [source, setSource] = useState<Source | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
+  const copies = useCopyHolder();
 
   useEffect(() => {
     if (!userId) return;
     let active = true;
-    fetchSource(userId, id)
+    fetchSource(userId, id, copies.mark())
       .then((next) => {
         if (active) setSource(next);
       })
@@ -43,7 +45,7 @@ export default function SourceSheet() {
     return () => {
       active = false;
     };
-  }, [userId, id]);
+  }, [userId, id, copies]);
 
   const url = webUrl(source?.origin ?? null);
 

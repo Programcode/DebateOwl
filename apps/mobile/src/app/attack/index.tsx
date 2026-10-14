@@ -22,6 +22,7 @@ import { caseToText } from '@/lib/result-text';
 import { arrivalNotices, attackCase, autosaveSources, fetchResult, isCompleteCase, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 // The website's defaults (AttackForm). The last form stays for the session, as on the website.
@@ -54,6 +55,7 @@ export default function AttackScreen() {
   const [phase, setPhase] = useState<'form' | 'attacking'>('form');
   const [error, setError] = useState<AIErrorKind | null>(null);
   const requests = useRef(0);
+  const copies = useCopyHolder();
   const abort = useRef<AbortController | null>(null);
   const live = useRef(true);
 
@@ -85,7 +87,7 @@ export default function AttackScreen() {
     }
     if (!userId || caseKey.startsWith('local-')) return;
     let active = true;
-    fetchResult(userId, 'case', caseKey)
+    fetchResult(userId, 'case', caseKey, copies.mark())
       .then((row) => {
         if (active && row && isCompleteCase(row.output)) setForm({ caseText: caseToText(row.output) });
       })
@@ -93,7 +95,7 @@ export default function AttackScreen() {
     return () => {
       active = false;
     };
-  }, [caseKey, userId, setForm]);
+  }, [caseKey, userId, setForm, copies]);
 
   const submit = async () => {
     if (!userId) return;

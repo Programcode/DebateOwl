@@ -18,6 +18,8 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 
 import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
+import { debateListScopes, deletedListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
 import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -223,6 +225,7 @@ export async function recordResult<K extends ResultKind>(
     .select('id')
     .single();
   if (error || !data) throw new Error(error?.message ?? `Could not save the ${kind}`);
+  afterWrite(userId, debateListScopes(record.debateId, kind));
   return (data as { id: string }).id;
 }
 
@@ -247,14 +250,19 @@ interface ResultRow {
   output: unknown;
 }
 
-export async function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
-  const { data, error } = await supabase
+/** A saved result; offline, the saved copy. */
+export function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string, mark?: CopyMark): Promise<SavedResult<K> | null> {
+  return cachedRead(userId, `result:${kind}`, id, () => loadResult(userId, kind, id), mark);
+}
+
+async function loadResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
+  const { data, error, status } = await supabase
     .from(TABLES[kind])
     .select('id,title,side,debate_id,created_at,input,output')
     .eq('user_id', userId)
     .eq('id', id)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw readFailed(error, status);
   if (!data) return null;
   const row = data as ResultRow;
   return {
@@ -270,8 +278,10 @@ export async function fetchResult<K extends ResultKind>(userId: string, kind: K,
 }
 
 export async function deleteResult(userId: string, kind: ResultKind, id: string): Promise<void> {
-  const { error } = await supabase.from(TABLES[kind]).delete().eq('user_id', userId).eq('id', id);
+  const { data, error } = await supabase.from(TABLES[kind]).delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  afterWrite(userId, [{ group: `result:${kind}`, key: id }, ...deletedListScopes(deletedFrom, kind)]);
 }
 
 /** The guard the website's results pages use: an old or broken row shows a notice instead of a crash. */

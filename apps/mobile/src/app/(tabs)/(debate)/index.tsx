@@ -25,6 +25,7 @@ import {
   type DebateSide,
 } from '@/lib/debates';
 import { useAnnouncements } from '@/lib/use-announcements';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { mainActionGradient, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -137,15 +138,17 @@ function DebateDetails({ debateId }: { debateId: string }) {
   const [counts, setCounts] = useState<DebateCounts | null>(null);
   const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
   const [failed, setFailed] = useState(false);
+  const copies = useCopyHolder();
 
   // Both sides load together, so switching the view is instant.
   const load = useCallback(async (isCurrent: () => boolean) => {
     if (!userId) return;
+    const mark = copies.mark();
     try {
       const [nextCounts, pro, con] = await Promise.all([
-        fetchDebateCounts(userId, debateId),
-        fetchRecentWork(userId, debateId, 'pro', RECENT_LIMIT),
-        fetchRecentWork(userId, debateId, 'con', RECENT_LIMIT),
+        fetchDebateCounts(userId, debateId, mark),
+        fetchRecentWork(userId, debateId, 'pro', RECENT_LIMIT, mark),
+        fetchRecentWork(userId, debateId, 'con', RECENT_LIMIT, mark),
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
@@ -156,17 +159,18 @@ function DebateDetails({ debateId }: { debateId: string }) {
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [userId, debateId]);
+  }, [userId, debateId, copies]);
 
-  // Reload on focus, so work saved on the website shows up.
+  // Reload on focus, so work saved on the website shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void load(() => active);
       return () => {
         active = false;
+        copies.release();
       };
-    }, [load]),
+    }, [load, copies]),
   );
 
   const results = counts?.results[view];

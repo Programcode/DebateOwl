@@ -1,5 +1,7 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 
+import { debateListScopes } from './debates';
+import { afterWrite, cachedRead, pickFailure, readFailed, type CopyMark } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -54,14 +56,18 @@ interface MessageRow {
  */
 
 /** Chats in a debate, or the unsorted ones in one-off mode, newest first, as the website's saved chats list. */
-export async function fetchChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
+export function fetchChats(userId: string, debateId: string | null, mark?: CopyMark): Promise<ChatSummary[]> {
+  return cachedRead(userId, 'chats', debateId ?? 'one-off', () => loadChats(userId, debateId), mark);
+}
+
+async function loadChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
   const query = supabase
     .from('chats')
     .select('id,title,created_at,messages(count)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null));
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null));
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string; messages: { count: number }[] }[]).map((row) => ({
     id: row.id,
     title: row.title,
@@ -70,13 +76,17 @@ export async function fetchChats(userId: string, debateId: string | null): Promi
   }));
 }
 
-export async function fetchChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
+export function fetchChat(userId: string, chatId: string, mark?: CopyMark): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
+  return cachedRead(userId, 'chat', chatId, () => loadChat(userId, chatId), mark);
+}
+
+async function loadChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
   const [chat, messages] = await Promise.all([
     supabase.from('chats').select('debate_id').eq('user_id', userId).eq('id', chatId).single(),
     supabase.from('messages').select('id,role,content,output,created_at').eq('chat_id', chatId).order('created_at', { ascending: true }),
   ]);
-  if (chat.error) throw new Error(chat.error.message);
-  if (messages.error) throw new Error(messages.error.message);
+  const failures = [chat, messages].flatMap((result) => (result.error ? [readFailed(result.error, result.status)] : []));
+  if (failures.length > 0) throw pickFailure(failures);
   return {
     debateId: (chat.data as { debate_id: string | null }).debate_id ?? null,
     messages: ((messages.data ?? []) as MessageRow[]).map((row) => ({
@@ -108,6 +118,7 @@ export async function saveChat(userId: string, record: ChatRecord, messages: Cha
     if (error || !data) throw new Error(error?.message ?? 'Could not save the chat');
     chatId = (data as { id: string }).id;
     debateId = activeDebateId;
+    afterWrite(userId, [{ group: 'chats', key: debateId }, ...debateListScopes(debateId, 'chat')]);
   }
   const pending = messages.slice(record.persisted);
   const { error } = await supabase.from('messages').insert(pending.map((message) => ({
@@ -119,5 +130,7 @@ export async function saveChat(userId: string, record: ChatRecord, messages: Cha
   })));
   // The chat exists now; keep it so the next save adds these messages to it instead of creating another.
   if (error) throw new ChatSaveError(error.message, { chatId, debateId, persisted: record.persisted });
+  // The conversation and the message count in its debate's list changed.
+  afterWrite(userId, [{ group: 'chat', key: chatId }, { group: 'chats', key: debateId ?? 'one-off' }]);
   return { chatId, debateId, persisted: messages.length };
 }
