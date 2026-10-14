@@ -22,7 +22,22 @@ const BODY = 15.5;
 const PINNED_HEIGHT = 54;
 
 /** The scrolling page under the header, leaving room for the pinned actions. */
-export function DocumentScreen({ header, children, actions, notice, testID }: { header: ReactNode; children: ReactNode; actions?: ReactNode; notice?: string; testID?: string }) {
+export function DocumentScreen({
+  header,
+  children,
+  actions,
+  actionWidths,
+  notice,
+  testID,
+}: {
+  header: ReactNode;
+  children: ReactNode;
+  actions?: ReactNode;
+  /** How the pinned buttons share the width, such as [1, 1.4]; equally when absent. */
+  actionWidths?: number[];
+  notice?: string;
+  testID?: string;
+}) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottom = Math.max(insets.bottom - 6, 14);
@@ -45,9 +60,9 @@ export function DocumentScreen({ header, children, actions, notice, testID }: { 
       ) : null}
       {actions ? (
         <View style={[styles.pinned, { bottom }]}>
-          {/* The pinned buttons share the width equally, as in the mock, within the document's column on iPad. */}
+          {/* The pinned buttons share the width equally unless told otherwise, as in the mocks, within the document's column on iPad. */}
           <View style={styles.pinnedRow}>
-            {Children.map(unwrapFragment(actions), (action) => (action ? <View style={styles.pinnedItem}>{action}</View> : null))}
+            {Children.map(unwrapFragment(actions), (action, index) => (action ? <View style={[styles.pinnedItem, actionWidths?.[index] ? { flex: actionWidths[index] } : null]}>{action}</View> : null))}
           </View>
         </View>
       ) : null}

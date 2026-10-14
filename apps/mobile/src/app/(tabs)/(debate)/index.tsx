@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
@@ -169,7 +169,6 @@ function DebateDetails({ debateId }: { debateId: string }) {
     }, [load]),
   );
 
-  const open = (href: Href) => router.navigate(href);
   const results = counts?.results[view];
   const items = recent?.[view] ?? null;
 
@@ -192,7 +191,7 @@ function DebateDetails({ debateId }: { debateId: string }) {
         <Stat value={counts?.rounds} label={t('mobile.debate.statRounds', { count: counts?.rounds ?? 0 })} />
       </View>
 
-      <SparCard onPress={() => open('/practice')} />
+      <SparCard onPress={() => router.push({ pathname: '/sparring', params: { from: 'debate' } })} />
 
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('mobile.tabs.prepare')}
