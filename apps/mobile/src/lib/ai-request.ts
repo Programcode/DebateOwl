@@ -43,6 +43,16 @@ export function abortError(): Error {
   return error;
 }
 
+/** Settles with the read, or rejects as soon as the signal aborts. The read itself cannot be cancelled, only no longer waited for. */
+export function untilAborted<T>(read: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(abortError());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    read.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
 export function utf8Length(value: string): number {
   let bytes = 0;
   for (const char of value) {
@@ -89,16 +99,15 @@ export async function postFunction<T>(
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   // The deadline and the caller's abort start before the session read, so
-  // leaving the screen while the token refreshes never sends the request.
+  // leaving the screen while the token refreshes never sends the request, and
+  // a refresh that stalls ends at the deadline instead of when it resolves.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const abortForCaller = () => controller.abort();
   signal?.addEventListener('abort', abortForCaller);
   if (signal?.aborted) controller.abort();
   try {
-    if (controller.signal.aborted) throw abortError();
-    const token = await accessToken();
-    if (controller.signal.aborted) throw abortError();
+    const token = await untilAborted(accessToken(), controller.signal);
     const json = JSON.stringify(body);
     if (utf8Length(json) > MAX_REQUEST_BODY_BYTES) throw new AIError('tooLarge', 'Request is too large');
     const response = await fetch(`${supabaseProject.url}/functions/v1/${path}`, {

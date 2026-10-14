@@ -2521,7 +2521,11 @@
         "tooLarge": "Ez túl hosszú az elküldéshez. Rövidítsd le, és próbáld újra.",
         "debateMissing": "Ez a vita már nem létezik. Válassz másik vitát, és próbáld újra.",
         "failed": "Valami hiba történt. Próbáld újra."
-      }
+      },
+      "deleteBrainstormTitle": "Törlöd az ötletelést?",
+      "deleteBrainstormDesc": "Ez eltávolítja az ötletelést az előzményeid közül.",
+      "deleteFactoidsTitle": "Törlöd a tényeket?",
+      "deleteFactoidsDesc": "Ez eltávolítja a tényeket az előzményeid közül."
     },
     "attack": {
       "caseRequired": "Illeszd be vagy írd le a megtámadandó esetet."
@@ -2547,6 +2551,18 @@
       "replay": "Visszanézés",
       "versus": "{{user}} – {{opponent}}",
       "roundsFailed": "Nem sikerült betölteni a vitapárbaj-fordulóidat."
+    },
+    "brainstorm": {
+      "strengths": {
+        "strong": "Erős",
+        "moderate": "Közepes",
+        "weak": "Gyenge"
+      },
+      "ideaCount_one": "{{count}} ötlet",
+      "ideaCount_other": "{{count}} ötlet"
+    },
+    "factoids": {
+      "claimRequired": "Írj be egy állítást."
     }
   }
 }

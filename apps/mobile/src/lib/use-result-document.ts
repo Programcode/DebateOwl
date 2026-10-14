@@ -32,6 +32,14 @@ export function arrivalNoticeText(t: TFunction, notice: string | undefined, fail
     .join(' ');
 }
 
+/** The delete confirmation for each kind: the website's own for cases, the app's for the rest. */
+const DELETE_TEXT: Record<ResultKind, { title: (t: TFunction) => string; message: (t: TFunction) => string }> = {
+  case: { title: (t) => t('historyPage.deleteCaseTitle'), message: (t) => t('historyPage.deleteCaseDesc') },
+  attack: { title: (t) => t('mobile.results.deleteAttackTitle'), message: (t) => t('mobile.results.deleteAttackDesc') },
+  brainstorm: { title: (t) => t('mobile.results.deleteBrainstormTitle'), message: (t) => t('mobile.results.deleteBrainstormDesc') },
+  factoids: { title: (t) => t('mobile.results.deleteFactoidsTitle'), message: (t) => t('mobile.results.deleteFactoidsDesc') },
+};
+
 /**
  * A result's document: the result itself (from this session or the saved
  * row), the debate's Library for its citation chips, the Current Debate's
@@ -151,8 +159,8 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
     const forUser = userId;
     const savedId = result.savedId;
     const confirmed = await confirmDestructive({
-      title: kind === 'case' ? t('historyPage.deleteCaseTitle') : t('mobile.results.deleteAttackTitle'),
-      message: kind === 'case' ? t('historyPage.deleteCaseDesc') : t('mobile.results.deleteAttackDesc'),
+      title: DELETE_TEXT[kind].title(t),
+      message: DELETE_TEXT[kind].message(t),
       confirm: t('common.delete'),
       cancel: t('common.cancel'),
     });

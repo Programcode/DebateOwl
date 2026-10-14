@@ -1,4 +1,6 @@
 import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
+import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
+import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -90,4 +92,93 @@ export function discussAttackMessage(result: AttackOutput): string {
     ${result.weaknesses.slice(0, 3).map((w) => `- ${w.description} (${w.severity})`).join('\n')}
 
     Can you help me improve this?`;
+}
+
+/**
+ * A brainstorm as plain text. The website has no clipboard button for
+ * brainstorms, so this follows its Word export's sections (exportBrainstormToDocx),
+ * with the PDF export's translated headings where the Word export has English ones.
+ */
+export function brainstormToText(result: BrainstormOutput, t: Translate): string {
+  const lines: string[] = [t('export.brainstormResults')];
+  const topFive = result.topFive ?? [];
+  if (topFive.length > 0) {
+    lines.push('', t('export.topArgumentAngles').toUpperCase());
+    topFive.forEach((item) => {
+      lines.push('', `#${item.rank}: ${item.idea?.title || t('brainstormResults.untitled')}`);
+      lines.push(item.idea?.description || '');
+      lines.push(`${t('export.whyTop')}: ${item.whyTop || ''}`);
+    });
+  }
+  const mindmap = result.mindmap ?? [];
+  if (mindmap.length > 0) {
+    lines.push('', t('export.argumentCategories').toUpperCase());
+    mindmap.forEach((category) => {
+      lines.push('', category.category);
+      (category.items ?? []).forEach((idea) => lines.push(`• ${idea.title}: ${idea.description}`));
+    });
+  }
+  const buckets = result.buckets ?? [];
+  if (buckets.length > 0) {
+    lines.push('', t('export.strategicBuckets').toUpperCase());
+    buckets.forEach((bucket) => {
+      lines.push('', bucket.name);
+      lines.push(bucket.keyInsight || '');
+      (bucket.ideas ?? []).forEach((idea) => lines.push(`• ${idea.title}`));
+    });
+  }
+  const nextSteps = result.nextSteps ?? [];
+  if (nextSteps.length > 0) {
+    lines.push('', t('export.recommendedNextSteps').toUpperCase());
+    nextSteps.forEach((step, i) => lines.push(`${i + 1}. ${step}`));
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Factoids as plain text, following the website's Word export
+ * (exportFactoidsToDocx) as attackToText does for attacks.
+ */
+export function factoidsToText(result: FactoidsOutput, t: Translate): string {
+  const lines: string[] = [t('export.researchFactoids'), '', t('export.keyFactsAndEvidence').toUpperCase()];
+  const factoids = result.factoids ?? [];
+  if (factoids.length === 0) lines.push(t('export.noFactoids'));
+  factoids.forEach((f, i) => {
+    lines.push('', `${i + 1}. ${f.shortClaim}`);
+    lines.push(`${t('export.keyFigure')}: ${f.keyFigure || ''}`);
+    lines.push(`${t('export.context')}: ${f.context || ''}`);
+    lines.push(`${t('export.howToUse')}: ${f.howToUse || ''}`);
+    lines.push(`${t('export.source')}: ${f.citation?.title || t('export.unknown')} - ${f.citation?.publisher || t('export.unknown')}`);
+  });
+  const warnings = result.warnings ?? [];
+  if (warnings.length > 0) {
+    lines.push('', t('export.warnings').toUpperCase());
+    warnings.forEach((warning) => lines.push(`⚠ ${warning}`));
+  }
+  return lines.join('\n');
+}
+
+/** The message the website's Discuss button sends to Ask for a brainstorm (BrainstormPage). */
+export function discussBrainstormMessage(result: BrainstormOutput, t: Translate): string {
+  let summary = "I'd like to discuss these brainstormed ideas.\n\n";
+  if (result.topFive) {
+    summary += '**Top Ideas:**\n' + result.topFive.map((i) => {
+      const side = i.idea.side ? t(`brainstormResults.${i.idea.side}`, { defaultValue: i.idea.side }) : 'N/A';
+      return `- ${i.idea.title} (${side})`;
+    }).join('\n');
+  } else if (result.buckets) {
+    summary += '**Key Buckets:**\n' + result.buckets.map((b) => `- ${b.name}: ${b.keyInsight}`).join('\n');
+  }
+  summary += '\n\nCan you help me expand on one of these?';
+  return summary;
+}
+
+/** The message the website's Discuss button sends to Ask for factoids (FactoidsPage). */
+export function discussFactoidsMessage(result: FactoidsOutput): string {
+  return `I'd like to discuss the evidence I found.
+    
+    **Factoids:**
+    ${result.factoids.slice(0, 3).map((f) => `- ${f.shortClaim} (${f.citation.publisher})`).join('\n')}
+    
+    How can I best use this evidence?`;
 }

@@ -98,16 +98,6 @@ export async function withTurnDeadline<T>(signal: AbortSignal, work: (signal: Ab
   }
 }
 
-/** Settles with the read, or rejects as soon as the signal aborts. The read itself cannot be cancelled, only no longer waited for. */
-export function untilAborted<T>(read: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) return Promise.reject(abortError());
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(abortError());
-    signal.addEventListener('abort', onAbort, { once: true });
-    read.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
-  });
-}
-
 export type CrossfireNextTurn = CrossfireReply & { signalToken?: string };
 
 /** The opponent's next question or answer, checked as the website checks it. */

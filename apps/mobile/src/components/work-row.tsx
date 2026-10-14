@@ -26,8 +26,8 @@ export const KIND_ICONS: Record<DebateItemKind, IconName> = {
 export type OpenedFrom = 'debate' | 'prepare' | 'practice';
 
 /**
- * Where a saved item opens. Cases, attacks and Sparring rounds open read-only as documents;
- * the Prepare tools not in the app yet open their "on its way" screen, and
+ * Where a saved item opens. Cases, attacks, brainstorms, factoids and Sparring
+ * rounds open read-only as documents; Flowcharts open their "on its way" screen, and
  * Practice work opens the Practice tab.
  */
 export function workHref(item: DebateItem, from: OpenedFrom): Href {
@@ -37,7 +37,9 @@ export function workHref(item: DebateItem, from: OpenedFrom): Href {
     case 'attack':
       return { pathname: '/attack/[id]', params: { id: item.id, from } };
     case 'brainstorm':
+      return { pathname: '/brainstorm/[id]', params: { id: item.id, from } };
     case 'factoids':
+      return { pathname: '/factoids/[id]', params: { id: item.id, from } };
     case 'flowchart':
       return { pathname: '/coming/[tool]', params: { tool: item.kind } };
     case 'sparring':
