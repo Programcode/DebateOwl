@@ -194,17 +194,17 @@ Go on only if all of these hold:
 - the profile is enterprise (`all devices` true) or ad hoc with Adam's iPhone UDID among its devices: ask Adam for the UDID. A development profile (`get-task-allow` true) is not what EAS internal distribution expects; ask Adam first;
 - the `.p12`'s SHA-1 equals one of the profile's certificate SHA-1s.
 
-Set `DEBATELAB_APP_GROUP` (in the profile's `env` in `eas.json`) only if `app groups` lists a group. Otherwise this build has no Live Activity.
+Set `DEBATELAB_APP_GROUP` (in the profile's `env` in `eas.json`, and exported in this shell for step 4) only if `app groups` lists a group. Otherwise this build has no Live Activity.
 
 **2. Link the EAS project, once.**
 
 ```bash
 cd apps/mobile
 export EXPO_TOKEN="$(cat $S/eas-token)"
-npx eas-cli@24.13.0 init --non-interactive
+npx eas-cli@24.13.0 init --account <account> --force --non-interactive
 ```
 
-`eas init` cannot edit `app.config.ts`, so it prints the project ID. Add `owner: '<account>'` and `extra: { eas: { projectId: '<id>' } }` to the config, commit, and build from that commit. Expo Go's config gains those two fields, which is expected.
+Without a project ID in the config, the non-interactive init needs both `--account` (the Expo account that owns the project, `adamgaborjani` on Adam's VPS) and `--force`, which links `@<account>/debatelab` if it exists and creates it otherwise. `eas init` cannot edit `app.config.ts`, so it prints the project ID. Add `owner: '<account>'` and `extra: { eas: { projectId: '<id>' } }` to the config, commit, and build from that commit. Expo Go's config gains those two fields, which is expected.
 
 **3. Count the builds already used.**
 
@@ -228,10 +228,11 @@ import json, os, sys
 s = sys.argv[1]
 cert = {'path': f'{s}/cert.p12', 'password': open(f'{s}/p12-password').read().strip()}
 target = {'provisioningProfilePath': f'{s}/profile.mobileprovision', 'distributionCertificate': cert}
-# With DEBATELAB_APP_GROUP the widget extension is a second target with its own entry:
-# {'ios': {'DebateLab': target, 'ExpoWidgetsTarget': target}}, with a profile valid for both.
+# With DEBATELAB_APP_GROUP the widget extension is a second target and needs its own entry,
+# signed by a profile valid for both bundle ids (a wildcard profile is).
+ios = {'DebateLab': target, 'ExpoWidgetsTarget': target} if os.environ.get('DEBATELAB_APP_GROUP') else target
 fd = os.open('credentials.json', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-os.write(fd, json.dumps({'ios': target}).encode())
+os.write(fd, json.dumps({'ios': ios}).encode())
 os.close(fd)
 EOF
 git status --short   # credentials.json must not appear
