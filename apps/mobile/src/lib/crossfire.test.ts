@@ -3,13 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const fetchMock = vi.hoisted(() => vi.fn());
 
 // The session read never settles, as when a token refresh stalls.
-vi.mock('./supabase', () => ({ supabase: { auth: { getSession: () => new Promise<never>(() => {}) } } }));
+const getSession = vi.hoisted(() => vi.fn(() => new Promise<never>(() => {})));
+vi.mock('./supabase', () => ({ supabase: { auth: { getSession } } }));
 vi.mock('expo/fetch', () => ({ fetch: fetchMock }));
 
 import { AIError, postFunction, untilAborted } from './ai-request';
 import { withTurnDeadline } from './crossfire';
 
 afterEach(() => {
+  vi.clearAllMocks();
   vi.useRealTimers();
 });
 
@@ -44,5 +46,12 @@ describe('postFunction', () => {
     expect(error).toBeInstanceOf(AIError);
     expect((error as AIError).kind).toBe('timeout');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('never reads the session for a request cancelled before it starts', async () => {
+    const leaving = new AbortController();
+    leaving.abort();
+    await expect(postFunction('ai', {}, leaving.signal, async () => 'answer')).rejects.toMatchObject({ name: 'AbortError' });
+    expect(getSession).not.toHaveBeenCalled();
   });
 });

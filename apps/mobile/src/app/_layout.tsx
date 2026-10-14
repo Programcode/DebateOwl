@@ -90,6 +90,11 @@ function Root() {
             <Stack.Screen name="brainstorm/[id]" />
             <Stack.Screen name="factoids/index" />
             <Stack.Screen name="factoids/[id]" />
+            {/* Flowchart full screen above the tabs, its card, claim and saved-map sheets as form sheets, as in mock A. */}
+            <Stack.Screen name="flowchart/index" />
+            <Stack.Screen name="flowchart/card" options={sheet} />
+            <Stack.Screen name="flowchart/claim" options={sheet} />
+            <Stack.Screen name="flowchart/maps" options={sheet} />
             {/* Live practice screens, full screen with no tab bar, as the live round in mock 05. */}
             <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="crossfire" />
