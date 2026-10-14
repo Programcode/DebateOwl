@@ -2541,6 +2541,75 @@
     },
     "factoids": {
       "claimRequired": "Enter a statement."
+    },
+    "flowchart": {
+      "untitled": "Unsaved map",
+      "notSaved": "Not saved yet",
+      "edited": "Edited, not saved",
+      "savedWhen": "Saved {{when}}",
+      "flow": "Flow",
+      "map": "Map",
+      "columns": {
+        "yourCase": "Your case",
+        "attacks": "Their attacks",
+        "rebuttals": "Your rebuttals"
+      },
+      "emptyColumn": "No cards yet",
+      "attacksMeta": "attacks: {{claim}}",
+      "rebutsMeta": "rebuts: {{claim}}",
+      "notAnswered": "Not answered yet",
+      "via": {
+        "support": "supports",
+        "attack": "attacked by",
+        "rebuttal": "rebutted by"
+      },
+      "quoted": "“{{label}}”",
+      "summary": {
+        "supports": "Supports {{claims}}.",
+        "attacks": "Attacks {{claims}}.",
+        "rebuts": "Rebuts {{claims}}.",
+        "supportedBy_one": "Supported by {{count}} claim.",
+        "supportedBy_other": "Supported by {{count}} claims.",
+        "attackedBy_one": "Attacked by {{count}} claim.",
+        "attackedBy_other": "Attacked by {{count}} claims.",
+        "rebuttedBy_one": "Rebutted by {{count}} claim.",
+        "rebuttedBy_other": "Rebutted by {{count}} claims.",
+        "none": "Not linked to other cards yet."
+      },
+      "links": {
+        "responds": {
+          "support": "Supports {{claim}}",
+          "attack": "Attacks {{claim}}",
+          "rebuttal": "Rebuts {{claim}}"
+        },
+        "answeredBy": {
+          "support": "Supported by {{claim}}",
+          "attack": "Attacked by {{claim}}",
+          "rebuttal": "Rebutted by {{claim}}"
+        }
+      },
+      "linksTitle": "Links",
+      "linkClaim": "Link claim",
+      "linkTitle": "Link to a claim",
+      "linkHint": "Choose the claim this card answers, and how it answers it.",
+      "alreadyLinked": "Already linked",
+      "removeLink": "Remove link: {{link}}",
+      "changeType": "Change type",
+      "cardGone": "This card is no longer on the map.",
+      "mapGone": "This map is no longer open. Go back to the Flowchart.",
+      "saveAs": "Save as…",
+      "deleteMap": "Delete map",
+      "deleteMapTitle": "Delete this map?",
+      "deleteMapDesc": "“{{title}}” will be deleted from your saved flowcharts. This cannot be undone.",
+      "missing": "This map was deleted elsewhere. Use Save as to keep it.",
+      "mapMissing": "This flowchart was deleted or is not in your account.",
+      "openLatest": "Open the newest map",
+      "loadFailed": "Could not load your flowcharts.",
+      "openFailed": "Could not open that map. Try again.",
+      "newMap": "New map",
+      "discardTitle": "Start a new map?",
+      "discardDesc": "Your unsaved map will be replaced by the starter map.",
+      "startNew": "Start new"
     }
   }
 }

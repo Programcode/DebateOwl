@@ -5,14 +5,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionMenu } from './action-menu';
-import type { HeaderAction } from './document-header';
+import type { HeaderAction, HeaderButton } from './document-header';
 import { Icon } from './icon';
 import { Text } from './text';
 
 import { useTheme } from '@/theme/use-theme';
 
 /** The web preview has no native header, so it draws mock 03's bar and its menu. */
-export function DocumentHeader({ backLabel, onShare, actions }: { backLabel: string; onShare?: () => void; actions: HeaderAction[] }) {
+export function DocumentHeader({ backLabel, onShare, actions, buttons = [] }: { backLabel: string; onShare?: () => void; actions: HeaderAction[]; buttons?: HeaderButton[] }) {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -27,6 +27,11 @@ export function DocumentHeader({ backLabel, onShare, actions }: { backLabel: str
         </Text>
       </Pressable>
       <View style={styles.actions}>
+        {buttons.map((button) => (
+          <Pressable key={button.key} accessibilityRole="button" accessibilityLabel={button.label} onPress={button.onPress} hitSlop={8} style={styles.icon} testID={`document-${button.key}`}>
+            <Icon name={button.icon} color={colors.primary} size={27} />
+          </Pressable>
+        ))}
         {onShare ? (
           <Pressable accessibilityRole="button" accessibilityLabel={t('mobile.results.share')} onPress={onShare} hitSlop={8} style={styles.icon}>
             <Icon name="share" color={colors.primary} size={25} />
