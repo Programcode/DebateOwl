@@ -41,8 +41,10 @@ function iosLocale(strings: PermissionStrings) {
   };
 }
 
-// expo-widgets adds the push entitlement even with its push option off, and a
-// profile without push cannot sign it.
+// expo-widgets adds the push entitlement even with its push option off, and
+// prebuild applies expo-notifications' plugin on its own once the package is
+// installed, which adds it too. The signing profile has no push, so every
+// development build drops it until a profile with push exists.
 const withoutPushEntitlement: ConfigPlugin = (config) =>
   withEntitlementsPlist(config, (mod) => {
     delete mod.modResults['aps-environment'];
@@ -122,9 +124,8 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
         widgets: [],
       },
     ]);
-    // Registered before Expo applies the plugins list. Mods registered later act
-    // first, so this one runs after expo-widgets has written its entitlements.
-    return withoutPushEntitlement(config);
   }
-  return config;
+  // Registered before Expo applies the plugins list. Mods registered later act
+  // first, so this one runs after the plugins have written their entitlements.
+  return withoutPushEntitlement(config);
 };
