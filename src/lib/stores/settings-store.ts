@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
-import { canAccessProModels as canAccessProModelsFor } from '@debatelab/core/ai/pro-access';
+import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -128,17 +128,14 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   });
 }
 
-async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
-  return canAccessProModelsFor(settings, async () => {
-    const userId = await getUserId();
-    if (!userId) return null;
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId);
-    return error ? null : data ?? [];
-  });
+/** Whether the plan includes Pro models, or null when it can't be read. */
+async function canAccessProModels(userId: string): Promise<boolean | null> {
+  return (await readEntitlement(supabase, userId))?.canAccessProModels ?? null;
 }
+
+// Bumped by every reset and every hydration. A hydration that started for an
+// earlier account, or was overtaken by a newer one, applies and saves nothing.
+let hydrationGeneration = 0;
 
 async function getUserId() {
   const { data } = await supabase.auth.getUser();
@@ -147,15 +144,21 @@ async function getUserId() {
 
 // The auth trigger provisions every settings row, and clients may only UPDATE
 // the user-editable columns. An upsert needs INSERT and is always denied.
-async function updateSettings(payload: {
+type SettingsPayload = {
   language: string;
   output_language: string;
   theme: string;
   feature_configs: Record<string, ProviderConfig>;
   custom_system_prompt: string | null;
-}) {
+};
+
+async function updateSettings(payload: SettingsPayload) {
   const userId = await getUserId();
   if (!userId) return;
+  await updateSettingsFor(userId, payload);
+}
+
+async function updateSettingsFor(userId: string, payload: SettingsPayload) {
   const { error } = await supabase.from('user_settings').update({
     ...payload,
     updated_at: new Date().toISOString(),
@@ -165,9 +168,7 @@ async function updateSettings(payload: {
   }
 }
 
-async function persistMigratedFeatureConfigs(featureConfigs: Record<FeatureTab, ProviderConfig>) {
-  const userId = await getUserId();
-  if (!userId) return;
+async function persistMigratedFeatureConfigs(userId: string, featureConfigs: Record<FeatureTab, ProviderConfig>) {
   const { error } = await supabase
     .from('user_settings')
     .update({ feature_configs: featureConfigs, updated_at: new Date().toISOString() })
@@ -259,14 +260,20 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       hydrateFromServer: async () => {
+        // The account is read once, at the start; every later step checks the
+        // generation, so an account switch during an await drops this run.
+        const generation = ++hydrationGeneration;
+        const current = () => generation === hydrationGeneration;
+        const userId = await getUserId();
+        if (!userId || !current()) return;
         const { data, error } = await supabase
           .from('user_settings')
           .select('*')
           .single();
-        if (error || !data) return;
+        if (error || !data || !current()) return;
 
-        const allowProModels = await canAccessProModels(data);
-        if (allowProModels === null) return;
+        const allowProModels = await canAccessProModels(userId);
+        if (allowProModels === null || !current()) return;
         const mergedConfigs = normalizeFeatureConfigs(
           data.feature_configs,
           allowProModels,
@@ -284,6 +291,7 @@ export const useSettingsStore = create<SettingsState>()(
         const theme = neverSaved ? get().theme : (data.theme as 'light' | 'dark' | 'system') || 'system';
         const customSystemPrompt = data.custom_system_prompt || undefined;
         await applyAppLanguage(language);
+        if (!current()) return;
         set({
           language,
           outputLanguage,
@@ -293,7 +301,7 @@ export const useSettingsStore = create<SettingsState>()(
           wikiResearchEnabled: get().wikiResearchEnabled,
         });
         if (neverSaved) {
-          await updateSettings({
+          await updateSettingsFor(userId, {
             language,
             output_language: outputLanguage,
             theme,
@@ -301,10 +309,11 @@ export const useSettingsStore = create<SettingsState>()(
             custom_system_prompt: customSystemPrompt ?? null,
           });
         } else if (configsNeedMigration) {
-          await persistMigratedFeatureConfigs(mergedConfigs);
+          await persistMigratedFeatureConfigs(userId, mergedConfigs);
         }
       },
       resetLocalData: (preserveLanguage = false) => {
+        hydrationGeneration += 1;
         const language = preserveLanguage ? get().language : 'en';
         set({
           language,

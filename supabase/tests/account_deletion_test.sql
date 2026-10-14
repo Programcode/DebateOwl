@@ -118,6 +118,12 @@ INSERT INTO public.subscriptions (user_id, stripe_customer_id, stripe_subscripti
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'cus_leaver', 'sub_leaver', 'active', now(), now() + interval '30 days');
 -- A checkout customer whose subscription the webhook has not recorded yet.
 INSERT INTO public.stripe_customers (user_id, customer_id) VALUES ('ac000000-0000-4000-8000-00000000000a', 'cus_leaver_checkout');
+-- An App Store subscription. Deletion cannot cancel it; Apple keeps billing
+-- until the user cancels in their Apple account settings.
+INSERT INTO public.app_store_subscriptions (original_transaction_id, user_id, product_id, transaction_id, environment,
+    purchased_at, expires_at, transaction_signed_at)
+  VALUES ('leaver-original', 'ac000000-0000-4000-8000-00000000000a', 'com.adam.debatelab.pro.monthly', 'leaver-transaction',
+    'Production', now(), now() + interval '30 days', now());
 
 -- Admin-authored rows: the leaver is an admin whose catalog work must survive.
 INSERT INTO public.promo_codes (id, code, type, created_by)
@@ -260,9 +266,10 @@ SELECT is(
     'stripe_customer_ids', jsonb_build_array('cus_leaver', 'cus_leaver_checkout'),
     'storage_objects', jsonb_build_array(
       jsonb_build_object('bucket_id', 'account-test', 'name', 'leaver/notes.txt')
-    )
+    ),
+    'app_store_subscription_active', true
   ),
-  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names'
+  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names, and flags the App Store subscription Apple keeps billing'
 );
 RESET ROLE;
 

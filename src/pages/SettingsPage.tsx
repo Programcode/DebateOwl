@@ -36,6 +36,7 @@ import { APP_LANGUAGES, isAppLanguage } from '@/lib/languages';
 
 const tierLabels: Record<string, { labelKey: string; color: string }> = {
   trial: { labelKey: 'settings.tierTrial', color: 'bg-blue-500' },
+  basic: { labelKey: 'settings.tierBasic', color: 'bg-teal-500' },
   pro: { labelKey: 'settings.tierPro', color: 'bg-amber-500' },
   legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'bg-green-500' },
   expired: { labelKey: 'settings.tierExpired', color: 'bg-red-500' },
