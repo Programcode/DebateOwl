@@ -1,7 +1,7 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 
 import { debateListScopes } from './debates';
-import { afterWrite, cachedRead, pickFailure, readFailed } from './offline-cache';
+import { afterWrite, cachedRead, pickFailure, readFailed, type CopyMark } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -56,8 +56,8 @@ interface MessageRow {
  */
 
 /** Chats in a debate, or the unsorted ones in one-off mode, newest first, as the website's saved chats list. */
-export function fetchChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
-  return cachedRead(userId, 'chats', debateId ?? 'one-off', () => loadChats(userId, debateId));
+export function fetchChats(userId: string, debateId: string | null, mark?: CopyMark): Promise<ChatSummary[]> {
+  return cachedRead(userId, 'chats', debateId ?? 'one-off', () => loadChats(userId, debateId), mark);
 }
 
 async function loadChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
@@ -76,8 +76,8 @@ async function loadChats(userId: string, debateId: string | null): Promise<ChatS
   }));
 }
 
-export function fetchChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
-  return cachedRead(userId, 'chat', chatId, () => loadChat(userId, chatId));
+export function fetchChat(userId: string, chatId: string, mark?: CopyMark): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
+  return cachedRead(userId, 'chat', chatId, () => loadChat(userId, chatId), mark);
 }
 
 async function loadChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {

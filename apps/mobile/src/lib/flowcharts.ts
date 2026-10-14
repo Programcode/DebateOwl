@@ -1,7 +1,7 @@
 import { readFlowchart, type FlowchartDocument } from '@debatelab/core/flowchart';
 
 import { debateListScopes, deletedListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed, updateCopy } from './offline-cache';
+import { afterWrite, cachedRead, CopyHolder, readFailed, updateCopy, type CopyMark } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -46,8 +46,8 @@ function fromRow(row: FlowchartRow): SavedFlowchart {
 }
 
 /** The maps saved in one debate, or one-off maps for null, newest first, as the website's saved list shows them. */
-export function fetchFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
-  return cachedRead(userId, 'flowcharts', debateId ?? 'one-off', () => loadFlowchartList(userId, debateId));
+export function fetchFlowchartList(userId: string, debateId: string | null, mark?: CopyMark): Promise<FlowchartSummary[]> {
+  return cachedRead(userId, 'flowcharts', debateId ?? 'one-off', () => loadFlowchartList(userId, debateId), mark);
 }
 
 async function loadFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
@@ -61,8 +61,11 @@ async function loadFlowchartList(userId: string, debateId: string | null): Promi
   }));
 }
 
-export function fetchFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
-  return cachedRead(userId, 'flowchart', id, () => loadFlowchart(userId, id));
+/** The copies the Flowchart screen shows, including a map the saved maps sheet opened for it. */
+export const flowchartScreenCopies = new CopyHolder();
+
+export function fetchFlowchart(userId: string, id: string, mark?: CopyMark): Promise<SavedFlowchart | null> {
+  return cachedRead(userId, 'flowchart', id, () => loadFlowchart(userId, id), mark);
 }
 
 async function loadFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {

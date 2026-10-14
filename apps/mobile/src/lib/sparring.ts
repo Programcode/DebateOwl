@@ -15,7 +15,7 @@ import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
 import { debateListScopes, deletedListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed, type CopyScope } from './offline-cache';
+import { afterWrite, cachedRead, readFailed, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -103,8 +103,8 @@ export async function attachSparring(userId: string, id: string, debateId: strin
 }
 
 /** A saved, judged round; null when there is none or it does not check out. Offline, the saved copy. */
-export async function fetchSparringRound(userId: string, id: string): Promise<SparringSession | null> {
-  return cachedRead(userId, 'sparring', id, () => loadSparringRound(userId, id));
+export async function fetchSparringRound(userId: string, id: string, mark?: CopyMark): Promise<SparringSession | null> {
+  return cachedRead(userId, 'sparring', id, () => loadSparringRound(userId, id), mark);
 }
 
 async function loadSparringRound(userId: string, id: string): Promise<SparringSession | null> {
@@ -124,8 +124,8 @@ export interface SparringRoundSummary {
  * The judged rounds in one debate, or outside every debate when `debateId` is
  * null, newest first, as the website's history lists them.
  */
-export async function fetchSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {
-  return cachedRead(userId, 'sparring-rounds', `${debateId ?? 'one-off'}:${limit}`, () => loadSparringRounds(userId, debateId, limit));
+export async function fetchSparringRounds(userId: string, debateId: string | null, limit: number, mark?: CopyMark): Promise<SparringRoundSummary[]> {
+  return cachedRead(userId, 'sparring-rounds', `${debateId ?? 'one-off'}:${limit}`, () => loadSparringRounds(userId, debateId, limit), mark);
 }
 
 async function loadSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {

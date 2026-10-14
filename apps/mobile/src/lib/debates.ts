@@ -1,4 +1,4 @@
-import { cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyScope } from './offline-cache';
+import { cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -188,8 +188,8 @@ async function countRows(userId: string, table: string, debateId: string, sides?
 const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
 
 /** Sources, saved results per side and Sparring rounds in one debate. One-off work has no debate and never counts. */
-export function fetchDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
-  return cachedRead(userId, 'debate-lists', `counts:${debateId}`, () => loadDebateCounts(userId, debateId));
+export function fetchDebateCounts(userId: string, debateId: string, mark?: CopyMark): Promise<DebateCounts> {
+  return cachedRead(userId, 'debate-lists', `counts:${debateId}`, () => loadDebateCounts(userId, debateId), mark);
 }
 
 async function loadDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
@@ -203,8 +203,8 @@ async function loadDebateCounts(userId: string, debateId: string): Promise<Debat
 }
 
 /** Library sources per debate, for the switcher's list. */
-export function fetchSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
-  return cachedRead(userId, 'debate-lists', `source-counts:${debateIds.join(',')}`, () => loadSourceCounts(userId, debateIds));
+export function fetchSourceCounts(userId: string, debateIds: string[], mark?: CopyMark): Promise<Record<string, number>> {
+  return cachedRead(userId, 'debate-lists', `source-counts:${debateIds.join(',')}`, () => loadSourceCounts(userId, debateIds), mark);
 }
 
 async function loadSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
@@ -239,8 +239,8 @@ async function fetchResultRows(userId: string, debateId: string, table: ResultTa
 const newestFirst = (lists: DebateItem[][], limit: number) => lists.flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
 
 /** The newest saved results and rounds for one side of a debate, like the website's side lists. */
-export function fetchRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
-  return cachedRead(userId, 'debate-lists', `recent:${debateId}:${side}:${limit}`, () => loadRecentWork(userId, debateId, side, limit));
+export function fetchRecentWork(userId: string, debateId: string, side: DebateSide, limit: number, mark?: CopyMark): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `recent:${debateId}:${side}:${limit}`, () => loadRecentWork(userId, debateId, side, limit), mark);
 }
 
 async function loadRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
@@ -303,8 +303,8 @@ function listScopes(debateId: string | undefined, change: 'source' | DebateItemK
 }
 
 /** A debate's saved Prepare results for both sides, newest first, for the Prepare tab. */
-export function fetchPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
-  return cachedRead(userId, 'debate-lists', `prepare:${debateId}:${limit}`, () => loadPrepareWork(userId, debateId, limit));
+export function fetchPrepareWork(userId: string, debateId: string, limit: number, mark?: CopyMark): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `prepare:${debateId}:${limit}`, () => loadPrepareWork(userId, debateId, limit), mark);
 }
 
 async function loadPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {

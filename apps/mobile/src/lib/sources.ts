@@ -4,7 +4,7 @@ import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from 
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
 import { debateListScopes, deletedListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed, type CopyScope } from './offline-cache';
+import { afterWrite, cachedRead, readFailed, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -64,8 +64,8 @@ function fromRow(row: SourceRow): Source {
  */
 
 /** One debate's sources, newest first, as the website's Library lists them by default. Offline, the saved copy. */
-export function fetchSources(userId: string, debateId: string): Promise<Source[]> {
-  return cachedRead(userId, 'sources', debateId, () => loadSources(userId, debateId));
+export function fetchSources(userId: string, debateId: string, mark?: CopyMark): Promise<Source[]> {
+  return cachedRead(userId, 'sources', debateId, () => loadSources(userId, debateId), mark);
 }
 
 async function loadSources(userId: string, debateId: string): Promise<Source[]> {
@@ -79,8 +79,8 @@ async function loadSources(userId: string, debateId: string): Promise<Source[]> 
   return ((data ?? []) as SourceRow[]).map(fromRow);
 }
 
-export function fetchSource(userId: string, id: string): Promise<Source | null> {
-  return cachedRead(userId, 'source', id, () => loadSource(userId, id));
+export function fetchSource(userId: string, id: string, mark?: CopyMark): Promise<Source | null> {
+  return cachedRead(userId, 'source', id, () => loadSource(userId, id), mark);
 }
 
 async function loadSource(userId: string, id: string): Promise<Source | null> {

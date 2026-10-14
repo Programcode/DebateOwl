@@ -10,6 +10,7 @@ import { Text } from './text';
 
 import { useAuth } from '@/lib/auth';
 import { fetchChats, type ChatSummary } from '@/lib/chats';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { formatDate } from '@/lib/dates';
 import { useTheme } from '@/theme/use-theme';
 
@@ -36,13 +37,17 @@ export function AskHistory({
   const userId = session?.user.id ?? null;
   const [chats, setChats] = useState<ChatSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const copies = useCopyHolder();
 
   useEffect(() => {
-    if (!visible || !userId) return;
+    if (!visible || !userId) {
+      copies.release();
+      return;
+    }
     let active = true;
     setChats(null);
     setFailed(false);
-    fetchChats(userId, debateId)
+    fetchChats(userId, debateId, copies.mark())
       .then((next) => {
         if (active) setChats(next);
       })
@@ -53,7 +58,7 @@ export function AskHistory({
     return () => {
       active = false;
     };
-  }, [visible, userId, debateId]);
+  }, [visible, userId, debateId, copies]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>

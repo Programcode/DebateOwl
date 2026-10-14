@@ -35,7 +35,8 @@ import {
   type FlowchartDraft,
 } from '@/lib/flowchart-drafts';
 import { flowchartToText } from '@/lib/flowchart-text';
-import { deleteFlowchart, fetchFlowchart, fetchFlowchartList, insertFlowchart, updateFlowchart } from '@/lib/flowcharts';
+import { deleteFlowchart, fetchFlowchart, fetchFlowchartList, flowchartScreenCopies, insertFlowchart, updateFlowchart } from '@/lib/flowcharts';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 const NOTICE_MS = 3500;
@@ -71,6 +72,7 @@ export default function FlowchartScreen() {
 
   const live = useRef(true);
   const owner = useRef(userId);
+  const copies = useCopyHolder(flowchartScreenCopies);
   owner.current = userId;
   const loads = useRef(0);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +100,7 @@ export default function FlowchartScreen() {
     if (!userId) return;
     const forUser = userId;
     const isCurrent = () => loads.current === request && live.current && owner.current === forUser;
+    const mark = copies.mark();
     setFailure(null);
     const run = async () => {
       if (requestedId) {
@@ -107,7 +110,7 @@ export default function FlowchartScreen() {
           setFound({ id: requestedId, scope: held.scope });
           return;
         }
-        const row = await fetchFlowchart(forUser, requestedId);
+        const row = await fetchFlowchart(forUser, requestedId, mark);
         if (!isCurrent()) return;
         if (!row) {
           setFailure({ scope: null, kind: 'missing' });
@@ -120,9 +123,9 @@ export default function FlowchartScreen() {
       }
       const target = scopeKey(activeDebateId);
       if (openDraft(target)) return;
-      const list = await fetchFlowchartList(forUser, activeDebateId);
+      const list = await fetchFlowchartList(forUser, activeDebateId, mark);
       if (!isCurrent() || openDraft(target)) return;
-      const row = list.length > 0 ? await fetchFlowchart(forUser, list[0].id) : null;
+      const row = list.length > 0 ? await fetchFlowchart(forUser, list[0].id, mark) : null;
       if (!isCurrent() || openDraft(target)) return;
       showDraft(target, row ? savedDraft(row) : newDraft(activeDebateId, starterFlowchart(tRef.current)));
     };
@@ -131,7 +134,7 @@ export default function FlowchartScreen() {
       console.warn('Could not load flowcharts:', cause instanceof Error ? cause.message : cause);
       setFailure({ scope: requestedId ? null : scopeKey(activeDebateId), kind: 'failed' });
     });
-  }, [userId, activeDebateId, requestedId, attempt]);
+  }, [userId, activeDebateId, requestedId, attempt, copies]);
 
   const open = scope ? openDraft(scope) : null;
   const draft = open?.draft ?? null;

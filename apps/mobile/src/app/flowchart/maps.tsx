@@ -12,7 +12,8 @@ import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { formatRelativeDate } from '@/lib/dates';
 import { getDraft, NEW_MAP, newDraft, openDraft, savedDraft, scopeDebateId, showDraft, useFlowchartDrafts } from '@/lib/flowchart-drafts';
-import { fetchFlowchart, fetchFlowchartList, type FlowchartSummary } from '@/lib/flowcharts';
+import { fetchFlowchart, fetchFlowchartList, flowchartScreenCopies, type FlowchartSummary } from '@/lib/flowcharts';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { keepIfSame } from '@/lib/keep-if-same';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -35,6 +36,7 @@ export default function SavedMapsSheet() {
   const [opening, setOpening] = useState<number | null>(null);
   const [failedOpen, setFailedOpen] = useState(false);
   const loads = useRef(0);
+  const copies = useCopyHolder();
   // Only the latest tap may open a map; an earlier one still loading is dropped.
   const selections = useRef(0);
   const live = useRef(true);
@@ -52,13 +54,13 @@ export default function SavedMapsSheet() {
     const forScope = scope;
     const isCurrent = () => loads.current === request && live.current && owner.current === forUser;
     try {
-      const items = await fetchFlowchartList(forUser, debateId);
+      const items = await fetchFlowchartList(forUser, debateId, copies.mark());
       if (isCurrent()) setList((previous) => keepIfSame(previous, { for: `${forUser}:${forScope}`, items, failed: false }));
     } catch (cause) {
       console.warn('Could not load saved flowcharts:', cause instanceof Error ? cause.message : cause);
       if (isCurrent()) setList((previous) => (previous?.for === `${forUser}:${forScope}` && previous.items ? previous : { for: `${forUser}:${forScope}`, items: null, failed: true }));
     }
-  }, [debateId, scope, userId]);
+  }, [debateId, scope, userId, copies]);
 
   useEffect(() => {
     void load();
@@ -82,7 +84,8 @@ export default function SavedMapsSheet() {
     setOpening(index);
     setFailedOpen(false);
     try {
-      const row = await fetchFlowchart(forUser, item.id);
+      // The map shows on the Flowchart screen once this sheet closes, so it counts there.
+      const row = await fetchFlowchart(forUser, item.id, flowchartScreenCopies.mark());
       if (!live.current || owner.current !== forUser || selections.current !== selection) return;
       if (!row) {
         setFailedOpen(true);

@@ -19,7 +19,7 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { debateListScopes, deletedListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed } from './offline-cache';
+import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
 import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -251,8 +251,8 @@ interface ResultRow {
 }
 
 /** A saved result; offline, the saved copy. */
-export function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
-  return cachedRead(userId, `result:${kind}`, id, () => loadResult(userId, kind, id));
+export function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string, mark?: CopyMark): Promise<SavedResult<K> | null> {
+  return cachedRead(userId, `result:${kind}`, id, () => loadResult(userId, kind, id), mark);
 }
 
 async function loadResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {

@@ -5,7 +5,8 @@ import { useSyncExternalStore } from 'react';
  * Whether the app is reading saved copies instead of the network. expo-network
  * says when the device is offline; offline-cache.ts says while any screen's
  * data is a saved copy, which covers a network that is up but cannot reach
- * the server. Each copy counts until its own data is read from the server again.
+ * the server. Each copy counts until its own data is read from the server
+ * again, or the screens showing it close or move on (offline-cache.ts, CopyHolder).
  */
 
 export interface OfflineStatus {

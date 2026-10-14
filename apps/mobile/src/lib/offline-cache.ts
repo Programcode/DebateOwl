@@ -107,9 +107,11 @@ const newest = new Map<string, number>();
 // started before it. Kept only while such a read is still running.
 let floors: { scope: CopyScope; ticket: number }[] = [];
 const running = new Set<number>();
-// The copies screens are showing right now instead of the server's answer.
-// A key leaves when it is read from the server again, or when a write drops it.
-const shown = new Map<string, CacheGroup>();
+// The copies screens are showing right now instead of the server's answer, and
+// who shows each: a screen's CopyHolder, or null for a read that named none. A
+// key leaves when it is read from the server again, when a write drops it, or
+// when the last screen showing it lets it go.
+const shown = new Map<string, { group: CacheGroup; holders: Set<CopyHolder | null> }>();
 let index: { userId: string; entries: Index } | null = null;
 
 function warn(what: string) {
@@ -213,9 +215,64 @@ async function removeEntries(userId: string, storageKeys: string[]) {
   await AsyncStorage.multiRemove(storageKeys);
 }
 
-function noteShown(storageKey: string, group: CacheGroup, fromCopy: boolean) {
-  if (fromCopy) shown.set(storageKey, group);
-  else shown.delete(storageKey);
+/**
+ * The reads of one screen, or of one part of it, so the saved copies it shows
+ * stop counting once it moves on. Each load takes a `mark()` and passes it to
+ * its reads; the first of them to finish lets go of what the screen's earlier
+ * loads showed, and a read from an earlier load finishing late no longer
+ * counts. `release()` lets go of everything, for when the screen closes or
+ * stops showing that data.
+ */
+export class CopyHolder {
+  loads = 0;
+  settled = 0;
+  readonly keys = new Set<string>();
+
+  mark(): CopyMark {
+    return { holder: this, load: ++this.loads };
+  }
+
+  release() {
+    this.settled = ++this.loads;
+    letGo(this);
+    setSavedCopiesShown(shown.size > 0);
+  }
+}
+
+export interface CopyMark {
+  holder: CopyHolder;
+  load: number;
+}
+
+function letGo(holder: CopyHolder) {
+  for (const storageKey of holder.keys) {
+    const entry = shown.get(storageKey);
+    entry?.holders.delete(holder);
+    if (entry?.holders.size === 0) shown.delete(storageKey);
+  }
+  holder.keys.clear();
+}
+
+/** Whether a finished read of this load still counts for its screen; a newer load first lets go of the older ones' copies. */
+function settleMark({ holder, load }: CopyMark): boolean {
+  if (load < holder.settled) return false;
+  if (load > holder.settled) {
+    holder.settled = load;
+    letGo(holder);
+  }
+  return true;
+}
+
+function noteShown(storageKey: string, group: CacheGroup, fromCopy: boolean, mark: CopyMark | undefined) {
+  const counts = !mark || settleMark(mark);
+  if (!fromCopy) shown.delete(storageKey);
+  else if (counts) {
+    const holder = mark?.holder ?? null;
+    const entry = shown.get(storageKey) ?? { group, holders: new Set<CopyHolder | null>() };
+    entry.holders.add(holder);
+    shown.set(storageKey, entry);
+    holder?.keys.add(storageKey);
+  }
   setSavedCopiesShown(shown.size > 0);
 }
 
@@ -223,8 +280,9 @@ function noteShown(storageKey: string, group: CacheGroup, fromCopy: boolean) {
  * Reads through the network and keeps a copy for this account. Offline, or
  * when no answer came back from the server, answers from the copy; with no
  * copy, or when the server answered with an error, fails as the read did.
+ * A screen passes its load's `mark` so a copy it shows stops counting once it moves on.
  */
-export async function cachedRead<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>): Promise<T> {
+export async function cachedRead<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>, mark?: CopyMark): Promise<T> {
   const ticket = ++tickets;
   const gen = generation;
   const storageKey = entryKey(userId, group, key);
@@ -233,7 +291,7 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
     if (copy) {
       settle(ticket);
-      if (gen === generation) noteShown(storageKey, group, true);
+      if (gen === generation) noteShown(storageKey, group, true, mark);
       return copy.value;
     }
   }
@@ -245,10 +303,10 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
     if (!isUnreachable(cause)) throw cause;
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
     if (!copy) throw cause;
-    if (gen === generation) noteShown(storageKey, group, true);
+    if (gen === generation) noteShown(storageKey, group, true, mark);
     return copy.value;
   }
-  if (gen === generation) noteShown(storageKey, group, false);
+  if (gen === generation) noteShown(storageKey, group, false, mark);
   writeCopy(userId, group, key, value, ticket, gen).catch(warn('Could not keep a saved copy'));
   return value;
 }
@@ -287,7 +345,7 @@ export function afterWrite(userId: string, scopes: CopyScope[]) {
     if (scope.key !== undefined) newest.set(entryKey(userId, scope.group, scope.key), ticket);
     else if (running.size > 0) floors.push({ scope, ticket });
   }
-  for (const [storageKey, group] of shown) {
+  for (const [storageKey, { group }] of shown) {
     if (scopes.some((scope) => inScope(userId, scope, group, storageKey))) shown.delete(storageKey);
   }
   setSavedCopiesShown(shown.size > 0);

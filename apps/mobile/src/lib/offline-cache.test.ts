@@ -228,6 +228,32 @@ describe('the saved-copies notice', () => {
     await cache.cachedRead('user-a', 'source', 'source-1', async () => 'text');
     expect(shown()).toBe(false);
   });
+
+  it('goes when the screen showing a copy closes or reads something else', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'source', 'source-1', async () => 'text');
+    await cache.cachedRead('user-a', 'source', 'source-2', async () => 'other');
+    const shown = () => cache.getOfflineStatus().savedCopies;
+    const sheet = new cache.CopyHolder();
+    await cache.cachedRead('user-a', 'source', 'source-1', offlineFailure, sheet.mark());
+    expect(shown()).toBe(true);
+    sheet.release();
+    expect(shown()).toBe(false);
+
+    // The screen moves on to another source, read from the server: the first copy no longer counts.
+    await cache.cachedRead('user-a', 'source', 'source-1', offlineFailure, sheet.mark());
+    await cache.cachedRead('user-a', 'source', 'source-2', async () => 'other', sheet.mark());
+    expect(shown()).toBe(false);
+
+    // A read still running when the screen closed does not count once it lands.
+    const slow = deferred<void>();
+    const late = cache.cachedRead('user-a', 'source', 'source-1', () => slow.promise.then(offlineFailure), sheet.mark());
+    sheet.release();
+    slow.resolve();
+    await expect(late).resolves.toBe('text');
+    expect(shown()).toBe(false);
+  });
 });
 
 describe('after a write', () => {

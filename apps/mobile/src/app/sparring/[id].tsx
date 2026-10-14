@@ -11,6 +11,7 @@ import { SparringScorecardScreen } from '@/components/sparring-views';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { fetchSparringRound, sparringDraft } from '@/lib/sparring';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 
 type Judged = SparringSession & { scorecard: SparringScorecard };
 type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' } | { status: 'ready'; round: Judged };
@@ -36,12 +37,13 @@ export default function SavedSparringScreen() {
     return { owner: userId, state: kept ? { status: 'ready', round: kept } : { status: 'loading' } };
   });
   const state: State = held.owner === userId ? held.state : { status: 'loading' };
+  const copies = useCopyHolder();
 
   useEffect(() => {
     if (judged(sparringDraft.get(), id) || !userId) return;
     const forUser = userId;
     let active = true;
-    fetchSparringRound(forUser, id)
+    fetchSparringRound(forUser, id, copies.mark())
       .then((round) => {
         if (!active) return;
         const ready = judged(round, id);
@@ -54,7 +56,7 @@ export default function SavedSparringScreen() {
     return () => {
       active = false;
     };
-  }, [id, userId]);
+  }, [id, userId, copies]);
 
   if (state.status !== 'ready') {
     return (

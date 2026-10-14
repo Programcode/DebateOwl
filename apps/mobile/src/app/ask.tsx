@@ -23,6 +23,7 @@ import { useDebates } from '@/lib/debate-context';
 import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { fetchSources, type Source } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -76,6 +77,8 @@ export default function AskScreen() {
   const config = useRef<Promise<FeatureConfig> | null>(null);
   // The conversation the saved record belongs to; replacing it drops late writes.
   const conversation = useRef(0);
+  // The opened chat's saved copy counts until another conversation starts.
+  const chatCopies = useCopyHolder();
   const recordRef = useRef(record);
   const saves = useRef<Promise<void>>(Promise.resolve());
   const activeDebateRef = useRef(activeDebateId);
@@ -103,6 +106,7 @@ export default function AskScreen() {
   const startConversation = (messagesNext: ChatMessage[], recordNext: ChatRecord) => {
     abortActive();
     conversation.current += 1;
+    chatCopies.release();
     setMessages(messagesNext);
     setRecord(recordNext);
     setStreaming(null);
@@ -126,12 +130,16 @@ export default function AskScreen() {
 
   // The debate this conversation reads from: a loaded chat keeps its own.
   const chatDebateId = record.chatId ? record.debateId : activeDebateId;
+  const libraryCopies = useCopyHolder();
   useEffect(() => {
     // The previous debate's sources never stand in for this one's while they load.
     setLibrary([]);
-    if (!chatDebateId || !userId) return;
+    if (!chatDebateId || !userId) {
+      libraryCopies.release();
+      return;
+    }
     let active = true;
-    fetchSources(userId, chatDebateId)
+    fetchSources(userId, chatDebateId, libraryCopies.mark())
       .then((next) => {
         if (active) setLibrary(next);
       })
@@ -139,7 +147,7 @@ export default function AskScreen() {
     return () => {
       active = false;
     };
-  }, [userId, chatDebateId]);
+  }, [userId, chatDebateId, libraryCopies]);
 
   // Each finished exchange is saved to the debate, as on the website.
   const lastRole = messages[messages.length - 1]?.role;
@@ -306,7 +314,7 @@ export default function AskScreen() {
     const owner = conversation.current;
     setOpening(true);
     try {
-      const chat = await fetchChat(userId, chatId);
+      const chat = await fetchChat(userId, chatId, chatCopies.mark());
       if (owner !== conversation.current) return;
       setMessages(chat.messages);
       setRecord({ chatId, debateId: chat.debateId, persisted: chat.messages.length });
