@@ -432,6 +432,19 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-case`);
+  // A wide iPad shows the outline rail: jumping to a part scrolls the case and marks that part current.
+  const outline = page.getByTestId('document-outline');
+  if (await outline.isVisible()) {
+    const target = outline.getByRole('menuitem').filter({ hasText: /^(Case Structure|Eset Struktúra|Estructura del Caso)$/ });
+    await target.click();
+    await page.waitForFunction(
+      () => Array.from(document.querySelectorAll('[data-testid="document-outline"] [role="menuitem"]')).find((item) => item.getAttribute('aria-selected') === 'true')?.textContent?.match(/Case Structure|Eset Struktúra|Estructura del Caso/),
+      undefined,
+      { timeout: 5_000 },
+    );
+    await page.waitForTimeout(300);
+    await shoot(page, `${prefix}-case-outline`);
+  }
   // Close the open argument, so every argument shows collapsed.
   await page.getByTestId('document-item').first().click();
   await shoot(page, `${prefix}-case-collapsed`);
