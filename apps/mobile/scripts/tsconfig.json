@@ -5,5 +5,5 @@
     "lib": ["DOM", "ESNext"],
     "types": ["node"]
   },
-  "include": ["*.ts"]
+  "include": ["*.ts", "../app.config.ts"]
 }

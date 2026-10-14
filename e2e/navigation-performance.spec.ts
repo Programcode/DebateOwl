@@ -366,13 +366,14 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
       await route.fulfill({ json: { announcements: [] } });
       return;
     }
+    if (url.pathname.endsWith('/rest/v1/rpc/effective_entitlement')) {
+      // The plan; the settings store reads it too, to pick default models.
+      subscriptionRequests.push('effective_entitlement');
+      await route.fulfill({ json: [{ tier: 'trial', daily_limit: 5, can_access_pro_models: false }] });
+      return;
+    }
     if (url.pathname.includes('/rest/v1/')) {
-      const select = url.searchParams.get('select') ?? '';
-      if (url.pathname.endsWith('/user_settings') && select.includes('subscription_tier')) {
-        subscriptionRequests.push('user_settings');
-      } else if (url.pathname.endsWith('/subscriptions')) {
-        subscriptionRequests.push('subscriptions');
-      } else if (url.pathname.endsWith('/ai_requests')) {
+      if (url.pathname.endsWith('/ai_requests')) {
         subscriptionRequests.push('ai_requests');
       }
       await route.fulfill({
@@ -389,6 +390,7 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   await page.goto('/app/generate');
   await waitForContent(page, { selector: 'main h1', text: 'Generate' });
   await expect.poll(() => subscriptionRequests.filter((name) => name === 'ai_requests').length).toBe(1);
+  const readsBeforeNavigation = [...subscriptionRequests];
 
   await openHome(page);
   await homeToolLink(page, 'attack').click();
@@ -396,5 +398,6 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   // eslint-disable-next-line no-restricted-properties -- observation window: no extra subscription request may follow.
   await page.waitForTimeout(100);
 
-  expect(subscriptionRequests).toEqual(['user_settings', 'ai_requests']);
+  expect(readsBeforeNavigation).toContain('effective_entitlement');
+  expect(subscriptionRequests).toEqual(readsBeforeNavigation);
 });

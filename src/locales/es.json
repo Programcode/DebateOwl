@@ -441,6 +441,7 @@
     "system": "Sistema",
     "subscription": "Suscripción",
     "tierTrial": "Prueba gratis",
+    "tierBasic": "Básico",
     "tierPro": "Pro",
     "tierLegacyFree": "Gratis heredado",
     "tierExpired": "Caducado",
@@ -2427,6 +2428,9 @@
     "common": {
       "done": "Listo"
     },
+    "offline": {
+      "notice": "Sin conexión: se muestran las copias guardadas. La IA y el guardado esperan a la conexión."
+    },
     "debates": {
       "search": "Buscar mociones",
       "noMatches": "Ningún debate coincide con tu búsqueda.",
@@ -2637,6 +2641,10 @@
       "discardTitle": "¿Empezar un mapa nuevo?",
       "discardDesc": "Tu mapa sin guardar se sustituirá por el mapa inicial.",
       "startNew": "Empezar nuevo"
+    },
+    "permissions": {
+      "speechRecognition": "DebateLab convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",
+      "microphone": "DebateLab usa el micrófono mientras dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring."
     }
   }
 }

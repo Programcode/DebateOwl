@@ -1,3 +1,4 @@
+import { cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -64,11 +65,22 @@ export function sortDebates(debates: Debate[]): Debate[] {
   return [...debates].sort((a, b) => b.lastActivityAt - a.lastActivityAt);
 }
 
+interface DebateList {
+  debates: Debate[];
+  currentId: string | null;
+}
+
+/** Keeps the saved debates list in step with a write, so an offline restart opens what the student chose. */
+function keepInCopy(userId: string, change: (list: DebateList) => DebateList) {
+  updateCopy<DebateList>(userId, 'debates', 'all', (copy) => copy && change(copy));
+}
+
 async function setCurrentPointer(userId: string, debateId: string) {
   const { error } = await supabase
     .from('current_debates')
     .upsert({ user_id: userId, debate_id: debateId, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) throw new Error(error.message);
+  keepInCopy(userId, (list) => ({ ...list, currentId: list.debates.some((debate) => debate.id === debateId) ? debateId : list.currentId }));
 }
 
 /**
@@ -76,14 +88,18 @@ async function setCurrentPointer(userId: string, debateId: string) {
  * the real boundary; the filter keeps a wrong session from mixing accounts.
  */
 
-/** Every debate, newest activity first, and the current one when it is still in the list. */
-export async function fetchDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
+/** Every debate, newest activity first, and the current one when it is still in the list. Offline, the saved copy. */
+export function fetchDebates(userId: string): Promise<DebateList> {
+  return cachedRead(userId, 'debates', 'all', () => loadDebates(userId));
+}
+
+async function loadDebates(userId: string): Promise<DebateList> {
   const [debatesResult, currentResult] = await Promise.all([
     supabase.from('debates').select(DEBATE_COLUMNS).eq('user_id', userId).order('last_activity_at', { ascending: false }),
     supabase.from('current_debates').select('debate_id').eq('user_id', userId).maybeSingle(),
   ]);
-  if (debatesResult.error) throw new Error(debatesResult.error.message);
-  if (currentResult.error) throw new Error(currentResult.error.message);
+  const failures = [debatesResult, currentResult].flatMap((result) => (result.error ? [readFailed(result.error, result.status)] : []));
+  if (failures.length > 0) throw pickFailure(failures);
   const debates = ((debatesResult.data ?? []) as DebateRow[]).map(fromRow);
   const currentId = (currentResult.data as { debate_id?: string } | null)?.debate_id ?? null;
   return {
@@ -106,6 +122,7 @@ export async function createDebate(
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not create debate');
   const debate = fromRow(data as DebateRow);
+  keepInCopy(userId, (list) => ({ ...list, debates: sortDebates([debate, ...list.debates.filter((item) => item.id !== debate.id)]) }));
   await setCurrentPointer(userId, debate.id);
   return debate;
 }
@@ -118,6 +135,8 @@ export async function switchDebate(userId: string, debateId: string): Promise<nu
   await supabase.from('debates').update({ last_activity_at: new Date(now).toISOString() })
     .eq('id', debateId)
     .eq('user_id', userId);
+  // As the Debate provider shows it: the switch counts as activity even when the timestamp was not saved.
+  keepInCopy(userId, (list) => ({ ...list, debates: sortDebates(list.debates.map((item) => (item.id === debateId ? { ...item, lastActivityAt: now } : item))) }));
   return now;
 }
 
@@ -161,27 +180,35 @@ async function countRows(userId: string, table: string, debateId: string, sides?
     .eq('user_id', userId)
     .eq('debate_id', debateId);
   if (sides) query = query.in('side', sides);
-  const { count, error } = await query;
-  if (error) throw new Error(error.message);
+  const { count, error, status } = await query;
+  if (error) throw readFailed(error, status);
   return count ?? 0;
 }
 
 const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
 
 /** Sources, saved results per side and Sparring rounds in one debate. One-off work has no debate and never counts. */
-export async function fetchDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
-  const [sources, rounds, pro, con] = await Promise.all([
+export function fetchDebateCounts(userId: string, debateId: string, mark?: CopyMark): Promise<DebateCounts> {
+  return cachedRead(userId, 'debate-lists', `counts:${debateId}`, () => loadDebateCounts(userId, debateId), mark);
+}
+
+async function loadDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
+  const [sources, rounds, pro, con] = await readAll([
     countRows(userId, 'sources', debateId),
     countRows(userId, 'sparring_sessions', debateId),
-    Promise.all(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.pro))),
-    Promise.all(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.con))),
+    readAll(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.pro))),
+    readAll(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.con))),
   ]);
   return { sources, rounds, results: { pro: sum(pro), con: sum(con) } };
 }
 
 /** Library sources per debate, for the switcher's list. */
-export async function fetchSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
-  const counts = await Promise.all(debateIds.map((id) => countRows(userId, 'sources', id)));
+export function fetchSourceCounts(userId: string, debateIds: string[], mark?: CopyMark): Promise<Record<string, number>> {
+  return cachedRead(userId, 'debate-lists', `source-counts:${debateIds.join(',')}`, () => loadSourceCounts(userId, debateIds), mark);
+}
+
+async function loadSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
+  const counts = await readAll(debateIds.map((id) => countRows(userId, 'sources', id)));
   return Object.fromEntries(debateIds.map((id, index) => [id, counts[index]]));
 }
 
@@ -199,8 +226,8 @@ async function fetchResultRows(userId: string, debateId: string, table: ResultTa
     .eq('user_id', userId)
     .eq('debate_id', debateId);
   if (sides) query = query.in('side', sides);
-  const { data, error } = await query.order('created_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await query.order('created_at', { ascending: false }).limit(limit);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row): DebateItem => ({
     id: row.id,
     kind: KIND_BY_TABLE[table],
@@ -212,17 +239,16 @@ async function fetchResultRows(userId: string, debateId: string, table: ResultTa
 const newestFirst = (lists: DebateItem[][], limit: number) => lists.flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
 
 /** The newest saved results and rounds for one side of a debate, like the website's side lists. */
-export async function fetchRecentWork(
-  userId: string,
-  debateId: string,
-  side: DebateSide,
-  limit: number,
-): Promise<DebateItem[]> {
-  const lists = await Promise.all([
+export function fetchRecentWork(userId: string, debateId: string, side: DebateSide, limit: number, mark?: CopyMark): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `recent:${debateId}:${side}:${limit}`, () => loadRecentWork(userId, debateId, side, limit), mark);
+}
+
+async function loadRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
+  const lists = await readAll([
     ...RESULT_TABLES.map((table) => fetchResultRows(userId, debateId, table, SIDES_FOR[side], limit)),
     (async () => {
       // The website lists a judged round under its motion and the side the student spoke, ordered by its last update.
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('sparring_sessions')
         .select('id,motion,updated_at')
         .eq('user_id', userId)
@@ -231,7 +257,7 @@ export async function fetchRecentWork(
         .eq('status', 'complete')
         .order('updated_at', { ascending: false })
         .limit(limit);
-      if (error) throw new Error(error.message);
+      if (error) throw readFailed(error, status);
       return ((data ?? []) as { id: string; motion: string; updated_at: string }[]).map((row): DebateItem => ({
         id: row.id,
         kind: 'sparring',
@@ -245,9 +271,43 @@ export async function fetchRecentWork(
 
 /** The Prepare tools' tables. */
 const PREPARE_TABLES = ['cases', 'brainstorms', 'factoids', 'flowcharts'] as const satisfies readonly ResultTable[];
+const PREPARE_KINDS = new Set<DebateItemKind>(PREPARE_TABLES.map((table) => KIND_BY_TABLE[table]));
+
+/**
+ * The saved counts and lists of one debate that a write changed: adding or
+ * removing a source changes its counts; a saved result or round also changes
+ * the recent work, and a Prepare result the Prepare list.
+ */
+export function debateListScopes(debateId: string | null, change: 'source' | DebateItemKind): CopyScope[] {
+  return debateId ? listScopes(debateId, change) : [];
+}
+
+/**
+ * The saved counts and lists a delete changed, from the debates its deleted
+ * rows name. A delete that returned no row (the row was already gone, say
+ * deleted on the website) does not say which debate held it, so every
+ * debate's counts and lists of that kind are dropped.
+ */
+export function deletedListScopes(deletedFrom: (string | null)[], change: 'source' | DebateItemKind): CopyScope[] {
+  return deletedFrom.length > 0 ? deletedFrom.flatMap((debateId) => debateListScopes(debateId, change)) : listScopes(undefined, change);
+}
+
+/** One debate's counts and lists, or every debate's when `debateId` is undefined. */
+function listScopes(debateId: string | undefined, change: 'source' | DebateItemKind): CopyScope[] {
+  const of = debateId ? `${debateId}:` : '';
+  const scopes: CopyScope[] = [debateId ? { group: 'debate-lists', key: `counts:${debateId}` } : { group: 'debate-lists', prefix: 'counts:' }];
+  if (change === 'source') return [...scopes, { group: 'debate-lists', prefix: 'source-counts:', about: debateId }];
+  scopes.push({ group: 'debate-lists', prefix: `recent:${of}` });
+  if (PREPARE_KINDS.has(change)) scopes.push({ group: 'debate-lists', prefix: `prepare:${of}` });
+  return scopes;
+}
 
 /** A debate's saved Prepare results for both sides, newest first, for the Prepare tab. */
-export async function fetchPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
-  const lists = await Promise.all(PREPARE_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
+export function fetchPrepareWork(userId: string, debateId: string, limit: number, mark?: CopyMark): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `prepare:${debateId}:${limit}`, () => loadPrepareWork(userId, debateId, limit), mark);
+}
+
+async function loadPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
+  const lists = await readAll(PREPARE_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
   return newestFirst(lists, limit);
 }

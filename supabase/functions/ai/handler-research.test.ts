@@ -1,3 +1,4 @@
+import { entitlementRows } from "../_shared/testing/entitlement.ts";
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -186,14 +187,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/user_settings")) {
-        return jsonResponse({
-          subscription_tier: "trial",
-          daily_limit_override: 50,
-          trial_ends_at: "2099-01-01T00:00:00.000Z",
-          grace_period_ends_at: null,
-        });
-      }
+      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
       if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
@@ -324,14 +318,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/user_settings")) {
-        return jsonResponse({
-          subscription_tier: "trial",
-          daily_limit_override: 50,
-          trial_ends_at: "2099-01-01T00:00:00.000Z",
-          grace_period_ends_at: null,
-        });
-      }
+      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
       if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
@@ -430,13 +417,10 @@ function supabaseTestResponse(url: URL): Response | undefined {
   if (url.origin !== "https://supabase.test") return undefined;
   if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
   if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-  if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({
-    subscription_tier: (globalThis as typeof globalThis & { __testTier?: string }).__testTier || "trial",
-    daily_limit_override: 50,
-    trial_ends_at: "2099-01-01T00:00:00.000Z",
-    grace_period_ends_at: null,
-  });
-  if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }]);
+  if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) {
+    const tier = (globalThis as typeof globalThis & { __testTier?: "trial" | "pro" }).__testTier || "trial";
+    return jsonResponse(entitlementRows(tier, { daily_limit: 50 }));
+  }
   if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
   if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
   if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });

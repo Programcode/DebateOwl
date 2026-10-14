@@ -441,6 +441,7 @@
     "system": "Rendszer",
     "subscription": "Előfizetés",
     "tierTrial": "Ingyenes próba",
+    "tierBasic": "Alap",
     "tierPro": "Pro",
     "tierLegacyFree": "Korábbi ingyenes",
     "tierExpired": "Lejárt",
@@ -2427,6 +2428,9 @@
     "common": {
       "done": "Kész"
     },
+    "offline": {
+      "notice": "Offline: a mentett másolatokat látod. Az MI és a mentés megvárja a kapcsolatot."
+    },
     "debates": {
       "search": "Tételek keresése",
       "noMatches": "Nincs a keresésnek megfelelő vita.",
@@ -2637,6 +2641,10 @@
       "discardTitle": "Új térképet kezdesz?",
       "discardDesc": "A mentetlen térképed helyére a kezdő térkép kerül.",
       "startNew": "Új kezdése"
+    },
+    "permissions": {
+      "speechRecognition": "A DebateLab szöveggé alakítja a hangodat, amikor kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz. A hangot az Apple dolgozza fel a felismeréshez.",
+      "microphone": "A DebateLab a mikrofont használja, amíg kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz."
     }
   }
 }

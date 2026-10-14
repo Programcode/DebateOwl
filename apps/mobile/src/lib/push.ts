@@ -28,7 +28,7 @@ import { supabase } from './supabase';
  *
  * - unavailable: this build cannot get an Expo push token. Expo Go on Android
  *   has no remote push since SDK 53, and every build needs the app's EAS
- *   project ID (`extra.eas.projectId` in app.json), which is not set yet.
+ *   project ID (`extra.eas.projectId` in app.config.ts), which is not set yet.
  * - blocked: iOS Settings turned notifications off for the app.
  * - off / on: this account on this phone.
  */

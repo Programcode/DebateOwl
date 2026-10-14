@@ -2,9 +2,12 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { OfflineNotice } from './offline-notice';
+
 /**
  * A tab's scrolling content. On iOS the native header and tab bar adjust the
- * insets automatically; `safeTop` is for screens without a header.
+ * insets automatically; `safeTop` is for screens without a header. The
+ * offline notice leads every tab while saved copies are shown.
  */
 export function Screen({ children, safeTop, gap }: { children: ReactNode; safeTop?: boolean; gap?: number }) {
   const insets = useSafeAreaInsets();
@@ -12,6 +15,7 @@ export function Screen({ children, safeTop, gap }: { children: ReactNode; safeTo
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, safeTop && { paddingTop: insets.top + 12 }, gap !== undefined && { gap }]}>
+      <OfflineNotice />
       {children}
     </ScrollView>
   );

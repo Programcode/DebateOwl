@@ -1,3 +1,4 @@
+import { entitlementRows } from "../_shared/testing/entitlement.ts";
 const testEnvironment = {
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_ANON_KEY: "test-anon-key",
@@ -63,13 +64,8 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (url.pathname.includes("/rest/v1/user_settings")) {
-        return new Response(JSON.stringify({
-          subscription_tier: "trial",
-          daily_limit_override: 50,
-          trial_ends_at: "2099-01-01T00:00:00.000Z",
-          grace_period_ends_at: null,
-        }), { headers: { "Content-Type": "application/json" } });
+      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) {
+        return new Response(JSON.stringify(entitlementRows("trial", { daily_limit: 50 })), { headers: { "Content-Type": "application/json" } });
       }
       if (url.pathname.includes("/rest/v1/rate_limits")) {
         return new Response(JSON.stringify({ limit_value: 50 }), {

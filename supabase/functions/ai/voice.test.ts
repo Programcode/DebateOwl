@@ -1,3 +1,4 @@
+import { entitlementRows } from "../_shared/testing/entitlement.ts";
 // Voice rounds through the real ai entrypoint: audio tags reach only the
 // voice payload, typed requests are untouched, and measured delivery facts
 // reach the judge and the saved round.
@@ -52,8 +53,7 @@ function install(reply: unknown): Harness {
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: USER, aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01T00:00:00.000Z", grace_period_ends_at: null });
-      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
+      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
       if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
       if (url.pathname.includes("/rest/v1/rpc/sparring_request_started_at")) return jsonResponse(new Date().toISOString());

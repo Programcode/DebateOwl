@@ -14,7 +14,9 @@ import {
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
 import { abortError, AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
+import { debateListScopes } from './debates';
 import type { FeatureConfig } from './feature-config';
+import { afterWrite } from './offline-cache';
 import { sessionSlot } from './session-memory';
 import { supabase } from './supabase';
 
@@ -180,6 +182,7 @@ export async function recordCrossfire(
     .select('id')
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the crossfire');
+  afterWrite(userId, debateListScopes(debateId, 'crossfire'));
   return (data as { id: string }).id;
 }
 

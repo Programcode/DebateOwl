@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
+import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 import { interFonts } from '@/theme/fonts';
@@ -41,6 +42,9 @@ function Root() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // Offline, reads answer from saved copies and the screens say so.
+  useEffect(() => watchNetwork(), []);
 
   // A phone that opted in registers again on launch and when the language changes (see refreshPush).
   const userId = session?.user.id;

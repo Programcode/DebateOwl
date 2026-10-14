@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { getInstallId, sessionStorage } from './device-storage';
+import { setCacheOwner } from './offline-cache';
 import { forgetPushOnSignOut } from './push';
 import { setSessionOwner } from './session-memory';
 import { supabase } from './supabase';
@@ -79,10 +80,11 @@ async function signOutError(scope: 'global' | 'local'): Promise<string | null> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<Session | null>(null);
-  // The session memory is cleared before an account change renders, so no
-  // screen ever shows the previous account's forms or results.
+  // The session memory and the saved copies are cleared before an account
+  // change renders, so no screen ever shows the previous account's work.
   const setSession = useCallback((next: Session | null) => {
     setSessionOwner(next?.user.id ?? null);
+    setCacheOwner(next?.user.id ?? null);
     setSessionState(next);
   }, []);
   const [loading, setLoading] = useState(true);
