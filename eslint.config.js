@@ -80,7 +80,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "@typescript-eslint/no-unused-vars": "off",
       // Metro bundles images through require().
-      "@typescript-eslint/no-require-imports": ["error", { allow: ["\\.png$"] }],
+      "@typescript-eslint/no-require-imports": ["error", { allow: ["\\.png$", "\\.wav$"] }],
       "no-restricted-globals": [
         "error",
         ...["window", "document", "localStorage", "sessionStorage", "location"].map((name) => ({

@@ -1,6 +1,6 @@
 import type { IconName } from './icon-paths';
 
-/** The Practice tools, in the website's order. Attack and Ask are in the app; the rest follow. */
+/** The Practice tools, in the website's order. Attack, Ask, Crossfire and Timer are in the app; the rest follow. */
 export const PRACTICE_TOOLS = [
   { key: 'attack', icon: 'shield' },
   { key: 'ask', icon: 'chat' },

@@ -2530,6 +2530,15 @@
     "attack": {
       "caseRequired": "Pega o escribe el caso que quieres atacar."
     },
+    "timer": {
+      "speechOf": "Discurso {{n}} de {{of}}",
+      "ofTotal": "de {{total}}",
+      "next": "Siguiente discurso",
+      "reset": "Reiniciar"
+    },
+    "crossfire": {
+      "voiceLater": "Llegará con la versión de la app."
+    },
     "brainstorm": {
       "strengths": {
         "strong": "Fuerte",
