@@ -2542,6 +2542,16 @@
     "crossfire": {
       "voiceLater": "Coming with the app build."
     },
+    "sparring": {
+      "chooseSide": "Which side are you on?",
+      "turnOf": "Turn {{current}} of {{total}}, {{pressure}}",
+      "yourNext": "Your {{turn}} is next",
+      "interrupted": "The request stopped when you left the round. Try again to carry on.",
+      "resume": "Resume",
+      "replay": "Replay",
+      "versus": "{{user}} vs {{opponent}}",
+      "roundsFailed": "Could not load your sparring rounds."
+    },
     "brainstorm": {
       "strengths": {
         "strong": "Strong",

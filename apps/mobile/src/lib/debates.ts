@@ -233,13 +233,14 @@ async function loadRecentWork(userId: string, debateId: string, side: DebateSide
   const lists = await Promise.all([
     ...RESULT_TABLES.map((table) => fetchResultRows(userId, debateId, table, SIDES_FOR[side], limit)),
     (async () => {
-      // The website lists a round under its motion and the side the student spoke, ordered by its last update.
+      // The website lists a judged round under its motion and the side the student spoke, ordered by its last update.
       const { data, error } = await supabase
         .from('sparring_sessions')
         .select('id,motion,updated_at')
         .eq('user_id', userId)
         .eq('debate_id', debateId)
         .eq('user_side', side)
+        .eq('status', 'complete')
         .order('updated_at', { ascending: false })
         .limit(limit);
       if (error) throw new Error(error.message);

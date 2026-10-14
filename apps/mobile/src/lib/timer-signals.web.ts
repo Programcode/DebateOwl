@@ -13,4 +13,10 @@ export function useTimerSignals(): (signal: TimerSignal, sound: boolean) => void
   };
 }
 
+/** Counts the turn-start taps on `window` for the screenshot script. */
+export function tapTurnStart() {
+  const target = window as unknown as { __debatelabTurnTaps?: number };
+  target.__debatelabTurnTaps = (target.__debatelabTurnTaps ?? 0) + 1;
+}
+
 export function useKeepAwakeWhile(_active: boolean) {}
