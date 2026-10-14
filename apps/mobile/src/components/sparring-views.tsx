@@ -5,13 +5,13 @@ import type { TFunction } from 'i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Modal, StyleSheet, TextInput, View } from 'react-native';
 
 import { PrimaryButton, SecondaryButton, TextButton } from './buttons';
 import { Bullets, DocSection, DocumentScreen, Paragraph } from './document';
 import { DocumentHeader } from './document-header';
 import { SegmentedControl } from './segmented-control';
+import { SheetScrollView } from './sheet';
 import { Text } from './text';
 
 import { useAuth } from '@/lib/auth';
@@ -277,7 +277,7 @@ export function SparringTranscript({ speeches }: { speeches: SparringSpeech[] })
 
 /**
  * The flow button's sheet: notes the student keeps during the round, and the
- * transcript so far. The scroll view is the sheet's root, as every sheet's is.
+ * transcript so far. SheetScrollView is the sheet's root, as every sheet's is.
  */
 export function RoundNotesSheet({
   visible,
@@ -294,17 +294,10 @@ export function RoundNotesSheet({
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [view, setView] = useState<'notes' | 'transcript'>('notes');
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <ScrollView
-        style={{ backgroundColor: colors.background }}
-        contentContainerStyle={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        testID="sparring-notes">
+      <SheetScrollView contentContainerStyle={styles.sheet} testID="sparring-notes">
         <View style={styles.sheetHead}>
           <Text accessibilityRole="header" weight="bold" style={styles.sheetTitle}>
             {t('mobile.sparring.notes')}
@@ -335,7 +328,7 @@ export function RoundNotesSheet({
             <SparringTranscript speeches={speeches} />
           </View>
         )}
-      </ScrollView>
+      </SheetScrollView>
     </Modal>
   );
 }
@@ -374,7 +367,7 @@ const styles = StyleSheet.create({
   speechHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
   speaker: { fontSize: 15, flexShrink: 1 },
   used: { fontSize: 13.5, fontVariant: ['tabular-nums'] },
-  sheet: { paddingHorizontal: 20, paddingTop: 18, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  sheet: { paddingTop: 18, gap: 16 },
   sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { fontSize: 22 },
   notesInput: { minHeight: 260, borderWidth: 1, borderRadius: radius.field, padding: 14, fontSize: 16.5, lineHeight: 23, fontFamily: fontFamily.regular, textAlignVertical: 'top' },

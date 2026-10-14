@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -39,32 +39,39 @@ export default function PracticeScreen() {
   const userId = session?.user.id ?? null;
   const { current } = useDebates();
   const debateId = current?.id ?? null;
-  const [rounds, setRounds] = useState<{ debateId: string | null; items: SparringRoundSummary[] } | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Each load belongs to the debate it was read for, so another debate's rounds, or its failure, never show under this one.
+  const [rounds, setRounds] = useState<{ debateId: string | null; items: SparringRoundSummary[] | null; failed: boolean } | null>(null);
+
+  // Every load takes a number; only the newest may write, so a slow load for another debate never replaces this one's.
+  const loads = useRef(0);
+  const load = useCallback(async () => {
+    if (!userId) return;
+    const forDebate = debateId;
+    const request = ++loads.current;
+    const isCurrent = () => loads.current === request;
+    try {
+      const items = await fetchSparringRounds(userId, forDebate, ROUNDS_LIMIT);
+      if (!isCurrent()) return;
+      setRounds((previous) => keepIfSame(previous, { debateId: forDebate, items, failed: false }));
+    } catch (cause) {
+      if (!isCurrent()) return;
+      console.warn('Could not load sparring rounds:', cause instanceof Error ? cause.message : cause);
+      setRounds({ debateId: forDebate, items: null, failed: true });
+    }
+  }, [userId, debateId]);
 
   // Reload on focus, so a round just judged or deleted shows up.
   useFocusEffect(
     useCallback(() => {
-      if (!userId) return;
-      let active = true;
-      fetchSparringRounds(userId, debateId, ROUNDS_LIMIT)
-        .then((items) => {
-          if (!active) return;
-          setRounds((previous) => keepIfSame(previous, { debateId, items }));
-          setFailed(false);
-        })
-        .catch((cause: unknown) => {
-          console.warn('Could not load sparring rounds:', cause instanceof Error ? cause.message : cause);
-          if (active) setFailed(true);
-        });
+      void load();
       return () => {
-        active = false;
+        loads.current += 1;
       };
-    }, [userId, debateId]),
+    }, [load]),
   );
 
-  // Rounds read for another debate are not shown while this one's load.
   const items = rounds?.debateId === debateId ? rounds.items : null;
+  const failed = rounds?.debateId === debateId && rounds.failed;
 
   return (
     <Screen>

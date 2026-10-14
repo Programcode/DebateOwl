@@ -33,7 +33,7 @@ import { RoundNotesSheet, SparringScorecardScreen } from '@/components/sparring-
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
-import { AIError, isAbortError } from '@/lib/ai-request';
+import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { useDebates } from '@/lib/debate-context';
@@ -144,8 +144,8 @@ export default function SparringScreen() {
     requestRef.current = controller;
     setRequest({ status: 'pending' });
     try {
-      const config = await fetchFeatureConfig(forUser, 'sparring');
-      if (controller.signal.aborted) return;
+      // Read under the request's abort, so leaving while the settings load sends nothing.
+      const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
       const scorecard = await judgeSparring(
         { action: 'score', sessionId: snapshot.id, motion: snapshot.motion, userSide: snapshot.userSide, format: snapshot.format, difficulty: snapshot.difficulty, speeches: snapshot.speeches, language: outputLanguage },
         { config, debateId: snapshot.debateId ?? null, signal: controller.signal },
@@ -178,8 +178,8 @@ export default function SparringScreen() {
     requestRef.current = controller;
     setRequest({ status: 'pending' });
     try {
-      const config = await fetchFeatureConfig(forUser, 'sparring');
-      if (controller.signal.aborted) return;
+      // Read under the request's abort, so leaving while the settings load sends nothing.
+      const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
       const { speaker: _speaker, ...currentTurn } = turn;
       const generated = await sparringTurn(
         { action: 'respond', sessionId: snapshot.id, motion: snapshot.motion, userSide: snapshot.userSide, format: snapshot.format, difficulty: snapshot.difficulty, speeches: snapshot.speeches, language: outputLanguage, currentTurn },
