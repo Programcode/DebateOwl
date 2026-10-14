@@ -2446,7 +2446,15 @@
     "you": {
       "usage": "Ma {{used}} / {{limit}} MI-használat",
       "loadFailed": "Nem sikerült betölteni az előfizetésedet.",
-      "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra."
+      "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra.",
+      "notifications": {
+        "title": "Értesítések",
+        "description": "Értesítést kapsz erre a telefonra, amikor elkészül egy sparring forduló értékelése.",
+        "blocked": "Az iOS Beállításokban ki vannak kapcsolva az alkalmazás értesítései.",
+        "openSettings": "Beállítások megnyitása",
+        "unavailable": "Az alkalmazás ezen verziója még nem tud értesítéseket fogadni.",
+        "failed": "Nem sikerült módosítani az értesítéseket. Próbáld újra."
+      }
     },
     "deleteAccount": {
       "failedHint": "A fiókod megmaradt. Ellenőrizd a kapcsolatot, és próbáld újra."

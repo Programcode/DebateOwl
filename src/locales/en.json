@@ -2446,7 +2446,15 @@
     "you": {
       "usage": "{{used}} of {{limit}} AI uses today",
       "loadFailed": "Could not load your subscription.",
-      "saveFailed": "Could not save your settings. Try again."
+      "saveFailed": "Could not save your settings. Try again.",
+      "notifications": {
+        "title": "Notifications",
+        "description": "Get a notification on this phone when a sparring round is scored.",
+        "blocked": "Notifications are off for this app in iOS Settings.",
+        "openSettings": "Open Settings",
+        "unavailable": "This version of the app cannot receive notifications yet.",
+        "failed": "Could not change notifications. Try again."
+      }
     },
     "deleteAccount": {
       "failedHint": "Your account is still here. Check your connection and try again."
