@@ -6,6 +6,7 @@ import { Chip, CiteBadge } from './chip';
 import type { CitationTarget } from './citation-target';
 import { Icon } from './icon';
 import { MarkdownView } from './markdown-view';
+import { OfflineNotice } from './offline-notice';
 import { Text } from './text';
 
 import { radius } from '@/theme/colors';
@@ -32,6 +33,7 @@ export function DocumentScreen({ header, children, actions, notice, testID }: { 
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[styles.content, { paddingBottom: (actions ? PINNED_HEIGHT + 24 : 16) + bottom }]}>
+        <OfflineNotice />
         {children}
       </ScrollView>
       {notice ? (

@@ -10,6 +10,7 @@ import { TextButton } from '@/components/buttons';
 import { DocumentHeader, type HeaderAction } from '@/components/document-header';
 import { FlowColumnsView, FlowLegend, MapTreeView } from '@/components/flowchart-views';
 import { Icon } from '@/components/icon';
+import { OfflineNotice } from '@/components/offline-notice';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
@@ -296,6 +297,7 @@ export default function FlowchartScreen() {
             </Pressable>
           ) : null}
           {oneOff ? <OneOffNotice /> : null}
+          <OfflineNotice />
           <SegmentedControl
             options={[
               { value: 'flow', label: t('mobile.flowchart.flow') },

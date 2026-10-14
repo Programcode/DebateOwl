@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
+import { watchNetwork } from '@/lib/network-status';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 import { interFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -40,6 +41,9 @@ function Root() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // Offline, reads answer from saved copies and the screens say so.
+  useEffect(() => watchNetwork(), []);
 
   if (!ready) return null;
 
