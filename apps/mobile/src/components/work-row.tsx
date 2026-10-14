@@ -27,7 +27,7 @@ export type OpenedFrom = 'debate' | 'prepare' | 'practice';
 
 /**
  * Where a saved item opens. Cases, attacks, brainstorms and factoids open
- * read-only as documents; Flowcharts open their "on its way" screen, and
+ * read-only as documents, a flowchart opens on the Flowchart screen, and
  * Practice work opens the Practice tab.
  */
 export function workHref(item: DebateItem, from: OpenedFrom): Href {
@@ -41,7 +41,7 @@ export function workHref(item: DebateItem, from: OpenedFrom): Href {
     case 'factoids':
       return { pathname: '/factoids/[id]', params: { id: item.id, from } };
     case 'flowchart':
-      return { pathname: '/coming/[tool]', params: { tool: item.kind } };
+      return { pathname: '/flowchart', params: { id: item.id, from } };
     default:
       return '/practice';
   }

@@ -2,6 +2,9 @@ import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import { mapRows, type FlowchartDocument, type FlowNodeType } from '@debatelab/core/flowchart';
+
+import { mapMeta, typeLabel, viaLabel } from './flowchart-text';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -191,4 +194,30 @@ export function factoidsExportHtml(result: FactoidsOutput, t: Translate): string
   if (result.searchSuggestions?.length) parts.push(`<h2>${escape(t('export.furtherResearchSuggestions'))}</h2>${bullets(result.searchSuggestions)}`);
   if (result.warnings?.length) parts.push(`<h2>${escape(t('export.warnings'))}</h2>${bullets(result.warnings)}`);
   return page(t('export.researchFactoids'), t('export.factoidsSummary', { count: factoids.length, verified }), parts.join(''), t);
+}
+
+/** The website's export file name (exportToPng's debate-flowchart.png), as a PDF. */
+export const FLOWCHART_EXPORT_FILE_NAME = 'debate-flowchart.pdf';
+
+/** The website's node colours (nodeColors). */
+const FLOW_COLORS: Record<FlowNodeType, string> = { thesis: '#0284c7', contention: '#10b981', attack: '#ef4444', rebuttal: '#3b82f6', dropped: '#f59e0b' };
+
+const FLOW_STYLE = `<style>
+  .card { border: 1px solid #cbd5e1; border-left-width: 4px; border-radius: 10px; padding: 7px 11px; margin: 0 0 10px; break-inside: avoid; }
+  .card .kind { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .card .text { font-weight: 600; }
+  .card .description { color: #475569; font-size: 10pt; margin: 2px 0 0; }
+  .card .meta { color: #64748b; font-size: 9pt; margin-top: 2px; }
+  .via { color: #64748b; font-size: 9pt; font-weight: 600; margin: 0 0 3px; }
+</style>`;
+
+/** The Map tab's tree as a PDF page: every card under the one it answers, with its link. */
+export function flowchartExportHtml(title: string, meta: string, doc: FlowchartDocument, t: Translate): string {
+  const rows = mapRows(doc).map(({ node, depth, via }) => {
+    const color = FLOW_COLORS[node.data.type];
+    const note = mapMeta(t, doc, node);
+    return `<div style="margin-left: ${Math.min(depth, 6) * 18}px">${via ? `<div class="via">\u21b3 ${escape(viaLabel(t, via))}</div>` : ''}<div class="card" style="border-left-color: ${color}"><div class="kind" style="color: ${color}">${escape(typeLabel(t, node.data.type))}</div><div class="text">${escape(node.data.label)}</div>${
+      node.data.description ? `<p class="description">${escape(node.data.description)}</p>` : ''}${note && note !== typeLabel(t, node.data.type) ? `<div class="meta">${escape(note)}</div>` : ''}</div></div>`;
+  });
+  return page(title, meta, FLOW_STYLE + rows.join(''), t);
 }
