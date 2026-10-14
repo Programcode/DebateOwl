@@ -2444,7 +2444,8 @@
       "usage": "Ma {{used}} / {{limit}} MI-használat",
       "loadFailed": "Nem sikerült betölteni az előfizetésedet.",
       "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra.",
-      "historyDesc": "Minden mentett munkád, vitánként"
+      "historyDesc": "Minden mentett munkád, vitánként",
+      "deleteDataDesc": "Mentett munkák, források és viták. A fiókod és a beállításaid megmaradnak."
     },
     "deleteAccount": {
       "failedHint": "A fiókod megmaradt. Ellenőrizd a kapcsolatot, és próbáld újra."

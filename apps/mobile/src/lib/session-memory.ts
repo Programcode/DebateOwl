@@ -28,3 +28,8 @@ export function setSessionOwner(userId: string | null) {
   owner = userId;
   resets.forEach((reset) => reset());
 }
+
+/** Forgets the session memory of the account still signed in, as after Delete all my data. */
+export function forgetSessionMemory() {
+  resets.forEach((reset) => reset());
+}

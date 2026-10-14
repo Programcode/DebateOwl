@@ -2444,7 +2444,8 @@
       "usage": "{{used}} de {{limit}} usos de IA hoy",
       "loadFailed": "No se pudo cargar tu suscripción.",
       "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo.",
-      "historyDesc": "Todo lo que guardaste, por debate"
+      "historyDesc": "Todo lo que guardaste, por debate",
+      "deleteDataDesc": "Trabajo guardado, fuentes y debates. Tu cuenta y tus ajustes se mantienen."
     },
     "deleteAccount": {
       "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."

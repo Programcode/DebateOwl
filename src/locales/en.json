@@ -2444,7 +2444,8 @@
       "usage": "{{used}} of {{limit}} AI uses today",
       "loadFailed": "Could not load your subscription.",
       "saveFailed": "Could not save your settings. Try again.",
-      "historyDesc": "Everything you saved, by debate"
+      "historyDesc": "Everything you saved, by debate",
+      "deleteDataDesc": "Saved work, sources and debates. Your account and settings stay."
     },
     "deleteAccount": {
       "failedHint": "Your account is still here. Check your connection and try again."

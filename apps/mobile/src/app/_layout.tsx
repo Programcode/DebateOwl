@@ -76,6 +76,7 @@ function Root() {
             <Stack.Screen name="debates" options={sheet} />
             <Stack.Screen name="new-debate" options={sheet} />
             <Stack.Screen name="delete-account" options={sheet} />
+            <Stack.Screen name="delete-data" options={sheet} />
             <Stack.Screen name="add-link" options={sheet} />
             <Stack.Screen name="new-note" options={sheet} />
             <Stack.Screen name="source/[id]" options={sheet} />
