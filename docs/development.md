@@ -194,7 +194,7 @@ Go on only if all of these hold:
 - the profile is enterprise (`all devices` true) or ad hoc with Adam's iPhone UDID among its devices: ask Adam for the UDID. A development profile (`get-task-allow` true) is not what EAS internal distribution expects; ask Adam first;
 - the `.p12`'s SHA-1 equals one of the profile's certificate SHA-1s.
 
-Set `DEBATELAB_APP_GROUP` (in the profile's `env` in `eas.json`, and exported in this shell for step 4) only if `app groups` lists a group. Otherwise this build has no Live Activity.
+Set `DEBATELAB_APP_GROUP` in the profile's `env` in `eas.json` only if `app groups` lists a group, and then pass `widgets` to step 4. Don't export it in this shell: outside a build the config rejects it without `DEBATELAB_BUILD=dev`, which breaks `eas init`. Without an App Group this build has no Live Activity.
 
 **2. Link the EAS project, once.**
 
@@ -223,14 +223,14 @@ Stop if the last 24 hours already has one build or the last 7 days three.
 **4. Write the credentials file without printing the password.**
 
 ```bash
-python3 - $S <<'EOF'
+python3 - $S <<'EOF'   # add `widgets` after $S when eas.json sets DEBATELAB_APP_GROUP
 import json, os, sys
 s = sys.argv[1]
 cert = {'path': f'{s}/cert.p12', 'password': open(f'{s}/p12-password').read().strip()}
 target = {'provisioningProfilePath': f'{s}/profile.mobileprovision', 'distributionCertificate': cert}
 # With DEBATELAB_APP_GROUP the widget extension is a second target and needs its own entry,
 # signed by a profile valid for both bundle ids (a wildcard profile is).
-ios = {'DebateLab': target, 'ExpoWidgetsTarget': target} if os.environ.get('DEBATELAB_APP_GROUP') else target
+ios = {'DebateLab': target, 'ExpoWidgetsTarget': target} if sys.argv[2:] == ['widgets'] else target
 fd = os.open('credentials.json', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 os.write(fd, json.dumps({'ios': ios}).encode())
 os.close(fd)
