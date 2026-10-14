@@ -8,6 +8,9 @@
  *   PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
  *
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it.
+ * SCREENS=you,timer limits the signed-in screens to those groups: debate,
+ * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
+ * timer, crossfire, flowchart, one-off. Sign-in screens are always shot.
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
  * script signs in once through the real sign-in screen and also checks that a
@@ -68,6 +71,8 @@ const OUT = join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
 const ONLY = process.env.ONLY?.trim() ?? '';
+const SCREENS = process.env.SCREENS?.split(',').map((name) => name.trim()).filter(Boolean);
+const want = (group: string) => !SCREENS?.length || SCREENS.includes(group);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const STAGING_HOST = new URL(SUPABASE_PROJECTS.staging.url).host;
 const SESSION_KEY = `sb-${STAGING_HOST.split('.')[0]}-auth-token`;
@@ -79,6 +84,7 @@ const DEVICES = {
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
+const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -1019,49 +1025,78 @@ async function main() {
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
           await pinSettings(tabPage, language);
-          await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
-            await shoot(tabPage, `${prefix}-failed`);
-            throw error;
-          });
-          shots += 6;
-          await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
-            await shoot(tabPage, `${prefix}-failed`);
-            throw error;
-          });
-          shots += 5;
+          if (want('debate')) {
+            await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
+              await shoot(tabPage, `${prefix}-failed`);
+              throw error;
+            });
+            shots += 6;
+          }
+          if (want('library')) {
+            await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
+              await shoot(tabPage, `${prefix}-failed`);
+              throw error;
+            });
+            shots += 5;
+          }
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
+            if (!want(name)) continue;
             await tabPage.goto(`${ORIGIN}${route}`);
             await tabPage.getByRole('tablist').first().waitFor();
             if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
             await settle(tabPage);
             await shoot(tabPage, `${prefix}-${name}`);
             shots += 1;
+            if (name === 'you') {
+              // The web preview turns notifications on without registering anything (push.web.ts).
+              const notifications = tabPage.getByRole('switch', { name: NOTIFICATIONS[language as keyof typeof NOTIFICATIONS] });
+              await notifications.scrollIntoViewIfNeeded();
+              await notifications.click();
+              await tabPage.waitForFunction(() => document.querySelector('[role="switch"]:checked') !== null);
+              await shoot(tabPage, `${prefix}-you-notifications-on`);
+              shots += 1;
+            }
           }
-          const emptyPage = await signedIn.newPage();
-          watchErrors(emptyPage, problems, `${prefix} empty`);
-          await pinSettings(emptyPage, language);
-          await shootEmptyDebate(emptyPage, prefix);
-          shots += 2;
-          await shootAskScreens(signedIn, prefix, language, problems);
-          shots += 3;
-          await shootResultScreens(signedIn, prefix, language, problems);
-          shots += 9;
+          if (want('empty')) {
+            const emptyPage = await signedIn.newPage();
+            watchErrors(emptyPage, problems, `${prefix} empty`);
+            await pinSettings(emptyPage, language);
+            await shootEmptyDebate(emptyPage, prefix);
+            shots += 2;
+          }
+          if (want('ask')) {
+            await shootAskScreens(signedIn, prefix, language, problems);
+            shots += 3;
+          }
+          if (want('results')) {
+            await shootResultScreens(signedIn, prefix, language, problems);
+            shots += 9;
+          }
           for (const tool of ['brainstorm', 'factoids'] as const) {
+            if (!want(tool)) continue;
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 6;
           }
-          await shootTimerScreens(signedIn, prefix, language, problems);
-          shots += 3;
-          await shootCrossfireScreens(signedIn, prefix, language, problems);
-          shots += 3;
-          await shootFlowchart(signedIn, prefix, language, problems);
-          shots += 10;
-          const oneOffPage = await signedIn.newPage();
-          watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
-          await pinSettings(oneOffPage, language);
-          await shootOneOffTools(oneOffPage, prefix);
-          await oneOffPage.close();
-          shots += 2;
+          if (want('timer')) {
+            await shootTimerScreens(signedIn, prefix, language, problems);
+            shots += 3;
+          }
+          if (want('crossfire')) {
+            await shootCrossfireScreens(signedIn, prefix, language, problems);
+            shots += 3;
+          }
+          if (want('flowchart')) {
+            await shootFlowchart(signedIn, prefix, language, problems);
+            shots += 10;
+          }
+          if (want('one-off')) {
+            const oneOffPage = await signedIn.newPage();
+            watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
+            await pinSettings(oneOffPage, language);
+            await shootOneOffTools(oneOffPage, prefix);
+            await oneOffPage.close();
+            shots += 2;
+          }
           await signedIn.close();
         }
       }
