@@ -1,10 +1,11 @@
 import { requireOptionalNativeModule } from 'expo';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-// What the running binary can do beyond Expo Go. A development build links
-// these modules only when app.config.ts ran with DEBATELAB_BUILD=dev, and
-// Expo Go never has them, so it is not even asked: no import of a module
-// that is missing, no crash.
+// What the running binary can do beyond Expo Go. Autolinking puts these
+// modules into every native build; DEBATELAB_BUILD=dev in app.config.ts adds
+// what they need to work (the speech prompts, and with an App Group the
+// widget extension). Expo Go never has them, so it is not even asked: no
+// import of a module that is missing, no crash.
 
 export type NativeCapabilities = {
   /** expo-speech-recognition is linked. */
