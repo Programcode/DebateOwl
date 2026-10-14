@@ -196,6 +196,22 @@ describe('which failures fall back', () => {
       await expect(cachedRead('user-a', 'sources', 'debate-1', () => Promise.reject(refusal))).rejects.toBe(refusal);
     }
   });
+
+  it('throws a refusal from one of several queries even when another got no answer', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    const unreachable = { error: { message: 'Network request failed' }, status: 0 };
+    const refused = { error: { message: 'JWT expired' }, status: 401 };
+    supabase.results.push({ count: 1, error: null, status: 200 }, { count: 2, error: null, status: 200 });
+    await cache.fetchSourceCounts('user-a', ['debate-1', 'debate-2']);
+    supabase.results.push(unreachable, refused);
+    await expect(cache.fetchSourceCounts('user-a', ['debate-1', 'debate-2'])).rejects.toThrow('JWT expired');
+
+    supabase.results.push({ data: [], error: null, status: 200 }, { data: null, error: null, status: 200 });
+    await cache.fetchDebates('user-a');
+    supabase.results.push(unreachable, refused);
+    await expect(cache.fetchDebates('user-a')).rejects.toThrow('JWT expired');
+  });
 });
 
 describe('the saved-copies notice', () => {

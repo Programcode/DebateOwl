@@ -1,4 +1,4 @@
-import { cachedRead, readFailed, updateCopy, type CopyScope } from './offline-cache';
+import { cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -98,8 +98,8 @@ async function loadDebates(userId: string): Promise<DebateList> {
     supabase.from('debates').select(DEBATE_COLUMNS).eq('user_id', userId).order('last_activity_at', { ascending: false }),
     supabase.from('current_debates').select('debate_id').eq('user_id', userId).maybeSingle(),
   ]);
-  if (debatesResult.error) throw readFailed(debatesResult.error, debatesResult.status);
-  if (currentResult.error) throw readFailed(currentResult.error, currentResult.status);
+  const failures = [debatesResult, currentResult].flatMap((result) => (result.error ? [readFailed(result.error, result.status)] : []));
+  if (failures.length > 0) throw pickFailure(failures);
   const debates = ((debatesResult.data ?? []) as DebateRow[]).map(fromRow);
   const currentId = (currentResult.data as { debate_id?: string } | null)?.debate_id ?? null;
   return {
@@ -193,11 +193,11 @@ export function fetchDebateCounts(userId: string, debateId: string): Promise<Deb
 }
 
 async function loadDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
-  const [sources, rounds, pro, con] = await Promise.all([
+  const [sources, rounds, pro, con] = await readAll([
     countRows(userId, 'sources', debateId),
     countRows(userId, 'sparring_sessions', debateId),
-    Promise.all(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.pro))),
-    Promise.all(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.con))),
+    readAll(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.pro))),
+    readAll(RESULT_TABLES.map((table) => countRows(userId, table, debateId, SIDES_FOR.con))),
   ]);
   return { sources, rounds, results: { pro: sum(pro), con: sum(con) } };
 }
@@ -208,7 +208,7 @@ export function fetchSourceCounts(userId: string, debateIds: string[]): Promise<
 }
 
 async function loadSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
-  const counts = await Promise.all(debateIds.map((id) => countRows(userId, 'sources', id)));
+  const counts = await readAll(debateIds.map((id) => countRows(userId, 'sources', id)));
   return Object.fromEntries(debateIds.map((id, index) => [id, counts[index]]));
 }
 
@@ -244,7 +244,7 @@ export function fetchRecentWork(userId: string, debateId: string, side: DebateSi
 }
 
 async function loadRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
-  const lists = await Promise.all([
+  const lists = await readAll([
     ...RESULT_TABLES.map((table) => fetchResultRows(userId, debateId, table, SIDES_FOR[side], limit)),
     (async () => {
       // The website lists a judged round under its motion and the side the student spoke, ordered by its last update.
@@ -308,6 +308,6 @@ export function fetchPrepareWork(userId: string, debateId: string, limit: number
 }
 
 async function loadPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
-  const lists = await Promise.all(PREPARE_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
+  const lists = await readAll(PREPARE_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
   return newestFirst(lists, limit);
 }

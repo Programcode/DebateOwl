@@ -1,7 +1,7 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 
 import { debateListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed } from './offline-cache';
+import { afterWrite, cachedRead, pickFailure, readFailed } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -85,8 +85,8 @@ async function loadChat(userId: string, chatId: string): Promise<{ debateId: str
     supabase.from('chats').select('debate_id').eq('user_id', userId).eq('id', chatId).single(),
     supabase.from('messages').select('id,role,content,output,created_at').eq('chat_id', chatId).order('created_at', { ascending: true }),
   ]);
-  if (chat.error) throw readFailed(chat.error, chat.status);
-  if (messages.error) throw readFailed(messages.error, messages.status);
+  const failures = [chat, messages].flatMap((result) => (result.error ? [readFailed(result.error, result.status)] : []));
+  if (failures.length > 0) throw pickFailure(failures);
   return {
     debateId: (chat.data as { debate_id: string | null }).debate_id ?? null,
     messages: ((messages.data ?? []) as MessageRow[]).map((row) => ({

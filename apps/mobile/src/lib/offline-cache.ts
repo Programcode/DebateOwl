@@ -75,6 +75,25 @@ export function readFailed(error: { message: string }, status: number): ReadErro
 
 const isUnreachable = (cause: unknown) => cause instanceof ReadError && cause.unreachable;
 
+/**
+ * The failure to throw when several queries of one read failed: a server's
+ * refusal wins over a query that got no answer, so a saved copy never hides it.
+ */
+export function pickFailure(causes: unknown[]): unknown {
+  return causes.find((cause) => !isUnreachable(cause)) ?? causes[0];
+}
+
+/**
+ * Promise.all for the queries of one read. It waits for all of them, so a
+ * refusal from one is thrown even when another got no answer first.
+ */
+export async function readAll<T extends readonly unknown[] | []>(reads: T): Promise<{ -readonly [K in keyof T]: Awaited<T[K]> }> {
+  const results = await Promise.allSettled(reads);
+  const failures = results.flatMap((result) => (result.status === 'rejected' ? [result.reason as unknown] : []));
+  if (failures.length > 0) throw pickFailure(failures);
+  return results.map((result) => (result as PromiseFulfilledResult<unknown>).value) as { -readonly [K in keyof T]: Awaited<T[K]> };
+}
+
 const queue = createSerialQueue();
 // undefined until the auth provider names the first owner, so that first call always checks storage.
 let owner: string | null | undefined;
