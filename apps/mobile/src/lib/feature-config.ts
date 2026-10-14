@@ -1,5 +1,6 @@
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
 import { canAccessProModels } from '@debatelab/core/ai/pro-access';
+import { PROVIDER_ID, type ProviderConfig } from '@debatelab/core/ai/providers/types';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -16,8 +17,8 @@ import { supabase } from './supabase';
 /**
  * A tool's model and its settings, picked exactly as the website's settings
  * store (src/lib/stores/settings-store.ts) picks them from
- * user_settings.feature_configs. The app only reads them: the model picker
- * and the migration that rewrites old configs stay on the website.
+ * user_settings.feature_configs. The model picker writes them back through the
+ * settings provider; the migration that rewrites old configs stays on the website.
  */
 export interface FeatureConfig {
   model: string;
@@ -73,22 +74,56 @@ function normalizeConfig(value: unknown, fallback: FeatureConfig, allowProModels
   };
 }
 
-export async function fetchFeatureConfig(userId: string, feature: FeatureTab): Promise<FeatureConfig> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('feature_configs, subscription_tier, grace_period_ends_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error || !data) return defaultConfig(feature);
-  // Null when it cannot be told, as on the website, which then keeps its defaults.
-  const allowProModels = await canAccessProModels(data, async () => {
+/** Whether the student may pick Pro models, from their user_settings row; null when it cannot be told. */
+export function canUseProModels(userId: string, settings: { subscription_tier?: unknown; grace_period_ends_at?: unknown }): Promise<boolean | null> {
+  return canAccessProModels(settings, async () => {
     const { data: rows, error: billingError } = await supabase
       .from('subscriptions')
       .select('status, current_period_end')
       .eq('user_id', userId);
     return billingError ? null : rows ?? [];
   });
-  if (allowProModels === null) return defaultConfig(feature);
+}
+
+/** A tool's settings and whether the student has Pro access (false when it cannot be told). */
+export async function fetchFeatureSettings(userId: string, feature: FeatureTab): Promise<{ config: FeatureConfig; pro: boolean }> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('feature_configs, subscription_tier, grace_period_ends_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error || !data) return { config: defaultConfig(feature), pro: false };
+  // Null when it cannot be told, as on the website, which then keeps its defaults.
+  const allowProModels = await canUseProModels(userId, data);
+  if (allowProModels === null) return { config: defaultConfig(feature), pro: false };
   const fallback = defaultConfig(feature, allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL);
-  return normalizeConfig(asRecord(data.feature_configs)?.[feature], fallback, allowProModels);
+  return { config: normalizeConfig(asRecord(data.feature_configs)?.[feature], fallback, allowProModels), pro: allowProModels };
+}
+
+export async function fetchFeatureConfig(userId: string, feature: FeatureTab): Promise<FeatureConfig> {
+  return (await fetchFeatureSettings(userId, feature)).config;
+}
+
+export type FeatureConfigChange = Partial<Pick<FeatureConfig, 'model' | 'reasoningEffort'>>;
+
+/** Whether a model or Auto choice is for Pro students only, as the website's ModelSelector marks it. */
+export function isProOnlyModel(model: string): boolean {
+  return model === AUTO_PRO || Boolean(getModelCatalogEntry(model)?.isProOnly);
+}
+
+/**
+ * The whole feature_configs object the website would save after this change,
+ * in its canonical shape, so the website keeps it as it is: every tool's saved
+ * config normalised as the website's normalizeFeatureConfigs does (its
+ * defaults where none was saved), with the change applied to one tool.
+ */
+export function featureConfigsWith(saved: unknown, pro: boolean, feature: FeatureTab, change: FeatureConfigChange): Record<FeatureTab, ProviderConfig> {
+  if (change.model !== undefined && !pro && isProOnlyModel(change.model)) throw new Error('Pro models need Pro access');
+  const record = asRecord(saved);
+  const fallbackModel = pro ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
+  const features = Object.keys(getDefaultFeatureConfigs()) as FeatureTab[];
+  return Object.fromEntries(features.map((name) => {
+    const config = normalizeConfig(record?.[name], defaultConfig(name, fallbackModel), pro);
+    return [name, { provider: PROVIDER_ID, ...config, ...(name === feature ? change : {}) }];
+  })) as Record<FeatureTab, ProviderConfig>;
 }
