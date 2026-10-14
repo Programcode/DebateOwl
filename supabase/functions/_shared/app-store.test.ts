@@ -1,7 +1,9 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19";
+import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1.0.19";
 import {
   APPLE_ROOTS,
   type AppStoreConfig,
+  AppStoreConfigError,
+  appStoreConfigFromEnv,
   AppStoreVerificationError,
   type VerificationCode,
   verifyNotification,
@@ -159,4 +161,30 @@ Deno.test("appAccountToken and family sharing are read from the signed transacti
 Deno.test("a notification without app data is not for this service", async () => {
   const jws = await signJws(chain, { notificationType: "EXTERNAL_PURCHASE_TOKEN", notificationUUID: crypto.randomUUID(), signedDate: Date.now() });
   assertEquals(await verifyNotification(jws, config, roots), null);
+});
+
+Deno.test("configuration fails closed: a bundle id is required, and Production needs the app's Apple id", () => {
+  const names = ["APP_STORE_BUNDLE_ID", "APP_STORE_ENVIRONMENTS", "APP_STORE_APP_APPLE_ID"];
+  const saved = names.map((name) => Deno.env.get(name));
+  const set = (values: Record<string, string | undefined>) => {
+    for (const name of names) {
+      const value = values[name];
+      if (value === undefined) Deno.env.delete(name);
+      else Deno.env.set(name, value);
+    }
+  };
+  try {
+    set({});
+    assertThrows(appStoreConfigFromEnv, AppStoreConfigError);
+    set({ APP_STORE_BUNDLE_ID: TEST_BUNDLE_ID });
+    assertThrows(appStoreConfigFromEnv, AppStoreConfigError, "APP_STORE_APP_APPLE_ID");
+    set({ APP_STORE_BUNDLE_ID: TEST_BUNDLE_ID, APP_STORE_ENVIRONMENTS: "Sandbox,Xcode" });
+    assertThrows(appStoreConfigFromEnv, AppStoreConfigError);
+    set({ APP_STORE_BUNDLE_ID: TEST_BUNDLE_ID, APP_STORE_ENVIRONMENTS: "Sandbox" });
+    assertEquals(appStoreConfigFromEnv(), { bundleId: TEST_BUNDLE_ID, environments: ["Sandbox"], appAppleId: undefined });
+    set({ APP_STORE_BUNDLE_ID: TEST_BUNDLE_ID, APP_STORE_ENVIRONMENTS: "Production, Sandbox", APP_STORE_APP_APPLE_ID: "1234567890" });
+    assertEquals(appStoreConfigFromEnv(), { bundleId: TEST_BUNDLE_ID, environments: ["Production", "Sandbox"], appAppleId: 1234567890 });
+  } finally {
+    names.forEach((name, index) => saved[index] === undefined ? Deno.env.delete(name) : Deno.env.set(name, saved[index]!));
+  }
 });

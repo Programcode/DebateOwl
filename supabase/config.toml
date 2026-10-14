@@ -47,6 +47,15 @@ verify_jwt = false
 [functions.stripe-webhook]
 verify_jwt = false
 
+# App Store Server Notifications come from Apple (no Supabase JWT). The
+# handler verifies Apple's signature on every payload instead.
+[functions.app-store-notifications]
+verify_jwt = false
+
+# Validates the caller's Bearer token in-function, like the functions above.
+[functions.app-store-purchase]
+verify_jwt = false
+
 # Demo code sign-in happens before the caller has a Supabase session, so
 # there is no JWT yet to verify at the gateway.
 [functions.demo-code-login]
