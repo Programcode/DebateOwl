@@ -68,6 +68,26 @@ const ACCOUNT_B = { user: { id: 'user-b' }, access_token: 'token-b' };
 
 const { enablePush, forgetPushOnSignOut, readPushState, refreshPush } = await import('./push');
 
+/** A small model of the database: rows, and the registrations a release withdrew. */
+function database() {
+  const db = { rows: [] as { token: unknown; userId: string; registration: unknown }[], withdrawn: new Set<unknown>() };
+  const callers: Record<string, string> = { 'Bearer token-a': 'user-a', 'Bearer token-b': 'user-b' };
+  const apply = (request: Sent) => {
+    const caller = callers[request.headers.Authorization];
+    const args = request.args;
+    if (request.name === 'register_push_token') {
+      if (db.withdrawn.has(args.p_registration)) return { error: { message: 'withdrawn' } };
+      db.rows = db.rows.filter((row) => row.token !== args.p_token);
+      db.rows.push({ token: args.p_token, userId: caller, registration: args.p_registration });
+    } else if (request.name === 'release_push_token') {
+      if (args.p_registration) db.withdrawn.add(args.p_registration);
+      db.rows = db.rows.filter((row) => row.registration !== args.p_registration);
+    }
+    return { error: null };
+  };
+  return Object.assign(db, { apply });
+}
+
 function deferred() {
   let resolve!: (value: { error: { message: string } | null }) => void;
   const promise = new Promise<{ error: { message: string } | null }>((res) => (resolve = res));
@@ -103,7 +123,7 @@ describe('push token removal on sign-out', () => {
     const registered = server.sent.find((request) => request.name === 'register_push_token');
     const removal = server.sent.find((request) => request.name === 'release_push_token');
     expect(removal).toMatchObject({
-      args: { p_token: TOKEN, p_installation_id: 'install-1', p_registration: registered?.args.p_registration },
+      args: { p_installation_id: 'install-1', p_registration: registered?.args.p_registration },
       headers: { Authorization: 'Bearer token-a' },
     });
     expect(removal?.signal?.aborted).toBe(false);
@@ -120,33 +140,18 @@ describe('push token removal on sign-out', () => {
     await refreshPush('user-b', 'en');
     expect(server.sent.at(-1)).toMatchObject({
       name: 'release_push_token',
-      args: { p_token: TOKEN, p_registration: 'registration-a' },
+      args: { p_registration: 'registration-a' },
       headers: { Authorization: 'Bearer token-b' },
     });
     expect(server.storage.has(KEY)).toBe(false);
   });
 
   it('keeps a registration that commits after sign-out removed the rows from reaching the next account', async () => {
-    // A small model of the database: rows, and the registrations a release withdrew.
-    const db = { rows: [] as { token: unknown; userId: string; registration: unknown }[], withdrawn: new Set<unknown>() };
-    const callers: Record<string, string> = { 'Bearer token-a': 'user-a', 'Bearer token-b': 'user-b' };
-    const apply = (request: Sent) => {
-      const caller = callers[request.headers.Authorization];
-      const args = request.args;
-      if (request.name === 'register_push_token') {
-        if (db.withdrawn.has(args.p_registration)) return { error: { message: 'withdrawn' } };
-        db.rows = db.rows.filter((row) => row.token !== args.p_token);
-        db.rows.push({ token: args.p_token, userId: caller, registration: args.p_registration });
-      } else if (request.name === 'release_push_token') {
-        if (args.p_registration) db.withdrawn.add(args.p_registration);
-        db.rows = db.rows.filter((row) => row.token !== args.p_token && row.registration !== args.p_registration);
-      }
-      return { error: null };
-    };
+    const db = database();
     // The registration reaches the database but commits only when the test says so.
     const commit = deferred();
     server.respond = (request) =>
-      request.name === 'register_push_token' ? commit.promise.then(() => apply(request)) : Promise.resolve(apply(request));
+      request.name === 'register_push_token' ? commit.promise.then(() => db.apply(request)) : Promise.resolve(db.apply(request));
 
     const enabled = enablePush('user-a', 'en');
     await vi.waitFor(() => expect(server.sent.map((request) => request.name)).toContain('register_push_token'));
@@ -163,6 +168,32 @@ describe('push token removal on sign-out', () => {
     server.session = ACCOUNT_B;
     await refreshPush('user-b', 'en');
     expect(db.rows).toEqual([]);
+  });
+
+  it('registers under a new ID after a release that never answered, so the late release leaves it alone', async () => {
+    const db = database();
+    server.storage.set(KEY, JSON.stringify({ userId: 'user-a', token: TOKEN, id: 'registration-a', confirmed: true }));
+    db.rows.push({ token: TOKEN, userId: 'user-a', registration: 'registration-a' });
+    // Sign-out's release reaches the database only when the test says so.
+    const late = deferred();
+    let held = false;
+    server.respond = (request) => {
+      if (request.name !== 'release_push_token' || held) return Promise.resolve(db.apply(request));
+      held = true;
+      return late.promise.then(() => db.apply(request));
+    };
+    const signOut = forgetPushOnSignOut('user-a', 'token-a');
+    await vi.advanceTimersByTimeAsync(20_000);
+    await signOut;
+
+    // The same account signs in again and turns notifications on; then the old release lands.
+    await expect(enablePush('user-a', 'en')).resolves.toBe('on');
+    late.resolve({ error: null });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(db.rows).toMatchObject([{ token: TOKEN, userId: 'user-a' }]);
+    expect(db.rows[0]?.registration).not.toBe('registration-a');
+    await expect(readPushState('user-a')).resolves.toBe('on');
   });
 
   it('removes a first registration whose answer was lost', async () => {

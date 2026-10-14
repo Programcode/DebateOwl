@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(29);
+SELECT plan(31);
 
 INSERT INTO auth.users (id) VALUES
   ('f1111111-1111-4111-8111-111111111111'),
@@ -40,9 +40,9 @@ SELECT ok(
   'only a signed-in user can register a token, and only for themselves'
 );
 SELECT ok(
-  has_function_privilege('authenticated', 'public.release_push_token(text, uuid, uuid)', 'EXECUTE')
-    AND NOT has_function_privilege('anon', 'public.release_push_token(text, uuid, uuid)', 'EXECUTE')
-    AND NOT has_function_privilege('service_role', 'public.release_push_token(text, uuid, uuid)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'public.release_push_token(uuid, uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.release_push_token(uuid, uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('service_role', 'public.release_push_token(uuid, uuid)', 'EXECUTE'),
   'only a signed-in user can release a token'
 );
 
@@ -183,14 +183,18 @@ SELECT ok(
 );
 SET LOCAL ROLE authenticated;
 
--- The account that registered the phone signed out without removing its row;
--- the next account on the phone releases it.
+-- A release with no registration ID reaches only the caller's own rows from
+-- the install that no registration wrote.
+RESET ROLE;
+INSERT INTO public.push_tokens (token, user_id, platform, installation_id)
+VALUES ('ExponentPushToken[jjjjjjjjjjjjjjjjjjjjjj]', 'f1111111-1111-4111-8111-111111111111', 'ios', 'fa000000-0000-4000-8000-000000000002');
+SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', true);
-SELECT public.release_push_token('ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]', NULL, NULL);
+SELECT public.release_push_token('fa000000-0000-4000-8000-000000000002', NULL);
 RESET ROLE;
 SELECT ok(
-  (SELECT count(*) = 9 AND NOT bool_or(token = 'ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]') FROM public.push_tokens),
-  'the next account on the phone releases a token another account holds, and only that token'
+  (SELECT count(*) = 10 AND bool_or(token = 'ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]') AND NOT bool_or(token = 'ExponentPushToken[jjjjjjjjjjjjjjjjjjjjjj]') FROM public.push_tokens),
+  'a release without a registration ID deletes the caller''s unregistered rows from the install, not another account''s'
 );
 SET LOCAL ROLE authenticated;
 
@@ -199,10 +203,10 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', true);
 SELECT public.register_push_token('ExponentPushToken[gggggggggggggggggggggg]', 'ios', 'en', 'fa000000-0000-4000-8000-000000000003', 'ab000000-0000-4000-8000-000000000004');
 SELECT set_config('request.jwt.claim.sub', 'f2222222-2222-4222-8222-222222222222', true);
-SELECT public.release_push_token(NULL, 'fa000000-0000-4000-8000-000000000003', 'ab000000-0000-4000-8000-000000000004');
+SELECT public.release_push_token('fa000000-0000-4000-8000-000000000003', 'ab000000-0000-4000-8000-000000000004');
 RESET ROLE;
 SELECT ok(
-  (SELECT count(*) = 9 AND NOT bool_or(token = 'ExponentPushToken[gggggggggggggggggggggg]') FROM public.push_tokens),
+  (SELECT count(*) = 10 AND NOT bool_or(token = 'ExponentPushToken[gggggggggggggggggggggg]') FROM public.push_tokens),
   'releasing a registration deletes the row it wrote, whichever account holds it, and nothing else'
 );
 SET LOCAL ROLE authenticated;
@@ -218,6 +222,38 @@ SELECT lives_ok(
   'the phone can register again with a new registration ID'
 );
 
+-- The first account's release on sign-out timed out but is still on its way.
+-- The next account releases that registration itself and turns notifications
+-- on with the same token; the first account's release arrives last.
+SELECT public.register_push_token('ExponentPushToken[hhhhhhhhhhhhhhhhhhhhhh]', 'ios', 'en', 'fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000006');
+SELECT set_config('request.jwt.claim.sub', 'f2222222-2222-4222-8222-222222222222', true);
+SELECT public.release_push_token('fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000006');
+SELECT public.register_push_token('ExponentPushToken[hhhhhhhhhhhhhhhhhhhhhh]', 'ios', 'en', 'fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000007');
+SELECT set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', true);
+SELECT public.release_push_token('fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000006');
+RESET ROLE;
+SELECT results_eq(
+  $$SELECT user_id, registration_id, enabled FROM public.push_tokens WHERE token = 'ExponentPushToken[hhhhhhhhhhhhhhhhhhhhhh]'$$,
+  $$VALUES ('f2222222-2222-4222-8222-222222222222'::uuid, 'ab000000-0000-4000-8000-000000000007'::uuid, true)$$,
+  'a release that arrives late leaves the next account''s newer registration of the same token alone'
+);
+SET LOCAL ROLE authenticated;
+
+-- The same account: its release of one registration arrives after it
+-- registered the same install again under a new ID.
+SELECT set_config('request.jwt.claim.sub', 'f2222222-2222-4222-8222-222222222222', true);
+SELECT public.release_push_token('fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000007');
+SELECT public.register_push_token('ExponentPushToken[hhhhhhhhhhhhhhhhhhhhhh]', 'ios', 'en', 'fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000008');
+SELECT public.release_push_token('fa000000-0000-4000-8000-000000000004', 'ab000000-0000-4000-8000-000000000007');
+RESET ROLE;
+SELECT results_eq(
+  $$SELECT user_id, registration_id FROM public.push_tokens WHERE token = 'ExponentPushToken[hhhhhhhhhhhhhhhhhhhhhh]'$$,
+  $$VALUES ('f2222222-2222-4222-8222-222222222222'::uuid, 'ab000000-0000-4000-8000-000000000008'::uuid)$$,
+  'a late release leaves the same account''s newer registration from the same install alone'
+);
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', true);
+
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT throws_ok(
   $$SELECT public.register_push_token('ExponentPushToken[ffffffffffffffffffffff]', 'ios', 'en', NULL, 'ab000000-0000-4000-8000-000000000009')$$,
@@ -226,10 +262,10 @@ SELECT throws_ok(
   'a token cannot be registered without a signed-in user'
 );
 SELECT throws_ok(
-  $$SELECT public.release_push_token('ExponentPushToken[dddddddddddddddddddddd]', NULL, NULL)$$,
+  $$SELECT public.release_push_token('fa000000-0000-4000-8000-000000000001', NULL)$$,
   '42501',
   NULL,
-  'a token cannot be released without a signed-in user'
+  'nothing can be released without a signed-in user'
 );
 
 RESET ROLE;

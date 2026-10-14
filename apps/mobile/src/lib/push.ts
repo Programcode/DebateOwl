@@ -18,13 +18,15 @@ import { supabase } from './supabase';
  * register_push_token, and removes it again on sign-out.
  *
  * Every registration carries the ID of the local registration record, and
- * release_push_token withdraws that ID while it deletes the rows. The server
- * refuses a registration whose ID was withdrawn, so a registration the app
- * gave up on cannot land after the release: cancelling a request does not
- * cancel its database statement. Sign-out releases with that account's own
- * access token, which keeps working until it expires. The local record is
- * cleared only once a release succeeded; until then another account on this
- * phone releases it before doing anything else with push.
+ * release_push_token withdraws that ID and deletes only the rows it wrote. The
+ * server refuses a registration whose ID was withdrawn, so a registration the
+ * app gave up on cannot land after the release: cancelling a request does not
+ * cancel its database statement. Once a release is sent for an ID, the next
+ * registration gets a new one, so a release that arrives late never deletes a
+ * newer registration's row. Sign-out releases with that account's own access
+ * token, which keeps working until it expires. The local record is cleared
+ * only once a release succeeded; until then the next change on this phone
+ * releases it again before doing anything else with push.
  *
  * - unavailable: this build cannot get an Expo push token. Expo Go on Android
  *   has no remote push since SDK 53, and every build needs the app's EAS
@@ -37,7 +39,8 @@ export type PushState = 'unavailable' | 'blocked' | 'off' | 'on';
 // The token this install registered, for whom, and the registration's ID.
 // `confirmed` stays false until the server confirms the first registration,
 // so a registration whose answer never came is still known here and gets
-// released.
+// released. `released` is set before a release is sent and the ID is never
+// registered again after it.
 const REGISTRATION_KEY = 'debatelab.push-registration';
 // register_push_token's error for a registration whose ID was released.
 const WITHDRAWN = '55000';
@@ -46,7 +49,7 @@ const SIGN_OUT_WAIT_MS = 5_000;
 // How long one round of push requests may run, so a hung call cannot hold the queue.
 const REQUEST_BUDGET_MS = 20_000;
 
-type Registration = { userId: string; token: string; id: string; confirmed: boolean };
+type Registration = { userId: string; token: string; id: string; confirmed: boolean; released: boolean };
 
 // One change at a time, so sign-out's release runs after a registration in
 // flight instead of before it, and the next account never inherits the row.
@@ -74,9 +77,9 @@ async function readRegistration(): Promise<Registration | null> {
   try {
     const value: unknown = JSON.parse((await AsyncStorage.getItem(REGISTRATION_KEY)) ?? 'null');
     if (typeof value !== 'object' || value === null) return null;
-    const { userId, token, id, confirmed } = value as Record<string, unknown>;
+    const { userId, token, id, confirmed, released } = value as Record<string, unknown>;
     if (typeof userId !== 'string' || typeof token !== 'string' || typeof id !== 'string') return null;
-    return { userId, token, id, confirmed: confirmed === true };
+    return { userId, token, id, confirmed: confirmed === true, released: released === true };
   } catch {
     return null;
   }
@@ -109,10 +112,12 @@ async function register(userId: string, language: AppLanguage, signal: AbortSign
   // register_push_token files the token under whoever sent the request; send it as this user.
   const accessToken = await accessTokenOf(userId, signal);
   const installationId = await untilAborted(getInstallId(), signal);
-  // Callers release any other registration first, so one recorded here is this user's own.
+  // Callers release any other registration first, so one recorded here is this user's own and was never released.
   const previous = await untilAborted(readRegistration(), signal);
   const registration =
-    previous?.userId === userId ? { ...previous, token } : { userId, token, id: Crypto.randomUUID(), confirmed: false };
+    previous?.userId === userId
+      ? { ...previous, token }
+      : { userId, token, id: Crypto.randomUUID(), confirmed: false, released: false };
   // Recorded before asking, so a release withdraws this registration even if its answer is lost.
   await untilAborted(writeRegistration(registration), signal);
   const { error } = await supabase
@@ -132,17 +137,17 @@ async function register(userId: string, language: AppLanguage, signal: AbortSign
 }
 
 /**
- * Withdraws the registration recorded here, whoever made it, and deletes this
- * phone's rows: the ones it wrote, its token, and any row this install filed
- * under the caller, then forgets it. Any signed-in account may release: the
- * registration ID and the token are the proof.
+ * Withdraws the registration recorded here, whoever made it, and deletes the
+ * rows it wrote, then forgets it. Any signed-in account may release: the
+ * registration ID is the proof.
  */
 async function release(accessToken: string, signal: AbortSignal): Promise<void> {
   const registration = await untilAborted(readRegistration(), signal);
   const installationId = await untilAborted(getInstallId(), signal);
+  // Marked before sending: this release may still arrive after a newer registration, so that one needs a new ID.
+  if (registration && !registration.released) await untilAborted(writeRegistration({ ...registration, released: true }), signal);
   const { error } = await supabase
     .rpc('release_push_token', {
-      p_token: registration?.token ?? null,
       p_installation_id: installationId,
       p_registration: registration?.id ?? null,
     })
@@ -155,12 +160,13 @@ async function release(accessToken: string, signal: AbortSignal): Promise<void> 
 /**
  * Before anything else with push on this phone, releases a registration this
  * user should not hold: one another account left because its release on
- * sign-out failed, or a first registration of this user's whose answer never
- * came, since the switch showed it as off.
+ * sign-out failed, a first registration of this user's whose answer never
+ * came, since the switch showed it as off, or one whose release was sent but
+ * not confirmed.
  */
 async function releaseStale(userId: string, signal: AbortSignal): Promise<void> {
   const registration = await untilAborted(readRegistration(), signal);
-  if (!registration || (registration.userId === userId && registration.confirmed)) return;
+  if (!registration || (registration.userId === userId && registration.confirmed && !registration.released)) return;
   await release(await accessTokenOf(userId, signal), signal);
 }
 
@@ -169,7 +175,9 @@ export function readPushState(userId: string): Promise<PushState> {
   return serial(async () => {
     if (!available()) return 'unavailable';
     const [permissions, registration] = await Promise.all([Notifications.getPermissionsAsync(), readRegistration()]);
-    if (registration?.userId === userId && registration.confirmed) return allowed(permissions) ? 'on' : 'blocked';
+    if (registration?.userId === userId && registration.confirmed && !registration.released) {
+      return allowed(permissions) ? 'on' : 'blocked';
+    }
     return !allowed(permissions) && !permissions.canAskAgain ? 'blocked' : 'off';
   });
 }
