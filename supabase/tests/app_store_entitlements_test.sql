@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(79);
+SELECT plan(83);
 
 -- Returns how many rows a statement changed; a privilege or RLS rejection changes none.
 CREATE FUNCTION pg_temp.rows_changed(statement text)
@@ -374,6 +374,26 @@ SELECT is(
     pg_temp.tx('o6', 't1', 'basic', now() + interval '300 days', now() - interval '30 minutes')
       || jsonb_build_object('purchaseDate', now() - interval '65 days')),
   'stale', 'a late copy of the yearly transaction cannot undo the upgrade');
+
+-- Apple marks the replaced transaction isUpgraded. When that copy arrives
+-- before the upgrade itself, the replaced plan must not keep granting access.
+SELECT pg_temp.settings('e0000000-0000-4000-8000-000000000034', 'expired', NULL, NULL);
+SELECT public.apply_app_store_transaction('e0000000-0000-4000-8000-000000000034',
+  pg_temp.tx('o7', 't1', 'basic', now() + interval '300 days', now() - interval '2 hours')
+    || jsonb_build_object('purchaseDate', now() - interval '65 days'));
+SELECT is(
+  public.apply_app_store_transaction(NULL,
+    pg_temp.tx('o7', 't1', 'basic', now() + interval '300 days', now() - interval '1 hour')
+      || jsonb_build_object('purchaseDate', now() - interval '65 days', 'isUpgraded', true)),
+  'applied', 'the replaced transaction, signed again as upgraded, is applied');
+SELECT is(pg_temp.plan_of('e0000000-0000-4000-8000-000000000034'), 'expired/0/false/-',
+  'an upgraded transaction grants nothing, although it has not expired');
+SELECT is(
+  public.apply_app_store_transaction(NULL,
+    pg_temp.tx('o7', 't2', 'pro', now() + interval '30 days', now())
+      || jsonb_build_object('purchaseDate', now())),
+  'applied', 'the upgrade that replaces it is applied');
+SELECT is(pg_temp.plan_of('e0000000-0000-4000-8000-000000000034'), 'pro/50/true/app_store', 'and grants its tier');
 
 -- ============================================================
 -- Account deletion: whether Apple may still bill the user

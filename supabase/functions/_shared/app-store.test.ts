@@ -49,6 +49,7 @@ Deno.test("a notification signed through the pinned root verifies with its trans
   assertEquals(verified?.environment, "Production");
   assertEquals(verified?.transaction?.record.originalTransactionId, "2000000000000001");
   assertEquals(verified?.transaction?.record.familyShared, false);
+  assertEquals(verified?.transaction?.record.isUpgraded, false);
   assertEquals(verified?.renewal?.autoRenew, true);
 });
 
@@ -148,15 +149,16 @@ Deno.test("a transaction that is not an auto-renewable subscription is unsupport
   );
 });
 
-Deno.test("appAccountToken and family sharing are read from the signed transaction", async () => {
+Deno.test("appAccountToken, family sharing and an upgrade are read from the signed transaction", async () => {
   const token = "E0000000-0000-4000-8000-000000000030";
   const verified = await verifyTransaction(
-    await signJws(chain, transactionPayload({ appAccountToken: token, inAppOwnershipType: "FAMILY_SHARED", revocationDate: Date.now(), revocationReason: 1 })),
+    await signJws(chain, transactionPayload({ appAccountToken: token, inAppOwnershipType: "FAMILY_SHARED", isUpgraded: true, revocationDate: Date.now(), revocationReason: 1 })),
     config,
     roots,
   );
   assertEquals(verified.appAccountToken, token.toLowerCase());
   assertEquals(verified.record.familyShared, true);
+  assertEquals(verified.record.isUpgraded, true);
   assertEquals(verified.record.revocationReason, 1);
   await rejectsWith(
     async () => await verifyTransaction(await signJws(chain, transactionPayload({ appAccountToken: "not-a-uuid" })), config, roots),

@@ -190,6 +190,8 @@ export interface TransactionRecord {
   revocationDate?: string;
   revocationReason?: number;
   familyShared: boolean;
+  /** Apple's isUpgraded: a newer transaction in the group replaces this one. */
+  isUpgraded: boolean;
 }
 
 export interface RenewalRecord {
@@ -272,6 +274,7 @@ export async function verifyTransaction(
       revocationDate: optionalTime(payload.revocationDate, "revocationDate"),
       revocationReason: typeof revocationReason === "number" ? revocationReason : undefined,
       familyShared: payload.inAppOwnershipType === "FAMILY_SHARED",
+      isUpgraded: payload.isUpgraded === true,
     },
   };
 }

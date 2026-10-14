@@ -62,6 +62,10 @@ CREATE TABLE public.app_store_subscriptions (
   revoked_at timestamptz,
   revocation_reason integer,
   family_shared boolean NOT NULL DEFAULT false,
+  -- Apple's isUpgraded: the customer upgraded within the subscription group,
+  -- and a newer transaction replaces this one. Like StoreKit's
+  -- currentEntitlements, the plan ignores it until that one arrives.
+  upgraded boolean NOT NULL DEFAULT false,
   -- signedDate of the transaction above, which orders updates to it.
   transaction_signed_at timestamptz NOT NULL,
   auto_renew boolean,
@@ -155,6 +159,7 @@ BEGIN
   JOIN public.app_store_products AS product ON product.product_id = store.product_id
   WHERE store.user_id = p_user_id
     AND store.revoked_at IS NULL
+    AND NOT store.upgraded
     AND greatest(store.expires_at, coalesce(store.grace_period_expires_at, store.expires_at)) > p_at
   ORDER BY product.tier = 'pro' DESC,
     greatest(store.expires_at, coalesce(store.grace_period_expires_at, store.expires_at)) DESC
@@ -303,7 +308,7 @@ BEGIN
         BEGIN
           INSERT INTO public.app_store_subscriptions (
             original_transaction_id, user_id, product_id, transaction_id, environment,
-            purchased_at, expires_at, revoked_at, revocation_reason, family_shared,
+            purchased_at, expires_at, revoked_at, revocation_reason, family_shared, upgraded,
             transaction_signed_at, auto_renew, grace_period_expires_at, renewal_signed_at
           ) VALUES (
             v_original_id,
@@ -316,6 +321,7 @@ BEGIN
             (p_transaction->>'revocationDate')::timestamptz,
             (p_transaction->>'revocationReason')::integer,
             coalesce((p_transaction->>'familyShared')::boolean, false),
+            coalesce((p_transaction->>'isUpgraded')::boolean, false),
             v_signed,
             (p_renewal->>'autoRenew')::boolean,
             (p_renewal->>'gracePeriodExpiresDate')::timestamptz,
@@ -349,6 +355,7 @@ BEGIN
           revoked_at = (p_transaction->>'revocationDate')::timestamptz,
           revocation_reason = (p_transaction->>'revocationReason')::integer,
           family_shared = coalesce((p_transaction->>'familyShared')::boolean, false),
+          upgraded = coalesce((p_transaction->>'isUpgraded')::boolean, false),
           transaction_signed_at = v_signed,
           updated_at = now()
         WHERE original_transaction_id = v_original_id
