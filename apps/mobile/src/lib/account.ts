@@ -37,13 +37,16 @@ export async function exportAccountData(now: Date = new Date()): Promise<{ fileN
 
 /**
  * Deletes the account's saved work, sources, debates and API keys through the
- * website's clear_current_user_data function, which acts for whoever holds the
- * session. The session must still be the account the student confirmed for.
- * Settings and the subscription stay.
+ * website's clear_current_user_data function, which acts for whoever the
+ * request's token belongs to. The session must still be the account the
+ * student confirmed for, and the request carries that session's token: left to
+ * supabase-js, it would read the session again when sending, and an account
+ * signed in meanwhile would lose its data. Settings and the subscription stay.
  */
 export async function clearAllData(userId: string): Promise<void> {
   const { data } = await supabase.auth.getSession();
-  if (data.session?.user.id !== userId) throw new Error('The signed-in account changed');
-  const { error } = await supabase.rpc('clear_current_user_data');
+  const session = data.session;
+  if (!session || session.user.id !== userId) throw new Error('The signed-in account changed');
+  const { error } = await supabase.rpc('clear_current_user_data').setHeader('Authorization', `Bearer ${session.access_token}`);
   if (error) throw new Error(error.message);
 }

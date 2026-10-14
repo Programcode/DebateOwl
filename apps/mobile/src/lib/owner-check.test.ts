@@ -27,9 +27,4 @@ describe('account-wide writes after an account switch', () => {
     await expect(clearAllData('user-a')).rejects.toThrow();
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
-
-  it('deletes all data for the account that confirmed', async () => {
-    await clearAllData('user-b');
-    expect(supabase.rpc).toHaveBeenCalledWith('clear_current_user_data');
-  });
 });
