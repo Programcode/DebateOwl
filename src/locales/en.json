@@ -2632,6 +2632,10 @@
       "discardTitle": "Start a new map?",
       "discardDesc": "Your unsaved map will be replaced by the starter map.",
       "startNew": "Start new"
+    },
+    "permissions": {
+      "speechRecognition": "DebateLab turns your voice into text when you dictate a question, a Crossfire answer or a Sparring speech. Apple processes the audio to recognize it.",
+      "microphone": "DebateLab uses the microphone while you dictate a question, a Crossfire answer or a Sparring speech."
     }
   }
 }
