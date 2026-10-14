@@ -73,6 +73,9 @@ function parseSettings(value: unknown): Settings | null {
 
 const cacheKey = (userId: string) => `debatelab.settings.${userId}`;
 
+/** How long a tool waits for earlier settings writes before reading its model anyway. */
+const READ_WAIT_MS = 5000;
+
 function isEmptyObject(value: unknown): boolean {
   return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
 }
@@ -282,8 +285,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, [writes]);
 
+  // Queued behind earlier writes; a write that hangs delays a tool by at most READ_WAIT_MS, then it reads anyway.
   const readFeatureConfig = useCallback(
-    (forUser: string, feature: FeatureTab) => writes(() => fetchFeatureConfig(forUser, feature)),
+    (forUser: string, feature: FeatureTab) =>
+      new Promise<FeatureConfig>((resolve, reject) => {
+        const fallback = setTimeout(() => void fetchFeatureConfig(forUser, feature).then(resolve, reject), READ_WAIT_MS);
+        writes(() => fetchFeatureConfig(forUser, feature)).then(
+          (config) => {
+            clearTimeout(fallback);
+            resolve(config);
+          },
+          (cause: unknown) => {
+            clearTimeout(fallback);
+            reject(cause);
+          },
+        );
+      }),
     [writes],
   );
 
