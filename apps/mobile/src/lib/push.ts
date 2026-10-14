@@ -86,11 +86,14 @@ async function removeToken(registration: Registration, signal?: AbortSignal): Pr
   if (error) throw new Error(error.message);
 }
 
-export async function readPushState(userId: string): Promise<PushState> {
-  if (!available()) return 'unavailable';
-  const [permissions, registration] = await Promise.all([Notifications.getPermissionsAsync(), readRegistration()]);
-  if (registration?.userId === userId) return allowed(permissions) ? 'on' : 'blocked';
-  return !allowed(permissions) && !permissions.canAskAgain ? 'blocked' : 'off';
+/** Queued behind any change in flight, so a read during a change reports where it ended. */
+export function readPushState(userId: string): Promise<PushState> {
+  return serial(async () => {
+    if (!available()) return 'unavailable';
+    const [permissions, registration] = await Promise.all([Notifications.getPermissionsAsync(), readRegistration()]);
+    if (registration?.userId === userId) return allowed(permissions) ? 'on' : 'blocked';
+    return !allowed(permissions) && !permissions.canAskAgain ? 'blocked' : 'off';
+  });
 }
 
 /** Asks for permission if needed, then files the token under this user. */

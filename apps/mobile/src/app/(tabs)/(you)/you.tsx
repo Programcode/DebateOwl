@@ -1,6 +1,6 @@
 import { APP_LANGUAGES, type AppLanguage } from '@debatelab/core/languages';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 
@@ -15,6 +15,7 @@ import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { disablePush, enablePush, readPushState, type PushState } from '@/lib/push';
+import { createPushSwitch, type PushSwitchView } from '@/lib/push-switch';
 import { useSettings, type ThemePreference } from '@/lib/settings';
 import { fetchSubscription, type Subscription, type SubscriptionTier } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
@@ -159,22 +160,12 @@ function NotificationsCard({ userId }: { userId: string | undefined }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { language } = useSettings();
-  const [state, setState] = useState<PushState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-  // Bumped by every read and change, so an older answer never overwrites a newer one.
-  const request = useRef(0);
+  const [{ state, busy, failed }, setView] = useState<PushSwitchView>({ state: null, busy: false, failed: false });
+  const [pushSwitch] = useState(() => createPushSwitch((patch) => setView((view) => ({ ...view, ...patch }))));
 
   const load = useCallback(() => {
-    if (!userId) return;
-    const id = ++request.current;
-    readPushState(userId).then(
-      (next) => {
-        if (id === request.current) setState(next);
-      },
-      (cause: unknown) => console.warn('Could not read the notification state:', cause instanceof Error ? cause.message : cause),
-    );
-  }, [userId]);
+    if (userId) pushSwitch.load(() => readPushState(userId));
+  }, [userId, pushSwitch]);
 
   // The switch may have changed in iOS Settings while DebateLab was in the background.
   useFocusEffect(load);
@@ -187,20 +178,7 @@ function NotificationsCard({ userId }: { userId: string | undefined }) {
 
   const change = (on: boolean) => {
     if (!userId) return;
-    const id = ++request.current;
-    setBusy(true);
-    setFailed(false);
-    (on ? enablePush(userId, language) : disablePush(userId).then((): PushState => 'off')).then(
-      (next) => {
-        if (id === request.current) setState(next);
-      },
-      (cause: unknown) => {
-        console.warn('Could not change notifications:', cause instanceof Error ? cause.message : cause);
-        if (id === request.current) setFailed(true);
-      },
-    ).finally(() => {
-      if (id === request.current) setBusy(false);
-    });
+    pushSwitch.change(() => (on ? enablePush(userId, language) : disablePush(userId).then((): PushState => 'off')));
   };
 
   return (
