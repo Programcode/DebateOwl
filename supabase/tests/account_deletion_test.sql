@@ -107,6 +107,8 @@ INSERT INTO public.sparring_sessions (user_id, debate_id, motion, user_side, per
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'ac100000-0000-4000-8000-00000000000a', 'Motion', 'pro', 'coach');
 INSERT INTO public.debate_context_pins (user_id, debate_id, item_kind, item_id)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'ac100000-0000-4000-8000-00000000000a', 'chat', 'ac300000-0000-4000-8000-00000000000a');
+INSERT INTO public.push_tokens (token, user_id, platform)
+  VALUES ('ExponentPushToken[leaverphonetoken00000]', 'ac000000-0000-4000-8000-00000000000a', 'ios');
 INSERT INTO public.ai_requests (user_id, feature, provider, model)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'brainstorm', 'openrouter', 'model');
 INSERT INTO public.daily_usage_counters (user_id, usage_date) VALUES ('ac000000-0000-4000-8000-00000000000a', current_date);
