@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { AnnouncementBanner } from '@/components/announcement-banner';
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
@@ -23,6 +24,7 @@ import {
   type DebateItem,
   type DebateSide,
 } from '@/lib/debates';
+import { useAnnouncements } from '@/lib/use-announcements';
 import { mainActionGradient, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -33,6 +35,9 @@ export default function DebateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { status, current, refresh } = useDebates();
+  // The website's announcement banner, at the top of the Debate tab.
+  const announcements = useAnnouncements();
+  const refreshAnnouncements = announcements.refresh;
 
   // Debates switched on the website show up when the tab comes back into view.
   const focusedBefore = useRef(false);
@@ -40,7 +45,8 @@ export default function DebateScreen() {
     useCallback(() => {
       if (focusedBefore.current) void refresh();
       focusedBefore.current = true;
-    }, [refresh]),
+      refreshAnnouncements();
+    }, [refresh, refreshAnnouncements]),
   );
 
   const openSwitcher = () => router.push('/debates');
@@ -56,6 +62,7 @@ export default function DebateScreen() {
   if (status === 'error') {
     return (
       <Screen safeTop>
+        <AnnouncementBanner announcements={announcements} />
         <Card>
           <Text tone="secondary" style={styles.body}>
             {t('mobile.debate.loadFailed')}
@@ -69,6 +76,7 @@ export default function DebateScreen() {
   if (!current) {
     return (
       <Screen safeTop>
+        <AnnouncementBanner announcements={announcements} />
         <SwitcherPill onPress={openSwitcher} />
         <OneOffNotice />
         <View style={styles.emptyText}>
@@ -86,6 +94,7 @@ export default function DebateScreen() {
 
   return (
     <Screen safeTop gap={0}>
+      <AnnouncementBanner announcements={announcements} style={styles.banner} />
       <SwitcherPill onPress={openSwitcher} />
       <OneOffNotice style={styles.notice} />
       <Text accessibilityRole="header" weight="bold" style={styles.motion} testID="current-debate-motion">
@@ -336,6 +345,7 @@ const styles = StyleSheet.create({
   sparText: { flex: 1, gap: 2 },
   sparTitle: { color: '#ffffff', fontSize: 18, lineHeight: 23 },
   sparLine: { color: 'rgba(255,255,255,0.88)', fontSize: 14.5, lineHeight: 20 },
+  banner: { marginBottom: 14 },
   section: { fontSize: 18.5, lineHeight: 24, letterSpacing: -0.2, marginTop: 20, marginBottom: 9, marginHorizontal: 2 },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginRight: 2 },
   sectionTitle: { flex: 1, marginTop: 0, marginBottom: 0 },
