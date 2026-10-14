@@ -45,7 +45,11 @@ export function abortError(): Error {
 
 /** Settles with the read, or rejects as soon as the signal aborts. The read itself cannot be cancelled, only no longer waited for. */
 export function untilAborted<T>(read: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) return Promise.reject(abortError());
+  if (signal.aborted) {
+    // Nobody waits for the read any more, so its own failure must not go unhandled.
+    read.catch(() => {});
+    return Promise.reject(abortError());
+  }
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(abortError());
     signal.addEventListener('abort', onAbort, { once: true });
@@ -107,6 +111,7 @@ export async function postFunction<T>(
   signal?.addEventListener('abort', abortForCaller);
   if (signal?.aborted) controller.abort();
   try {
+    if (controller.signal.aborted) throw abortError();
     const token = await untilAborted(accessToken(), controller.signal);
     const json = JSON.stringify(body);
     if (utf8Length(json) > MAX_REQUEST_BODY_BYTES) throw new AIError('tooLarge', 'Request is too large');
