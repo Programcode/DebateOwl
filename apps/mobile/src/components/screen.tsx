@@ -2,22 +2,26 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HOME_MAX_WIDTH } from '@/lib/layout';
+
 /**
  * A tab's scrolling content. On iOS the native header and tab bar adjust the
- * insets automatically; `safeTop` is for screens without a header.
+ * insets automatically; `safeTop` is for screens without a header. `wide` is
+ * an iPad dashboard's width instead of the phone-width column.
  */
-export function Screen({ children, safeTop, gap }: { children: ReactNode; safeTop?: boolean; gap?: number }) {
+export function Screen({ children, safeTop, gap, wide }: { children: ReactNode; safeTop?: boolean; gap?: number; wide?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={[styles.content, safeTop && { paddingTop: insets.top + 12 }, gap !== undefined && { gap }]}>
+      contentContainerStyle={[styles.content, wide && styles.wide, safeTop && { paddingTop: insets.top + 12 }, gap !== undefined && { gap }]}>
       {children}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Content stays phone-width on iPad until the iPad layouts land.
+  // Tabs without an iPad layout keep a phone-width column on iPad.
   content: { paddingHorizontal: 20, paddingBottom: 32, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  wide: { paddingHorizontal: 36, paddingBottom: 48, maxWidth: HOME_MAX_WIDTH },
 });
