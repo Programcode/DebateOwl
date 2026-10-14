@@ -2619,6 +2619,10 @@
       "discardTitle": "¿Empezar un mapa nuevo?",
       "discardDesc": "Tu mapa sin guardar se sustituirá por el mapa inicial.",
       "startNew": "Empezar nuevo"
+    },
+    "permissions": {
+      "speechRecognition": "DebateLab convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",
+      "microphone": "DebateLab usa el micrófono mientras dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring."
     }
   }
 }

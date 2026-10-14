@@ -50,7 +50,9 @@
         "scripts/**/*.ts"
       ],
       "ignoreDependencies": [
-        "expo-updates"
+        "expo-updates",
+        "expo-speech-recognition",
+        "expo-widgets"
       ]
     }
   },
