@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { getInstallId, sessionStorage } from './device-storage';
+import { forgetPushOnSignOut } from './push';
 import { setSessionOwner } from './session-memory';
 import { supabase } from './supabase';
 import { sessionStorageKey } from './supabase-config';
@@ -143,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (verificationError) throw verificationError;
     },
     signOut: async () => {
+      // While the session still works, so the next person on this phone gets none of this account's notifications.
+      if (session) await forgetPushOnSignOut(session.user.id);
       // supabase-js loads the session before signing out. Offline with an
       // expired access token that refresh fails, and it returns the error
       // without removing the stored session. Signing out must still sign out

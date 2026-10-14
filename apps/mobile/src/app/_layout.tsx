@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
+import { refreshPush } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 import { interFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -32,7 +33,7 @@ export default function RootLayout() {
 function Root() {
   const [fontsLoaded, fontError] = useFonts(interFonts);
   const { session, loading, settled } = useAuth();
-  const { ready: settingsReady } = useSettings();
+  const { ready: settingsReady, language } = useSettings();
   const { scheme, colors } = useTheme();
   // Settings come from the device here, so the app opens in the account's language and theme.
   const ready = (fontsLoaded || fontError !== null) && !loading && settingsReady;
@@ -40,6 +41,15 @@ function Root() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // A phone that opted in registers again on launch and when the language changes (see refreshPush).
+  const userId = session?.user.id;
+  useEffect(() => {
+    if (!userId || !settingsReady) return;
+    refreshPush(userId, language).catch((cause: unknown) => {
+      console.warn('Could not refresh the push token:', cause instanceof Error ? cause.message : cause);
+    });
+  }, [userId, language, settingsReady]);
 
   if (!ready) return null;
 

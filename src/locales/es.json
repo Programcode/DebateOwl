@@ -2442,7 +2442,15 @@
     "you": {
       "usage": "{{used}} de {{limit}} usos de IA hoy",
       "loadFailed": "No se pudo cargar tu suscripción.",
-      "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo."
+      "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo.",
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Recibe una notificación en este teléfono cuando se puntúe una ronda de sparring.",
+        "blocked": "Las notificaciones de esta app están desactivadas en los Ajustes de iOS.",
+        "openSettings": "Abrir Ajustes",
+        "unavailable": "Esta versión de la app todavía no puede recibir notificaciones.",
+        "failed": "No se pudieron cambiar las notificaciones. Inténtalo de nuevo."
+      }
     },
     "deleteAccount": {
       "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."
