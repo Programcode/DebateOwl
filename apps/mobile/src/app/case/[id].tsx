@@ -71,6 +71,7 @@ export default function CaseScreen() {
   return (
     <DocumentScreen
       testID="case-document"
+      outline
       notice={doc.notice}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, caseToText(output)))} actions={actions} />}
       actions={

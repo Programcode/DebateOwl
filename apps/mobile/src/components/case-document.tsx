@@ -136,7 +136,7 @@ export function CaseDocument({
         </DocSection>
       ) : null}
 
-      <NumberedItems items={items} testID="case-arguments" />
+      <NumberedItems items={items} testID="case-arguments" outline />
 
       <DocSection title={t('generateResults.caseStructure')} description={t('generateResults.caseStructureDesc')}>
         <SubHeading>{t('generateResults.burdenOfProof')}</SubHeading>

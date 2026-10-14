@@ -72,6 +72,7 @@ export default function BrainstormResultScreen() {
   return (
     <DocumentScreen
       testID="brainstorm-document"
+      outline
       notice={doc.notice}
       header={<DocumentHeader backLabel={back} onShare={questionsOnly ? undefined : () => run(() => shareText(title, brainstormToText(output, t)))} actions={actions} />}
       // The website shows only the questions when the model needs more, with no export or discussion.
