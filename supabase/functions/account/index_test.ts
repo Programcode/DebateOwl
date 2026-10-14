@@ -26,6 +26,7 @@ function harness(overrides: Partial<AccountDeps> = {}) {
       return Promise.resolve({
         stripe_customer_ids: ["cus_1"],
         storage_objects: [{ bucket_id: "files", name: `${userId}/a.pdf` }],
+        app_store_subscription_active: false,
       });
     },
     stopBilling: (userId, customerIds) => {
@@ -67,7 +68,7 @@ Deno.test("delete removes only the caller's account, after billing and files", a
   const { calls, post } = harness();
   const response = await post({ action: "delete", confirmation: caller.email, userId: otherUserId });
   assertEquals(response.status, 200);
-  assertEquals(await response.json(), { deleted: true, canceledSubscriptions: 1 });
+  assertEquals(await response.json(), { deleted: true, canceledSubscriptions: 1, appStoreSubscriptionActive: false });
   assertEquals(calls, [
     `plan:${caller.id}`,
     `billing:${caller.id}:cus_1`,
@@ -75,6 +76,15 @@ Deno.test("delete removes only the caller's account, after billing and files", a
     `prepare:${caller.id}`,
     `delete:${caller.id}`,
   ]);
+});
+
+Deno.test("delete tells the app when an App Store subscription will keep billing", async () => {
+  const { post } = harness({
+    deletionPlan: () => Promise.resolve({ stripe_customer_ids: [], storage_objects: [], app_store_subscription_active: true }),
+  });
+  const response = await post({ action: "delete", confirmation: caller.email });
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).appStoreSubscriptionActive, true);
 });
 
 Deno.test("delete without the typed confirmation deletes nothing", async () => {

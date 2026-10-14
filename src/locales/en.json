@@ -441,6 +441,7 @@
     "system": "System",
     "subscription": "Subscription",
     "tierTrial": "Free Trial",
+    "tierBasic": "Basic",
     "tierPro": "Pro",
     "tierLegacyFree": "Legacy Free",
     "tierExpired": "Expired",
