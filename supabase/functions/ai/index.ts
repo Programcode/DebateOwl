@@ -70,6 +70,7 @@ import {
   getGlobalPrompt,
   log,
   narrowSparringDatabase,
+  sendPushAfterResponse,
   sparringSupabase,
   supabase,
   supabaseServiceKey,
@@ -713,6 +714,8 @@ export async function handleRequest(req: Request): Promise<Response> {
           onScoreSaved: () => {
             sparringScoreClaimed = false;
           },
+          notifyScored: (scorerId, sessionId) =>
+            sendPushAfterResponse([{ kind: "sparring_scored", userId: scorerId, sessionId }]),
         });
       case "crossfire":
         return await handleCrossfire(ctx, {
