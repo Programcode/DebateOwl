@@ -71,8 +71,8 @@ export default function FlowchartScreen() {
   const [menu, setMenu] = useState<'export' | null>(null);
   const [notice, setNoticeState] = useState('');
   const layout = useLayoutClass();
-  // The card docked in the iPad inspector, with the map it was opened on.
-  const [claim, setClaim] = useState<{ scope: string; map: string; node: string } | null>(null);
+  // The card docked in the iPad inspector, with the account and map it was opened on.
+  const [claim, setClaim] = useState<{ userId: string; scope: string; map: string; node: string } | null>(null);
 
   const live = useRef(true);
   const owner = useRef(userId);
@@ -146,13 +146,13 @@ export default function FlowchartScreen() {
   const openCard = (node: FlowNode) => {
     if (!scope || !open) return;
     if (layout !== 'phone') {
-      setClaim({ scope, map: open.draft.handle, node: node.id });
+      if (userId) setClaim({ userId, scope, map: open.draft.handle, node: node.id });
       return;
     }
     router.push({ pathname: '/flowchart/claim', params: { scope, map: open.draft.handle, node: node.id } });
   };
-  // The inspector shows only a card of the map on screen; another map or debate closes it.
-  const docked = layout !== 'phone' && claim && claim.scope === scope && claim.map === open?.draft.handle ? claim : null;
+  // The inspector shows only a card of the map on screen; another account, map or debate closes it.
+  const docked = layout !== 'phone' && claim && claim.userId === userId && claim.scope === scope && claim.map === open?.draft.handle ? claim : null;
 
   /** Runs a save or delete for the map on screen, as the account and map were when the student chose it. */
   const act = async (work: (forUser: string, at: { scope: string; key: string; draft: FlowchartDraft }) => Promise<void>) => {
