@@ -84,14 +84,39 @@ export function pickFailure(causes: unknown[]): unknown {
 }
 
 /**
- * Promise.all for the queries of one read. It waits for all of them, so a
- * refusal from one is thrown even when another got no answer first.
+ * Promise.all for the queries of one read. A server's refusal is thrown as
+ * soon as it arrives; a query that got no answer is held until the others
+ * settle, so a refusal from one of them still wins over it.
  */
-export async function readAll<T extends readonly unknown[] | []>(reads: T): Promise<{ -readonly [K in keyof T]: Awaited<T[K]> }> {
-  const results = await Promise.allSettled(reads);
-  const failures = results.flatMap((result) => (result.status === 'rejected' ? [result.reason as unknown] : []));
-  if (failures.length > 0) throw pickFailure(failures);
-  return results.map((result) => (result as PromiseFulfilledResult<unknown>).value) as { -readonly [K in keyof T]: Awaited<T[K]> };
+export function readAll<T extends readonly unknown[] | []>(reads: T): Promise<{ -readonly [K in keyof T]: Awaited<T[K]> }> {
+  return new Promise((resolve, reject) => {
+    const values: unknown[] = new Array(reads.length);
+    const unanswered: unknown[] = [];
+    let pending = reads.length;
+    const settle = () => {
+      pending -= 1;
+      if (pending > 0) return;
+      if (unanswered.length > 0) reject(unanswered[0]);
+      else resolve(values as { -readonly [K in keyof T]: Awaited<T[K]> });
+    };
+    if (pending === 0) {
+      resolve(values as { -readonly [K in keyof T]: Awaited<T[K]> });
+      return;
+    }
+    reads.forEach((read, i) => {
+      Promise.resolve(read).then(
+        (value) => {
+          values[i] = value;
+          settle();
+        },
+        (cause: unknown) => {
+          if (!isUnreachable(cause)) reject(cause);
+          else unanswered.push(cause);
+          settle();
+        },
+      );
+    });
+  });
 }
 
 const queue = createSerialQueue();

@@ -212,6 +212,14 @@ describe('which failures fall back', () => {
     supabase.results.push(unreachable, refused);
     await expect(cache.fetchDebates('user-a')).rejects.toThrow('JWT expired');
   });
+
+  it('throws a refusal at once instead of waiting for a query that never answers', async () => {
+    const cache = await load();
+    const refused = Promise.reject(cache.readFailed({ message: 'JWT expired' }, 401));
+    const outcome = cache.readAll([refused, new Promise<never>(() => {})]).catch((cause: unknown) => cause);
+    const first = await Promise.race([outcome, new Promise((resolve) => setTimeout(() => resolve('still waiting'), 50))]);
+    expect(first).toMatchObject({ message: 'JWT expired' });
+  });
 });
 
 describe('the saved-copies notice', () => {
