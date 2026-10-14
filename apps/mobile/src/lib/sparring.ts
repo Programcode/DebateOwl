@@ -14,6 +14,7 @@ import * as Crypto from 'expo-crypto';
 import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
+import { cachedRead, forgetCopy } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -87,8 +88,12 @@ export async function attachSparring(id: string, debateId: string, side: Sparrin
   if (error) throw new Error(error.message);
 }
 
-/** A saved, judged round; null when there is none or it does not check out. */
+/** A saved, judged round; null when there is none or it does not check out. Offline, the saved copy. */
 export async function fetchSparringRound(userId: string, id: string): Promise<SparringSession | null> {
+  return cachedRead(userId, 'sparring', id, () => loadSparringRound(userId, id));
+}
+
+async function loadSparringRound(userId: string, id: string): Promise<SparringSession | null> {
   const { data, error } = await supabase.from('sparring_sessions').select(SPARRING_SESSION_COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   return data ? parseSavedSparringRows([data])[0] ?? null : null;
@@ -106,6 +111,10 @@ export interface SparringRoundSummary {
  * null, newest first, as the website's history lists them.
  */
 export async function fetchSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {
+  return cachedRead(userId, 'sparring-rounds', `${debateId ?? 'one-off'}:${limit}`, () => loadSparringRounds(userId, debateId, limit));
+}
+
+async function loadSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {
   let query = supabase.from('sparring_sessions').select('id,motion,user_side,updated_at').eq('user_id', userId).eq('status', 'complete');
   query = debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null);
   const { data, error } = await query.order('updated_at', { ascending: false }).limit(limit);
@@ -121,6 +130,7 @@ export async function fetchSparringRounds(userId: string, debateId: string | nul
 export async function deleteSparringRound(userId: string, id: string): Promise<void> {
   const { error } = await supabase.from('sparring_sessions').delete().eq('user_id', userId).eq('id', id);
   if (error) throw new Error(error.message);
+  forgetCopy(userId, 'sparring', id);
 }
 
 /** A new round's id. The server takes it as the saved row's id, so it must be a UUID. */

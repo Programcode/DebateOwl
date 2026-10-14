@@ -33,6 +33,9 @@ const LIMITS = {
   flowchart: 40,
   chats: 20,
   chat: 40,
+  /** Judged Sparring rounds per debate, and each saved round. */
+  'sparring-rounds': 20,
+  sparring: 40,
 } as const;
 
 export type CacheGroup = keyof typeof LIMITS;
