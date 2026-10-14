@@ -2547,6 +2547,16 @@
     "crossfire": {
       "voiceLater": "Llegará con la versión de la app."
     },
+    "sparring": {
+      "chooseSide": "¿Qué postura defiendes?",
+      "turnOf": "Turno {{current}} de {{total}}, {{pressure}}",
+      "yourNext": "Después te toca: {{turn}}",
+      "interrupted": "La solicitud se detuvo al salir de la ronda. Vuelve a intentarlo para continuar.",
+      "resume": "Reanudar",
+      "replay": "Repasar",
+      "versus": "{{user}} vs. {{opponent}}",
+      "roundsFailed": "No se pudieron cargar tus rondas de sparring."
+    },
     "brainstorm": {
       "strengths": {
         "strong": "Fuerte",
