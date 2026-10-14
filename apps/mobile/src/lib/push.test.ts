@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Sent = {
-  kind: 'rpc' | 'delete';
   name: string;
-  args?: Record<string, unknown>;
-  filters: [string, unknown][];
+  args: Record<string, unknown>;
   headers: Record<string, string>;
   signal?: AbortSignal;
 };
@@ -19,14 +17,18 @@ const server = vi.hoisted(() => ({
 
 function builder(request: Sent) {
   const query = {
-    delete: () => query,
-    eq: (column: string, value: unknown) => (request.filters.push([column, value]), query),
     setHeader: (name: string, value: string) => ((request.headers[name] = value), query),
     abortSignal: (signal: AbortSignal) => ((request.signal = signal), query),
     then: <T>(onFulfilled: (value: { error: { message: string } | null }) => T, onRejected?: (cause: unknown) => T) => {
       server.sent.push(request);
-      if (request.signal?.aborted) return Promise.resolve({ error: { message: 'AbortError' } }).then(onFulfilled, onRejected);
-      return server.respond(request).then(onFulfilled, onRejected);
+      const aborted = { error: { message: 'AbortError' } };
+      if (request.signal?.aborted) return Promise.resolve(aborted).then(onFulfilled, onRejected);
+      // As with fetch, aborting ends the request for the app; the server may still act on it.
+      const answer = new Promise<{ error: { message: string } | null }>((resolve, reject) => {
+        request.signal?.addEventListener('abort', () => resolve(aborted), { once: true });
+        server.respond(request).then(resolve, reject);
+      });
+      return answer.then(onFulfilled, onRejected);
     },
   };
   return query;
@@ -35,8 +37,7 @@ function builder(request: Sent) {
 vi.mock('./supabase', () => ({
   supabase: {
     auth: { getSession: async () => ({ data: { session: server.session } }) },
-    rpc: (name: string, args: Record<string, unknown>) => builder({ kind: 'rpc', name, args, filters: [], headers: {} }),
-    from: (name: string) => builder({ kind: 'delete', name, filters: [], headers: {} }),
+    rpc: (name: string, args: Record<string, unknown>) => builder({ name, args, headers: {} }),
   },
 }));
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -47,6 +48,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 vi.mock('./device-storage', () => ({ getInstallId: async () => 'install-1' }));
+vi.mock('expo-crypto', () => ({ randomUUID: () => crypto.randomUUID() }));
 vi.mock('expo', () => ({ isRunningInExpoGo: () => false }));
 vi.mock('expo/fetch', () => ({ fetch: vi.fn() }));
 vi.mock('expo-constants', () => ({ default: { easConfig: { projectId: 'project' }, expoConfig: null } }));
@@ -98,17 +100,17 @@ describe('push token removal on sign-out', () => {
     registration.resolve({ error: null });
     await expect(enabled).resolves.toBe('on');
     await vi.waitFor(() => expect(server.storage.has(KEY)).toBe(false));
-    const removal = server.sent.find((request) => request.kind === 'delete');
+    const registered = server.sent.find((request) => request.name === 'register_push_token');
+    const removal = server.sent.find((request) => request.name === 'release_push_token');
     expect(removal).toMatchObject({
-      name: 'push_tokens',
-      filters: [['user_id', 'user-a'], ['installation_id', 'install-1']],
+      args: { p_token: TOKEN, p_installation_id: 'install-1', p_registration: registered?.args.p_registration },
       headers: { Authorization: 'Bearer token-a' },
     });
     expect(removal?.signal?.aborted).toBe(false);
   });
 
   it('keeps the registration when the removal fails, and the next account releases the token', async () => {
-    server.storage.set(KEY, JSON.stringify({ userId: 'user-a', token: TOKEN, confirmed: true }));
+    server.storage.set(KEY, JSON.stringify({ userId: 'user-a', token: TOKEN, id: 'registration-a', confirmed: true }));
     server.respond = () => Promise.resolve({ error: { message: 'offline' } });
     await forgetPushOnSignOut('user-a', 'token-a');
     expect(server.storage.has(KEY)).toBe(true);
@@ -118,10 +120,49 @@ describe('push token removal on sign-out', () => {
     await refreshPush('user-b', 'en');
     expect(server.sent.at(-1)).toMatchObject({
       name: 'release_push_token',
-      args: { p_token: TOKEN },
+      args: { p_token: TOKEN, p_registration: 'registration-a' },
       headers: { Authorization: 'Bearer token-b' },
     });
     expect(server.storage.has(KEY)).toBe(false);
+  });
+
+  it('keeps a registration that commits after sign-out removed the rows from reaching the next account', async () => {
+    // A small model of the database: rows, and the registrations a release withdrew.
+    const db = { rows: [] as { token: unknown; userId: string; registration: unknown }[], withdrawn: new Set<unknown>() };
+    const callers: Record<string, string> = { 'Bearer token-a': 'user-a', 'Bearer token-b': 'user-b' };
+    const apply = (request: Sent) => {
+      const caller = callers[request.headers.Authorization];
+      const args = request.args;
+      if (request.name === 'register_push_token') {
+        if (db.withdrawn.has(args.p_registration)) return { error: { message: 'withdrawn' } };
+        db.rows = db.rows.filter((row) => row.token !== args.p_token);
+        db.rows.push({ token: args.p_token, userId: caller, registration: args.p_registration });
+      } else if (request.name === 'release_push_token') {
+        if (args.p_registration) db.withdrawn.add(args.p_registration);
+        db.rows = db.rows.filter((row) => row.token !== args.p_token && row.registration !== args.p_registration);
+      }
+      return { error: null };
+    };
+    // The registration reaches the database but commits only when the test says so.
+    const commit = deferred();
+    server.respond = (request) =>
+      request.name === 'register_push_token' ? commit.promise.then(() => apply(request)) : Promise.resolve(apply(request));
+
+    const enabled = enablePush('user-a', 'en');
+    await vi.waitFor(() => expect(server.sent.map((request) => request.name)).toContain('register_push_token'));
+    // The app gives up on it; cancelling the request does not cancel the statement.
+    const failed = expect(enabled).rejects.toThrow();
+    await vi.advanceTimersByTimeAsync(20_000);
+    await failed;
+
+    await forgetPushOnSignOut('user-a', 'token-a');
+    server.session = null;
+    commit.resolve({ error: null });
+    await vi.advanceTimersByTimeAsync(0);
+
+    server.session = ACCOUNT_B;
+    await refreshPush('user-b', 'en');
+    expect(db.rows).toEqual([]);
   });
 
   it('removes a first registration whose answer was lost', async () => {
@@ -132,7 +173,7 @@ describe('push token removal on sign-out', () => {
 
     // The server may have stored the row before the answer was lost.
     await forgetPushOnSignOut('user-a', 'token-a');
-    expect(server.sent.at(-1)).toMatchObject({ kind: 'delete', headers: { Authorization: 'Bearer token-a' } });
+    expect(server.sent.at(-1)).toMatchObject({ name: 'release_push_token', headers: { Authorization: 'Bearer token-a' } });
     expect(server.storage.has(KEY)).toBe(false);
   });
 });
