@@ -1,3 +1,4 @@
+import { cachedRead } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -76,8 +77,12 @@ async function setCurrentPointer(userId: string, debateId: string) {
  * the real boundary; the filter keeps a wrong session from mixing accounts.
  */
 
-/** Every debate, newest activity first, and the current one when it is still in the list. */
-export async function fetchDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
+/** Every debate, newest activity first, and the current one when it is still in the list. Offline, the saved copy. */
+export function fetchDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
+  return cachedRead(userId, 'debates', 'all', () => loadDebates(userId));
+}
+
+async function loadDebates(userId: string): Promise<{ debates: Debate[]; currentId: string | null }> {
   const [debatesResult, currentResult] = await Promise.all([
     supabase.from('debates').select(DEBATE_COLUMNS).eq('user_id', userId).order('last_activity_at', { ascending: false }),
     supabase.from('current_debates').select('debate_id').eq('user_id', userId).maybeSingle(),
@@ -169,7 +174,11 @@ async function countRows(userId: string, table: string, debateId: string, sides?
 const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
 
 /** Sources, saved results per side and Sparring rounds in one debate. One-off work has no debate and never counts. */
-export async function fetchDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
+export function fetchDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
+  return cachedRead(userId, 'debate-lists', `counts:${debateId}`, () => loadDebateCounts(userId, debateId));
+}
+
+async function loadDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
   const [sources, rounds, pro, con] = await Promise.all([
     countRows(userId, 'sources', debateId),
     countRows(userId, 'sparring_sessions', debateId),
@@ -180,7 +189,11 @@ export async function fetchDebateCounts(userId: string, debateId: string): Promi
 }
 
 /** Library sources per debate, for the switcher's list. */
-export async function fetchSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
+export function fetchSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
+  return cachedRead(userId, 'debate-lists', `source-counts:${debateIds.join(',')}`, () => loadSourceCounts(userId, debateIds));
+}
+
+async function loadSourceCounts(userId: string, debateIds: string[]): Promise<Record<string, number>> {
   const counts = await Promise.all(debateIds.map((id) => countRows(userId, 'sources', id)));
   return Object.fromEntries(debateIds.map((id, index) => [id, counts[index]]));
 }
@@ -212,12 +225,11 @@ async function fetchResultRows(userId: string, debateId: string, table: ResultTa
 const newestFirst = (lists: DebateItem[][], limit: number) => lists.flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
 
 /** The newest saved results and rounds for one side of a debate, like the website's side lists. */
-export async function fetchRecentWork(
-  userId: string,
-  debateId: string,
-  side: DebateSide,
-  limit: number,
-): Promise<DebateItem[]> {
+export function fetchRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `recent:${debateId}:${side}:${limit}`, () => loadRecentWork(userId, debateId, side, limit));
+}
+
+async function loadRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
   const lists = await Promise.all([
     ...RESULT_TABLES.map((table) => fetchResultRows(userId, debateId, table, SIDES_FOR[side], limit)),
     (async () => {
@@ -246,7 +258,11 @@ export async function fetchRecentWork(
 const PREPARE_TABLES = ['cases', 'brainstorms', 'factoids', 'flowcharts'] as const satisfies readonly ResultTable[];
 
 /** A debate's saved Prepare results for both sides, newest first, for the Prepare tab. */
-export async function fetchPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
+export function fetchPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `prepare:${debateId}:${limit}`, () => loadPrepareWork(userId, debateId, limit));
+}
+
+async function loadPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
   const lists = await Promise.all(PREPARE_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
   return newestFirst(lists, limit);
 }

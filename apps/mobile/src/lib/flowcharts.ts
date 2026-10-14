@@ -1,5 +1,6 @@
 import { readFlowchart, type FlowchartDocument } from '@debatelab/core/flowchart';
 
+import { cachedRead, forgetCopy } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -44,7 +45,11 @@ function fromRow(row: FlowchartRow): SavedFlowchart {
 }
 
 /** The maps saved in one debate, or one-off maps for null, newest first, as the website's saved list shows them. */
-export async function fetchFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
+export function fetchFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
+  return cachedRead(userId, 'flowcharts', debateId ?? 'one-off', () => loadFlowchartList(userId, debateId));
+}
+
+async function loadFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
   const query = supabase.from('flowcharts').select('id,title,created_at').eq('user_id', userId);
   const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null)).order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -55,7 +60,11 @@ export async function fetchFlowchartList(userId: string, debateId: string | null
   }));
 }
 
-export async function fetchFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
+export function fetchFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
+  return cachedRead(userId, 'flowchart', id, () => loadFlowchart(userId, id));
+}
+
+async function loadFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
   const { data, error } = await supabase.from('flowcharts').select(COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   return data ? fromRow(data as FlowchartRow) : null;
@@ -87,4 +96,5 @@ export async function updateFlowchart(userId: string, id: string, doc: Flowchart
 export async function deleteFlowchart(userId: string, id: string): Promise<void> {
   const { error } = await supabase.from('flowcharts').delete().eq('user_id', userId).eq('id', id);
   if (error) throw new Error(error.message);
+  forgetCopy(userId, 'flowchart', id);
 }

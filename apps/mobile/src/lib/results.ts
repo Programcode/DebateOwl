@@ -18,6 +18,7 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 
 import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
+import { cachedRead, forgetCopy } from './offline-cache';
 import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -247,7 +248,12 @@ interface ResultRow {
   output: unknown;
 }
 
-export async function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
+/** A saved result; offline, the saved copy. */
+export function fetchResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
+  return cachedRead(userId, `result:${kind}`, id, () => loadResult(userId, kind, id));
+}
+
+async function loadResult<K extends ResultKind>(userId: string, kind: K, id: string): Promise<SavedResult<K> | null> {
   const { data, error } = await supabase
     .from(TABLES[kind])
     .select('id,title,side,debate_id,created_at,input,output')
@@ -272,6 +278,7 @@ export async function fetchResult<K extends ResultKind>(userId: string, kind: K,
 export async function deleteResult(userId: string, kind: ResultKind, id: string): Promise<void> {
   const { error } = await supabase.from(TABLES[kind]).delete().eq('user_id', userId).eq('id', id);
   if (error) throw new Error(error.message);
+  forgetCopy(userId, `result:${kind}`, id);
 }
 
 /** The guard the website's results pages use: an old or broken row shows a notice instead of a crash. */

@@ -3,6 +3,7 @@ import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/co
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
+import { cachedRead, forgetCopy } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -61,8 +62,12 @@ function fromRow(row: SourceRow): Source {
  * the real boundary; the filter keeps a wrong session from mixing accounts.
  */
 
-/** One debate's sources, newest first, as the website's Library lists them by default. */
-export async function fetchSources(userId: string, debateId: string): Promise<Source[]> {
+/** One debate's sources, newest first, as the website's Library lists them by default. Offline, the saved copy. */
+export function fetchSources(userId: string, debateId: string): Promise<Source[]> {
+  return cachedRead(userId, 'sources', debateId, () => loadSources(userId, debateId));
+}
+
+async function loadSources(userId: string, debateId: string): Promise<Source[]> {
   const { data, error } = await supabase
     .from('sources')
     .select(SOURCE_COLUMNS)
@@ -73,7 +78,11 @@ export async function fetchSources(userId: string, debateId: string): Promise<So
   return ((data ?? []) as SourceRow[]).map(fromRow);
 }
 
-export async function fetchSource(userId: string, id: string): Promise<Source | null> {
+export function fetchSource(userId: string, id: string): Promise<Source | null> {
+  return cachedRead(userId, 'source', id, () => loadSource(userId, id));
+}
+
+async function loadSource(userId: string, id: string): Promise<Source | null> {
   const { data, error } = await supabase
     .from('sources')
     .select(SOURCE_COLUMNS)
@@ -144,6 +153,7 @@ export async function removeSource(userId: string, id: string, debateId?: string
   const query = supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
   const { error } = await (debateId ? query.eq('debate_id', debateId) : query);
   if (error) throw new Error(error.message);
+  forgetCopy(userId, 'source', id);
   notifySourcesChanged();
 }
 

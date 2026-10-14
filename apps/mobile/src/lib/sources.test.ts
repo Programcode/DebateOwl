@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 const supabase = vi.hoisted(() => ({ from: vi.fn() }));
 
 vi.mock('./supabase', () => ({ supabase }));
+// Reads go straight to the network here; offline-cache.test.ts covers the saved copies.
+vi.mock('./offline-cache', () => ({ cachedRead: (_user: string, _group: string, _key: string, load: () => Promise<unknown>) => load(), forgetCopy: vi.fn() }));
 
 import { applySourceAssessments } from './sources';
 

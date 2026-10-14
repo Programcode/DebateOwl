@@ -1,5 +1,6 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 
+import { cachedRead } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -54,7 +55,11 @@ interface MessageRow {
  */
 
 /** Chats in a debate, or the unsorted ones in one-off mode, newest first, as the website's saved chats list. */
-export async function fetchChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
+export function fetchChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
+  return cachedRead(userId, 'chats', debateId ?? 'one-off', () => loadChats(userId, debateId));
+}
+
+async function loadChats(userId: string, debateId: string | null): Promise<ChatSummary[]> {
   const query = supabase
     .from('chats')
     .select('id,title,created_at,messages(count)')
@@ -70,7 +75,11 @@ export async function fetchChats(userId: string, debateId: string | null): Promi
   }));
 }
 
-export async function fetchChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
+export function fetchChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
+  return cachedRead(userId, 'chat', chatId, () => loadChat(userId, chatId));
+}
+
+async function loadChat(userId: string, chatId: string): Promise<{ debateId: string | null; messages: ChatMessage[] }> {
   const [chat, messages] = await Promise.all([
     supabase.from('chats').select('debate_id').eq('user_id', userId).eq('id', chatId).single(),
     supabase.from('messages').select('id,role,content,output,created_at').eq('chat_id', chatId).order('created_at', { ascending: true }),
