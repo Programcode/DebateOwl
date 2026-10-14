@@ -81,6 +81,8 @@ function Root() {
             <Stack.Screen name="source/[id]" options={sheet} />
             {/* Full screen above the tabs, as in mock 07. */}
             <Stack.Screen name="ask" />
+            {/* History, full screen above the tabs like the documents it opens. */}
+            <Stack.Screen name="history" />
             {/* Generate, Attack, Brainstorm, Factoids and their documents, full screen above the tabs, as in mock 03. */}
             <Stack.Screen name="generate" />
             <Stack.Screen name="case/[id]" />

@@ -53,6 +53,25 @@ export default function YouScreen() {
 
       <SubscriptionCard userId={session?.user.id} />
 
+      <Card style={styles.list}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/history', params: { from: 'you' } })}
+          testID="you-history"
+          style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+          <IconTile name="history" />
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={styles.rowTitle}>
+              {t('nav.history')}
+            </Text>
+            <Text tone="faint" style={styles.small}>
+              {t('mobile.you.historyDesc')}
+            </Text>
+          </View>
+          <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+        </Pressable>
+      </Card>
+
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('settings.globalSettings')}
       </Text>

@@ -199,9 +199,15 @@ function DebateDetails({ debateId }: { debateId: string }) {
         ))}
       </View>
 
-      <Text accessibilityRole="header" weight="bold" style={styles.section}>
-        {t('mobile.debate.pickUp')}
-      </Text>
+      <View style={styles.sectionRow}>
+        <Text accessibilityRole="header" weight="bold" style={[styles.section, styles.sectionTitle]}>
+          {t('mobile.debate.pickUp')}
+        </Text>
+        <TextButton
+          label={t('mobile.debate.seeAll')}
+          onPress={() => router.push({ pathname: '/history', params: { from: 'debate' } })}
+        />
+      </View>
       {failed ? (
         <Card>
           <Text tone="secondary" style={styles.body}>
@@ -331,6 +337,8 @@ const styles = StyleSheet.create({
   sparTitle: { color: '#ffffff', fontSize: 18, lineHeight: 23 },
   sparLine: { color: 'rgba(255,255,255,0.88)', fontSize: 14.5, lineHeight: 20 },
   section: { fontSize: 18.5, lineHeight: 24, letterSpacing: -0.2, marginTop: 20, marginBottom: 9, marginHorizontal: 2 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginRight: 2 },
+  sectionTitle: { flex: 1, marginTop: 0, marginBottom: 0 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: {
     flexGrow: 1,

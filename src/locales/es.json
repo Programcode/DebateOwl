@@ -2422,7 +2422,8 @@
       "pickUp": "Continúa donde lo dejaste",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "No se pudo cargar tu debate.",
-      "viewAria": "Mostrar la preparación de"
+      "viewAria": "Mostrar la preparación de",
+      "seeAll": "Ver todo"
     },
     "common": {
       "done": "Listo"
@@ -2442,7 +2443,8 @@
     "you": {
       "usage": "{{used}} de {{limit}} usos de IA hoy",
       "loadFailed": "No se pudo cargar tu suscripción.",
-      "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo."
+      "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo.",
+      "historyDesc": "Todo lo que guardaste, por debate"
     },
     "deleteAccount": {
       "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."
@@ -2619,6 +2621,9 @@
       "discardTitle": "¿Empezar un mapa nuevo?",
       "discardDesc": "Tu mapa sin guardar se sustituirá por el mapa inicial.",
       "startNew": "Empezar nuevo"
+    },
+    "history": {
+      "loadFailed": "No se pudo cargar tu historial."
     }
   }
 }

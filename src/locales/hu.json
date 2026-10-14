@@ -2422,7 +2422,8 @@
       "pickUp": "Folytasd, ahol abbahagytad",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Nem sikerült betölteni a vitát.",
-      "viewAria": "Felkészülés megjelenítése"
+      "viewAria": "Felkészülés megjelenítése",
+      "seeAll": "Összes"
     },
     "common": {
       "done": "Kész"
@@ -2442,7 +2443,8 @@
     "you": {
       "usage": "Ma {{used}} / {{limit}} MI-használat",
       "loadFailed": "Nem sikerült betölteni az előfizetésedet.",
-      "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra."
+      "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra.",
+      "historyDesc": "Minden mentett munkád, vitánként"
     },
     "deleteAccount": {
       "failedHint": "A fiókod megmaradt. Ellenőrizd a kapcsolatot, és próbáld újra."
@@ -2619,6 +2621,9 @@
       "discardTitle": "Új térképet kezdesz?",
       "discardDesc": "A mentetlen térképed helyére a kezdő térkép kerül.",
       "startNew": "Új kezdése"
+    },
+    "history": {
+      "loadFailed": "Nem sikerült betölteni az előzményeidet."
     }
   }
 }

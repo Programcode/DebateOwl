@@ -50,7 +50,7 @@ const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
 export default function AskScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const { prompt, chat: resumeChatId } = useLocalSearchParams<{ prompt?: string; chat?: string }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
@@ -317,6 +317,16 @@ export default function AskScreen() {
       if (owner === conversation.current) setOpening(false);
     }
   };
+
+  // A chat picked in History opens here, as the website's Resume loads it into Ask. Once per opening.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current || !resumeChatId || !userId) return;
+    resumed.current = true;
+    void openChat(resumeChatId);
+    // openChat reads refs and state setters; it runs once per opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeChatId, userId]);
 
   const subtitle = oneOff ? t('debate.oneOffActive') : current?.motion ?? '';
   const busy = loading || opening;

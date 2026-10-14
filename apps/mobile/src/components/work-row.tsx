@@ -22,8 +22,8 @@ export const KIND_ICONS: Record<DebateItemKind, IconName> = {
   sparring: 'swords',
 };
 
-/** The tab a saved result's document goes back to. */
-export type OpenedFrom = 'debate' | 'prepare' | 'practice';
+/** The tab, or History, a saved result's document goes back to. */
+export type OpenedFrom = 'debate' | 'prepare' | 'practice' | 'history';
 
 /**
  * Where a saved item opens. Cases, attacks, brainstorms and factoids open

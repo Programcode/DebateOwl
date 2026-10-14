@@ -2422,7 +2422,8 @@
       "pickUp": "Pick up where you left off",
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Could not load your debate.",
-      "viewAria": "Show preparation for"
+      "viewAria": "Show preparation for",
+      "seeAll": "See all"
     },
     "common": {
       "done": "Done"
@@ -2442,7 +2443,8 @@
     "you": {
       "usage": "{{used}} of {{limit}} AI uses today",
       "loadFailed": "Could not load your subscription.",
-      "saveFailed": "Could not save your settings. Try again."
+      "saveFailed": "Could not save your settings. Try again.",
+      "historyDesc": "Everything you saved, by debate"
     },
     "deleteAccount": {
       "failedHint": "Your account is still here. Check your connection and try again."
@@ -2619,6 +2621,9 @@
       "discardTitle": "Start a new map?",
       "discardDesc": "Your unsaved map will be replaced by the starter map.",
       "startNew": "Start new"
+    },
+    "history": {
+      "loadFailed": "Could not load your history."
     }
   }
 }
