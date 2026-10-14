@@ -1111,6 +1111,8 @@ async function shootHistory(context: BrowserContext, prefix: string, language: s
   await shoot(page, `${prefix}-history`);
   await page.getByTestId('history-tab-chats').click();
   await shoot(page, `${prefix}-history-chats`);
+  await page.getByTestId('history-tab-sparring').click();
+  await shoot(page, `${prefix}-history-sparring`);
 
   await page.getByTestId('history-scope').click();
   const menu = page.getByTestId('history-scope-menu');
@@ -1431,7 +1433,7 @@ async function main() {
           }
           if (wants('history')) {
             await shootHistory(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'history'));
-            shots += 6;
+            shots += 7;
           }
           if (wants('announcements')) {
             await shootAnnouncements(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'announcements'));

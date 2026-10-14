@@ -32,7 +32,32 @@ import {
 import { keepIfSame } from '@/lib/keep-if-same';
 import { suggestDebate } from '@/lib/motion';
 import { deleteResult } from '@/lib/results';
+import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
 import { useTheme } from '@/theme/use-theme';
+
+/** What the History lists delete, with the website's confirmation and failure copy. */
+const DELETIONS: Record<'case' | 'sparring', { tab: HistoryTab; title: string; desc: string; failed: string; label: string; run: (userId: string, id: string) => Promise<void> }> = {
+  case: {
+    tab: 'cases',
+    title: 'historyPage.deleteCaseTitle',
+    desc: 'historyPage.deleteCaseDesc',
+    failed: 'historyPage.deleteFailed',
+    label: 'historyPage.deleteCaseLabel',
+    run: (userId, id) => deleteResult(userId, 'case', id),
+  },
+  sparring: {
+    tab: 'sparring',
+    title: 'historyPage.deleteSparringTitle',
+    desc: 'historyPage.deleteSparringDesc',
+    failed: 'historyPage.sparringDeleteFailed',
+    label: 'historyPage.deleteSparringAria',
+    run: async (userId, id) => {
+      await deleteSparringRound(userId, id);
+      // The finished round on the Sparring screen is this one; another round, finished or not, stays.
+      if (sparringDraft.get()?.id === id) sparringDraft.set(null);
+    },
+  },
+};
 
 /** The History scope for work that belongs to no debate, as the website's OUTSIDE_DEBATES. */
 const OUTSIDE = 'outside';
@@ -47,21 +72,19 @@ const EMPTY: Record<HistoryTab, { title: string; desc: string; action: string; h
   attacks: { title: 'historyPage.emptyAttacks', desc: 'historyPage.emptyAttacksDesc', action: 'historyPage.attackCase', href: { pathname: '/attack', params: { from: 'history' } } },
   brainstorms: { title: 'historyPage.emptyBrainstorms', desc: 'historyPage.emptyBrainstormsDesc', action: 'historyPage.brainstormIdeas', href: { pathname: '/brainstorm', params: { from: 'history' } } },
   factoids: { title: 'historyPage.emptyFactoids', desc: 'historyPage.emptyFactoidsDesc', action: 'historyPage.findEvidence', href: { pathname: '/factoids', params: { from: 'history' } } },
-  // Sparring is not in the app yet (PR 5b); the Practice tab is where it will start.
-  sparring: { title: 'historyPage.emptySparring', desc: 'historyPage.emptySparringDesc', action: 'historyPage.startSparring', href: '/practice' },
+  sparring: { title: 'historyPage.emptySparring', desc: 'historyPage.emptySparringDesc', action: 'historyPage.startSparring', href: { pathname: '/sparring', params: { from: 'history' } } },
 };
 
 /**
  * Where a History row opens, or null when the app cannot open it. Chats load
- * back into Ask, as the website's Resume does. The website cannot reopen a
+ * back into Ask, as the website's Resume does, and a Sparring round opens its
+ * scorecard, as the website's Load does. The website cannot reopen a
  * Crossfire round, so neither can the app.
- * TODO(PR 5b): open and delete Sparring rounds once Sparring is in the app.
  */
 function historyHref(item: HistoryItem): Href | null {
   switch (item.kind) {
     case 'chat':
       return { pathname: '/ask', params: { chat: item.id } };
-    case 'sparring':
     case 'crossfire':
       return null;
     default:
@@ -138,28 +161,31 @@ export default function HistoryScreen() {
     ? t('debate.outsideDebates')
     : `${scope === current?.id ? `${t('nav.currentDebate')}: ` : ''}${scopeDebate?.motion ?? ''}`;
 
+  // The website's History deletes cases and Sparring rounds, each after its own confirmation.
   const remove = async (item: HistoryItem): Promise<boolean> => {
     const forUser = owner.current;
-    if (!forUser || item.kind !== 'case') return false;
+    const deletion = item.kind === 'case' || item.kind === 'sparring' ? DELETIONS[item.kind] : null;
+    if (!forUser || !deletion) return false;
     const confirmed = await confirmDestructive({
-      title: t('historyPage.deleteCaseTitle'),
-      message: t('historyPage.deleteCaseDesc'),
+      title: t(deletion.title),
+      message: t(deletion.desc),
       confirm: t('common.delete'),
       cancel: t('common.cancel'),
     });
     if (!confirmed || owner.current !== forUser) return false;
     try {
-      await deleteResult(forUser, 'case', item.id);
+      await deletion.run(forUser, item.id);
     } catch (cause) {
-      console.warn('Could not delete the case:', cause instanceof Error ? cause.message : cause);
-      if (live.current && owner.current === forUser) showNotice(t('historyPage.deleteFailed'));
+      console.warn(`Could not delete the ${item.kind}:`, cause instanceof Error ? cause.message : cause);
+      if (live.current && owner.current === forUser) showNotice(t(deletion.failed));
       return false;
     }
     if (!live.current || owner.current !== forUser) return true;
     // Any load still running read the list before this delete.
     loads.current += 1;
+    const list = deletion.tab;
     setLoaded((previous) => previous?.kind === 'debate'
-      ? { ...previous, lists: { ...previous.lists, cases: previous.lists.cases.filter((entry) => entry.id !== item.id) } }
+      ? { ...previous, lists: { ...previous.lists, [list]: previous.lists[list].filter((entry) => entry.id !== item.id) } }
       : previous);
     return true;
   };
@@ -282,8 +308,7 @@ function TabList({ tab, items, onDelete }: { tab: HistoryTab; items: HistoryItem
             item={item}
             first={index === 0}
             onPress={href ? () => router.push(href) : undefined}
-            // The website deletes cases and Sparring rounds here; rounds wait for Sparring in the app.
-            onDelete={item.kind === 'case' ? () => onDelete(item) : undefined}
+            onDelete={item.kind === 'case' || item.kind === 'sparring' ? () => onDelete(item) : undefined}
           />
         );
       })}
@@ -306,7 +331,7 @@ function itemMeta(t: ReturnType<typeof useTranslation>['t'], item: HistoryItem |
   return [t('mobile.debate.itemMeta', { kind, when }), ...parts].join(' · ');
 }
 
-/** One saved result. Tapping opens it where the app can; a case swipes left to delete, with the website's confirmation. */
+/** One saved result. Tapping opens it where the app can; a case or a Sparring round swipes left to delete, with the website's confirmation. */
 function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; first: boolean; onPress?: () => void; onDelete?: () => Promise<boolean> }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -355,7 +380,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       renderRightActions={() => (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={t('historyPage.deleteCaseLabel', { title })}
+          accessibilityLabel={item.kind === 'sparring' ? t(DELETIONS.sparring.label, { motion: title }) : t(DELETIONS.case.label, { title })}
           onPress={() => void remove()}
           style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
           <Icon name="trash" color="#ffffff" size={20} />
