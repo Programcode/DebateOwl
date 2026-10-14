@@ -24,7 +24,7 @@ export default function DeleteDataSheet() {
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuth();
-  const { refresh, setOneOff } = useDebates();
+  const { refresh, forgetDebates } = useDebates();
   const userId = session?.user.id ?? null;
   const email = session?.user.email;
   const [confirmation, setConfirmation] = useState('');
@@ -59,9 +59,10 @@ export default function DeleteDataSheet() {
       return;
     }
     if (owner.current !== forUser) return;
-    // As the website clears its stores: this session's results and drafts, one-off mode, and the debates, now gone.
+    // As the website clears its stores: this session's results and drafts, one-off mode, and the debates, now
+    // gone. They are cleared here first, so a reload that fails leaves nothing deleted on screen or targeted.
     forgetSessionMemory();
-    setOneOff(false);
+    forgetDebates(forUser);
     void refresh();
     showNotice(t('settings.deleteSuccess'), t('settings.deleteSuccessDesc'));
     if (live.current) router.back();

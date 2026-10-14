@@ -26,6 +26,8 @@ type DebateContextValue = {
   create: (input: { motion: string; settings: DebateSettings }) => Promise<Debate>;
   switchTo: (id: string) => Promise<void>;
   setOneOff: (oneOff: boolean) => void;
+  /** After Delete all my data: drops this account's debates and Current Debate here, whether or not a reload works. */
+  forgetDebates: (userId: string) => void;
 };
 
 const DebateContext = createContext<DebateContextValue | null>(null);
@@ -120,6 +122,15 @@ export function DebateProvider({ children }: { children: ReactNode }) {
         setOneOff(false);
       },
       setOneOff,
+      forgetDebates: (forUser) => {
+        if (owner.current !== forUser) return;
+        // A load that started before the delete must not bring the deleted debates back.
+        writes.current += 1;
+        setDebates([]);
+        setCurrentId(null);
+        setOneOff(false);
+        setStatus('ready');
+      },
     };
   }, [status, debates, currentId, oneOff, refresh]);
 
