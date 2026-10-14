@@ -9,9 +9,11 @@ import {
   canUseProModels,
   featureConfigsWith,
   fetchFeatureConfig,
+  fetchFeatureSettings,
   type FeatureConfig,
   type FeatureConfigChange,
 } from './feature-config';
+import { readFeatureConfigAfterWrites } from './feature-config-read';
 import i18n, { deviceLanguage } from './i18n';
 import { createSerialQueue } from './serial-queue';
 import { supabase } from './supabase';
@@ -35,7 +37,7 @@ type SettingsContextValue = Settings & {
   setTheme: (theme: ThemePreference) => Promise<void>;
   /** Saves one tool's model or reasoning to feature_configs, in order with every other settings write. */
   setFeatureConfig: (feature: FeatureTab, change: FeatureConfigChange) => Promise<void>;
-  /** A tool's saved config, read after every settings write made before it, so a tool runs with the model just picked. */
+  /** A tool's config, read after every settings write made before it, so a tool runs with the model just picked. */
   readFeatureConfig: (userId: string, feature: FeatureTab) => Promise<FeatureConfig>;
 };
 
@@ -73,7 +75,7 @@ function parseSettings(value: unknown): Settings | null {
 
 const cacheKey = (userId: string) => `debatelab.settings.${userId}`;
 
-/** How long a tool waits for earlier settings writes before reading its model anyway. */
+/** How long a tool waits for earlier settings writes before reading its model anyway, with the choice still being saved on top. */
 const READ_WAIT_MS = 5000;
 
 function isEmptyObject(value: unknown): boolean {
@@ -180,6 +182,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const versions = useRef<Record<SettingKey, number>>({ language: 0, outputLanguage: 0, theme: 0 });
   // Whether the row's feature_configs is filled in; null until a load or save tells.
   const configsSaved = useRef<boolean | null>(null);
+  // Per tool and field, the model or reasoning still being saved, so a tool
+  // that stops waiting for a slow save still runs with it. Each entry is
+  // dropped when its save settles, unless a later save of that field replaced it.
+  const pendingConfigs = useRef(new Map<string, { feature: FeatureTab; change: FeatureConfigChange; seq: number }>());
+  const pendingSeq = useRef(0);
   // Saves write one at a time in the order they were made, so the last choice
   // is the last write even when an earlier save's Pro-access check is slower.
   const [writes] = useState(createSerialQueue);
@@ -202,6 +209,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     owner.current = userId;
     const gen = ++generation.current;
     configsSaved.current = null;
+    pendingConfigs.current.clear();
     if (!userId) {
       apply({ ...SIGNED_OUT, language: deviceLanguage() }, null, gen);
       confirmed.current = { ...latest.current };
@@ -277,32 +285,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const forUser = owner.current;
     if (!forUser) throw new Error('Sign in to choose a model');
     const gen = generation.current;
-    await writes(async () => {
-      if (generation.current !== gen) return;
-      await writeFeatureConfig(forUser, feature, change);
-      if (generation.current !== gen) return;
-      configsSaved.current = true;
+    const seq = ++pendingSeq.current;
+    const fields = (Object.keys(change) as (keyof FeatureConfigChange)[]).filter((field) => change[field] !== undefined);
+    const keys = fields.map((field) => {
+      const key = `${feature}.${field}`;
+      pendingConfigs.current.set(key, { feature, change: { [field]: change[field] }, seq });
+      return key;
     });
+    try {
+      await writes(async () => {
+        if (generation.current !== gen) return;
+        await writeFeatureConfig(forUser, feature, change);
+        if (generation.current !== gen) return;
+        configsSaved.current = true;
+      });
+    } finally {
+      if (generation.current === gen) {
+        for (const key of keys) if (pendingConfigs.current.get(key)?.seq === seq) pendingConfigs.current.delete(key);
+      }
+    }
   }, [writes]);
 
-  // Queued behind earlier writes; a write that hangs delays a tool by at most READ_WAIT_MS, then it reads anyway.
-  const readFeatureConfig = useCallback(
-    (forUser: string, feature: FeatureTab) =>
-      new Promise<FeatureConfig>((resolve, reject) => {
-        const fallback = setTimeout(() => void fetchFeatureConfig(forUser, feature).then(resolve, reject), READ_WAIT_MS);
-        writes(() => fetchFeatureConfig(forUser, feature)).then(
-          (config) => {
-            clearTimeout(fallback);
-            resolve(config);
-          },
-          (cause: unknown) => {
-            clearTimeout(fallback);
-            reject(cause);
-          },
-        );
-      }),
-    [writes],
-  );
+  const readFeatureConfig = useCallback((forUser: string, feature: FeatureTab) => {
+    const gen = generation.current;
+    return readFeatureConfigAfterWrites({
+      writes,
+      read: () => fetchFeatureSettings(forUser, feature),
+      // Only this account's choices, and none from before an owner change.
+      pending: () => {
+        if (generation.current !== gen || owner.current !== forUser) return null;
+        const entries = [...pendingConfigs.current.values()].filter((entry) => entry.feature === feature);
+        return entries.length ? Object.assign({}, ...entries.map((entry) => entry.change)) as FeatureConfigChange : null;
+      },
+      waitMs: READ_WAIT_MS,
+    });
+  }, [writes]);
 
   const value = useMemo<SettingsContextValue>(() => ({
     ...settings,

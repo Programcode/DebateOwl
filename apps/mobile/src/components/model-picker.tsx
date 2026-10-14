@@ -36,6 +36,8 @@ type Field = keyof Choice;
  * through the settings provider's queue. A change shows at once; a failed
  * save rolls back only its own field, and only while it is that field's
  * latest change. Nothing lands after an account change or after leaving.
+ * `onChange` runs when the student picks and again when a save fails, so a
+ * caller that kept a config read meanwhile (Ask) drops a model that was not saved.
  */
 function useModelChoice(feature: FeatureTab, onChange?: () => void) {
   const { session } = useAuth();
@@ -98,6 +100,7 @@ function useModelChoice(feature: FeatureTab, onChange?: () => void) {
         console.warn('Could not save the model:', cause instanceof Error ? cause.message : cause);
         if (!live.current || owner.current !== forUser) return;
         setFailed(true);
+        onChange?.();
         if (versions.current[field] !== version || !confirmed.current) return;
         const previous = confirmed.current[field];
         setState((current) => (current && current.owner === forUser ? { ...current, choice: { ...current.choice, [field]: previous } } : current));
