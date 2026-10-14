@@ -44,6 +44,12 @@
  * each turn, signal and debrief with fixed text in the run's language, and
  * answers the crossfire write locally.
  *
+ * Sparring screenshots never call a model and never save: the page answers
+ * each opponent turn and the judge with fixed text in the run's language
+ * (holding them open for the "opponent" and "judging" shots), and answers
+ * the attach_to_debate call locally. The run checks the turn-start taps. The
+ * flow button's Flowchart reads the fixed maps described below.
+ *
  * The Timer runs on Playwright's clock, so its minutes pass at once, and the
  * run checks that it signalled one beep at the last minute and two at time up.
  *
@@ -819,6 +825,147 @@ async function shootCrossfireScreens(context: BrowserContext, prefix: string, la
   await page.close();
 }
 
+// A made-up Lincoln-Douglas round as Con, in English and Hungarian, and a scorecard whose totals match its categories, as the client checks.
+const SPARRING_TEXT = {
+  en: {
+    opponent: [
+      'Private cars fill the centre with fumes that children breathe on their way to school. Closing the centre to them is the fastest way to clean that air, and every city that tried it kept the ban.',
+      'My opponent says shops will suffer, but footfall rises when streets are calm. People who walk stop more often and stay longer than people looking for a parking space.',
+      'The night-shift worker is covered: permits for carers and early shifts already exist. What remains is a choice between cleaner air for everyone and convenience for a few.',
+    ],
+    speeches: [
+      'A ban punishes the people with the fewest choices. The nurse who drives in at five a.m. has no bus at that hour, and permits only help those who know how to apply.',
+      'Cleaner air matters, but low-emission zones get most of the benefit without shutting anyone out. Charge the most polluting cars and leave the centre open.',
+    ],
+    verdict: "Your second speech answered the night-shift worker case directly. Evidence was thin: name the transit data, don't just say it exists.",
+    feedback: ['The burden on shift workers was clear and well framed.', 'You asserted that low-emission zones work without a source.', 'Delivery read clearly, with short and confident sentences.', 'You chose the right clash and stayed on it.'],
+    overall: 'A disciplined round. Lead with your strongest example and back each claim with one named source.',
+    moments: ['Turning the permit system into an access problem.'],
+    next: ['Bring one figure for how many workers start before the buses run.'],
+  },
+  hu: {
+    opponent: [
+      'A magánautók kipufogógázzal töltik meg a belvárost, amelyet a gyerekek iskolába menet belélegeznek. A belváros lezárása a leggyorsabb módja a levegő megtisztításának, és minden város megtartotta a tilalmat, amely kipróbálta.',
+      'Az ellenfelem szerint a boltok veszítenek, de a forgalom nő, ha az utcák csendesek. A gyalogosok gyakrabban megállnak és tovább maradnak, mint akik parkolóhelyet keresnek.',
+      'Az éjszakás dolgozókra is gondoltunk: a gondozóknak és a korai műszakosoknak már ma is jár engedély. A választás a tisztább levegő mindenkinek és néhányak kényelme között van.',
+    ],
+    speeches: [
+      'A tilalom azokat bünteti, akiknek a legkevesebb választásuk van. A hajnali ötkor munkába autózó ápolónak abban az órában nincs busza, az engedély pedig csak annak segít, aki tudja, hogyan kérje.',
+      'A tiszta levegő fontos, de az alacsony kibocsátású övezetek kizárás nélkül hozzák az előnyök nagy részét. Fizessenek a legjobban szennyező autók, a belváros maradjon nyitva.',
+    ],
+    verdict: 'A második beszéded közvetlenül válaszolt az éjszakás dolgozó esetére. A bizonyítékok gyengék voltak: nevezd meg a közlekedési adatokat, ne csak állítsd, hogy léteznek.',
+    feedback: ['A műszakban dolgozók terhét világosan és jól keretezted.', 'Forrás nélkül állítottad, hogy az alacsony kibocsátású övezetek működnek.', 'Az előadás világos volt, rövid és határozott mondatokkal.', 'A megfelelő ütközési pontot választottad, és kitartottál mellette.'],
+    overall: 'Fegyelmezett forduló. Kezdd a legerősebb példáddal, és minden állítást támassz alá egy megnevezett forrással.',
+    moments: ['Az engedélyrendszert hozzáférési problémává fordítottad.'],
+    next: ['Hozz egy számot arról, hány dolgozó kezd a buszok indulása előtt.'],
+  },
+} as const;
+
+const SPARRING_CATEGORIES = [['Logic', 21, 18], ['Evidence', 15, 19], ['Delivery', 22, 17], ['Strategy', 20, 17]] as const;
+
+/** Fakes Sparring's AI calls and its debate filing for this page (see the header). `hold` keeps the next answer of that kind open until it is released. */
+async function fakeSparring(page: Page, language: keyof typeof SPARRING_TEXT) {
+  const text = SPARRING_TEXT[language];
+  const held: Record<'respond' | 'score', (() => void) | null> = { respond: null, score: null };
+  const holding = { respond: false, score: false };
+  await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
+    const body = route.request().postDataJSON() as { feature?: string; input?: { action?: 'respond' | 'score'; speeches?: { speaker: string }[] } } | null;
+    if (body?.feature !== 'sparring') return route.abort();
+    const action = body.input?.action ?? 'respond';
+    if (holding[action]) await new Promise<void>((resolve) => { held[action] = resolve; });
+    let output: unknown;
+    if (action === 'respond') {
+      const index = (body.input?.speeches ?? []).filter((speech) => speech.speaker === 'ai').length;
+      output = { action, speech: { content: text.opponent[index % text.opponent.length], strategy: 'Press the access argument.', targetedPoints: [], integrityToken: 'screenshot-integrity-token-0000000000000000' } };
+    } else {
+      const categories = SPARRING_CATEGORIES.map(([name, userScore, aiScore], index) => ({ name, userScore, aiScore, feedback: text.feedback[index] }));
+      output = {
+        action,
+        scorecard: {
+          userScore: categories.reduce((sum, item) => sum + item.userScore, 0),
+          aiScore: categories.reduce((sum, item) => sum + item.aiScore, 0),
+          categories,
+          overallFeedback: text.overall,
+          keyMoments: [...text.moments],
+          improvementAreas: [...text.next],
+          winner: 'user',
+          verdict: text.verdict,
+        },
+      };
+    }
+    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output } });
+  });
+  await page.route(`${REST}/rpc/attach_to_debate`, (route) => route.fulfill({ status: 204, body: '' }));
+  return {
+    hold: (action: 'respond' | 'score') => { holding[action] = true; },
+    release: (action: 'respond' | 'score') => {
+      holding[action] = false;
+      held[action]?.();
+      held[action] = null;
+    },
+  };
+}
+
+/** Sparring from the Practice tab: the setup, the opponent's turn and yours, judging, and the scorecard, all from fixed outputs. */
+async function shootSparringScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const text = SPARRING_TEXT[language === 'hu' ? 'hu' : 'en'];
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} sparring`);
+  await pinSettings(page, language);
+  const fake = await fakeSparring(page, language === 'hu' ? 'hu' : 'en');
+  await fakeFlowcharts(page);
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-sparring').click({ timeout: 30_000 });
+  await page.getByTestId('sparring-setup').waitFor({ timeout: 15_000 });
+  // The motion comes from the Current Debate, so the round attaches to it without the motion question.
+  await page.waitForFunction(() => (document.querySelector('[data-testid="sparring-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await page.getByTestId('sparring-format').click();
+  await page.getByRole('menuitem', { name: 'Lincoln-Douglas' }).click();
+  await settle(page);
+  await shoot(page, `${prefix}-sparring-setup`);
+
+  fake.hold('respond');
+  await page.getByRole('button', { name: /^(Start round|Forduló indítása|Iniciar ronda)$/ }).click();
+  await page.getByRole('menuitem', { name: /^(Con|Ellene|En contra)$/ }).click();
+  await page.getByTestId('sparring-thinking').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-sparring-opponent`);
+  fake.release('respond');
+
+  for (const [index, speech] of text.speeches.entries()) {
+    await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
+    await page.getByTestId('sparring-input').fill(speech);
+    if (index === 0) {
+      await page.getByTestId('sparring-input').blur();
+      await page.waitForTimeout(400);
+      await shoot(page, `${prefix}-sparring-your-turn`);
+      // The student's clock runs from the moment the turn starts.
+      await page.getByTestId('sparring-time').filter({ hasText: /^6:5\d$/ }).waitFor({ timeout: 5_000 });
+      // The flow button opens the Flowchart above the round, and the round is still there on the way back.
+      await page.getByTestId('sparring-flow').click();
+      await page.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
+      await settle(page);
+      await shoot(page, `${prefix}-sparring-flowchart`);
+      await page.goBack();
+      await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
+      if ((await page.getByTestId('sparring-input').inputValue()) !== speech) problems.push(`${prefix} sparring: the speech draft was lost after the Flowchart`);
+    }
+    if (index === text.speeches.length - 1) fake.hold('score');
+    await page.getByTestId('sparring-main').click();
+  }
+  await page.getByTestId('sparring-judging').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-sparring-judging`);
+  fake.release('score');
+
+  await page.getByTestId('sparring-scorecard').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-sparring-scorecard`);
+  const taps = await page.evaluate(() => (window as unknown as { __debatelabTurnTaps?: number }).__debatelabTurnTaps ?? 0);
+  if (taps !== text.speeches.length) problems.push(`${prefix} sparring: expected ${text.speeches.length} turn-start taps, got ${taps}`);
+  await page.close();
+}
+
 /**
  * The Timer from the Practice tab: idle, running, and after time up. The page's
  * clock is Playwright's, so minutes pass at once; the web preview records the
@@ -1054,6 +1201,8 @@ async function main() {
           shots += 3;
           await shootCrossfireScreens(signedIn, prefix, language, problems);
           shots += 3;
+          await shootSparringScreens(signedIn, prefix, language, problems);
+          shots += 6;
           await shootFlowchart(signedIn, prefix, language, problems);
           shots += 10;
           const oneOffPage = await signedIn.newPage();
