@@ -82,7 +82,7 @@ Move code into `_shared` only when multiple functions use the same boundary or p
 
 ## Push notifications
 
-The iOS app files its Expo push token through the `register_push_token` RPC (`20261014120000_push_tokens.sql`). The function writes only the caller's `auth.uid()`, moves a token to the current account when a second account signs in on the same phone, keeps one token per install and ten per account, and turns a disabled token back on. Clients can read and delete only their own `push_tokens` rows and cannot insert or update them directly. `push_tickets` is service-role only and carries no user ID; deleting a token or an account deletes its tickets.
+The iOS app files its Expo push token through the `register_push_token` RPC (`20261014120000_push_tokens.sql`). The function writes only the caller's `auth.uid()`, moves a token to the current account when a second account signs in on the same phone, keeps one token per install and ten per account (one registration per account at a time, under an advisory lock), and turns a disabled token back on. Sign-out deletes the account's rows for that install with the account's own access token, after any registration still in flight; the app keeps its local record until the delete succeeds. If it never does, the next account on the phone calls `release_push_token`, which deletes a token whatever account holds it: holding the token is the proof, as it already is for `register_push_token`. Clients can read and delete only their own `push_tokens` rows and cannot insert or update them directly. `push_tickets` is service-role only and carries no user ID; deleting a token or an account deletes its tickets.
 
 [`functions/_shared/push.ts`](functions/_shared/push.ts) sends through `https://exp.host/--/api/v2/push/send`, so the same code serves Expo Go, development and store builds. It reads tokens with the service role for the user IDs named by each notification, builds every message from the notification of the user who owns the token row, and drops rows for anyone else. Messages carry fixed, localized copy (`en`, `es`, `hu`, from the token's locale) and IDs only, never debate content, because they show on a lock screen. It sends in batches of 100, stores the tickets, turns a token off when a ticket or receipt says `DeviceNotRegistered`, and never throws into the request that triggered it. There is no scheduled receipts job: each send first reads the receipts that are at least 15 minutes old and forgets tickets older than Expo's 24-hour receipt window.
 
@@ -142,7 +142,7 @@ The stack begins at port `54321` and is not parallel-safe across worktrees. Coor
 
 The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
 
-`20261014120000_push_tokens.sql` is additive: it creates `push_tokens`, `push_tickets` and `register_push_token`. See [Push notifications](#push-notifications).
+`20261014120000_push_tokens.sql` is additive: it creates `push_tokens`, `push_tickets`, `register_push_token` and `release_push_token`. See [Push notifications](#push-notifications).
 
 `20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 

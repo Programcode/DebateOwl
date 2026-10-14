@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(20);
+SELECT plan(23);
 
 INSERT INTO auth.users (id) VALUES
   ('f1111111-1111-4111-8111-111111111111'),
@@ -31,6 +31,12 @@ SELECT ok(
     AND NOT has_function_privilege('anon', 'public.register_push_token(text, text, text, uuid)', 'EXECUTE')
     AND NOT has_function_privilege('service_role', 'public.register_push_token(text, text, text, uuid)', 'EXECUTE'),
   'only a signed-in user can register a token, and only for themselves'
+);
+SELECT ok(
+  has_function_privilege('authenticated', 'public.release_push_token(text)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.release_push_token(text)', 'EXECUTE')
+    AND NOT has_function_privilege('service_role', 'public.release_push_token(text)', 'EXECUTE'),
+  'only a signed-in user can release a token'
 );
 
 SET LOCAL ROLE authenticated;
@@ -151,12 +157,29 @@ SELECT ok(
 );
 SET LOCAL ROLE authenticated;
 
+-- The account that registered the phone signed out without removing its row;
+-- the next account on the phone releases it.
+SELECT set_config('request.jwt.claim.sub', 'f1111111-1111-4111-8111-111111111111', true);
+SELECT public.release_push_token('ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]');
+RESET ROLE;
+SELECT ok(
+  (SELECT count(*) = 9 AND NOT bool_or(token = 'ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]') FROM public.push_tokens),
+  'the next account on the phone releases a token another account holds, and only that token'
+);
+SET LOCAL ROLE authenticated;
+
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT throws_ok(
   $$SELECT public.register_push_token('ExponentPushToken[ffffffffffffffffffffff]', 'ios', 'en', NULL)$$,
   '42501',
   NULL,
   'a token cannot be registered without a signed-in user'
+);
+SELECT throws_ok(
+  $$SELECT public.release_push_token('ExponentPushToken[dddddddddddddddddddddd]')$$,
+  '42501',
+  NULL,
+  'a token cannot be released without a signed-in user'
 );
 
 RESET ROLE;

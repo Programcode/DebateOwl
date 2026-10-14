@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     signOut: async () => {
       // While the session still works, so the next person on this phone gets none of this account's notifications.
-      if (session) await forgetPushOnSignOut(session.user.id);
+      if (session) await forgetPushOnSignOut(session.user.id, session.access_token);
       // supabase-js loads the session before signing out. Offline with an
       // expired access token that refresh fails, and it returns the error
       // without removing the stored session. Signing out must still sign out

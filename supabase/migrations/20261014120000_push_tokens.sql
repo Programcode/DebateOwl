@@ -7,6 +7,10 @@
 -- no longer uses. Under RLS the second account cannot see the first one's row,
 -- so registration goes through register_push_token, which only ever writes the
 -- caller's own user ID. Clients read and delete their own rows directly.
+--
+-- Sign-out deletes the account's rows with its own access token. If that
+-- fails, the next account on the phone calls release_push_token, which
+-- deletes a token whatever account holds it.
 
 CREATE TABLE public.push_tokens (
   token text PRIMARY KEY
@@ -107,3 +111,26 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.register_push_token(text, text, text, uuid) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.register_push_token(text, text, text, uuid) TO authenticated;
+
+-- Deletes a token whatever account holds it. Holding the token is the proof:
+-- the same caller could already move it to themselves with
+-- register_push_token. The app calls it when the account that registered this
+-- phone signed out but its rows could not be removed, so that account's
+-- notifications stop reaching the next person on the phone.
+CREATE FUNCTION public.release_push_token(p_token text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF (SELECT auth.uid()) IS NULL THEN
+    RAISE EXCEPTION 'not signed in' USING ERRCODE = '42501';
+  END IF;
+
+  DELETE FROM public.push_tokens WHERE token = p_token;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.release_push_token(text) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.release_push_token(text) TO authenticated;

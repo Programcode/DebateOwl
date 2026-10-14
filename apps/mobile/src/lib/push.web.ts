@@ -29,7 +29,7 @@ export function refreshPush(_userId: string, _language: AppLanguage): Promise<vo
   return Promise.resolve();
 }
 
-export function forgetPushOnSignOut(_userId: string): Promise<void> {
+export function forgetPushOnSignOut(_userId: string, _accessToken: string): Promise<void> {
   enabledFor = null;
   return Promise.resolve();
 }
