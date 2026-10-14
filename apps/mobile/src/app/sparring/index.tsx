@@ -105,6 +105,8 @@ export default function SparringScreen() {
   const requestRef = useRef<AbortController | null>(null);
   const live = useRef(true);
   const owner = useRef(userId);
+  // Each side choice gets a number; a slower earlier one never starts a round over a newer one.
+  const startAttempt = useRef(0);
 
   // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
@@ -255,6 +257,7 @@ export default function SparringScreen() {
   const chooseSide = async (side: SparringSide) => {
     if (!userId) return;
     const forUser = userId;
+    const attempt = ++startAttempt.current;
     const text = motion.trim();
     const decision = decideMotionTarget(text, { debates, current, oneOff });
     if (decision.kind !== 'ask') {
@@ -269,7 +272,7 @@ export default function SparringScreen() {
       onceLabel: current ? t('debate.useOnce') : t('debate.offerNotNow'),
       cancel: t('common.cancel'),
     });
-    if (!choice || !live.current || owner.current !== forUser) return;
+    if (!choice || !live.current || owner.current !== forUser || startAttempt.current !== attempt) return;
     let debateId: string | null = null;
     try {
       if (choice.kind === 'switch') {
@@ -283,7 +286,7 @@ export default function SparringScreen() {
       if (live.current) setFormError(t('debate.saveFailed'));
       return;
     }
-    if (live.current && owner.current === forUser) begin(side, debateId, forUser);
+    if (live.current && owner.current === forUser && startAttempt.current === attempt) begin(side, debateId, forUser);
   };
 
   const submit = () => {

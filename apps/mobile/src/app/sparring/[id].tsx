@@ -30,23 +30,26 @@ export default function SavedSparringScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
-  const [state, setState] = useState<State>(() => {
+  // The state remembers whose round it holds, so another account never sees it while its own read runs.
+  const [held, setHeld] = useState<{ owner: string | null; state: State }>(() => {
     const kept = judged(sparringDraft.get(), id);
-    return kept ? { status: 'ready', round: kept } : { status: 'loading' };
+    return { owner: userId, state: kept ? { status: 'ready', round: kept } : { status: 'loading' } };
   });
+  const state: State = held.owner === userId ? held.state : { status: 'loading' };
 
   useEffect(() => {
     if (judged(sparringDraft.get(), id) || !userId) return;
+    const forUser = userId;
     let active = true;
-    fetchSparringRound(userId, id)
+    fetchSparringRound(forUser, id)
       .then((round) => {
         if (!active) return;
         const ready = judged(round, id);
-        setState(ready ? { status: 'ready', round: ready } : { status: 'missing' });
+        setHeld({ owner: forUser, state: ready ? { status: 'ready', round: ready } : { status: 'missing' } });
       })
       .catch((cause: unknown) => {
         console.warn('Could not load the round:', cause instanceof Error ? cause.message : cause);
-        if (active) setState({ status: 'failed' });
+        if (active) setHeld({ owner: forUser, state: { status: 'failed' } });
       });
     return () => {
       active = false;
