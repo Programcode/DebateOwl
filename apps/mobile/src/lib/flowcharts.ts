@@ -1,6 +1,6 @@
 import { readFlowchart, type FlowchartDocument } from '@debatelab/core/flowchart';
 
-import { debateListScopes } from './debates';
+import { debateListScopes, deletedListScopes } from './debates';
 import { afterWrite, cachedRead, readFailed, updateCopy } from './offline-cache';
 import { supabase } from './supabase';
 
@@ -104,8 +104,10 @@ export async function deleteFlowchart(userId: string, id: string): Promise<void>
   const { data, error } = await supabase.from('flowcharts').delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
   const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  // With no row, it was already gone and any debate's list, or the one-off list, may still hold it.
   afterWrite(userId, [
     { group: 'flowchart', key: id },
-    ...deletedFrom.flatMap((debate) => [{ group: 'flowcharts' as const, key: debate ?? 'one-off' }, ...debateListScopes(debate, 'flowchart')]),
+    ...(deletedFrom.length > 0 ? deletedFrom.map((debate) => ({ group: 'flowcharts' as const, key: debate ?? 'one-off' })) : [{ group: 'flowcharts' as const }]),
+    ...deletedListScopes(deletedFrom, 'flowchart'),
   ]);
 }

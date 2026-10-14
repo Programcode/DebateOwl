@@ -3,8 +3,8 @@ import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/co
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
-import { debateListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed } from './offline-cache';
+import { debateListScopes, deletedListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -155,9 +155,12 @@ export async function removeSource(userId: string, id: string, debateId?: string
   const query = supabase.from('sources').delete().eq('user_id', userId).eq('id', id);
   const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query).select('debate_id');
   if (error) throw new Error(error.message);
-  // The deleted row names its debate, whose Library and counts change.
-  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).flatMap((row) => (row.debate_id ? [row.debate_id] : []));
-  afterWrite(userId, [{ group: 'source', key: id }, ...deletedFrom.flatMap((debate) => [{ group: 'sources' as const, key: debate }, ...debateListScopes(debate, 'source')])]);
+  // The deleted row names its debate, whose Library and counts change. With no row, every Library may hold it.
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  const libraries: CopyScope[] = deletedFrom.length > 0
+    ? deletedFrom.flatMap((debate) => (debate ? [{ group: 'sources' as const, key: debate }] : []))
+    : [{ group: 'sources' }];
+  afterWrite(userId, [{ group: 'source', key: id }, ...libraries, ...deletedListScopes(deletedFrom, 'source')]);
   notifySourcesChanged();
 }
 

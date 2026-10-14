@@ -14,7 +14,7 @@ import * as Crypto from 'expo-crypto';
 import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
-import { debateListScopes } from './debates';
+import { debateListScopes, deletedListScopes } from './debates';
 import { afterWrite, cachedRead, readFailed, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
@@ -145,7 +145,9 @@ export async function deleteSparringRound(userId: string, id: string): Promise<v
   const { data, error } = await supabase.from('sparring_sessions').delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
   const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
-  afterWrite(userId, [{ group: 'sparring', key: id }, ...deletedFrom.flatMap((debate) => [...roundListScopes(debate), ...debateListScopes(debate, 'sparring')])]);
+  // With no row, it was already gone and any debate's rounds, or the one-off rounds, may still list it.
+  const roundLists: CopyScope[] = deletedFrom.length > 0 ? deletedFrom.flatMap(roundListScopes) : [{ group: 'sparring-rounds' }];
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundLists, ...deletedListScopes(deletedFrom, 'sparring')]);
 }
 
 /** A new round's id. The server takes it as the saved row's id, so it must be a UUID. */

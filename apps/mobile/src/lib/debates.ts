@@ -279,11 +279,26 @@ const PREPARE_KINDS = new Set<DebateItemKind>(PREPARE_TABLES.map((table) => KIND
  * the recent work, and a Prepare result the Prepare list.
  */
 export function debateListScopes(debateId: string | null, change: 'source' | DebateItemKind): CopyScope[] {
-  if (!debateId) return [];
-  const scopes: CopyScope[] = [{ group: 'debate-lists', key: `counts:${debateId}` }];
+  return debateId ? listScopes(debateId, change) : [];
+}
+
+/**
+ * The saved counts and lists a delete changed, from the debates its deleted
+ * rows name. A delete that returned no row (the row was already gone, say
+ * deleted on the website) does not say which debate held it, so every
+ * debate's counts and lists of that kind are dropped.
+ */
+export function deletedListScopes(deletedFrom: (string | null)[], change: 'source' | DebateItemKind): CopyScope[] {
+  return deletedFrom.length > 0 ? deletedFrom.flatMap((debateId) => debateListScopes(debateId, change)) : listScopes(undefined, change);
+}
+
+/** One debate's counts and lists, or every debate's when `debateId` is undefined. */
+function listScopes(debateId: string | undefined, change: 'source' | DebateItemKind): CopyScope[] {
+  const of = debateId ? `${debateId}:` : '';
+  const scopes: CopyScope[] = [debateId ? { group: 'debate-lists', key: `counts:${debateId}` } : { group: 'debate-lists', prefix: 'counts:' }];
   if (change === 'source') return [...scopes, { group: 'debate-lists', prefix: 'source-counts:', about: debateId }];
-  scopes.push({ group: 'debate-lists', prefix: `recent:${debateId}:` });
-  if (PREPARE_KINDS.has(change)) scopes.push({ group: 'debate-lists', prefix: `prepare:${debateId}:` });
+  scopes.push({ group: 'debate-lists', prefix: `recent:${of}` });
+  if (PREPARE_KINDS.has(change)) scopes.push({ group: 'debate-lists', prefix: `prepare:${of}` });
   return scopes;
 }
 

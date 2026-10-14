@@ -262,6 +262,24 @@ describe('after a write', () => {
     await expect(cache.cachedRead('user-a', 'sources', 'debate-2', offlineFailure)).resolves.toEqual([{ id: 'source-2' }]);
   });
 
+  it('a delete whose row was already gone still drops every list and count that may hold it', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => [{ id: 'source-1' }]);
+    await cache.cachedRead('user-a', 'debate-lists', 'counts:debate-1', async () => ({ sources: 1 }));
+    await cache.cachedRead('user-a', 'debate-lists', 'source-counts:debate-1', async () => ({ 'debate-1': 1 }));
+    await cache.cachedRead('user-a', 'flowcharts', 'one-off', async () => [{ id: 'map-1' }]);
+    await cache.cachedRead('user-a', 'debate-lists', 'prepare:debate-1:20', async () => [{ id: 'map-1' }]);
+    // Deleted on the website first: the delete succeeds and returns no row.
+    supabase.results.push({ data: [], error: null, status: 200 }, { data: [], error: null, status: 200 });
+    await cache.removeSource('user-a', 'source-1');
+    await cache.deleteFlowchart('user-a', 'map-1');
+    await cache.cachedRead('user-a', 'sources', 'flush', offlineFailure).catch(() => undefined);
+    for (const [group, key] of [['sources', 'debate-1'], ['debate-lists', 'counts:debate-1'], ['debate-lists', 'source-counts:debate-1'], ['flowcharts', 'one-off'], ['debate-lists', 'prepare:debate-1:20']] as const) {
+      await expect(cache.cachedRead('user-a', group, key, offlineFailure), `${group} ${key}`).rejects.toThrow();
+    }
+  });
+
   it('switching debates changes the saved Current Debate, so an offline restart opens the new one', async () => {
     let cache = await load();
     cache.setCacheOwner('user-a');
