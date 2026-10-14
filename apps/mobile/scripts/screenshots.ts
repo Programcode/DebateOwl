@@ -7,7 +7,14 @@
  *   npm run -w @debatelab/mobile export:web
  *   PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
  *
- * ONLY=iphone-light-en limits a run to the combinations whose name starts with it.
+ * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
+ * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
+ * SCREENS=library,ask limits it to those groups of screens: sign-in, debate,
+ * library, tabs (Prepare, Practice, You), ask, results (Generate and Attack),
+ * tools (Brainstorm and Factoids), timer, crossfire, sparring, flowchart.
+ *
+ * The iPad sizes are portrait (1024x1366), landscape (1366x1024) and a 600-point
+ * window (Split View or Slide Over), which takes the phone layout.
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
  * script signs in once through the real sign-in screen and also checks that a
@@ -73,14 +80,18 @@ const DIST = join(__dirname, '../dist');
 const OUT = join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
-const ONLY = process.env.ONLY?.trim() ?? '';
+const ONLY = (process.env.ONLY ?? '').split(',').map((value) => value.trim());
+const SCREENS = process.env.SCREENS?.split(',').map((value) => value.trim()).filter(Boolean) ?? null;
+const wants = (group: string) => !SCREENS || SCREENS.includes(group);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const STAGING_HOST = new URL(SUPABASE_PROJECTS.staging.url).host;
 const SESSION_KEY = `sb-${STAGING_HOST.split('.')[0]}-auth-token`;
 
 const DEVICES = {
   iphone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
-  ipad: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  ipad: { viewport: { width: 1024, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  'ipad-landscape': { viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  'ipad-narrow': { viewport: { width: 600, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
@@ -1139,44 +1150,50 @@ async function main() {
   let shots = 0;
   try {
     const session = DEMO_CODE ? await signIn(browser, problems) : null;
-    if (session) await checkOfflineColdStart(browser, session, problems);
+    if (session && wants('sign-in')) await checkOfflineColdStart(browser, session, problems);
     else console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
 
     for (const [device, options] of Object.entries(DEVICES)) {
       for (const scheme of SCHEMES) {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
-          if (!prefix.startsWith(ONLY)) continue;
-          const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
-          const page = await signedOut.newPage();
-          watchErrors(page, problems, prefix);
-          await page.goto(`${ORIGIN}/sign-in`);
-          await page.getByRole('tablist').waitFor();
-          await shoot(page, `${prefix}-sign-in`);
-          await page.getByRole('button').first().click();
-          await page.getByRole('alert').waitFor();
-          await shoot(page, `${prefix}-sign-in-error`);
-          await page.getByRole('tab').nth(1).click();
-          await shoot(page, `${prefix}-sign-in-demo`);
-          shots += 3;
-          await signedOut.close();
+          if (!ONLY.some((only) => prefix.startsWith(only))) continue;
+          if (wants('sign-in')) {
+            const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
+            const page = await signedOut.newPage();
+            watchErrors(page, problems, prefix);
+            await page.goto(`${ORIGIN}/sign-in`);
+            await page.getByRole('tablist').waitFor();
+            await shoot(page, `${prefix}-sign-in`);
+            await page.getByRole('button').first().click();
+            await page.getByRole('alert').waitFor();
+            await shoot(page, `${prefix}-sign-in-error`);
+            await page.getByRole('tab').nth(1).click();
+            await shoot(page, `${prefix}-sign-in-demo`);
+            shots += 3;
+            await signedOut.close();
+          }
 
           if (!session) continue;
           const signedIn = await browser.newContext({ ...options, colorScheme: scheme, locale, storageState: session });
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
           await pinSettings(tabPage, language);
-          await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
-            await shoot(tabPage, `${prefix}-failed`);
-            throw error;
-          });
-          shots += 6;
-          await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
-            await shoot(tabPage, `${prefix}-failed`);
-            throw error;
-          });
-          shots += 5;
-          for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
+          if (wants('debate')) {
+            await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
+              await shoot(tabPage, `${prefix}-failed`);
+              throw error;
+            });
+            shots += 6;
+          }
+          if (wants('library')) {
+            await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
+              await shoot(tabPage, `${prefix}-failed`);
+              throw error;
+            });
+            shots += 5;
+          }
+          for (const [name, route] of wants('tabs') ? Object.entries(SIGNED_IN_ROUTES) : []) {
             await tabPage.goto(`${ORIGIN}${route}`);
             await tabPage.getByRole('tablist').first().waitFor();
             if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
@@ -1184,33 +1201,49 @@ async function main() {
             await shoot(tabPage, `${prefix}-${name}`);
             shots += 1;
           }
-          const emptyPage = await signedIn.newPage();
-          watchErrors(emptyPage, problems, `${prefix} empty`);
-          await pinSettings(emptyPage, language);
-          await shootEmptyDebate(emptyPage, prefix);
-          shots += 2;
-          await shootAskScreens(signedIn, prefix, language, problems);
-          shots += 3;
-          await shootResultScreens(signedIn, prefix, language, problems);
-          shots += 9;
-          for (const tool of ['brainstorm', 'factoids'] as const) {
+          if (wants('debate')) {
+            const emptyPage = await signedIn.newPage();
+            watchErrors(emptyPage, problems, `${prefix} empty`);
+            await pinSettings(emptyPage, language);
+            await shootEmptyDebate(emptyPage, prefix);
+            shots += 2;
+          }
+          if (wants('ask')) {
+            await shootAskScreens(signedIn, prefix, language, problems);
+            shots += 3;
+          }
+          if (wants('results')) {
+            await shootResultScreens(signedIn, prefix, language, problems);
+            shots += 9;
+          }
+          for (const tool of wants('tools') ? (['brainstorm', 'factoids'] as const) : []) {
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 6;
           }
-          await shootTimerScreens(signedIn, prefix, language, problems);
-          shots += 3;
-          await shootCrossfireScreens(signedIn, prefix, language, problems);
-          shots += 3;
-          await shootSparringScreens(signedIn, prefix, language, problems);
-          shots += 6;
-          await shootFlowchart(signedIn, prefix, language, problems);
-          shots += 10;
-          const oneOffPage = await signedIn.newPage();
-          watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
-          await pinSettings(oneOffPage, language);
-          await shootOneOffTools(oneOffPage, prefix);
-          await oneOffPage.close();
-          shots += 2;
+          if (wants('timer')) {
+            await shootTimerScreens(signedIn, prefix, language, problems);
+            shots += 3;
+          }
+          if (wants('crossfire')) {
+            await shootCrossfireScreens(signedIn, prefix, language, problems);
+            shots += 3;
+          }
+          if (wants('sparring')) {
+            await shootSparringScreens(signedIn, prefix, language, problems);
+            shots += 6;
+          }
+          if (wants('flowchart')) {
+            await shootFlowchart(signedIn, prefix, language, problems);
+            shots += 10;
+          }
+          if (wants('tools')) {
+            const oneOffPage = await signedIn.newPage();
+            watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
+            await pinSettings(oneOffPage, language);
+            await shootOneOffTools(oneOffPage, prefix);
+            await oneOffPage.close();
+            shots += 2;
+          }
           await signedIn.close();
         }
       }
