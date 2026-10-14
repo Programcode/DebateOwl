@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('./supabase', () => ({ supabase: {} }));
-vi.mock('expo/fetch', () => ({ fetch: vi.fn() }));
+const fetchMock = vi.hoisted(() => vi.fn());
 
-import { AIError } from './ai-request';
-import { untilAborted, withTurnDeadline } from './crossfire';
+// The session read never settles, as when a token refresh stalls.
+vi.mock('./supabase', () => ({ supabase: { auth: { getSession: () => new Promise<never>(() => {}) } } }));
+vi.mock('expo/fetch', () => ({ fetch: fetchMock }));
+
+import { AIError, postFunction, untilAborted } from './ai-request';
+import { withTurnDeadline } from './crossfire';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -29,5 +32,17 @@ describe('withTurnDeadline', () => {
     const turn = withTurnDeadline(leaving.signal, (signal) => untilAborted(new Promise<never>(() => {}), signal));
     leaving.abort();
     await expect(turn).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+describe('postFunction', () => {
+  it('ends at its deadline when the session read stalls, without sending the request', async () => {
+    vi.useFakeTimers();
+    const request = postFunction('ai', {}, undefined, async () => 'answer', 75_000).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(75_000);
+    const error = await request;
+    expect(error).toBeInstanceOf(AIError);
+    expect((error as AIError).kind).toBe('timeout');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

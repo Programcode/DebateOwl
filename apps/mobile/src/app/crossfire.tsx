@@ -25,7 +25,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
-import { abortError, AIError, isAbortError, type ResponseExtras } from '@/lib/ai-request';
+import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
@@ -38,7 +38,6 @@ import {
   crossfireSignal,
   crossfireTurn,
   recordCrossfire,
-  untilAborted,
   withTurnDeadline,
 } from '@/lib/crossfire';
 import { useDebates } from '@/lib/debate-context';
