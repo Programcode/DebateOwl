@@ -26,6 +26,7 @@ import { useTheme } from '@/theme/use-theme';
 
 const TIER_LABELS: Record<SubscriptionTier, string> = {
   trial: 'settings.tierTrial',
+  basic: 'settings.tierBasic',
   pro: 'settings.tierPro',
   legacy_free: 'settings.tierLegacyFree',
   expired: 'settings.tierExpired',

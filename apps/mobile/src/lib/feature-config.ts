@@ -1,6 +1,6 @@
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
-import { canAccessProModels } from '@debatelab/core/ai/pro-access';
 import { PROVIDER_ID, type ProviderConfig } from '@debatelab/core/ai/providers/types';
+import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -74,27 +74,21 @@ function normalizeConfig(value: unknown, fallback: FeatureConfig, allowProModels
   };
 }
 
-/** Whether the student may pick Pro models, from their user_settings row; null when it cannot be told. */
-export function canUseProModels(userId: string, settings: { subscription_tier?: unknown; grace_period_ends_at?: unknown }): Promise<boolean | null> {
-  return canAccessProModels(settings, async () => {
-    const { data: rows, error: billingError } = await supabase
-      .from('subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId);
-    return billingError ? null : rows ?? [];
-  });
+/** Whether the student may pick Pro models, from effective_entitlement; null when the plan cannot be read. */
+export async function canUseProModels(userId: string): Promise<boolean | null> {
+  return (await readEntitlement(supabase, userId))?.canAccessProModels ?? null;
 }
 
 /** A tool's settings and whether the student has Pro access (false when it cannot be told). */
 export async function fetchFeatureSettings(userId: string, feature: FeatureTab): Promise<{ config: FeatureConfig; pro: boolean }> {
   const { data, error } = await supabase
     .from('user_settings')
-    .select('feature_configs, subscription_tier, grace_period_ends_at')
+    .select('feature_configs')
     .eq('user_id', userId)
     .maybeSingle();
   if (error || !data) return { config: defaultConfig(feature), pro: false };
-  // Null when it cannot be told, as on the website, which then keeps its defaults.
-  const allowProModels = await canUseProModels(userId, data);
+  // Null when the plan cannot be read, as on the website, which then keeps its defaults.
+  const allowProModels = await canUseProModels(userId);
   if (allowProModels === null) return { config: defaultConfig(feature), pro: false };
   const fallback = defaultConfig(feature, allowProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL);
   return { config: normalizeConfig(asRecord(data.feature_configs)?.[feature], fallback, allowProModels), pro: allowProModels };

@@ -1,3 +1,4 @@
+import { entitlementRows } from "../_shared/testing/entitlement.ts";
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -78,14 +79,7 @@ async function runScenario(scenario: Scenario) {
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/user_settings")) {
-        return jsonResponse({
-          subscription_tier: "trial",
-          daily_limit_override: 50,
-          trial_ends_at: "2099-01-01T00:00:00.000Z",
-          grace_period_ends_at: null,
-        });
-      }
+      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
       if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);

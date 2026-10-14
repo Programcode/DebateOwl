@@ -18,7 +18,7 @@ The local Supabase stack still uses shared default ports and container names. In
 - `src/` is the React 18 and TypeScript client. Routes and lazy page entry points live in `src/App.tsx`.
 - `src/lib/stores/` owns browser state and Supabase hydration. `src/lib/ai/client.ts` is the client AI boundary.
 - `packages/core/` (`@debatelab/core`, npm workspace) holds platform-neutral shared code: Zod schemas, validation, languages, Crossfire and Sparring logic. No DOM globals, React, or `import.meta` there; old `src/lib/` paths re-export it. Stores and i18n catalogs stay in `src/`.
-- `apps/mobile/` (`@debatelab/mobile`, npm workspace) is the Expo iOS app (React 19, Expo Router). It imports `@debatelab/core`, the `src/locales` catalogs and `src/lib/supabase/projects.ts`; milestone 1 runs in Expo Go, so only Expo Go's native modules. Read [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) before changing it.
+- `apps/mobile/` (`@debatelab/mobile`, npm workspace) is the Expo iOS app (React 19, Expo Router). It imports `@debatelab/core`, the `src/locales` catalogs and `src/lib/supabase/projects.ts`; it runs in Expo Go, and native modules Expo Go lacks go only into the development build (`DEBATELAB_BUILD=dev` in `app.config.ts`). Read [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) before changing it.
 - `supabase/functions/` contains Deno Edge Functions. Shared auth, CORS, research, prompts, cost, and validation code lives in `supabase/functions/_shared/`.
 - `supabase/migrations/` is the database history and schema source of truth.
 - `src/lib/stores/debate-store.ts` owns the Current Debate: every source and saved result belongs to one debate or to one-off work, and nothing crosses debates.

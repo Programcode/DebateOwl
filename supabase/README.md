@@ -53,13 +53,19 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 - `admin`: authenticated administrator operations with server-side role checks, including redacted demo-code list/create/disable/reset actions.
 - `announcements`: authenticated announcement listing and dismissal.
 - `redeem-promo`: authenticated atomic promo redemption.
-- `account`: authenticated data export and account deletion for the caller only. It never reads a user ID from the request. Deletion cancels Stripe subscriptions first and stops if that fails, then removes Storage objects, clears the user's workspaces, and deletes the auth user. Export and the deletion plan use service-role-only RPCs. See [Account export and deletion](../docs/architecture.md#account-export-and-deletion).
+- `account`: authenticated data export and account deletion for the caller only. It never reads a user ID from the request. Deletion cancels Stripe subscriptions first and stops if that fails, then removes Storage objects, clears the user's workspaces, and deletes the auth user. It cannot cancel an App Store subscription; its response's `appStoreSubscriptionActive` tells the app to send the user to Apple's subscription settings. Export and the deletion plan use service-role-only RPCs. See [Account export and deletion](../docs/architecture.md#account-export-and-deletion).
 
 ### Billing
 
 - `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
 - `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
 - `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling with idempotency state.
+- `app-store-notifications`: App Store Server Notifications V2 from Apple, with no Supabase session. It verifies the signed payload, and the transaction and renewal info inside it, against the pinned Apple Root CA - G3 (`_shared/apple-root-ca.ts`), checks bundle id, environment and, in Production, the app's Apple id, then applies them through `apply_app_store_transaction`, which records each notificationUUID once. It answers 200 for duplicates and data it does not use, 400 for data that fails verification, and 503 or 500 when it is unconfigured or the database fails, so Apple retries.
+- `app-store-purchase`: authenticated. The app posts the signed transaction StoreKit returned, and optionally its renewal info. It is verified the same way and applied only when its `appAccountToken` equals the caller's user id. The answer is the caller's plan. It requires no browser Origin and uses the shared CORS headers.
+
+Both App Store functions answer 503 `not_configured` until `APP_STORE_BUNDLE_ID` is set (and `APP_STORE_APP_APPLE_ID` when Production is allowed). Deploying them, setting those values, and pointing App Store Connect's notification URL at the function all need Adam's authorization. Tests inject a root they generate; production code has no setting that changes the trusted root.
+
+Every quota and plan check reads `effective_entitlement()`; see [Billing and usage](../docs/architecture.md#billing-and-usage).
 
 ## Shared backend modules
 
@@ -124,6 +130,8 @@ The stack begins at port `54321` and is not parallel-safe across worktrees. Coor
 
 The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
 
+`20261014123154_app_store_entitlements.sql` is additive: it creates `app_store_products` (with placeholder product ids), `app_store_subscriptions` (users read their own, only the service role writes) and `app_store_notifications` (service role only), `effective_entitlement()`, and `apply_app_store_transaction()` (service role only), and adds the App Store flag to `account_deletion_plan`. `supabase/tests/app_store_entitlements_test.sql` covers the tier rules, update ordering, idempotency and isolation. Apply it before anything that calls `effective_entitlement` ships to a project: the AI and voice checks fail closed and the website's plan read fails without it, so every signed-in user would lose AI access. Order: the migration, then `ai`, `ai-stream`, `voice` and `account`, then the frontend (merging to `main` ships it and starts the staging sync). The two App Store functions can follow later.
+
 `20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 
 `20260926090100_legacy_debate_cleanup.sql` defines `private.purge_legacy_debate_material`, which deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. The migration does not call it, so applying it deletes nothing; legacy rows stay in the Unsorted view. Running the purge on a remote project is a separate, destructive step that needs explicit authorization for that environment. Work created after the rollout is never touched, however late it runs.
@@ -159,6 +167,7 @@ Document names, never values. Depending on deployed features, server-side config
 - `ELEVENLABS_API_KEY` for the opponent's voice, and optionally `ELEVENLABS_VOICE_ID` to replace the default voice; without the key, voice rounds use the browser's voice;
 - research provider keys;
 - Stripe secret, webhook secret, and price configuration, plus `STRIPE_API_URL`, which only the local full-stack gate sets so the `account` function reaches its fake Stripe (leave it unset everywhere else);
+- `APP_STORE_BUNDLE_ID`, `APP_STORE_ENVIRONMENTS` (`Production`, `Sandbox`, or both, comma-separated; default `Production`) and `APP_STORE_APP_APPLE_ID` (required when Production is allowed) for the two App Store functions. None of them is a secret, and there is no Apple shared secret: StoreKit 2 data is verified by its signature. They are not in `backend:status`'s expected list until the App Store functions are deployed;
 - demo-code hashing material;
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;

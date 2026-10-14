@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/AuthProvider';
+import { readEntitlement, type SubscriptionTier } from '@debatelab/core/supabase/entitlement';
 
-export type SubscriptionTier = 'trial' | 'pro' | 'legacy_free' | 'expired';
+export type { SubscriptionTier };
 
 interface SubscriptionState {
   tier: SubscriptionTier;
@@ -16,12 +17,6 @@ interface SubscriptionState {
   gracePeriodEndsAt: string | null;
   loading: boolean;
   refresh: () => Promise<void>;
-}
-
-interface BillingRow {
-  stripe_customer_id?: string | null;
-  status?: string | null;
-  current_period_end?: string | null;
 }
 
 type SubscriptionSnapshot = Omit<SubscriptionState, 'loading' | 'refresh' | 'isPro' | 'isTrialActive' | 'isExpired'>;
@@ -45,88 +40,33 @@ const SIGNED_IN_FALLBACK: SubscriptionSnapshot = {
 };
 
 async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> {
-  let snapshot = { ...SIGNED_IN_FALLBACK };
-
-  try {
-    const { data, error: settingsError } = await supabase
-      .from('user_settings')
-      .select('subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (settingsError) {
-      console.warn('[useSubscription] Failed to load user settings:', settingsError.message);
-      throw new Error(settingsError.message);
-    }
-
-    if (data) {
-      const rawTier = (data.subscription_tier || 'trial') as SubscriptionTier;
-      const limitOrDefault = (defaultLimit: number) => data.daily_limit_override ?? defaultLimit;
-      const now = new Date();
-      let billingRows: BillingRow[] = [];
-
-      const { data: billingData, error: billingError } = await supabase
-        .from('subscriptions')
-        .select('stripe_customer_id, status, current_period_end')
-        .eq('user_id', userId)
-        .order('current_period_end', { ascending: false, nullsFirst: false })
-        .limit(5);
-
-      if (billingError) {
-        console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
-      } else {
-        billingRows = billingData || [];
-      }
-
-      const activeStripeSubscription = billingRows.some((row) =>
-        (row.status === 'active' || row.status === 'trialing') &&
-        row.current_period_end &&
-        new Date(row.current_period_end) > now
-      );
-      const promoEnd = data.grace_period_ends_at ? new Date(data.grace_period_ends_at) : null;
-      const trialEnd = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
-      const hasActiveTrialGift = Boolean(trialEnd && now < trialEnd);
-
-      snapshot = {
-        ...snapshot,
-        hasStripeBilling: billingRows.some((row) => Boolean(row.stripe_customer_id)),
-        trialEndsAt: data.trial_ends_at,
-        gracePeriodEndsAt: data.grace_period_ends_at,
-      };
-
-      if (rawTier === 'legacy_free') {
-        snapshot.tier = promoEnd && now < promoEnd ? 'legacy_free' : hasActiveTrialGift ? 'trial' : 'expired';
-        snapshot.dailyLimit = limitOrDefault(snapshot.tier === 'legacy_free' ? 50 : snapshot.tier === 'trial' ? 5 : 0);
-      } else if (rawTier === 'pro' && ((promoEnd && now < promoEnd) || activeStripeSubscription)) {
-        snapshot.tier = 'pro';
-        snapshot.dailyLimit = limitOrDefault(50);
-      } else if (rawTier === 'trial' && trialEnd && now < trialEnd) {
-        snapshot.tier = 'trial';
-        snapshot.dailyLimit = limitOrDefault(5);
-      } else if (hasActiveTrialGift) {
-        snapshot.tier = 'trial';
-        snapshot.dailyLimit = limitOrDefault(5);
-      } else {
-        snapshot.dailyLimit = limitOrDefault(0);
-      }
-    }
-
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const { count, error: usageError } = await supabase
-      .from('ai_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', todayStart.toISOString());
-    if (usageError) {
-      console.warn('[useSubscription] Failed to load daily usage:', usageError.message);
-    }
-
-    return { ...snapshot, dailyUsed: usageError ? 0 : count || 0 };
-  } catch (error) {
-    console.warn('[useSubscription] Failed to load:', error);
-    throw error;
+  // The plan merges Stripe, App Store, promo and trial access on the server,
+  // the same answer the AI functions enforce.
+  const entitlement = await readEntitlement(supabase, userId);
+  if (!entitlement) {
+    console.warn('[useSubscription] Failed to load the plan');
+    throw new Error('Could not load the plan');
   }
+
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const { count, error: usageError } = await supabase
+    .from('ai_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', todayStart.toISOString());
+  if (usageError) {
+    console.warn('[useSubscription] Failed to load daily usage:', usageError.message);
+  }
+
+  return {
+    tier: entitlement.tier,
+    hasStripeBilling: entitlement.hasStripeBilling,
+    dailyLimit: entitlement.dailyLimit,
+    dailyUsed: usageError ? 0 : count || 0,
+    trialEndsAt: entitlement.trialEndsAt,
+    gracePeriodEndsAt: entitlement.gracePeriodEndsAt,
+  };
 }
 
 export function useSubscription(): SubscriptionState {

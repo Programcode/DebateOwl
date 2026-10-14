@@ -1,4 +1,5 @@
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
+import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '@debatelab/core/contract/model-catalog';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -87,15 +88,9 @@ function isEmptyObject(value: unknown): boolean {
  * their Pro access can't be read right now.
  */
 async function defaultModelFor(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('subscription_tier,grace_period_ends_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error || !data) return null;
-  const pro = await canUseProModels(userId, data);
-  if (pro === null) return null;
-  return pro ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
+  const entitlement = await readEntitlement(supabase, userId);
+  if (!entitlement) return null;
+  return entitlement.canAccessProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
 }
 
 /**
@@ -141,12 +136,12 @@ async function writeSetting(userId: string, key: SettingKey, value: string, conf
 async function writeFeatureConfig(userId: string, feature: FeatureTab, change: FeatureConfigChange) {
   const { data, error } = await supabase
     .from('user_settings')
-    .select('feature_configs, subscription_tier, grace_period_ends_at')
+    .select('feature_configs')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No settings row for this account');
-  const pro = await canUseProModels(userId, data);
+  const pro = await canUseProModels(userId);
   if (pro === null) throw new Error('Could not read Pro access');
   const featureConfigs = featureConfigsWith(data.feature_configs, pro, feature, change);
   const { error: writeError } = await supabase

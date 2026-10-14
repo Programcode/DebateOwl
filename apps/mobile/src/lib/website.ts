@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 /**
- * The public website, from app.json's extra.websiteUrl. Staging builds link
+ * The public website, from app.config.ts's extra.websiteUrl. Staging builds link
  * there too: the staging site is behind Vercel login, and Terms and Privacy
  * are the same pages.
  */

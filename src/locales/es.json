@@ -441,6 +441,7 @@
     "system": "Sistema",
     "subscription": "Suscripción",
     "tierTrial": "Prueba gratis",
+    "tierBasic": "Básico",
     "tierPro": "Pro",
     "tierLegacyFree": "Gratis heredado",
     "tierExpired": "Caducado",
@@ -2635,6 +2636,10 @@
     },
     "history": {
       "loadFailed": "No se pudo cargar tu historial."
+    },
+    "permissions": {
+      "speechRecognition": "DebateLab convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",
+      "microphone": "DebateLab usa el micrófono mientras dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring."
     }
   }
 }

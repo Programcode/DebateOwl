@@ -17,7 +17,12 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 export type AccountUser = { id: string; email?: string | null };
 export type StorageObject = { bucket_id: string; name: string };
-export type DeletionPlan = { stripe_customer_ids: string[]; storage_objects: StorageObject[] };
+export type DeletionPlan = {
+  stripe_customer_ids: string[];
+  storage_objects: StorageObject[];
+  /** Apple may still bill an App Store subscription; only the user can cancel it. */
+  app_store_subscription_active: boolean;
+};
 
 export type AccountDeps = {
   authenticate: (req: Request) => Promise<AccountUser>;
@@ -134,7 +139,13 @@ export function createHandler(deps: AccountDeps) {
         await deps.prepareDeletion(user.id);
         await deps.deleteAuthUser(user.id);
         console.log(`[ACCOUNT] Deleted account ${user.id}`);
-        return Response.json({ deleted: true, canceledSubscriptions }, { headers: corsHeaders });
+        // The server cannot cancel an App Store subscription, so the app sends
+        // the user to Apple's subscription settings when this is true.
+        return Response.json({
+          deleted: true,
+          canceledSubscriptions,
+          appStoreSubscriptionActive: plan.app_store_subscription_active === true,
+        }, { headers: corsHeaders });
       }
 
       throw new HttpError(400, 'action must be "export" or "delete"');
