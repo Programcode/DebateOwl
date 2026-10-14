@@ -33,6 +33,7 @@ import { keepIfSame } from '@/lib/keep-if-same';
 import { suggestDebate } from '@/lib/motion';
 import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 /** What the History lists delete, with the website's confirmation and failure copy. */
@@ -126,15 +127,17 @@ export default function HistoryScreen() {
     };
   }, []);
 
+  const copies = useCopyHolder();
   const load = useCallback(async (target: string) => {
     if (!userId) return;
     const forUser = userId;
     const request = ++loads.current;
     const isCurrent = () => live.current && loads.current === request && owner.current === forUser;
+    const mark = copies.mark();
     try {
       const next: Loaded = target === OUTSIDE
-        ? { scope: OUTSIDE, kind: 'unsorted', entries: await fetchUnsortedWork(forUser) }
-        : { scope: target, kind: 'debate', lists: await fetchDebateHistory(forUser, target) };
+        ? { scope: OUTSIDE, kind: 'unsorted', entries: await fetchUnsortedWork(forUser, mark) }
+        : { scope: target, kind: 'debate', lists: await fetchDebateHistory(forUser, target, mark) };
       if (!isCurrent()) return;
       // Focus refreshes usually reread the same rows; keep the shown lists when they did not change.
       setLoaded((previous) => keepIfSame(previous, next));
@@ -144,7 +147,7 @@ export default function HistoryScreen() {
       console.warn('Could not load history:', cause instanceof Error ? cause.message : cause);
       setFailed(target);
     }
-  }, [userId]);
+  }, [userId, copies]);
 
   // Reload on focus, so a case deleted in its document or work saved on the website shows up.
   // The scope follows the Current Debate, so wait for the debates instead of loading one-off work first.

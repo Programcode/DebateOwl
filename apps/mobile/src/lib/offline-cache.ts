@@ -39,9 +39,14 @@ const LIMITS = {
   /** Judged Sparring rounds per debate, and each saved round. */
   'sparring-rounds': 20,
   sparring: 40,
+  /** History's six lists of a debate, and the work outside every debate (`one-off`). */
+  history: 20,
 } as const;
 
 export type CacheGroup = keyof typeof LIMITS;
+
+/** Every copy of every group, for a write that changed all of the account's data. */
+export const ALL_COPIES: readonly CopyScope[] = (Object.keys(LIMITS) as CacheGroup[]).map((group) => ({ group }));
 
 /** A copy larger than this is not kept; web storage holds about 5 MB in all. */
 const MAX_ENTRY_CHARS = 512_000;

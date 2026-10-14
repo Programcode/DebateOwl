@@ -130,7 +130,7 @@ export async function saveChat(userId: string, record: ChatRecord, messages: Cha
   })));
   // The chat exists now; keep it so the next save adds these messages to it instead of creating another.
   if (error) throw new ChatSaveError(error.message, { chatId, debateId, persisted: record.persisted });
-  // The conversation and the message count in its debate's list changed.
-  afterWrite(userId, [{ group: 'chat', key: chatId }, { group: 'chats', key: debateId ?? 'one-off' }]);
+  // The conversation and the message count in its debate's list and in History changed.
+  afterWrite(userId, [{ group: 'chat', key: chatId }, { group: 'chats', key: debateId ?? 'one-off' }, { group: 'history', key: debateId ?? 'one-off' }]);
   return { chatId, debateId, persisted: messages.length };
 }

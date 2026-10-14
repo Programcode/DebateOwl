@@ -1,13 +1,15 @@
 import { SparringScorecardSchema, SparringSpeechSchema } from '@debatelab/core/ai/schemas/sparring';
 
-import type { DebateItem, DebateItemKind } from './debates';
+import { debateListScopes, type DebateItem, type DebateItemKind } from './debates';
+import { afterWrite, cachedRead, readAll, readFailed, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
  * The website's History page (src/pages/HistoryPage.tsx) and its unsorted
  * view (src/components/features/debate/UnsortedWork.tsx), read from the same
  * tables. A debate shows six lists; work outside every debate is one list of
- * every kind, plus Library sources, that can be added to a debate.
+ * every kind, plus Library sources, that can be added to a debate. Offline,
+ * both answer from their saved copies.
  */
 
 export type HistoryTab = 'cases' | 'chats' | 'attacks' | 'brainstorms' | 'factoids' | 'sparring';
@@ -73,8 +75,8 @@ async function fetchRows(userId: string, kind: Exclude<DebateItemKind, 'sparring
     ...(kind === 'case' ? ['case_side:output->metadata->>side'] : []),
   ].join(',');
   const query = supabase.from(table).select(columns).eq('user_id', userId);
-  const { data, error } = await inScope(query, scope).order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await inScope(query, scope).order('created_at', { ascending: false });
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as unknown as { id: string; title: string; created_at: string; motion?: string | null; case_side?: string | null }[]).map((row) => ({
     id: row.id,
     kind,
@@ -88,8 +90,8 @@ async function fetchRows(userId: string, kind: Exclude<DebateItemKind, 'sparring
 /** Chats with their message count, as the website's chat list shows them. */
 async function fetchChatRows(userId: string, scope: Scope): Promise<HistoryItem[]> {
   const query = supabase.from('chats').select('id,title,created_at,messages(count)').eq('user_id', userId);
-  const { data, error } = await inScope(query, scope).order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await inScope(query, scope).order('created_at', { ascending: false });
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string; messages: { count: number }[] }[]).map((row) => ({
     id: row.id,
     kind: 'chat',
@@ -119,8 +121,8 @@ async function fetchRounds(userId: string, scope: Scope): Promise<HistoryItem[]>
     .select('id,motion,user_side,format,turns,final_evaluation,status,updated_at')
     .eq('user_id', userId)
     .eq('status', 'complete');
-  const { data, error } = await inScope(query, scope).order('updated_at', { ascending: false }).limit(MAX_ROUNDS);
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await inScope(query, scope).order('updated_at', { ascending: false }).limit(MAX_ROUNDS);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as RoundRow[]).flatMap((row): HistoryItem[] => {
     const turns = Array.isArray(row.turns) && row.turns.length <= 12 ? row.turns : null;
     const scorecard = SparringScorecardSchema.safeParse(row.final_evaluation);
@@ -141,10 +143,14 @@ async function fetchRounds(userId: string, scope: Scope): Promise<HistoryItem[]>
   });
 }
 
-/** The six lists of one debate. */
-export async function fetchDebateHistory(userId: string, debateId: string): Promise<HistoryLists> {
+/** The six lists of one debate. Offline, the saved copy. */
+export function fetchDebateHistory(userId: string, debateId: string, mark?: CopyMark): Promise<HistoryLists> {
+  return cachedRead(userId, 'history', debateId, () => loadDebateHistory(userId, debateId), mark);
+}
+
+async function loadDebateHistory(userId: string, debateId: string): Promise<HistoryLists> {
   const scope = { debateId };
-  const [cases, chats, attacks, brainstorms, factoids, sparring] = await Promise.all([
+  const [cases, chats, attacks, brainstorms, factoids, sparring] = await readAll([
     fetchRows(userId, 'case', scope),
     fetchChatRows(userId, scope),
     fetchRows(userId, 'attack', scope),
@@ -155,10 +161,14 @@ export async function fetchDebateHistory(userId: string, debateId: string): Prom
   return { cases, chats, attacks, brainstorms, factoids, sparring };
 }
 
-/** Work of every kind and Library sources that belong to no debate, newest first. */
-export async function fetchUnsortedWork(userId: string): Promise<UnsortedEntry[]> {
+/** Work of every kind and Library sources that belong to no debate, newest first. Offline, the saved copy. */
+export function fetchUnsortedWork(userId: string, mark?: CopyMark): Promise<UnsortedEntry[]> {
+  return cachedRead(userId, 'history', 'one-off', () => loadUnsortedWork(userId), mark);
+}
+
+async function loadUnsortedWork(userId: string): Promise<UnsortedEntry[]> {
   const scope = { unsorted: true } as const;
-  const lists = await Promise.all([
+  const lists = await readAll([
     fetchRows(userId, 'case', scope),
     fetchRows(userId, 'attack', scope),
     fetchRows(userId, 'brainstorm', scope),
@@ -168,13 +178,13 @@ export async function fetchUnsortedWork(userId: string): Promise<UnsortedEntry[]
     fetchRows(userId, 'crossfire', scope),
     fetchRounds(userId, scope),
     (async (): Promise<UnsortedEntry[]> => {
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('sources')
         .select('id,title,created_at')
         .eq('user_id', userId)
         .is('debate_id', null)
         .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
+      if (error) throw readFailed(error, status);
       return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row) => ({
         kind: 'source' as const,
         id: row.id,
@@ -192,7 +202,9 @@ export async function fetchUnsortedWork(userId: string): Promise<UnsortedEntry[]
  * the sparring store's attachSessionToDebate do. The function checks that the
  * debate and the item belong to the signed-in account and that the item is in
  * no debate yet. It acts for whoever holds the session, so the session must
- * still be the account the screen showed this work for.
+ * still be the account the screen showed this work for. Afterwards the saved
+ * copies that showed the item outside every debate, or the debate without it,
+ * are dropped.
  */
 export async function attachToDebate(userId: string, entry: UnsortedEntry, debateId: string): Promise<void> {
   const { data } = await supabase.auth.getSession();
@@ -205,4 +217,27 @@ export async function attachToDebate(userId: string, entry: UnsortedEntry, debat
     ...(entry.kind === 'sparring' && 'sparring' in entry && entry.sparring ? { p_side: entry.sparring.userSide } : {}),
   });
   if (error) throw new Error(error.message);
+  afterWrite(userId, [...attachedCopies(entry.kind, entry.id, debateId), ...debateListScopes(debateId, entry.kind), ...debateListScopes(null, entry.kind)]);
+}
+
+/** The item's own copy and the per-debate lists it left (one-off) and joined. */
+function attachedCopies(kind: UnsortedEntry['kind'], id: string, debateId: string): CopyScope[] {
+  switch (kind) {
+    case 'case':
+    case 'attack':
+    case 'brainstorm':
+    case 'factoids':
+      return [{ group: `result:${kind}`, key: id }];
+    case 'chat':
+      return [{ group: 'chat', key: id }, { group: 'chats', key: 'one-off' }, { group: 'chats', key: debateId }];
+    case 'flowchart':
+      return [{ group: 'flowchart', key: id }, { group: 'flowcharts', key: 'one-off' }, { group: 'flowcharts', key: debateId }];
+    case 'source':
+      return [{ group: 'source', key: id }, { group: 'sources', key: debateId }];
+    case 'sparring':
+      // The round lists are keyed `<debate or one-off>:<limit>`, as sparring.ts reads them.
+      return [{ group: 'sparring', key: id }, { group: 'sparring-rounds', prefix: 'one-off:' }, { group: 'sparring-rounds', prefix: `${debateId}:` }];
+    case 'crossfire':
+      return [];
+  }
 }

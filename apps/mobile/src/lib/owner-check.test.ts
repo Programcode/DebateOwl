@@ -6,6 +6,7 @@ const supabase = vi.hoisted(() => ({
 }));
 
 vi.mock('./supabase', () => ({ supabase }));
+vi.mock('./offline-cache', () => ({ afterWrite: vi.fn(), ALL_COPIES: [], cachedRead: vi.fn(), readAll: vi.fn(), readFailed: vi.fn(), pickFailure: vi.fn(), updateCopy: vi.fn() }));
 
 import { clearAllData } from './account';
 import { attachToDebate } from './history';

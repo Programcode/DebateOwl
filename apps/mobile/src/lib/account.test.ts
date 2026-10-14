@@ -14,6 +14,7 @@ vi.mock('./supabase', () => ({
     },
   }),
 }));
+vi.mock('./offline-cache', () => ({ afterWrite: vi.fn(), ALL_COPIES: [] }));
 
 import { clearAllData } from './account';
 import { supabase } from './supabase';

@@ -1,5 +1,6 @@
 import { getEdgeFunctionErrorMessage } from '@debatelab/core/supabase/edge-function-error';
 
+import { afterWrite, ALL_COPIES } from './offline-cache';
 import { supabase } from './supabase';
 
 /** The text a user types to confirm deletion. Must match deletionConfirmation in supabase/functions/account. */
@@ -49,4 +50,6 @@ export async function clearAllData(userId: string): Promise<void> {
   if (!session || session.user.id !== userId) throw new Error('The signed-in account changed');
   const { error } = await supabase.rpc('clear_current_user_data').setHeader('Authorization', `Bearer ${session.access_token}`);
   if (error) throw new Error(error.message);
+  // No saved copy may show deleted work offline, and the reload that follows must not read one back.
+  afterWrite(userId, [...ALL_COPIES]);
 }
