@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(19);
+SELECT plan(20);
 
 INSERT INTO auth.users (id) VALUES
   ('f1111111-1111-4111-8111-111111111111'),
@@ -132,6 +132,24 @@ SELECT ok(
   (SELECT count(*) = 10 AND bool_or(token = 'ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]') FROM public.push_tokens),
   'an account keeps its ten most recently seen tokens'
 );
+
+-- READ COMMITTED would let two registrations at once each count only their
+-- own row, so registration holds a per-account lock until it commits.
+RESET ROLE;
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_catalog.pg_locks AS held
+    CROSS JOIN LATERAL (SELECT hashtextextended('push-tokens:f2222222-2222-4222-8222-222222222222', 0) AS key) AS lock
+    WHERE held.locktype = 'advisory'
+      AND held.pid = pg_backend_pid()
+      AND held.mode = 'ExclusiveLock'
+      AND held.objsubid = 1
+      AND held.classid = ((lock.key >> 32) & 4294967295)::text::oid
+      AND held.objid = (lock.key & 4294967295)::text::oid
+  ),
+  'registration holds the account''s lock until the transaction ends'
+);
+SET LOCAL ROLE authenticated;
 
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT throws_ok(

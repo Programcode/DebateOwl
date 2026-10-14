@@ -74,6 +74,10 @@ BEGIN
     RAISE EXCEPTION 'not signed in' USING ERRCODE = '42501';
   END IF;
 
+  -- One registration per account at a time: two at once would each count
+  -- only their own new row and could keep eleven between them.
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('push-tokens:' || v_user_id::text, 0));
+
   IF p_installation_id IS NOT NULL THEN
     DELETE FROM public.push_tokens
     WHERE user_id = v_user_id AND installation_id = p_installation_id AND token <> p_token;
