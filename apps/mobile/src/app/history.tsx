@@ -393,7 +393,7 @@ function UnsortedList({
           {t('debate.unsortedEmptyDesc')}
         </Text>
         {notice ? (
-          <Text tone="secondary" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body}>
+          <Text tone="secondary" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
             {notice}
           </Text>
         ) : null}
