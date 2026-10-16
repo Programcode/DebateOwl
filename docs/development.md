@@ -149,6 +149,7 @@ scripts/agent-stack.sh --name my-task test     # what npm run test:db runs: pgTA
 scripts/agent-stack.sh --name my-task psql -c 'select 1'
 scripts/agent-stack.sh --name my-task advisors # Supabase security advisors
 scripts/agent-stack.sh --name my-task reset    # re-apply migrations after editing them
+scripts/agent-stack.sh --name my-task serve fn.env  # Edge Functions with fn.env's variables (foreground)
 scripts/agent-stack.sh --name my-task destroy  # always, including after failures
 ```
 

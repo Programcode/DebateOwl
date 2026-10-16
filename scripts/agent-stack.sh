@@ -8,11 +8,12 @@
 #
 # The stack cannot serve auth email templates from `content_path`, so the
 # project it starts is an overlay directory: symlinks to this checkout's
-# migrations, functions, tests, and templates, plus a copy of config.toml
-# without the magic-link template block. Edits in the checkout are live;
-# run `reset` to re-apply migrations after changing them.
+# migrations, tests, and templates, a copy of its functions (the stack does
+# not find functions behind a symlink), and a copy of config.toml without the
+# magic-link template block. Run `reset` after changing migrations and
+# `serve` again after changing functions.
 #
-# usage: scripts/agent-stack.sh [--name NAME] start|env|reset|test|advisors|psql|stop|destroy
+# usage: scripts/agent-stack.sh [--name NAME] start|env|reset|test|advisors|psql|serve|stop|destroy
 #
 #   start     start (or resume) the stack; writes connection values to <dir>/stack.env
 #   env       print the path of stack.env and the non-secret URLs
@@ -20,6 +21,8 @@
 #   test      run pgTAP and the concurrency scripts (what `npm run test:db` runs)
 #   advisors  run the Supabase security advisors against the stack
 #   psql      open psql (or run `psql -c ...` with extra args) as postgres
+#   serve ENV_FILE  serve the Edge Functions with ENV_FILE's variables
+#             (runs in the foreground; stop it with Ctrl-C or kill its PID)
 #   stop      stop the stack, keeping its data
 #   destroy   stop the stack and delete its data
 #
@@ -46,9 +49,12 @@ export SUPABASE_EXPERIMENTAL_STACK=1
 prepare_overlay() {
   mkdir -p "$dir/supabase"
   local part
-  for part in migrations functions tests templates; do
+  for part in migrations tests templates; do
     ln -sfn "$root/supabase/$part" "$dir/supabase/$part"
   done
+  if [ -L "$dir/supabase/functions" ]; then rm "$dir/supabase/functions"; fi
+  mkdir -p "$dir/supabase/functions"
+  rsync -a --delete --exclude .env "$root/supabase/functions/" "$dir/supabase/functions/"
   awk '/^\[/ { skip = ($0 == "[auth.email.template.magic_link]") } !skip' \
     "$root/supabase/config.toml" > "$dir/supabase/config.toml"
 }
@@ -91,6 +97,14 @@ case "$cmd" in
   psql)
     psql "$(db_url)" -v ON_ERROR_STOP=1 "$@"
     ;;
+  serve)
+    env_file="${1:?usage: $0 serve ENV_FILE}"
+    prepare_overlay
+    # The stack's workers read supabase/functions/.env; --env-file alone does
+    # not reach them.
+    install -m 600 "$env_file" "$dir/supabase/functions/.env"
+    sb functions serve --env-file "$dir/supabase/functions/.env"
+    ;;
   stop)
     sb stop
     ;;
@@ -99,7 +113,7 @@ case "$cmd" in
     rm -rf "$dir"
     ;;
   *)
-    sed -n '2,27p' "$0" >&2
+    sed -n '2,30p' "$0" >&2
     exit 2
     ;;
 esac
