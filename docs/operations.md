@@ -90,7 +90,7 @@ Admins see a **Developer** card in Settings that signs out, sets the key, and re
 
 A build can pin one project with the `VITE_SUPABASE_ENV` build variable (`production` or `staging`; any other non-empty value fails the build). A pinned build ignores the localStorage key, hides the Settings card and the strip's **Switch to Production** button, and does not reload when another tab switches. The strip still shows on a pinned staging build. The staging Vercel project uses this so each PR gets a staging preview; see [Per-PR previews](#per-pr-previews).
 
-The switch only works while the `connect-src` directive in [`vercel.json`](../vercel.json) allows the staging project origin. Today the `*.supabase.co` wildcard covers it. If you narrow that wildcard, list both project origins explicitly.
+The switch only works while the `connect-src` directive in [`vercel.json`](../vercel.json) allows the staging project origin. It lists exactly the two project origins from [`src/lib/supabase/projects.ts`](../src/lib/supabase/projects.ts), and `src/test/vercel-deployment-config.test.ts` fails if they drift apart.
 
 ## Per-PR previews
 
