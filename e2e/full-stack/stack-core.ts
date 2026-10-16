@@ -34,6 +34,10 @@ export const fake = {
   async fail(feature: string, status = 500, count = 1) {
     await fetch(`${fakeUrl}/__fail`, { method: "POST", body: JSON.stringify({ feature, status, count }) });
   },
+  /** Sets what the fake Stripe returns for GET /v1/subscriptions/:id. */
+  async stripeSubscription(subscription: { id: string; status: string }) {
+    await fetch(`${fakeUrl}/__subscription`, { method: "POST", body: JSON.stringify(subscription) });
+  },
 };
 
 export type DemoUser = { code: string; email: string; userId: () => Promise<string> };

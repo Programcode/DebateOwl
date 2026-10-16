@@ -38,25 +38,27 @@ function sendWebhook(event: object, signature = true) {
   });
 }
 
-function subscriptionEvent(type: string, subscriptionId: string, status: string) {
+function subscriptionObject(subscriptionId: string, status: string) {
   const now = Math.floor(Date.now() / 1000);
+  return {
+    id: subscriptionId,
+    object: "subscription",
+    status,
+    cancel_at_period_end: false,
+    current_period_start: now,
+    current_period_end: now + 30 * 86_400,
+    cancel_at: null,
+    canceled_at: null,
+    ended_at: null,
+  };
+}
+
+function subscriptionEvent(type: string, subscriptionId: string, status: string) {
   return {
     id: `evt_${randomUUID()}`,
     object: "event",
     type,
-    data: {
-      object: {
-        id: subscriptionId,
-        object: "subscription",
-        status,
-        cancel_at_period_end: false,
-        current_period_start: now,
-        current_period_end: now + 30 * 86_400,
-        cancel_at: null,
-        canceled_at: null,
-        ended_at: null,
-      },
-    },
+    data: { object: subscriptionObject(subscriptionId, status) },
   };
 }
 
@@ -114,6 +116,8 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
   expect(forged.status).toBe(400);
   expect(await tier(userId)).toBe("expired");
 
+  // The webhook applies Stripe's current state, which the fake Stripe holds.
+  await fake.stripeSubscription(subscriptionObject(subscriptionId, "active"));
   const accepted = await sendWebhook(activated);
   expect(accepted.status).toBe(200);
   expect(await tier(userId)).toBe("pro");
@@ -124,8 +128,13 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
 
+  await fake.stripeSubscription(subscriptionObject(subscriptionId, "canceled"));
   const canceled = await sendWebhook(subscriptionEvent("customer.subscription.deleted", subscriptionId, "canceled"));
   expect(canceled.status).toBe(200);
+  expect(await tier(userId)).toBe("expired");
+  // An older "active" update that Stripe delivers late must not revive the plan.
+  const stale = await sendWebhook(subscriptionEvent("customer.subscription.updated", subscriptionId, "active"));
+  expect(stale.status).toBe(200);
   expect(await tier(userId)).toBe("expired");
   const { data: row } = await admin.from("subscriptions").select("status").eq("stripe_subscription_id", subscriptionId).single();
   expect(row?.status).toBe("canceled");

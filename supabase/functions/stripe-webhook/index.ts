@@ -23,9 +23,17 @@ if (!STRIPE_WEBHOOK_SECRET) throw new Error("Missing required env: STRIPE_WEBHOO
 if (!SUPABASE_URL) throw new Error("Missing required env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing required env: SUPABASE_SERVICE_ROLE_KEY");
 
+// Only the local full-stack gate sets this, to reach its fake Stripe.
+const stripeApiUrl = Deno.env.get("STRIPE_API_URL");
+const stripeEndpoint = stripeApiUrl ? new URL(stripeApiUrl) : null;
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
   httpClient: Stripe.createFetchHttpClient(),
+  ...(stripeEndpoint && {
+    host: stripeEndpoint.hostname,
+    port: stripeEndpoint.port || (stripeEndpoint.protocol === "http:" ? "80" : "443"),
+    protocol: stripeEndpoint.protocol.replace(":", "") as "http" | "https",
+  }),
 });
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
