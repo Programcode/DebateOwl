@@ -333,15 +333,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   } catch (err) {
     if (err instanceof AppError) {
-      return new Response(JSON.stringify({ error: err.message, details: err.details }), {
+      console.error("[CHECKOUT] Configuration error:", err.message.slice(0, 2000));
+      return new Response(JSON.stringify({ error: "Unable to create checkout session. Please try again." }), {
         status: err.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { status, message, details } = classifyStripeError(err);
-    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }));
-    return new Response(JSON.stringify({ error: message, details }), {
+    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }).slice(0, 2000));
+    return new Response(JSON.stringify({ error: "Unable to create checkout session. Please try again." }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

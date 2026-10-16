@@ -838,14 +838,14 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   try {
     frames = `data: ${JSON.stringify({ error: { message: "provider exploded" } })}`;
     const providerError = await (await handleStreamRequest(request())).text();
-    if (providerError.includes("event: final") || !providerError.includes("event: error") || !providerError.includes("provider exploded")) {
+    if (providerError.includes("event: final") || !providerError.includes("event: error") || providerError.includes("provider exploded") || !providerError.includes('"code":"provider_error"')) {
       throw new Error(`provider error was not surfaced as an SSE error: ${providerError}`);
     }
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
 
     frames = `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`;
     const incomplete = await (await handleStreamRequest(request())).text();
-    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || !incomplete.includes("ended before completion")) {
+    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || incomplete.includes("ended before completion") || !incomplete.includes('"code":"provider_error"')) {
       throw new Error(`incomplete EOF was treated as success: ${incomplete}`);
     }
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("incomplete EOF published a cost");
@@ -988,7 +988,7 @@ Deno.test("stream terminal events stop an open upstream promptly", async () => {
 
     scenario = "error";
     const errorText = await withTimeout((await handleStreamRequest(request())).text(), "error stream");
-    if (errorText.includes("event: final") || !errorText.includes("provider exploded")) throw new Error(`provider error was not emitted: ${errorText}`);
+    if (errorText.includes("event: final") || !errorText.includes("event: error") || errorText.includes("provider exploded") || !errorText.includes('"code":"provider_error"')) throw new Error(`provider error was not emitted: ${errorText}`);
     await withTimeout(upstreamCancelled, "error upstream cancellation");
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
   } finally {

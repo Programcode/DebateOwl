@@ -75,7 +75,10 @@ export async function requireUser(req: Request, adminKey = supabaseServiceRoleKe
 
 export function jsonError(error: unknown, corsHeaders: Record<string, string>) {
   const status = error instanceof HttpError ? error.status : 500;
-  const message = error instanceof Error ? error.message : "Internal server error";
+  if (!(error instanceof HttpError)) {
+    console.error("[AUTH] Internal error:", error instanceof Error ? error.message.slice(0, 2000) : String(error).slice(0, 2000));
+  }
+  const message = error instanceof HttpError ? error.message : "Internal server error";
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },

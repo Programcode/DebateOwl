@@ -757,7 +757,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[ERROR]", message);
+    console.error("[ERROR]", message.slice(0, 2000));
 
     if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
       await supabase.rpc("complete_workspace_thread_generation", {
@@ -795,9 +795,9 @@ export async function handleRequest(req: Request): Promise<Response> {
       ]),
       latencyMs,
       "error",
-      message.slice(0, 100),
+      "ai_error",
     );
-    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
 

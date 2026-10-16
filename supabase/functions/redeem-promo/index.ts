@@ -58,8 +58,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[PROMO] Error:", message);
-    return new Response(JSON.stringify({ success: false, message }), {
+    console.error("[PROMO] Error:", message.slice(0, 2000));
+    return new Response(JSON.stringify({ success: false, message: "Unable to redeem promo code. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

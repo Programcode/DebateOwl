@@ -217,7 +217,10 @@ export async function callOpenRouter(
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
   }, REQUEST_BUDGET_MS, signal);
-  if (!response.ok) throw new Error(`OpenRouter error: ${errorBody ?? ""}`);
+  if (!response.ok) {
+    console.error(`[OpenRouter] Request failed (${response.status}):`, errorBody?.slice(0, 2000));
+    throw new Error("AI provider request failed");
+  }
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);

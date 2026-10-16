@@ -653,7 +653,8 @@ export async function handleRequest(req: Request): Promise<Response> {
             }
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -693,7 +694,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 }, { onConflict: "user_id" });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -748,7 +750,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 .upsert(updatePayload, { onConflict: "user_id" });
 
             if (updateError) {
-                return new Response(JSON.stringify({ error: updateError.message }), {
+                console.error("[ADMIN] Database operation failed:", updateError.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -845,7 +848,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 }, { onConflict: "feature" });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -875,7 +879,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 .eq("feature", feature);
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -928,7 +933,8 @@ export async function handleRequest(req: Request): Promise<Response> {
             });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -957,7 +963,8 @@ export async function handleRequest(req: Request): Promise<Response> {
             }).eq("id", id);
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -1008,14 +1015,14 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[ADMIN API ERROR]", message);
+        console.error("[ADMIN API ERROR]", message.slice(0, 2000));
         if (message === "Admin role no longer active") {
             return new Response(JSON.stringify({ error: message }), {
                 status: 403,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
-        return new Response(JSON.stringify({ error: message }), {
+        return new Response(JSON.stringify({ error: "Internal server error" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

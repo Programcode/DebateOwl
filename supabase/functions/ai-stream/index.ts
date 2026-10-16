@@ -279,7 +279,10 @@ export async function handleRequest(req: Request): Promise<Response> {
           body: JSON.stringify(payload),
           signal: upstreamAbort.signal,
         });
-        if (!response.ok || !response.body) throw new Error(await response.text() || `OpenRouter ${response.status}`);
+        if (!response.ok || !response.body) {
+          console.error(`[OpenRouter] Stream request failed (${response.status}):`, (await response.text()).slice(0, 2000));
+          throw new Error("AI provider request failed");
+        }
 
         reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -353,10 +356,10 @@ export async function handleRequest(req: Request): Promise<Response> {
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         cancelUpstream();
-        const errorMessage = err instanceof Error ? err.message : "Streaming failed";
+        console.error("[AI_STREAM] Stream failed:", (err instanceof Error ? err.message : String(err)).slice(0, 2000));
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
         if (!isAbort) {
-          try { emit("error", { message: errorMessage }); } catch { /* client disconnected */ }
+          try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
         }
         const observedUsage = collectUsage();
         await logUsage(
