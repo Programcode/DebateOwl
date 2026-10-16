@@ -236,26 +236,34 @@ ALTER TABLE public.webhook_events
 -- the Edge Function's clock could let a skewed worker take over a fresh claim.
 -- A claim that is neither complete nor abandoned is 'in_progress', and the
 -- webhook answers it with a retryable status, so a delivery that dies after
--- claiming is retried rather than acknowledged.
+-- claiming is retried rather than acknowledged. Only a row seen complete is a
+-- 'duplicate': if a failed delivery released its claim between our insert and
+-- our read, the row is gone and we try to claim it again.
 CREATE FUNCTION public.claim_webhook_event(p_id text, p_type text)
 RETURNS text
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
+DECLARE
+  v_completed timestamptz;
 BEGIN
-  INSERT INTO public.webhook_events (id, event_type, processed_at, completed_at)
-  VALUES (p_id, p_type, now(), NULL)
-  ON CONFLICT (id) DO NOTHING;
-  IF FOUND THEN RETURN 'claimed'; END IF;
+  FOR attempt IN 1..3 LOOP
+    INSERT INTO public.webhook_events (id, event_type, processed_at, completed_at)
+    VALUES (p_id, p_type, now(), NULL)
+    ON CONFLICT (id) DO NOTHING;
+    IF FOUND THEN RETURN 'claimed'; END IF;
 
-  UPDATE public.webhook_events SET processed_at = now()
-  WHERE id = p_id AND completed_at IS NULL AND processed_at < now() - interval '10 minutes';
-  IF FOUND THEN RETURN 'claimed'; END IF;
+    UPDATE public.webhook_events SET processed_at = now()
+    WHERE id = p_id AND completed_at IS NULL AND processed_at < now() - interval '10 minutes';
+    IF FOUND THEN RETURN 'claimed'; END IF;
 
-  IF EXISTS (SELECT 1 FROM public.webhook_events WHERE id = p_id AND completed_at IS NULL) THEN
-    RETURN 'in_progress';
-  END IF;
-  RETURN 'duplicate';
+    SELECT completed_at INTO v_completed FROM public.webhook_events WHERE id = p_id;
+    IF FOUND THEN
+      RETURN CASE WHEN v_completed IS NULL THEN 'in_progress' ELSE 'duplicate' END;
+    END IF;
+  END LOOP;
+  -- Still contended: never acknowledge an event nobody has completed.
+  RETURN 'in_progress';
 END;
 $$;
 
