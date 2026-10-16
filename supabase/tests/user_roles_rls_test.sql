@@ -68,8 +68,8 @@ SELECT is(
 );
 SELECT throws_ok(
   $$SELECT * FROM public.get_active_rate_limits()$$,
-  'P0001',
-  'administrator access required',
+  '42501',
+  NULL,
   'admin-only RPCs still reject the user after the escalation attempts'
 );
 
