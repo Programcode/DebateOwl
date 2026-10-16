@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import {
   duplicateWebhookResponse,
+  processWebhookEvent,
   webhookFailureResponse,
 } from "./webhook-event-lifecycle.ts";
 
@@ -63,62 +64,58 @@ Deno.serve(async (req) => {
   console.log(`[WEBHOOK] Received event: ${event.type} (${event.id})`);
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutCompleted(session);
-        break;
-      }
-      case "invoice.payment_succeeded": {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handlePaymentSucceeded(invoice);
-        break;
-      }
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handlePaymentFailed(invoice);
-        break;
-      }
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionDeleted(subscription);
-        break;
-      }
-      case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpdated(subscription);
-        break;
-      }
-      default:
-        console.log(`[WEBHOOK] Unhandled event type: ${event.type}`);
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    const failure = webhookFailureResponse(message);
-    console.error(`[WEBHOOK] Error processing ${event.type}:`, message);
-    // Return 5xx so Stripe retries. The idempotency record is written only after success.
-    return new Response(JSON.stringify(failure), {
-      status: failure.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const duplicate = await processWebhookEvent(event, {
+      claim: async (id, type) => {
+        const { error } = await supabase.from("webhook_events").insert({ id, event_type: type });
+        if (error?.code === "23505") return false;
+        if (error) throw new Error(`Failed to claim webhook event: ${error.message}`);
+        return true;
+      },
+      release: async (id) => {
+        const { error } = await supabase.from("webhook_events").delete().eq("id", id);
+        if (error) throw new Error(`Failed to release webhook event: ${error.message}`);
+      },
+      retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      handle: async (type, object) => {
+        switch (type) {
+          case "checkout.session.completed": {
+            const session = object as Stripe.Checkout.Session;
+            await handleCheckoutCompleted(session);
+            break;
+          }
+          case "invoice.payment_succeeded": {
+            const invoice = object as Stripe.Invoice;
+            await handlePaymentSucceeded(invoice);
+            break;
+          }
+          case "invoice.payment_failed": {
+            const invoice = object as Stripe.Invoice;
+            await handlePaymentFailed(invoice);
+            break;
+          }
+          case "customer.subscription.deleted":
+          case "customer.subscription.updated": {
+            const subscription = object as Stripe.Subscription;
+            if (subscription.status === "canceled") await handleSubscriptionDeleted(subscription);
+            else await handleSubscriptionUpdated(subscription);
+            break;
+          }
+          default:
+            console.log(`[WEBHOOK] Unhandled event type: ${event.type}`);
+        }
+      },
     });
-  }
-
-  const { error: eventInsertError } = await supabase.from("webhook_events").insert({
-    id: event.id,
-    event_type: event.type,
-  });
-
-  if (eventInsertError) {
-    if (eventInsertError.code === "23505") {
-      const duplicate = duplicateWebhookResponse();
-      console.log(`[WEBHOOK] Duplicate event ignored: ${event.id}`);
-      return new Response(JSON.stringify({ received: true, ...duplicate }), {
-        status: duplicate.status,
+    if (duplicate) {
+      return new Response(JSON.stringify({ received: true, ...duplicateWebhookResponse() }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const failure = webhookFailureResponse("Failed to record webhook event");
-    console.error("[WEBHOOK] Failed to record webhook event:", eventInsertError);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const failure = webhookFailureResponse("Webhook processing failed");
+    console.error(`[WEBHOOK] Error processing ${event.type}:`, message);
+    // The failed delivery released its claim; return 5xx so Stripe retries.
     return new Response(JSON.stringify(failure), {
       status: failure.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -284,6 +281,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
     if (userError) {
       console.error("[WEBHOOK] Failed to downgrade user on cancellation:", userError);
+      throw new Error(`Failed to downgrade user on cancellation: ${userError.message}`);
     }
 
     console.log(`[WEBHOOK] User ${sub.user_id} subscription canceled`);
