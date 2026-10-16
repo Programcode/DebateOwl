@@ -8,6 +8,8 @@ type HeaderRule = {
 };
 
 type VercelConfig = {
+  trailingSlash?: boolean;
+  redirects?: Array<{ source: string; destination: string; statusCode?: number }>;
   rewrites?: Array<{ source: string; destination: string }>;
   headers?: HeaderRule[];
 };
@@ -32,10 +34,27 @@ function headersFor(config: VercelConfig, source: string) {
 }
 
 describe("Vercel frontend deployment configuration", () => {
-  it("falls back to the SPA shell after Vercel checks the filesystem", () => {
+  it("serves the SPA shell for app routes only, so unknown paths get the real 404", () => {
     const config = loadConfig();
 
-    expect(config.rewrites).toEqual([{ source: "/(.*)", destination: "/index.html" }]);
+    expect(config.rewrites).toEqual(
+      ["/app", "/app/:path*", "/login", "/share/:path*", "/expocit/sources"]
+        .map((source) => ({ source, destination: "/app-shell.html" })),
+    );
+    // Rewrite sources match exactly, so /app/settings/ must first lose its slash.
+    expect(config.trailingSlash).toBe(false);
+  });
+
+  it("permanently redirects the retired brand pages to the landing page", () => {
+    const config = loadConfig();
+
+    const pages = "debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab";
+    // Vercel matches a trailing slash only when the source spells it out.
+    expect(config.redirects).toEqual(["", "/", "/:rest+"].map((suffix) => ({
+      source: `/:page(${pages})${suffix}`,
+      destination: "/",
+      statusCode: 301,
+    })));
   });
 
   it("preserves the production security headers", () => {
@@ -103,7 +122,7 @@ describe("Vercel frontend deployment configuration", () => {
     const packageJson = loadPackageJson();
 
     expect(indexHtml).not.toMatch(/rel="(?:modulepreload|preload|prefetch)"[^>]*(?:pages|LandingPage|LoginPage|HomePage|GeneratePage|AttackPage)/i);
-    expect(packageJson.scripts?.build).toBe("vite build && node scripts/check-build-boundaries.mjs");
+    expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-build-boundaries.mjs");
   });
 
   it("caches the offline shell and only caches feature assets after they are visited", () => {
@@ -124,7 +143,7 @@ describe("Vercel frontend deployment configuration", () => {
     },
   );
 
-  it.each(["/", "/index.html", "/theme-init.js", "/sw.js"])(
+  it.each(["/", "/index.html", "/app-shell.html", "/theme-init.js", "/sw.js"])(
     "prevents stale caching for %s",
     (source) => {
       const config = loadConfig();

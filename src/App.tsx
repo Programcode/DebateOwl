@@ -1,5 +1,5 @@
 // src/App.tsx
-import { Component, Suspense, lazy, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,15 +15,30 @@ import { useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
-import { routeLoaders } from "@/lib/route-modules";
+import { routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import type { PrerenderedRoute } from "@/lib/seo/pages";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
 
+/**
+ * A page the build prerenders. mountApp loads its module before the first
+ * render, so React replaces the prerendered HTML with the same page at once
+ * instead of showing a route skeleton while the chunk resolves.
+ */
+function prerenderedPage(route: PrerenderedRoute) {
+  const loader: RouteLoader<{ default: ComponentType }> = routeLoaders[route];
+  const LazyPage = lazy(loader);
+  return function PrerenderedPage() {
+    const [Page] = useState(() => loader.loaded()?.default ?? LazyPage);
+    return <Page />;
+  };
+}
+
 // Lazy load all pages for code splitting
-const LandingPage = lazy(routeLoaders["/"]);
-const TermsPage = lazy(routeLoaders["/terms"]);
-const PrivacyPage = lazy(routeLoaders["/privacy"]);
+const LandingPage = prerenderedPage("/");
+const TermsPage = prerenderedPage("/terms");
+const PrivacyPage = prerenderedPage("/privacy");
 const HomePage = lazy(routeLoaders["/app"]);
 const CurrentDebatePage = lazy(routeLoaders["/app/debate"]);
 const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
@@ -45,7 +60,7 @@ const SharedPage = lazy(routeLoaders["/share/:code"]);
 const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
 const LoginPage = lazy(routeLoaders["/login"]);
 const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
-const NotFound = lazy(routeLoaders["*"]);
+const NotFound = prerenderedPage("*");
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 

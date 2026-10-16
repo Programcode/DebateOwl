@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/lib/supabase/AuthProvider';
+import { useAuth } from '@/lib/supabase/auth-context';
 import { cn } from '@/lib/utils';
 
 /** Where "home" is for this visitor: the app when signed in, the landing page otherwise. */

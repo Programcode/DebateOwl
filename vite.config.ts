@@ -2,7 +2,6 @@ import { defineConfig, loadEnv, type Plugin, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "path";
 import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./src/lib/supabase/projects";
 
@@ -51,39 +50,6 @@ function bundleGraph(): Plugin {
         fileName: '.vite/bundle-graph.json',
         source: JSON.stringify(chunks, null, 2),
       });
-    },
-  };
-}
-
-/**
- * The built index.html names the landing page as its canonical URL, and Vercel
- * serves it for every route. Public routes listed in sitemap.xml get their own
- * copy of the shell at `<route>/index.html` naming themselves instead; Vercel
- * serves a real file before the SPA rewrite. Google advises against changing a
- * canonical from JavaScript, so this happens at build time.
- */
-const SELF_CANONICAL_ROUTES = ["/terms", "/privacy"];
-const SITE_ORIGIN = "https://debate.pi-stack.org";
-
-function selfCanonicalShells(): Plugin {
-  return {
-    name: "self-canonical-shells",
-    apply: (_config, env) => env.command === "build",
-    writeBundle(options) {
-      const outDir = options.dir ?? "dist";
-      const shell = readFileSync(path.join(outDir, "index.html"), "utf8");
-      const canonical = `<link rel="canonical" href="${SITE_ORIGIN}/" />`;
-      const ogUrl = `<meta property="og:url" content="${SITE_ORIGIN}/" />`;
-      if (!shell.includes(canonical) || !shell.includes(ogUrl)) {
-        throw new Error("index.html no longer carries the landing canonical and og:url tags this plugin rewrites");
-      }
-      for (const route of SELF_CANONICAL_ROUTES) {
-        const html = shell
-          .replace(canonical, `<link rel="canonical" href="${SITE_ORIGIN}${route}" />`)
-          .replace(ogUrl, `<meta property="og:url" content="${SITE_ORIGIN}${route}" />`);
-        mkdirSync(path.join(outDir, route), { recursive: true });
-        writeFileSync(path.join(outDir, route, "index.html"), html);
-      }
     },
   };
 }
@@ -138,14 +104,14 @@ export default defineConfig(({ mode }) => {
     proxy,
     allowedHosts,
   },
-  plugins: [react(), bundleGraph(), selfCanonicalShells(), ...uploadSourceMaps],
+  plugins: [react(), bundleGraph(), ...uploadSourceMaps],
   define: {
     "import.meta.env.VITE_SENTRY_RELEASE": JSON.stringify(release ?? ""),
     "import.meta.env.VITE_SENTRY_ENVIRONMENT": JSON.stringify(process.env.VERCEL_ENV ?? ""),
   },
   optimizeDeps: {
-    // Narrows dev prebundling to the SPA entry. Without this, Vite crawls all
-    // 84 HTML files under the root, including the prerendered pages in public/.
+    // Narrows dev prebundling to the SPA entry. Without this, Vite crawls every
+    // HTML file under the root, including the static guide pages in public/.
     entries: ['index.html'],
   },
   resolve: {

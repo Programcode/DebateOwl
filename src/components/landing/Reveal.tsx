@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 // Full transform strings run on the compositor; the x/y shorthands animate on the main thread.
@@ -21,7 +21,10 @@ interface RevealProps {
  */
 export function Reveal({ children, className, delay = 0, onLoad = false }: RevealProps) {
     const reduceMotion = useReducedMotion();
-    if (reduceMotion) return <div className={className}>{children}</div>;
+    // Prerendered HTML already shows this content. Running the entrance on the
+    // render that replaces it would hide it for a moment, so only later mounts animate.
+    const [prerendered] = useState(() => typeof document === "undefined" || document.getElementById("root")?.dataset.prerendered !== undefined);
+    if (reduceMotion || prerendered) return <div className={className}>{children}</div>;
     const transition = { duration: 0.35, ease: EASE_OUT_STRONG, delay: Math.min(delay, 0.2) };
     return onLoad ? (
         <motion.div className={className} initial={HIDDEN} animate={SHOWN} transition={transition}>

@@ -15,7 +15,7 @@
     "docs:check": "node scripts/check-docs.mjs",
     "backend:status": "node scripts/backend-status.mjs",
     "ci:failures": "node scripts/ci-failures.mjs",
-    "build": "vite build && node scripts/check-build-boundaries.mjs",
+    "build": "vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-build-boundaries.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint . && npm run lint:repo",
     "lint:repo": "knip --no-config-hints && node scripts/check-repo-rules.mjs",

@@ -19,7 +19,6 @@ export async function applyAppLanguage(language: AppLanguage): Promise<void> {
 
   document.documentElement.lang = language;
   document.querySelector<HTMLMetaElement>('meta[name="language"]')?.setAttribute('content', languageName(language));
-  document.title = i18n.t('home.title');
 }
 
 export default i18n;

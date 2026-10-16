@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { PublicPageShell } from '@/components/layout/PublicPageShell';
+import { usePageHead } from '@/lib/seo/use-page-head';
 
 export default function TermsPage() {
   const { t } = useTranslation();
+  usePageHead('/terms');
 
   const sections = Array.from({ length: 10 }, (_, i) => i + 1);
 

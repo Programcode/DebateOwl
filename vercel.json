@@ -3,10 +3,44 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:page(debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab)",
+      "destination": "/",
+      "statusCode": 301
+    },
+    {
+      "source": "/:page(debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab)/",
+      "destination": "/",
+      "statusCode": 301
+    },
+    {
+      "source": "/:page(debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab)/:rest+",
+      "destination": "/",
+      "statusCode": 301
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/app",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/app/:path*",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/share/:path*",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/expocit/sources",
+      "destination": "/app-shell.html"
     }
   ],
   "headers": [
@@ -76,6 +110,15 @@
       ]
     },
     {
+      "source": "/(app-shell|404)\\.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/",
       "headers": [
         {
@@ -86,6 +129,15 @@
     },
     {
       "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/app-shell.html",
       "headers": [
         {
           "key": "Cache-Control",
