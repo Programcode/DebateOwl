@@ -3,6 +3,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "trailingSlash": false,
   "redirects": [
     {
       "source": "/:page(debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab)",

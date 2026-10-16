@@ -8,6 +8,7 @@ type HeaderRule = {
 };
 
 type VercelConfig = {
+  trailingSlash?: boolean;
   redirects?: Array<{ source: string; destination: string; statusCode?: number }>;
   rewrites?: Array<{ source: string; destination: string }>;
   headers?: HeaderRule[];
@@ -40,6 +41,8 @@ describe("Vercel frontend deployment configuration", () => {
       ["/app", "/app/:path*", "/login", "/share/:path*", "/expocit/sources"]
         .map((source) => ({ source, destination: "/app-shell.html" })),
     );
+    // Rewrite sources match exactly, so /app/settings/ must first lose its slash.
+    expect(config.trailingSlash).toBe(false);
   });
 
   it("permanently redirects the retired brand pages to the landing page", () => {

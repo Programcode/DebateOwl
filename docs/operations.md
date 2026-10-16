@@ -42,6 +42,7 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 
 - the Vite build command and `dist` output;
 - rewrites of the app routes (`/app`, `/login`, `/share`, `/expocit/sources`) to `app-shell.html`; any other path that is not a file gets `404.html` with a real 404 status;
+- `trailingSlash: false`, which 308-redirects `/app/settings/` to `/app/settings` before routing, since rewrite and redirect sources match exactly;
 - 301 redirects from the retired brand pages (`/debatelab`, `/debatelab-by-programcode`, and the rest) to `/`;
 - no-cache headers for `/`, `index.html`, `app-shell.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;

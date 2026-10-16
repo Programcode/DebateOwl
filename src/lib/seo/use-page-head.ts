@@ -25,7 +25,8 @@ function setCanonical(path: string | undefined) {
 /**
  * Gives a prerendered page its own title, description, canonical URL and
  * robots rule while it is on screen, and puts the shell's back when the visitor
- * moves on to a page that has none.
+ * moves on to a page that has none. The structured data and og:url the build
+ * wrote describe only the page first loaded, so they go when it does.
  */
 export function usePageHead(route: PrerenderedRoute) {
   useEffect(() => {
@@ -39,6 +40,7 @@ export function usePageHead(route: PrerenderedRoute) {
       setMeta('description', SHELL_HEAD.description);
       setMeta('robots', SHELL_HEAD.robots);
       setCanonical(undefined);
+      document.head.querySelectorAll('script[type="application/ld+json"], meta[property="og:url"]').forEach((node) => node.remove());
     };
   }, [route]);
 }
