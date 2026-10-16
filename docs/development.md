@@ -139,6 +139,21 @@ supabase stop --no-backup
 
 The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` through database tests and the real-Auth collaboration browser journey, and stops the stack and owned processes on exit. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
 
+### A private database per agent
+
+When several agents need a database at once, each can run its own Docker-free project with [`scripts/agent-stack.sh`](../scripts/agent-stack.sh). It uses the Supabase CLI's experimental stack engine (CLI 2.121 or newer) on the native runtime: no lock, no shared ports, and a cold start of about 20 seconds.
+
+```bash
+scripts/agent-stack.sh --name my-task start    # applies every migration; prints API_URL and DB_URL
+scripts/agent-stack.sh --name my-task test     # what npm run test:db runs: pgTAP and the concurrency scripts
+scripts/agent-stack.sh --name my-task psql -c 'select 1'
+scripts/agent-stack.sh --name my-task advisors # Supabase security advisors
+scripts/agent-stack.sh --name my-task reset    # re-apply migrations after editing them
+scripts/agent-stack.sh --name my-task destroy  # always, including after failures
+```
+
+Ports are assigned by the CLI; read them from the env file `start` prints. The stack cannot serve the magic-link email template, so the script runs the project from an overlay directory under `~/.cache/debatelab-stacks/` that drops that block and symlinks everything else. Use it for migrations, pgTAP, the concurrency scripts and RLS queries. The full-stack browser journeys still need `./.superset/db-gate.sh`, which is also what CI runs.
+
 Never point local tests at staging or production. Never apply a migration to an unverified project.
 
 ## Browser workflow

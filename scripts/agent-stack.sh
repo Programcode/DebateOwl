@@ -17,7 +17,7 @@
 #   start     start (or resume) the stack; writes connection values to <dir>/stack.env
 #   env       print the path of stack.env and the non-secret URLs
 #   reset     re-apply every migration to a fresh database
-#   test      run pgTAP (`supabase test db`)
+#   test      run pgTAP and the concurrency scripts (what `npm run test:db` runs)
 #   advisors  run the Supabase security advisors against the stack
 #   psql      open psql (or run `psql -c ...` with extra args) as postgres
 #   stop      stop the stack, keeping its data
@@ -81,6 +81,9 @@ case "$cmd" in
     ;;
   test)
     sb test db "$@"
+    for script in test-daily-quota test-workspace-invite-concurrency test-workspace-mutation-concurrency; do
+      SUPABASE_DB_URL="$(db_url)" bash "$root/scripts/$script.sh"
+    done
     ;;
   advisors)
     sb db advisors --db-url "$(db_url)" --type security --level info "$@"
