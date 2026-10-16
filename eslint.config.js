@@ -81,6 +81,25 @@ export default tseslint.config(
     },
   },
   {
+    // App code imports AI requests and errors through src/lib/ai/client.ts
+    // only. The core and feature files behind it are internal.
+    files: ["src/**/*.{ts,tsx}", "e2e/**/*.ts", "agentic/**/*.ts"],
+    ignores: ["src/lib/ai/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "(^|/)ai/(request|errors|sources|text|features(/.*)?)$",
+              message: "Import AI requests and errors from @/lib/ai/client.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Fixed sleeps pass or fail with machine speed. Wait for a condition.
     files: ["e2e/**/*.ts", "agentic/**/*.ts", ".claude/skills/verify-debatelab/**/*.ts"],
     rules: {

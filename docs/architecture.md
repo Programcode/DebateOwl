@@ -55,7 +55,7 @@ Client-side environment selection is a developer convenience, not authorization.
 
 ## AI request flow
 
-[`src/lib/ai/client.ts`](../src/lib/ai/client.ts) is the browser AI boundary.
+[`src/lib/ai/client.ts`](../src/lib/ai/client.ts) is the browser AI boundary: app code imports only from it. The transport is `request.ts`, and each feature has a file in `features/`, mirroring `supabase/functions/ai/features/`.
 
 1. A feature page validates input and calls a feature wrapper.
 2. The client reads the current Supabase session.
