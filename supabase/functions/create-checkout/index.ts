@@ -298,7 +298,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         .maybeSingle();
 
       if (promoLookupError) {
-        console.warn(`[CHECKOUT] Promo lookup warning for ${promoCode}: ${promoLookupError.message}`);
+        console.warn(`[CHECKOUT] Promo lookup failed`);
       }
 
       if (promo && promo.type === "discount") {
@@ -309,7 +309,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           .maybeSingle();
 
         if (redemptionLookupError) {
-          console.warn(`[CHECKOUT] Promo redemption lookup warning for ${promoCode}: ${redemptionLookupError.message}`);
+          console.warn(`[CHECKOUT] Promo redemption lookup failed`);
         }
 
         if (existingRedemption) {
