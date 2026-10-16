@@ -31,6 +31,14 @@ export function filterObservabilityBreadcrumb<T extends ConsoleBreadcrumb>(bread
   return isReactCaughtRenderError ? null : breadcrumb;
 }
 
+/** Share links grant read access to whoever holds them; keep their codes out of telemetry. */
+export function redactShareLinks<T extends { transaction?: string; request?: { url?: string } }>(event: T): T {
+  const redact = (value: string) => value.replace(/\/share\/[^/?#\s]+/g, "/share/:code");
+  if (event.transaction) event.transaction = redact(event.transaction);
+  if (event.request?.url) event.request.url = redact(event.request.url);
+  return event;
+}
+
 const SAFE_ERROR_NAME = /^[A-Z][A-Za-z]{0,40}Error$/;
 const CODE_LOCATION = String.raw`(?:[a-z][a-z0-9+.-]*:\/\/|\/)[^\s()]+:\d+:\d+`;
 const V8_STACK_FRAME = new RegExp(String.raw`^\s+at (?:.+ \(${CODE_LOCATION}\)|${CODE_LOCATION})$`);
@@ -143,6 +151,8 @@ async function loadSentry(): Promise<SentryModule | null> {
       // No sendDefaultPii: deprecated, and Sentry ignores it whenever
       // dataCollection is set. The block below is the only PII control.
       beforeBreadcrumb: filterObservabilityBreadcrumb,
+      beforeSend: redactShareLinks,
+      beforeSendTransaction: redactShareLinks,
       dataCollection: {
         userInfo: false,
         cookies: false,

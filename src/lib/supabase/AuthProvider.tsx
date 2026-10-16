@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void init();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
+      if (import.meta.env.DEV) console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
 
       const prevUserId = currentUserIdRef.current;
       const nextUserId = newSession?.user?.id;
@@ -223,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Provider access tokens are short-lived. Keep them only for this browser
       // session; a later export must reauthorize if no fresh token is available.
       if (newSession?.provider_token) {
-        console.log('[Auth] Storing new provider_token');
+        if (import.meta.env.DEV) console.log('[Auth] Storing new provider_token');
         sessionStorage.setItem('google_provider_token', newSession.provider_token);
       }
 

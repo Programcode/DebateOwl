@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 
 const projectRoot = resolve(process.cwd());
@@ -111,3 +111,33 @@ if (violations.length > 0) {
 
 const indexHtml = readFileSync(resolve(distDir, 'index.html'), 'utf8');
 if (!/rel="stylesheet"/.test(indexHtml)) throw new Error('The production entry does not request application CSS from index.html.');
+
+// Everything in dist/ is public. Source maps are uploaded to Sentry and then
+// deleted; if an upload fails they must not ship. No server secret may reach
+// the bundle: the only JWTs allowed are anon keys.
+const distFiles = readdirSync(distDir, { recursive: true, withFileTypes: true })
+  .filter((entry) => entry.isFile())
+  .map((entry) => resolve(entry.parentPath, entry.name));
+const sourceMaps = distFiles.filter((file) => file.endsWith('.map'));
+if (sourceMaps.length > 0) {
+  throw new Error(`Source maps would be served publicly:\n${sourceMaps.map((file) => relative(distDir, file)).join('\n')}`);
+}
+
+const secretPattern = /\b(?:sk_live_|sk_test_|rk_live_|whsec_|sk-or-v1-|sk-ant-|sk-proj-|sb_secret_)[A-Za-z0-9_-]{8,}|service_role/;
+const jwtPattern = /eyJ[A-Za-z0-9_-]{10,}\.(eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}/g;
+const secretViolations = distFiles
+  .filter((file) => /\.(?:js|mjs|html|json|txt|webmanifest)$/.test(file))
+  .flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    const found = [];
+    if (secretPattern.test(text)) found.push(`${relative(distDir, file)}: matches a server secret pattern`);
+    for (const [, payload] of text.matchAll(jwtPattern)) {
+      let role;
+      try { role = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).role; } catch { continue; }
+      if (role !== 'anon') found.push(`${relative(distDir, file)}: JWT with role ${role ?? 'none'}`);
+    }
+    return found;
+  });
+if (secretViolations.length > 0) {
+  throw new Error(`Possible secrets in the public build:\n${secretViolations.join('\n')}`);
+}
