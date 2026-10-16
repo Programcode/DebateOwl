@@ -1,6 +1,6 @@
 # Trust boundaries and validation
 
-Part of the [coding standards](../../CODING_STANDARDS.md). The client AI boundary is [`src/lib/ai/client.ts`](../../src/lib/ai/client.ts); the server boundaries are the Edge Function handlers described in [supabase/README.md](../../supabase/README.md).
+Part of the [coding standards](../../CODING_STANDARDS.md). The client AI boundary is [`src/lib/ai/client.ts`](../../src/lib/ai/client.ts), and response validation lives in `src/lib/ai/request.ts`, `src/lib/ai/streaming.ts`, `src/lib/ai/sources.ts`, and each `src/lib/ai/features/*.ts`; the server boundaries are the Edge Function handlers described in [supabase/README.md](../../supabase/README.md).
 
 ## Validate at the boundary, then trust the type
 

@@ -14,7 +14,7 @@ const CORS_HEADERS = {
 };
 
 // The client rejects a generate response whose contention count does not match
-// the requested length (see expectedContentionCount in src/lib/ai/client.ts).
+// the requested length (see expectedContentionCount in src/lib/ai/features/generate.ts).
 const CONTENTION_COUNT: Record<string, number> = { brief: 2, standard: 3, comprehensive: 4 };
 
 const CONTENTIONS = [
