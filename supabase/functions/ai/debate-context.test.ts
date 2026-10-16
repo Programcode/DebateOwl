@@ -204,7 +204,7 @@ Deno.test("a forged debate is rejected before quota, routing, or provider work",
   }
 });
 
-Deno.test("debate context rejects text, workspace mixing, and malformed IDs before authentication", async () => {
+Deno.test("debate context rejects text, workspace mixing, and malformed IDs after authentication but before quota", async () => {
   for (const [label, extra] of [
     ["workspace mixing", { workspaceContext: { workspaceId: DEBATE } }],
     ["source text", { sources: [{ title: "Forged", content: "Forged text", type: "text" }] }],
@@ -218,7 +218,7 @@ Deno.test("debate context rejects text, workspace mixing, and malformed IDs befo
         ...extra,
       }));
       assert(response.status === 400, `${label} returned ${response.status}`);
-      assert(harness.calls.length === 0, `${label} performed remote work: ${harness.calls.join(", ")}`);
+      assert(JSON.stringify(harness.calls) === JSON.stringify(["/auth/v1/user"]), `${label} performed work beyond authentication: ${harness.calls.join(", ")}`);
     } finally {
       harness.restore();
     }
@@ -230,7 +230,7 @@ Deno.test("debate context rejects text, workspace mixing, and malformed IDs befo
       input: askInput,
       debateContext: { debateId: DEBATE, side: "pro", outputs: [{ kind: "case", id: CASE, digest: "Forged digest" }] },
     }));
-    assert(response.status === 400 && harness.calls.length === 0, "a forged output digest was accepted");
+    assert(response.status === 400 && JSON.stringify(harness.calls) === JSON.stringify(["/auth/v1/user"]), "a forged output digest was accepted or performed work beyond authentication");
   } finally {
     harness.restore();
   }
