@@ -6,6 +6,7 @@ Deno.test("a replayed webhook never retrieves or runs a handler", async () => {
   const duplicate = await processWebhookEvent({ id: "evt-1", type: "customer.subscription.updated", data: { object: { id: "sub-1", status: "active" } } }, {
     claim: () => Promise.resolve(false),
     release: () => { throw new Error("must not release another delivery's claim"); },
+    complete: () => { throw new Error("must not complete another delivery's claim"); },
     retrieveSubscription: () => { calls++; return Promise.resolve({ id: "sub-1", status: "canceled" }); },
     handle: () => { calls++; return Promise.resolve(); },
   });
@@ -19,6 +20,7 @@ Deno.test("a failed webhook releases its claim so a retry can run", async () => 
   const deps = {
     claim: () => { if (claimed) return Promise.resolve(false); claimed = true; return Promise.resolve(true); },
     release: () => { claimed = false; return Promise.resolve(); },
+    complete: () => Promise.resolve(),
     retrieveSubscription: () => Promise.resolve({ id: "sub-1" }),
     handle: () => { if (++calls === 1) throw new Error("database failed"); return Promise.resolve(); },
   };
@@ -35,6 +37,7 @@ Deno.test("a distinct stale active update after deletion applies current cancele
   const deps = {
     claim: (id: string) => { seen.add(id); return Promise.resolve(true); },
     release: () => Promise.resolve(),
+    complete: () => Promise.resolve(),
     retrieveSubscription: (id: string) => Promise.resolve({ id, status: "canceled" }),
     handle: (_type: string, subscription: { id: string; status?: string }) => {
       tier = subscription.status === "active" ? "pro" : "expired";

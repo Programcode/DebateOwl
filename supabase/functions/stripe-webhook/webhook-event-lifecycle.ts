@@ -16,6 +16,7 @@ export async function processWebhookEvent<T extends { id: string }>(
   deps: {
     claim: (id: string, type: string) => Promise<boolean>;
     release: (id: string) => Promise<void>;
+    complete: (id: string) => Promise<void>;
     retrieveSubscription: (id: string) => Promise<T>;
     handle: (type: string, object: T) => Promise<void>;
   },
@@ -28,9 +29,10 @@ export async function processWebhookEvent<T extends { id: string }>(
       ? await deps.retrieveSubscription(event.data.object.id)
       : event.data.object;
     await deps.handle(event.type, object);
-    return false;
   } catch (error) {
     await deps.release(event.id);
     throw error;
   }
+  await deps.complete(event.id);
+  return false;
 }

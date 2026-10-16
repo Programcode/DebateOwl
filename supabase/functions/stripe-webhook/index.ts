@@ -9,6 +9,9 @@ import {
   webhookFailureResponse,
 } from "./webhook-event-lifecycle.ts";
 
+// A claim this old with no completion belongs to a delivery that died.
+const ABANDONED_CLAIM_MS = 10 * 60 * 1000;
+
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
@@ -66,10 +69,28 @@ Deno.serve(async (req) => {
   try {
     const duplicate = await processWebhookEvent(event, {
       claim: async (id, type) => {
-        const { error } = await supabase.from("webhook_events").insert({ id, event_type: type });
-        if (error?.code === "23505") return false;
-        if (error) throw new Error(`Failed to claim webhook event: ${error.message}`);
-        return true;
+        const { error } = await supabase.from("webhook_events")
+          .insert({ id, event_type: type, completed_at: null });
+        if (!error) return true;
+        if (error.code !== "23505") throw new Error(`Failed to claim webhook event: ${error.message}`);
+        // A delivery whose worker died mid-handler never completed or released
+        // its claim. Let a retry take it over once it is clearly abandoned.
+        const { data: reclaimed, error: reclaimError } = await supabase.from("webhook_events")
+          .update({ processed_at: new Date().toISOString() })
+          .eq("id", id)
+          .is("completed_at", null)
+          .lt("processed_at", new Date(Date.now() - ABANDONED_CLAIM_MS).toISOString())
+          .select("id");
+        if (reclaimError) throw new Error(`Failed to reclaim webhook event: ${reclaimError.message}`);
+        return (reclaimed?.length ?? 0) > 0;
+      },
+      complete: async (id) => {
+        const { error } = await supabase.from("webhook_events")
+          .update({ completed_at: new Date().toISOString() })
+          .eq("id", id);
+        // The handler's effects are applied; a missing marker only lets a
+        // later retry run the idempotent handlers again.
+        if (error) console.error("[WEBHOOK] Failed to mark event complete:", error.message);
       },
       release: async (id) => {
         const { error } = await supabase.from("webhook_events").delete().eq("id", id);
@@ -199,8 +220,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   // Fetch the full subscription to get current period
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
+  // Take the status from Stripe too: a late payment event must not mark a
+  // since-canceled subscription active again.
   const { error } = await supabase.from("subscriptions").update({
-    status: "active",
+    status: subscription.status,
     current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
   }).eq("stripe_subscription_id", subscriptionId);

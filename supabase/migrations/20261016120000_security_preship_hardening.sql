@@ -9,6 +9,8 @@
 --    objects that later migrations create start with no client privileges.
 -- 3. Account deletion removes the user's demo code and the IP addresses and
 --    fingerprints recorded against it.
+-- 4. Stripe webhook claims record completion, so a claim left by a worker
+--    that died mid-handler can be taken over by Stripe's retry.
 
 -- 1. Promo redemption ---------------------------------------------------------
 
@@ -215,3 +217,12 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.prepare_account_deletion(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.prepare_account_deletion(uuid) TO service_role;
+
+-- 4. Stripe webhook claims -----------------------------------------------------
+
+-- The webhook now claims an event before running its handlers and marks it
+-- complete afterwards. Existing rows, and rows written by the previous
+-- function version (which recorded events only after success), default to
+-- complete; the new claim inserts NULL explicitly.
+ALTER TABLE public.webhook_events
+  ADD COLUMN completed_at timestamptz DEFAULT now();
