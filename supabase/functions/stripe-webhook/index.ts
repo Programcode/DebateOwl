@@ -1,7 +1,7 @@
 // Supabase Edge Function: Stripe Webhook Handler
 // Processes Stripe events and syncs subscription state to the database.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import {
   duplicateWebhookResponse,

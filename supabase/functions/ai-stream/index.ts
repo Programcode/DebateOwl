@@ -1,7 +1,7 @@
 // Supabase Edge Function: streaming Ask proxy for DebateLab.
 // Keeps provider keys server-side and uses SSE for progressive UI rendering.
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
 import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
 import { boundPromptSources, buildStreamingAskSystemPrompt, type StreamingAskMaterial } from "../_shared/prompts.ts";

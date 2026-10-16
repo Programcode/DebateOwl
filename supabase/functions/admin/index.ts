@@ -1,7 +1,7 @@
 // Supabase Edge Function: Admin API for DebateLab
 // Provides usage statistics, rate limit management, and user management
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import {
     validateAnnouncementId,
     validateCreateAnnouncement,

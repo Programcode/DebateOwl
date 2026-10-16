@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 import {
   getDemoCodeDenialReason,
