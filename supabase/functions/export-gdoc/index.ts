@@ -730,7 +730,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     console.log("[GDOC] Function invoked, method:", req.method);
 
     const origin = req.headers.get("origin");
-    const corsHeaders = getCorsHeaders(origin, { allowDevOrigins: true });
+    const corsHeaders = getCorsHeaders(origin);
 
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
