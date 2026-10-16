@@ -18,8 +18,8 @@ async function snap(page: Page, name: string) {
 async function addSource(page: Page, title: string, content: string) {
   await page.goto("/app/library");
   await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill(title);
-  await page.getByRole("textbox", { name: "Paste source content..." }).fill(content);
+  await page.getByPlaceholder("Source title...").fill(title);
+  await page.getByPlaceholder("Paste source content...").fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }

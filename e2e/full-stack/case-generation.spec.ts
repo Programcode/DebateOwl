@@ -10,10 +10,10 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
   await startDebate(page, motion);
   await page.goto("/app/library");
   await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill("Tallinn fare study");
+  await page.getByPlaceholder("Source title...").fill("Tallinn fare study");
   // Imported articles are often this long. Inlining that text in the request
   // exceeded the Edge Function's 200 KB body limit before sources loaded server-side.
-  await page.getByRole("textbox", { name: "Paste source content..." })
+  await page.getByPlaceholder("Paste source content...")
     .fill(`${marker} Tallinn ridership rose 14 percent after fares were removed. ${"Detailed ridership evidence. ".repeat(9_000)}`);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByText("Grounding Active")).toBeVisible();
