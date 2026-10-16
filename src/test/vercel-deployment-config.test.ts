@@ -45,11 +45,13 @@ describe("Vercel frontend deployment configuration", () => {
   it("permanently redirects the retired brand pages to the landing page", () => {
     const config = loadConfig();
 
-    expect(config.redirects).toHaveLength(1);
-    expect(config.redirects?.[0]).toMatchObject({ destination: "/", statusCode: 301 });
-    for (const page of ["debatelab", "debate-lab", "debatelab-ai", "debatelab-app", "what-is-debatelab", "debatelab-by-programcode", "about-debatelab"]) {
-      expect(config.redirects?.[0].source).toMatch(new RegExp(`[(|]${page}[|)]`));
-    }
+    const pages = "debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab";
+    // Vercel matches a trailing slash only when the source spells it out.
+    expect(config.redirects).toEqual(["", "/", "/:rest+"].map((suffix) => ({
+      source: `/:page(${pages})${suffix}`,
+      destination: "/",
+      statusCode: 301,
+    })));
   });
 
   it("preserves the production security headers", () => {
