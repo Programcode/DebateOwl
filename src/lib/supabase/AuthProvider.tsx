@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { AUTH_STORAGE_KEY, setActiveAccessToken, supabase } from './client';
+import { AuthContext, useAuth, type AuthContextValue } from './auth-context';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
@@ -11,26 +12,6 @@ import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 import { setJamUserId } from '@/lib/jam-metadata';
 import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
 
-interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
-  loading: boolean;
-  signInWithGoogle: (options?: { driveAccess?: boolean }) => Promise<void>;
-  signInWithEmailOtp: (email: string) => Promise<void>;
-  verifyEmailOtp: (email: string, token: string) => Promise<void>;
-  signInWithDemoCode: (code: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  /** Ends the session and clears this project's local data before an environment switch. Never hangs. */
-  leaveEnvironment: () => Promise<void>;
-  /**
-   * Clears only this tab's own storage (Google token, sparring state). For a tab
-   * that reloads because another tab switched projects; it must not touch the
-   * shared stores, which may already belong to the new project.
-   */
-  discardTabState: () => void;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_OPERATION_TIMEOUT_MS = 4000;
 const OAUTH_CODE_EXCHANGE_TIMEOUT_MS = 15_000;
 const DEMO_FINGERPRINT_STORAGE_KEY = 'debate-demo-browser-fingerprint';
@@ -385,8 +366,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-}
+export { useAuth };

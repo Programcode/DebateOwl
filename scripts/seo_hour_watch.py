@@ -14,10 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "docs" / "seo-hour-watch.log"
 URLS = [
     "https://debate.pi-stack.org/",
-    "https://debate.pi-stack.org/debatelab",
-    "https://debate.pi-stack.org/debatelab-by-programcode",
-    "https://debate.pi-stack.org/what-is-debatelab",
-    "https://debate.pi-stack.org/debatelab-app",
+    "https://debate.pi-stack.org/terms",
+    "https://debate.pi-stack.org/ai-debate-practice",
+    "https://debate.pi-stack.org/debatelab-pricing",
     "https://debate.pi-stack.org/llms.txt",
     "https://debate.pi-stack.org/sitemap.xml",
 ]

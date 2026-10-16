@@ -59,7 +59,7 @@ Browser or PWA
   -> OpenRouter models, research providers, Stripe, Google APIs
 ```
 
-- The frontend is hosted on **Vercel**. [`vercel.json`](vercel.json) owns the build, SPA fallback, cache policy, and security headers. Merging to `main` deploys it to production.
+- The frontend is hosted on **Vercel**. [`vercel.json`](vercel.json) owns the build, app-route rewrites, cache policy, and security headers. Merging to `main` deploys it to production.
 - **Supabase** holds auth, data, and Edge Functions. Migrations and function deploys are separate operations that need explicit authorization.
 - The browser never holds provider secrets. AI requests go to the `ai` and `ai-stream` Edge Functions, which check auth, quotas, and controls, load debate sources by ID, call the model through OpenRouter, validate the output, and record usage.
 

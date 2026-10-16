@@ -2,10 +2,13 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { PublicPageShell, useHomePath } from "@/components/layout/PublicPageShell";
+import { usePageHead } from "@/lib/seo/use-page-head";
 
 const NotFound = () => {
   const { t } = useTranslation();
   const home = useHomePath();
+  // Not indexed, and no canonical URL that would point a crawler elsewhere.
+  usePageHead("*");
 
   return (
     <PublicPageShell className="flex min-h-[60vh] max-w-[65ch] flex-col items-center justify-center text-center">

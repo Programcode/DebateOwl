@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import App from "./App.tsx";
 import { WebTelemetry } from "./components/WebTelemetry";
 import "./i18n";
@@ -6,6 +7,7 @@ import "@fontsource-variable/inter";
 import "./index.css";
 import { registerServiceWorker } from "./register-service-worker";
 import { initializeObservability } from "./lib/observability";
+import { preloadRoute } from "./lib/route-modules";
 
 const initializeTelemetry = (): void => {
   const run = (): void => { void initializeObservability(); };
@@ -16,13 +18,36 @@ const initializeTelemetry = (): void => {
   }
 };
 
+/** The route whose HTML the build prerendered into #root, when it is the page being opened. */
+function prerenderedRoute(container: HTMLElement): string | undefined {
+  const route = container.dataset.prerendered;
+  return route === "*" || route === window.location.pathname ? route : undefined;
+}
+
 export function mountApp(): void {
-  createRoot(document.getElementById("root")!).render(
+  const container = document.getElementById("root")!;
+  const root = createRoot(container);
+  const app = (
     <>
       <App />
       <WebTelemetry />
-    </>,
+    </>
   );
+  const prerendered = prerenderedRoute(container);
+  if (prerendered) {
+    // The prerendered page stays on screen until its module is loaded, then one
+    // synchronous render replaces it with the same page. A failed load renders
+    // anyway and the route's own lazy load reports the error.
+    const render = (): void => {
+      flushSync(() => root.render(app));
+      delete container.dataset.prerendered;
+    };
+    void Promise.resolve(preloadRoute(prerendered)).then(render, render);
+  } else {
+    // HTML prerendered for another route (an offline copy, say) is replaced like the startup shell.
+    delete container.dataset.prerendered;
+    root.render(app);
+  }
   registerServiceWorker();
 
   if (document.readyState === "complete") {

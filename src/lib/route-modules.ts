@@ -1,15 +1,25 @@
-function cacheLoader<T>(loader: () => Promise<T>): () => Promise<T> {
-  let pending: Promise<T> | undefined;
+export type RouteLoader<T> = (() => Promise<T>) & {
+  /** The module once it has loaded, so a page can render without suspending. */
+  loaded: () => T | undefined;
+};
 
-  return () => {
+function cacheLoader<T>(loader: () => Promise<T>): RouteLoader<T> {
+  let pending: Promise<T> | undefined;
+  let loaded: T | undefined;
+
+  const load = () => {
     if (pending) return pending;
 
-    pending = loader().catch((error) => {
+    pending = loader().then((module) => {
+      loaded = module;
+      return module;
+    }, (error) => {
       pending = undefined;
       throw error;
     });
     return pending;
   };
+  return Object.assign(load, { loaded: () => loaded });
 }
 
 export const routeLoaders = {

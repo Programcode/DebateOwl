@@ -41,12 +41,15 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 [`vercel.json`](../vercel.json) owns:
 
 - the Vite build command and `dist` output;
-- SPA fallback to `index.html`;
-- no-cache headers for `/`, `index.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
+- rewrites of the app routes (`/app`, `/login`, `/share`, `/expocit/sources`) to `app-shell.html`; any other path that is not a file gets `404.html` with a real 404 status;
+- 301 redirects from the retired brand pages (`/debatelab`, `/debatelab-by-programcode`, and the rest) to `/`;
+- no-cache headers for `/`, `index.html`, `app-shell.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;
 - Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only.
 
-The build also writes `dist/terms/index.html` and `dist/privacy/index.html`: copies of the app shell whose canonical URL names their own route instead of the landing page (`selfCanonicalShells` in [`vite.config.ts`](../vite.config.ts)). Vercel serves them before the SPA fallback. Add a route there when a new SPA page joins `public/sitemap.xml`.
+After `vite build`, [`scripts/prerender.mjs`](../scripts/prerender.mjs) renders the landing page, `/terms`, `/privacy`, and the 404 page in Node through [`src/prerender/entry.tsx`](../src/prerender/entry.tsx). It writes them to `dist/index.html`, `dist/terms/index.html`, `dist/privacy/index.html`, and `dist/404.html`, each with its own title, description, and canonical URL from [`src/lib/seo/pages.ts`](../src/lib/seo/pages.ts); the landing page also carries the Organization and SoftwareApplication JSON-LD. The built shell is kept as `dist/app-shell.html`. On load, the client replaces the prerendered HTML with the same page. A new public SPA page needs an entry in `PAGE_HEADS`, in the prerender entry, and a route kept out of the 404.
+
+[`scripts/sitemap.mjs`](../scripts/sitemap.mjs) then writes `dist/sitemap.xml` from every page in `dist/` that names itself as canonical and is not `noindex`. Each `<lastmod>` is the `dateModified` the page declares in its JSON-LD: the guide pages' `CONTENT_DATE` in [`scripts/generate_seo_content.py`](../scripts/generate_seo_content.py), the legal pages' "last updated" dates, and the landing page's last source commit. A page without a date is listed without `<lastmod>`.
 
 [`src/test/vercel-deployment-config.test.ts`](../src/test/vercel-deployment-config.test.ts) guards these rules. Update it together with `vercel.json`, and do not paste the full configuration into another guide.
 
@@ -205,6 +208,6 @@ Do not expose protected data in artifacts. Record the commit, environment, opera
 - Green local E2E plus staging failure: schema, functions, provider access, demo code, or CORS may differ. Run the staging suite locally first; if it fails there too on a UI step, the spec is stale, not staging.
 - New frontend errors against Supabase right after a merge: the matching migration or function may not be applied to production yet. Run `npm run backend:status` from the linked checkout.
 - Function returns unauthorized after deploy: check handler auth and environment propagation before changing gateway settings.
-- Browser works on one route only: check the `vercel.json` SPA rewrite and cache headers.
+- Browser works on one route only, or an app route shows the 404 page: check the `vercel.json` app-route rewrites and cache headers.
 
 Read [testing.md](testing.md) for evidence rules and [`../supabase/README.md`](../supabase/README.md) for backend ownership.
