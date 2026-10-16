@@ -41,12 +41,15 @@ SELECT set_eq(
   'anon holds EXECUTE only on get_shared_item; admin RPCs rely on more than require_admin()'
 );
 
-SELECT is_empty(
-  $$SELECT d.defaclobjtype::text || ' ' || a.grantee::regrole::text
-    FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
-    WHERE d.defaclrole = 'postgres'::regrole AND d.defaclnamespace = 'public'::regnamespace
-      AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole)$$,
-  'objects that postgres creates in public grant nothing to clients by default'
+-- A migration that forgets its grants must leave a new table closed. (A new
+-- function is caught by the anon EXECUTE check above.)
+CREATE TABLE public.pgtap_new_table (id serial);
+SELECT ok(
+  NOT has_table_privilege('anon', 'public.pgtap_new_table', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
+    AND NOT has_table_privilege('authenticated', 'public.pgtap_new_table', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
+    AND NOT has_sequence_privilege('anon', 'public.pgtap_new_table_id_seq', 'USAGE,UPDATE')
+    AND NOT has_sequence_privilege('authenticated', 'public.pgtap_new_table_id_seq', 'USAGE,UPDATE'),
+  'a table or sequence that postgres creates in public later grants clients nothing'
 );
 
 SELECT * FROM finish();

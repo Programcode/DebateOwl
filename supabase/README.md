@@ -104,7 +104,7 @@ Do not use wildcard origins to hide a failed browser test. Before protected stag
 ## Migrations and database tests
 
 Migration filenames define execution order. Never edit an applied migration to change production history; add a new forward migration.
-When creating a table, sequence or function in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Since `20261016120000_security_preship_hardening.sql`, objects that `postgres` creates in `public` grant `anon` and `authenticated` nothing by default (and functions grant `PUBLIC` nothing), so a missing grant shows up as `permission denied`, not as an open table. `supabase/tests/client_grants_test.sql` checks this.
+When creating a table, sequence or function in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Since `20261016120000_security_preship_hardening.sql`, tables and sequences that `postgres` creates in `public` grant `anon` and `authenticated` nothing by default, so a missing grant shows up as `permission denied`, not as an open table. Functions still get Postgres's global `PUBLIC EXECUTE`, so every new function needs its own `REVOKE ... FROM PUBLIC`. `supabase/tests/client_grants_test.sql` checks both.
 
 Local gate:
 

@@ -9,9 +9,6 @@ import {
   webhookFailureResponse,
 } from "./webhook-event-lifecycle.ts";
 
-// A claim this old with no completion belongs to a delivery that died.
-const ABANDONED_CLAIM_MS = 10 * 60 * 1000;
-
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
@@ -75,29 +72,20 @@ Deno.serve(async (req) => {
   console.log(`[WEBHOOK] Received event: ${event.type} (${event.id})`);
 
   try {
-    const duplicate = await processWebhookEvent(event, {
+    const outcome = await processWebhookEvent(event, {
+      // Claim and completion run on the database clock; see claim_webhook_event.
       claim: async (id, type) => {
-        const { error } = await supabase.from("webhook_events")
-          .insert({ id, event_type: type, completed_at: null });
-        if (!error) return true;
-        if (error.code !== "23505") throw new Error(`Failed to claim webhook event: ${error.message}`);
-        // A delivery whose worker died mid-handler never completed or released
-        // its claim. Let a retry take it over once it is clearly abandoned.
-        const { data: reclaimed, error: reclaimError } = await supabase.from("webhook_events")
-          .update({ processed_at: new Date().toISOString() })
-          .eq("id", id)
-          .is("completed_at", null)
-          .lt("processed_at", new Date(Date.now() - ABANDONED_CLAIM_MS).toISOString())
-          .select("id");
-        if (reclaimError) throw new Error(`Failed to reclaim webhook event: ${reclaimError.message}`);
-        return (reclaimed?.length ?? 0) > 0;
+        const { data, error } = await supabase.rpc("claim_webhook_event", { p_id: id, p_type: type });
+        if (error) throw new Error(`Failed to claim webhook event: ${error.message}`);
+        if (data !== "claimed" && data !== "duplicate" && data !== "in_progress") {
+          throw new Error(`Unexpected webhook claim result: ${String(data)}`);
+        }
+        return data;
       },
       complete: async (id) => {
-        const { error } = await supabase.from("webhook_events")
-          .update({ completed_at: new Date().toISOString() })
-          .eq("id", id);
+        const { error } = await supabase.rpc("complete_webhook_event", { p_id: id });
         // The handler's effects are applied; a missing marker only lets a
-        // later retry run the idempotent handlers again.
+        // retry after the abandon window run the idempotent handlers again.
         if (error) console.error("[WEBHOOK] Failed to mark event complete:", error.message);
       },
       release: async (id) => {
@@ -134,9 +122,17 @@ Deno.serve(async (req) => {
         }
       },
     });
-    if (duplicate) {
+    if (outcome === "duplicate") {
       return new Response(JSON.stringify({ received: true, ...duplicateWebhookResponse() }), {
         status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (outcome === "in_progress") {
+      // Another delivery holds the claim. A non-2xx keeps Stripe retrying in
+      // case that delivery dies before completing.
+      return new Response(JSON.stringify({ received: false, error: "Event is being processed" }), {
+        status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -170,14 +170,19 @@ GRANT EXECUTE ON FUNCTION public.get_daily_usage(integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_usage_by_user(integer, integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_active_rate_limits() TO service_role;
 
--- New tables, sequences and functions start closed; each migration grants
--- what its clients need (supabase/README.md already asks for that).
+-- New tables and sequences start closed; each migration grants what its
+-- clients need (supabase/README.md already asks for that). Functions still get
+-- Postgres's built-in global PUBLIC EXECUTE, which a schema-scoped revoke
+-- cannot remove and a global one would also strip from extension functions
+-- (pgTAP and any extension enabled later), so each function migration keeps
+-- its explicit REVOKE ... FROM PUBLIC; client_grants_test.sql fails on any
+-- public function anon can execute other than get_shared_item.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON SEQUENCES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE ALL ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+  REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
 
 -- 3. Account deletion ---------------------------------------------------------
 
@@ -226,3 +231,43 @@ GRANT EXECUTE ON FUNCTION public.prepare_account_deletion(uuid) TO service_role;
 -- complete; the new claim inserts NULL explicitly.
 ALTER TABLE public.webhook_events
   ADD COLUMN completed_at timestamptz DEFAULT now();
+
+-- Claim and completion run on the database clock: a reclaim cutoff taken from
+-- the Edge Function's clock could let a skewed worker take over a fresh claim.
+-- A claim that is neither complete nor abandoned is 'in_progress', and the
+-- webhook answers it with a retryable status, so a delivery that dies after
+-- claiming is retried rather than acknowledged.
+CREATE FUNCTION public.claim_webhook_event(p_id text, p_type text)
+RETURNS text
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.webhook_events (id, event_type, processed_at, completed_at)
+  VALUES (p_id, p_type, now(), NULL)
+  ON CONFLICT (id) DO NOTHING;
+  IF FOUND THEN RETURN 'claimed'; END IF;
+
+  UPDATE public.webhook_events SET processed_at = now()
+  WHERE id = p_id AND completed_at IS NULL AND processed_at < now() - interval '10 minutes';
+  IF FOUND THEN RETURN 'claimed'; END IF;
+
+  IF EXISTS (SELECT 1 FROM public.webhook_events WHERE id = p_id AND completed_at IS NULL) THEN
+    RETURN 'in_progress';
+  END IF;
+  RETURN 'duplicate';
+END;
+$$;
+
+CREATE FUNCTION public.complete_webhook_event(p_id text)
+RETURNS void
+LANGUAGE sql
+SET search_path = ''
+AS $$
+  UPDATE public.webhook_events SET completed_at = now() WHERE id = p_id;
+$$;
+
+REVOKE ALL ON FUNCTION public.claim_webhook_event(text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.complete_webhook_event(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_webhook_event(text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.complete_webhook_event(text) TO service_role;

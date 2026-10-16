@@ -10,18 +10,22 @@ export function webhookFailureResponse(message: string): {
   return { status: 500, received: false, error: message };
 }
 
-// Claim before side effects. Only the delivery that inserted the row may release it.
+export type ClaimResult = "claimed" | "duplicate" | "in_progress";
+
+// Claim before side effects. Only the delivery that holds the claim may
+// release or complete it. Returns "processed" or why it did nothing.
 export async function processWebhookEvent<T extends { id: string }>(
   event: { id: string; type: string; data: { object: T } },
   deps: {
-    claim: (id: string, type: string) => Promise<boolean>;
+    claim: (id: string, type: string) => Promise<ClaimResult>;
     release: (id: string) => Promise<void>;
     complete: (id: string) => Promise<void>;
     retrieveSubscription: (id: string) => Promise<T>;
     handle: (type: string, object: T) => Promise<void>;
   },
-): Promise<boolean> {
-  if (!await deps.claim(event.id, event.type)) return true;
+): Promise<"processed" | "duplicate" | "in_progress"> {
+  const claim = await deps.claim(event.id, event.type);
+  if (claim !== "claimed") return claim;
   try {
     const subscriptionEvent = event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted";
@@ -34,5 +38,5 @@ export async function processWebhookEvent<T extends { id: string }>(
     throw error;
   }
   await deps.complete(event.id);
-  return false;
+  return "processed";
 }
