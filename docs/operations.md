@@ -160,6 +160,16 @@ Before enabling protected browser staging, verify `http://127.0.0.1:18080` for `
 
 Local development origins must remain bounded to intended ports and hosts.
 
+## Sign-in email and DNS
+
+Production and staging Supabase Auth send sign-in codes from `DebateLab <auth@debate.pi-stack.org>` through Resend's SMTP relay (`smtp.resend.com`); the relay password lives only in each project's Auth settings. DNS for `pi-stack.org` is the Cloudflare zone. The sending records are:
+
+- `send.debate.pi-stack.org`: Resend's SPF (`include:amazonses.com`) and bounce MX, so the bounce domain aligns with the From address.
+- `resend._domainkey.debate.pi-stack.org`: Resend's DKIM key; messages are signed with `d=debate.pi-stack.org`.
+- `_dmarc.debate.pi-stack.org`: `p=quarantine` with relaxed alignment. Reports go to the same Gmail address as `_dmarc.pi-stack.org`; receivers that check external report authorization drop them.
+
+The SPF and MX records on `debate.pi-stack.org` itself belong to Cloudflare Email Routing for inbound mail. A name can hold only one SPF record, so do not add Resend's there. Before tightening DMARC to `p=reject`, or after changing the sender, send a staging sign-in code to a mail-tester address and confirm `dmarc=pass`, then delete that staging user. Any other service that sends as `@debate.pi-stack.org` must be added to SPF or DKIM first, or its mail lands in spam.
+
 ## Secrets
 
 Secret names may be documented; values may not. Server-side categories include:
