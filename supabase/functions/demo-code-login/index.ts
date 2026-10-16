@@ -85,6 +85,7 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .select("id", { count: "exact", head: true })
           .eq("ip_address", ipAddress)
           .eq("success", false)
+          .or("failure_reason.is.null,failure_reason.not.in.(rate_limited,invalid_format)")
           .gte("created_at", since)
           .then(({ count, error }) => {
             if (error) throw error;
@@ -101,6 +102,7 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .select("id", { count: "exact", head: true })
           .eq("browser_fingerprint", browserFingerprint)
           .eq("success", false)
+          .or("failure_reason.is.null,failure_reason.not.in.(rate_limited,invalid_format)")
           .gte("created_at", since)
           .then(({ count, error }) => {
             if (error) throw error;
@@ -110,7 +112,22 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
     );
   }
 
-  if (checks.length === 0) return false;
+  if (checks.length === 0) {
+    checks.push(Promise.resolve(
+      supabase
+          .from("demo_access_attempts")
+          .select("id", { count: "exact", head: true })
+          .is("ip_address", null)
+          .is("browser_fingerprint", null)
+          .eq("success", false)
+          .or("failure_reason.is.null,failure_reason.not.in.(rate_limited,invalid_format)")
+          .gte("created_at", since)
+          .then(({ count, error }) => {
+            if (error) throw error;
+            return count || 0;
+          }),
+    ));
+  }
   const counts = await Promise.all(checks);
   return isDemoCodeRateLimited(counts);
 }
