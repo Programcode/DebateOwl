@@ -1,6 +1,6 @@
 # Pre-ship security pass
 
-**Status:** In progress. Audit finished 2026-10-16 against `main` at `df25e985`. The clear fixes are on branch `security/preship-pass`, not merged or deployed; the decisions for Adam are under [Needs Adam](#needs-adam).
+**Status:** In progress. The fixes shipped on 2026-10-17: #148 merged as `f16e8a4`, migration `20261016120000` applied and all 14 Edge Functions redeployed on staging and production. The decisions under [Needs Adam](#needs-adam) are still open.
 
 The checklist follows the shape of a 25-item pre-ship security pass run by parallel subagents. The source post could not be fetched (x.com returned 402), so the items below are a standard pre-ship list adapted to DebateLab's stack: Supabase Postgres and Auth, Deno Edge Functions, a Vite client on Vercel, OpenRouter, Exa, Stripe, ElevenLabs and Google export.
 
