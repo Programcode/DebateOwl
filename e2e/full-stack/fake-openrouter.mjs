@@ -251,7 +251,10 @@ async function proxy(req, res, path) {
   }
   const started = Date.now();
   // A caller that hangs up (a cancelled live run) stops the upstream call too.
+  // A streamed reply is complete at its finish reason; the caller may close
+  // right after it without reading the trailing bytes.
   const hangUp = new AbortController();
+  let finished = false;
   res.on("close", () => {
     if (!res.writableEnded) hangUp.abort();
   });
@@ -268,7 +271,10 @@ async function proxy(req, res, path) {
     // fields prove which model answered, independent of the rewrite above.
     // A streamed reply names them in its first chunk, so read them as it arrives.
     let head = "";
+    let tail = "";
     for await (const chunk of response.body ?? []) {
+      tail = (tail + Buffer.from(chunk).toString("utf8")).slice(-4096);
+      if (/"finish_reason"\s*:\s*"|data: \[DONE\]/.test(tail)) finished = true;
       if (head.length < 8192) {
         head += Buffer.from(chunk).toString("utf8");
         record.upstreamModel ??= /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
@@ -279,7 +285,7 @@ async function proxy(req, res, path) {
     res.end();
   } catch (error) {
     if (hangUp.signal.aborted) {
-      record.status = 499;
+      if (!finished) record.status = 499;
       return;
     }
     record.status = 502;
