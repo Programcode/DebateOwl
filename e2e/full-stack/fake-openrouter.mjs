@@ -19,6 +19,8 @@ if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREA
 const requests = [];
 let failures = [];
 let upstreamCalls = 0;
+// Delay between streamed chunks; a test can slow it to keep a draft on screen.
+let streamDelayMs;
 
 const MARK = "FAKE-PROVIDER";
 
@@ -217,7 +219,7 @@ async function streamJson(res, content) {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   for (let index = 0; index < content.length; index += STREAM_CHUNK_CHARS) {
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(index, index + STREAM_CHUNK_CHARS) } }] })}\n\n`);
-    await new Promise((resolve) => setTimeout(resolve, STREAM_CHUNK_DELAY_MS));
+    await new Promise((resolve) => setTimeout(resolve, streamDelayMs ?? STREAM_CHUNK_DELAY_MS));
   }
   res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
   res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
@@ -307,6 +309,12 @@ createServer(async (req, res) => {
   if (url.pathname === "/__reset" && req.method === "POST") {
     requests.length = 0;
     failures = [];
+    streamDelayMs = undefined;
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__stream-delay" && req.method === "POST") {
+    const { ms } = JSON.parse(await readBody(req) || "{}");
+    streamDelayMs = typeof ms === "number" && ms >= 0 ? ms : undefined;
     return json(res, 200, { ok: true });
   }
   if (url.pathname === "/__fail" && req.method === "POST") {

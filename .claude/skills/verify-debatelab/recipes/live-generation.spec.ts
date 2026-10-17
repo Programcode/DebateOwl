@@ -1,5 +1,5 @@
 import type { Page, Response } from "@playwright/test";
-import { AI_TIMEOUT, expect, expectStreamed, readAIResponse, startDebate, test } from "./fixtures";
+import { AI_TIMEOUT, expect, expectStreamed, fake, readAIResponse, startDebate, test } from "./fixtures";
 
 // Feature map: features/live-generation.md.
 const motion = "This House would make public transport free at the point of use";
@@ -32,6 +32,8 @@ async function expectLiveStream(response: Response) {
 }
 
 test("live-generate: a case fills in section by section while the model writes it", async ({ signedIn: page, evidence }) => {
+  // Fake mode writes a case in about a second; slow it so the draft can be inspected.
+  await fake.streamDelay(80);
   await startDebate(page, motion);
   await page.goto("/app/generate");
   await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);

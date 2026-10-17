@@ -34,6 +34,10 @@ export const fake = {
   async fail(feature: string, status = 500, count = 1) {
     await fetch(`${fakeUrl}/__fail`, { method: "POST", body: JSON.stringify({ feature, status, count }) });
   },
+  /** Milliseconds between streamed chunks (fake mode only) until the next reset. */
+  async streamDelay(ms: number) {
+    await fetch(`${fakeUrl}/__stream-delay`, { method: "POST", body: JSON.stringify({ ms }) });
+  },
 };
 
 export type DemoUser = { code: string; email: string; userId: () => Promise<string> };

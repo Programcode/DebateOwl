@@ -174,7 +174,7 @@ It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run 
 
 - Live runs are slow: sparring and crossfire take several minutes each because the model must reason. Use `-g` to run one test while iterating.
 - Vite does not reload `tailwind.config.ts` on a running stack: new theme keys, variants and the `future` flags produce no CSS until `$H down && $H up`. Edits to `src/` and `src/index.css` apply on reload as usual.
-- The fake provider streams a structured answer in 24-character chunks 10 ms apart when the request asks to stream, so a Generate draft is on screen for about a second in fake mode. Short replies (a Crossfire turn) finish in well under that, so prove those with `expectStreamed` rather than by catching the draft.
+- The fake provider streams a structured answer in 24-character chunks 10 ms apart when the request asks to stream, so a Generate draft is on screen for about a second in fake mode; `fake.streamDelay(ms)` slows it for one test (the next reset restores it). Short replies (a Crossfire turn) finish in well under that, so prove those with `expectStreamed` rather than by catching the draft.
 - The fake provider rejects prompts it doesn't recognize. If a prompt change makes a feature fail with a provider error, update `e2e/full-stack/fake-openrouter.mjs`. Don't mock around it.
 - Once, the fake-provider container was SIGKILLed about 20 seconds after `up`, and the cause was never found. Doctor catches this, and `drive` refuses to run until you `down && up`.
 - Demo-code users are Pro with a daily limit of 999. To test quota or tier paths, change `user_settings` through `admin` inside the recipe, as `e2e/full-stack/case-generation.spec.ts` does.
