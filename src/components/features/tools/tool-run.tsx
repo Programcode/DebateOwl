@@ -36,6 +36,18 @@ function subscribeLive(listener: () => void): () => void {
   return () => liveListeners.delete(listener);
 }
 
+/**
+ * Cancels every tool's request and drops every live draft. Runs belong to the
+ * signed-in account, so an account change must not leave one writing on screen.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function abortToolRuns(): void {
+  controllers.forEach((controller) => controller.abort());
+  controllers.clear();
+  liveStates.clear();
+  liveListeners.forEach((listener) => listener());
+}
+
 /** One run of a form tool: a cancellable request, its live draft, and the error it ended with. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useToolRun(tool: string) {
