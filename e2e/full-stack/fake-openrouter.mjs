@@ -250,25 +250,38 @@ async function proxy(req, res, path) {
     return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
   }
   const started = Date.now();
+  // A caller that hangs up (a cancelled live run) stops the upstream call too.
+  const hangUp = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) hangUp.abort();
+  });
   try {
     const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
       method: "POST",
       headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
       body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
+      signal: hangUp.signal,
     });
     record.status = response.status;
     res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
     // Keep the head of the reply: OpenRouter's own `model` and `provider`
     // fields prove which model answered, independent of the rewrite above.
+    // A streamed reply names them in its first chunk, so read them as it arrives.
     let head = "";
     for await (const chunk of response.body ?? []) {
-      if (head.length < 8192) head += Buffer.from(chunk).toString("utf8");
+      if (head.length < 8192) {
+        head += Buffer.from(chunk).toString("utf8");
+        record.upstreamModel ??= /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+        record.upstreamProvider ??= /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+      }
       res.write(chunk);
     }
     res.end();
-    record.upstreamModel = /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
-    record.upstreamProvider = /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
   } catch (error) {
+    if (hangUp.signal.aborted) {
+      record.status = 499;
+      return;
+    }
     record.status = 502;
     const message = error instanceof Error ? error.message : "upstream connection failed";
     console.error(`live provider request failed: ${message}`);

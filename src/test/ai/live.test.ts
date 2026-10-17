@@ -70,6 +70,21 @@ describe('readLiveResponse', () => {
     await expect(context.json()).resolves.toMatchObject({ code: 'limit_reached', limit: 10 });
   });
 
+  it('stops reading when the request is aborted, even if the stream keeps going', async () => {
+    // A fetch wrapper such as the Jam recorder can leave the body streaming after abort.
+    const encoder = new TextEncoder();
+    const endless = new Response(new ReadableStream({
+      async pull(controller) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        controller.enqueue(encoder.encode(event('delta', { text: 'more ' })));
+      },
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+    const controller = new AbortController();
+    const reading = readLiveResponse(endless, { onDraft: () => {} }, controller.signal);
+    setTimeout(() => controller.abort(), 50);
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
   it('fails when the stream ends before its result', async () => {
     const error = await readLiveResponse(eventStream([event('delta', { text: '{"a": "b' })]), { onDraft: () => {} });
     expect(error).toBeInstanceOf(FunctionsFetchError);

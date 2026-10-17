@@ -29,6 +29,7 @@ function isPhase(value: unknown): value is LivePhase {
 export async function readLiveResponse<T>(
   response: Response,
   live: LiveGeneration,
+  signal?: AbortSignal,
 ): Promise<T | FunctionsHttpError | FunctionsFetchError> {
   const contentType = response.headers.get('content-type') ?? '';
   if (!contentType.includes('text/event-stream') || !response.body) return await response.json() as T;
@@ -71,9 +72,17 @@ export async function readLiveResponse<T>(
     }
   };
 
+  // A fetch wrapper (the Jam recorder wraps window.fetch) can keep a
+  // response streaming after its request is aborted, so stop reading here.
+  const stopReading = () => {
+    reader.cancel(signal?.reason).catch((): undefined => undefined);
+  };
+  signal?.addEventListener('abort', stopReading, { once: true });
   try {
     while (!result) {
+      if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
       const { done, value } = await reader.read();
+      if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
       if (done) break;
       const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
       buffer = parsed.buffer;
@@ -81,6 +90,7 @@ export async function readLiveResponse<T>(
     }
     if (!result) handle(consumeSSEChunk('', `${buffer}${decoder.decode()}\n\n`).events);
   } finally {
+    signal?.removeEventListener('abort', stopReading);
     if (timer) clearTimeout(timer);
     reader.cancel().catch((): undefined => undefined);
   }

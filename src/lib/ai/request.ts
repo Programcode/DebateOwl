@@ -222,7 +222,7 @@ export async function callSupabaseAI<T = unknown>(
         headers: { Authorization: `Bearer ${accessToken}` },
         body: { ...requestBody, stream: true },
         signal: controller.signal,
-      }, (response) => readLiveResponse<Record<string, unknown>>(response, live))
+      }, (response) => readLiveResponse<Record<string, unknown>>(response, live, controller.signal))
       : await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
         headers: { Authorization: `Bearer ${accessToken}` },
         body: requestBody,
