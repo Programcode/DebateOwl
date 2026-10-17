@@ -49,6 +49,10 @@ import {
   saveCrossfireDraft,
 } from '@/lib/crossfire/storage';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { readableLiveText } from '@/lib/voice/live-text';
+import { LiveCaret, LiveToolRun } from '@/components/features/tools/live-draft';
+import { crossfireDebriefDraftSections } from '@/components/features/tools/live-sections';
+import type { LiveRunState } from '@/components/features/tools/tool-run';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { cn } from '@/lib/utils';
@@ -345,6 +349,9 @@ export default function CrossfirePage() {
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
+  // The opponent's turn and the debrief as the model writes them.
+  const [liveReply, setLiveReply] = useState('');
+  const [liveDebrief, setLiveDebrief] = useState<LiveRunState>({});
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   // Autosaves fire on every change; the queue keeps an older one from landing last.
   const [saveArtifact] = useState(() => createArtifactSaveQueue(saveWorkspaceArtifact));
@@ -453,13 +460,25 @@ export default function CrossfirePage() {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    setLiveReply('');
+    const ownsRequest = () => requestRef.current === controller && !controller.signal.aborted;
     try {
       const result = await crossfire({
         operation: 'next-turn',
         config: snapshot.config,
         transcript: snapshot.turns,
         expectedReply,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution), voice: voiceActive });
+      }, modelConfig, {
+        signal: controller.signal,
+        workspaceContext: workspace.context ?? undefined,
+        debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        voice: voiceActive,
+        live: {
+          onDraft: (draft) => {
+            if (ownsRequest()) setLiveReply(typeof draft.text === 'string' ? readableLiveText(draft.text) : '');
+          },
+        },
+      });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
         dispatch({
@@ -495,6 +514,8 @@ export default function CrossfirePage() {
       if (controller.signal.aborted) return;
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
+    } finally {
+      if (requestRef.current === controller) setLiveReply('');
     }
   }, [modelConfig, roundDebateId, voiceActive, voiceLanguage, workspace.context]);
 
@@ -502,12 +523,23 @@ export default function CrossfirePage() {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    setLiveDebrief({});
+    const ownsRequest = () => requestRef.current === controller && !controller.signal.aborted;
     try {
       const result = await crossfire({
         operation: 'debrief',
         config: snapshot.config,
         transcript: snapshot.turns,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
+      }, modelConfig, {
+        signal: controller.signal,
+        workspaceContext: workspace.context ?? undefined,
+        debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        live: {
+          onDraft: (draft) => {
+            if (ownsRequest()) setLiveDebrief({ phase: 'writing', draft });
+          },
+        },
+      });
       if (controller.signal.aborted) return;
       if ('type' in result) {
         dispatch({
@@ -522,6 +554,8 @@ export default function CrossfirePage() {
       if (controller.signal.aborted) return;
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
+    } finally {
+      if (requestRef.current === controller) setLiveDebrief({});
     }
   }, [modelConfig, roundDebateId, workspace.context]);
 
@@ -887,11 +921,15 @@ export default function CrossfirePage() {
   }
 
   if (state.phase === 'debriefing') {
+    const debriefSections = liveDebrief.draft ? crossfireDebriefDraftSections(liveDebrief.draft, t) : [];
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8')}>
         <WorkspaceToolScope context={workspace.context} />
         <div className="mx-auto max-w-4xl space-y-6">
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
+          {state.requestStatus === 'pending' && debriefSections.length > 0 ? (
+            <LiveToolRun label={t('crossfire.debriefLoading')} live={liveDebrief} sections={debriefSections} />
+          ) : (
           <Card>
             <CardContent className="flex min-h-56 flex-col items-center justify-center gap-4 p-8 text-center">
               {state.requestStatus === 'pending' ? (
@@ -919,6 +957,7 @@ export default function CrossfirePage() {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     );
@@ -975,12 +1014,21 @@ export default function CrossfirePage() {
           </Alert>
         )}
 
-        {state.request.status === 'pending' && (
+        {state.request.status === 'pending' && (liveReply ? (
+          // The opponent's turn as it is written, styled as the turn it becomes.
+          <article data-testid="crossfire-live-turn" className="mr-auto max-w-[92%] rounded-lg border border-border bg-card p-4" aria-busy="true">
+            <div className="mb-2 flex items-center justify-between gap-4 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">T{state.turns.length + 1}</span>
+              <span>{state.request.expectedReply === 'question' ? t('crossfire.question') : t('crossfire.answer')}</span>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{liveReply}<LiveCaret /></p>
+          </article>
+        ) : (
           <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground" role="status" aria-live="polite">
             <Loader2 className="h-4 w-4 animate-spin text-primary motion-reduce:animate-none" />
             {t('crossfire.thinking')}
           </div>
-        )}
+        ))}
 
         {composerKind && (
           <Card>

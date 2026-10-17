@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, type DemoUser, expect, MARK, providerCall, stackReady, test } from "./stack";
+import { admin, expect, expectResult, MARK, providerCall, stackReady, test, type DemoUser } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -124,7 +124,7 @@ for (const locale of ["en", "hu"] as const) {
     await expect(page.getByTestId("current-debate-strip")).toContainText(`${text.workingIn} ${text.tourMotion}`);
     await expect(page.getByRole("textbox", { name: text.generateMotion })).toHaveValue(text.tourMotion);
     await page.getByRole("button", { name: text.generateSubmit }).click();
-    await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+    await expectResult(page, `${MARK} case thesis`);
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect((await providerCall("generate")).user).toContain(`Motion: ${text.tourMotion}`);
     await expect.poll(async () => {
@@ -149,7 +149,7 @@ for (const locale of ["en", "hu"] as const) {
     await offer.getByRole("button", { name: text.startDebate }).click();
     await expect(offer).toBeHidden();
 
-    await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+    await expectResult(page, `${MARK} case thesis`);
     await expect(page.getByTestId("current-debate-strip")).toContainText(`${text.workingIn} ${text.gateMotion}`);
     const { debates, currentId } = await serverDebates(user);
     expect(debates.map((debate) => debate.motion)).toEqual([text.gateMotion]);

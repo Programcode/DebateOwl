@@ -38,6 +38,10 @@ export const fake = {
   async stripeSubscription(subscription: { id: string; status: string }) {
     await fetch(`${fakeUrl}/__subscription`, { method: "POST", body: JSON.stringify(subscription) });
   },
+  /** Milliseconds between streamed chunks (fake mode only) until the next reset. */
+  async streamDelay(ms: number) {
+    await fetch(`${fakeUrl}/__stream-delay`, { method: "POST", body: JSON.stringify({ ms }) });
+  },
 };
 
 export type DemoUser = { code: string; email: string; userId: () => Promise<string> };

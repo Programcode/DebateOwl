@@ -11,6 +11,7 @@ import { useDebateContextStore } from '@/lib/stores/debate-context-store';
 import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
 import { setJamUserId } from '@/lib/jam-metadata';
 import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
+import { abortToolRuns } from '@/components/features/tools/tool-run';
 
 const AUTH_OPERATION_TIMEOUT_MS = 4000;
 const OAUTH_CODE_EXCHANGE_TIMEOUT_MS = 15_000;
@@ -100,7 +101,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
   const hydrateSparringStore = useSparringStore((state) => state.hydrateSavedSessions);
   const prepareSparringStore = useSparringStore((state) => state.prepareForUser);
-  const resetSessionStore = useSessionStore((state) => state.resetLocalData);
+  const resetSessionData = useSessionStore((state) => state.resetLocalData);
+  // A tool still writing for the previous account stops with its data.
+  const resetSessionStore = useCallback(() => {
+    abortToolRuns();
+    resetSessionData();
+  }, [resetSessionData]);
   const clearSessionStore = useSessionStore((state) => state.clearSession);
   const resetSettingsStore = useSettingsStore((state) => state.resetLocalData);
   const resetSparringStore = useSparringStore((state) => state.resetLocalData);

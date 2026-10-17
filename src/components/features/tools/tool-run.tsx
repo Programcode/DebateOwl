@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { LiveGeneration, LivePhase } from '@/lib/ai/client';
 
 export interface ToolRunError {
   title: string;
@@ -12,28 +13,81 @@ export interface ToolRunError {
 // belongs to the tool, not to one mount of its page: Cancel works after coming back.
 const controllers = new Map<string, AbortController>();
 
-/** One run of a form tool: a cancellable request and the error it ended with. */
+/** What the model has written so far in a tool's current run. */
+export interface LiveRunState {
+  phase?: LivePhase;
+  draft?: Record<string, unknown>;
+}
+
+// The draft lives beside the request, so coming back to the page mid-run
+// shows the answer as far as it has got.
+const liveStates = new Map<string, LiveRunState>();
+const liveListeners = new Set<() => void>();
+const EMPTY_LIVE: LiveRunState = {};
+
+function setLiveState(tool: string, state: LiveRunState | null): void {
+  if (state) liveStates.set(tool, state);
+  else liveStates.delete(tool);
+  liveListeners.forEach((listener) => listener());
+}
+
+function subscribeLive(listener: () => void): () => void {
+  liveListeners.add(listener);
+  return () => liveListeners.delete(listener);
+}
+
+/**
+ * Cancels every tool's request and drops every live draft. Runs belong to the
+ * signed-in account, so an account change must not leave one writing on screen.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function abortToolRuns(): void {
+  controllers.forEach((controller) => controller.abort());
+  controllers.clear();
+  liveStates.clear();
+  liveListeners.forEach((listener) => listener());
+}
+
+/** One run of a form tool: a cancellable request, its live draft, and the error it ended with. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useToolRun(tool: string) {
   const [error, setError] = useState<ToolRunError | null>(null);
+  const liveState = useSyncExternalStore(subscribeLive, () => liveStates.get(tool) ?? EMPTY_LIVE);
 
   const start = useCallback(() => {
     controllers.get(tool)?.abort();
     const controller = new AbortController();
     controllers.set(tool, controller);
+    setLiveState(tool, null);
     setError(null);
     return controller.signal;
+  }, [tool]);
+
+  /** Live updates for the run `start` just began; a later run silences them. */
+  const live = useCallback((): LiveGeneration => {
+    const controller = controllers.get(tool);
+    const current = () => controller !== undefined && controllers.get(tool) === controller && !controller.signal.aborted;
+    return {
+      onDraft: (draft) => {
+        if (current()) setLiveState(tool, { ...liveStates.get(tool), phase: 'writing', draft });
+      },
+      onPhase: (phase) => {
+        if (current()) setLiveState(tool, { ...liveStates.get(tool), phase });
+      },
+    };
   }, [tool]);
 
   const cancel = useCallback(() => {
     controllers.get(tool)?.abort();
     controllers.delete(tool);
+    setLiveState(tool, null);
   }, [tool]);
 
-  return { start, cancel, error, setError, clearError: () => setError(null) };
+  return { start, live, liveState, cancel, error, setError, clearError: () => setError(null) };
 }
 
-function useElapsedSeconds() {
+// eslint-disable-next-line react-refresh/only-export-components
+export function useElapsedSeconds() {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const startedAt = Date.now();

@@ -12,6 +12,17 @@ export async function signIn(page: Page, user: DemoUser) {
   await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
 }
 
+/**
+ * Waits for a tool's finished result to show `text`. A live draft shows the
+ * text while the request is still running, before the result is saved and
+ * billed, so seeing the text alone does not mean the run is done.
+ */
+export async function expectResult(page: Page, text: string, timeout = 30_000) {
+  await expect(page.getByText(text).first()).toBeVisible({ timeout });
+  await expect(page.getByTestId("live-draft")).toHaveCount(0, { timeout });
+  await expect(page.getByText(text).first()).toBeVisible();
+}
+
 /** The visible Current Debate control: the header menu on desktop, the second header row on mobile. */
 export function debateControl(page: Page) {
   return page.locator('[data-testid="current-debate-desktop"]:visible, [data-testid="current-debate-mobile"]:visible').first();

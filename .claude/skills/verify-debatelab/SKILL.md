@@ -82,7 +82,8 @@ It also prints the commit the stack started at and whether there are uncommitted
 - The voice helpers: `stubSpeech(page)` installs a scripted microphone, recogniser and browser voice; `say(page, words)` speaks; `spokenByBrowser(page)` reads back what the browser voice said.
 - `admin`: a service-role client for reading rows as a second view.
 - `fake` / `providerCall(feature)`: what the Edge Function actually sent upstream. Use `fake.fail(feature, status)` to force a provider error.
-- `aiResponse(page, feature, operation?)`: the parsed body of the next `ai` Edge Function response. Assert that its fields reach the screen, never on model wording, so a recipe passes in both modes. `LIVE` and `AI_TIMEOUT` (30 s fake, 240 s live) let a recipe branch where a check only makes sense live, and a fake-mode branch adds an `unverified` annotation instead of passing silently.
+- `aiResponse(page, feature, operation?)`: the parsed body of the next `ai` Edge Function response. Pages ask for live generation, so most `ai` responses are event streams; `aiResponse` and `readAIResponse(response)` read the final `result` event (or a plain JSON body) for you, so never call `response.json()` on an `ai` response. Assert that its fields reach the screen, never on model wording, so a recipe passes in both modes. `LIVE` and `AI_TIMEOUT` (30 s fake, 240 s live) let a recipe branch where a check only makes sense live, and a fake-mode branch adds an `unverified` annotation instead of passing silently.
+- `expectStreamed([...])`: every provider call for those features asked the model to stream, which proves the page showed the answer live.
 - `expectProviderCalls([...])`: what reached the provider. Each test writes `provider-calls.json`, and in live mode the fixture fails the test if any chat call was answered by a model other than the pin.
 - `evidence`: `step(line)`, `aria(name, locator?)`, `shot(name)` and `json(name, value)`.
 - Automatic failure on any uncaught page error, horizontal overflow, or remote Supabase request.
@@ -173,6 +174,7 @@ It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run 
 
 - Live runs are slow: sparring and crossfire take several minutes each because the model must reason. Use `-g` to run one test while iterating.
 - Vite does not reload `tailwind.config.ts` on a running stack: new theme keys, variants and the `future` flags produce no CSS until `$H down && $H up`. Edits to `src/` and `src/index.css` apply on reload as usual.
+- The fake provider streams a structured answer in 24-character chunks 10 ms apart when the request asks to stream, so a Generate draft is on screen for about a second in fake mode; `fake.streamDelay(ms)` slows it for one test (the next reset restores it). Short replies (a Crossfire turn) finish in well under that, so prove those with `expectStreamed` rather than by catching the draft.
 - The fake provider rejects prompts it doesn't recognize. If a prompt change makes a feature fail with a provider error, update `e2e/full-stack/fake-openrouter.mjs`. Don't mock around it.
 - Once, the fake-provider container was SIGKILLed about 20 seconds after `up`, and the cause was never found. Doctor catches this, and `drive` refuses to run until you `down && up`.
 - Demo-code users are Pro with a daily limit of 999. To test quota or tier paths, change `user_settings` through `admin` inside the recipe, as `e2e/full-stack/case-generation.spec.ts` does.

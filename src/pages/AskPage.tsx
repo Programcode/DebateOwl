@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
 import { askChat, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
@@ -61,6 +62,7 @@ export default function AskPage() {
   })));
   const [chatError, setChatError] = useState<AskChatError | null>(null);
   const chatScope = useDebateStore((state) => state.oneOff ? null : state.currentDebateId);
+  const { user } = useAuth();
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
@@ -88,12 +90,21 @@ export default function AskPage() {
 
   // A reply still in flight belongs to the scope it was asked in; a new debate
   // or one-off mode starts a fresh conversation, so drop the late answer.
-  const askedScopeRef = useRef(chatScope);
+  // The account is part of the scope: a reply (or its live text) asked by one
+  // account never lands in the next one's chat.
+  const askScope = `${user?.id ?? ''}:${chatScope ?? ''}`;
+  const askedScopeRef = useRef(askScope);
   useEffect(() => {
-    if (askedScopeRef.current === chatScope) return;
-    askedScopeRef.current = chatScope;
+    if (askedScopeRef.current === askScope) return;
+    const accountChanged = askedScopeRef.current.split(':')[0] !== (user?.id ?? '');
+    askedScopeRef.current = askScope;
     abortActiveRequest();
-  }, [abortActiveRequest, chatScope]);
+    if (accountChanged) {
+      // Text that arrived after the account reset belongs to the old account.
+      setAskStreamingAssistant(null);
+      setAskLoading(false);
+    }
+  }, [abortActiveRequest, askScope, setAskLoading, setAskStreamingAssistant, user?.id]);
 
   // Each finished exchange is recorded into the Current Debate automatically,
   // including conversations started from another tool's Discuss button.
@@ -269,6 +280,34 @@ export default function AskPage() {
           if (ownsStream) {
             streamAbortRef.current = null;
           }
+        }
+      } else if (!workspace.context) {
+        // Structured modes (citations, web search, pros/cons, argument map)
+        // answer in JSON; its response field fills the bubble as it is written.
+        const liveMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant' as const,
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: true as const,
+        };
+        const controller = new AbortController();
+        streamAbortRef.current = controller;
+        setAskStreamingAssistant(liveMessage);
+        streamedId = liveMessage.id;
+        try {
+          result = await askChat(fullMessage, history, mode, config, {
+            ...options,
+            signal: controller.signal,
+            live: {
+              onDraft: (draft) => {
+                if (!isCurrentRequest() || streamAbortRef.current !== controller) return;
+                setAskStreamingAssistant({ ...liveMessage, content: typeof draft.response === 'string' ? draft.response : '' });
+              },
+            },
+          });
+        } finally {
+          if (streamAbortRef.current === controller) streamAbortRef.current = null;
         }
       } else {
         result = await askChat(fullMessage, history, mode, config, options);

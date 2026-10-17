@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
-import { admin, chooseForMotion, expect, fake, MARK, providerCall, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, expectResult, fake, MARK, providerCall, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -89,7 +89,7 @@ test("a promo code redeemed in Settings restores AI access", async ({ signedIn: 
     expect(await tier(userId)).toBe("pro");
 
     await brainstorm(page);
-    await expect(page.getByText(`${MARK} idea 1`)).toBeVisible({ timeout: 30_000 });
+    await expectResult(page, `${MARK} idea 1`);
     await providerCall("brainstorm");
   } finally {
     await admin.from("promo_codes").delete().eq("id", promo.id);

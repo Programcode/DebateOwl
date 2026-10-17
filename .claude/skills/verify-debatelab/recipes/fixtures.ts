@@ -12,6 +12,8 @@ import { expect, fake, stackReady, test as stackTest } from "../../../../e2e/ful
 export * from "../../../../e2e/full-stack/stack";
 // Scripted microphone, recogniser, and browser voice for spoken rounds.
 export { say, spokenByBrowser, stubSpeech } from "../../../../e2e/helpers/voice";
+import { readAIResponse, type AIResponseBody } from "../../../../e2e/helpers/ai-response";
+export { readAIResponse };
 
 if (!stackReady) throw new Error("Stack environment missing; run recipes through `verify.sh drive`");
 
@@ -47,10 +49,25 @@ export function aiResponse(page: Page, feature: string, operation?: string) {
     } catch {
       return false;
     }
-  }, { timeout: AI_TIMEOUT }).then(async (response) => {
-    expect(response.status(), `ai ${feature} status`).toBe(200);
-    return response.json() as Promise<{ output: Record<string, unknown>; discoveredSources?: unknown[]; [key: string]: unknown }>;
+  }, { timeout: AI_TIMEOUT }).then(async (response): Promise<AIResponseBody> => {
+    // Pages stream the answer live; the final event holds the status and body.
+    const { status, body } = await readAIResponse(response);
+    expect(status, `ai ${feature} status`).toBe(200);
+    return body;
   });
+}
+
+/**
+ * Each feature's provider calls asked the model to stream: the page showed
+ * the answer live instead of waiting for the whole reply.
+ */
+export async function expectStreamed(features: string[]) {
+  const calls = await providerCalls();
+  for (const feature of features) {
+    const own = calls.filter((call) => call.feature === feature);
+    expect(own.length, `provider calls for ${feature}`).toBeGreaterThan(0);
+    expect(own.map((call) => call.stream), `${feature} calls streamed`).toEqual(own.map(() => true));
+  }
 }
 
 /** The provider was called for each feature, and every call succeeded. */

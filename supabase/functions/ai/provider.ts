@@ -12,7 +12,16 @@ import {
   type ModelCatalogEntry,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
-import { fetchJsonWithTimeout, OPENROUTER_API_URL, type Provider } from "../_shared/research.ts";
+import {
+  fetchJsonWithTimeout,
+  fetchWithTimeoutAndConsume,
+  MAX_PROVIDER_ERROR_BODY_BYTES,
+  MAX_PROVIDER_ERROR_BODY_CHARS,
+  MAX_PROVIDER_RESPONSE_BYTES,
+  OPENROUTER_API_URL,
+  type Provider,
+  readResponseText,
+} from "../_shared/research.ts";
 
 export const OPENROUTER_PROVIDER: Provider = "openrouter";
 
@@ -75,6 +84,21 @@ export interface AIResult {
   usage?: NormalizedUsage;
 }
 
+/**
+ * Receives a main provider call's text as the model writes it. Only the
+ * call whose output the user sees takes one; research sub-calls never do.
+ */
+export interface GenerationStream {
+  /** Raw model text, in order, exactly as the provider sent it. */
+  delta: (text: string) => void;
+  /** The text so far is void: a repair retry starts the answer again. */
+  reset: () => void;
+  /** The request moved to a step that writes nothing yet. */
+  phase: (name: GenerationPhase) => void;
+}
+
+export type GenerationPhase = "research" | "writing" | "checking";
+
 type OpenRouterResponse = {
   choices?: Array<{ message?: { content?: string | null } }>;
   usage?: unknown;
@@ -102,14 +126,16 @@ export async function callAI(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   reasoningEffort: ReasoningEffort,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  stream?: GenerationStream,
 ): Promise<AIResult> {
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal);
+    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal, stream);
   } catch (err) {
     if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
+    stream?.reset();
     let retry: AIResult;
     try {
       retry = await callAIOnce(
@@ -119,6 +145,7 @@ export async function callAI(
         withJsonRepairPrompt(messages),
         reasoningEffort,
         signal,
+        stream,
       );
     } catch (retryError) {
       // Preserve the completed first attempt if cancellation or another
@@ -168,7 +195,8 @@ export async function callAIOnce(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   reasoningEffort: ReasoningEffort,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  stream?: GenerationStream,
 ): Promise<AIResult> {
   if (provider !== OPENROUTER_PROVIDER) throw new Error(`Unsupported provider: ${provider}`);
   return await callOpenRouter(
@@ -176,6 +204,7 @@ export async function callAIOnce(
     model,
     reasoningEffort,
     signal,
+    stream,
   );
 }
 
@@ -197,6 +226,7 @@ export async function callOpenRouter(
   model: string,
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal,
+  stream?: GenerationStream,
 ): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
@@ -211,6 +241,7 @@ export async function callOpenRouter(
     // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
     provider: { require_parameters: true },
   };
+  if (stream) return await streamOpenRouter(apiKey, payload, stream, signal);
 
   const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
@@ -224,4 +255,135 @@ export async function callOpenRouter(
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
+}
+
+// A streamed reply wraps every token in a JSON frame (ids, model, provider,
+// timestamps), so its raw size is many times the answer's. The answer keeps
+// the plain reply's cap; the frames get room for that overhead.
+const MAX_STREAM_FRAME_OVERHEAD = 32;
+
+type OpenRouterStreamChunk = {
+  choices?: Array<{ delta?: { content?: unknown }; finish_reason?: unknown }>;
+  usage?: unknown;
+  error?: unknown;
+};
+
+/**
+ * The same request as callOpenRouter with `stream: true`. Each content token
+ * goes to the sink as it arrives; the joined text is then parsed exactly like
+ * a non-streamed reply, so the result the caller sees does not change.
+ */
+async function streamOpenRouter(
+  apiKey: string,
+  payload: Record<string, unknown>,
+  stream: GenerationStream,
+  signal?: AbortSignal,
+): Promise<AIResult> {
+  stream.phase("writing");
+  const { text, usage } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({ ...payload, stream: true, stream_options: { include_usage: true } }),
+  }, REQUEST_BUDGET_MS, signal, async (response, bodySignal) => {
+    if (!response.ok || !response.body) {
+      const body = response.body
+        ? await readResponseText(response, MAX_PROVIDER_ERROR_BODY_BYTES, MAX_PROVIDER_ERROR_BODY_CHARS, bodySignal, true)
+        : { text: "" };
+      console.error(`[OpenRouter] Stream request failed (${response.status}):`, body.text.slice(0, 2000));
+      throw new Error("AI provider request failed");
+    }
+    return await readOpenRouterStream(response.body, stream, bodySignal);
+  });
+  return parseProviderContent(text, "OpenRouter", usage);
+}
+
+export async function readOpenRouterStream(
+  body: ReadableStream<Uint8Array>,
+  stream: GenerationStream,
+  signal: AbortSignal,
+): Promise<{ text: string; usage: NormalizedUsage }> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let text = "";
+  let totalBytes = 0;
+  let textBytes = 0;
+  const encoder = new TextEncoder();
+  let usageRaw: Record<string, unknown> | undefined;
+  let done = false;
+  let finished = false;
+
+  const processLine = (line: string) => {
+    const trimmed = line.trim();
+    // OpenRouter sends `: OPENROUTER PROCESSING` comments while a model thinks.
+    if (!trimmed.startsWith("data:")) return;
+    const data = trimmed.slice("data:".length).trim();
+    if (data === "[DONE]") {
+      done = true;
+      return;
+    }
+    let chunk: OpenRouterStreamChunk;
+    try { chunk = JSON.parse(data); } catch { return; }
+    if (chunk.error) {
+      const message = typeof chunk.error === "object" && chunk.error !== null && "message" in chunk.error
+        ? (chunk.error as { message?: unknown }).message
+        : chunk.error;
+      console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
+      throw new Error("AI provider request failed");
+    }
+    const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
+    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finished = true;
+    const content = choice?.delta?.content;
+    if (typeof content === "string" && content) {
+      text += content;
+      textBytes += encoder.encode(content).byteLength;
+      if (textBytes > MAX_PROVIDER_RESPONSE_BYTES) throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
+      stream.delta(content);
+    }
+    if (chunk.usage && typeof chunk.usage === "object" && !Array.isArray(chunk.usage)) {
+      usageRaw = { ...usageRaw, ...(chunk.usage as Record<string, unknown>) };
+    }
+  };
+
+  try {
+    while (!done) {
+      if (signal.aborted) throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
+      const { done: ended, value } = await reader.read();
+      if (ended) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES * MAX_STREAM_FRAME_OVERHEAD) {
+        throw new Error(`Provider stream exceeds ${MAX_PROVIDER_RESPONSE_BYTES * MAX_STREAM_FRAME_OVERHEAD} bytes`);
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        processLine(line);
+        if (done) break;
+      }
+    }
+    if (!done) {
+      buffer += decoder.decode();
+      for (const line of buffer.split("\n")) {
+        processLine(line);
+        if (done) break;
+      }
+    }
+  } catch (error) {
+    // Tokens already arrived are billed even though the answer is lost.
+    if (error && typeof error === "object") {
+      (error as { usage?: NormalizedUsage }).usage = usageRaw
+        ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true }
+        : missingOpenRouterUsage("stream");
+    }
+    throw error;
+  } finally {
+    void reader.cancel().catch(() => undefined);
+  }
+  if (!done && !finished) {
+    const error = new Error("OpenRouter stream ended before completion") as Error & { usage?: NormalizedUsage };
+    error.usage = usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream");
+    throw error;
+  }
+  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream") };
 }

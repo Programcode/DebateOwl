@@ -57,6 +57,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   // web search or citations, perform research instead of leaving it to the model.
   let webSearchContext = "";
   if (shouldUseResearch) {
+    ctx.stream?.phase("research");
     const searchDecision = await decideAskSearch(message, history, researchDeps);
     askSearchQuery = searchDecision.query || message.slice(0, 240);
     if (askSearchQuery) {
@@ -97,7 +98,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
   const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
   const messages = [...history, { role: "user", content: prompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   if (output && typeof output === "object") {
