@@ -33,7 +33,8 @@ function Block({ block, writing }: { block: DraftBlock; writing: boolean }) {
   }
   return (
     <div>
-      {block.label && <h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{block.label}</h4>}
+      {/* Result labels read "Reasoning:" inline; as a heading the colon goes. */}
+      {block.label && <h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{block.label.replace(/[:：]\s*$/, '')}</h4>}
       {block.items ? (
         <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-foreground/90">
           {block.items.map((item, index) => (

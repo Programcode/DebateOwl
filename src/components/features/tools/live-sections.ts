@@ -70,7 +70,7 @@ export function generateDraftSections(draft: Draft, t: TFunction): DraftSection[
       ...itemsBlock(t('generateResults.keyDefinitions'), structure.keyDefinitions),
       ...block(t('generateResults.burdenOfProof'), structure.burdenOfProof),
     ]),
-    ...section('contentions', t('generateResults.structuredArguments'), list(draft.contentions).flatMap((value) => {
+    ...section('contentions', t('generateResults.arguments'), list(draft.contentions).flatMap((value) => {
       const contention = record(value);
       return [
         ...heading(contention.claim),

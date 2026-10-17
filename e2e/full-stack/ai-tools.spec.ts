@@ -1,4 +1,4 @@
-import { admin, chooseForMotion, expect, MARK, fake, providerCall, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, expectResult, fake, MARK, providerCall, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -7,7 +7,7 @@ test("Attack analyses a pasted case", async ({ signedIn: page }) => {
   await page.getByLabel("Your Argument *").fill("Free transit cuts congestion because riders leave their cars at home.");
   await page.getByRole("button", { name: "Find Weaknesses" }).click();
 
-  await expect(page.getByText(`${MARK} weakness`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} weakness`);
   expect((await providerCall("attack")).user).toContain("riders leave their cars at home");
 });
 
@@ -17,7 +17,7 @@ test("Brainstorm returns ranked angles", async ({ signedIn: page }) => {
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
   await chooseForMotion(page, "create");
 
-  await expect(page.getByText(`${MARK} idea 1`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} idea 1`);
   expect((await providerCall("brainstorm")).user).toContain("Motion: Universal basic income should replace targeted welfare");
 });
 
@@ -28,7 +28,7 @@ test("Factoids completes research without verified web sources", async ({ signed
 
   // The local stack has no search key, so the server must drop every unverified
   // factoid and still finish instead of inventing citations.
-  await expect(page.getByText(`${MARK} search suggestion`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} search suggestion`);
   expect((await providerCall("factoids")).user).toContain('"Fare-free transit raises ridership"');
 });
 
