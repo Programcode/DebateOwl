@@ -35,7 +35,7 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
   const systemPrompt = await buildSystemPromptFor(feature);
   const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
   const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
   const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);

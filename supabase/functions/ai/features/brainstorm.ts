@@ -22,6 +22,7 @@ export async function handleBrainstorm(ctx: FeatureContext): Promise<Response> {
 
   // Perform deep research to find relevant context
   console.log("[BRAINSTORM] Starting deep research for motion:", motion);
+  ctx.stream?.phase("research");
   const research = await deepResearch(motion, "", researchDeps, DEEP_RESEARCH);
   const searchContext = buildResearchContext(research);
 
@@ -29,7 +30,7 @@ export async function handleBrainstorm(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
   enforceBrainstormControls(output, side, outputMode);
 

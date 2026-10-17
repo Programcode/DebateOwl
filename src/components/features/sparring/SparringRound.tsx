@@ -18,6 +18,9 @@ import { measureDelivery, type SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import type { AppLanguage } from '@/lib/languages';
 import { ClockAnnouncer, RoundClock, clockTone } from '@/components/features/practice/RoundClock';
+import { LiveCaret, LiveToolRun } from '@/components/features/tools/live-draft';
+import { sparringScoreDraftSections } from '@/components/features/tools/live-sections';
+import type { LiveRunState } from '@/components/features/tools/tool-run';
 
 const MAX_SPEECH_CHARS = 6_000;
 
@@ -26,8 +29,12 @@ interface SparringRoundProps {
   /** The student speaks this round; the language is the one they speak in. */
   voice?: { language: AppLanguage } | null;
   aiLoading?: boolean;
+  /** The opponent's speech as the model writes it. */
+  liveSpeech?: string;
   aiError?: string | null;
   judging?: boolean;
+  /** The judge's scorecard as the model writes it. */
+  liveJudging?: LiveRunState;
   judgingError?: string | null;
   submissionError?: string | null;
   onSubmit: (content: string, delivery?: SpeechDelivery | null) => void;
@@ -51,8 +58,10 @@ export function SparringRound({
   session,
   voice = null,
   aiLoading = false,
+  liveSpeech = '',
   aiError,
   judging = false,
+  liveJudging,
   judgingError,
   submissionError,
   onSubmit,
@@ -67,6 +76,7 @@ export function SparringRound({
   const resetTurnTimer = useSparringStore((state) => state.resetTurnTimer);
   const isOnline = useOnlineStatus();
   const currentTurn = session.turns[session.currentTurnIndex];
+  const judgingSections = liveJudging?.draft ? sparringScoreDraftSections(liveJudging.draft, t) : [];
   const currentWordCount = wordCount(session.draft);
   const totalWords = useMemo(() => session.speeches.reduce((sum, speech) => sum + wordCount(speech.content), 0), [session.speeches]);
   const userTurn = currentTurn?.speaker === 'user';
@@ -182,7 +192,9 @@ export function SparringRound({
             </CardContent>
           </Card>
 
-          {judging ? (
+          {judging && !judgingError && judgingSections.length > 0 ? (
+            <LiveToolRun label={t('sparring.round.judgeWeighing', 'Judge is weighing the round')} live={liveJudging ?? {}} sections={judgingSections} />
+          ) : judging ? (
           <Card className="border-primary/20 bg-primary/[0.025]" aria-busy={judging && !judgingError}>
               <CardContent className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center">
                 {judgingError ? (
@@ -247,6 +259,16 @@ export function SparringRound({
                     {!timeExpired && submissionError && <p className="text-sm text-destructive" role="alert">{submissionError}</p>}
                   </CardContent>
                 </Card>
+              ) : aiLoading && !aiError && liveSpeech ? (
+                // The opponent's speech as it is written, in the place it will be read.
+                <article data-testid="sparring-live-speech" className="rounded-xl border border-primary/20 bg-card p-4 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <h2 id="sparring-live-opponent" className="text-sm font-semibold">{t('sparring.round.opponentSpeaking', 'Opponent is speaking')}</h2>
+                    {currentTurn && <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${currentTurn.id}`, currentTurn.label)}</span>}
+                  </div>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground/90">{liveSpeech}<LiveCaret /></p>
+                </article>
               ) : (
                 <Card className="border-primary/20 bg-primary/[0.025]">
                   <CardContent className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center">

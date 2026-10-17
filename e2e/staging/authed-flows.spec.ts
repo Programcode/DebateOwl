@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type Page } from '@playwright/test';
+import { readAIResponse } from '../helpers/ai-response';
 
 test.describe.configure({ mode: 'serial' });
 // A failed action throws well inside the test timeout, so the cleanup in `finally` still runs.
@@ -154,7 +155,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
         response.request().method() === 'POST' && response.url().includes('/functions/v1/ai'),
       { timeout: 90_000 });
       await page.getByRole('button', { name: 'Send message' }).click();
-      expect((await aiResponse).ok()).toBe(true);
+      expect((await readAIResponse(await aiResponse)).status).toBe(200);
       const saveResponseButton = page.getByRole('button', { name: 'Save message' }).last();
       await expect(saveResponseButton).toBeAttached({ timeout: 90_000 });
       const assistantBubble = saveResponseButton.locator('..');

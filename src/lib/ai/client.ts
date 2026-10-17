@@ -26,6 +26,7 @@ export {
   reportAIFailure,
 } from './request';
 export type { DiscoveredSource, ResultWithSources } from './sources';
+export type { LiveGeneration, LivePhase } from './live';
 export { CROSSFIRE_REQUEST_TIMEOUT_MS, crossfire, crossfireSignal } from './features/crossfire';
 export { generateCase } from './features/generate';
 export { attackCase } from './features/attack';

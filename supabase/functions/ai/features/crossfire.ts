@@ -64,6 +64,7 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     [{ role: "user", content: userPrompt }],
     reasoningEffort,
     workSignal,
+    ctx.stream,
   ));
   const cleanedOutput = cleanGeneratedText(aiResult.output);
   const output = crossfireInput.operation === "next-turn"

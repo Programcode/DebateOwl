@@ -1,5 +1,5 @@
 // src/pages/AttackPage.tsx
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Swords } from 'lucide-react';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -15,7 +15,9 @@ import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { LiveToolRun } from '@/components/features/tools/live-draft';
+import { attackDraftSections } from '@/components/features/tools/live-sections';
 import { attackDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { prefillFromAttack } from '@/lib/crossfire/prefill';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
@@ -38,6 +40,12 @@ export default function AttackPage() {
   const config = getFeatureConfig('attack');
   const run = useToolRun('attack');
   const results = useRevealResults();
+  // On phones the answer sits below the form; bring it into view once the model starts writing.
+  const drafting = Boolean(run.liveState.draft);
+  const revealResults = results.reveal;
+  useEffect(() => {
+    if (drafting) revealResults();
+  }, [drafting, revealResults]);
   const lastInput = useRef<AttackInput | null>(null);
   const navigate = useNavigate();
   const subError = useSubscriptionError();
@@ -51,7 +59,7 @@ export default function AttackPage() {
     // Attack critiques pasted text, not a motion, so it follows the Current Debate directly.
     const debateId = workspace.context ? null : activeDebateId();
     try {
-      const { result, discoveredSources } = await attackCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal);
+      const { result, discoveredSources } = await attackCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal, run.live());
       // A canceled request can still resolve (its last step ignores the signal); never publish it.
       if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
@@ -110,7 +118,7 @@ export default function AttackPage() {
               />
             )}
             {attackLoading ? (
-              <ToolRunStatus label={t('attack.working', 'Reviewing your case…')} onCancel={run.cancel} />
+              <LiveToolRun label={t('attack.working', 'Reviewing your case…')} live={run.liveState} sections={run.liveState.draft ? attackDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : attackResult ? (
               <div key="attack-results">
                 <AttackResults

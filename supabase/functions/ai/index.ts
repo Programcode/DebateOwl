@@ -81,9 +81,11 @@ import {
   type AIResult,
   callAI,
   createRequestBudgetSignal,
+  type GenerationStream,
   modelForRequest,
   OPENROUTER_PROVIDER,
 } from "./provider.ts";
+import { streamFeatureResponse } from "./stream.ts";
 import {
   isRecord,
   MAX_REQUEST_BODY_BYTES,
@@ -127,7 +129,10 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-  const workSignal = createRequestBudgetSignal(req.signal);
+  // A streamed response ends early when the browser cancels it; provider
+  // work stops with it, as it does when a plain request is aborted.
+  const streamCancel = new AbortController();
+  const workSignal = createRequestBudgetSignal(AbortSignal.any([req.signal, streamCancel.signal]));
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
   }
@@ -163,6 +168,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (requestedReasoningEffort === null) return badRequest("Invalid reasoning effort", corsHeaders);
   // A voice round. It sits beside `input` so servers from before voice ignore it.
   const voiceRequested = body.voice === true;
+  // Live generation: answer with Server-Sent Events (see stream.ts). Older
+  // servers ignore the flag and answer with JSON, which clients also accept.
+  const streamRequested = body.stream === true;
   // The per-user custom system prompt was replaced by each Current Debate's
   // settings and instructions. A customSystemPrompt field from an older
   // client is ignored.
@@ -677,126 +685,132 @@ export async function handleRequest(req: Request): Promise<Response> {
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
     });
-  try {
-    const ctx: FeatureContext = {
-      req,
-      userId,
-      provider,
-      model,
-      reasoningEffort,
-      workSignal,
-      voice: voiceRequested,
-      input: sanitizedInput,
-      sources,
-      sourceAssessments,
-      sourceDecisionCandidates,
-      researchDeps,
-      startTime,
-      researchUsageForLog,
-      recordMainResult,
-      buildSystemPromptFor,
-      markTruncated: () => {
-        responseTruncated = true;
-      },
-      respond: async (payload) => new Response(JSON.stringify(await successBody(payload)), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }),
-    };
+  const runFeature = async (stream?: GenerationStream): Promise<Response> => {
+    try {
+      const ctx: FeatureContext = {
+        req,
+        userId,
+        provider,
+        model,
+        reasoningEffort,
+        workSignal,
+        voice: voiceRequested,
+        stream,
+        input: sanitizedInput,
+        sources,
+        sourceAssessments,
+        sourceDecisionCandidates,
+        researchDeps,
+        startTime,
+        researchUsageForLog,
+        recordMainResult,
+        buildSystemPromptFor,
+        markTruncated: () => {
+          responseTruncated = true;
+        },
+        respond: async (payload) => new Response(JSON.stringify(await successBody(payload)), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }),
+      };
 
-    switch (feature) {
-      case "sparring":
-        return await handleSparring(ctx, {
-          request: validatedSparringRequest,
-          database: sparringDatabase,
-          claimToken: sparringScoreClaimToken,
-          onScoreSaved: () => {
-            sparringScoreClaimed = false;
-          },
+      switch (feature) {
+        case "sparring":
+          return await handleSparring(ctx, {
+            request: validatedSparringRequest,
+            database: sparringDatabase,
+            claimToken: sparringScoreClaimToken,
+            onScoreSaved: () => {
+              sparringScoreClaimed = false;
+            },
+          });
+        case "crossfire":
+          return await handleCrossfire(ctx, {
+            input: crossfireInput,
+            sources: crossfireSources,
+            workspaceSources: workspaceAccess ? sources : null,
+            debateContext: debatePromptContextFor(loadedDebate, feature),
+            onOutputsOmittedForSize: () => {
+              if (!loadedDebate) return;
+              loadedDebate = {
+                ...loadedDebate,
+                outputs: [],
+                outputsOmittedForSize: [
+                  ...loadedDebate.outputs.map(({ kind, id }) => ({ kind, id })),
+                  ...loadedDebate.outputsOmittedForSize,
+                ],
+              };
+            },
+          });
+        case "factoids":
+          return await handleFactoids(ctx);
+        case "ask":
+          return await handleAsk(ctx);
+        case "generate":
+          return await handleGenerate(ctx);
+        case "brainstorm":
+          return await handleBrainstorm(ctx);
+        case "attack":
+          return await handleAttack(ctx);
+      }
+
+      // Fallback for any other feature
+      const systemPrompt = await buildSystemPromptFor(feature);
+      const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
+      const messages = [{ role: "user", content: userPrompt }];
+      const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, stream));
+      const output = cleanGeneratedText(fallbackResult.output);
+
+      const latencyMs = Date.now() - startTime;
+      await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsageForLog()]), latencyMs);
+      return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error("[ERROR]", message);
+
+      if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
+        await supabase.rpc("complete_workspace_thread_generation", {
+          p_content: "Generation interrupted",
+          p_request_id: workspaceAccess.requestId,
+          p_status: "interrupted",
+          p_thread_id: workspaceAccess.threadId,
+          p_user_id: userId,
+          p_workspace_id: workspaceAccess.workspaceId,
         });
-      case "crossfire":
-        return await handleCrossfire(ctx, {
-          input: crossfireInput,
-          sources: crossfireSources,
-          workspaceSources: workspaceAccess ? sources : null,
-          debateContext: debatePromptContextFor(loadedDebate, feature),
-          onOutputsOmittedForSize: () => {
-            if (!loadedDebate) return;
-            loadedDebate = {
-              ...loadedDebate,
-              outputs: [],
-              outputsOmittedForSize: [
-                ...loadedDebate.outputs.map(({ kind, id }) => ({ kind, id })),
-                ...loadedDebate.outputsOmittedForSize,
-              ],
-            };
-          },
-        });
-      case "factoids":
-        return await handleFactoids(ctx);
-      case "ask":
-        return await handleAsk(ctx);
-      case "generate":
-        return await handleGenerate(ctx);
-      case "brainstorm":
-        return await handleBrainstorm(ctx);
-      case "attack":
-        return await handleAttack(ctx);
+        workspaceThreadSettled = true;
+      }
+
+      if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
+        await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
+        sparringScoreClaimed = false;
+      }
+
+      // Log error
+      const latencyMs = Date.now() - startTime;
+      const usageError = err && typeof err === "object"
+        ? err as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }
+        : undefined;
+      // A successful main call takes precedence over usage attached to a later
+      // post-processing error. This avoids counting its repair attempts twice.
+      const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, workSignal?.aborted === true);
+      await logUsage(
+        userId,
+        feature,
+        provider,
+        model,
+        mergeNormalizedUsage([
+          mainErrorUsage,
+          ...researchUsageForLog(),
+        ]),
+        latencyMs,
+        "error",
+        message.slice(0, 100),
+      );
+      return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+  };
 
-    // Fallback for any other feature
-    const systemPrompt = await buildSystemPromptFor(feature);
-    const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
-    const messages = [{ role: "user", content: userPrompt }];
-    const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
-    const output = cleanGeneratedText(fallbackResult.output);
-
-    const latencyMs = Date.now() - startTime;
-    await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsageForLog()]), latencyMs);
-    return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[ERROR]", message);
-
-    if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
-      await supabase.rpc("complete_workspace_thread_generation", {
-        p_content: "Generation interrupted",
-        p_request_id: workspaceAccess.requestId,
-        p_status: "interrupted",
-        p_thread_id: workspaceAccess.threadId,
-        p_user_id: userId,
-        p_workspace_id: workspaceAccess.workspaceId,
-      });
-      workspaceThreadSettled = true;
-    }
-
-    if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
-      await releaseSparringScoreClaim(sparringDatabase, validatedSparringRequest.sessionId, userId, sparringScoreClaimToken);
-      sparringScoreClaimed = false;
-    }
-
-    // Log error
-    const latencyMs = Date.now() - startTime;
-    const usageError = err && typeof err === "object"
-      ? err as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }
-      : undefined;
-    // A successful main call takes precedence over usage attached to a later
-    // post-processing error. This avoids counting its repair attempts twice.
-    const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, workSignal?.aborted === true);
-    await logUsage(
-      userId,
-      feature,
-      provider,
-      model,
-      mergeNormalizedUsage([
-        mainErrorUsage,
-        ...researchUsageForLog(),
-      ]),
-      latencyMs,
-      "error",
-      message.slice(0, 100),
-    );
-    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
+  if (!streamRequested) return await runFeature();
+  return streamFeatureResponse(corsHeaders, streamCancel, runFeature);
 }
 
 if (import.meta.main) {

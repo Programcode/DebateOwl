@@ -19,9 +19,13 @@ if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREA
 const requests = [];
 let failures = [];
 let upstreamCalls = 0;
+// Delay between streamed chunks; a test can slow it to keep a draft on screen.
+let streamDelayMs;
 
 const MARK = "FAKE-PROVIDER";
 
+const STREAM_CHUNK_CHARS = 24;
+const STREAM_CHUNK_DELAY_MS = 10;
 const usage = { prompt_tokens: 120, completion_tokens: 80, total_tokens: 200, cost: 0.0001 };
 
 const contention = (index) => ({
@@ -209,6 +213,19 @@ function stream(res) {
   res.end("data: [DONE]\n\n");
 }
 
+// Live generation: a structured answer streamed in small chunks, the way a
+// model writes tokens, so the client's partial rendering runs for real.
+async function streamJson(res, content) {
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+  for (let index = 0; index < content.length; index += STREAM_CHUNK_CHARS) {
+    res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(index, index + STREAM_CHUNK_CHARS) } }] })}\n\n`);
+    await new Promise((resolve) => setTimeout(resolve, streamDelayMs ?? STREAM_CHUNK_DELAY_MS));
+  }
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
+  res.end("data: [DONE]\n\n");
+}
+
 async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -235,25 +252,44 @@ async function proxy(req, res, path) {
     return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
   }
   const started = Date.now();
+  // A caller that hangs up (a cancelled live run) stops the upstream call too.
+  // A streamed reply is complete at its finish reason; the caller may close
+  // right after it without reading the trailing bytes.
+  const hangUp = new AbortController();
+  let finished = false;
+  res.on("close", () => {
+    if (!res.writableEnded) hangUp.abort();
+  });
   try {
     const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
       method: "POST",
       headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
       body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
+      signal: hangUp.signal,
     });
     record.status = response.status;
     res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
     // Keep the head of the reply: OpenRouter's own `model` and `provider`
     // fields prove which model answered, independent of the rewrite above.
+    // A streamed reply names them in its first chunk, so read them as it arrives.
     let head = "";
+    let tail = "";
     for await (const chunk of response.body ?? []) {
-      if (head.length < 8192) head += Buffer.from(chunk).toString("utf8");
+      tail = (tail + Buffer.from(chunk).toString("utf8")).slice(-4096);
+      if (/"finish_reason"\s*:\s*"|data: \[DONE\]/.test(tail)) finished = true;
+      if (head.length < 8192) {
+        head += Buffer.from(chunk).toString("utf8");
+        record.upstreamModel ??= /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+        record.upstreamProvider ??= /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+      }
       res.write(chunk);
     }
     res.end();
-    record.upstreamModel = /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
-    record.upstreamProvider = /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
   } catch (error) {
+    if (hangUp.signal.aborted) {
+      if (!finished) record.status = 499;
+      return;
+    }
     record.status = 502;
     const message = error instanceof Error ? error.message : "upstream connection failed";
     console.error(`live provider request failed: ${message}`);
@@ -273,6 +309,12 @@ createServer(async (req, res) => {
   if (url.pathname === "/__reset" && req.method === "POST") {
     requests.length = 0;
     failures = [];
+    streamDelayMs = undefined;
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__stream-delay" && req.method === "POST") {
+    const { ms } = JSON.parse(await readBody(req) || "{}");
+    streamDelayMs = typeof ms === "number" && ms >= 0 ? ms : undefined;
     return json(res, 200, { ok: true });
   }
   if (url.pathname === "/__fail" && req.method === "POST") {
@@ -312,6 +354,7 @@ createServer(async (req, res) => {
   }
   if (feature === "ask-stream") return stream(res);
   if (output === null) return json(res, 500, { error: { message: `Fake ${feature} could not parse the request` } });
+  if (body.stream === true) return streamJson(res, JSON.stringify(output));
   return json(res, 200, {
     id: `fake-${requests.length}`,
     model: body.model,

@@ -2007,7 +2007,8 @@
       "totalWords_other": "{{count}} palabras",
       "wordCount_one": "{{count}} palabra",
       "wordCount_other": "{{count}} palabras",
-      "latestOpponent": "Último discurso del oponente"
+      "latestOpponent": "Último discurso del oponente",
+      "opponentSpeaking": "El oponente está hablando"
     },
     "scorecard": {
       "eyebrow": "Revisión de la ronda",
@@ -2366,7 +2367,13 @@
   "tools": {
     "elapsed": "{{seconds}} s",
     "aiCaveat": "Generado por IA. Comprueba los datos y las fuentes antes de usarlos en una ronda.",
-    "researchedSources": "Fuentes investigadas ({{total}})"
+    "researchedSources": "Fuentes investigadas ({{total}})",
+    "live": {
+      "researching": "Buscando fuentes…",
+      "writing": "Escribiendo…",
+      "writingLive": "Escribiendo en directo",
+      "checking": "Comprobando qué fuentes usó la respuesta…"
+    }
   },
   "discuss": {
     "attack": {

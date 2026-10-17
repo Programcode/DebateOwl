@@ -5,7 +5,7 @@ import { activeDebateId, useDebateStore } from '../stores/debate-store';
 import { parseDebateContextUsage, useDebateContextStore } from '../stores/debate-context-store';
 import { currentDebateContextPlan } from '../debate/context-state';
 import { requestSide, type DebateContextRequest } from '../../../supabase/functions/_shared/debate-context';
-import { getActiveAccessToken, invokeAuthenticatedFunction, supabase } from '@/lib/supabase/client';
+import { getActiveAccessToken, invokeAuthenticatedFunction, invokeAuthenticatedFunctionWith, supabase } from '@/lib/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
@@ -27,6 +27,7 @@ import {
 } from './errors';
 import { parseSourceAssessments } from './sources';
 import { utf8ByteLength } from './text';
+import { readLiveResponse, type LiveGeneration } from './live';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -49,6 +50,8 @@ export interface AIRequestOptions<T = unknown> {
   keepContextChoices?: boolean;
   /** A voice round: ask for a reply the opponent's voice can perform. */
   voice?: boolean;
+  /** Show the answer while the model writes it. */
+  live?: LiveGeneration;
 }
 
 /**
@@ -213,11 +216,18 @@ export async function callSupabaseAI<T = unknown>(
       throw new AIError('Request is too large. Shorten the input and try again.', { statusCode: 413, requestId });
     }
 
-    const { data, error } = await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: requestBody,
-      signal: controller.signal,
-    });
+    const live = options.live;
+    const { data, error } = live
+      ? await invokeAuthenticatedFunctionWith<Record<string, unknown>>('ai', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: { ...requestBody, stream: true },
+        signal: controller.signal,
+      }, (response) => readLiveResponse<Record<string, unknown>>(response, live, controller.signal))
+      : await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: requestBody,
+        signal: controller.signal,
+      });
 
     const elapsed = Math.round(performance.now() - startTime);
 

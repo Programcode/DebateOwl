@@ -1,4 +1,4 @@
-import { admin, createDemoUser, deleteDemoUser, expect, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
+import { admin, createDemoUser, deleteDemoUser, expect, expectResult, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
 import type { Page } from "@playwright/test";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
@@ -22,7 +22,7 @@ test("only active Library sources ground AI requests, and deletions persist", as
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
   await page.getByRole("button", { name: "Start Brainstorming" }).click();
-  await expect(page.getByText(`${MARK} idea 1`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} idea 1`);
   const call = await providerCall("brainstorm");
   expect(call.system).toContain("ACTIVE-SOURCE-MARKER");
   expect(call.system).not.toContain("PAUSED-SOURCE-MARKER");

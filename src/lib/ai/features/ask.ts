@@ -3,6 +3,7 @@ import { AskOutputSchema, type AskOutput } from '../schemas/ask';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import { AIError, AIResponseError } from '../errors';
 import { callSupabaseAI, withOutputLanguage } from '../request';
+import type { LiveGeneration } from '../live';
 import { truncateUtf8, utf8ByteLength } from '../text';
 
 const MAX_ASK_HISTORY_ITEMS = 8;
@@ -39,6 +40,9 @@ export interface AskChatOptions {
   workspaceContext?: WorkspaceToolContext;
   /** Debate whose sources ground the answer; defaults to the active debate. */
   debateId?: string | null;
+  /** Show the answer while the model writes it. */
+  live?: LiveGeneration;
+  signal?: AbortSignal;
 }
 
 export async function askChat(
@@ -59,6 +63,8 @@ export async function askChat(
   }), config, {
     workspaceContext: options.workspaceContext,
     debateId: options.debateId,
+    live: options.live,
+    signal: options.signal,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown };
       const parsed = AskOutputSchema.safeParse(data.output);

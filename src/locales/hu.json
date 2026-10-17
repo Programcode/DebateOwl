@@ -2007,7 +2007,8 @@
       "totalWords_other": "{{count}} szó",
       "wordCount_one": "{{count}} szó",
       "wordCount_other": "{{count}} szó",
-      "latestOpponent": "Az ellenfél utolsó beszéde"
+      "latestOpponent": "Az ellenfél utolsó beszéde",
+      "opponentSpeaking": "Az ellenfél beszél"
     },
     "scorecard": {
       "eyebrow": "Forduló értékelése",
@@ -2366,7 +2367,13 @@
   "tools": {
     "elapsed": "{{seconds}} mp",
     "aiCaveat": "MI által készült. Ellenőrizd a tényeket és a forrásokat, mielőtt egy fordulóban használod.",
-    "researchedSources": "Felkutatott források ({{total}})"
+    "researchedSources": "Felkutatott források ({{total}})",
+    "live": {
+      "researching": "Források keresése…",
+      "writing": "Írás…",
+      "writingLive": "Élőben íródik",
+      "checking": "Annak ellenőrzése, mely forrásokat használta a válasz…"
+    }
   },
   "discuss": {
     "attack": {

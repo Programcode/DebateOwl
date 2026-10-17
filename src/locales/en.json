@@ -2007,7 +2007,8 @@
       "totalWords_other": "{{count}} words",
       "wordCount_one": "{{count}} word",
       "wordCount_other": "{{count}} words",
-      "latestOpponent": "Opponent’s last speech"
+      "latestOpponent": "Opponent’s last speech",
+      "opponentSpeaking": "Opponent is speaking"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -2366,7 +2367,13 @@
   "tools": {
     "elapsed": "{{seconds}}s",
     "aiCaveat": "AI-generated. Check facts and sources before using them in a round.",
-    "researchedSources": "Researched sources ({{total}})"
+    "researchedSources": "Researched sources ({{total}})",
+    "live": {
+      "researching": "Researching sources…",
+      "writing": "Writing…",
+      "writingLive": "Writing live",
+      "checking": "Checking which sources the answer used…"
+    }
   },
   "discuss": {
     "attack": {

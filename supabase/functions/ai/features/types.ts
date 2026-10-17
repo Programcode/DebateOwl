@@ -7,7 +7,7 @@ import type { ReasoningEffort } from "../../_shared/model-catalog.ts";
 import type { Feature, PromptSource } from "../../_shared/prompts.ts";
 import type { Provider, ResearchContext, ResearchDeps } from "../../_shared/research.ts";
 import type { SourceAssessment, SourceDecisionCandidate } from "../../_shared/source-decisions.ts";
-import type { AIResult } from "../provider.ts";
+import type { AIResult, GenerationStream } from "../provider.ts";
 
 export interface FeatureContext {
   req: Request;
@@ -19,6 +19,8 @@ export interface FeatureContext {
   workSignal: AbortSignal;
   /** The client asked for a spoken opponent reply (voice round). */
   voice: boolean;
+  /** Live generation sink: the main provider call's tokens and progress. */
+  stream?: GenerationStream;
   /** Sanitized, control-validated feature input. */
   input: Record<string, unknown>;
   /** Library sources after ranking, ready for the prompt. */

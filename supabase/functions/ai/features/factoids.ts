@@ -24,6 +24,7 @@ export async function handleFactoids(ctx: FeatureContext): Promise<Response> {
   const sourceCount = Math.min(15, Math.max(3, Number(sanitizedInput.sourceCount || 5)));
 
   // Perform deep research with multiple search rounds
+  ctx.stream?.phase("research");
   const research = await deepResearch(claim, region, researchDeps, withResearchPreferences(DEEP_RESEARCH, {
     preferredSourceType,
     timeframe,
@@ -34,7 +35,7 @@ export async function handleFactoids(ctx: FeatureContext): Promise<Response> {
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
 
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   // Post-process: quality floor. Only citations whose URL matches fetched,

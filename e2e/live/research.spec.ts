@@ -22,6 +22,8 @@ test("case generation researches the web and cites what it found", async ({ sign
 
   const panel = page.getByText("Researched sources").locator("..");
   await expect(panel).toBeVisible();
+  // The sources are folded under the result header; open them.
+  await page.getByText("Researched sources").click();
   await expect(panel.getByRole("link").first()).toHaveAttribute("href", httpLink);
 
   const { data } = await admin.from("ai_requests").select("feature,status").eq("user_id", await user.userId()).eq("feature", "generate");

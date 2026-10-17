@@ -1,5 +1,5 @@
 // src/pages/BrainstormPage.tsx
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -15,7 +15,9 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { LiveToolRun } from '@/components/features/tools/live-draft';
+import { brainstormDraftSections } from '@/components/features/tools/live-sections';
 import { brainstormDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
@@ -37,6 +39,12 @@ export default function BrainstormPage() {
   const config = getFeatureConfig('brainstorm');
   const run = useToolRun('brainstorm');
   const results = useRevealResults();
+  // On phones the answer sits below the form; bring it into view once the model starts writing.
+  const drafting = Boolean(run.liveState.draft);
+  const revealResults = results.reveal;
+  useEffect(() => {
+    if (drafting) revealResults();
+  }, [drafting, revealResults]);
   const lastRun = useRef<{ data: BrainstormInput; debateId: string | null } | null>(null);
   const navigate = useNavigate();
   const subError = useSubscriptionError();
@@ -51,7 +59,7 @@ export default function BrainstormPage() {
     const signal = run.start();
     setBrainstormLoading(true);
     try {
-      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal, run.live());
       // A canceled request can still resolve (its last step ignores the signal); never publish it.
       if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
@@ -99,7 +107,7 @@ export default function BrainstormPage() {
               />
             )}
             {brainstormLoading ? (
-              <ToolRunStatus label={t('brainstorm.working', 'Finding angles…')} onCancel={run.cancel} />
+              <LiveToolRun label={t('brainstorm.working', 'Finding angles…')} live={run.liveState} sections={run.liveState.draft ? brainstormDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : brainstormResult ? (
               <div key="brainstorm-results">
                 <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />

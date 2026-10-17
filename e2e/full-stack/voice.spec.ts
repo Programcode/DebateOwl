@@ -1,5 +1,6 @@
 import { admin, chooseForMotion, expect, fake, MARK, providerCall, stackReady, test } from "./stack";
 import { say, spokenByBrowser, stubSpeech } from "../helpers/voice";
+import { readAIResponse } from "../helpers/ai-response";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -16,7 +17,7 @@ test("a spoken sparring round runs on the browser voice, and no audio tag is sho
   page.on("response", async (response) => {
     if (response.request().method() !== "POST") return;
     const path = new URL(response.url()).pathname;
-    if (path.endsWith("/functions/v1/ai")) aiVoice.push(await response.json().catch(() => ({})));
+    if (path.endsWith("/functions/v1/ai")) aiVoice.push(await readAIResponse(response).then(({ body }) => body).catch(() => ({})));
     if (path.endsWith("/functions/v1/voice")) {
       const body = await response.json().catch(() => ({}));
       voiceAnswers.push({ status: response.status(), code: body.code });
@@ -107,7 +108,7 @@ test("a spoken Crossfire reply is cleaned, signed, and read by the browser voice
   const aiVoice: Array<VoiceBody & { output?: { text?: string } }> = [];
   page.on("response", async (response) => {
     if (response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/functions/v1/ai")) {
-      aiVoice.push(await response.json().catch(() => ({})));
+      aiVoice.push(await readAIResponse(response).then(({ body }) => body).catch(() => ({})));
     }
   });
 

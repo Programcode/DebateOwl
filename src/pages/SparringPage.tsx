@@ -10,6 +10,8 @@ import type { SparringRespondInput, SparringScoreInput, SparringSpeech } from '@
 import { SparringSetup, type SparringSetupValues } from '@/components/features/sparring/SparringSetup';
 import { SparringRound } from '@/components/features/sparring/SparringRound';
 import { SparringScorecard } from '@/components/features/sparring/SparringScorecard';
+import type { LiveRunState } from '@/components/features/tools/tool-run';
+import { readableLiveText } from '@/lib/voice/live-text';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
@@ -63,6 +65,8 @@ export default function SparringPage() {
   const getFeatureConfig = useSettingsStore((state) => state.getFeatureConfig);
   const outputLanguage = useSettingsStore((state) => state.outputLanguage);
   const [aiLoading, setAiLoading] = useState(false);
+  const [liveSpeech, setLiveSpeech] = useState('');
+  const [liveJudging, setLiveJudging] = useState<LiveRunState>({});
   const [aiError, setAiError] = useState<string | null>(null);
   const [judgingError, setJudgingError] = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -165,7 +169,14 @@ export default function SparringPage() {
       currentTurn: turnInput,
     };
 
-    void generateSparringTurn(input, config, workspace.context ?? undefined, session.debateId ?? null, voiceActive)
+    setLiveSpeech('');
+    void generateSparringTurn(input, config, workspace.context ?? undefined, session.debateId ?? null, voiceActive, {
+      onDraft: (draft) => {
+        if (aiRequestRef.current !== requestKey) return;
+        const speech = draft.speech && typeof draft.speech === 'object' ? (draft.speech as Record<string, unknown>).content : undefined;
+        setLiveSpeech(typeof speech === 'string' ? readableLiveText(speech) : '');
+      },
+    })
       .then((result) => {
         if (aiRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
@@ -202,6 +213,7 @@ export default function SparringPage() {
         if (aiRequestRef.current === requestKey) {
           aiInFlightRef.current = false;
           setAiLoading(false);
+          setLiveSpeech('');
         }
       });
   }, [appendAiSpeech, config, outputLanguage, pauseTimer, resumeTimer, retryNonce, session, t, voiceActive, workspace.context]);
@@ -227,7 +239,12 @@ export default function SparringPage() {
       speeches: session.speeches,
       language: outputLanguage,
     };
-    void judgeSparringSession(input, config, workspace.context ?? undefined, session.debateId ?? null)
+    setLiveJudging({});
+    void judgeSparringSession(input, config, workspace.context ?? undefined, session.debateId ?? null, {
+      onDraft: (draft) => {
+        if (judgeRequestRef.current === requestKey) setLiveJudging({ phase: 'writing', draft });
+      },
+    })
       .then((result) => {
         if (judgeRequestRef.current !== requestKey) return;
         if (useSparringStore.getState().currentSession?.id !== session.id) return;
@@ -243,7 +260,10 @@ export default function SparringPage() {
         setJudgingError(readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
       })
       .finally(() => {
-        if (judgeRequestRef.current === requestKey) judgeInFlightRef.current = false;
+        if (judgeRequestRef.current === requestKey) {
+          judgeInFlightRef.current = false;
+          setLiveJudging({});
+        }
       });
   }, [completeSession, config, outputLanguage, retryNonce, session, t, workspace.context]);
 
@@ -349,6 +369,8 @@ export default function SparringPage() {
         session={session}
         voice={voiceActive ? { language: outputLanguage } : null}
         aiLoading={aiLoading}
+        liveSpeech={liveSpeech}
+        liveJudging={liveJudging}
         aiError={aiError}
         judging={session.phase === 'judging'}
         judgingError={judgingError}
