@@ -1,5 +1,5 @@
 // src/pages/BrainstormPage.tsx
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +39,12 @@ export default function BrainstormPage() {
   const config = getFeatureConfig('brainstorm');
   const run = useToolRun('brainstorm');
   const results = useRevealResults();
+  // On phones the answer sits below the form; bring it into view once the model starts writing.
+  const drafting = Boolean(run.liveState.draft);
+  const revealResults = results.reveal;
+  useEffect(() => {
+    if (drafting) revealResults();
+  }, [drafting, revealResults]);
   const lastRun = useRef<{ data: BrainstormInput; debateId: string | null } | null>(null);
   const navigate = useNavigate();
   const subError = useSubscriptionError();

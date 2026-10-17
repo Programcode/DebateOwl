@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -42,6 +42,12 @@ export default function FactoidsPage() {
   const { toast } = useToast();
   const run = useToolRun('factoids');
   const results = useRevealResults();
+  // On phones the answer sits below the form; bring it into view once the model starts writing.
+  const drafting = Boolean(run.liveState.draft);
+  const revealResults = results.reveal;
+  useEffect(() => {
+    if (drafting) revealResults();
+  }, [drafting, revealResults]);
   const lastInput = useRef<FactoidsInput | null>(null);
   const navigate = useNavigate();
   const subError = useSubscriptionError();

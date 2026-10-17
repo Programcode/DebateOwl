@@ -1,5 +1,5 @@
 // src/pages/GeneratePage.tsx
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -64,6 +64,12 @@ export default function GeneratePage() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const run = useToolRun('generate');
   const results = useRevealResults();
+  // On phones the answer sits below the form; bring it into view once the model starts writing.
+  const drafting = Boolean(run.liveState.draft);
+  const revealResults = results.reveal;
+  useEffect(() => {
+    if (drafting) revealResults();
+  }, [drafting, revealResults]);
   const lastRun = useRef<{ data: GenerateInput; debateId: string | null } | null>(null);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
