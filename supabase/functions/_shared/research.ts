@@ -118,7 +118,7 @@ function linkAbortSignals(signals: Array<AbortSignal | null | undefined>) {
   };
 }
 
-async function fetchWithTimeoutAndConsume<T>(
+export async function fetchWithTimeoutAndConsume<T>(
   url: string,
   options: RequestInit,
   timeoutMs: number,

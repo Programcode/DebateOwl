@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
+import { readAIResponse } from "../helpers/ai-response";
 
 // Production canary. Everything here is read-only except the last two tests,
 // which make real AI requests as the dedicated canary account and run only on
@@ -119,8 +120,7 @@ test("the canary account generates a case", async ({ page }) => {
   await page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ })
     .getByRole("button", { name: /^(Not now, use it once|Use once without saving to a debate)$/ })
     .click();
-  const response = await generated;
-  expect(response.status(), "ai generate status").toBe(200);
-  const body = await response.json() as { output: { contentions?: unknown[] } };
+  const { status, body } = await readAIResponse(await generated);
+  expect(status, "ai generate status").toBe(200);
   expect(body.output.contentions, "generated contentions").toHaveLength(3);
 });

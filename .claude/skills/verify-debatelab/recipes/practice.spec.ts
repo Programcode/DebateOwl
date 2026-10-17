@@ -1,4 +1,4 @@
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, expectStreamed, test } from "./fixtures";
 
 // Feature map: features/practice.md. Voice rounds are recipes/voice-rounds.spec.ts.
 // A new account has no Current Debate, so each round first accepts the offer
@@ -43,6 +43,8 @@ test("spar-round and spar-verdict: a Lincoln-Douglas round is argued, judged, an
   expect(session).toMatchObject({ side: "pro", debates: { motion: sparMotion } });
   const calls = await expectProviderCalls(["sparring"]);
   expect(calls.some((call) => call.feature === "sparring" && /SPARRING ACTION: score/m.test(call.user ?? ""))).toBe(true);
+  // Opponent speeches and the scorecard were shown live (features/live-generation.md).
+  await expectStreamed(["sparring"]);
 });
 
 async function startCrossfire(page: import("@playwright/test").Page, mode: "mode-question-ai" | "mode-ai-questions-user") {
@@ -80,6 +82,8 @@ test("cross-turn and cross-debrief: questioning the AI gets an answer, a Jev sig
   await evidence.shot("03-debrief");
   await evidence.aria("03-debrief", page.getByTestId("crossfire-debrief"));
   await expectCrossfireSaved(await user.userId());
+  // The turn and the debrief were shown live (features/live-generation.md).
+  await expectStreamed(["crossfire"]);
 });
 
 test("cross-ai-questions: the AI questions the user, answers are judged, and the debrief completes", async ({ signedIn: page, user, evidence }) => {

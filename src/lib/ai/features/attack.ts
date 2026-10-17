@@ -3,6 +3,7 @@ import { AttackOutputSchema, type AttackOutput, type AttackInput } from '../sche
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import { AIResponseError } from '../errors';
 import { callSupabaseAI, withOutputLanguage } from '../request';
+import type { LiveGeneration } from '../live';
 import { autosaveDiscoveredSources, parseDiscoveredSources, type ResultWithSources } from '../sources';
 
 /**
@@ -20,11 +21,12 @@ function validateAttackOutput(output: unknown): AttackOutput {
   return parsed.data;
 }
 
-export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal): Promise<ResultWithSources<AttackOutput>> {
+export async function attackCase(input: AttackInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal, live?: LiveGeneration): Promise<ResultWithSources<AttackOutput>> {
   const response = await callSupabaseAI<ResultWithSources<AttackOutput>>('attack', withOutputLanguage(input as unknown as Record<string, unknown>), config, {
     workspaceContext,
     debateId,
     signal,
+    live,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       return {

@@ -270,6 +270,34 @@ export default function AskPage() {
             streamAbortRef.current = null;
           }
         }
+      } else if (!workspace.context) {
+        // Structured modes (citations, web search, pros/cons, argument map)
+        // answer in JSON; its response field fills the bubble as it is written.
+        const liveMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant' as const,
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: true as const,
+        };
+        const controller = new AbortController();
+        streamAbortRef.current = controller;
+        setAskStreamingAssistant(liveMessage);
+        streamedId = liveMessage.id;
+        try {
+          result = await askChat(fullMessage, history, mode, config, {
+            ...options,
+            signal: controller.signal,
+            live: {
+              onDraft: (draft) => {
+                if (!isCurrentRequest() || streamAbortRef.current !== controller) return;
+                setAskStreamingAssistant({ ...liveMessage, content: typeof draft.response === 'string' ? draft.response : '' });
+              },
+            },
+          });
+        } finally {
+          if (streamAbortRef.current === controller) streamAbortRef.current = null;
+        }
       } else {
         result = await askChat(fullMessage, history, mode, config, options);
       }

@@ -3,6 +3,7 @@ import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from '.
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import { AIResponseError } from '../errors';
 import { callSupabaseAI, withOutputLanguage } from '../request';
+import type { LiveGeneration } from '../live';
 import { autosaveDiscoveredSources, parseDiscoveredSources, type ResultWithSources } from '../sources';
 import { cleanGeneratedOutput } from '../text';
 
@@ -125,12 +126,13 @@ function expectedContentionCount(length: GenerateInput['length']): number {
   }
 }
 
-export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal): Promise<ResultWithSources<GenerateOutput>> {
+export async function generateCase(input: GenerateInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal, live?: LiveGeneration): Promise<ResultWithSources<GenerateOutput>> {
   const inputWithLanguage = withOutputLanguage(input as unknown as Record<string, unknown>);
   const response = await callSupabaseAI<ResultWithSources<GenerateOutput>>('generate', inputWithLanguage, config, {
     workspaceContext,
     debateId,
     signal,
+    live,
     transformResponse: (rawData) => {
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));

@@ -42,9 +42,24 @@ type AuthenticatedFunctionResult<T> =
   | { data: T; error: null }
   | { data: null; error: FunctionsFetchError | FunctionsHttpError | FunctionsRelayError };
 
+type AuthenticatedFunctionOptions = { body: Record<string, unknown>; headers: Record<string, string>; signal?: AbortSignal };
+
 export async function invokeAuthenticatedFunction<T = unknown>(
   functionName: string,
-  options: { body: Record<string, unknown>; headers: Record<string, string>; signal?: AbortSignal },
+  options: AuthenticatedFunctionOptions,
+): Promise<AuthenticatedFunctionResult<T>> {
+  return await invokeAuthenticatedFunctionWith<T>(functionName, options, async (response) => await response.json() as T);
+}
+
+/**
+ * Like invokeAuthenticatedFunction, but a successful response is handed to
+ * `read` instead of being parsed as JSON. Live generation reads an event
+ * stream this way; failures keep the same error types.
+ */
+export async function invokeAuthenticatedFunctionWith<T>(
+  functionName: string,
+  options: AuthenticatedFunctionOptions,
+  read: (response: Response) => Promise<T | AuthenticatedFunctionResult<T>['error']>,
 ): Promise<AuthenticatedFunctionResult<T>> {
   let response: Response;
   try {
@@ -68,6 +83,9 @@ export async function invokeAuthenticatedFunction<T = unknown>(
   }
   if (!response.ok) return { data: null, error: new FunctionsHttpError(response) };
 
-  const data: T = await response.json();
-  return { data, error: null };
+  const data = await read(response);
+  if (data instanceof FunctionsFetchError || data instanceof FunctionsHttpError || data instanceof FunctionsRelayError) {
+    return { data: null, error: data };
+  }
+  return { data: data as T, error: null };
 }

@@ -22,7 +22,9 @@ import { Label } from '@/components/ui/label';
 import { Save, Target } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { LiveToolRun } from '@/components/features/tools/live-draft';
+import { generateDraftSections } from '@/components/features/tools/live-sections';
 import { generateDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
@@ -87,7 +89,7 @@ export default function GeneratePage() {
     const signal = run.start();
     setGenerateLoading(true);
     try {
-      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal, run.live());
       // A canceled request can still resolve (its last step ignores the signal); never publish it.
       if (signal.aborted) return;
       // Always stamp with real local time and motion
@@ -358,7 +360,7 @@ export default function GeneratePage() {
               />
             )}
             {generateLoading ? (
-              <ToolRunStatus label={t('generate.working', 'Writing your case…')} onCancel={run.cancel} />
+              <LiveToolRun label={t('generate.working', 'Writing your case…')} live={run.liveState} sections={run.liveState.draft ? generateDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : generateResult ? (
               <div key="generate-results" id="generate-results" className="space-y-4">
                 <GenerateResults

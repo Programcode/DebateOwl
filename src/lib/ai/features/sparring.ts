@@ -13,6 +13,7 @@ import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import { parseVoicePayload, type VoicePayload } from '@/lib/voice/payload';
 import { AIResponseError } from '../errors';
 import { callSupabaseAI, selectedOutputLanguage } from '../request';
+import type { LiveGeneration } from '../live';
 
 function sparringLanguage(language: string): string {
   return language.trim() || selectedOutputLanguage();
@@ -65,6 +66,7 @@ export async function generateSparringTurn(
   debateId: string | null = null,
   /** A voice round: the reply also carries segments the opponent's voice can perform. */
   voice = false,
+  live?: LiveGeneration,
 ): Promise<SparringTurnResult> {
   const requestInput: SparringRespondInput = {
     ...input,
@@ -80,7 +82,7 @@ export async function generateSparringTurn(
   const pending = pendingSparringTurns.get(requestKey);
   if (pending) return pending;
 
-  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext, debateId, voice);
+  const request = generateSparringTurnOnce(inputResult.data, config, workspaceContext, debateId, voice, live);
   pendingSparringTurns.set(requestKey, request);
   try {
     return await request;
@@ -95,6 +97,7 @@ async function generateSparringTurnOnce(
   workspaceContext: WorkspaceToolContext | undefined,
   debateId: string | null,
   voice: boolean,
+  live: LiveGeneration | undefined,
 ): Promise<SparringTurnResult> {
   const requestInput: SparringRespondInput = {
     ...input,
@@ -111,6 +114,7 @@ async function generateSparringTurnOnce(
     workspaceContext,
     debateId,
     voice,
+    live,
     // Turns keep the round's Review choices; judging ends the round.
     keepContextChoices: true,
     transformResponse: (rawData) => {
@@ -130,6 +134,7 @@ export async function judgeSparringSession(
   workspaceContext?: WorkspaceToolContext,
   /** The debate this round belongs to; null for a one-off round. */
   debateId: string | null = null,
+  live?: LiveGeneration,
 ): Promise<SparringScoreResponse> {
   const requestInput: SparringScoreInput = {
     ...input,
@@ -145,7 +150,7 @@ export async function judgeSparringSession(
   const pending = pendingSparringScores.get(requestKey);
   if (pending) return pending;
 
-  const request = judgeSparringSessionOnce(inputResult.data, config, workspaceContext, debateId);
+  const request = judgeSparringSessionOnce(inputResult.data, config, workspaceContext, debateId, live);
   pendingSparringScores.set(requestKey, request);
   try {
     return await request;
@@ -159,6 +164,7 @@ async function judgeSparringSessionOnce(
   config: ProviderConfig,
   workspaceContext: WorkspaceToolContext | undefined,
   debateId: string | null,
+  live: LiveGeneration | undefined,
 ): Promise<SparringScoreResponse> {
   const requestInput: SparringScoreInput = {
     ...input,
@@ -174,6 +180,7 @@ async function judgeSparringSessionOnce(
   return await callSupabaseAI<SparringScoreResponse>('sparring', inputResult.data, config, {
     workspaceContext,
     debateId,
+    live,
     transformResponse: (rawData) => validateSparringScoreResponse((rawData as { output: unknown }).output),
   });
 }

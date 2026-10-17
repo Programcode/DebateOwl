@@ -15,7 +15,9 @@ import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { LiveToolRun } from '@/components/features/tools/live-draft';
+import { factoidsDraftSections } from '@/components/features/tools/live-sections';
 import { factoidsDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
@@ -54,7 +56,7 @@ export default function FactoidsPage() {
     // Factoids research a claim, not the motion, so it follows the Current Debate directly.
     const debateId = workspace.context ? null : activeDebateId();
     try {
-      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal);
+      const { result, discoveredSources: sources } = await factoids(data, config, workspace.context ?? undefined, workspace.context ? undefined : debateId, signal, run.live());
       // A canceled request can still resolve (its last step ignores the signal); never publish it.
       if (signal.aborted) return;
       setDiscoveredSources(sources);
@@ -128,7 +130,7 @@ export default function FactoidsPage() {
               />
             )}
             {factoidsLoading ? (
-              <ToolRunStatus label={t('factoids.working', 'Searching for evidence…')} onCancel={run.cancel} />
+              <LiveToolRun label={t('factoids.working', 'Searching for evidence…')} live={run.liveState} sections={run.liveState.draft ? factoidsDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : factoidsResult ? (
               <div key="factoids-results">
                 <FactoidsResults

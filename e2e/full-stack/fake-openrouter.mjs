@@ -22,6 +22,8 @@ let upstreamCalls = 0;
 
 const MARK = "FAKE-PROVIDER";
 
+const STREAM_CHUNK_CHARS = 24;
+const STREAM_CHUNK_DELAY_MS = 10;
 const usage = { prompt_tokens: 120, completion_tokens: 80, total_tokens: 200, cost: 0.0001 };
 
 const contention = (index) => ({
@@ -209,6 +211,19 @@ function stream(res) {
   res.end("data: [DONE]\n\n");
 }
 
+// Live generation: a structured answer streamed in small chunks, the way a
+// model writes tokens, so the client's partial rendering runs for real.
+async function streamJson(res, content) {
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+  for (let index = 0; index < content.length; index += STREAM_CHUNK_CHARS) {
+    res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(index, index + STREAM_CHUNK_CHARS) } }] })}\n\n`);
+    await new Promise((resolve) => setTimeout(resolve, STREAM_CHUNK_DELAY_MS));
+  }
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
+  res.end("data: [DONE]\n\n");
+}
+
 async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -312,6 +327,7 @@ createServer(async (req, res) => {
   }
   if (feature === "ask-stream") return stream(res);
   if (output === null) return json(res, 500, { error: { message: `Fake ${feature} could not parse the request` } });
+  if (body.stream === true) return streamJson(res, JSON.stringify(output));
   return json(res, 200, {
     id: `fake-${requests.length}`,
     model: body.model,

@@ -15,7 +15,9 @@ import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/compone
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, ToolRunStatus, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { LiveToolRun } from '@/components/features/tools/live-draft';
+import { brainstormDraftSections } from '@/components/features/tools/live-sections';
 import { brainstormDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
@@ -51,7 +53,7 @@ export default function BrainstormPage() {
     const signal = run.start();
     setBrainstormLoading(true);
     try {
-      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal);
+      const { result, discoveredSources } = await brainstorm(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal, run.live());
       // A canceled request can still resolve (its last step ignores the signal); never publish it.
       if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
@@ -99,7 +101,7 @@ export default function BrainstormPage() {
               />
             )}
             {brainstormLoading ? (
-              <ToolRunStatus label={t('brainstorm.working', 'Finding angles…')} onCancel={run.cancel} />
+              <LiveToolRun label={t('brainstorm.working', 'Finding angles…')} live={run.liveState} sections={run.liveState.draft ? brainstormDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : brainstormResult ? (
               <div key="brainstorm-results">
                 <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />

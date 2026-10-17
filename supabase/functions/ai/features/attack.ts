@@ -22,13 +22,14 @@ export async function handleAttack(ctx: FeatureContext): Promise<Response> {
 
   // Research the topic to find counter-evidence
   console.log("[ATTACK] Starting deep research for case analysis");
+  ctx.stream?.phase("research");
   const research = await deepResearch(caseText.slice(0, 500), "", researchDeps, DEEP_RESEARCH);
   const searchContext = buildResearchContext(research);
 
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
   enforceAttackControls(output, detectFallacies, analyzeWeighing);
 
