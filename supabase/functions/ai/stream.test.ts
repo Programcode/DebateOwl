@@ -13,6 +13,7 @@ const environment = {
 for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value);
 
 const { handleRequest } = await import("./index.ts");
+const { readOpenRouterStream } = await import("./provider.ts");
 
 const USER = "user-1";
 const SESSION = "5e551000-0000-4000-8000-000000000002";
@@ -218,4 +219,27 @@ Deno.test("checks before the feature still answer with plain JSON and their stat
   } finally {
     harness.restore();
   }
+});
+
+Deno.test("frame overhead does not count against the answer's size cap", async () => {
+  // OpenRouter repeats ids, model, and provider in every token's frame, so a
+  // long but ordinary answer streams several times its own size.
+  const padding = "x".repeat(700);
+  const encoder = new TextEncoder();
+  const tokens = 2_000;
+  let sent = 0;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (sent === tokens) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }], usage: USAGE })}\n\ndata: [DONE]\n\n`));
+        controller.close();
+        return;
+      }
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ id: padding, choices: [{ delta: { content: "word " } }] })}\n\n`));
+      sent += 1;
+    },
+  });
+  const ignore = { delta: () => {}, reset: () => {}, phase: () => {} };
+  const { text } = await readOpenRouterStream(body, ignore, new AbortController().signal);
+  assert(text.length === tokens * 5, `the answer was cut: ${text.length}`);
 });

@@ -49,6 +49,19 @@ describe('readLiveResponse', () => {
     expect(drafts).toContainEqual({ thesis: 'Free tr' });
   });
 
+  it('delivers the last draft before a later phase', async () => {
+    const order: string[] = [];
+    const response = eventStream([
+      event('phase', { phase: 'writing' }) + event('delta', { text: '{"a": "done"}' }) + event('phase', { phase: 'checking' }),
+      event('result', { status: 200, body: { output: {} } }),
+    ]);
+    await readLiveResponse(response, {
+      onDraft: (draft) => order.push(`draft ${JSON.stringify(draft)}`),
+      onPhase: (phase) => order.push(phase),
+    });
+    expect(order).toEqual(['writing', 'draft {"a":"done"}', 'checking']);
+  });
+
   it('clears the draft when a repair retry starts again', async () => {
     const drafts: unknown[] = [];
     const response = eventStream([

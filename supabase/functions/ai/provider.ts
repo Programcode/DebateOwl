@@ -254,6 +254,11 @@ export async function callOpenRouter(
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
 }
 
+// A streamed reply wraps every token in a JSON frame (ids, model, provider,
+// timestamps), so its raw size is many times the answer's. The answer keeps
+// the plain reply's cap; the frames get room for that overhead.
+const MAX_STREAM_FRAME_OVERHEAD = 32;
+
 type OpenRouterStreamChunk = {
   choices?: Array<{ delta?: { content?: unknown }; finish_reason?: unknown }>;
   usage?: unknown;
@@ -298,6 +303,8 @@ export async function readOpenRouterStream(
   let buffer = "";
   let text = "";
   let totalBytes = 0;
+  let textBytes = 0;
+  const encoder = new TextEncoder();
   let usageRaw: Record<string, unknown> | undefined;
   let done = false;
   let finished = false;
@@ -324,6 +331,8 @@ export async function readOpenRouterStream(
     const content = choice?.delta?.content;
     if (typeof content === "string" && content) {
       text += content;
+      textBytes += encoder.encode(content).byteLength;
+      if (textBytes > MAX_PROVIDER_RESPONSE_BYTES) throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
       stream.delta(content);
     }
     if (chunk.usage && typeof chunk.usage === "object" && !Array.isArray(chunk.usage)) {
@@ -337,7 +346,9 @@ export async function readOpenRouterStream(
       const { done: ended, value } = await reader.read();
       if (ended) break;
       totalBytes += value.byteLength;
-      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES * MAX_STREAM_FRAME_OVERHEAD) {
+        throw new Error(`Provider stream exceeds ${MAX_PROVIDER_RESPONSE_BYTES * MAX_STREAM_FRAME_OVERHEAD} bytes`);
+      }
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";

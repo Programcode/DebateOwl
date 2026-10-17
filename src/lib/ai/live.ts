@@ -43,6 +43,7 @@ export async function readLiveResponse<T>(
   let result: { status: number; body: unknown } | null = null;
 
   const showDraft = () => {
+    if (timer) clearTimeout(timer);
     timer = null;
     if (text === shown) return;
     shown = text;
@@ -65,6 +66,9 @@ export async function readLiveResponse<T>(
         shown = '';
         live.onDraft({});
       } else if (event === 'phase' && isPhase(payload.phase)) {
+        // Text written before this phase lands first, so a throttled draft
+        // cannot arrive after it and look like writing again.
+        showDraft();
         live.onPhase?.(payload.phase);
       } else if (event === 'result' && typeof payload.status === 'number') {
         result = { status: payload.status, body: payload.body };
