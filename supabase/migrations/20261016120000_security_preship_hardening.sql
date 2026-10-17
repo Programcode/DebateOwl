@@ -148,18 +148,34 @@ BEGIN
 END;
 $$;
 
+-- The hosted projects carry policies on these two tables that no migration
+-- created (for example "rate_limits_select_own_or_global" and "Users can read
+-- own limits", both allowing user_id IS NULL). Drop every policy on them,
+-- whatever its name, and recreate only the one intended below.
+DO $$
+DECLARE
+  v_policy record;
+BEGIN
+  FOR v_policy IN
+    SELECT policyname, tablename FROM pg_policies
+    WHERE schemaname = 'public' AND tablename IN ('global_prompts', 'rate_limits')
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.%I', v_policy.policyname, v_policy.tablename);
+  END LOOP;
+END;
+$$;
+
 -- Operator instructions are part of the live system prompt; only Edge
 -- Functions (service role) read or write them.
-DROP POLICY IF EXISTS "global_prompts_select_all" ON public.global_prompts;
 REVOKE ALL ON TABLE public.global_prompts FROM anon, authenticated;
 
 -- Global limits (user_id IS NULL) are server configuration. A signed-in user
 -- may still read limits set for their own account.
-DROP POLICY IF EXISTS "rate_limits_select_own" ON public.rate_limits;
 CREATE POLICY "rate_limits_select_own" ON public.rate_limits
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 REVOKE ALL ON TABLE public.rate_limits FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.rate_limits FROM authenticated;
 
 -- Admin reporting RPCs relied only on require_admin() inside them; one reads
 -- every user's email. The admin Edge Function calls them with the service role.
