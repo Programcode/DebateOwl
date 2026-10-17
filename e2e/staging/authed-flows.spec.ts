@@ -149,7 +149,10 @@ test('real staging session persists, starts a debate, writes and removes a sourc
 
     await step(page, 'complete one AI request in Ask', async () => {
       await page.goto('/app/ask');
-      await page.getByLabel('Pros/Cons').click();
+      // Ask's modes live behind the Options popover since the design shell.
+      await page.getByRole('button', { name: 'Options' }).click();
+      await page.getByRole('switch', { name: 'Pros/Cons' }).click();
+      await page.keyboard.press('Escape');
       await page.getByPlaceholder('Ask your debate coach...').fill('Reply with one short sentence confirming this staging request.');
       const aiResponse = page.waitForResponse((response) =>
         response.request().method() === 'POST' && response.url().includes('/functions/v1/ai'),
