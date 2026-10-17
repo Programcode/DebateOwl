@@ -62,7 +62,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
   try {
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
         model: "openai/gpt-6-luna",
@@ -71,7 +71,8 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
     }));
     if (response.status !== 400) throw new Error(`non-streaming handler returned ${response.status}`);
     if (!(await response.text()).includes("ask.citationMode")) throw new Error("non-streaming error hid the invalid control");
-    if (calls.length !== 0) throw new Error(`non-streaming validation performed remote work: ${calls.join(", ")}`);
+    if (calls.length !== 1 || !calls[0].endsWith("/auth/v1/user")) throw new Error(`non-streaming validation performed quota or provider work: ${calls.join(", ")}`);
+    calls.length = 0;
 
     for (const [feature, input] of [
       ["ask", { message: "Question", mode: "general", language: "zz" }],
@@ -93,12 +94,13 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
     ] as const) {
       const languageResponse = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
         body: JSON.stringify({ feature, model: "openai/gpt-6-luna", input }),
       }));
       if (languageResponse.status !== 400) throw new Error(`${feature} invalid language returned ${languageResponse.status}`);
       if (!(await languageResponse.text()).includes(`${feature}.language`)) throw new Error(`${feature} invalid language was accepted`);
-      if (calls.length !== 0) throw new Error(`${feature} language validation performed remote work: ${calls.join(", ")}`);
+      if (calls.length !== 1 || !calls[0].endsWith("/auth/v1/user")) throw new Error(`${feature} language validation performed quota or provider work: ${calls.join(", ")}`);
+      calls.length = 0;
     }
 
     const streamResponse = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
@@ -836,14 +838,14 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   try {
     frames = `data: ${JSON.stringify({ error: { message: "provider exploded" } })}`;
     const providerError = await (await handleStreamRequest(request())).text();
-    if (providerError.includes("event: final") || !providerError.includes("event: error") || !providerError.includes("provider exploded")) {
+    if (providerError.includes("event: final") || !providerError.includes("event: error") || providerError.includes("provider exploded") || !providerError.includes('"code":"provider_error"')) {
       throw new Error(`provider error was not surfaced as an SSE error: ${providerError}`);
     }
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
 
     frames = `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`;
     const incomplete = await (await handleStreamRequest(request())).text();
-    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || !incomplete.includes("ended before completion")) {
+    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || incomplete.includes("ended before completion") || !incomplete.includes('"code":"provider_error"')) {
       throw new Error(`incomplete EOF was treated as success: ${incomplete}`);
     }
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("incomplete EOF published a cost");
@@ -986,7 +988,7 @@ Deno.test("stream terminal events stop an open upstream promptly", async () => {
 
     scenario = "error";
     const errorText = await withTimeout((await handleStreamRequest(request())).text(), "error stream");
-    if (errorText.includes("event: final") || !errorText.includes("provider exploded")) throw new Error(`provider error was not emitted: ${errorText}`);
+    if (errorText.includes("event: final") || !errorText.includes("event: error") || errorText.includes("provider exploded") || !errorText.includes('"code":"provider_error"')) throw new Error(`provider error was not emitted: ${errorText}`);
     await withTimeout(upstreamCancelled, "error upstream cancellation");
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
   } finally {

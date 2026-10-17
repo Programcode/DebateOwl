@@ -49,8 +49,8 @@ SELECT throws_ok(
 SELECT results_eq(
   $$SELECT user_id, limit_value FROM public.rate_limits
     WHERE limit_type = 'pgtap_daily' ORDER BY user_id NULLS FIRST$$,
-  $$VALUES (NULL::uuid, 100), ('b1111111-1111-4111-8111-111111111111'::uuid, 50)$$,
-  'a user reads the global limit and their own, not other users'' limits'
+  $$VALUES ('b1111111-1111-4111-8111-111111111111'::uuid, 50)$$,
+  'a user reads their own limit, not the global one or other users'' limits'
 );
 SELECT is(
   pg_temp.rows_changed($$UPDATE public.rate_limits SET limit_value = 1000000
@@ -72,8 +72,8 @@ SELECT throws_ok(
 );
 SELECT throws_ok(
   $$SELECT * FROM public.get_active_rate_limits()$$,
-  'P0001',
-  'administrator access required',
+  '42501',
+  NULL,
   'a regular user cannot list every user''s rate limits'
 );
 SELECT throws_ok(
@@ -122,14 +122,16 @@ SELECT is_empty(
   $$SELECT 1 FROM public.admin_grants$$,
   'anonymous callers cannot read the grant log'
 );
-SELECT is_empty(
-  $$SELECT 1 FROM public.rate_limits WHERE user_id IS NOT NULL$$,
-  'anonymous callers cannot read per-user rate limits'
+SELECT throws_ok(
+  $$SELECT 1 FROM public.rate_limits$$,
+  '42501',
+  NULL,
+  'anonymous callers cannot read rate limits'
 );
 SELECT throws_ok(
   $$SELECT * FROM public.get_active_rate_limits()$$,
-  'P0001',
-  'administrator access required',
+  '42501',
+  NULL,
   'anonymous callers cannot list rate limits through the admin RPC'
 );
 SELECT throws_ok(

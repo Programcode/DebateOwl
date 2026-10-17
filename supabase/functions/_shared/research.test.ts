@@ -517,3 +517,30 @@ Deno.test("research timeout stays bounded and marks accounting incomplete", asyn
     throw new Error("late non-cooperative work did not remain detached");
   }
 });
+
+Deno.test("research preserves queries for search while keeping them out of logs", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  const originalKey = Deno.env.get("EXA_API_KEY");
+  Deno.env.set("EXA_API_KEY", "test-key");
+  const logs: string[] = [];
+  const queries: string[] = [];
+  console.log = console.warn = (...args: unknown[]) => logs.push(args.join(" "));
+  globalThis.fetch = (async (_input: Request | URL | string, init?: RequestInit) => {
+    queries.push(JSON.parse(String(init?.body)).query);
+    return Response.json({ error: "search unavailable" }, { status: 400 });
+  }) as typeof fetch;
+  try {
+    await deepResearch("PRIVATE_CLAIM", "Global", {
+      provider: "openrouter", model: "openai/gpt-6-luna", reasoningEffort: "low",
+      callModel: () => Promise.resolve({ output: { queries: ["PRIVATE_FOLLOWUP"] } }),
+    }, { maxSeedQueries: 1, maxFollowUpQueries: 1, maxUrlsToRead: 0, overallTimeoutMs: 1000 });
+    if (!queries.some((query) => query.includes("PRIVATE_CLAIM")) || !queries.includes("PRIVATE_FOLLOWUP")) throw new Error("search queries changed");
+    if (logs.join(" ").includes("PRIVATE")) throw new Error("research text leaked to logs");
+    if (!logs.join(" ").includes("queryLength=")) throw new Error("search diagnostics missing");
+  } finally {
+    globalThis.fetch = originalFetch; console.log = originalLog; console.warn = originalWarn;
+    if (originalKey === undefined) Deno.env.delete("EXA_API_KEY"); else Deno.env.set("EXA_API_KEY", originalKey);
+  }
+});

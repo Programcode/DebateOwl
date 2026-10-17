@@ -1,7 +1,7 @@
 // Supabase Edge Function: Share API for DebateLab
 // Creates and manages shareable links for debate content
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders } from "../_shared/cors.ts";
 import { BodyTooLargeError, discardRequestBody, readBoundedBody } from "../_shared/bounded-body.ts";

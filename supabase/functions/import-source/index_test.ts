@@ -16,6 +16,8 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 Deno.test("import-source reserves only import_source quota", async () => {
   const originalFetch = globalThis.fetch;
+  const originalResolveDns = Deno.resolveDns;
+  Deno.resolveDns = ((_host: string, type: string) => Promise.resolve(type === "A" ? ["93.184.216.34"] : [])) as typeof Deno.resolveDns;
   let quotaRequest: Record<string, unknown> | undefined;
 
   globalThis.fetch =
@@ -67,5 +69,29 @@ Deno.test("import-source reserves only import_source quota", async () => {
     }
   } finally {
     globalThis.fetch = originalFetch;
+    Deno.resolveDns = originalResolveDns;
   }
+});
+
+Deno.test("import-source rejects invalid bodies and private URLs without spending quota", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalResolveDns = Deno.resolveDns;
+  let quotaCalls = 0;
+  Deno.resolveDns = ((_host: string, type: string) => Promise.resolve(type === "A" ? ["127.0.0.1"] : [])) as typeof Deno.resolveDns;
+  globalThis.fetch = (async (input: Request | URL | string) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
+    if (url.pathname.endsWith("/user_roles")) return jsonResponse({ role: "user" });
+    if (url.pathname.endsWith("/ai_requests")) return new Response(null, { status: 201 });
+    if (url.pathname.endsWith("/consume_daily_quota")) { quotaCalls++; return jsonResponse([{ allowed: false, current_count: 50 }]); }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  try {
+    for (const body of ["{", "null", '{"url":{}}', '{"url":"file:///etc/passwd"}', '{"url":"http://127.0.0.1"}', '{"url":"https://private.example"}']) {
+      const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/import-source", {
+        method: "POST", headers: { Authorization: "Bearer test-token" }, body,
+      }));
+      if (response.status !== 400 || quotaCalls !== 0) throw new Error(`invalid import returned ${response.status}, reserved ${quotaCalls} quotas`);
+    }
+  } finally { globalThis.fetch = originalFetch; Deno.resolveDns = originalResolveDns; }
 });

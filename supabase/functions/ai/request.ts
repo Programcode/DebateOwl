@@ -31,12 +31,12 @@ export function sanitizePromptInput(input: string, fieldName: string): { sanitiz
     .replace(/[\u200B-\u200D\uFEFF]/g, "");
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(sanitized)) {
-      console.warn(`[SECURITY] Prompt injection attempt detected in ${fieldName}: ${sanitized.slice(0, 200)}`);
+      console.warn(`[SECURITY] Prompt injection pattern=${pattern.source} length=${sanitized.length}`);
       return { rejected: `Suspicious content detected in ${fieldName}` };
     }
   }
   if (sanitized.length > MAX_INPUT_LENGTH) {
-    console.warn(`[SECURITY] Input truncated in ${fieldName}: ${sanitized.length} chars -> ${MAX_INPUT_LENGTH}`);
+    console.warn(`[SECURITY] Input truncated: ${sanitized.length} chars -> ${MAX_INPUT_LENGTH}`);
     return { sanitized: sanitized.slice(0, MAX_INPUT_LENGTH), truncated: true };
   }
   return { sanitized, truncated: false };

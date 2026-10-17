@@ -2,7 +2,7 @@
 // endpoints. Previously copy-pasted into ai/ and ai-stream/, where the two
 // copies had already drifted apart on trial handling.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { calculateRequestCost, type CostResult, type NormalizedUsage } from "./cost.ts";
 import {
   AUTO_PRO,

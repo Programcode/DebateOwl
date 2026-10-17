@@ -1,10 +1,11 @@
 // Supabase Edge Function: Stripe Webhook Handler
 // Processes Stripe events and syncs subscription state to the database.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import {
   duplicateWebhookResponse,
+  processWebhookEvent,
   webhookFailureResponse,
 } from "./webhook-event-lifecycle.ts";
 
@@ -19,9 +20,17 @@ if (!STRIPE_WEBHOOK_SECRET) throw new Error("Missing required env: STRIPE_WEBHOO
 if (!SUPABASE_URL) throw new Error("Missing required env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing required env: SUPABASE_SERVICE_ROLE_KEY");
 
+// Only the local full-stack gate sets this, to reach its fake Stripe.
+const stripeApiUrl = Deno.env.get("STRIPE_API_URL");
+const stripeEndpoint = stripeApiUrl ? new URL(stripeApiUrl) : null;
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
   httpClient: Stripe.createFetchHttpClient(),
+  ...(stripeEndpoint && {
+    host: stripeEndpoint.hostname,
+    port: stripeEndpoint.port || (stripeEndpoint.protocol === "http:" ? "80" : "443"),
+    protocol: stripeEndpoint.protocol.replace(":", "") as "http" | "https",
+  }),
 });
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -63,62 +72,75 @@ Deno.serve(async (req) => {
   console.log(`[WEBHOOK] Received event: ${event.type} (${event.id})`);
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutCompleted(session);
-        break;
-      }
-      case "invoice.payment_succeeded": {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handlePaymentSucceeded(invoice);
-        break;
-      }
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handlePaymentFailed(invoice);
-        break;
-      }
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionDeleted(subscription);
-        break;
-      }
-      case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpdated(subscription);
-        break;
-      }
-      default:
-        console.log(`[WEBHOOK] Unhandled event type: ${event.type}`);
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    const failure = webhookFailureResponse(message);
-    console.error(`[WEBHOOK] Error processing ${event.type}:`, message);
-    // Return 5xx so Stripe retries. The idempotency record is written only after success.
-    return new Response(JSON.stringify(failure), {
-      status: failure.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const outcome = await processWebhookEvent(event, {
+      // Claim and completion run on the database clock; see claim_webhook_event.
+      claim: async (id, type) => {
+        const { data, error } = await supabase.rpc("claim_webhook_event", { p_id: id, p_type: type });
+        if (error) throw new Error(`Failed to claim webhook event: ${error.message}`);
+        if (data !== "claimed" && data !== "duplicate" && data !== "in_progress") {
+          throw new Error(`Unexpected webhook claim result: ${String(data)}`);
+        }
+        return data;
+      },
+      complete: async (id) => {
+        const { error } = await supabase.rpc("complete_webhook_event", { p_id: id });
+        // The handler's effects are applied; a missing marker only lets a
+        // retry after the abandon window run the idempotent handlers again.
+        if (error) console.error("[WEBHOOK] Failed to mark event complete:", error.message);
+      },
+      release: async (id) => {
+        const { error } = await supabase.from("webhook_events").delete().eq("id", id);
+        if (error) throw new Error(`Failed to release webhook event: ${error.message}`);
+      },
+      retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      handle: async (type, object) => {
+        switch (type) {
+          case "checkout.session.completed": {
+            const session = object as Stripe.Checkout.Session;
+            await handleCheckoutCompleted(session);
+            break;
+          }
+          case "invoice.payment_succeeded": {
+            const invoice = object as Stripe.Invoice;
+            await handlePaymentSucceeded(invoice);
+            break;
+          }
+          case "invoice.payment_failed": {
+            const invoice = object as Stripe.Invoice;
+            await handlePaymentFailed(invoice);
+            break;
+          }
+          case "customer.subscription.deleted":
+          case "customer.subscription.updated": {
+            const subscription = object as Stripe.Subscription;
+            if (subscription.status === "canceled") await handleSubscriptionDeleted(subscription);
+            else await handleSubscriptionUpdated(subscription);
+            break;
+          }
+          default:
+            console.log(`[WEBHOOK] Unhandled event type: ${event.type}`);
+        }
+      },
     });
-  }
-
-  const { error: eventInsertError } = await supabase.from("webhook_events").insert({
-    id: event.id,
-    event_type: event.type,
-  });
-
-  if (eventInsertError) {
-    if (eventInsertError.code === "23505") {
-      const duplicate = duplicateWebhookResponse();
-      console.log(`[WEBHOOK] Duplicate event ignored: ${event.id}`);
-      return new Response(JSON.stringify({ received: true, ...duplicate }), {
-        status: duplicate.status,
+    if (outcome === "duplicate") {
+      return new Response(JSON.stringify({ received: true, ...duplicateWebhookResponse() }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const failure = webhookFailureResponse("Failed to record webhook event");
-    console.error("[WEBHOOK] Failed to record webhook event:", eventInsertError);
+    if (outcome === "in_progress") {
+      // Another delivery holds the claim. A non-2xx keeps Stripe retrying in
+      // case that delivery dies before completing.
+      return new Response(JSON.stringify({ received: false, error: "Event is being processed" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const failure = webhookFailureResponse("Webhook processing failed");
+    console.error(`[WEBHOOK] Error processing ${event.type}:`, message);
+    // The failed delivery released its claim; return 5xx so Stripe retries.
     return new Response(JSON.stringify(failure), {
       status: failure.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -202,8 +224,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   // Fetch the full subscription to get current period
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
+  // Take the status from Stripe too: a late payment event must not mark a
+  // since-canceled subscription active again.
   const { error } = await supabase.from("subscriptions").update({
-    status: "active",
+    status: subscription.status,
     current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
   }).eq("stripe_subscription_id", subscriptionId);
@@ -284,6 +308,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
     if (userError) {
       console.error("[WEBHOOK] Failed to downgrade user on cancellation:", userError);
+      throw new Error(`Failed to downgrade user on cancellation: ${userError.message}`);
     }
 
     console.log(`[WEBHOOK] User ${sub.user_id} subscription canceled`);

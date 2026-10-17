@@ -24,7 +24,11 @@ const demoCode = {
   disabled_at: null,
 };
 
+type Attempt = { ip_address: string | null; browser_fingerprint: string | null; failure_reason: string | null; success: boolean; created_at: string };
 type Scenario = {
+  attempts?: Attempt[];
+  ipAddress?: string;
+  browserFingerprint?: string;
   appMetadata?: Record<string, unknown>;
   attemptLookupFails?: boolean;
   currentRole?: string | null;
@@ -34,6 +38,9 @@ type Scenario = {
 };
 
 async function runScenario({
+  attempts = [],
+  ipAddress,
+  browserFingerprint,
   appMetadata = {},
   attemptLookupFails = false,
   currentRole = "user",
@@ -52,7 +59,20 @@ async function runScenario({
     calls.push({ body, method: request.method, pathname: url.pathname, search: url.search });
 
     if (url.pathname === "/rest/v1/demo_access_attempts" && request.method !== "POST") {
-      return attemptLookupFails ? jsonResponse({ message: "attempt lookup failed" }, 500) : jsonResponse([]);
+      if (attemptLookupFails) return jsonResponse({ message: "attempt lookup failed" }, 500);
+      const count = attempts.filter((attempt) => {
+        for (const field of ["ip_address", "browser_fingerprint", "success", "created_at"] as const) {
+          const filter = url.searchParams.get(field);
+          if (!filter) continue;
+          if (filter === "is.null" && attempt[field] !== null) return false;
+          if (filter.startsWith("eq.") && String(attempt[field]) !== filter.slice(3)) return false;
+          if (filter.startsWith("gte.") && String(attempt[field]) < filter.slice(4)) return false;
+        }
+        if (url.searchParams.get("or")?.includes("failure_reason.not.in") &&
+          ["rate_limited", "invalid_format"].includes(attempt.failure_reason ?? "")) return false;
+        return true;
+      }).length;
+      return new Response(null, { headers: { "Content-Range": `*/${count}` } });
     }
     if (url.pathname === "/rest/v1/demo_access_codes") return jsonResponse(demoCode);
     if (url.pathname === "/auth/v1/admin/users" && request.method === "GET") {
@@ -100,10 +120,10 @@ async function runScenario({
   try {
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/demo-code-login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(ipAddress ? { "X-Real-IP": ipAddress } : {}) },
       body: JSON.stringify({
         code: "DEMO-AB12-CD34",
-        ...(attemptLookupFails ? { browserFingerprint: "test-browser" } : {}),
+        ...(browserFingerprint || attemptLookupFails ? { browserFingerprint: browserFingerprint ?? "test-browser" } : {}),
         ...(redirectTo ? { redirectTo } : {}),
       }),
     }));
@@ -204,5 +224,29 @@ Deno.test("sends sign-in links back to a DebateLab preview but not to a foreign 
   if (!sent.includes(preview)) throw new Error(`preview redirect was dropped: ${sent}`);
   if ((await linkFor("https://evil.example.com/app")).includes("evil.example.com")) {
     throw new Error("foreign redirect was passed to generate_link");
+  }
+});
+
+Deno.test("anonymous demo attempts use a shared unknown bucket and fail closed", async () => {
+  const attempts = Array.from({ length: 10 }, () => ({ ip_address: null, browser_fingerprint: null, success: false, failure_reason: "not_found", created_at: new Date().toISOString() }));
+  const { response, calls } = await runScenario({ attempts });
+  if (response.status !== 429) throw new Error(`unknown bucket returned ${response.status}`);
+  if (countCalls(calls, "/rest/v1/demo_access_codes")) throw new Error("limited unknown caller reached code lookup");
+});
+
+Deno.test("demo limiter excludes its refusals, invalid formats, successes, old and unrelated attempts", async () => {
+  for (const identity of [{}, { ipAddress: "192.0.2.1" }, { browserFingerprint: "test-browser" }]) {
+    const base = { ip_address: "ipAddress" in identity ? identity.ipAddress! : null, browser_fingerprint: "browserFingerprint" in identity ? identity.browserFingerprint! : null, success: false, failure_reason: "not_found", created_at: new Date().toISOString() };
+    const attempts = [
+      ...Array.from({ length: 9 }, () => ({ ...base, failure_reason: null })),
+      ...["rate_limited", "invalid_format"].map((failure_reason) => ({ ...base, failure_reason })),
+      { ...base, success: true },
+      { ...base, created_at: "2000-01-01T00:00:00.000Z" },
+      { ...base, ip_address: "192.0.2.2", browser_fingerprint: "other-browser" },
+    ];
+    const { response } = await runScenario({ ...identity, attempts, existingUser: false });
+    if (response.status !== 200) throw new Error(`excluded attempts locked out caller: ${response.status}`);
+    const limited = await runScenario({ ...identity, attempts: [...attempts, base] });
+    if (limited.response.status !== 429) throw new Error("ten real failures did not limit caller");
   }
 });

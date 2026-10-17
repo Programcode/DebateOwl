@@ -197,7 +197,9 @@ Deno.test("a provider failure ends the stream with the same error a plain reques
     const events = await readEvents(response);
     const result = events.at(-1);
     assert(result?.event === "result" && result.data.status === 500, `expected a 500 result, got ${JSON.stringify(result)}`);
-    assert(String((result.data.body as { error?: unknown }).error).includes("OpenRouter error"), "the error body lost the provider message");
+    const body = result.data.body as { error?: unknown; code?: unknown };
+    assert(body.code === "provider_error", `expected the provider_error code, got ${JSON.stringify(body)}`);
+    assert(!String(body.error).includes("OpenRouter"), "the provider's error text reached the client");
     assert(harness.usageRows.some((row) => row.feature === "sparring" && row.status === "error"), "the failure was not logged");
   } finally {
     harness.restore();

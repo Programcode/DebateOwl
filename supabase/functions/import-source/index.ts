@@ -1,4 +1,4 @@
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
 import { BodyTooLargeError, discardRequestBody, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
@@ -256,22 +256,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Your account has been suspended. Please contact support.", code: "banned" }, 403, corsHeaders);
   }
 
-  let quota: { allowed: boolean; currentCount: number };
-  try {
-    quota = await consumeDailyImportQuota(user.id);
-  } catch (err) {
-    console.error("[IMPORT_SOURCE] quota reservation failed", err instanceof Error ? err.message : String(err));
-    return jsonResponse({ error: "Unable to verify your quota. Please try again." }, 500, corsHeaders);
-  }
-  if (!quota.allowed) {
-    return jsonResponse({
-      error: `You've reached the daily import limit (${DAILY_IMPORT_LIMIT}). Try again tomorrow.`,
-      code: "limit_reached",
-      limit: DAILY_IMPORT_LIMIT,
-      current: quota.currentCount,
-    }, 429, corsHeaders);
-  }
-
   const startedAt = Date.now();
   const deadline = new AbortController();
   const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
@@ -293,7 +277,26 @@ export async function handleRequest(req: Request): Promise<Response> {
       await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
       return jsonResponse({ error: "Invalid JSON body." }, 400, corsHeaders);
     }
-    const parsedUrl = validatePublicHttpUrl(String(body.url || "").trim());
+    if (typeof body.url !== "string") throw new Error("Enter a valid URL.");
+    const parsedUrl = validatePublicHttpUrl(body.url.trim());
+    await validateResolvedPublicHost(parsedUrl, deadline.signal);
+
+    let quota: { allowed: boolean; currentCount: number };
+    try {
+      quota = await consumeDailyImportQuota(user.id);
+    } catch (err) {
+      console.error("[IMPORT_SOURCE] quota reservation failed", err instanceof Error ? err.message : String(err));
+      return jsonResponse({ error: "Unable to verify your quota. Please try again." }, 500, corsHeaders);
+    }
+    if (!quota.allowed) {
+      return jsonResponse({
+        error: `You've reached the daily import limit (${DAILY_IMPORT_LIMIT}). Try again tomorrow.`,
+        code: "limit_reached",
+        limit: DAILY_IMPORT_LIMIT,
+        current: quota.currentCount,
+      }, 429, corsHeaders);
+    }
+
     const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal);
 
     if (!response.ok) {

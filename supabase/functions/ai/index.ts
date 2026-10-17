@@ -10,6 +10,7 @@ import {
   boundPromptSources,
   buildSystemPrompt,
   type Feature,
+  FEATURE_PROMPTS,
   MAX_PROMPT_SOURCE_COUNT,
   type PromptSource,
 } from "../_shared/prompts.ts";
@@ -129,13 +130,25 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+  }
+  // Require a valid user session for all AI requests.
+  // The frontend already enforces auth; this protects the endpoint even when
+  // gateway JWT verification is disabled.
+  let userId: string;
+  try {
+    userId = (await requireUser(req)).user.id;
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    return jsonError(error, corsHeaders);
+  }
+  log(requestId, "INFO", "User authenticated", { userId });
+
   // A streamed response ends early when the browser cancels it; provider
   // work stops with it, as it does when a plain request is aborted.
   const streamCancel = new AbortController();
   const workSignal = createRequestBudgetSignal(AbortSignal.any([req.signal, streamCancel.signal]));
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
-  }
   let body: Record<string, unknown>;
   try {
     const parsedBody = await readBoundedJsonBody(req);
@@ -149,12 +162,15 @@ export async function handleRequest(req: Request): Promise<Response> {
     log(requestId, "WARN", "Invalid JSON body received");
     return badRequest("Invalid JSON body", corsHeaders);
   }
-  const feature = typeof body.feature === "string" ? body.feature as Feature : undefined;
+  if (typeof body.feature !== "string" || !Object.hasOwn(FEATURE_PROMPTS, body.feature)) {
+    return badRequest("Unsupported feature", corsHeaders);
+  }
+  const feature = body.feature as Feature;
   const rawInput = body.input;
   const sentModel = (typeof body.model === "string" ? body.model : "") || DEFAULT_MODEL;
   const rawModel = retiredModelSuccessor(sentModel) ?? sentModel;
   if (!isModelSelection(rawModel)) {
-    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model: rawModel });
+    log(requestId, "WARN", "Rejected unsupported model/provider combination", { model: rawModel.slice(0, 100) });
     return badRequest("Unsupported model or provider combination", corsHeaders);
   }
   const requestedModel: ModelSelection = rawModel;
@@ -202,7 +218,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     debateContext: Boolean(debateContextRequest),
   });
 
-  if (!feature) return badRequest("Missing feature", corsHeaders);
   if (!isRecord(rawInput)) return badRequest("Missing input", corsHeaders);
 
   let input: Record<string, unknown> = rawInput;
@@ -280,19 +295,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     const enriched = sourceAssessments.length > 0 ? { ...payload, sourceAssessments } : payload;
     return Object.keys(meta).length > 0 ? { ...enriched, meta } : enriched;
   };
-
-  // Require a valid user session for all AI requests.
-  // The frontend already enforces auth; this protects the endpoint even when
-  // gateway JWT verification is disabled.
-  let userId: string;
-  try {
-    userId = (await requireUser(req)).user.id;
-  } catch (error) {
-    if (!(error instanceof HttpError)) throw error;
-    log(requestId, "WARN", "Authentication rejected", { error: error.message });
-    return jsonError(error, corsHeaders);
-  }
-  log(requestId, "INFO", "User authenticated", { userId });
 
   if (debateContextRequest) {
     try {
@@ -765,7 +767,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      console.error("[ERROR]", message);
+      console.error("[ERROR]", message.slice(0, 2000));
 
       if (workspaceAccess?.threadId && workspaceAccess.threadRequest && !workspaceThreadSettled) {
         await supabase.rpc("complete_workspace_thread_generation", {
@@ -803,9 +805,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         ]),
         latencyMs,
         "error",
-        message.slice(0, 100),
+        "ai_error",
       );
-      return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
   };
 

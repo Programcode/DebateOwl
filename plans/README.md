@@ -6,6 +6,7 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## In progress
 
+- **Pre-ship security pass.** A 25-item audit of the database, Edge Functions, client and hosting, with fixes for the clear findings. Plan and report: [2026-10-16 security pre-ship pass](2026-10-16-security-preship-pass.md).
 - **Staging that tracks main.** Audit of staging, the VPS sync timer, the seed, and what to delete. Plan: [2026-10-03 staging loop](2026-10-03-staging-loop.md). Previews come from #95 and the staging spec fix from #100.
 
 ## Backlog

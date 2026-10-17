@@ -1257,6 +1257,13 @@ export const useSessionStore = create<SessionState>()(
         factoidsResult: null,
         askMessages: [],
         askStreamingAssistant: null,
+        // Drafts belong to the signed-in user too; the next person on this
+        // browser must not see them prefilled.
+        pendingFlowchartData: null,
+        generateForm: {},
+        attackForm: {},
+        brainstormForm: {},
+        factoidsForm: {},
       }),
 
       clearSession: () => set({

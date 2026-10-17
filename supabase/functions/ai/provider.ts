@@ -248,7 +248,10 @@ export async function callOpenRouter(
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
   }, REQUEST_BUDGET_MS, signal);
-  if (!response.ok) throw new Error(`OpenRouter error: ${errorBody ?? ""}`);
+  if (!response.ok) {
+    console.error(`[OpenRouter] Request failed (${response.status}):`, errorBody?.slice(0, 2000));
+    throw new Error("AI provider request failed");
+  }
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
@@ -286,7 +289,8 @@ async function streamOpenRouter(
       const body = response.body
         ? await readResponseText(response, MAX_PROVIDER_ERROR_BODY_BYTES, MAX_PROVIDER_ERROR_BODY_CHARS, bodySignal, true)
         : { text: "" };
-      throw new Error(`OpenRouter error: ${body.text}`);
+      console.error(`[OpenRouter] Stream request failed (${response.status}):`, body.text.slice(0, 2000));
+      throw new Error("AI provider request failed");
     }
     return await readOpenRouterStream(response.body, stream, bodySignal);
   });
@@ -324,7 +328,8 @@ export async function readOpenRouterStream(
       const message = typeof chunk.error === "object" && chunk.error !== null && "message" in chunk.error
         ? (chunk.error as { message?: unknown }).message
         : chunk.error;
-      throw new Error(`OpenRouter error: ${typeof message === "string" ? message : "stream error"}`);
+      console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
+      throw new Error("AI provider request failed");
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
     if (typeof choice?.finish_reason === "string" && choice.finish_reason) finished = true;

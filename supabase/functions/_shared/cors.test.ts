@@ -64,3 +64,9 @@ Deno.test("rejects other Vercel projects and lookalike hosts", () => {
     assertEquals(isAllowedOrigin(origin), false, origin);
   }
 });
+
+Deno.test("dynamic CORS responses vary by Origin for allowed, rejected and absent origins", () => {
+  for (const origin of [ALLOWED_ORIGINS[0], "http://127.0.0.1:18080", "https://evil.example", null]) {
+    assertEquals(getCorsHeaders(origin).Vary, "Origin");
+  }
+});

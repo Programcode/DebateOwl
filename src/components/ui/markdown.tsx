@@ -30,6 +30,13 @@ export function Markdown({ children, className, inline = false }: MarkdownProps)
             {children}
           </a>
         ),
+        // Never load an image a model asked for: a prompt-injected source could
+        // put the student's work in the image URL and fetch it without a click.
+        img: ({ alt, src }) => (
+          <a href={src} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 [overflow-wrap:anywhere]">
+            {alt || src}
+          </a>
+        ),
       }}
     >
       {children}

@@ -69,6 +69,7 @@ export function getCorsHeaders(
     (allowDevOrigins && isDevOrigin(origin as string))
   );
   return {
+    "Vary": "Origin",
     "Access-Control-Allow-Origin": permitted ? origin as string : ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": methods,

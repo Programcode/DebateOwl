@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SUPABASE_PROJECTS } from "@/lib/supabase/projects";
 
 type HeaderRule = {
   source: string;
@@ -65,12 +66,24 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
     expect(headers["Content-Security-Policy"]).toContain("worker-src 'self' blob:");
     expect(headers["Content-Security-Policy"]).not.toMatch(/script-src[^;]*blob:/);
-    expect(headers["X-Frame-Options"]).toBe("SAMEORIGIN");
+    expect(headers["Content-Security-Policy"]).toContain("form-action 'self'");
+    expect(headers["X-Frame-Options"]).toBe("DENY");
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     // Dictation and voice rounds need the microphone on this origin only.
     expect(headers["Permissions-Policy"]).toBe("geolocation=(), microphone=(self), camera=()");
     expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains; preload");
+  });
+
+  it("lets the page load images and call Supabase only where the app needs to", () => {
+    const csp = headersFor(loadConfig(), "/(.*)")["Content-Security-Policy"];
+    const directive = (name: string) => csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name} `)) ?? "";
+
+    // Any-host images let prompt-injected Markdown send student work to a third party.
+    expect(directive("img-src").split(" ")).not.toContain("https:");
+    // A wildcard would let injected script post data to an attacker's own project.
+    const supabaseHosts = directive("connect-src").split(" ").filter((source) => source.includes("supabase.co"));
+    expect(supabaseHosts.sort()).toEqual(Object.values(SUPABASE_PROJECTS).map((project) => project.url).sort());
   });
 
   it("loads the theme bootstrap from a CSP-compatible external script", () => {

@@ -1,7 +1,7 @@
 // Supabase Edge Function: Create Stripe Checkout Session
 // Creates a Checkout Session for subscription purchase.
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
@@ -298,7 +298,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         .maybeSingle();
 
       if (promoLookupError) {
-        console.warn(`[CHECKOUT] Promo lookup warning for ${promoCode}: ${promoLookupError.message}`);
+        console.warn(`[CHECKOUT] Promo lookup failed`);
       }
 
       if (promo && promo.type === "discount") {
@@ -309,7 +309,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           .maybeSingle();
 
         if (redemptionLookupError) {
-          console.warn(`[CHECKOUT] Promo redemption lookup warning for ${promoCode}: ${redemptionLookupError.message}`);
+          console.warn(`[CHECKOUT] Promo redemption lookup failed`);
         }
 
         if (existingRedemption) {
@@ -333,15 +333,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   } catch (err) {
     if (err instanceof AppError) {
-      return new Response(JSON.stringify({ error: err.message, details: err.details }), {
+      console.error("[CHECKOUT] Configuration error:", err.message.slice(0, 2000));
+      return new Response(JSON.stringify({ error: "Unable to create checkout session. Please try again." }), {
         status: err.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { status, message, details } = classifyStripeError(err);
-    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }));
-    return new Response(JSON.stringify({ error: message, details }), {
+    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }).slice(0, 2000));
+    return new Response(JSON.stringify({ error: "Unable to create checkout session. Please try again." }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

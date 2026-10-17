@@ -17,6 +17,8 @@ const chatModel = (requested) => (liveModel === "as-requested" ? requested : liv
 const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
 if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
 const requests = [];
+// Subscription state the fake Stripe returns, set by tests through /__subscription.
+const subscriptions = new Map();
 let failures = [];
 let upstreamCalls = 0;
 // Delay between streamed chunks; a test can slow it to keep a draft on screen.
@@ -317,6 +319,11 @@ createServer(async (req, res) => {
     streamDelayMs = typeof ms === "number" && ms >= 0 ? ms : undefined;
     return json(res, 200, { ok: true });
   }
+  if (url.pathname === "/__subscription" && req.method === "POST") {
+    const subscription = JSON.parse(await readBody(req) || "{}");
+    subscriptions.set(subscription.id, subscription);
+    return json(res, 200, { ok: true });
+  }
   if (url.pathname === "/__fail" && req.method === "POST") {
     const { feature, count = 1, status = 500 } = JSON.parse(await readBody(req) || "{}");
     failures.push({ feature, count, status });
@@ -331,6 +338,14 @@ createServer(async (req, res) => {
     const body = JSON.parse(await readBody(req));
     requests.push({ feature: "jev", model: body.model, status: 200 });
     return json(res, 200, { model: body.model, answers: jevAnswers(body.questions ?? {}), usage: { input_tokens: 40, output_tokens: 8, cost: 0.00001 } });
+  }
+  const subscriptionPath = url.pathname.match(/^\/v1\/subscriptions\/([^/]+)$/);
+  if (subscriptionPath && req.method === "GET") {
+    // The webhook applies Stripe's current subscription state, not the event's.
+    const subscription = subscriptions.get(decodeURIComponent(subscriptionPath[1]));
+    if (!subscription) return json(res, 404, { error: { type: "invalid_request_error", message: "No such subscription" } });
+    requests.push({ feature: "stripe-subscription", user: subscription.id });
+    return json(res, 200, subscription);
   }
   if (url.pathname === "/v1/customers/search" && req.method === "GET") {
     // Account deletion searches Stripe (through STRIPE_API_URL) for the user's

@@ -281,7 +281,7 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
     }, 30000, signal);
     throwIfAborted(signal);
     if (!response.ok) {
-      console.warn(`[EXA] Search failed (${response.status}) for: ${query}`);
+      console.warn(`[EXA] Search failed (${response.status}) queryLength=${query.length}`);
       return [];
     }
     if (!data?.results || !Array.isArray(data.results)) return [];
@@ -293,7 +293,7 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
     }));
   } catch (err) {
     if (signal?.aborted) throw err;
-    console.warn(`[EXA] Search failed for: ${query}`);
+    console.warn(`[EXA] Search failed queryLength=${query.length}`);
     return [];
   }
 }
@@ -314,14 +314,14 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
     }, 30000, signal);
     throwIfAborted(signal);
     if (!response.ok) {
-      console.warn(`[EXA] Contents fetch failed (${response.status}) for: ${url}`);
+      console.warn(`[EXA] Contents fetch failed (${response.status}) urlLength=${url.length}`);
       return "";
     }
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
     return (data.results[0]?.text || "").slice(0, 8000);
   } catch (err) {
     if (signal?.aborted) throw err;
-    console.warn(`[EXA] Contents fetch failed for: ${url}`);
+    console.warn(`[EXA] Contents fetch failed urlLength=${url.length}`);
     return "";
   }
 }
@@ -437,7 +437,7 @@ async function deepResearchInner(
   signal?: AbortSignal
 ): Promise<ResearchContext> {
   throwIfAborted(signal);
-  console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) for: ${claim}`);
+  console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) claimLength=${claim.length}`);
 
   const preferredSourceType = options.preferredSourceType || "any";
   const seedRequests = buildSearchRequests(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
@@ -465,7 +465,7 @@ async function deepResearchInner(
     const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
     context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
-    console.log(`[RESEARCH] Seed query "${query}": ${results.length} results`);
+    console.log(`[RESEARCH] Seed queryLength=${query.length}: ${results.length} results`);
     return results.map((result) => ({ ...result, query }));
   }));
   seedResults.forEach((results) => allResults.push(...results));
@@ -477,7 +477,7 @@ async function deepResearchInner(
   if (options.maxFollowUpQueries > 0) {
     const followUpQueries = await generateFollowUpQueries(claim, initialText, deps);
     throwIfAborted(signal);
-    console.log(`[RESEARCH] Follow-up queries: ${followUpQueries.join(", ")}`);
+    console.log(`[RESEARCH] Follow-up query count: ${followUpQueries.length}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
       const results = await searchWithFallback(buildFollowUpSearchRequest(query, preferredSourceType, options.timeframe));

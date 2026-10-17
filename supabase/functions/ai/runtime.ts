@@ -3,7 +3,7 @@
 // Every module-load environment read lives here so tests can set the
 // environment before importing index.ts.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import {
   deriveSparringIntegritySecret,
   type SparringDatabase,

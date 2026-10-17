@@ -59,7 +59,7 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 - `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
 - `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
-- `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling with idempotency state.
+- `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling. It claims each event in `webhook_events` before running handlers, reads subscription state from Stripe rather than the event payload, marks the claim complete, and lets a retry take over a claim left incomplete for 10 minutes. It needs the `webhook_events.completed_at` column, so apply `20261016120000_security_preship_hardening.sql` before deploying it.
 
 ## Shared backend modules
 
@@ -104,7 +104,7 @@ Do not use wildcard origins to hide a failed browser test. Before protected stag
 ## Migrations and database tests
 
 Migration filenames define execution order. Never edit an applied migration to change production history; add a new forward migration.
-When creating a table in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Fresh projects and database resets cannot rely on automatic table or sequence grants.
+When creating a table, sequence or function in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Since `20261016120000_security_preship_hardening.sql`, tables and sequences that `postgres` creates in `public` grant `anon` and `authenticated` nothing by default, so a missing grant shows up as `permission denied`, not as an open table. Functions still get Postgres's global `PUBLIC EXECUTE`, so every new function needs its own `REVOKE ... FROM PUBLIC`. `supabase/tests/client_grants_test.sql` checks both.
 
 Local gate:
 

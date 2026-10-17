@@ -67,8 +67,8 @@ export function streamFeatureResponse(
       try {
         write(sse("result", await resultPayload(await run(stream))));
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        write(sse("result", { status: 500, body: { error: message } }));
+        console.error("[AI_STREAM] Stream failed:", error instanceof Error ? error.message.slice(0, 2000) : "Unknown error");
+        write(sse("result", { status: 500, body: { error: "AI request failed. Please try again.", code: "provider_error" } }));
       } finally {
         clearInterval(heartbeat);
         open = false;

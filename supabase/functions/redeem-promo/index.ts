@@ -28,13 +28,15 @@ export async function handleRequest(req: Request): Promise<Response> {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const { user, userClient } = auth;
+  const { userClient } = auth;
 
   try {
-    const body = await req.json();
-    const code = (body.code as string || "").trim().toUpperCase();
+    const body = await req.json().catch(() => null);
+    const code = typeof body?.code === "string" && body.code.length <= 64
+      ? body.code.trim().toUpperCase()
+      : "";
 
-    if (!code) {
+    if (!code || code.length > 64) {
       return new Response(JSON.stringify({ success: false, message: "Please enter a promo code" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -47,7 +49,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       throw redeemError;
     }
 
-    console.log(`[PROMO] User ${user.id} redeemed code ${code} (type: ${result?.promoType || "unknown"})`);
+    console.log(`[PROMO] Redemption ${result?.success ? "succeeded" : "failed"}`);
 
     return new Response(JSON.stringify({
       success: Boolean(result?.success),
@@ -58,8 +60,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[PROMO] Error:", message);
-    return new Response(JSON.stringify({ success: false, message }), {
+    console.error("[PROMO] Error:", message.slice(0, 2000));
+    return new Response(JSON.stringify({ success: false, message: "Unable to redeem promo code. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

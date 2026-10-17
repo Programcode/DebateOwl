@@ -1,7 +1,7 @@
 // Supabase Edge Function: Create Stripe Customer Portal Session
 // Generates a portal URL so users can manage their subscription.
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
