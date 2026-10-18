@@ -1,5 +1,10 @@
-export const SITE_ORIGIN = 'https://debate.pi-stack.org';
-export const BRAND = 'DebateLab by Pi-Stack';
+import site from '@/config/site.json';
+
+/** Brand and domain strings live in src/config/site.json; nothing else should hardcode them. */
+export const SITE_ORIGIN = site.origin;
+export const BRAND = site.brand;
+export const PRODUCT = site.product;
+export const ORGANIZATION = site.organization;
 
 export interface PageHead {
   title: string;
@@ -15,23 +20,23 @@ export interface PageHead {
  */
 export const PAGE_HEADS = {
   '/': {
-    title: 'DebateLab by Pi-Stack | AI Debate Prep, Cases & Rebuttals',
-    description: 'DebateLab by Pi-Stack helps students and competitive debaters practice with AI opponents, case generation, rebuttal drills, evidence leads, coaching, timers, and argument flowcharts.',
+    title: `${BRAND} | AI Debate Prep, Cases & Rebuttals`,
+    description: `${BRAND} helps students and competitive debaters practice with AI opponents, case generation, rebuttal drills, evidence leads, coaching, timers, and argument flowcharts.`,
     canonicalPath: '/',
   },
   '/terms': {
-    title: 'Terms of Service | DebateLab by Pi-Stack',
-    description: 'The terms for using DebateLab by Pi-Stack: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability.',
+    title: `Terms of Service | ${BRAND}`,
+    description: `The terms for using ${BRAND}: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability.`,
     canonicalPath: '/terms',
   },
   '/privacy': {
-    title: 'Privacy Policy | DebateLab by Pi-Stack',
-    description: 'How DebateLab by Pi-Stack collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data.',
+    title: `Privacy Policy | ${BRAND}`,
+    description: `How ${BRAND} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data.`,
     canonicalPath: '/privacy',
   },
   '*': {
-    title: 'Page not found | DebateLab by Pi-Stack',
-    description: 'This page does not exist on DebateLab by Pi-Stack.',
+    title: `Page not found | ${BRAND}`,
+    description: `This page does not exist on ${BRAND}.`,
   },
 } as const satisfies Record<string, PageHead>;
 

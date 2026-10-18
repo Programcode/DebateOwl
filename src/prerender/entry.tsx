@@ -6,7 +6,7 @@ import { StaticRouter } from 'react-router-dom';
 import i18n from '@/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
-import { BRAND, PAGE_HEADS, SITE_ORIGIN, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import { BRAND, ORGANIZATION, PAGE_HEADS, PRODUCT, SITE_ORIGIN, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
 import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
@@ -70,7 +70,7 @@ function landingStructuredData(dateModified: string | undefined) {
       {
         '@type': 'Organization',
         '@id': ORGANIZATION_ID,
-        name: 'Pi-Stack',
+        name: ORGANIZATION,
         url: `${SITE_ORIGIN}/`,
         logo: `${SITE_ORIGIN}/favicon.png`,
       },
@@ -85,7 +85,7 @@ function landingStructuredData(dateModified: string | undefined) {
         '@type': 'SoftwareApplication',
         '@id': `${SITE_ORIGIN}/#software`,
         name: BRAND,
-        alternateName: 'DebateLab',
+        alternateName: PRODUCT,
         applicationCategory: 'EducationalApplication',
         operatingSystem: 'Web',
         url: `${SITE_ORIGIN}/`,

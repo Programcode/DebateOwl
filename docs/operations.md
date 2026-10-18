@@ -52,6 +52,10 @@ After `vite build`, [`scripts/prerender.mjs`](../scripts/prerender.mjs) renders 
 
 [`scripts/sitemap.mjs`](../scripts/sitemap.mjs) then writes `dist/sitemap.xml` from every page in `dist/` that names itself as canonical and is not `noindex`. Each `<lastmod>` is the `dateModified` the page declares in its JSON-LD: the guide pages' `CONTENT_DATE` in [`scripts/generate_seo_content.py`](../scripts/generate_seo_content.py), the legal pages' "last updated" dates, and the landing page's last source commit. A page without a date is listed without `<lastmod>`.
 
+The guide pages in `public/<slug>/index.html` are generated, not hand-edited: run `python3 scripts/generate_seo_content.py` and commit its output. Short pages live in its `PAGES` list; pages with long-form copy, their own highlight-card descriptions, and their own FAQs (which also feed the page's FAQPage JSON-LD) live in [`scripts/seo_guides.py`](../scripts/seo_guides.py). Keep `PAGES` in order, because each page's related-guide links are picked by position.
+
+The site origin, product name, brand line, and organization name live in [`src/config/site.json`](../src/config/site.json). The app's head tags, the prerender and sitemap scripts, and the guide generator all read it, and guide copy names the product with a `{product}` token. Do not hardcode those strings in new code or copy.
+
 [`src/test/vercel-deployment-config.test.ts`](../src/test/vercel-deployment-config.test.ts) guards these rules. Update it together with `vercel.json`, and do not paste the full configuration into another guide.
 
 A Vercel deploy ships only the frontend. Supabase migrations and Edge Functions are separate operations with their own authorization, so a frontend that depends on new schema must wait until that schema is applied to production.

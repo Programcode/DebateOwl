@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { createServer } from 'vite';
 
 const DIST = 'dist';
-const SITE_ORIGIN = 'https://debate.pi-stack.org';
+const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
 // The landing page's lastmod is the last commit that changed these.
 const LANDING_SOURCES = ['src/pages/LandingPage.tsx', 'src/components/landing', 'src/lib/seo/pages.ts'];
 
