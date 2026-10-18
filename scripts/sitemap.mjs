@@ -6,7 +6,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const DIST = 'dist';
-const SITE_ORIGIN = 'https://debate.pi-stack.org';
+const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
 
 function htmlPages(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
