@@ -5,7 +5,7 @@ DebateLab by Pi-Stack is an AI debate preparation platform at https://debate.pi-
 Important public pages:
 - https://debate.pi-stack.org/ — homepage
 - https://debate.pi-stack.org/ai-debate-practice — AI debate practice overview
-- https://debate.pi-stack.org/debate-case-generator — case generation
+- https://debate.pi-stack.org/ai-debate-case-generator — case generation
 - https://debate.pi-stack.org/debate-rebuttal-practice — rebuttal practice
 - https://debate.pi-stack.org/debatelab-pricing — plans and pricing
 - https://debate.pi-stack.org/sitemap.xml — every public page

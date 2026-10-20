@@ -44,6 +44,7 @@ Vercel builds and serves the frontend from the Git repository. Merging to `main`
 - rewrites of the app routes (`/app`, `/login`, `/share`, `/expocit/sources`) to `app-shell.html`; any other path that is not a file gets `404.html` with a real 404 status;
 - `trailingSlash: false`, which 308-redirects `/app/settings/` to `/app/settings` before routing, since rewrite and redirect sources match exactly;
 - 301 redirects from the retired brand pages (`/debatelab`, `/debatelab-by-programcode`, and the rest) to `/`;
+- 301 redirects from retired guide slugs to the guide that replaced them, such as `/debate-weighing-guide` to `/how-to-weigh-in-debate`. The `trailingSlash` 308 runs first, so `/debate-weighing-guide/` reaches the same page in two permanent hops and needs no rule of its own;
 - no-cache headers for `/`, `index.html`, `app-shell.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
 - `noindex` headers for `/app`, `/login`, and `/share` routes;
 - Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only.
@@ -52,7 +53,9 @@ After `vite build`, [`scripts/prerender.mjs`](../scripts/prerender.mjs) renders 
 
 [`scripts/sitemap.mjs`](../scripts/sitemap.mjs) then writes `dist/sitemap.xml` from every page in `dist/` that names itself as canonical and is not `noindex`. Each `<lastmod>` is the `dateModified` the page declares in its JSON-LD: the guide pages' `CONTENT_DATE` in [`scripts/generate_seo_content.py`](../scripts/generate_seo_content.py), the legal pages' "last updated" dates, and the landing page's last source commit. A page without a date is listed without `<lastmod>`.
 
-The guide pages in `public/<slug>/index.html` are generated, not hand-edited: run `python3 scripts/generate_seo_content.py` and commit its output. Short pages live in its `PAGES` list; pages with long-form copy, their own highlight-card descriptions, and their own FAQs (which also feed the page's FAQPage JSON-LD) live in [`scripts/seo_guides.py`](../scripts/seo_guides.py). Keep `PAGES` in order, because each page's related-guide links are picked by position.
+The guide pages in `public/<slug>/index.html` are generated, not hand-edited: run `python3 scripts/generate_seo_content.py` and commit its output. Short pages live in its `PAGES` list; pages with long-form copy, their own highlight-card descriptions, and their own FAQs (which also feed the page's FAQPage JSON-LD) live in [`scripts/seo_guides.py`](../scripts/seo_guides.py). Keep `PAGES` in order, because each page's related-guide links are picked by position. A guide entry can set its own `modified` date, which overrides `CONTENT_DATE` for that page alone.
+
+To retire a guide, delete its `PAGES` entry and its `public/<slug>/` folder (the generator never deletes), add its redirects to `vercel.json`, and repoint any link to it. Two guides that answer the same search should become one page, not two thin ones.
 
 The site origin, product name, brand line, and organization name live in [`src/config/site.json`](../src/config/site.json). The app's head tags, the prerender and sitemap scripts, and the guide generator all read it, and guide copy names the product with a `{product}` token. Do not hardcode those strings in new code or copy.
 
