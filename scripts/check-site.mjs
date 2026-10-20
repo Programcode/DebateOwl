@@ -23,6 +23,8 @@ function sourcePattern(source) {
   const pattern = source
     .replace(/:\w+\(([^)]+)\)/g, '($1)')
     .replace(/:\w+\+/g, '.+')
+    // /:path* also matches the bare prefix: /share/:path* covers /share.
+    .replace(/\/:\w+\*/g, '(?:/.*)?')
     .replace(/:\w+\*/g, '.*');
   return new RegExp(`^${pattern}$`);
 }
@@ -86,6 +88,19 @@ function checkUrl(url, where, fromFile) {
 
 const textOf = (html) => html.replace(/<[^>]+>/g, '').replace(/&[#\w]+;/g, 'x').trim();
 
+/** Whether attributes give an accessible name: aria-label, or aria-labelledby naming elements with text in `html`. */
+function namedByAria(attributes, html) {
+  if (/\saria-label="[^"]*\S[^"]*"/.test(attributes)) return true;
+  const ids = attributes.match(/\saria-labelledby="([^"]+)"/)?.[1].trim().split(/\s+/);
+  if (!ids) return false;
+  return ids.every((id) => {
+    const start = html.search(new RegExp(`\\sid="${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    if (start < 0) return false;
+    const open = html.indexOf('>', start);
+    return Boolean(textOf(html.slice(open + 1, html.indexOf('</', open))));
+  });
+}
+
 for (const file of htmlFiles(DIST)) {
   const where = relative(DIST, file);
   const html = readFileSync(file, 'utf8');
@@ -117,11 +132,14 @@ for (const file of htmlFiles(DIST)) {
     if (!/\salt="/.test(tag)) report(where, `image without alt text: ${tag.slice(0, 80)}`);
   }
   for (const [, attributes, content] of body.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)) {
-    if (!/\saria-label(ledby)?="[^"]+"/.test(attributes) && !textOf(content)) report(where, 'button without an accessible name');
+    if (!namedByAria(attributes, body) && !textOf(content)) report(where, 'button without an accessible name');
   }
   const labelled = new Set([...body.matchAll(/<label\b[^>]*\sfor="([^"]+)"/g)].map((match) => match[1]));
+  // A field inside its <label> is labelled by it.
+  const wrapped = new Set([...body.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
+    .flatMap((match) => [...match[1].matchAll(/<(?:input|select|textarea)\b[^>]*>/g)].map((field) => field[0])));
   for (const [tag] of body.matchAll(/<(?:input|select|textarea)\b[^>]*>/g)) {
-    if (/\stype="hidden"/.test(tag) || /\saria-label(ledby)?="[^"]+"/.test(tag)) continue;
+    if (/\stype="hidden"/.test(tag) || wrapped.has(tag) || namedByAria(tag, body)) continue;
     const id = tag.match(/\sid="([^"]+)"/)?.[1];
     if (!id || !labelled.has(id)) report(where, `form field without a label: ${tag.slice(0, 80)}`);
   }
