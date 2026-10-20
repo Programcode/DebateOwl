@@ -969,7 +969,7 @@ GUIDES = {
             ]),
             ("When to weigh", [
                 "Start in the constructive, so the judge hears your impact framed before the other side frames theirs. Reinforce it in rebuttal, where you compare each clash as you win it. Make it the centre of the final speech. Late weighing is better than none, but weighing that only appears at the end competes with a decision the judge has already begun to make.",
-                "In Public Forum, weighing should be in summary if you want it in final focus. In Lincoln-Douglas, weighing usually runs through the value and criterion. In WSDC and British Parliamentary, third speakers and whips weigh clashes, and the reply speech weighs the whole debate.",
+                "In Public Forum, weighing should be in summary if you want it in final focus. In Lincoln-Douglas, weighing usually runs through the value and criterion. In World Schools, third speakers weigh the clashes and the reply speech weighs the whole debate. British Parliamentary has no reply speech, so the whips weigh the whole debate.",
             ]),
             ("Practise weighing with {product}", [
                 "Run a Sparring round and read the verdict: it says which arguments decided the round and why, which shows whether your weighing changed the outcome. Ask the coach to compare two impacts on a named measure, then write your own version and say it against the timer.",
@@ -1120,13 +1120,13 @@ GUIDES = {
                 {"h3": "Second speaker"},
                 "Rebuts the other side's case and extends their own team's arguments with new material. This is usually the speech with the most new analysis.",
                 {"h3": "Third speaker"},
-                "Organises the debate into its main clashes, rebuts within each one and weighs. The third speaker should not bring new arguments.",
+                "Organises the debate into its main clashes, rebuts within each one and weighs. Responding is the main job: a third speaker may present a small part of the team case only if the first speaker announced it when setting out the team line.",
                 {"h3": "Reply speaker"},
                 "Gives a short, biased summary of the whole debate: where the clashes were and why their team won them. No new arguments, and no new rebuttal.",
                 "Practise each role separately. A speaker who can only do one job is a weak point when the team needs to change roles for an impromptu round.",
             ]),
             ("Points of Information", [
-                "Speakers on the other side can offer a Point of Information during a substantive speech, except in the first and last minute, which are protected. The speaker chooses whether to accept, and should accept one or two. A good POI is short, under fifteen seconds, and aims at the warrant the speech depends on.",
+                "Speakers on the other side can offer a Point of Information during a substantive speech, except in the first and last minute, which are protected. The speaker chooses whether to accept, and as a general rule should accept at least two. A good POI is short, under fifteen seconds, and aims at the warrant the speech depends on.",
                 "Answering POIs matters as much as offering them. Take one, answer it in a sentence, and return to your structure. Turning down every POI usually looks evasive to judges.",
             ]),
             ("Prepare for WSDC with {product}", [
@@ -1137,7 +1137,7 @@ GUIDES = {
         "faqs": [
             ("How long are speeches in World Schools debate?", "Substantive speeches are eight minutes, and reply speeches are four minutes. Each team has three substantive speakers and one reply speech."),
             ("What is a Point of Information?", "A short question or statement offered by the other team during a substantive speech, outside the protected first and last minute. The speaker decides whether to accept it."),
-            ("Can the third speaker bring new arguments?", "No. The third speaker rebuts, organises the debate into clashes and weighs, but should not add new arguments."),
+            ("Can the third speaker bring new arguments?", "Only a small part of the team case, and only if the first speaker announced it when setting out the team line. The third speaker's main job is to rebut, organise the debate into clashes and weigh."),
             ("Who gives the reply speech?", "The first or second speaker of each team, never the third. The opposition reply comes first."),
             ("How do I practise impromptu WSDC motions?", "Set a one-hour timer, prepare a case with your team, and practise each role. Then review where the team line held and where it did not."),
         ],
@@ -1161,7 +1161,7 @@ GUIDES = {
             ("Finding evidence with {product}", [
                 {"steps": [
                     "Give Factoids a single statement from your case. It researches that statement and returns supporting factoids with citations, context and suggestions for how to use them.",
-                    "Turn on web research when you generate a case, so the draft comes with sources for its claims.",
+                    "Generate a case. {product} researches the motion before it writes, so the draft comes with sources for its claims.",
                     "Save the sources you trust to the Library. Active Library sources ground the other tools for that debate, so later answers draw on material you have checked.",
                     "Ask for counter-evidence too. Attack runs research on an argument and can point to sources that cut against it, which tells you what the other side may read.",
                 ]},

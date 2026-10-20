@@ -59,18 +59,34 @@ describe("Vercel frontend deployment configuration", () => {
   });
 
   it("redirects each retired guide to a live guide that no page links past", () => {
+    // Google already knows these URLs; dropping a rule turns one into a 404.
+    const retiredGuides: Record<string, string> = {
+      "/online-debate-timer-tool": "/online-debate-timer",
+      "/debate-argument-flowchart-tool": "/argument-flowchart",
+      "/debate-weighing-guide": "/how-to-weigh-in-debate",
+      "/debate-impact-calculus": "/how-to-weigh-in-debate",
+      "/debate-cross-examination-tips": "/how-to-cross-examine-in-debate",
+      "/debate-note-taking-flowing": "/how-to-flow-in-debate",
+      "/debate-case-generator": "/ai-debate-case-generator",
+      "/how-to-write-a-rebuttal-speech": "/how-to-practice-rebuttals",
+      "/wsdc-debate-practice": "/world-schools-debate",
+      "/ai-debate-evidence-research": "/debate-evidence-finder",
+      "/debate-evidence-verification": "/debate-evidence-finder",
+      "/debatelab-alternatives": "/best-ai-debate-tools",
+      "/ai-tools-for-debate-students": "/best-ai-debate-tools",
+    };
     const guideRedirects = (loadConfig().redirects ?? []).filter((rule) => !rule.source.startsWith("/:page("));
-    const retired = new Set(guideRedirects.map((rule) => rule.source));
+    const retired = new Set(Object.keys(retiredGuides));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))
       .map((entry) => `/${entry.name}`);
 
-    expect(retired.size).toBeGreaterThan(0);
-    for (const rule of guideRedirects) {
-      expect(rule.statusCode).toBe(301);
-      // One hop to a page that exists, never to another retired slug.
-      expect(pages).toContain(rule.destination);
-      expect(retired.has(rule.destination)).toBe(false);
+    expect(guideRedirects).toEqual(Object.entries(retiredGuides)
+      .map(([source, destination]) => ({ source, destination, statusCode: 301 })));
+    // One hop to a page that exists, never to another retired slug.
+    for (const destination of Object.values(retiredGuides)) {
+      expect(pages).toContain(destination);
+      expect(retired.has(destination)).toBe(false);
     }
     for (const page of pages) {
       // A generated page left behind would be shadowed by its redirect.
