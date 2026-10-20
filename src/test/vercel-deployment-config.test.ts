@@ -60,7 +60,7 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("redirects each retired guide to a live guide that no page links past", () => {
     const guideRedirects = (loadConfig().redirects ?? []).filter((rule) => !rule.source.startsWith("/:page("));
-    const retired = new Set(guideRedirects.map((rule) => rule.source.replace(/\/$/, "")));
+    const retired = new Set(guideRedirects.map((rule) => rule.source));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))
       .map((entry) => `/${entry.name}`);

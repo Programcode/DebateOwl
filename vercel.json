@@ -26,17 +26,7 @@
       "statusCode": 301
     },
     {
-      "source": "/online-debate-timer-tool/",
-      "destination": "/online-debate-timer",
-      "statusCode": 301
-    },
-    {
       "source": "/debate-argument-flowchart-tool",
-      "destination": "/argument-flowchart",
-      "statusCode": 301
-    },
-    {
-      "source": "/debate-argument-flowchart-tool/",
       "destination": "/argument-flowchart",
       "statusCode": 301
     },
@@ -46,17 +36,7 @@
       "statusCode": 301
     },
     {
-      "source": "/debate-weighing-guide/",
-      "destination": "/how-to-weigh-in-debate",
-      "statusCode": 301
-    },
-    {
       "source": "/debate-impact-calculus",
-      "destination": "/how-to-weigh-in-debate",
-      "statusCode": 301
-    },
-    {
-      "source": "/debate-impact-calculus/",
       "destination": "/how-to-weigh-in-debate",
       "statusCode": 301
     },
@@ -66,17 +46,7 @@
       "statusCode": 301
     },
     {
-      "source": "/debate-cross-examination-tips/",
-      "destination": "/how-to-cross-examine-in-debate",
-      "statusCode": 301
-    },
-    {
       "source": "/debate-note-taking-flowing",
-      "destination": "/how-to-flow-in-debate",
-      "statusCode": 301
-    },
-    {
-      "source": "/debate-note-taking-flowing/",
       "destination": "/how-to-flow-in-debate",
       "statusCode": 301
     },
@@ -86,17 +56,7 @@
       "statusCode": 301
     },
     {
-      "source": "/debate-case-generator/",
-      "destination": "/ai-debate-case-generator",
-      "statusCode": 301
-    },
-    {
       "source": "/how-to-write-a-rebuttal-speech",
-      "destination": "/how-to-practice-rebuttals",
-      "statusCode": 301
-    },
-    {
-      "source": "/how-to-write-a-rebuttal-speech/",
       "destination": "/how-to-practice-rebuttals",
       "statusCode": 301
     },
@@ -106,17 +66,7 @@
       "statusCode": 301
     },
     {
-      "source": "/wsdc-debate-practice/",
-      "destination": "/world-schools-debate",
-      "statusCode": 301
-    },
-    {
       "source": "/ai-debate-evidence-research",
-      "destination": "/debate-evidence-finder",
-      "statusCode": 301
-    },
-    {
-      "source": "/ai-debate-evidence-research/",
       "destination": "/debate-evidence-finder",
       "statusCode": 301
     },
@@ -126,27 +76,12 @@
       "statusCode": 301
     },
     {
-      "source": "/debate-evidence-verification/",
-      "destination": "/debate-evidence-finder",
-      "statusCode": 301
-    },
-    {
       "source": "/debatelab-alternatives",
       "destination": "/best-ai-debate-tools",
       "statusCode": 301
     },
     {
-      "source": "/debatelab-alternatives/",
-      "destination": "/best-ai-debate-tools",
-      "statusCode": 301
-    },
-    {
       "source": "/ai-tools-for-debate-students",
-      "destination": "/best-ai-debate-tools",
-      "statusCode": 301
-    },
-    {
-      "source": "/ai-tools-for-debate-students/",
       "destination": "/best-ai-debate-tools",
       "statusCode": 301
     }
